@@ -5,7 +5,6 @@ import me.anno.zauber.astbuilder.*
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.types.BooleanUtils.and
-import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 
@@ -56,24 +55,9 @@ class Scope(val name: String, val parent: Scope? = null) {
      * for each if/else-chain, these shall be filled in
      * */
     var branchCondition: Expression? = null
-    var branchConditionTrue: Boolean = false
 
-    fun addCondition(condition: Expression, isTrue: Boolean) {
-        var branchCondition = branchCondition
-        if (branchCondition == null) {
-            this.branchCondition = condition
-            branchConditionTrue = isTrue
-        } else {
-            if (!branchConditionTrue) {
-                branchCondition = branchCondition.not()
-            }
-            var condition = condition
-            if (!isTrue) {
-                condition = condition.not()
-            }
-            this.branchCondition = branchCondition.and(condition)
-            branchConditionTrue = true
-        }
+    fun addCondition(condition: Expression) {
+        branchCondition = branchCondition?.and(condition) ?: condition
     }
 
     var primaryConstructorScope: Scope? = null
@@ -323,6 +307,14 @@ class Scope(val name: String, val parent: Scope? = null) {
                 parent
             } else null
         }
+
+    fun generateField(initialValue: Expression): Field {
+        val name = generateName("field")
+        return Field(
+            this, false, true, null,
+            name, null, initialValue, emptyList(), initialValue.origin
+        )
+    }
 
     override fun toString(): String = pathStr
 

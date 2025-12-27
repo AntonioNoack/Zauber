@@ -6,18 +6,16 @@ import me.anno.zauber.types.Types.BooleanType
 
 object BooleanUtils {
     fun Expression.not(): Expression {
-        if (this is ExprTypeOp) {
-            when (op) {
-                ExprTypeOpType.INSTANCEOF -> return ExprTypeOp(
-                    left, ExprTypeOpType.NOT_INSTANCEOF, right,
-                    scope, origin
-                )
-                ExprTypeOpType.NOT_INSTANCEOF -> return ExprTypeOp(
-                    left, ExprTypeOpType.INSTANCEOF, right,
-                    scope, origin
-                )
-                else -> {}
-            }
+        // undo a not
+        if (this is PrefixExpression && this.type == PrefixType.NOT) {
+            return base
+        }
+
+        if (this is InstanceOfCheckExpr) {
+            return InstanceOfCheckExpr(
+                left, right, !negated,
+                scope, origin
+            )
         }
 
         if (this is CheckEqualsOp) {

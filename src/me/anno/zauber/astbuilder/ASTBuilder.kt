@@ -1531,10 +1531,37 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                 val scope = currPackage
                 expr = when (symbol) {
-                    "as" -> ExprTypeOp(expr, ExprTypeOpType.CAST_OR_CRASH, readType(null, true), scope, origin)
-                    "as?" -> ExprTypeOp(expr, ExprTypeOpType.CAST_OR_NULL, readType(null, true), scope, origin)
-                    "is" -> ExprTypeOp(expr, ExprTypeOpType.INSTANCEOF, readType(null, true), scope, origin)
-                    "!is" -> ExprTypeOp(expr, ExprTypeOpType.NOT_INSTANCEOF, readType(null, true), scope, origin)
+                    "as" -> {
+                        // we need to store the variable in a temporary field
+                        val tmpField = scope.generateField(expr)
+                        val fieldExpr = FieldExpression(tmpField, scope, origin)
+                        val throwExpr = CallExpression(
+                            NameExpression("throwNPE", scope, origin), emptyList(),
+                            listOf(NamedParameter(null, StringExpression(expr.toString(), scope, origin))), origin
+                        )
+                        val condition = InstanceOfCheckExpr(expr, readType(null, true), false, scope, origin)
+                        ExpressionList(
+                            listOf(
+                                AssignmentExpression(fieldExpr, expr),
+                                IfElseBranch(condition, fieldExpr, throwExpr)
+                            ), scope, origin
+                        )
+                    }
+                    "as?" -> {
+                        // we need to store the variable in a temporary field
+                        val tmpField = scope.generateField(expr)
+                        val fieldExpr = FieldExpression(tmpField, scope, origin)
+                        val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                        val condition = InstanceOfCheckExpr(expr, readType(null, true), false, scope, origin)
+                        ExpressionList(
+                            listOf(
+                                AssignmentExpression(fieldExpr, expr),
+                                IfElseBranch(condition, fieldExpr, nullExpr)
+                            ), scope, origin
+                        )
+                    }
+                    "is" -> InstanceOfCheckExpr(expr, readType(null, true), false, scope, origin)
+                    "!is" -> InstanceOfCheckExpr(expr, readType(null, true), true, scope, origin)
                     "." -> {
                         if (tokens.equals(i, TokenType.NAME) &&
                             tokens.equals(i + 1, TokenType.SYMBOL) &&
@@ -1759,7 +1786,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is IfElseBranch,
                 // todo while-loop without break can enforce a condition, too
             is WhileLoop -> false
-            is ExprTypeOp -> true // all these (as, as?, is, is?) can change type information...
+            is InstanceOfCheckExpr -> true // all these (as, as?, is, is?) can change type information...
             is NamedCallExpression -> {
                 exprSplitsScope(expr.base) ||
                         expr.valueParameters.any { exprSplitsScope(it.value) }

@@ -1,6 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class AndType(val types: List<Type>) : Type() {
 
@@ -10,7 +11,18 @@ class AndType(val types: List<Type>) : Type() {
          * */
         fun andTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
-            return AndType((getTypes(typeA) + getTypes(typeB)).distinct())
+            if (typeA is UnionType && typeB is NotType &&
+                typeB.type in typeA.types
+            ) {
+                val filteredA = typeA.types.filter { it != typeB.type }
+                    .reduce { a, b -> unionTypes(a, b) }
+                return if (typeB.type == NullType) filteredA
+                else andTypes(filteredA, typeB)
+            }
+
+            val joint = (getTypes(typeA) + getTypes(typeB)).distinct()
+            if (joint.size == 1) return joint.first()
+            return AndType(joint)
         }
 
         fun getTypes(type: Type): List<Type> {

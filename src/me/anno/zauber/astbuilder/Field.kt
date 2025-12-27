@@ -42,8 +42,6 @@ class Field(
         declaredScope.addField(this)
     }
 
-    val specificTypes = ArrayList<ScopedFieldType>()
-
     fun deductValueType(context: ResolutionContext): Type {
         val valueType = valueType
         if (valueType != null) return valueType

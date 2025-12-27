@@ -129,7 +129,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                         "in ${resolveOrigin(origin)}, scopes: ${codeScope.pathStr}"
             )
         }
-        return field.getValueType()
+        return field.getValueType(context)
     }
 
     fun resolveField(

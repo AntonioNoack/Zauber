@@ -4,6 +4,7 @@ import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -26,8 +27,8 @@ class IfElseBranch(val condition: Expression, val ifBranch: Expression, val else
             "Else and condition somehow have the same scope: ${condition.scope.pathStr}"
         }
 
-        ifBranch.scope.addCondition(condition, true)
-        elseBranch?.scope?.addCondition(condition, false)
+        ifBranch.scope.addCondition(condition)
+        elseBranch?.scope?.addCondition(condition.not())
     }
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
@@ -41,8 +42,8 @@ class IfElseBranch(val condition: Expression, val ifBranch: Expression, val else
             exprHasNoType(context)
         } else {
             // targetLambdaType stays the same
-            val ifType = TypeResolution.resolveType(context, ifBranch)
-            val elseType = TypeResolution.resolveType(context, elseBranch)
+            val ifType = TypeResolution.resolveType(context.withCodeScope(ifBranch.scope), ifBranch)
+            val elseType = TypeResolution.resolveType(context.withCodeScope(elseBranch.scope), elseBranch)
             unionTypes(ifType, elseType)
         }
     }

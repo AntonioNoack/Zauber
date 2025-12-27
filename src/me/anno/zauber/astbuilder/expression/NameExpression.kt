@@ -5,6 +5,7 @@ import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.findType
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -44,9 +45,10 @@ class NameExpression(
     override fun toString(): String = name
     override fun clone(scope: Scope) = NameExpression(name, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+
     override fun resolveType(context: ResolutionContext): Type {
         val field = resolveField(context, name, null)
-        if (field != null) return field.getValueType()
+        if (field != null) return field.getValueType(context)
 
         val type = findType(context.codeScope, context.selfType, name)
         if (type != null) return type
