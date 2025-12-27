@@ -72,7 +72,7 @@ object Compile {
 
         // base: compile itself
         addSource(samples)
-        if (false) {
+        if (true) {
             addSource(File(project, "src"))
         }
 

@@ -22,8 +22,8 @@ abstract class ResolvedCallable<V>(
             genericNames: List<Parameter>,
             genericValues: List<Type>
         ): Type {
-            check(genericNames.size == genericValues.size) {
-                "Expected same number of generic names and generic values, got ${genericNames.size} vs ${genericValues.size}"
+            if (genericNames.size != genericValues.size) {
+                System.err.println("Expected same number of generic names and generic values, got ${genericNames.size} vs ${genericValues.size} ($type)")
             }
             if (genericValues.isEmpty()) return type
             return when (type) {

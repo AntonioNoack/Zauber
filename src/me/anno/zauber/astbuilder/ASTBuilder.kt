@@ -27,12 +27,8 @@ import kotlin.math.min
 // I want macros... how could we implement them? learn about Rust macros
 //  -> we get tokens as attributes in a specific pattern,
 //  and after resolving the pattern, we can copy-paste these pattern variables as we please
-
 //  -> we should be able to implement when() and for() using these
-
-// todo getting started quickly is important for my Dopamine levels!
-
-// todo first parse class structures, function contents later, so we can immediately fill in what a variable name belongs to (type, local, class member, ...)
+//  -> do we even need macros when we have a good language? :)
 
 class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
@@ -1534,29 +1530,33 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     "as" -> {
                         // we need to store the variable in a temporary field
                         val tmpField = scope.generateField(expr)
+                        val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
+                        val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
                         val fieldExpr = FieldExpression(tmpField, scope, origin)
                         val throwExpr = CallExpression(
-                            NameExpression("throwNPE", scope, origin), emptyList(),
-                            listOf(NamedParameter(null, StringExpression(expr.toString(), scope, origin))), origin
+                            NameExpression("throwNPE", ifFalseScope, origin), emptyList(),
+                            listOf(NamedParameter(null, StringExpression(expr.toString(), ifFalseScope, origin))), origin
                         )
                         val condition = IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
                         ExpressionList(
                             listOf(
                                 AssignmentExpression(fieldExpr, expr),
-                                IfElseBranch(condition, fieldExpr, throwExpr)
+                                IfElseBranch(condition, fieldExpr.clone(ifTrueScope), throwExpr)
                             ), scope, origin
                         )
                     }
                     "as?" -> {
                         // we need to store the variable in a temporary field
                         val tmpField = scope.generateField(expr)
+                        val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
+                        val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
                         val fieldExpr = FieldExpression(tmpField, scope, origin)
-                        val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                        val nullExpr = SpecialValueExpression(SpecialValue.NULL, ifFalseScope, origin)
                         val condition = IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
                         ExpressionList(
                             listOf(
                                 AssignmentExpression(fieldExpr, expr),
-                                IfElseBranch(condition, fieldExpr, nullExpr)
+                                IfElseBranch(condition, fieldExpr.clone(ifTrueScope), nullExpr)
                             ), scope, origin
                         )
                     }
@@ -1670,7 +1670,26 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             }
             tokens.equals(i, "++") -> PostfixExpression(expr, PostfixType.INCREMENT, origin(i++))
             tokens.equals(i, "--") -> PostfixExpression(expr, PostfixType.DECREMENT, origin(i++))
-            tokens.equals(i, "!!") -> PostfixExpression(expr, PostfixType.ENSURE_NOT_NULL, origin(i++))
+            tokens.equals(i, "!!") -> {
+                val origin = origin(i++)
+                val scope = currPackage
+                val field = scope.generateField(expr)
+                val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
+                val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
+                val fieldExpr = FieldExpression(field, scope, origin)
+                val throwExpr = CallExpression(
+                    NameExpression("throwNPE", ifFalseScope, origin), emptyList(),
+                    listOf(NamedParameter(null, StringExpression(expr.toString(), ifFalseScope, origin))), origin
+                )
+                val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                val condition = CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
+                ExpressionList(
+                    listOf(
+                        AssignmentExpression(fieldExpr, expr),
+                        IfElseBranch(condition, fieldExpr.clone(ifTrueScope), throwExpr)
+                    ), scope, origin
+                )
+            }
             else -> null
         }
     }
@@ -1802,6 +1821,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         (expr.base is NameExpression && expr.base.name == "check") // this check is a little too loose
             }
             is AssignmentExpression -> true // explicit yes
+            is PrefixExpression -> exprSplitsScope(expr.base)
+            is PostfixExpression -> exprSplitsScope(expr.base)
+            is AssignIfMutableExpr -> true // we don't know better yet
+            is ExpressionList -> expr.list.any { exprSplitsScope(it) }
+            is CompareOp -> exprSplitsScope(expr.value)
+            is ImportedExpression -> false // I guess not...
+            is LambdaExpression -> false // I don't think so
+            is BreakExpression, is ContinueExpression -> false // execution ends here anyway
+            is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
             else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
         }
     }

@@ -70,6 +70,8 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
                     } else false
                 }
                 is FieldExpression -> expr.field == field
+                is NamedCallExpression,
+                is CallExpression -> false
                 else -> TODO("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
             }
         }
@@ -77,6 +79,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
         fun getUniqueValueType(expr: Expression): Type? {
             return when (expr) {
                 is SpecialValueExpression if expr.value == SpecialValue.NULL -> NullType
+                is NamedCallExpression, is CallExpression -> null // we could check their return type...
                 else -> TODO("Get unique value for $expr (${expr.javaClass.simpleName})")
             }
         }

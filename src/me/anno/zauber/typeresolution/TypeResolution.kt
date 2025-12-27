@@ -167,8 +167,9 @@ object TypeResolution {
                 if (scopes.distinct().size == 1) scopes.first()
                 else null
             }
+            is GenericType -> typeToScope(type.superBounds) // or should we choose null?
             // is NullableType -> typeToScope(type.base)
-            else -> throw NotImplementedError("typeToScope($type)")
+            else -> throw NotImplementedError("typeToScope($type, ${type.javaClass.simpleName})")
         }
     }
 
