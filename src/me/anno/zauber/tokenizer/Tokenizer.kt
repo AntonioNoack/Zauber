@@ -36,7 +36,7 @@ class Tokenizer(val src: String, fileName: String) {
             else if (src[i] == '/' && src[i + 1] == '*') depth++
             i++
         }
-        i += 2
+        i++ // skip last symbol
     }
 
     fun tokenize(): TokenList {

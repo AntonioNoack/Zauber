@@ -37,7 +37,8 @@ class TokenList(val src: String, val fileName: String) {
         while (depth > 0) {
             if (j >= size) {
                 printTokensInBlocks(i, open, close)
-                throw IllegalStateException("Could not find block end for $open/$close at ${err(i)}, #${size - i}")
+                System.err.println("Could not find block end for $open/$close at ${err(i)}, #${size - i}")
+                return size
             }
             when (getType(j++)) {
                 open, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++

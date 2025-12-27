@@ -1830,6 +1830,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is LambdaExpression -> false // I don't think so
             is BreakExpression, is ContinueExpression -> false // execution ends here anyway
             is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
+            is DoubleColonPrefix -> false // some lambda -> no
             else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
         }
     }

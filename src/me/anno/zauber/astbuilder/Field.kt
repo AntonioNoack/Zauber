@@ -19,12 +19,6 @@ class Field(
     val origin: Int
 ) {
 
-    init {
-        if (name == "valueParameters") {
-            println("Created field $this with initial $valueType, $initialValue")
-        }
-    }
-
     var privateGet = false
     var privateSet = false
 

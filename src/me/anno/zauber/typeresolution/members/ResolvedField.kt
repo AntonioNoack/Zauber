@@ -71,7 +71,8 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
                 }
                 is FieldExpression -> expr.field == field
                 is NamedCallExpression,
-                is CallExpression -> false
+                is CallExpression,
+                is SpecialValueExpression -> false
                 else -> TODO("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
             }
         }
