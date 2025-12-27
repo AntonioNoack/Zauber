@@ -1762,11 +1762,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             // if expression contains assignment of any kind, or a check-call
             //  we must create a new sub-scope,
             //  because the types of our fields may have changed
-            if (result.size > oldSize && exprSplitsScope(result.last())) {
+            if (result.size > oldSize && exprSplitsScope(result.last()) &&
+                i < tokens.size
+            ) {
                 val subName = currPackage.generateName("split")
                 currPackage = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
                 val remainder = readMethodBody()
-                result.add(remainder)
+                if (remainder.list.isNotEmpty()) result.add(remainder)
+                // else we can skip adding it, I think
             }
         }
         val code = ExpressionList(result, originalScope, origin)
@@ -1791,6 +1794,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 exprSplitsScope(expr.base) ||
                         expr.valueParameters.any { exprSplitsScope(it.value) }
             }
+            is ReturnExpression,
+            is ThrowExpression -> false // should these split the scope??? nothing after can happen
             is CallExpression -> {
                 exprSplitsScope(expr.base) ||
                         expr.valueParameters.any { exprSplitsScope(it.value) } ||
