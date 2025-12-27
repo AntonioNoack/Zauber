@@ -2,7 +2,6 @@ package me.anno.zauberei.astbuilder.expression
 
 import me.anno.zauberei.astbuilder.ASTBuilder
 import me.anno.zauberei.astbuilder.NamedParameter
-import me.anno.zauberei.astbuilder.controlflow.shortcutExpression
 import me.anno.zauberei.astbuilder.expression.constants.SpecialValue
 import me.anno.zauberei.astbuilder.expression.constants.SpecialValueExpression
 import me.anno.zauberei.types.Scope
@@ -27,8 +26,7 @@ fun ASTBuilder.binaryOp(
         "!=" -> CheckEqualsOp(left, right, byPointer = false, negated = true, scope, origin)
         "===" -> CheckEqualsOp(left, right, byPointer = true, negated = false, scope, origin)
         "!==" -> CheckEqualsOp(left, right, byPointer = true, negated = true, scope, origin)
-        "&&" -> shortcutExpression(left, ShortcutOperator.AND, right, scope, origin)
-        "||" -> shortcutExpression(left, ShortcutOperator.OR, right, scope, origin)
+        "&&", "||" -> throw IllegalStateException("&& and || should be handled separately")
         "::" -> {
             fun getBase(): Scope = when {
                 // left is VariableExpression -> scope.resolveType(left.name, this) as Scope

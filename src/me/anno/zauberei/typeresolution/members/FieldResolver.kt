@@ -82,34 +82,34 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
          val context = ResolutionContext(field.declaredScope, field.selfType, false, null)
          return ResolvedField(generics, field, emptyList(), context)*/
 
-        var methodSelfParams = selfTypeToTypeParams(field.selfType)
+        var fieldSelfParams = selfTypeToTypeParams(field.selfType)
         var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
         if (fieldSelfType is ClassType && fieldSelfType.clazz.scopeType?.isClassType() != true) {
             println("Field had invalid selfType: $fieldSelfType")
             fieldSelfType = null
-            methodSelfParams = emptyList()
+            fieldSelfParams = emptyList()
         }
         var actualTypeParams = typeParameters
-        if (methodSelfParams.isNotEmpty() && actualTypeParams != null) {
+        if (fieldSelfParams.isNotEmpty() && actualTypeParams != null) {
             // todo issue: actualTypeParams = null has a special meaning!!!
             //  we need to avoid that meaning, or must not make it non-null
             check(selfType != null)
             check(selfType is ClassType)
-            check(selfType.typeParameters?.size == methodSelfParams.size)
+            check(selfType.typeParameters?.size == fieldSelfParams.size)
             check(actualTypeParams !is FillInParameterList)
             actualTypeParams = selfType.typeParameters + (actualTypeParams ?: emptyList())
         }
         val generics = findGenericsForMatch(
             fieldSelfType, if (fieldSelfType == null) null else selfType,
             fieldReturnType, returnType,
-            methodSelfParams + field.typeParameters, actualTypeParams,
+            fieldSelfParams + field.typeParameters, actualTypeParams,
             emptyList(), valueParameters
         ) ?: return null
         val selfType = selfType ?: fieldSelfType
         val context = ResolutionContext(field.declaredScope, selfType, false, fieldReturnType)
         return ResolvedField(
-            generics.subList(0, methodSelfParams.size), field,
-            generics.subList(methodSelfParams.size, generics.size), context
+            generics.subList(0, fieldSelfParams.size), field,
+            generics.subList(fieldSelfParams.size, generics.size), context
         )
     }
 

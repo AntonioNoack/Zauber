@@ -289,15 +289,20 @@ class IsSubTypeOfTest {
 
     @Test
     fun testNotTypes() {
-        val scope = "class A".testInheritance()
-        val classA = scope["A"]
-
-        // todo test nots with unions(?)
-
+        val classA = IntType
         assertTrue(isSubTypeOf(classA, classA))
         assertFalse(isSubTypeOf(classA.not(), classA))
         assertFalse(isSubTypeOf(classA, classA.not()))
         assertTrue(isSubTypeOf(classA.not(), classA.not()))
+    }
+
+    @Test
+    fun testNotWithUnions() {
+        val directType = IntType
+        val indirectType = andTypes(unionTypes(directType, NullType), NullType.not())
+        assertTrue(isSubTypeOf(indirectType, directType))
+        assertTrue(isSubTypeOf(directType, indirectType))
+        assertFalse(isSubTypeOf(directType, unionTypes(IntType, NullType)))
     }
 
 }

@@ -30,6 +30,7 @@ Side motivation:
 - Fixed Point arithmetic without OOP/GC overhead
 - Stack-located variables
 - Comptime execution / code generation
+- Python-like Multi-assignment-style to swap fields: (a,b) = (b,a)
 
 I'd like to compile Rem's Engine (200k LOC + stdlib) to C++ in less than 30 seconds.
 Ideally much faster.

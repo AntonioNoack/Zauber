@@ -833,11 +833,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    fun origin(i: Int): Int {
+    private fun origin(i: Int): Int {
         return TokenListIndex.getIndex(tokens, i)
     }
 
-    fun readPrefix(): Expression {
+    private fun readPrefix(): Expression {
 
         val label =
             if (tokens.equals(i, TokenType.LABEL)) tokens.toString(i++)
@@ -1290,8 +1290,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return true
     }
 
-
-    fun readType(
+    private fun readType(
         selfType: Type? = null, allowSubTypes: Boolean,
         isAndType: Boolean = false
     ): Type {
@@ -1322,7 +1321,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return base
     }
 
-    fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean): Type {
+    private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean): Type {
 
         if (tokens.equals(i, "*")) {
             i++
@@ -1359,7 +1358,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return baseType
     }
 
-    fun readTypeParams(selfType: Type?): List<Type>? {
+    private fun readTypeParams(selfType: Type?): List<Type>? {
         if (i < tokens.size) {
             if (debug) println("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
         }
@@ -1389,19 +1388,19 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return args
     }
 
-    fun <R> pushCall(readImpl: () -> R): R {
+    private fun <R> pushCall(readImpl: () -> R): R {
         val result = tokens.push(i++, TokenType.OPEN_CALL, TokenType.CLOSE_CALL, readImpl)
         i++ // skip )
         return result
     }
 
-    fun <R> pushArray(readImpl: () -> R): R {
+    private fun <R> pushArray(readImpl: () -> R): R {
         val result = tokens.push(i++, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY, readImpl)
         i++ // skip ]
         return result
     }
 
-    fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
+    private fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
         val name = scopeName ?: currPackage.generateName(scopeType.name)
         return pushScope(name, scopeType) { childScope ->
             childScope.keywords.add(scopeType.name)
@@ -1414,7 +1413,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
+    private fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
         return pushScope(scope) {
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             scanBlockForNewTypes(i, blockEnd)
@@ -1427,7 +1426,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     /**
      * to make type-resolution immediately available/resolvable
      * */
-    fun scanBlockForNewTypes(i0: Int, i1: Int) {
+    private fun scanBlockForNewTypes(i0: Int, i1: Int) {
         var depth = 0
         var listen = -1
         var listenType = ""
@@ -1476,13 +1475,13 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         check(listen == -1) { "Listening for class/object/interface at ${tokens.err(listen)}" }
     }
 
-    fun <R> push(endTokenIdx: Int, readImpl: () -> R): R {
+    private fun <R> push(endTokenIdx: Int, readImpl: () -> R): R {
         val result = tokens.push(endTokenIdx, readImpl)
         i = endTokenIdx + 1 // skip }
         return result
     }
 
-    fun readExpression(minPrecedence: Int = 0): Expression {
+    private fun readExpression(minPrecedence: Int = 0): Expression {
         var expr = readPrefix()
         if (debug) println("prefix: $expr")
 
@@ -1600,7 +1599,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return expr
     }
 
-    fun tryReadPostfix(expr: Expression): Expression? {
+    private fun tryReadPostfix(expr: Expression): Expression? {
         return when {
             i >= tokens.size || !tokens.isSameLine(i - 1, i) -> null
             tokens.equals(i, TokenType.OPEN_CALL) -> {
@@ -1649,7 +1648,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    fun readLambda(): Expression {
+    private fun readLambda(): Expression {
         val arrow = tokens.findToken(i, "->")
         val variables = if (arrow >= 0) {
             val variables = ArrayList<LambdaVariable>()
@@ -1698,17 +1697,19 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return LambdaExpression(variables, currPackage, body)
     }
 
-    fun readComma() {
+    private fun readComma() {
         if (tokens.equals(i, TokenType.COMMA)) i++
         else if (i < tokens.size) throw IllegalStateException("Expected comma at ${tokens.err(i)}")
     }
 
-    fun readMethodBody(): ExpressionList {
+    private fun readMethodBody(): ExpressionList {
+        val originalScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
         if (debug) println("reading function body[$i], ${tokens.err(i)}")
         if (debug) tokens.printTokensInBlocks(i)
         while (i < tokens.size) {
+            val oldSize = result.size
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
                     throw IllegalStateException("} in the middle at ${tokens.err(i)}")
@@ -1729,10 +1730,48 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     if (debug) println("block += ${result.last()}")
                 }
             }
+
+            // todo check whether this works correctly
+            // if expression contains assignment of any kind, or a check-call
+            //  we must create a new sub-scope,
+            //  because the types of our fields may have changed
+            if (result.size > oldSize && exprSplitsScope(result.last())) {
+                val subName = currPackage.generateName("split")
+                currPackage = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
+                val remainder = readMethodBody()
+                result.add(remainder)
+            }
         }
-        val code = ExpressionList(result, currPackage, origin)
-        currPackage.code.add(code)
+        val code = ExpressionList(result, originalScope, origin)
+        originalScope.code.add(code)
+        currPackage = originalScope // restore scope
         return code
+    }
+
+    private fun exprSplitsScope(expr: Expression): Boolean {
+        return when (expr) {
+            is SpecialValueExpression,
+            is StringExpression,
+            is NumberExpression,
+            is FieldExpression,
+            is NameExpression,
+                // todo if-else-branch can enforce a condition: if only one branch returns
+            is IfElseBranch,
+                // todo while-loop without break can enforce a condition, too
+            is WhileLoop -> false
+            is ExprTypeOp -> true // all these (as, as?, is, is?) can change type information...
+            is NamedCallExpression -> {
+                exprSplitsScope(expr.base) ||
+                        expr.valueParameters.any { exprSplitsScope(it.value) }
+            }
+            is CallExpression -> {
+                exprSplitsScope(expr.base) ||
+                        expr.valueParameters.any { exprSplitsScope(it.value) } ||
+                        (expr.base is NameExpression && expr.base.name == "check") // this check is a little too loose
+            }
+            is AssignmentExpression -> true // explicit yes
+            else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
+        }
     }
 
     private fun readDestructuring(isVar: Boolean, isLateinit: Boolean): DestructuringAssignment {
@@ -1753,7 +1792,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return DestructuringAssignment(names, value, isVar, isLateinit)
     }
 
-    fun readDeclaration(isVar: Boolean, isLateinit: Boolean = false): Expression {
+    private fun readDeclaration(isVar: Boolean, isLateinit: Boolean = false): Expression {
         i++ // skip var/val
 
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
