@@ -1,4 +1,4 @@
-# Zauberei
+# Zauber
 
 This is a modern programming language with focus on usability, performance, and safety.
 
@@ -125,4 +125,6 @@ Total Progress: 1.2 %
 ## Naming
 
 Programming languages are magic to even most developers, and I like the German words "Zauber" and "Zauberei".
+Compilers were pretty magic to me before I got well into this project too, although I had some JVM2WASM experience.
+
 I'm also thinking about renaming it to "fux" (German & English mixed) or "fox", but idk...

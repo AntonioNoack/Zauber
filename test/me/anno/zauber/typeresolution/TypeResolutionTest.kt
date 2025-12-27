@@ -1,0 +1,143 @@
+package me.anno.zauber.typeresolution
+
+import me.anno.zauber.Compile.root
+import me.anno.zauber.astbuilder.ASTBuilder
+import me.anno.zauber.astbuilder.Constructor
+import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.tokenizer.Tokenizer
+import me.anno.zauber.types.StandardTypes.standardClasses
+import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.CharType
+import me.anno.zauber.types.Types.DoubleType
+import me.anno.zauber.types.Types.FloatType
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnionType
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+
+// todo test all type-resolution scenarios
+// todo test the special "Self" type
+
+class TypeResolutionTest {
+
+    companion object {
+        var ctr = 0
+
+        fun testTypeResolution(code: String): Type {
+            val testScopeName = "test${ctr++}"
+            val tokens = Tokenizer(
+                """
+            package $testScopeName
+            
+            $code
+        """.trimIndent(), "?"
+            ).tokenize()
+            ASTBuilder(tokens, root).readFileLevel()
+            val testScope = root.children.first { it.name == testScopeName }
+            TypeResolution.resolveTypesAndNames(testScope)
+            val field = testScope.fields.first { it.name == "tested" }
+            return field.valueType
+                ?: throw IllegalStateException("Could not resolve type for $field")
+        }
+
+        fun defineArrayListConstructors() {
+            val arrayListType = standardClasses["ArrayList"]!!
+            if (arrayListType.typeParameters.isEmpty()) {
+                arrayListType.typeParameters += Parameter(
+                    false, false, false,
+                    "X", NullableAnyType, null, arrayListType, -1
+                )
+            }
+
+            // we need to define the constructor without any args
+            val constructors = arrayListType.constructors
+            if (constructors.none { it.valueParameters.isEmpty() }) {
+                constructors.add(
+                    Constructor(
+                        arrayListType.typeWithoutArgs, emptyList(),
+                        arrayListType.getOrCreatePrimConstructorScope(), null, null,
+                        emptyList(), -1
+                    )
+                )
+            }
+            if (constructors.none { it.valueParameters.size == 1 }) {
+                constructors.add(
+                    Constructor(
+                        arrayListType.typeWithoutArgs, listOf(
+                            Parameter(
+                                false, false, false, "size",
+                                IntType, null, arrayListType, -1
+                            ),
+                        ),
+                        arrayListType.getOrCreatePrimConstructorScope(), null, null,
+                        emptyList(), -1
+                    )
+                )
+            }
+        }
+
+        fun defineListParameters() {
+            val arrayListType = standardClasses["List"]!!
+            if (arrayListType.typeParameters.isEmpty()) {
+                arrayListType.typeParameters += Parameter(
+                    false, false, false,
+                    "X", NullableAnyType, null, arrayListType, -1
+                )
+            }
+        }
+
+    }
+
+    @Test
+    fun testConstants() {
+        assertEquals(BooleanType, testTypeResolution("val tested = true"))
+        assertEquals(BooleanType, testTypeResolution("val tested = false"))
+        assertEquals(NullType, testTypeResolution("val tested = null"))
+        assertEquals(IntType, testTypeResolution("val tested = 0"))
+        assertEquals(LongType, testTypeResolution("val tested = 0L"))
+        assertEquals(FloatType, testTypeResolution("val tested = 0f"))
+        assertEquals(FloatType, testTypeResolution("val tested = 0.0f"))
+        assertEquals(DoubleType, testTypeResolution("val tested = 0d"))
+        assertEquals(DoubleType, testTypeResolution("val tested = 0.0"))
+        assertEquals(DoubleType, testTypeResolution("val tested = 1e3"))
+        assertEquals(CharType, testTypeResolution("val tested = ' '"))
+        assertEquals(StringType, testTypeResolution("val tested = \"Test 123\""))
+    }
+
+    @Test
+    fun testNullableTypes() {
+        assertEquals(
+            UnionType(listOf(ClassType(BooleanType.clazz, null), NullType)),
+            testTypeResolution("val tested: Boolean?")
+        )
+    }
+
+    @Test
+    fun testConstructorWithParameter() {
+        val intArrayType = standardClasses["IntArray"]!!
+        // we need to define the constructor without any args
+        val constructors = intArrayType.constructors
+        if (constructors.none { it.valueParameters.size == 1 }) {
+            constructors.add(
+                Constructor(
+                    intArrayType.typeWithoutArgs, listOf(
+                        Parameter(
+                            false, false, false,
+                            "size", IntType, null, intArrayType, -1
+                        )
+                    ),
+                    intArrayType.getOrCreatePrimConstructorScope(), null, null,
+                    emptyList(), -1
+                )
+            )
+        }
+        assertEquals(intArrayType.typeWithoutArgs, testTypeResolution("val tested = IntArray(5)"))
+    }
+
+}
