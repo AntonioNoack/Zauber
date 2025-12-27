@@ -8,7 +8,7 @@ import me.anno.zauber.types.Types.BooleanType
 /**
  * [is, !is]
  * */
-class InstanceOfCheckExpr(val left: Expression, val right: Type, val negated: Boolean, scope: Scope, origin: Int) :
+class IsInstanceOfExpr(val left: Expression, val right: Type, val negated: Boolean, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
@@ -22,6 +22,6 @@ class InstanceOfCheckExpr(val left: Expression, val right: Type, val negated: Bo
     override fun resolveType(context: ResolutionContext): Type = BooleanType
 
     override fun clone(scope: Scope): Expression {
-        return InstanceOfCheckExpr(left.clone(scope), right, negated, scope, origin)
+        return IsInstanceOfExpr(left.clone(scope), right, negated, scope, origin)
     }
 }

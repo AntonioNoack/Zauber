@@ -11,8 +11,8 @@ object BooleanUtils {
             return base
         }
 
-        if (this is InstanceOfCheckExpr) {
-            return InstanceOfCheckExpr(
+        if (this is IsInstanceOfExpr) {
+            return IsInstanceOfExpr(
                 left, right, !negated,
                 scope, origin
             )

@@ -35,7 +35,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
         fun applyConditionToType(field: Field, type: Type, expr: Expression, context: ResolutionContext): Type {
             return when (expr) {
                 // todo as? and as should be compilable to if-else-branch
-                is InstanceOfCheckExpr -> {
+                is IsInstanceOfExpr -> {
                     if (exprIsField(field, expr.left, context)) {
                         expr.right
                         TODO()
