@@ -19,7 +19,7 @@ Side motivation:
 ## Goals:
 - Kotlin-style
 - Native C/C++ performance
-- Rust-style enums (e.g. for errors) AKA union types
+- Rust-style enums (e.g. for errors) AKA union types → these are just sealed classes, aren't they?
 - Rust-style macros (or at least their power)
 - Struct types aka not storing the object header where not necessary
 - Easy struct of arrays
@@ -48,9 +48,43 @@ Ideally much faster.
 - [ ] ...
 - [ ] Compile the compiler using the compiler
 
+## Type Definitions
+
+I want to be able to declare rich types like TypeScript,
+and not to pay the runtime overhead, e.g.
+
+```kotlin
+value class Euro(val value: Int) {
+// plus, times, ...
+}
+
+typealias FloatLike = Half|Float|Double
+typealias SeriComp = Serializable&Comparable<*>
+typealias NotFloat = Number&!FloatLike
+```
+
+Static analysis can also be really helpful and powerful,
+so it would be nice to have comptime-restricted types, e.g.
+
+```kotlin
+val x: Int[in 0 until 100] = 45
+val somePrime: Int[isPrime(it)] = 17
+val cheapEnum: String["a","b","c"] = "a"
+```
+
+## Allocation Styles
+(not yet implemented)
+
+```kotlin
+data class Vec2i(val x: Int, val y: Int)
+value var x = Vec2i(0,0) // will be stored on the stack
+val y = Vec2i(0,0) // will be ref-counted
+value val array = Array(10) { Vec2i(it,it*it) } // constant size -> can be stored on the stack
+```
+
 ### Progress Estimation
 
-Total Progress: 0.5 %
+Total Progress: 1.2 %
 
 ```yaml
 - Kotlin-Style:
