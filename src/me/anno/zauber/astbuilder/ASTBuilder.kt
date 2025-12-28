@@ -734,8 +734,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val keywords = packKeywords()
                     result.add(Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin))
 
-                    // automatically gets added to currPackage...
-                    Field(currPackage, isVar, isVal, selfType, name, type, initialValue, keywords, origin)
+                    if (isVar || isVal) {
+                        // automatically gets added to currPackage...
+                        Field(currPackage, isVar, isVal, selfType, name, type, initialValue, keywords, origin)
+                    }
 
                     readComma()
                 }
