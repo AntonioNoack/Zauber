@@ -130,7 +130,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     sortedValueParameters[i]
                 }
                 if (!isSubTypeOf(
-                        mvParam, vParam,
+                        actualSelfType,mvParam, vParam,
                         expectedTypeParameters,
                         resolvedTypes,
                         if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
@@ -231,9 +231,9 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             val superType = call.type
             val genericNames = scope.typeParameters
             val genericValues = call.type.typeParameters ?: emptyList()
-            val mappedSelfType = resolveGenerics(selfType, genericNames, genericValues) as ClassType
-            val mappedTypeParameters = typeParameters?.map {
-                resolveGenerics(it, genericNames, genericValues)
+            val mappedSelfType = resolveGenerics(null, selfType, genericNames, genericValues) as ClassType
+            val mappedTypeParameters = typeParameters?.map { paramType ->
+                resolveGenerics(selfType, paramType, genericNames, genericValues)
             }
             check(superType.clazz != selfType.clazz)
             findMemberInHierarchy(

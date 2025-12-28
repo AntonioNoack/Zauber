@@ -103,10 +103,11 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
         val field = resolved
         val ownerNames = field.selfTypeTypeParams
         val context = context.withSelfType(field.selfType)
+        val selfType = if (field.selfType != null) context.selfType else null
 
         val valueType = field.deductValueType(context)
-        val forType = resolveGenerics(valueType, ownerNames, ownerTypes)
-        val forCall = resolveGenerics(forType, field.typeParameters, callTypes)
+        val forType = resolveGenerics(selfType, valueType, ownerNames, ownerTypes)
+        val forCall = resolveGenerics(selfType, forType, field.typeParameters, callTypes)
 
         return filterTypeByScopeConditions(field, forCall, context)
     }

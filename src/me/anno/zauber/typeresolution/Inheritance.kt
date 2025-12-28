@@ -14,6 +14,7 @@ import me.anno.zauber.types.impl.*
 object Inheritance {
 
     fun isSubTypeOf(
+        selfTypeIfNeeded: Type?,
         expected: Parameter,
         actual: ValueParameter,
         expectedTypeParams: List<Parameter>,
@@ -21,7 +22,7 @@ object Inheritance {
         insertMode: InsertMode
     ): Boolean {
         val expectedType = resolveGenerics(
-            expected.type,
+            selfTypeIfNeeded, expected.type,
             expectedTypeParams.filterIndexed { index, _ -> actualTypeParameters[index] != null },
             actualTypeParameters.filterNotNull()
         )
