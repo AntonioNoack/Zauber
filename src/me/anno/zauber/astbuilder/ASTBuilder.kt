@@ -20,6 +20,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.NullType.typeOrNull
+import me.anno.zauber.types.impl.SelfType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import kotlin.math.max
 import kotlin.math.min
@@ -85,6 +86,20 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     fun readTypePath(selfType: Type?): Type {
         check(tokens.equals(i, TokenType.NAME))
         val name0 = tokens.toString(i++)
+        if (name0 == "Self") {// Special-meaning type
+            if (selfType is ClassType) {
+                return SelfType(selfType.clazz)
+            } else {
+                check(selfType == null)
+                var scope = currPackage
+                while (scope.scopeType?.isClassType() != true) {
+                    scope = scope.parent
+                        ?: throw IllegalStateException("Could not resolve Self-type in $currPackage")
+                }
+                return SelfType(scope)
+            }
+        }
+
         var path = genericParams.last()[name0]
             ?: currPackage.resolveTypeOrNull(name0, this)
             ?: (selfType as? ClassType)?.clazz?.resolveType(name0, this)
@@ -99,8 +114,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     private fun readClass() {
         check(tokens.equals(++i, TokenType.NAME))
         val name = tokens.toString(i++)
-        val clazz = currPackage.getOrPut(name, tokens.fileName, null)
+
         val keywords = packKeywords()
+        val scopeType =
+            if ("enum" in keywords) ScopeType.ENUM_CLASS
+            else ScopeType.NORMAL_CLASS
+
+
+        val clazz = currPackage.getOrPut(name, tokens.fileName, scopeType)
+
         val typeParameters = readTypeParameterDeclarations(clazz)
         clazz.typeParameters = typeParameters
         clazz.hasTypeParameters = true
@@ -109,10 +131,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (privatePrimaryConstructor) i++
 
         readAnnotations()
-
-        val scopeType =
-            if ("enum" in keywords) ScopeType.ENUM_CLASS
-            else ScopeType.NORMAL_CLASS
 
         if (tokens.equals(i, "constructor")) i++
         val constructorOrigin = origin(i)

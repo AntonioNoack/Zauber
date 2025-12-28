@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Field
+import me.anno.zauber.astbuilder.controlflow.IfElseBranch
 import me.anno.zauber.astbuilder.expression.*
 import me.anno.zauber.astbuilder.expression.constants.SpecialValue
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
@@ -73,6 +74,10 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
                 is NamedCallExpression,
                 is CallExpression,
                 is SpecialValueExpression -> false
+                is ExpressionList -> exprIsField(field, expr.list.last(), context)
+                is IfElseBranch -> expr.elseBranch != null && // unlikely
+                        exprIsField(field, expr.ifBranch, context) &&
+                        exprIsField(field, expr.elseBranch, context)
                 else -> TODO("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
             }
         }

@@ -18,7 +18,9 @@ import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 // todo test all type-resolution scenarios
@@ -138,6 +140,71 @@ class TypeResolutionTest {
             )
         }
         assertEquals(intArrayType.typeWithoutArgs, testTypeResolution("val tested = IntArray(5)"))
+    }
+
+    @Test
+    fun testGetOperator() {
+        val type = testTypeResolution(
+            """
+            class Node(val value: Int)
+            val x: Node
+            val tested = x.value
+        """.trimIndent()
+        )
+        assertEquals(IntType, type)
+    }
+
+    @Test
+    fun testIfNullOperator() {
+        val type = testTypeResolution(
+            """
+            val x: Int?
+            val tested = x ?: 0f
+        """.trimIndent()
+        )
+        assertEquals(unionTypes(IntType, FloatType), type)
+    }
+
+    @Test
+    fun testNullableGetOperator() {
+        val type = testTypeResolution(
+            """
+            class Node(val parent: Node?, val value: Int)
+            val x: Node?
+            val tested = x?.parent?.value
+        """.trimIndent()
+        )
+        assertEquals(unionTypes(IntType, NullType), type)
+    }
+
+    @Test
+    fun testSelfType() {
+        val type0 = testTypeResolution(
+            """
+            open class A(val other: Self?)
+            class B(other: Self?): A(other)
+            val tested = B(null).other
+        """.trimIndent()
+        )
+        check(type0 is UnionType && NullType in type0.types && type0.types.size == 2)
+        val type1 = type0.types.first { it != NullType }
+        println("Resolved Self to $type1 (should be B)")
+        assertTrue(type1 is ClassType)
+        assertTrue((type1 as ClassType).clazz.name == "B")
+    }
+
+    @Test
+    fun testSelfType2() {
+        val type = testTypeResolution(
+            """
+            open class A(val other: Self?)
+            class B(other: Self?): A(other)
+            val tested = B(null).other!!
+        """.trimIndent()
+        )
+        println("Resolved Self to $type (should be B)")
+        assertTrue(type is ClassType)
+        assertTrue((type as ClassType).clazz.name == "B")
     }
 
 }

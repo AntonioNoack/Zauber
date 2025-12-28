@@ -18,11 +18,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
 
     fun exprHasNoType(context: ResolutionContext): Type {
         if (!context.allowTypeless) throw IllegalStateException(
-            "Expected type, but found $this in ${
-                resolveOrigin(
-                    origin
-                )
-            }"
+            "Expected type, but found $this in ${resolveOrigin(origin)}"
         )
         return UnitType
     }
