@@ -22,6 +22,10 @@ class CallExpression(
     origin: Int
 ) : Expression(base.scope, origin) {
 
+    init {
+        check(base !is NameExpression || base.name != "?.")
+    }
+
     override fun forEachExpr(callback: (Expression) -> Unit) {
         callback(base)
         for (i in valueParameters.indices) {

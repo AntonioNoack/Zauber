@@ -1576,7 +1576,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         },
                         { fieldExpr, scope ->
                             pushScope(scope) {
-                                handleDotOperator(fieldExpr.clone(scope), op)
+                                val dotOperator = operators["."]!!
+                                handleDotOperator(fieldExpr.clone(scope), dotOperator)
                             }
                         },
                         { scope ->
@@ -1686,7 +1687,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 AssignmentExpression(fieldExpr, expr),
                 IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
             ), scope, origin
-        )
+        ).apply {
+            println("Created branch: $this")
+        }
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {

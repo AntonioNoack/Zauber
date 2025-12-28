@@ -7,6 +7,7 @@ import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.types.BooleanUtils.and
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -19,6 +20,7 @@ class NamedCallExpression(
 ) : Expression(scope, origin) {
 
     init {
+        check(name != "?.")
         if (name == "." && valueParameters.size == 1 &&
             valueParameters[0].value is NamedCallExpression
         ) throw IllegalStateException("NamedCall-stack must be within base, not in parameter: $this")

@@ -22,7 +22,7 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
         // if any previous expression returns NothingType, return NothingType; else return the last found type
         lateinit var type: Type
         for (i in list.indices) {
-            type = TypeResolution.resolveType(context, list[i])
+            type = TypeResolution.resolveType(context.withAllowTypeless(context.allowTypeless || i+1<list.size), list[i])
             if (type == NothingType) return NothingType
         }
         return type

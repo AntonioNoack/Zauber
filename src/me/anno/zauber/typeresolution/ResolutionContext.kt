@@ -39,4 +39,9 @@ class ResolutionContext(
     override fun toString(): String {
         return "ResolutionContext(code=$codeScope, selfType=$selfType, allowTypeless=$allowTypeless, targetType=$targetType)"
     }
+
+    fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
+        if (allowTypeless == newAllowTypeless) return this
+        return ResolutionContext(codeScope, selfType, newAllowTypeless, targetType)
+    }
 }
