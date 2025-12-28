@@ -1522,93 +1522,59 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val origin = origin(i)
                 i++ // consume operator
 
-                fun readRHS(): Expression =
-                    readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
-
                 val scope = currPackage
                 expr = when (symbol) {
-                    "as" -> {
-                        // we need to store the variable in a temporary field
-                        val tmpField = scope.generateField(expr)
-                        val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
-                        val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
-                        val fieldExpr = FieldExpression(tmpField, scope, origin)
-                        val throwExpr = CallExpression(
-                            NameExpression("throwNPE", ifFalseScope, origin), emptyList(),
-                            listOf(NamedParameter(null, StringExpression(expr.toString(), ifFalseScope, origin))), origin
-                        )
-                        val condition = IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
-                        ExpressionList(
-                            listOf(
-                                AssignmentExpression(fieldExpr, expr),
-                                IfElseBranch(condition, fieldExpr.clone(ifTrueScope), throwExpr)
-                            ), scope, origin
+                    "as" -> createCastExpression(expr, scope, origin) { ifFalseScope ->
+                        val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
+                        val debugInfoParam = NamedParameter(null, debugInfoExpr)
+                        CallExpression(
+                            NameExpression("throwNPE", ifFalseScope, origin),
+                            emptyList(), listOf(debugInfoParam), origin
                         )
                     }
-                    "as?" -> {
-                        // we need to store the variable in a temporary field
-                        val tmpField = scope.generateField(expr)
-                        val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
-                        val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
-                        val fieldExpr = FieldExpression(tmpField, scope, origin)
-                        val nullExpr = SpecialValueExpression(SpecialValue.NULL, ifFalseScope, origin)
-                        val condition = IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
-                        ExpressionList(
-                            listOf(
-                                AssignmentExpression(fieldExpr, expr),
-                                IfElseBranch(condition, fieldExpr.clone(ifTrueScope), nullExpr)
-                            ), scope, origin
-                        )
+                    "as?" -> createCastExpression(expr, scope, origin) { scope ->
+                        SpecialValueExpression(SpecialValue.NULL, scope, origin)
                     }
                     "is" -> IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
                     "!is" -> IsInstanceOfExpr(expr, readType(null, true), true, scope, origin)
-                    "." -> {
-                        if (tokens.equals(i, TokenType.NAME) &&
-                            tokens.equals(i + 1, TokenType.SYMBOL) &&
-                            tokens.endsWith(i + 1, '=') &&
-                            !tokens.equals(i + 1, "==") &&
-                            !tokens.equals(i + 1, "!=") &&
-                            !tokens.equals(i + 1, "===") &&
-                            !tokens.equals(i + 1, "!==")
-                        ) {
-                            val name = tokens.toString(i++)
-                            if (tokens.equals(i, "=")) {
-                                val originI = origin(i++) // skip =
-                                val value = readExpression()
-                                val nameTitlecase = name[0].uppercaseChar() + name.substring(1)
-                                val setterName = "set$nameTitlecase"
-                                val param = NamedParameter(null, value)
-                                NamedCallExpression(
-                                    expr, setterName, null,
-                                    listOf(param), expr.scope, originI
-                                )
-                            } else {
-                                // +=, -=, *=, /=, ...
-                                val originI = origin(i)
-                                val symbol = tokens.toString(i++)
-                                val expr1 = nameExpression(name, originI, this, currPackage)
-                                val param1 = NamedParameter(null, expr1)
-                                val left = NamedCallExpression(
-                                    expr, ".", null,
-                                    listOf(param1), expr.scope, originI
-                                )
-                                val right = readExpression()
-                                AssignIfMutableExpr(left, symbol, right)
+                    "?:" -> createBranchExpression(
+                        expr, scope, origin,
+                        { fieldExpr ->
+                            val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                            CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
+                        },
+                        { fieldExpr, scope -> fieldExpr.clone(scope) }, // not null -> just the field
+                        { scope ->
+                            pushScope(scope) {
+                                readExpression()
                             }
-                        } else {
-                            val rhs = readRHS()
-                            binaryOp(currPackage, expr, op.symbol, rhs)
-                        }
-                    }
+                        },
+                    )
+                    "?." -> createBranchExpression(
+                        expr, scope, origin,
+                        { fieldExpr ->
+                            val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                            CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
+                        },
+                        { fieldExpr, scope ->
+                            pushScope(scope) {
+                                handleDotOperator(fieldExpr.clone(scope), op)
+                            }
+                        },
+                        { scope ->
+                            SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                        },
+                    )
+                    "." -> handleDotOperator(expr, op)
                     "&&", "||" -> {
                         val left = expr
                         val name = currPackage.generateName("shortcut")
-                        val right = pushScope(name, ScopeType.EXPRESSION) { readRHS() }
+                        val right = pushScope(name, ScopeType.EXPRESSION) { readRHS(op) }
                         if (symbol == "&&") shortcutExpressionI(left, ShortcutOperator.AND, right, scope, origin)
                         else shortcutExpressionI(left, ShortcutOperator.OR, right, scope, origin)
                     }
                     else -> {
-                        val rhs = readRHS()
+                        val rhs = readRHS(op)
                         if (isInfix) {
                             val param = NamedParameter(null, rhs)
                             NamedCallExpression(
@@ -1624,6 +1590,85 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         return expr
+    }
+
+    private fun readRHS(op: Operator): Expression =
+        readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
+
+    private fun handleDotOperator(expr: Expression, op: Operator): Expression {
+        return if (isNamedAssignment(tokens, i)) {
+            val name = tokens.toString(i++)
+            if (tokens.equals(i, "=")) {
+                val originI = origin(i++) // skip =
+                val value = readExpression()
+                val nameTitlecase = name[0].uppercaseChar() + name.substring(1)
+                val setterName = "set$nameTitlecase"
+                val param = NamedParameter(null, value)
+                NamedCallExpression(
+                    expr, setterName, null,
+                    listOf(param), expr.scope, originI
+                )
+            } else {
+                // +=, -=, *=, /=, ...
+                val originI = origin(i)
+                val symbol = tokens.toString(i++)
+                val expr1 = nameExpression(name, originI, this, currPackage)
+                val param1 = NamedParameter(null, expr1)
+                val left = NamedCallExpression(
+                    expr, ".", null,
+                    listOf(param1), expr.scope, originI
+                )
+                val right = readExpression()
+                AssignIfMutableExpr(left, symbol, right)
+            }
+        } else {
+            val rhs = readRHS(op)
+            binaryOp(currPackage, expr, op.symbol, rhs)
+        }
+    }
+
+    private fun isNamedAssignment(tokens: TokenList, i: Int): Boolean {
+        return tokens.equals(i, TokenType.NAME) &&
+                tokens.equals(i + 1, TokenType.SYMBOL) &&
+                tokens.endsWith(i + 1, '=') &&
+                !tokens.equals(i + 1, "==") &&
+                !tokens.equals(i + 1, "!=") &&
+                !tokens.equals(i + 1, "===") &&
+                !tokens.equals(i + 1, "!==")
+    }
+
+    private fun createCastExpression(
+        expr: Expression, scope: Scope, origin: Int,
+        ifFalseExpr: (Scope) -> Expression
+    ): Expression {
+        val type = readType(null, true)
+        return createBranchExpression(expr, scope, origin, { fieldExpr ->
+            IsInstanceOfExpr(fieldExpr, type, false, scope, origin)
+        }, { fieldExpr, ifTrueScope ->
+            fieldExpr.clone(ifTrueScope)
+        }, ifFalseExpr)
+    }
+
+    private fun createBranchExpression(
+        expr: Expression, scope: Scope, origin: Int,
+        condition: (FieldExpression) -> Expression,
+        ifTrueExpr: (FieldExpression, Scope) -> Expression,
+        ifFalseExpr: (Scope) -> Expression,
+    ): Expression {
+        // we need to store the variable in a temporary field
+        val tmpField = scope.generateField(expr)
+        val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
+        val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
+        val fieldExpr = FieldExpression(tmpField, scope, origin)
+        val condition = condition(fieldExpr)
+        val ifTrueExpr = ifTrueExpr(fieldExpr, ifTrueScope)
+        val ifFalseExpr = ifFalseExpr(ifFalseScope)
+        return ExpressionList(
+            listOf(
+                AssignmentExpression(fieldExpr, expr),
+                IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
+            ), scope, origin
+        )
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {
@@ -1673,21 +1718,21 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             tokens.equals(i, "!!") -> {
                 val origin = origin(i++)
                 val scope = currPackage
-                val field = scope.generateField(expr)
-                val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
-                val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
-                val fieldExpr = FieldExpression(field, scope, origin)
-                val throwExpr = CallExpression(
-                    NameExpression("throwNPE", ifFalseScope, origin), emptyList(),
-                    listOf(NamedParameter(null, StringExpression(expr.toString(), ifFalseScope, origin))), origin
-                )
-                val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
-                val condition = CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
-                ExpressionList(
-                    listOf(
-                        AssignmentExpression(fieldExpr, expr),
-                        IfElseBranch(condition, fieldExpr.clone(ifTrueScope), throwExpr)
-                    ), scope, origin
+                createBranchExpression(
+                    expr, scope, origin,
+                    { fieldExpr ->
+                        val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                        CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
+                    },
+                    { fieldExpr, ifTrueScope ->
+                        fieldExpr.clone(ifTrueScope)
+                    }, { scope ->
+                        val debugInfoExpr = StringExpression(expr.toString(), scope, origin)
+                        CallExpression(
+                            NameExpression("throwNPE", scope, origin), emptyList(),
+                            listOf(NamedParameter(null, debugInfoExpr)), origin
+                        )
+                    }
                 )
             }
             else -> null
