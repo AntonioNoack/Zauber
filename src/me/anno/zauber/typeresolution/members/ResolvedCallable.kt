@@ -40,12 +40,14 @@ abstract class ResolvedCallable<V>(
                     }.reduce { a, b -> unionTypes(a, b) }
                 }
                 is ClassType -> {
-                    val typeArgs = type.typeParameters ?: return type
-                    if (typeArgs.isNotEmpty()) LOGGER.info("old types: $typeArgs")
+                    val typeArgs = type.typeParameters
+                    if (typeArgs.isNullOrEmpty()) return type
                     val newTypeArgs = typeArgs.map { partType ->
                         resolveGenerics(selfType, partType, genericNames, genericValues)
                     }
-                    if (typeArgs.isNotEmpty()) LOGGER.info("new types: $newTypeArgs")
+                    if (typeArgs != newTypeArgs) {
+                        LOGGER.info("Mapped types: $typeArgs -> $newTypeArgs")
+                    }
                     ClassType(type.clazz, newTypeArgs)
                 }
                 NullType -> type

@@ -873,9 +873,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             tokens.equals(i, "false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i++))
             tokens.equals(i, "this") -> SpecialValueExpression(SpecialValue.THIS, currPackage, origin(i++))
             tokens.equals(i, "super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i++))
-            tokens.equals(i - 1, "::") && tokens.equals(i, "class") -> {
-                SpecialValueExpression(SpecialValue.CLASS, currPackage, origin(i++))
-            }
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i), currPackage, origin(i++))
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i), currPackage, origin(i++))
             tokens.equals(i, "!") -> PrefixExpression(PrefixType.NOT, origin(i++), readExpression())
@@ -1597,6 +1594,25 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         val right = pushScope(name, ScopeType.EXPRESSION) { readRHS(op) }
                         if (symbol == "&&") shortcutExpressionI(left, ShortcutOperator.AND, right, scope, origin)
                         else shortcutExpressionI(left, ShortcutOperator.OR, right, scope, origin)
+                    }
+                    "::" -> {
+                        if (tokens.equals(i, "class")) {
+                            when (expr) {
+                                is NameExpression -> {
+                                    val i0 = i + 1
+                                    i -= 2 // skipping over :: and name
+                                    val type = readType(null, false)
+                                    check(tokens.equals(i++, "::"))
+                                    check(tokens.equals(i++, "class"))
+                                    check(i == i0)
+                                    GetClassFromTypeExpression(type, scope, origin)
+                                }
+                                else -> throw NotImplementedError("Use left side as type ($expr, ${expr.javaClass.simpleName}), then generate ::class")
+                            }
+                        } else {
+                            val rhs = readRHS(op)
+                            binaryOp(currPackage, expr, op.symbol, rhs)
+                        }
                     }
                     else -> {
                         val rhs = readRHS(op)

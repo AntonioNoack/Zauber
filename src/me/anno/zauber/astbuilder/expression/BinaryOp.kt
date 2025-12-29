@@ -40,12 +40,6 @@ fun ASTBuilder.binaryOp(
             val leftIsType = left is NameExpression && left.name[0].isUpperCase() ||
                     left is SpecialValueExpression && left.value == SpecialValue.THIS
             when {
-                leftIsType && right is SpecialValueExpression && right.value == SpecialValue.CLASS -> {
-                    GetClassFromTypeExpression(getBase(), left.scope, left.origin)
-                }
-                right is SpecialValueExpression && right.value == SpecialValue.CLASS -> {
-                    GetClassFromValueExpression(left, right.origin)
-                }
                 leftIsType && right is NameExpression -> {
                     GetMethodFromTypeExpression(getBase(), right.name, right.scope, right.origin)
                 }

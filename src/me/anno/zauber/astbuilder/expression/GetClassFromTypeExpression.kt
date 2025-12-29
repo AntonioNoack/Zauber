@@ -6,7 +6,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.getScope
 import me.anno.zauber.types.impl.ClassType
 
-class GetClassFromTypeExpression(val base: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
+class GetClassFromTypeExpression(val base: Type, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
 
@@ -15,7 +15,7 @@ class GetClassFromTypeExpression(val base: Scope, scope: Scope, origin: Int) : E
     }
 
     override fun resolveType(context: ResolutionContext): Type {
-        return ClassType(getScope("Class"), listOf(ClassType(base, null)))
+        return ClassType(getScope("KClass"), listOf(base))
     }
 
     override fun clone(scope: Scope) = GetClassFromTypeExpression(base, scope, origin)

@@ -5,6 +5,5 @@ enum class SpecialValue {
     FALSE,
     NULL,
     THIS,
-    SUPER,
-    CLASS
+    SUPER
 }

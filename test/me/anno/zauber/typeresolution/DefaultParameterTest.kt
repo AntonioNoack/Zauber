@@ -20,7 +20,7 @@ class DefaultParameterTest {
             FloatType,
             TypeResolutionTest.testTypeResolution(
                 """
-                fun call(x: Int = 0): Float { return 1f }
+                fun call(x: Int = 0): Float
                 
                 val tested = call()
             """.trimIndent()
@@ -35,7 +35,7 @@ class DefaultParameterTest {
             TypeResolutionTest.testTypeResolution(
                 """
                 class X {
-                    fun call(x: Int = 0): Float { return 1f }
+                    fun call(x: Int = 0): Float
                 }
                 
                 val tested = X().call()
@@ -51,7 +51,7 @@ class DefaultParameterTest {
             TypeResolutionTest.testTypeResolution(
                 """
                 class X
-                fun X.call(x: Int = 0): Float { return 1f }
+                fun X.call(x: Int = 0): Float
                 
                 val tested = X().call()
             """.trimIndent()

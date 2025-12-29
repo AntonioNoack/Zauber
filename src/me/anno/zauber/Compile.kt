@@ -13,19 +13,22 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Scope
 import java.io.File
 
-// todo we need type resolution, but it is really hard
+// we need type resolution, but it is really hard
 //  can we outsource the problem?
 //  should we try to solve easy problems, first?
 //  should we implement an easier language compiler like Java first?
 //  can we put all work on the C++/Zig compiler???
 //  should we try to create a Kotlin-preprocessor instead?
+// -> let's give out best 🌟
+
+// most type resolution probably is easy,
+//  e.g. function names usually differ from field names,
+//  so once we know all function names known to a scope (or everything), we can already decide many cases
+// -> yes/no, it easily gets difficult ^^
 
 // todo if-conditions help us find what type something is...
 //  but we need to understand what's possible and how the code flows...
-
-// todo most type resolution probably is easy,
-//  e.g. function names usually differ from field names,
-//  so once we know all function names known to a scope (or everything), we can already decide many cases
+// -> partially done, but early exit remains an issue
 
 // todo expand macros:
 //   compile-time if
@@ -40,7 +43,10 @@ import java.io.File
 // todo run C++ compiler
 
 object Compile {
-    
+
+    // should be the very first thing
+    var lastTime = System.nanoTime()
+
     private val LOGGER = LogManager.getLogger(Compile::class)
 
     val stdlib = "zauber"
@@ -113,45 +119,57 @@ object Compile {
     fun main(args: Array<String>) {
         // todo compile and run our samples, and confirm all tests work as expected (write unit tests as samples)
 
-        val t0 = System.nanoTime()
+        step("JDK-Overhead") {}
 
-        tokenizeSources()
-        val t1 = System.nanoTime()
-        LOGGER.info("Took ${(t1 - t0) * 1e-6f} ms Reading & Tokenizing")
+        step("Reading & Tokenizing") {
+            tokenizeSources()
+        }
 
-        collectNamedClassesForTypeResolution()
-        val t2 = System.nanoTime()
-        LOGGER.info("Took ${(t2 - t1) * 1e-6f} ms Indexing Top-Level Classes")
+        step("Indexing Top-Level Classes") {
+            collectNamedClassesForTypeResolution()
+        }
 
-        buildASTs()
-        val t3 = System.nanoTime()
-        LOGGER.info("Took ${(t3 - t2) * 1e-6f} ms Parsing AST")
+        step("Parsing ASTs") {
+            buildASTs()
+        }
 
         // todo when all expressions are parsed, we can replace more names with being method names / specific fields
 
         if (false) printPackages(root, 0)
 
 
-        createDefaultParameterFunctions(root)
-        val t4 = System.nanoTime()
-        LOGGER.info("Took ${(t4 - t3) * 1e-6f} ms Parsing AST")
+        step("Create Default Parameter Functions") {
+            createDefaultParameterFunctions(root)
+        }
 
+        step("Resolving Types") {
+            TypeResolution.resolveTypesAndNames(root)
+        }
 
-        TypeResolution.resolveTypesAndNames(root)
-        val t5 = System.nanoTime()
-        LOGGER.info("Took ${(t5 - t4) * 1e-6f} ms Resolving Types")
+        step("Resolving Specific Calls") {
+            TypeExpansion.resolveSpecificCalls(root)
+        }
 
+        step("Create C-Code") {
+            CSourceGenerator.generateCode(File("./out/c"), root)
+        }
 
-        TypeExpansion.resolveSpecificCalls(root)
-        val t6 = System.nanoTime()
-        LOGGER.info("Took ${(t6 - t5) * 1e-6f} ms Resolving Specific Calls")
+        printStats()
+    }
 
-
+    private fun printStats() {
         LOGGER.info("Num Expressions: ${Expression.numExpressionsCreated}")
         // 658k expressions 😲 (1µs/element at the moment)
-
-        CSourceGenerator.generateCode(File("./out/c"), root)
     }
+
+    fun step(name: String, executeStep: () -> Unit) {
+        executeStep()
+        val t6 = System.nanoTime()
+        LOGGER.info("Took ${((t6 - lastTime) / 1e6f).f3()} ms $name")
+        lastTime = t6
+    }
+
+    fun Float.f3() = "%.3f".format(this)
 
     fun printPackages(root: Scope, depth: Int) {
         LOGGER.info("  ".repeat(depth) + root.name)
