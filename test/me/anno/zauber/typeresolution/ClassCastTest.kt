@@ -40,7 +40,7 @@ class ClassCastTest {
                 
                 val x: Int? = null
                 val tested: Float? get() {
-                    if(x == null) return null
+                    if (x == null) return null
                     return x+1f
                 }
             """.trimIndent()
