@@ -247,4 +247,32 @@ class GenericTest {
             )
         )
     }
+
+    @Test
+    fun testLambdaInsideLambda(){
+        // what about listOf("1,2,3").map{it.split(',').map{it.toInt()}}?
+        //  can we somehow hide lambdas? I don't think so...
+        val listType = standardClasses["List"]!!
+        val listOfInt = ClassType(listType, listOf(IntType))
+        assertEquals(
+            ClassType(listType, listOf(listOfInt)),
+            TypeResolutionTest.testTypeResolution(
+                """
+                fun <V> listOf(v: V): List<V>
+                fun <V,R> List<V>.map(map: (V) -> R): List<R>
+                fun String.split(separator: Char): List<String>
+                fun String.toInt(): Int
+                
+                val tested = listOf("1,2,3").map{it.split(',').map{it.toInt()}}
+                
+                // define types as classes
+                package zauber
+                class List<V>
+                class Int
+                class String
+                class Char
+            """.trimIndent()
+            )
+        )
+    }
 }

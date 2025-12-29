@@ -47,8 +47,6 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * for unknown generics, we need them for the return type to be fully known
      * */
     open fun hasLambdaOrUnknownGenericsType(): Boolean {
-        // todo what about listOf("1,2,3").map{it.split(',').map{it.toInt()}}?
-        //  can we somehow hide lambdas? I don't think so...
         LOGGER.warn("Does (${javaClass.simpleName}) $this contain a lambda? Assuming no for now...")
         return false
     }
