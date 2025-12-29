@@ -157,7 +157,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         val scope = clazz.getOrCreatePrimConstructorScope()
         val primaryConstructor = Constructor(
-            clazz.typeWithoutArgs, constructorParams ?: emptyList(),
+            constructorParams ?: emptyList(),
             scope, null, null,
             if (privatePrimaryConstructor) listOf("private") else emptyList(),
             constructorOrigin
@@ -524,7 +524,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         val constructor = Constructor(
-            clazz.typeWithoutArgs, parameters, innerScope,
+            parameters, innerScope,
             superCall, body, keywords, origin
         )
         innerScope.selfAsConstructor = constructor

@@ -3,10 +3,7 @@ package zauber
 import zauber.impl.SimpleListIterator
 import kotlin.math.max
 
-class ArrayList<V>(capacity: Int) : MutableList<V> {
-
-    // todo implement inserting constructors and methods from parameters with default values
-    constructor() : this(16)
+class ArrayList<V>(capacity: Int = 16) : MutableList<V> {
 
     val content = Array<V>(capacity)
 

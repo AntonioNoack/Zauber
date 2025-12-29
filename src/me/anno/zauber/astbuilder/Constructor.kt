@@ -5,7 +5,6 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.impl.ClassType
 
 class Constructor(
-    val selfType: ClassType,
     val valueParameters: List<Parameter>,
     val scope: Scope,
     val superCall: InnerSuperCall?,
@@ -14,6 +13,7 @@ class Constructor(
     val origin: Int
 ) {
 
+    val selfType: ClassType get() = scope.parent!!.typeWithoutArgs
     val typeParameters: List<Parameter> get() = emptyList()
 
     override fun toString(): String {

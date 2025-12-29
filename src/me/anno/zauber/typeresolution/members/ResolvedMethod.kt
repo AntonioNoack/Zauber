@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Method
 import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -16,7 +17,7 @@ class ResolvedMethod(ownerTypes: List<Type>, method: Method, callTypes: List<Typ
         val inGeneral = method.returnType!!
         val forSelf = resolveGenerics(selfType, inGeneral, ownerNames, ownerTypes)
         val forCall = resolveGenerics(selfType, forSelf, method.typeParameters, callTypes)
-        println("returnType for call: $inGeneral -${ownerNames}|$ownerTypes> $forSelf -${method.typeParameters}|$callTypes> $forCall")
+        LOGGER.info("ReturnType for call: $inGeneral -${ownerNames}|$ownerTypes> $forSelf -${method.typeParameters}|$callTypes> $forCall")
         return forCall
     }
 
@@ -25,6 +26,8 @@ class ResolvedMethod(ownerTypes: List<Type>, method: Method, callTypes: List<Typ
     }
 
     companion object {
+        private val LOGGER = LogManager.getLogger(ResolvedMethod::class)
+
         fun selfTypeToTypeParams(selfType: Type?): List<Parameter> {
             return (selfType as? ClassType)?.clazz?.typeParameters ?: emptyList()
         }

@@ -65,7 +65,7 @@ class TypeResolutionTest {
             if (constructors.none { it.valueParameters.isEmpty() }) {
                 val scope = arrayListType.getOrCreatePrimConstructorScope()
                 scope.selfAsConstructor = Constructor(
-                    arrayListType.typeWithoutArgs, emptyList(),
+                    emptyList(),
                     scope, null, null,
                     emptyList(), -1
                 )
@@ -73,7 +73,7 @@ class TypeResolutionTest {
             if (constructors.none { it.valueParameters.size == 1 }) {
                 val scope = arrayListType.getOrPut(arrayListType.generateName("constructor"), ScopeType.CONSTRUCTOR)
                 scope.selfAsConstructor = Constructor(
-                    arrayListType.typeWithoutArgs, listOf(
+                    listOf(
                         Parameter(
                             false, false, false, "size",
                             IntType, null, arrayListType, -1
@@ -129,7 +129,7 @@ class TypeResolutionTest {
         if (constructors.none { it.valueParameters.size == 1 }) {
             val scope = intArrayType.getOrCreatePrimConstructorScope()
             scope.selfAsConstructor = Constructor(
-                intArrayType.typeWithoutArgs, listOf(
+                listOf(
                     Parameter(
                         false, false, false,
                         "size", IntType, null, intArrayType, -1

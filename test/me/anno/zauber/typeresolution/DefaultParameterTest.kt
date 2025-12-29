@@ -15,7 +15,7 @@ class DefaultParameterTest {
     }
 
     @Test
-    fun testDefaultParamWithoutSelf() {
+    fun testDefaultParameterWithoutSelf() {
         assertEquals(
             FloatType,
             TypeResolutionTest.testTypeResolution(
@@ -29,7 +29,7 @@ class DefaultParameterTest {
     }
 
     @Test
-    fun testDefaultParamWithSelf() {
+    fun testDefaultParameterWithSelf() {
         assertEquals(
             FloatType,
             TypeResolutionTest.testTypeResolution(
@@ -45,13 +45,29 @@ class DefaultParameterTest {
     }
 
     @Test
-    fun testDefaultParamWithSelfExtension() {
+    fun testDefaultParameterWithSelfExtension() {
         assertEquals(
             FloatType,
             TypeResolutionTest.testTypeResolution(
                 """
                 class X
                 fun X.call(x: Int = 0): Float
+                
+                val tested = X().call()
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testDefaultConstructorParam() {
+        assertEquals(
+            FloatType,
+            TypeResolutionTest.testTypeResolution(
+                """
+                class X(val x: Int = 0) {
+                    fun call(): Float
+                }
                 
                 val tested = X().call()
             """.trimIndent()
