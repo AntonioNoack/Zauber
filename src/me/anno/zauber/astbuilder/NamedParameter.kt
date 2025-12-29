@@ -11,7 +11,7 @@ class NamedParameter(val name: String?, val value: Expression) {
     }
 
     fun toString(depth: Int): String {
-        val valueStr = value.toString(depth)
+        val valueStr = value.toString(depth - 1)
         return if (name != null) "$name=$valueStr" else valueStr
     }
 }

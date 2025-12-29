@@ -7,6 +7,7 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.types.BooleanUtils.and
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Scope / Package / Class / Object / Interface ...
@@ -293,9 +294,8 @@ class Scope(val name: String, val parent: Scope? = null) {
             ?: throw IllegalStateException("Unresolved type '$name' in $this, children: ${children.map { it.name }}")
     }
 
-    private var nextAnonymousName = 0
     fun generateName(prefix: String): String {
-        return "$$prefix${nextAnonymousName++}"
+        return "$$prefix${nextAnonymousName.incrementAndGet()}"
     }
 
     val parentIfSameFile: Scope?
@@ -329,6 +329,10 @@ class Scope(val name: String, val parent: Scope? = null) {
             hash = hash * 31 + path[i].hashCode()
         }
         return hash
+    }
+
+    companion object {
+        private val nextAnonymousName = AtomicInteger(0)
     }
 
 }

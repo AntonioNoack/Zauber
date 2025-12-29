@@ -66,7 +66,11 @@ class Field(
     }
 
     override fun toString(): String {
-        return "Field($selfType.$name=$initialValue)"
+        return if (initialValue == null) {
+            "Field($selfType.$name)"
+        } else {
+            "Field($selfType.$name=${initialValue.toString(3)})"
+        }
     }
 
     fun moveToScope(newScope: Scope) {
