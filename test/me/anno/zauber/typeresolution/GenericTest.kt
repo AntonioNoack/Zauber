@@ -267,7 +267,7 @@ class GenericTest {
                 
                 // define types as classes
                 package zauber
-                class List<V>
+                interface List<V>
                 class Int
                 class String
                 class Char
