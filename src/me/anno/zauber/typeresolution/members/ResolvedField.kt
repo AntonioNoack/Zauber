@@ -101,7 +101,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
     }
 
     fun getValueType(context: ResolutionContext): Type {
-        LOGGER.info("getting value of $resolved in scope ${context.codeScope.pathStr}")
+        LOGGER.info("Getting value of $resolved in scope ${context.codeScope.pathStr}")
 
         val field = resolved
         val ownerNames = field.selfTypeTypeParams

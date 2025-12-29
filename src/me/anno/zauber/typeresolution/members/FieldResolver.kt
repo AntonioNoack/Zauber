@@ -142,7 +142,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     ): ResolvedField? {
         val returnType = context.targetType
         val selfType = context.selfType
-        LOGGER.info("typeParams for field '$name': $typeParameters, selfType: $selfType")
+        LOGGER.info("TypeParams for field '$name': $typeParameters, selfType: $selfType")
         val valueParameters = emptyList<ValueParameter>()
         val field = MethodResolver.null1()
             ?: findMemberInHierarchy(context.selfScope, name, returnType, selfType, typeParameters, valueParameters)

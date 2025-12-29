@@ -1,6 +1,7 @@
 package me.anno.zauber.astbuilder
 
 import me.anno.zauber.astbuilder.expression.Expression
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
@@ -8,7 +9,7 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class Field(
-    val declaredScope: Scope,
+    var declaredScope: Scope,
     val isVar: Boolean,
     val isVal: Boolean,
     val selfType: Type?, // may be null inside methods, owner is stack, kind of
@@ -18,6 +19,10 @@ class Field(
     val keywords: List<String>,
     val origin: Int
 ) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(Field::class)
+    }
 
     var privateGet = false
     var privateSet = false
@@ -38,14 +43,22 @@ class Field(
 
     fun deductValueType(context: ResolutionContext): Type {
         val valueType = valueType
-        if (valueType != null) return valueType
+        if (valueType != null) {
+            return valueType
+        }
 
         val initialValue = initialValue
-        if (initialValue != null) return TypeResolution.resolveType(context, initialValue)
+        if (initialValue != null) {
+            val newContext = context.withCodeScope(initialValue.scope)
+            LOGGER.info("Resolving field using initialValue: $initialValue, codeScope: ${newContext.codeScope}, selfScope: ${newContext.selfScope}")
+            return TypeResolution.resolveType(newContext, initialValue)
+        }
 
         val getterExpr = getterExpr
         if (getterExpr != null) {
-            val newContext = context.withSelfType(selfType ?: context.selfType)
+            val newContext = context
+                .withCodeScope(getterExpr.scope)
+                .withSelfType(selfType ?: context.selfType)
             return TypeResolution.resolveType(newContext, getterExpr)
         }
 
@@ -54,5 +67,11 @@ class Field(
 
     override fun toString(): String {
         return "Field($selfType.$name=$initialValue)"
+    }
+
+    fun moveToScope(newScope: Scope) {
+        check(declaredScope.fields.remove(this))
+        declaredScope = newScope
+        newScope.addField(this)
     }
 }

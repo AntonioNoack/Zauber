@@ -1853,6 +1853,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (debug) tokens.printTokensInBlocks(i)
         while (i < tokens.size) {
             val oldSize = result.size
+            val oldNumFields = currPackage.fields.size
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
                     throw IllegalStateException("} in the middle at ${tokens.err(i)}")
@@ -1878,11 +1879,16 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             // if expression contains assignment of any kind, or a check-call
             //  we must create a new sub-scope,
             //  because the types of our fields may have changed
-            if (result.size > oldSize && exprSplitsScope(result.last()) &&
-                i < tokens.size
+            if ((result.size > oldSize && exprSplitsScope(result.last()) && i < tokens.size) ||
+                currPackage.fields.size > oldNumFields
             ) {
+                val newFields = currPackage.fields.subList(oldNumFields, currPackage.fields.size)
                 val subName = currPackage.generateName("split")
-                currPackage = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
+                val newScope = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
+                for (field in newFields.reversed()) {
+                    field.moveToScope(newScope)
+                }
+                currPackage = newScope
                 val remainder = readMethodBody()
                 if (remainder.list.isNotEmpty()) result.add(remainder)
                 // else we can skip adding it, I think
