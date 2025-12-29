@@ -18,7 +18,7 @@ class FieldExpression(
 
     override fun resolveType(context: ResolutionContext): Type {
         val generics = findGenericsForMatch(
-            field.selfType, context.selfType,
+            field.selfType, if (field.selfType == null) null else context.selfType,
             field.valueType, context.targetType,
             emptyList(), emptyList(),
             emptyList(), emptyList()

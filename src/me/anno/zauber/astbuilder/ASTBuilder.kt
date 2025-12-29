@@ -746,15 +746,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val keywords = packKeywords()
                     result.add(Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin))
 
-                    if (isVar || isVal) {
-                        // automatically gets added to currPackage...
-                        Field(currPackage, isVar, isVal, selfType, name, type, initialValue, keywords, origin)
-                    } else if (secondaryScope != null) {
-                        Field(
-                            secondaryScope, isVar = false, isVal = false,
-                            selfType, name, type, initialValue, keywords, origin
-                        )
-                    }
+                    val fieldScope = if (isVar || isVal) currPackage else secondaryScope
+                    // automatically gets added to fieldScope
+                    Field(fieldScope, isVar, isVal, selfType, name, type, initialValue, keywords, origin)
 
                     readComma()
                 }
