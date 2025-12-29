@@ -4,7 +4,9 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.Constructor
 import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.tokenizer.Tokenizer
+import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
@@ -19,9 +21,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 // todo test all type-resolution scenarios
@@ -42,8 +42,9 @@ class TypeResolutionTest {
         """.trimIndent(), "?"
             ).tokenize()
             ASTBuilder(tokens, root).readFileLevel()
+            createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
-            TypeResolution.resolveTypesAndNames(testScope)
+            resolveTypesAndNames(testScope)
             val field = testScope.fields.first { it.name == "tested" }
             return field.valueType
                 ?: throw IllegalStateException("Could not resolve type for $field")

@@ -1,6 +1,7 @@
 package me.anno.zauber.astbuilder.expression
 
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -41,11 +42,14 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     open fun hasLambdaOrUnknownGenericsType(): Boolean {
         // todo what about listOf("1,2,3").map{it.split(',').map{it.toInt()}}?
         //  can we somehow hide lambdas? I don't think so...
-        System.err.println("Does (${javaClass.simpleName}) $this contain a lambda? Assuming no for now...")
+        LOGGER.warn("Does (${javaClass.simpleName}) $this contain a lambda? Assuming no for now...")
         return false
     }
 
     companion object {
+
+        private val LOGGER = LogManager.getLogger(Expression::class)
+
         var numExpressionsCreated = 0
             private set
     }

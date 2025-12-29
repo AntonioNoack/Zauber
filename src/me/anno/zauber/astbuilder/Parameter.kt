@@ -10,15 +10,15 @@ class Parameter(
     val isVararg: Boolean,
     val name: String,
     val type: Type,
-    val initialValue: Expression?,
+    val defaultValue: Expression?,
     val scope: Scope,
     val origin: Int
 ) {
     override fun toString(): String {
-        return "${if (isVar) "var " else ""}${if (isVal) "val " else ""}${scope.pathStr}.$name: $type${if (initialValue != null) " = $initialValue" else ""}"
+        return "${if (isVar) "var " else ""}${if (isVal) "val " else ""}${scope.pathStr}.$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
     }
 
     fun clone(scope: Scope): Parameter {
-        return Parameter(isVar, isVal, isVararg, name, type, initialValue?.clone(scope), scope, origin)
+        return Parameter(isVar, isVal, isVararg, name, type, defaultValue?.clone(scope), scope, origin)
     }
 }

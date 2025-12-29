@@ -5,6 +5,7 @@ import me.anno.zauber.astbuilder.controlflow.IfElseBranch
 import me.anno.zauber.astbuilder.expression.*
 import me.anno.zauber.astbuilder.expression.constants.SpecialValue
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Type
@@ -16,6 +17,8 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
     ResolvedCallable<Field>(ownerTypes, callTypes, field, context) {
 
     companion object {
+        private val LOGGER = LogManager.getLogger(ResolvedField::class)
+        
         fun filterTypeByScopeConditions(field: Field, type: Type, context: ResolutionContext): Type {
             // todo filter type based on scope conditions
             // todo branches that return Nothing shall be ignored, and their condition applies even after
@@ -27,7 +30,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
                     type = applyConditionToType(field, type, condition, context)
                 }
 
-                println("Scope-Condition[${scope.pathStr}]: $condition")
+                LOGGER.info("Scope-Condition[${scope.pathStr}]: $condition")
                 scope = scope.parentIfSameFile ?: break
             }
             return type
@@ -56,7 +59,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
                     } else type
                 }
                 else -> {
-                    println("!Ignoring $expr for $field")
+                    LOGGER.info("!Ignoring $expr for $field")
                     type
                 }
             }
@@ -98,7 +101,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
     }
 
     fun getValueType(context: ResolutionContext): Type {
-        println("getting value of $resolved in scope ${context.codeScope.pathStr}")
+        LOGGER.info("getting value of $resolved in scope ${context.codeScope.pathStr}")
 
         val field = resolved
         val ownerNames = field.selfTypeTypeParams

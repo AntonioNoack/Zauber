@@ -1,12 +1,15 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Constructor
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() {
+
+    private val LOGGER = LogManager.getLogger(ConstructorResolver::class)
 
     override fun findMemberInScope(
         scope: Scope?, name: String,
@@ -17,13 +20,13 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>
     ): ResolvedConstructor? {
-        println("Checking $scope for constructor $name")
+        LOGGER.info("Checking $scope for constructor $name")
         scope ?: return null
         if (scope.name == name) {
             val constructor = findMemberInScopeImpl(scope, name, returnType, selfType, typeParameters, valueParameters)
             if (constructor != null) return constructor
         }
-        // println("  children: ${scope.children.map { it.name }}")
+        // LOGGER.info("  children: ${scope.children.map { it.name }}")
         for (child in scope.children) {
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
                 val constructor =
@@ -43,19 +46,19 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
     ): ResolvedConstructor? {
-        println("Checking $scope for constructors")
+        LOGGER.info("Checking $scope for constructors")
         check(scope.name == name)
         for (member in scope.constructors) {
             // if (method.name != name) continue
             if (member.typeParameters.isNotEmpty()) {
-                println("Given $member on $selfType, with target $returnType, can we deduct any generics from that?")
+                LOGGER.info("Given $member on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val match = findMemberMatch(
                 member, member.selfType,
                 returnType,
                 typeParameters, valueParameters,
             )
-            println("Match($member): $match")
+            LOGGER.info("Match($member): $match")
             if (match != null) return match
         }
         return null
@@ -80,6 +83,6 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             constructor.selfType.clazz, constructor.selfType,
             false, returnType
         )
-        return ResolvedConstructor(generics, constructor,context)
+        return ResolvedConstructor(generics, constructor, context)
     }
 }

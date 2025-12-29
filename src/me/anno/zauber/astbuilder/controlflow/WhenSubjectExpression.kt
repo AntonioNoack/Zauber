@@ -4,12 +4,15 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.Field
 import me.anno.zauber.astbuilder.expression.*
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
+
+private val LOGGER = LogManager.getLogger("WhenSubjectExpression")
 
 class SubjectWhenCase(val conditions: List<SubjectCondition?>, val conditionScope: Scope, val body: Expression) {
 
@@ -75,9 +78,9 @@ fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases
             }
         }
         if (false) {
-            println("new-case:")
-            println("  condition: ${condition?.scope?.pathStr}")
-            println("  body: ${case.body.scope.pathStr}")
+            LOGGER.info("new-case:")
+            LOGGER.info("  condition: ${condition?.scope?.pathStr}")
+            LOGGER.info("  body: ${case.body.scope.pathStr}")
         }
         WhenCase(condition, case.body)
     }

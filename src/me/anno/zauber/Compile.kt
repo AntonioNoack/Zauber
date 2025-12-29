@@ -6,6 +6,7 @@ import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
 import me.anno.zauber.generator.c.CSourceGenerator
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.Tokenizer
 import me.anno.zauber.typeresolution.TypeResolution
@@ -39,6 +40,8 @@ import java.io.File
 // todo run C++ compiler
 
 object Compile {
+    
+    private val LOGGER = LogManager.getLogger(Compile::class)
 
     val stdlib = "zauber"
 
@@ -114,15 +117,15 @@ object Compile {
 
         tokenizeSources()
         val t1 = System.nanoTime()
-        println("Took ${(t1 - t0) * 1e-6f} ms Reading & Tokenizing")
+        LOGGER.info("Took ${(t1 - t0) * 1e-6f} ms Reading & Tokenizing")
 
         collectNamedClassesForTypeResolution()
         val t2 = System.nanoTime()
-        println("Took ${(t2 - t1) * 1e-6f} ms Indexing Top-Level Classes")
+        LOGGER.info("Took ${(t2 - t1) * 1e-6f} ms Indexing Top-Level Classes")
 
         buildASTs()
         val t3 = System.nanoTime()
-        println("Took ${(t3 - t2) * 1e-6f} ms Parsing AST")
+        LOGGER.info("Took ${(t3 - t2) * 1e-6f} ms Parsing AST")
 
         // todo when all expressions are parsed, we can replace more names with being method names / specific fields
 
@@ -131,27 +134,27 @@ object Compile {
 
         createDefaultParameterFunctions(root)
         val t4 = System.nanoTime()
-        println("Took ${(t4 - t3) * 1e-6f} ms Parsing AST")
+        LOGGER.info("Took ${(t4 - t3) * 1e-6f} ms Parsing AST")
 
 
         TypeResolution.resolveTypesAndNames(root)
         val t5 = System.nanoTime()
-        println("Took ${(t5 - t4) * 1e-6f} ms Resolving Types")
+        LOGGER.info("Took ${(t5 - t4) * 1e-6f} ms Resolving Types")
 
 
         TypeExpansion.resolveSpecificCalls(root)
         val t6 = System.nanoTime()
-        println("Took ${(t6 - t5) * 1e-6f} ms Resolving Specific Calls")
+        LOGGER.info("Took ${(t6 - t5) * 1e-6f} ms Resolving Specific Calls")
 
 
-        println("Num Expressions: ${Expression.numExpressionsCreated}")
+        LOGGER.info("Num Expressions: ${Expression.numExpressionsCreated}")
         // 658k expressions 😲 (1µs/element at the moment)
 
         CSourceGenerator.generateCode(File("./out/c"), root)
     }
 
     fun printPackages(root: Scope, depth: Int) {
-        println("  ".repeat(depth) + root.name)
+        LOGGER.info("  ".repeat(depth) + root.name)
         for (child in root.children) {
             printPackages(child, depth + 1)
         }

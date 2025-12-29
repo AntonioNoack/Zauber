@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Field
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.FillInParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
@@ -14,6 +15,8 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
 object FieldResolver : MemberResolver<Field, ResolvedField>() {
+
+    private val LOGGER = LogManager.getLogger(FieldResolver::class)
 
     override fun findMemberInScope(
         scope: Scope?, name: String,
@@ -29,7 +32,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         for (field in scope.fields) {
             if (field.name != name) continue
             if (field.typeParameters.isNotEmpty()) {
-                println("Given $field on $selfType, with target $returnType, can we deduct any generics from that?")
+                LOGGER.info("Given $field on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val valueType = if (returnType != null) {
                 getFieldReturnType(scopeSelfType, field)
@@ -47,7 +50,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     private fun getFieldReturnType(scopeSelfType: Type?, field: Field): Type? {
         if (field.valueType == null) {
             val expr = (field.initialValue ?: field.getterExpr)!!
-            println("Resolving valueType($field), initial/getter: $expr")
+            LOGGER.info("Resolving valueType($field), initial/getter: $expr")
             val context = ResolutionContext(
                 field.declaredScope,//.innerScope,
                 field.selfType ?: scopeSelfType,
@@ -85,7 +88,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         var fieldSelfParams = selfTypeToTypeParams(field.selfType)
         var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
         if (fieldSelfType is ClassType && fieldSelfType.clazz.scopeType?.isClassType() != true) {
-            println("Field had invalid selfType: $fieldSelfType")
+            LOGGER.info("Field had invalid selfType: $fieldSelfType")
             fieldSelfType = null
             fieldSelfParams = emptyList()
         }
@@ -119,7 +122,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         typeParameters: List<Type>?,
         origin: Int
     ): Type {
-        println("typeParams: $typeParameters")
+        LOGGER.info("typeParams: $typeParameters")
         val field = resolveField(context, name, typeParameters)
         if (field == null) {
             val selfScope = context.selfScope
@@ -139,7 +142,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     ): ResolvedField? {
         val returnType = context.targetType
         val selfType = context.selfType
-        println("typeParams for field '$name': $typeParameters, selfType: $selfType")
+        LOGGER.info("typeParams for field '$name': $typeParameters, selfType: $selfType")
         val valueParameters = emptyList<ValueParameter>()
         val field = MethodResolver.null1()
             ?: findMemberInHierarchy(context.selfScope, name, returnType, selfType, typeParameters, valueParameters)

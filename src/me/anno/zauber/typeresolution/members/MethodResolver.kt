@@ -3,6 +3,7 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.astbuilder.Method
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
 import me.anno.zauber.astbuilder.expression.Expression
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.FillInParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
@@ -15,6 +16,8 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
+
+    private val LOGGER = LogManager.getLogger(MethodResolver::class)
 
     override fun findMemberInScope(
         scope: Scope?, name: String,
@@ -30,7 +33,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         for (method in scope.methods) {
             if (method.name != name) continue
             if (method.typeParameters.isNotEmpty()) {
-                println("Given $method on $selfType, with target $returnType, can we deduct any generics from that?")
+                LOGGER.info("Given $method on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val methodReturnType = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)
@@ -46,7 +49,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun getMethodReturnType(scopeSelfType: Type?, method: Method): Type? {
         if (method.returnType == null) {
-            if (false) println("Resolving ${method.scope}.type by ${method.body}")
+            if (false) LOGGER.info("Resolving ${method.scope}.type by ${method.body}")
             val context = ResolutionContext(
                 method.scope,
                 method.selfType ?: scopeSelfType,
@@ -118,9 +121,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         if (candidates.isEmpty()) {
             val selfScope = context.selfScope
             val codeScope = context.codeScope
-            println("self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
-            println("code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
-            println("lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
+            LOGGER.info("self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
+            LOGGER.info("code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
+            LOGGER.info("lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
             throw IllegalStateException(
                 "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
                         "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"

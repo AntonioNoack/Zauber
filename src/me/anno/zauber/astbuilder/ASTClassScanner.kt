@@ -2,12 +2,15 @@ package me.anno.zauber.astbuilder
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.astbuilder.ASTBuilder.Companion.fileLevelKeywords
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.SuperCallName
 
 object ASTClassScanner {
+
+    private val LOGGER = LogManager.getLogger(ASTClassScanner::class)
 
     /**
      * to make type-resolution immediately available/resolvable
@@ -50,7 +53,7 @@ object ASTClassScanner {
                 else -> {
 
                     /*if(tokens.equals(i,"Operator")) {
-                        println("Found Operator at ${tokens.err(i)}, $depth, $listen, $listenType")
+                        LOGGER.info("Found Operator at ${tokens.err(i)}, $depth, $listen, $listenType")
                     }*/
 
                     if (depth == 0) {
@@ -116,7 +119,7 @@ object ASTClassScanner {
                                 nextPackage.keywords.add(listenType)
                                 nextPackage.fileName = tokens.fileName
 
-                                // println("discovered $nextPackage")
+                                // LOGGER.info("discovered $nextPackage")
 
                                 var j = i + 1 // after name
                                 if (tokens.equals(j, "<")) {
@@ -134,7 +137,7 @@ object ASTClassScanner {
                                     j++
                                     while (tokens.equals(j, TokenType.NAME)) {
                                         val name = tokens.toString(j++)
-                                        // println("discovered $nextPackage extends $name")
+                                        // LOGGER.info("discovered $nextPackage extends $name")
                                         nextPackage.superCallNames.add(SuperCallName(name, imports))
                                         if (tokens.equals(j, "<")) {
                                             j = tokens.findBlockEnd(j, "<", ">") + 1

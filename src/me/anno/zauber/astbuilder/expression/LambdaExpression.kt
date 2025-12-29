@@ -1,6 +1,7 @@
 package me.anno.zauber.astbuilder.expression
 
 import me.anno.zauber.astbuilder.Field
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.LambdaParameter
@@ -13,6 +14,10 @@ class LambdaExpression(
     val bodyScope: Scope,
     val body: Expression,
 ) : Expression(bodyScope, body.origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(LambdaExpression::class)
+    }
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
         callback(body)
@@ -28,7 +33,7 @@ class LambdaExpression(
     override fun hasLambdaOrUnknownGenericsType(): Boolean = true
 
     override fun resolveType(context: ResolutionContext): Type {
-        println("Handling lambda expression... target: ${context.targetType}")
+        LOGGER.info("Handling lambda expression... target: ${context.targetType}")
         val bodyContext = context
             .withCodeScope(bodyScope)
             .withTargetType(null)
@@ -43,7 +48,7 @@ class LambdaExpression(
                             val param0 = targetLambdaType.parameters[0]
                             val type = param0.type
                             val autoParamName = "it"
-                            println("Inserting $autoParamName into lambda automatically, type: $type")
+                            LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
                             Field(
                                 bodyScope, false, true, null,
                                 autoParamName, type, null,

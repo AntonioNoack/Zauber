@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.astbuilder.SuperCall
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.ResolvedCallable.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -12,6 +13,8 @@ import me.anno.zauber.types.impl.*
  * Check if one type inherits from another, incl. generic checks.
  * */
 object Inheritance {
+
+    private val LOGGER = LogManager.getLogger(Inheritance::class)
 
     fun isSubTypeOf(
         selfTypeIfNeeded: Type?,
@@ -27,7 +30,7 @@ object Inheritance {
             actualTypeParameters.filterNotNull()
         )
         if (expected.type != expectedType) {
-            println("Resolved ${expected.type} to $expectedType for isSubTypeOf")
+            LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
         }
         return isSubTypeOf(
             expectedType,
@@ -44,8 +47,8 @@ object Inheritance {
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
     ): Boolean {
-        println("checking $actualType instanceOf $expectedType")
-        println("  with generics $expectedTypeParams")
+        LOGGER.info("checking $actualType instanceOf $expectedType")
+        LOGGER.info("  with generics $expectedTypeParams")
         val result = isSubTypeOfImpl(
             expectedType,
             actualType,
@@ -53,7 +56,7 @@ object Inheritance {
             actualTypeParameters,
             insertMode,
         )
-        println("  got $result for $actualType instanceOf $expectedType")
+        LOGGER.info("  got $result for $actualType instanceOf $expectedType")
         return result
     }
 
@@ -73,7 +76,7 @@ object Inheritance {
 
         if (typeParamIdx == -1) {
             /*val generallyExpectedType = expectedType.superBounds
-            println("Missing $expectedType for $actualType, falling back to $generallyExpectedType")
+            LOGGER.info("Missing $expectedType for $actualType, falling back to $generallyExpectedType")
             return isSubTypeOf(
                 generallyExpectedType,
                 actualType,
@@ -82,11 +85,11 @@ object Inheritance {
                 insertMode
             )*/
             if (insertMode != InsertMode.WEAK) {
-                System.err.println("Missing generic parameter ${expectedType.name}, ignoring it")
+                LOGGER.warn("Missing generic parameter ${expectedType.name}, ignoring it")
             }// else can be safely ignored ;)
             return true
-            // System.err.println("Missing generic parameter ${expectedType.scope.pathStr}.${expectedType.name}, ignoring it")
-            // System.err.println("Available generic parameters: ${expectedTypeParams.map { "${it.scope.pathStr}.${it.name}" }}")
+            // System.err.LOGGER.info("Missing generic parameter ${expectedType.scope.pathStr}.${expectedType.name}, ignoring it")
+            // System.err.LOGGER.info("Available generic parameters: ${expectedTypeParams.map { "${it.scope.pathStr}.${it.name}" }}")
         }
 
         actualTypeParameters as FillInParameterList
@@ -103,7 +106,7 @@ object Inheritance {
         ) return false
 
         val success = actualTypeParameters.union(typeParamIdx, actualType, insertMode == InsertMode.STRONG)
-        println("Found Type[$success for $actualType @$insertMode]: [$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}")
+        LOGGER.info("Found Type[$success for $actualType @$insertMode]: [$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}")
         return success
     }
 
@@ -244,7 +247,7 @@ object Inheritance {
             return false
         }
 
-        println(
+        LOGGER.info(
             "checkingEq: $expectedType vs $actualType " +
                     "-> ${expectedType == actualType}"
         )
@@ -256,7 +259,7 @@ object Inheritance {
                 val actualGenerics = actualType.typeParameters
                 val expectedGenerics = expectedType.typeParameters
                 if (expectedGenerics == null) {
-                    println("Nothing is expected for generics, matching")
+                    LOGGER.info("Nothing is expected for generics, matching")
                     return true
                 }
 
@@ -266,17 +269,17 @@ object Inheritance {
                                 expectedTypeParams.none { p -> p.scope == it.scope && p.name == it.name }
                     }*/
                 ) {
-                    println("Actual generics unknown -> continue with true (?)")
+                    LOGGER.info("Actual generics unknown -> continue with true (?)")
                     return true
                 }
 
                 val sufficient = actualType.classHasNoTypeParams()
                 val actualSize = actualGenerics?.size ?: if (sufficient) 0 else -1
                 val expectedSize = expectedGenerics.size
-                println("Class vs Class (${actualType.clazz.name}), $actualSize vs $expectedSize, $insertMode")
+                LOGGER.info("Class vs Class (${actualType.clazz.name}), $actualSize vs $expectedSize, $insertMode")
 
                 if (actualSize != expectedSize) {
-                    println("Mismatch in generic count :(")
+                    LOGGER.info("Mismatch in generic count :(")
                     return false
                 }
 
@@ -298,13 +301,13 @@ object Inheritance {
                 return true
             }
 
-            // println("classType of $expectedType: ${expectedType.clazz.scopeType}")
+            // LOGGER.info("classType of $expectedType: ${expectedType.clazz.scopeType}")
 
             // check super class
             // todo if super type has generics, we need to inject them into the super type
             return getSuperCalls(actualType.clazz).any { superCall ->
                 val superType = superCall.type
-                println("super($actualType): $superType")
+                LOGGER.info("super($actualType): $superType")
                 isSubTypeOf(
                     expectedType,
                     superType,
@@ -343,7 +346,7 @@ object Inheritance {
             if (expectedType is GenericType || actualType is GenericType) {
                 val expectedType = if (expectedType is GenericType) expectedType.superBounds else expectedType
                 val actualType = if (actualType is GenericType) actualType.superBounds else expectedType
-                println("Using superBounds...")
+                LOGGER.info("Using superBounds...")
                 return isSubTypeOf(
                     expectedType, actualType,
                     expectedTypeParams, actualTypeParameters,

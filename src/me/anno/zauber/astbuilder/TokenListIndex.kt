@@ -1,9 +1,12 @@
 package me.anno.zauber.astbuilder
 
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import kotlin.math.max
 
 object TokenListIndex {
+
+    private val LOGGER = LogManager.getLogger(TokenListIndex::class)
 
     private val tokenLists = ArrayList<TokenList>()
     private var indices = IntArray(64)
@@ -36,7 +39,7 @@ object TokenListIndex {
         if (idx !in tokenLists.indices) {
             throw IllegalStateException("Failed token search of $i in ${indices.toList()}")
         }
-        // println("$i${indices.copyOf(tokenLists.size).toList()}->$idx -> ${tokenLists[idx].fileName}")
+        if (false) LOGGER.info("$i${indices.copyOf(tokenLists.size).toList()}->$idx -> ${tokenLists[idx].fileName}")
         return tokenLists[idx]
     }
 

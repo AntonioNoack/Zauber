@@ -4,6 +4,7 @@ import me.anno.zauber.Compile
 import me.anno.zauber.astbuilder.NamedParameter
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.astbuilder.expression.Expression
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -17,6 +18,8 @@ import me.anno.zauber.types.impl.UnionType
  * Resolve types step by step, might fail, but should be stable at least.
  * */
 object TypeResolution {
+    
+    private val LOGGER = LogManager.getLogger(TypeResolution::class)
 
     val langScope by lazy { Compile.root.getOrPut("zauber", null) }
 
@@ -52,21 +55,21 @@ object TypeResolution {
         for (field in scope.fields) {
             val initialValue = field.initialValue ?: field.getterExpr
             if (field.valueType == null && initialValue != null) {
-                println("Resolving field $field in scope ${scope.pathStr}")
-                println("fieldSelfType: ${field.selfType}")
-                println("scopeSelfType: $scopeSelfType")
+                LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
+                LOGGER.info("fieldSelfType: ${field.selfType}")
+                LOGGER.info("scopeSelfType: $scopeSelfType")
                 //try {
                 val selfType = field.selfType ?: scopeSelfType
                 val context = ResolutionContext(field.declaredScope, selfType, false, null)
                 field.valueType = resolveType(context, initialValue)
-                println("Resolved $field to ${field.valueType}")
+                LOGGER.info("Resolved $field to ${field.valueType}")
                 /*} catch (e: Throwable) {
                     e.printStackTrace()
                     // continue anyway for now
                 }*/
             }
         }
-        if (false) println("${scope.fileName}: ${scope.pathStr}, ${scope.fields.size}f, ${scope.methods.size}m, ${scope.code.size}c")
+        if (false) LOGGER.info("${scope.fileName}: ${scope.pathStr}, ${scope.fields.size}f, ${scope.methods.size}m, ${scope.code.size}c")
     }
 
     fun getSelfType(scope: Scope): Type? {
@@ -100,9 +103,9 @@ object TypeResolution {
         if (alreadyResolved != null) {
             return alreadyResolved
         } else {
-            println("Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
+            LOGGER.info("Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
             val type = expr.resolveType(context)
-            println("Resolved type of $expr to $type")
+            LOGGER.info("Resolved type of $expr to $type")
             expr.resolvedType = type
             return type
         }
@@ -127,7 +130,7 @@ object TypeResolution {
     fun resolveThisType(scope: Scope): Scope {
         var scope = scope
         while (true) {
-            println("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
+            LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
             val scopeType = scope.scopeType
             when {
                 scopeType != null && scopeType.isClassType() -> return scope
@@ -136,7 +139,7 @@ object TypeResolution {
                     val self = func.selfType
                     if (self != null) {
                         val selfScope = typeToScope(self)!!
-                        println("Method-SelfType[${scope.pathStr}]: $self -> $selfScope")
+                        LOGGER.info("Method-SelfType[${scope.pathStr}]: $self -> $selfScope")
                         return resolveThisType(selfScope)
                     }
                 }

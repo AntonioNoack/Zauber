@@ -1,9 +1,14 @@
 package me.anno.zauber.tokenizer
 
+import me.anno.zauber.logging.LogManager
 import kotlin.math.max
 
 // could be placed into a token list...
 class TokenList(val src: String, val fileName: String) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(TokenList::class)
+    }
 
     var size = 0
     var tliIndex = -1
@@ -31,13 +36,13 @@ class TokenList(val src: String, val fileName: String) {
     ): R = push(findBlockEnd(i, openStr, closeStr), readImpl)
 
     fun findBlockEnd(i: Int, open: TokenType, close: TokenType): Int {
-       check(equals(i, open))
+        check(equals(i, open))
         var depth = 1
         var j = i + 1
         while (depth > 0) {
             if (j >= size) {
                 printTokensInBlocks(i, open, close)
-                System.err.println("Could not find block end for $open/$close at ${err(i)}, #${size - i}")
+                LOGGER.warn("Could not find block end for $open/$close at ${err(i)}, #${size - i}")
                 return size
             }
             when (getType(j++)) {
@@ -61,7 +66,7 @@ class TokenList(val src: String, val fileName: String) {
                 else -> {}
             }
             if (depth < 0) break
-            println("  ".repeat(depth) + "$j: ${getType(j)} '${toString(j)}'")
+            LOGGER.info("  ".repeat(depth) + "$j: ${getType(j)} '${toString(j)}'")
             when (getType(j)) {
                 open, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
                 else -> {}

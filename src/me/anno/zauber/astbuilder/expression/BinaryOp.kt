@@ -4,7 +4,10 @@ import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.NamedParameter
 import me.anno.zauber.astbuilder.expression.constants.SpecialValue
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
+
+private val LOGGER = LogManager.getLogger("BinaryOp")
 
 private fun compareTo(left: Expression, right: Expression) =
     NamedCallExpression(
@@ -104,7 +107,7 @@ fun lookupBinaryOp(symbol: String): String {
         "in" -> "contains"
         ".", ".?", "?:" -> symbol
         else -> {
-            println("unknown binary op: $symbol")
+            LOGGER.warn("Unknown binary op: $symbol")
             symbol
         }
     }

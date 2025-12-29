@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.FillInParameterList
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -16,6 +17,7 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
 
     companion object {
+        private val LOGGER = LogManager.getLogger(MemberResolver::class)
 
         fun findGenericsForMatch(
             expectedSelfType: Type?,
@@ -37,14 +39,14 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
 
             // todo objects don't need actualSelfType, if properly in scope or imported...
             if ((expectedSelfType != null) != (actualSelfType != null)) {
-                println("selfType mismatch: $expectedSelfType vs $actualSelfType")
+                LOGGER.info("selfType mismatch: $expectedSelfType vs $actualSelfType")
                 return null
             }
 
-            println("checking types: $expectedTypeParameters vs $actualTypeParameters")
-            println("  and   values: $expectedValueParameters vs $actualValueParameters")
-            println("  and   selves: $expectedSelfType vs $actualSelfType")
-            println("  and  returns: $expectedReturnType vs $actualReturnType")
+            LOGGER.info("checking types: $expectedTypeParameters vs $actualTypeParameters")
+            LOGGER.info("  and   values: $expectedValueParameters vs $actualValueParameters")
+            LOGGER.info("  and   selves: $expectedSelfType vs $actualSelfType")
+            LOGGER.info("  and  returns: $expectedReturnType vs $actualReturnType")
 
             // first match everything by name
             // todo resolve default values... -> could be expanded earlier :)
@@ -53,24 +55,24 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             val isVararg = expectedValueParameters.lastOrNull()?.isVararg == true
             if (isVararg) {
                 if (expectedValueParameters.size > actualValueParameters.size) {
-                    println("param-size too low")
+                    LOGGER.info("param-size too low")
                     return null
                 }
             } else {
                 if (expectedValueParameters.size != actualValueParameters.size) {
-                    println("param-size mismatch: expected ${expectedValueParameters.size}, but got ${actualValueParameters.size}")
+                    LOGGER.info("param-size mismatch: expected ${expectedValueParameters.size}, but got ${actualValueParameters.size}")
                     return null
                 }
             }
 
             if (actualTypeParameters != null && actualTypeParameters.size != expectedTypeParameters.size) {
-                println("type-param-size mismatch: expected ${expectedTypeParameters.size}, but got ${actualTypeParameters.size}")
+                LOGGER.info("type-param-size mismatch: expected ${expectedTypeParameters.size}, but got ${actualTypeParameters.size}")
                 return null
             }
 
             val sortedValueParameters = resolveNamedParameters(expectedValueParameters, actualValueParameters)
                 ?: run {
-                    println("param-name mismatch")
+                    LOGGER.info("param-name mismatch")
                     return null
                 }
 
@@ -79,7 +81,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
 
             val findGenericTypes = actualTypeParameters == null
 
-            // println("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
+            // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
             val matchesSelfType = expectedSelfType == null || isSubTypeOf(
                 expectedSelfType, actualSelfType!!,
                 expectedTypeParameters,
@@ -88,13 +90,13 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             )
 
             if (!matchesSelfType) {
-                println("selfType-mismatch: $actualSelfType !is $expectedSelfType")
+                LOGGER.info("selfType-mismatch: $actualSelfType !is $expectedSelfType")
                 return null
             }
 
             // todo this should only be executed sometimes...
             //  missing generic parameters can be temporarily inserted...
-            // println("matchesReturnType($expectedReturnType vs $actualReturnType)")
+            // LOGGER.info("matchesReturnType($expectedReturnType vs $actualReturnType)")
             val matchesReturnType = expectedReturnType == null || actualReturnType == null ||
                     isSubTypeOf(
                         expectedReturnType,
@@ -105,7 +107,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     )
 
             if (!matchesReturnType) {
-                println("returnType-mismatch: $actualReturnType !is $expectedReturnType")
+                LOGGER.info("returnType-mismatch: $actualReturnType !is $expectedReturnType")
                 return null
             }
 
@@ -137,14 +139,14 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     )
                 ) {
                     val type = vParam.getType(mvParam.type)
-                    println("type mismatch: $type is not always a ${mvParam.type}")
+                    LOGGER.info("type mismatch: $type is not always a ${mvParam.type}")
                     return null
                 }
             }
 
             val immutableList =
                 if (resolvedTypes is FillInParameterList) resolvedTypes.types.asList() else resolvedTypes
-            println("Found match: $immutableList")
+            LOGGER.info("Found match: $immutableList")
             return immutableList as List<Type>
         }
 

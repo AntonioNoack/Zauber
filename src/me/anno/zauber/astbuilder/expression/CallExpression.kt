@@ -2,6 +2,7 @@ package me.anno.zauber.astbuilder.expression
 
 import me.anno.zauber.astbuilder.NamedParameter
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
@@ -21,6 +22,10 @@ class CallExpression(
     val valueParameters: List<NamedParameter>,
     origin: Int
 ) : Expression(base.scope, origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(CallExpression::class)
+    }
 
     init {
         check(base !is NameExpression || base.name != "?.")
@@ -53,7 +58,7 @@ class CallExpression(
     override fun resolveType(context: ResolutionContext): Type {
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
-        println("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
+        LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
         // todo base can be a constructor, field or a method
         // todo find the best matching candidate...
         val returnType = context.targetType
@@ -63,7 +68,7 @@ class CallExpression(
             }
             is NameExpression -> {
                 val name = base.name
-                println("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+                LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
                 val constructor = null1()
@@ -76,7 +81,7 @@ class CallExpression(
             }
             is ImportedExpression -> {
                 val name = base.nameAsImport.name
-                println("Find call '$name' with nameAsImport=${base.nameAsImport}")
+                LOGGER.info("Find call '$name' with nameAsImport=${base.nameAsImport}")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
                 val constructor =
