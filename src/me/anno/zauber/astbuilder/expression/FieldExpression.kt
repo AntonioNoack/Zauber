@@ -23,7 +23,9 @@ class FieldExpression(
             emptyList(), emptyList(),
             emptyList(), emptyList()
         )
-        check(generics != null)
+        check(generics != null) {
+            "Resolved field $field, but somehow the generics were incompatible???"
+        }
         val resolved = ResolvedField(generics, field, emptyList(), context)
         return resolved.getValueType(context)
     }

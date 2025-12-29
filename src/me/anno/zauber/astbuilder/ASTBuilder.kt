@@ -139,9 +139,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (tokens.equals(i, "constructor")) i++
         val constructorOrigin = origin(i)
         val constructorParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            pushScope(clazz.getOrCreatePrimConstructorScope()) {
+            val primScope = clazz.getOrCreatePrimConstructorScope()
+            pushScope(primScope) {
                 val selfType = ClassType(clazz, null)
-                pushCall { readParamDeclarations(selfType) }
+                pushCall { readParamDeclarations(selfType, primScope) }
             }
         } else null
 
@@ -333,15 +334,19 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             readType(selfType, true)
         } else null
 
-        val initialValue = if (tokens.equals(i, "=")) {
-            i++
-            // todo find reasonable end index, e.g. fun, class, private, object, and limit to that
-            readExpression()
-        } else if (tokens.equals(i, "by")) {
-            i++
-            // todo find reasonable end index, e.g. fun, class, private, object, and limit to that
-            DelegateExpression(readExpression())
-        } else null
+        val primScope = fieldScope.getOrCreatePrimConstructorScope()
+        val initialValue = pushScope(primScope) {
+            // println("Fields in primary constructor for $primScope: ${primScope.fields}")
+            if (tokens.equals(i, "=")) {
+                i++
+                // todo find reasonable end index, e.g. fun, class, private, object, and limit to that
+                readExpression()
+            } else if (tokens.equals(i, "by")) {
+                i++
+                // todo find reasonable end index, e.g. fun, class, private, object, and limit to that
+                DelegateExpression(readExpression())
+            } else null
+        }
 
         val field = Field(
             currPackage, isVar, !isVar, selfType,
@@ -445,7 +450,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         pushScope(methodScope) {
             parameters = pushCall {
                 val selfType = ClassType(clazz, null)
-                readParamDeclarations(selfType)
+                readParamDeclarations(selfType, methodScope)
             }
         }
 
@@ -493,9 +498,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         check(tokens.equals(i, TokenType.OPEN_CALL))
         lateinit var parameters: List<Parameter>
         val clazz = currPackage
-        val innerScope = pushScope("constructor", ScopeType.CONSTRUCTOR_PARAMS) { scope ->
+        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR_PARAMS) { scope ->
             val selfType = ClassType(clazz, null)
-            parameters = pushCall { readParamDeclarations(selfType) }
+            parameters = pushCall { readParamDeclarations(selfType, scope) }
             scope
         }
 
@@ -514,7 +519,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         } else null
 
         // body (or just = expression)
-        val body = pushScope(innerScope) {
+        val body = pushScope(constructorScope) {
             if (tokens.equals(i, "=")) {
                 i++ // skip =
                 readExpression()
@@ -524,10 +529,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         val constructor = Constructor(
-            parameters, innerScope,
+            parameters, constructorScope,
             superCall, body, keywords, origin
         )
-        innerScope.selfAsConstructor = constructor
+        constructorScope.selfAsConstructor = constructor
         return constructor
     }
 
@@ -704,7 +709,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return params
     }
 
-    fun readParamDeclarations(selfType: Type?): List<Parameter> {
+    fun readParamDeclarations(
+        selfType: Type?,
+        secondaryScope: Scope
+    ): List<Parameter> {
         // todo when this has its own '=', this needs its own scope...,
         //  and that scope could be inherited by the function body...
         val result = ArrayList<Parameter>()
@@ -741,6 +749,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     if (isVar || isVal) {
                         // automatically gets added to currPackage...
                         Field(currPackage, isVar, isVal, selfType, name, type, initialValue, keywords, origin)
+                    } else if (secondaryScope != null) {
+                        Field(
+                            secondaryScope, isVar = false, isVal = false,
+                            selfType, name, type, initialValue, keywords, origin
+                        )
                     }
 
                     readComma()
@@ -1244,7 +1257,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val catches = ArrayList<Catch>()
         while (tokens.equals(i, "catch")) {
             check(tokens.equals(++i, TokenType.OPEN_CALL))
-            val params = pushCall { readParamDeclarations(null) }
+            val catchName = currPackage.generateName("catch")
+            val catchScope = currPackage.getOrPut(catchName, ScopeType.METHOD_BODY)
+            val params = pushCall { readParamDeclarations(null, catchScope) }
             check(params.size == 1)
             val handler = readBodyOrExpression()
             catches.add(Catch(params[0], handler))
