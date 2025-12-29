@@ -45,7 +45,7 @@ class NamedCallExpression(
     }
 
     override fun toStringImpl(depth: Int): String {
-        val base = if (depth < 0) "${base.javaClass.simpleName}..." else base.toString(depth)
+        val base = base.toString(depth)
         return if (typeParameters.isNullOrEmpty() && name == "." &&
             valueParameters.size == 1 &&
             when (valueParameters[0].value) {
@@ -61,9 +61,7 @@ class NamedCallExpression(
                 "($base).${valueParameters[0].value.toString(depth)}"
             }
         } else {
-            val valueParameters = valueParameters.joinToString(", ", "(", ")") {
-                if (depth < 0) "${it.javaClass.simpleName}..." else it.toString(depth)
-            }
+            val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
             if (typeParameters != null && typeParameters.isEmpty()) {
                 "($base).$name$valueParameters"
             } else {

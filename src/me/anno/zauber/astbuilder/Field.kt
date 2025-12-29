@@ -70,7 +70,7 @@ class Field(
     }
 
     fun toString(depth: Int): String {
-        return if (initialValue == null || depth < 0) {
+        return if (initialValue == null) {
             "Field($selfType.$name)"
         } else {
             "Field($selfType.$name=${initialValue.toString(depth)})"
