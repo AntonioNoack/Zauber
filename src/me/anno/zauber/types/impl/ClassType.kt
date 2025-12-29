@@ -30,14 +30,13 @@ class ClassType(val clazz: Scope, val typeParameters: List<Type>?) : Type() {
         return clazz.hasTypeParameters && clazz.typeParameters.isEmpty()
     }
 
-    override fun toString(depth: Int): String {
+    override fun toStringImpl(depth: Int): String {
         val className = if (clazz.name == "Companion") clazz.pathStr else clazz.name
         var asString = className
         if (typeParameters == null || typeParameters.isNotEmpty()) {
             asString += if (depth > 0) {
-                val newDepth = depth - 1
                 typeParameters?.joinToString(",", "<", ">") {
-                    it.toString(newDepth)
+                    it.toString(depth)
                 } ?: "<?>"
             } else {
                 "..."

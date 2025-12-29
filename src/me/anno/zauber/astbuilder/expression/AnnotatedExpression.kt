@@ -11,7 +11,7 @@ class AnnotatedExpression(val annotation: Annotation, val base: Expression) : Ex
         callback(base)
     }
 
-    override fun toString(depth: Int): String {
+    override fun toStringImpl(depth: Int): String {
         return "$annotation${base.toString(depth)}"
     }
 

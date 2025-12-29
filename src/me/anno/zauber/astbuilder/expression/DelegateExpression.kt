@@ -11,8 +11,8 @@ class DelegateExpression(val delegate: Expression) : Expression(delegate.scope, 
         callback(delegate)
     }
 
-    override fun toString(depth: Int): String {
-        return "by ${delegate.toString(depth - 1)}"
+    override fun toStringImpl(depth: Int): String {
+        return "by ${delegate.toString(depth)}"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

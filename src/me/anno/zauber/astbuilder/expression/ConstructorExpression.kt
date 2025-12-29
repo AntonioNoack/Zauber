@@ -18,8 +18,8 @@ class ConstructorExpression(
         }
     }
 
-    override fun toString(depth: Int): String {
-        return "new($clazz)(${params.joinToString { it.toString(depth - 1) }})"
+    override fun toStringImpl(depth: Int): String {
+        return "new($clazz)(${params.joinToString { it.toString(depth) }})"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

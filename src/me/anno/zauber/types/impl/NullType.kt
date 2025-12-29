@@ -7,7 +7,7 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
  * Exactly null
  * */
 object NullType : Type() {
-    override fun toString(depth: Int): String = "NullType"
+    override fun toStringImpl(depth: Int): String = "NullType"
 
     fun typeOrNull(base: Type): Type {
         return unionTypes(base, NullType)

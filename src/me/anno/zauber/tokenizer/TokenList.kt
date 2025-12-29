@@ -167,7 +167,7 @@ class TokenList(val src: String, val fileName: String) {
     }
 
     override fun toString(): String {
-        return (0 until size).map { i ->
+        return List(size) { i ->
             "${getType(i)}(${toString(i)})"
         }.toString()
     }

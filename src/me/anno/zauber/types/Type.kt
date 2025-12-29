@@ -1,11 +1,6 @@
 package me.anno.zauber.types
 
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.LambdaType
-import me.anno.zauber.types.impl.NotType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.impl.*
 
 abstract class Type {
     fun containsGenerics(): Boolean {
@@ -19,8 +14,11 @@ abstract class Type {
         }
     }
 
-    abstract fun toString(depth: Int): String
-    override fun toString(): String = toString(10)
+    abstract fun toStringImpl(depth: Int): String
+    override fun toString(): String = toStringImpl(10)
+    fun toString(depth: Int): String {
+        return if (depth >= 0) toStringImpl(depth - 1) else "${javaClass.simpleName}..."
+    }
 
     open fun not(): Type = NotType(this)
 }

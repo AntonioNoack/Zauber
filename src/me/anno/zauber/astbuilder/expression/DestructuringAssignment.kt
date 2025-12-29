@@ -14,9 +14,9 @@ class DestructuringAssignment(
         callback(initialValue)
     }
 
-    override fun toString(depth: Int): String {
+    override fun toStringImpl(depth: Int): String {
         return (if (isVar) if (isLateinit) "lateinit var" else "var " else "val ") +
-                "(${names.joinToString()}) = ${initialValue.toString(depth - 1)}"
+                "(${names.joinToString()}) = ${initialValue.toString(depth)}"
     }
 
     override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)

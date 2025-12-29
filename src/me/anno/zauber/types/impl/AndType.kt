@@ -34,9 +34,8 @@ class AndType(val types: List<Type>) : Type() {
         check(types.size >= 2)
     }
 
-    override fun toString(depth: Int): String {
-        val newDepth = depth - 1
-        return "AndType(${types.joinToString { it.toString(newDepth) }})"
+    override fun toStringImpl(depth: Int): String {
+        return "AndType(${types.joinToString { it.toString(depth) }})"
     }
 
     override fun equals(other: Any?): Boolean {

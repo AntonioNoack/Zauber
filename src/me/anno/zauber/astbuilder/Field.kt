@@ -66,10 +66,14 @@ class Field(
     }
 
     override fun toString(): String {
-        return if (initialValue == null) {
+        return toString(10)
+    }
+
+    fun toString(depth: Int): String {
+        return if (initialValue == null || depth < 0) {
             "Field($selfType.$name)"
         } else {
-            "Field($selfType.$name=${initialValue.toString(3)})"
+            "Field($selfType.$name=${initialValue.toString(depth)})"
         }
     }
 

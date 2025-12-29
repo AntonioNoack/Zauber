@@ -19,8 +19,8 @@ class AssignmentExpression(var variableName: Expression, var newValue: Expressio
         callback(newValue)
     }
 
-    override fun toString(depth: Int): String {
-        return "$variableName=${newValue.toString(depth - 1)}"
+    override fun toStringImpl(depth: Int): String {
+        return "$variableName=${newValue.toString(depth)}"
     }
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false // this has no return type

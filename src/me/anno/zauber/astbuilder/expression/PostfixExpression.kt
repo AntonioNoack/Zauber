@@ -11,8 +11,8 @@ class PostfixExpression(val base: Expression, val type: PostfixType, origin: Int
         callback(base)
     }
 
-    override fun toString(depth: Int): String {
-        return "${base.toString(depth - 1)}${type.symbol}"
+    override fun toStringImpl(depth: Int): String {
+        return "${base.toString(depth)}${type.symbol}"
     }
 
     override fun clone(scope: Scope) = PostfixExpression(base.clone(scope), type, origin)

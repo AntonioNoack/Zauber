@@ -13,8 +13,8 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
         callback(body)
     }
 
-    override fun toString(depth: Int): String {
-        return "${if (label != null) "$label@" else ""} while(${condition.toString(depth - 1)}) { ${body.toString(depth - 1)} }"
+    override fun toStringImpl(depth: Int): String {
+        return "${if (label != null) "$label@" else ""} while(${condition.toString(depth)}) { ${body.toString(depth)} }"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

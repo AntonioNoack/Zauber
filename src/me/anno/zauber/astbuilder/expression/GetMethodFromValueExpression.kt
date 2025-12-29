@@ -11,8 +11,8 @@ class GetMethodFromValueExpression(val base: Expression, val name: String, origi
     Expression(base.scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(depth: Int): String {
-        return "${base.toString(depth - 1)}::$name"
+    override fun toStringImpl(depth: Int): String {
+        return "${base.toString(depth)}::$name"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

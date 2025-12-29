@@ -8,14 +8,13 @@ import me.anno.zauber.types.Type
  * (A,B,C) -> R
  * */
 class LambdaType(val parameters: List<LambdaParameter>, val returnType: Type) : Type() {
-    override fun toString(depth: Int): String {
-        val newDepth = depth - 1
+    override fun toStringImpl(depth: Int): String {
         return "LambdaType((${
             parameters.joinToString(", ") {
-                if (it.name != null) "${it.name}=${it.type.toString(newDepth)}"
-                else it.type.toString(newDepth)
+                if (it.name != null) "${it.name}=${it.type.toString(depth)}"
+                else it.type.toString(depth)
             }
-        }) -> ${returnType.toString(newDepth)})"
+        }) -> ${returnType.toString(depth)})"
     }
 
     override fun equals(other: Any?): Boolean {

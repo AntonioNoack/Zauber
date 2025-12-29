@@ -18,11 +18,11 @@ class GenericType(val scope: Scope, val name: String) : Type() {
     val superBounds: Type
         get() = byTypeParameter.type
 
-    override fun toString(depth: Int): String {
-        return if (superBounds == NullableAnyType && depth > 0) {
+    override fun toStringImpl(depth: Int): String {
+        return if (superBounds == NullableAnyType) {
             "${scope.pathStr}.$name"
         } else {
-            "(${scope.pathStr}.$name: ${superBounds.toString(depth - 1)})"
+            "(${scope.pathStr}.$name: ${superBounds.toString(depth)})"
         }
     }
 

@@ -11,8 +11,8 @@ class PrefixExpression(val type: PrefixType, origin: Int, val base: Expression) 
         callback(base)
     }
 
-    override fun toString(depth: Int): String {
-        return "${type.symbol}${base.toString(depth - 1)}"
+    override fun toStringImpl(depth: Int): String {
+        return "${type.symbol}${base.toString(depth)}"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

@@ -27,7 +27,7 @@ class ConditionedType(val base: Type, val conditions: List<Condition>): Type() {
         PREDICATE_FUNCTION
     }
 
-    override fun toString(depth: Int): String {
+    override fun toStringImpl(depth: Int): String {
         TODO("Not yet implemented")
     }
 }

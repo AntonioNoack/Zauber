@@ -13,9 +13,9 @@ class ReturnExpression(val value: Expression?, val label: String?, scope: Scope,
         if (value != null) callback(value)
     }
 
-    override fun toString(depth: Int): String {
+    override fun toStringImpl(depth: Int): String {
         return if (value == null) "return"
-        else "return ${value.toString(depth - 1)}"
+        else "return ${value.toString(depth)}"
     }
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false // type is known: Nothing

@@ -10,8 +10,8 @@ class CompareOp(val value: Expression, val type: CompareType) : Expression(value
         callback(value)
     }
 
-    override fun toString(depth: Int): String {
-        return "(${value.toString(depth - 1)}) ${type.symbol} 0"
+    override fun toStringImpl(depth: Int): String {
+        return "(${value.toString(depth)}) ${type.symbol} 0"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

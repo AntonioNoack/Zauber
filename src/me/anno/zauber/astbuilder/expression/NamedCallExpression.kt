@@ -44,8 +44,7 @@ class NamedCallExpression(
                 valueParameters.any { it.value.hasLambdaOrUnknownGenericsType() }
     }
 
-    override fun toString(depth: Int): String {
-        val depth = depth - 1
+    override fun toStringImpl(depth: Int): String {
         val base = if (depth < 0) "${base.javaClass.simpleName}..." else base.toString(depth)
         return if (typeParameters.isNullOrEmpty() && name == "." &&
             valueParameters.size == 1 &&

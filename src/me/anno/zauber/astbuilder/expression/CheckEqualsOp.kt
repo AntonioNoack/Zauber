@@ -24,8 +24,7 @@ class CheckEqualsOp(
             else -> "=="
         }
 
-    override fun toString(depth: Int): String {
-        val depth = depth - 1
+    override fun toStringImpl(depth: Int): String {
         return "(${left.toString(depth)})$symbol(${right.toString(depth)})"
     }
 
