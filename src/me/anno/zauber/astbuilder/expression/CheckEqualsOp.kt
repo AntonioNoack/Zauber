@@ -24,11 +24,13 @@ class CheckEqualsOp(
             else -> "=="
         }
 
-    override fun toString(): String {
-        return "($left)$symbol($right)"
+    override fun toString(depth: Int): String {
+        val depth = depth - 1
+        return "(${left.toString(depth)})$symbol(${right.toString(depth)})"
     }
 
     override fun resolveType(context: ResolutionContext): Type = BooleanType
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false // result is always Boolean
-    override fun clone(scope: Scope) = CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
+    override fun clone(scope: Scope) =
+        CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
 }

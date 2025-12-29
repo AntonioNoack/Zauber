@@ -15,8 +15,10 @@ class IsInstanceOfExpr(val left: Expression, val right: Type, val negated: Boole
         callback(left)
     }
 
-    override fun toString(): String {
-        return "($left)${if (negated) "!is" else "is"}($right)"
+    val symbol: String get() = if (negated) "!is" else "is"
+
+    override fun toString(depth: Int): String {
+        return "(${left.toString(depth - 1)})$symbol($right)"
     }
 
     override fun resolveType(context: ResolutionContext): Type = BooleanType

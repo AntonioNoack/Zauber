@@ -11,7 +11,7 @@ class DoubleColonPrefix(val left: Scope, val methodName: String, scope: Scope, o
     Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(): String {
+    override fun toString(depth: Int): String {
         return "($left)::$methodName"
     }
 

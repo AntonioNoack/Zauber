@@ -2,12 +2,11 @@ package me.anno.zauber.astbuilder.expression
 
 import me.anno.zauber.astbuilder.NamedParameter
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveFieldType
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
-import me.anno.zauber.types.BooleanUtils.and
+import me.anno.zauber.typeresolution.members.FieldResolver.resolveFieldType
+import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -45,27 +44,28 @@ class NamedCallExpression(
                 valueParameters.any { it.value.hasLambdaOrUnknownGenericsType() }
     }
 
-    override fun toString(): String {
-        return when {
-            typeParameters.isNullOrEmpty() && name == "." &&
-                    valueParameters.size == 1 &&
-                    when (valueParameters[0].value) {
-                        is NameExpression,
-                        is CallExpression,
-                        is NamedCallExpression -> true
-                        else -> false
-                    } -> {
-                if (base is NameExpression) {
-                    "$base.${valueParameters[0].value}"
-                } else {
-                    "($base).${valueParameters[0].value}"
-                }
+    override fun toString(depth: Int): String {
+        val depth = depth - 1
+        return if (typeParameters.isNullOrEmpty() && name == "." &&
+            valueParameters.size == 1 &&
+            when (valueParameters[0].value) {
+                is NameExpression,
+                is CallExpression,
+                is NamedCallExpression -> true
+                else -> false
             }
-            typeParameters != null && typeParameters.isEmpty() -> {
-                "($base).$name(${valueParameters.joinToString()})"
+        ) {
+            if (base is NameExpression) {
+                "$base.${valueParameters[0].value.toString(depth)}"
+            } else {
+                "($base).${valueParameters[0].value.toString(depth)}"
             }
-            else -> {
-                "($base).$name<${typeParameters?.joinToString() ?: "?"}>(${valueParameters.joinToString()})"
+        } else {
+            val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
+            if (typeParameters != null && typeParameters.isEmpty()) {
+                "($base).$name$valueParameters"
+            } else {
+                "($base).$name<${typeParameters?.joinToString() ?: "?"}>$valueParameters"
             }
         }
     }

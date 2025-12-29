@@ -16,8 +16,8 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         callback(right)
     }
 
-    override fun toString(): String {
-        return "$left $symbol $right"
+    override fun toString(depth: Int): String {
+        return "${left.toString(depth - 1)} $symbol ${right.toString(depth - 1)}"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

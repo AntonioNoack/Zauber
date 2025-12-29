@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 
 class BreakExpression(val label: String?, scope: Scope, origin: Int) : Expression(scope, origin) {
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(): String {
+    override fun toString(depth: Int): String {
         return if (label != null) "break@$label" else "break"
     }
 

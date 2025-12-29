@@ -59,11 +59,12 @@ class IfElseBranch(val condition: Expression, val ifBranch: Expression, val else
                 (ifBranch.hasLambdaOrUnknownGenericsType() || elseBranch.hasLambdaOrUnknownGenericsType())
     }
 
-    override fun toString(): String {
+    override fun toString(depth: Int): String {
+        val depth = depth - 1
         return if (elseBranch == null) {
-            "if($condition) { $ifBranch }"
+            "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} }"
         } else {
-            "if($condition) { $ifBranch } else { $elseBranch }"
+            "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} } else { ${elseBranch.toString(depth)} }"
         }
     }
 

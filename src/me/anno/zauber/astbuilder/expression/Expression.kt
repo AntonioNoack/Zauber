@@ -34,6 +34,9 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * */
     abstract fun clone(scope: Scope): Expression
 
+    override fun toString(): String = toString(10)
+    abstract fun toString(depth: Int): String
+
     /**
      * returns whether the type of this has a lambda, or some other unknown generics inside;
      * for lambdas, we need to know, because usually no other type information is available;

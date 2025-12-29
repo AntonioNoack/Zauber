@@ -11,8 +11,8 @@ class AnnotatedExpression(val annotation: Annotation, val base: Expression) : Ex
         callback(base)
     }
 
-    override fun toString(): String {
-        return "$annotation$base"
+    override fun toString(depth: Int): String {
+        return "$annotation${base.toString(depth)}"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

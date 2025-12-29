@@ -8,7 +8,7 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
     Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(): String {
+    override fun toString(depth: Int): String {
         return "$base::$name"
     }
 

@@ -81,7 +81,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
                 is IfElseBranch -> expr.elseBranch != null && // unlikely
                         exprIsField(field, expr.ifBranch, context) &&
                         exprIsField(field, expr.elseBranch, context)
-                else -> TODO("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
+                else -> throw NotImplementedError("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
             }
         }
 
@@ -89,7 +89,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
             return when (expr) {
                 is SpecialValueExpression if expr.value == SpecialValue.NULL -> NullType
                 is NamedCallExpression, is CallExpression -> null // we could check their return type...
-                else -> TODO("Get unique value for $expr (${expr.javaClass.simpleName})")
+                else -> throw NotImplementedError("Get unique value for $expr (${expr.javaClass.simpleName})")
             }
         }
     }
@@ -105,13 +105,13 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
 
         val field = resolved
         val ownerNames = field.selfTypeTypeParams
-        val context = context.withSelfType(field.selfType)
-        val selfType = if (field.selfType != null) context.selfType else null
+        val selfType = field.selfType
 
         val valueType = field.deductValueType(context)
         val forType = resolveGenerics(selfType, valueType, ownerNames, ownerTypes)
         val forCall = resolveGenerics(selfType, forType, field.typeParameters, callTypes)
 
+        val context = context.withSelfType(field.selfType)
         return filterTypeByScopeConditions(field, forCall, context)
     }
 

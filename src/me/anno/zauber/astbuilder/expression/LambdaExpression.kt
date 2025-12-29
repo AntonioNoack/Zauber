@@ -23,8 +23,8 @@ class LambdaExpression(
         callback(body)
     }
 
-    override fun toString(): String {
-        return "LambdaExpr(${variables ?: "?"} -> $body)"
+    override fun toString(depth: Int): String {
+        return "LambdaExpr(${variables ?: "?"} -> ${body.toString(depth - 1)})"
     }
 
     // scope cannot be changed that easily, like with branches and loops

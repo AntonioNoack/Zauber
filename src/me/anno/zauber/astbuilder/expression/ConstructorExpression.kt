@@ -18,13 +18,14 @@ class ConstructorExpression(
         }
     }
 
-    override fun toString(): String {
-        return "new($clazz)($params)"
+    override fun toString(depth: Int): String {
+        return "new($clazz)(${params.joinToString { it.toString(depth - 1) }})"
     }
 
     override fun resolveType(context: ResolutionContext): Type {
         return ClassType(clazz, typeParams)
     }
 
-    override fun clone(scope: Scope) = ConstructorExpression(clazz, typeParams, params.map { it.clone(scope) }, scope, origin)
+    override fun clone(scope: Scope) =
+        ConstructorExpression(clazz, typeParams, params.map { it.clone(scope) }, scope, origin)
 }

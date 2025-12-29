@@ -13,8 +13,8 @@ class ThrowExpression(origin: Int, val thrown: Expression) : Expression(thrown.s
         callback(thrown)
     }
 
-    override fun toString(): String {
-        return "throw $thrown"
+    override fun toString(depth: Int): String {
+        return "throw ${thrown.toString(depth - 1)}"
     }
 
     override fun resolveType(context: ResolutionContext): Type = NothingType

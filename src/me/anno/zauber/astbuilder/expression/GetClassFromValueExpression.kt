@@ -13,8 +13,8 @@ class GetClassFromValueExpression(val type: Expression, origin: Int) : Expressio
         callback(type)
     }
 
-    override fun toString(): String {
-        return "($type)::class"
+    override fun toString(depth: Int): String {
+        return "(${type.toString(depth - 1)})::class"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

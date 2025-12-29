@@ -40,10 +40,16 @@ class Field(
         val valueType = valueType
         if (valueType != null) return valueType
 
-        val value = initialValue
-            ?: getterExpr
-            ?: throw IllegalStateException("Field $this has neither type, nor initial/getter")
-        return TypeResolution.resolveType(context, value)
+        val initialValue = initialValue
+        if (initialValue != null) return TypeResolution.resolveType(context, initialValue)
+
+        val getterExpr = getterExpr
+        if (getterExpr != null) {
+            val newContext = context.withSelfType(selfType ?: context.selfType)
+            return TypeResolution.resolveType(newContext, getterExpr)
+        }
+
+        throw IllegalStateException("Field $this has neither type, nor initial/getter")
     }
 
     override fun toString(): String {

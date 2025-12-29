@@ -42,7 +42,7 @@ class NameExpression(
     }
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(): String = name
+    override fun toString(depth: Int): String = name
     override fun clone(scope: Scope) = NameExpression(name, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
 

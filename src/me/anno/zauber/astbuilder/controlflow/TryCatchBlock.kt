@@ -32,4 +32,12 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
         Catch(it.param.clone(it.param.scope /* I don't think we should override this */), it.handler.clone(scope))
     }, finallyExpression?.clone(scope))
 
+    override fun toString(depth: Int): String {
+        return "try { $tryBody } ${
+            catches.joinToString(" ") {
+                "catch(${it.param} { ${it.handler}})"
+            }
+        } finally { $finallyExpression }"
+    }
+
 }

@@ -38,10 +38,12 @@ class CallExpression(
         }
     }
 
-    override fun toString(): String {
+    override fun toString(depth: Int): String {
+        val depth = depth-1
+        val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         return if (typeParameters != null && typeParameters.isEmpty()) {
-            "($base)($valueParameters)"
-        } else "($base)<${typeParameters ?: "?"}>($valueParameters)"
+            "($base)$valueParameters"
+        } else "($base)<${typeParameters ?: "?"}>$valueParameters"
     }
 
     override fun clone(scope: Scope) = CallExpression(

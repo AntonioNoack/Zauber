@@ -12,7 +12,7 @@ class ImportedExpression(
 ) : Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(): String = nameAsImport.name
+    override fun toString(depth: Int): String = nameAsImport.name
 
     override fun clone(scope: Scope) = ImportedExpression(nameAsImport, scope, origin)
 

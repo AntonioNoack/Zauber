@@ -12,7 +12,7 @@ class FieldExpression(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
     override fun forEachExpr(callback: (Expression) -> Unit) {}
-    override fun toString(): String = field.toString()
+    override fun toString(depth: Int): String = field.toString()
     override fun clone(scope: Scope) = FieldExpression(field, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
 

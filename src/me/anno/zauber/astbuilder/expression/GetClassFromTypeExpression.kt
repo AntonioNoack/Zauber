@@ -10,8 +10,8 @@ class GetClassFromTypeExpression(val base: Type, scope: Scope, origin: Int) : Ex
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
 
-    override fun toString(): String {
-        return "$base::class"
+    override fun toString(depth: Int): String {
+        return "${base.toString(depth)}::class"
     }
 
     override fun resolveType(context: ResolutionContext): Type {
