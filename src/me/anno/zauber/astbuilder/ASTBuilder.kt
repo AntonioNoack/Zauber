@@ -94,7 +94,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 var scope = currPackage
                 while (scope.scopeType?.isClassType() != true) {
                     scope = scope.parent
-                        ?: throw IllegalStateException("Could not resolve Self-type in $currPackage")
+                        ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
                 }
                 return SelfType(scope)
             }
@@ -230,7 +230,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             if (endIndex < 0) endIndex = tokens.size
             push(endIndex) {
                 while (i < tokens.size) {
-                    clazz.superCalls.add(readSuperCall())
+                    clazz.superCalls.add(readSuperCall(clazz.typeWithoutArgs))
                     readComma()
                 }
             }
@@ -978,7 +978,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         check(bodyIndex > i)
         push(bodyIndex) {
             while (i < tokens.size) {
-                clazz.superCalls.add(readSuperCall())
+                clazz.superCalls.add(readSuperCall(clazz.typeWithoutArgs))
                 readComma()
             }
         }
@@ -987,9 +987,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return ConstructorExpression(clazz, emptyList(), emptyList(), currPackage, origin)
     }
 
-    private fun readSuperCall(): SuperCall {
+    private fun readSuperCall(selfType: Type): SuperCall {
         val i0 = i
-        val type = readType(null, true) as? ClassType
+        val type = readType(selfType, true) as? ClassType
             ?: throw IllegalStateException("SuperType must be a ClassType, at ${tokens.err(i0)}")
 
         val valueParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -1689,9 +1689,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 AssignmentExpression(fieldExpr, expr),
                 IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
             ), scope, origin
-        ).apply {
+        )/*.apply {
             println("Created branch: $this")
-        }
+        }*/
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {

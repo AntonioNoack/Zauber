@@ -24,10 +24,11 @@ object TypeResolution {
         forEachScope(root, ::resolveTypesAndNamesImpl)
     }
 
-    private fun forEachScope(scope: Scope, callback: (Scope) -> Unit) {
+    fun forEachScope(scope: Scope, callback: (Scope) -> Unit) {
         callback(scope)
-        for (child in scope.children) {
-            forEachScope(child, callback)
+        val children = scope.children
+        for (i in children.indices) {
+            forEachScope(children[i], callback)
         }
     }
 

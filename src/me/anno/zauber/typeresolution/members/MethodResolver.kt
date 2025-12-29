@@ -46,9 +46,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun getMethodReturnType(scopeSelfType: Type?, method: Method): Type? {
         if (method.returnType == null) {
-            if (false) println("Resolving ${method.innerScope}.type by ${method.body}")
+            if (false) println("Resolving ${method.scope}.type by ${method.body}")
             val context = ResolutionContext(
-                method.innerScope,
+                method.scope,
                 method.selfType ?: scopeSelfType,
                 false, null
             )
@@ -86,7 +86,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             method.valueParameters, valueParameters
         ) ?: return null
         val selfType = selfType ?: method.selfType
-        val context = ResolutionContext(method.innerScope, selfType, false, returnType)
+        val context = ResolutionContext(method.scope, selfType, false, returnType)
         return ResolvedMethod(
             generics.subList(0, methodSelfParams.size), method,
             generics.subList(methodSelfParams.size, generics.size), context

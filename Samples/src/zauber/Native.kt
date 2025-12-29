@@ -1,3 +1,3 @@
 package zauber
 
-fun native(str: String = ""): Nothing = TODO()
+fun native(str: String): Nothing = TODO()

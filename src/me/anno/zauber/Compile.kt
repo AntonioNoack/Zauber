@@ -3,6 +3,8 @@ package me.anno.zauber
 import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.ASTClassScanner.findNamedClasses
 import me.anno.zauber.astbuilder.expression.Expression
+import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
+import me.anno.zauber.expansion.TypeExpansion
 import me.anno.zauber.generator.c.CSourceGenerator
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.Tokenizer
@@ -122,21 +124,28 @@ object Compile {
         val t3 = System.nanoTime()
         println("Took ${(t3 - t2) * 1e-6f} ms Parsing AST")
 
-        // todo when all expressions are parsed, we can replace names with being method names / specific fields
+        // todo when all expressions are parsed, we can replace more names with being method names / specific fields
 
         if (false) printPackages(root, 0)
 
-        // todo we should expand all methods with default-values here
+
+        createDefaultParameterFunctions(root)
+        val t4 = System.nanoTime()
+        println("Took ${(t4 - t3) * 1e-6f} ms Parsing AST")
+
 
         TypeResolution.resolveTypesAndNames(root)
+        val t5 = System.nanoTime()
+        println("Took ${(t5 - t4) * 1e-6f} ms Resolving Types")
 
-        // todo all types are resolved now, so we should create "instantiate" all generic types
-        //  to reduce type/traversal complexity (comptime gets "compiled")
 
-        val t4 = System.nanoTime()
+        TypeExpansion.resolveSpecificCalls(root)
+        val t6 = System.nanoTime()
+        println("Took ${(t6 - t5) * 1e-6f} ms Resolving Specific Calls")
+
+
         println("Num Expressions: ${Expression.numExpressionsCreated}")
         // 658k expressions 😲 (1µs/element at the moment)
-        println("Took ${(t4 - t3) * 1e-6f} ms Resolving Types")
 
         CSourceGenerator.generateCode(File("./out/c"), root)
     }

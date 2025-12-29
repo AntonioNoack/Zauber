@@ -10,7 +10,7 @@ class Method(
     val typeParameters: List<Parameter>,
     val valueParameters: List<Parameter>,
     // todo defined constructors need this extra scope, too
-    val innerScope: Scope,
+    val scope: Scope,
     var returnType: Type?,
     val extraConditions: List<TypeCondition>,
     val body: Expression?,
