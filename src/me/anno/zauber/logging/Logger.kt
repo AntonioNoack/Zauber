@@ -7,7 +7,7 @@ class Logger(val name: String, val debug: Boolean) {
 
     private fun infoImpl(prefix: String, message: String, stream: PrintStream) {
         if ('\n' !in message) {
-            stream.println("[${getTime()},$name:$prefix]: $message")
+            stream.println("[${getTime()},$name:$prefix] $message")
         } else {
             val lines = message.split('\n')
             infoImpl(prefix, lines.first(), stream)

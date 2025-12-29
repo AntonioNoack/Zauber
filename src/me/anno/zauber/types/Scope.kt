@@ -22,10 +22,10 @@ class Scope(val name: String, val parent: Scope? = null) {
     val children = ArrayList<Scope>()
     val sources = ArrayList<TokenList>()
 
-    val constructors = ArrayList<Constructor>()
     val code = ArrayList<Expression>()
 
-    val methods = ArrayList<Method>()
+    val constructors: List<Constructor> get() = children.mapNotNull { it.selfAsConstructor }
+    val methods: List<Method> get() = children.mapNotNull { it.selfAsMethod }
     val fields = ArrayList<Field>()
 
     val superCalls = ArrayList<SuperCall>()
@@ -34,6 +34,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     val enumValues = ArrayList<EnumEntry>()
     var typeAlias: Type? = null
 
+    var selfAsConstructor: Constructor? = null
     var selfAsMethod: Method? = null
 
     var typeParameters: List<Parameter> = emptyList()

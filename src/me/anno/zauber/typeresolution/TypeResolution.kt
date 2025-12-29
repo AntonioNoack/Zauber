@@ -18,7 +18,7 @@ import me.anno.zauber.types.impl.UnionType
  * Resolve types step by step, might fail, but should be stable at least.
  * */
 object TypeResolution {
-    
+
     private val LOGGER = LogManager.getLogger(TypeResolution::class)
 
     val langScope by lazy { Compile.root.getOrPut("zauber", null) }
@@ -49,15 +49,16 @@ object TypeResolution {
             return
         }
         val scopeSelfType = getSelfType(scope)
-        for (method in scope.methods) {
+        val children = scope.children
+        for (i in children.indices) {
+            val method = children[i].selfAsMethod ?: continue
             getMethodReturnType(scopeSelfType, method)
         }
         for (field in scope.fields) {
             val initialValue = field.initialValue ?: field.getterExpr
             if (field.valueType == null && initialValue != null) {
                 LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
-                LOGGER.info("fieldSelfType: ${field.selfType}")
-                LOGGER.info("scopeSelfType: $scopeSelfType")
+                LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
                 //try {
                 val selfType = field.selfType ?: scopeSelfType
                 val context = ResolutionContext(field.declaredScope, selfType, false, null)

@@ -39,11 +39,11 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
 
             // todo objects don't need actualSelfType, if properly in scope or imported...
             if ((expectedSelfType != null) != (actualSelfType != null)) {
-                LOGGER.info("selfType mismatch: $expectedSelfType vs $actualSelfType")
+                LOGGER.info("SelfType mismatch: $expectedSelfType vs $actualSelfType")
                 return null
             }
 
-            LOGGER.info("checking types: $expectedTypeParameters vs $actualTypeParameters")
+            LOGGER.info("Checking types: $expectedTypeParameters vs $actualTypeParameters")
             LOGGER.info("  and   values: $expectedValueParameters vs $actualValueParameters")
             LOGGER.info("  and   selves: $expectedSelfType vs $actualSelfType")
             LOGGER.info("  and  returns: $expectedReturnType vs $actualReturnType")
@@ -55,24 +55,24 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             val isVararg = expectedValueParameters.lastOrNull()?.isVararg == true
             if (isVararg) {
                 if (expectedValueParameters.size > actualValueParameters.size) {
-                    LOGGER.info("param-size too low")
+                    LOGGER.info("  param-size too low")
                     return null
                 }
             } else {
                 if (expectedValueParameters.size != actualValueParameters.size) {
-                    LOGGER.info("param-size mismatch: expected ${expectedValueParameters.size}, but got ${actualValueParameters.size}")
+                    LOGGER.info("  param-size mismatch: expected ${expectedValueParameters.size}, but got ${actualValueParameters.size}")
                     return null
                 }
             }
 
             if (actualTypeParameters != null && actualTypeParameters.size != expectedTypeParameters.size) {
-                LOGGER.info("type-param-size mismatch: expected ${expectedTypeParameters.size}, but got ${actualTypeParameters.size}")
+                LOGGER.info("  type-param-size mismatch: expected ${expectedTypeParameters.size}, but got ${actualTypeParameters.size}")
                 return null
             }
 
             val sortedValueParameters = resolveNamedParameters(expectedValueParameters, actualValueParameters)
                 ?: run {
-                    LOGGER.info("param-name mismatch")
+                    LOGGER.info("  param-name mismatch")
                     return null
                 }
 
@@ -90,7 +90,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             )
 
             if (!matchesSelfType) {
-                LOGGER.info("selfType-mismatch: $actualSelfType !is $expectedSelfType")
+                LOGGER.info("  selfType-mismatch: $actualSelfType !is $expectedSelfType")
                 return null
             }
 
@@ -107,7 +107,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     )
 
             if (!matchesReturnType) {
-                LOGGER.info("returnType-mismatch: $actualReturnType !is $expectedReturnType")
+                LOGGER.info("  returnType-mismatch: $actualReturnType !is $expectedReturnType")
                 return null
             }
 
@@ -139,7 +139,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     )
                 ) {
                     val type = vParam.getType(mvParam.type)
-                    LOGGER.info("type mismatch: $type is not always a ${mvParam.type}")
+                    LOGGER.info("  type mismatch: $type is not always a ${mvParam.type}")
                     return null
                 }
             }

@@ -7,6 +7,7 @@ import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.tokenizer.Tokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
@@ -62,26 +63,24 @@ class TypeResolutionTest {
             // we need to define the constructor without any args
             val constructors = arrayListType.constructors
             if (constructors.none { it.valueParameters.isEmpty() }) {
-                constructors.add(
-                    Constructor(
-                        arrayListType.typeWithoutArgs, emptyList(),
-                        arrayListType.getOrCreatePrimConstructorScope(), null, null,
-                        emptyList(), -1
-                    )
+                val scope = arrayListType.getOrCreatePrimConstructorScope()
+                scope.selfAsConstructor = Constructor(
+                    arrayListType.typeWithoutArgs, emptyList(),
+                    scope, null, null,
+                    emptyList(), -1
                 )
             }
             if (constructors.none { it.valueParameters.size == 1 }) {
-                constructors.add(
-                    Constructor(
-                        arrayListType.typeWithoutArgs, listOf(
-                            Parameter(
-                                false, false, false, "size",
-                                IntType, null, arrayListType, -1
-                            ),
+                val scope = arrayListType.getOrPut(arrayListType.generateName("constructor"), ScopeType.CONSTRUCTOR)
+                scope.selfAsConstructor = Constructor(
+                    arrayListType.typeWithoutArgs, listOf(
+                        Parameter(
+                            false, false, false, "size",
+                            IntType, null, arrayListType, -1
                         ),
-                        arrayListType.getOrCreatePrimConstructorScope(), null, null,
-                        emptyList(), -1
-                    )
+                    ),
+                    scope, null, null,
+                    emptyList(), -1
                 )
             }
         }
@@ -128,17 +127,16 @@ class TypeResolutionTest {
         // we need to define the constructor without any args
         val constructors = intArrayType.constructors
         if (constructors.none { it.valueParameters.size == 1 }) {
-            constructors.add(
-                Constructor(
-                    intArrayType.typeWithoutArgs, listOf(
-                        Parameter(
-                            false, false, false,
-                            "size", IntType, null, intArrayType, -1
-                        )
-                    ),
-                    intArrayType.getOrCreatePrimConstructorScope(), null, null,
-                    emptyList(), -1
-                )
+            val scope = intArrayType.getOrCreatePrimConstructorScope()
+            scope.selfAsConstructor = Constructor(
+                intArrayType.typeWithoutArgs, listOf(
+                    Parameter(
+                        false, false, false,
+                        "size", IntType, null, intArrayType, -1
+                    )
+                ),
+                scope, null, null,
+                emptyList(), -1
             )
         }
         assertEquals(intArrayType.typeWithoutArgs, testTypeResolution("val tested = IntArray(5)"))

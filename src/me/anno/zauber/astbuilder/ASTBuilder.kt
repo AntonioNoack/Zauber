@@ -155,13 +155,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             }
         }
 
+        val scope = clazz.getOrCreatePrimConstructorScope()
         val primaryConstructor = Constructor(
             clazz.typeWithoutArgs, constructorParams ?: emptyList(),
-            clazz.getOrCreatePrimConstructorScope(), null, null,
+            scope, null, null,
             if (privatePrimaryConstructor) listOf("private") else emptyList(),
             constructorOrigin
         )
-        clazz.constructors.add(primaryConstructor)
+        scope.selfAsConstructor = primaryConstructor
 
         readClassBody(name, keywords, scopeType)
         popGenericParams()
@@ -477,7 +478,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             returnType, extraConditions, body, keywords, origin
         )
         methodScope.selfAsMethod = method
-        currPackage.methods.add(method)
         return method
     }
 
@@ -527,7 +527,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             clazz.typeWithoutArgs, parameters, innerScope,
             superCall, body, keywords, origin
         )
-        currPackage.constructors.add(constructor)
+        innerScope.selfAsConstructor = constructor
         return constructor
     }
 

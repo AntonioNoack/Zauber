@@ -1,10 +1,19 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.zauber.types.StandardTypes
 import me.anno.zauber.types.Types.FloatType
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class DefaultParamTest {
+class DefaultParameterTest {
+
+    @BeforeEach
+    fun init() {
+        // ensure it's loaded
+        StandardTypes.standardClasses
+    }
+
     @Test
     fun testDefaultParamWithoutSelf() {
         assertEquals(

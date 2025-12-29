@@ -30,7 +30,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): ResolvedMethod? {
         scope ?: return null
         val scopeSelfType = getSelfType(scope)
-        for (method in scope.methods) {
+        val children = scope.children
+        for (i in children.indices) {
+            val method = children[i].selfAsMethod ?: continue
             if (method.name != name) continue
             if (method.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $method on $selfType, with target $returnType, can we deduct any generics from that?")
@@ -121,9 +123,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         if (candidates.isEmpty()) {
             val selfScope = context.selfScope
             val codeScope = context.codeScope
-            LOGGER.info("self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
-            LOGGER.info("code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
-            LOGGER.info("lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
+            LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
+            LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
+            LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
             throw IllegalStateException(
                 "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
                         "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"

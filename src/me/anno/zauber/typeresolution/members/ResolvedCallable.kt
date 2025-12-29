@@ -18,7 +18,7 @@ abstract class ResolvedCallable<V>(
     abstract fun getTypeFromCall(): Type
 
     companion object {
-        
+
         private val LOGGER = LogManager.getLogger(ResolvedCallable::class)
 
         fun resolveGenerics(
@@ -41,11 +41,11 @@ abstract class ResolvedCallable<V>(
                 }
                 is ClassType -> {
                     val typeArgs = type.typeParameters ?: return type
-                    LOGGER.info("old types: $typeArgs")
+                    if (typeArgs.isNotEmpty()) LOGGER.info("old types: $typeArgs")
                     val newTypeArgs = typeArgs.map { partType ->
                         resolveGenerics(selfType, partType, genericNames, genericValues)
                     }
-                    LOGGER.info("new types: $newTypeArgs")
+                    if (typeArgs.isNotEmpty()) LOGGER.info("new types: $newTypeArgs")
                     ClassType(type.clazz, newTypeArgs)
                 }
                 NullType -> type

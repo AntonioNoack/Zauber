@@ -48,17 +48,19 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
     ): ResolvedConstructor? {
         LOGGER.info("Checking $scope for constructors")
         check(scope.name == name)
-        for (member in scope.constructors) {
+        val children = scope.children
+        for (i in children.indices) {
+            val constructor = children[i].selfAsConstructor ?: continue
             // if (method.name != name) continue
-            if (member.typeParameters.isNotEmpty()) {
-                LOGGER.info("Given $member on $selfType, with target $returnType, can we deduct any generics from that?")
+            if (constructor.typeParameters.isNotEmpty()) {
+                LOGGER.info("Given $constructor on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val match = findMemberMatch(
-                member, member.selfType,
+                constructor, constructor.selfType,
                 returnType,
                 typeParameters, valueParameters,
             )
-            LOGGER.info("Match($member): $match")
+            LOGGER.info("Match($constructor): $match")
             if (match != null) return match
         }
         return null

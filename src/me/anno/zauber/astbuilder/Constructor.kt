@@ -7,7 +7,7 @@ import me.anno.zauber.types.impl.ClassType
 class Constructor(
     val selfType: ClassType,
     val valueParameters: List<Parameter>,
-    val innerScope: Scope,
+    val scope: Scope,
     val superCall: InnerSuperCall?,
     val body: Expression?,
     val keywords: List<String>,
