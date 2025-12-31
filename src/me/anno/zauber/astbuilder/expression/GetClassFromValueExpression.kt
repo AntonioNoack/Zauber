@@ -22,6 +22,8 @@ class GetClassFromValueExpression(val type: Expression, origin: Int) : Expressio
         return ClassType(getScope("Class"), listOf(base))
     }
 
+    override fun hasLambdaOrUnknownGenericsType(): Boolean = type.hasLambdaOrUnknownGenericsType()
+
     override fun clone(scope: Scope) = GetClassFromValueExpression(type.clone(scope), origin)
 
 }

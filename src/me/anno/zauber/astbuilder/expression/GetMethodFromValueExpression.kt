@@ -20,6 +20,11 @@ class GetMethodFromValueExpression(val base: Expression, val name: String, origi
         TODO("Not yet implemented")
     }
 
+    // todo or if the resolved method has some...
+    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+        return true // base.hasLambdaOrUnknownGenericsType()
+    }
+
     override fun clone(scope: Scope) = GetMethodFromValueExpression(base.clone(scope), name, origin)
 
 }

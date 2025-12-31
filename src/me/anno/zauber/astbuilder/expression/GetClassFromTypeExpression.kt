@@ -18,6 +18,8 @@ class GetClassFromTypeExpression(val base: Type, scope: Scope, origin: Int) : Ex
         return ClassType(getScope("KClass"), listOf(base))
     }
 
+    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+
     override fun clone(scope: Scope) = GetClassFromTypeExpression(base, scope, origin)
 
 }

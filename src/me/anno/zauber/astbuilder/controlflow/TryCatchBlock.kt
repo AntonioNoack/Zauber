@@ -28,6 +28,11 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
         else unionTypes(bodyType, catchTypes)
     }
 
+    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+        return tryBody.hasLambdaOrUnknownGenericsType() ||
+                catches.any { it.handler.hasLambdaOrUnknownGenericsType() }
+    }
+
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
         Catch(it.param.clone(it.param.scope /* I don't think we should override this */), it.handler.clone(scope))
     }, finallyExpression?.clone(scope))

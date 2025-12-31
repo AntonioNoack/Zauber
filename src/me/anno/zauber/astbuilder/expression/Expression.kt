@@ -1,7 +1,6 @@
 package me.anno.zauber.astbuilder.expression
 
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -46,15 +45,9 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * for lambdas, we need to know, because usually no other type information is available;
      * for unknown generics, we need them for the return type to be fully known
      * */
-    open fun hasLambdaOrUnknownGenericsType(): Boolean {
-        LOGGER.warn("Does (${javaClass.simpleName}) $this contain a lambda? Assuming no for now...")
-        return false
-    }
+    abstract fun hasLambdaOrUnknownGenericsType(): Boolean
 
     companion object {
-
-        private val LOGGER = LogManager.getLogger(Expression::class)
-
         var numExpressionsCreated = 0
             private set
     }

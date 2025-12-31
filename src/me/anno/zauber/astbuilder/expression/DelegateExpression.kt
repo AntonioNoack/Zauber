@@ -15,9 +15,8 @@ class DelegateExpression(val delegate: Expression) : Expression(delegate.scope, 
         return "by ${delegate.toString(depth)}"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
-        TODO("Not yet implemented")
-    }
+    override fun resolveType(context: ResolutionContext): Type = delegate.resolveType(context)
+    override fun hasLambdaOrUnknownGenericsType(): Boolean = delegate.hasLambdaOrUnknownGenericsType()
 
     override fun clone(scope: Scope) = DelegateExpression(delegate.clone(scope))
 

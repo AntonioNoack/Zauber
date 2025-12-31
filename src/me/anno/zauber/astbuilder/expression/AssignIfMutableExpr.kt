@@ -20,9 +20,8 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         return "${left.toString(depth)} $symbol ${right.toString(depth)}"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
-        return UnitType
-    }
+    override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // UnitType
 
     override fun clone(scope: Scope): Expression = AssignIfMutableExpr(left.clone(scope), symbol, right.clone(scope))
 }

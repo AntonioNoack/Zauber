@@ -7,25 +7,31 @@ import me.anno.zauber.types.impl.ClassType
 
 class ConstructorExpression(
     val clazz: Scope,
-    val typeParams: List<Type>,
-    val params: List<Expression>,
+    val typeParameters: List<Type>?,
+    val valueParameters: List<Expression>,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
-        for (i in params.indices) {
-            callback(params[i])
+        for (i in valueParameters.indices) {
+            callback(valueParameters[i])
         }
     }
 
     override fun toStringImpl(depth: Int): String {
-        return "new($clazz)(${params.joinToString { it.toString(depth) }})"
+        return "new($clazz)(${valueParameters.joinToString { it.toString(depth) }})"
+    }
+
+    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+        val forTypeParams = typeParameters?.any { it.containsGenerics() } ?: clazz.typeParameters.isNotEmpty()
+        val forValueParams = valueParameters.any { it.hasLambdaOrUnknownGenericsType() }
+        return forTypeParams || forValueParams
     }
 
     override fun resolveType(context: ResolutionContext): Type {
-        return ClassType(clazz, typeParams)
+        return ClassType(clazz, typeParameters)
     }
 
     override fun clone(scope: Scope) =
-        ConstructorExpression(clazz, typeParams, params.map { it.clone(scope) }, scope, origin)
+        ConstructorExpression(clazz, typeParameters, valueParameters.map { it.clone(scope) }, scope, origin)
 }

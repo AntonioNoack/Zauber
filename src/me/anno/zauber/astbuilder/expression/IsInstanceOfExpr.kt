@@ -22,6 +22,7 @@ class IsInstanceOfExpr(val left: Expression, val right: Type, val negated: Boole
     }
 
     override fun resolveType(context: ResolutionContext): Type = BooleanType
+    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // always boolean
 
     override fun clone(scope: Scope): Expression {
         return IsInstanceOfExpr(left.clone(scope), right, negated, scope, origin)
