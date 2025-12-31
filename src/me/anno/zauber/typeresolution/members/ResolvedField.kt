@@ -18,19 +18,19 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
 
     companion object {
         private val LOGGER = LogManager.getLogger(ResolvedField::class)
-        
+
         fun filterTypeByScopeConditions(field: Field, type: Type, context: ResolutionContext): Type {
             // todo filter type based on scope conditions
             // todo branches that return Nothing shall be ignored, and their condition applies even after
             var type = type
             var scope = context.codeScope
             while (true) {
-                val condition = scope.branchCondition
-                if (condition != null) {
-                    type = applyConditionToType(field, type, condition, context)
+                val conditions = scope.branchConditions
+                for (i in conditions.indices) {
+                    type = applyConditionToType(field, type, conditions[i], context)
                 }
 
-                LOGGER.info("Scope-Condition[${scope.pathStr}]: $condition")
+                LOGGER.info("Scope-Condition[${scope.pathStr}]: $conditions")
                 scope = scope.parentIfSameFile ?: break
             }
             return type
@@ -67,7 +67,13 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
 
         fun exprIsField(field: Field, expr: Expression, context: ResolutionContext): Boolean {
             return when (expr) {
-                is NameExpression -> {
+                is MemberNameExpression -> {
+                    if (expr.name == field.name) {
+                        val field2 = resolveField(context, expr.name, null)
+                        field2?.resolved == field
+                    } else false
+                }
+                is LazyFieldOrTypeExpression -> {
                     if (expr.name == field.name) {
                         val field2 = resolveField(context, expr.name, null)
                         field2?.resolved == field
@@ -101,7 +107,7 @@ class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>,
     }
 
     fun getValueType(context: ResolutionContext): Type {
-        LOGGER.info("Getting value of $resolved in scope ${context.codeScope.pathStr}")
+        LOGGER.info("Getting type of $resolved in scope ${context.codeScope.pathStr}")
 
         val field = resolved
         val ownerNames = field.selfTypeTypeParams

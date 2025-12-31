@@ -2,7 +2,7 @@ package me.anno.zauber.astbuilder
 
 import me.anno.zauber.astbuilder.controlflow.*
 import me.anno.zauber.astbuilder.expression.*
-import me.anno.zauber.astbuilder.expression.NameExpression.Companion.nameExpression
+import me.anno.zauber.astbuilder.expression.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.astbuilder.expression.constants.NumberExpression
 import me.anno.zauber.astbuilder.expression.constants.SpecialValue
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
@@ -944,6 +944,16 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val args = pushCall { readParamExpressions() }
                     val base = nameExpression(namePath, origin, this, currPackage)
                     CallExpression(base, typeArgs, args, origin + 1)
+                } else if (
+                    // todo validate that we have nothing before us...
+                    tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
+                    val i0 = i + 2
+                    i-- // skipping over name
+                    val type = readType(null, false)
+                    check(tokens.equals(i++, "::"))
+                    check(tokens.equals(i++, "class"))
+                    check(i == i0)
+                    GetClassFromTypeExpression(type, currPackage, origin)
                 } else {
                     nameExpression(namePath, origin, this, currPackage)
                 }
@@ -1368,8 +1378,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         val path = readTypePath(selfType) // e.g. ArrayList
         val subType = if (allowSubTypes && tokens.equals(i, ".") && tokens.equals(i + 1, "(")) {
-            i++ // skip ., and then read lambda subtype
+            i++ // skip ., and then read lambda/inner subtype
             readType(selfType, true)
+            // todo if the type is a lambda, the outer type sets the scope...
+            //  can we unify this??? an outer class kind of is like an extra scope...
             TODO(
                 "We somehow need to support types like Map<K,V>.Iterator<J>, where Iterator is an inner class... " +
                         "or we just forbid inner classes"
@@ -1558,7 +1570,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                         val debugInfoParam = NamedParameter(null, debugInfoExpr)
                         CallExpression(
-                            NameExpression("throwNPE", ifFalseScope, origin),
+                            MemberNameExpression("throwNPE", ifFalseScope, origin),
                             emptyList(), listOf(debugInfoParam), origin
                         )
                     }
@@ -1607,7 +1619,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     "::" -> {
                         if (tokens.equals(i, "class")) {
                             when (expr) {
-                                is NameExpression -> {
+                                is LazyFieldOrTypeExpression -> {
                                     val i0 = i + 1
                                     i -= 2 // skipping over :: and name
                                     val type = readType(null, false)
@@ -1781,7 +1793,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     }, { scope ->
                         val debugInfoExpr = StringExpression(expr.toString(), scope, origin)
                         CallExpression(
-                            NameExpression("throwNPE", scope, origin), emptyList(),
+                            MemberNameExpression("throwNPE", scope, origin), emptyList(),
                             listOf(NamedParameter(null, debugInfoExpr)), origin
                         )
                     }
@@ -1906,7 +1918,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is StringExpression,
             is NumberExpression,
             is FieldExpression,
-            is NameExpression,
+            is MemberNameExpression,
+            is LazyFieldOrTypeExpression,
                 // todo if-else-branch can enforce a condition: if only one branch returns
             is IfElseBranch,
                 // todo while-loop without break can enforce a condition, too
@@ -1921,7 +1934,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is CallExpression -> {
                 exprSplitsScope(expr.base) ||
                         expr.valueParameters.any { exprSplitsScope(it.value) } ||
-                        (expr.base is NameExpression && expr.base.name == "check") // this check is a little too loose
+                        (expr.base is MemberNameExpression && expr.base.name == "check") // this check is a little too loose
             }
             is AssignmentExpression -> true // explicit yes
             is PrefixExpression -> exprSplitsScope(expr.base)

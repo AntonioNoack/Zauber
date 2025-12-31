@@ -28,7 +28,7 @@ class CallExpression(
     }
 
     init {
-        check(base !is NameExpression || base.name != "?.")
+        check(base !is MemberNameExpression || base.name != "?.")
     }
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
@@ -68,7 +68,20 @@ class CallExpression(
             is NamedCallExpression if base.name == "." -> {
                 TODO("Find method/field ${base}($valueParameters)")
             }
-            is NameExpression -> {
+            is MemberNameExpression -> {
+                val name = base.name
+                LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+                // findConstructor(selfScope, false, name, typeParameters, valueParameters)
+                val c = ConstructorResolver
+                val constructor = null1()
+                    ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
+                    ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
+                return resolveCallType(
+                    context, this, name, constructor,
+                    typeParameters, valueParameters
+                )
+            }
+            is LazyFieldOrTypeExpression -> {
                 val name = base.name
                 LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)

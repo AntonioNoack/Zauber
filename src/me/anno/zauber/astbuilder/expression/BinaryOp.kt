@@ -37,13 +37,13 @@ fun ASTBuilder.binaryOp(
                 else -> throw NotImplementedError("GetBase($left::$right at ${tokens.err(i)})")
             }
 
-            val leftIsType = left is NameExpression && left.name[0].isUpperCase() ||
+            val leftIsType = left is MemberNameExpression && left.name[0].isUpperCase() ||
                     left is SpecialValueExpression && left.value == SpecialValue.THIS
             when {
-                leftIsType && right is NameExpression -> {
+                leftIsType && right is MemberNameExpression -> {
                     GetMethodFromTypeExpression(getBase(), right.name, right.scope, right.origin)
                 }
-                right is NameExpression -> {
+                right is MemberNameExpression -> {
                     GetMethodFromValueExpression(left, right.name, right.origin)
                 }
                 else -> throw NotImplementedError("WhichType? $left::$right")

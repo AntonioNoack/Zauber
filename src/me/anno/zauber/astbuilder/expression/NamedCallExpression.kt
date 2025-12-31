@@ -49,13 +49,13 @@ class NamedCallExpression(
         return if (typeParameters.isNullOrEmpty() && name == "." &&
             valueParameters.size == 1 &&
             when (valueParameters[0].value) {
-                is NameExpression,
+                is MemberNameExpression,
                 is CallExpression,
                 is NamedCallExpression -> true
                 else -> false
             }
         ) {
-            if (this.base is NameExpression) {
+            if (this.base is MemberNameExpression) {
                 "$base.${valueParameters[0].value.toString(depth)}"
             } else {
                 "($base).${valueParameters[0].value.toString(depth)}"
@@ -81,7 +81,21 @@ class NamedCallExpression(
             val parameter0 = valueParameters[0]
             check(parameter0.name == null)
             when (val parameter = parameter0.value) {
-                is NameExpression -> {
+                is MemberNameExpression -> {
+                    // todo replace own generics, because we don't know them yet
+                    /*val selfType = context.selfType
+                    val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
+                        resolveGenerics(
+                            baseType,
+                            selfType.clazz.typeParameters,
+                            selfType.clazz.typeParameters.map { it.type })
+                    } else baseType*/
+                    return resolveFieldType(
+                        context.withSelfType(baseType),
+                        parameter.name, null, origin
+                    )
+                }
+                is LazyFieldOrTypeExpression -> {
                     // todo replace own generics, because we don't know them yet
                     /*val selfType = context.selfType
                     val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
@@ -96,17 +110,31 @@ class NamedCallExpression(
                     )
                 }
                 is CallExpression -> {
-                    val baseName = parameter.base as NameExpression
-                    val constructor = null
-                    // todo for lambdas, baseType must be known for their type to be resolved
-                    val valueParameters = resolveValueParameters(context, parameter.valueParameters)
-                    return resolveCallType(
-                        context.withSelfType(baseType),
-                        this, baseName.name, constructor,
-                        parameter.typeParameters, valueParameters
-                    )
+                    when (val baseName = parameter.base) {
+                        is MemberNameExpression -> {
+                            val constructor = null
+                            // todo for lambdas, baseType must be known for their type to be resolved
+                            val valueParameters = resolveValueParameters(context, parameter.valueParameters)
+                            return resolveCallType(
+                                context.withSelfType(baseType),
+                                this, baseName.name, constructor,
+                                parameter.typeParameters, valueParameters
+                            )
+                        }
+                        is LazyFieldOrTypeExpression -> {
+                            val constructor = null
+                            // todo for lambdas, baseType must be known for their type to be resolved
+                            val valueParameters = resolveValueParameters(context, parameter.valueParameters)
+                            return resolveCallType(
+                                context.withSelfType(baseType),
+                                this, baseName.name, constructor,
+                                parameter.typeParameters, valueParameters
+                            )
+                        }
+                        else -> throw NotImplementedError()
+                    }
                 }
-                else -> TODO("dot-operator with $parameter in ${resolveOrigin(origin)}")
+                else -> TODO("dot-operator with $parameter (${parameter.javaClass.simpleName}) in ${resolveOrigin(origin)}")
             }
         } else {
 

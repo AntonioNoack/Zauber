@@ -53,11 +53,11 @@ fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases
         if (case.conditions.all { it != null && it.subjectConditionType == SubjectConditionType.INSTANCEOF }) {
             val fieldName = when (subject) {
                 is AssignmentExpression -> when (val name = subject.variableName) {
-                    is NameExpression -> name.name
+                    is MemberNameExpression -> name.name
                     is FieldExpression -> name.field.name /* todo in this case, we can reuse the field, I think */
                     else -> throw NotImplementedException()
                 }
-                is NameExpression -> subject.name
+                is MemberNameExpression -> subject.name
                 else -> null
             }
             if (fieldName != null) {

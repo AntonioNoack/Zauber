@@ -9,8 +9,10 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
-class IfElseBranch(val condition: Expression, val ifBranch: Expression, val elseBranch: Expression?) :
-    Expression(condition.scope, condition.origin) {
+class IfElseBranch(
+    val condition: Expression, val ifBranch: Expression, val elseBranch: Expression?,
+    addToScope: Boolean = true
+) : Expression(condition.scope, condition.origin) {
 
     init {
         check(ifBranch.scope != elseBranch?.scope)
@@ -27,8 +29,10 @@ class IfElseBranch(val condition: Expression, val ifBranch: Expression, val else
             "Else and condition somehow have the same scope: ${condition.scope.pathStr}"
         }
 
-        ifBranch.scope.addCondition(condition)
-        elseBranch?.scope?.addCondition(condition.not())
+        if (addToScope) {
+            ifBranch.scope.addCondition(condition)
+            elseBranch?.scope?.addCondition(condition.not())
+        }
     }
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
@@ -51,7 +55,8 @@ class IfElseBranch(val condition: Expression, val ifBranch: Expression, val else
     override fun clone(scope: Scope): Expression = IfElseBranch(
         condition.clone(scope),
         ifBranch.clone(ifBranch.scope),
-        elseBranch?.clone(elseBranch.scope)
+        elseBranch?.clone(elseBranch.scope),
+        false
     )
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean {

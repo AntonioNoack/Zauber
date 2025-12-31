@@ -3,7 +3,7 @@ package me.anno.zauber.expansion
 import me.anno.zauber.astbuilder.*
 import me.anno.zauber.astbuilder.expression.CallExpression
 import me.anno.zauber.astbuilder.expression.ExpressionList
-import me.anno.zauber.astbuilder.expression.NameExpression
+import me.anno.zauber.astbuilder.expression.MemberNameExpression
 import me.anno.zauber.astbuilder.expression.NamedCallExpression
 import me.anno.zauber.astbuilder.expression.constants.SpecialValue
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
@@ -60,14 +60,14 @@ object DefaultParameterExpansion {
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
-                    if (index < i) NameExpression(parameter.name, scope, origin)
+                    if (index < i) MemberNameExpression(parameter.name, scope, origin)
                     else parameter.defaultValue!!
                 NamedParameter(parameter.name, value)
             }
 
             val newBody = if (self.selfType == null) {
                 CallExpression(
-                    NameExpression(self.name!!, scope, origin),
+                    MemberNameExpression(self.name!!, scope, origin),
                     newTypeParameters, newValueParameters, origin
                 )
             } else {
@@ -121,7 +121,7 @@ object DefaultParameterExpansion {
 
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
-                    if (index < i) NameExpression(parameter.name, scope, origin)
+                    if (index < i) MemberNameExpression(parameter.name, scope, origin)
                     else parameter.defaultValue!!
                 NamedParameter(parameter.name, value)
             }

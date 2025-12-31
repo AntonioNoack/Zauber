@@ -5,7 +5,7 @@ import me.anno.zauber.astbuilder.controlflow.ReturnExpression
 import me.anno.zauber.astbuilder.controlflow.WhileLoop
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.astbuilder.expression.ExpressionList
-import me.anno.zauber.astbuilder.expression.NameExpression
+import me.anno.zauber.astbuilder.expression.MemberNameExpression
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -173,7 +173,7 @@ object CSourceGenerator {
                             builder.append("return;\n")
                         }
                     }
-                    is NameExpression -> {
+                    is MemberNameExpression -> {
                         builder.append(expr.name)
                     }
                     else -> {

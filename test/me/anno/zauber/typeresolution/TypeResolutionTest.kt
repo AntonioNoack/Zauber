@@ -5,6 +5,7 @@ import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.Constructor
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.Tokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.ScopeType
@@ -94,6 +95,8 @@ class TypeResolutionTest {
                 )
             }
         }
+
+        private val LOGGER = LogManager.getLogger(TypeResolutionTest::class)
 
     }
 
@@ -190,10 +193,10 @@ class TypeResolutionTest {
         )
         check(type0 is UnionType && NullType in type0.types && type0.types.size == 2)
         val type1 = type0.types.first { it != NullType }
-        println("Resolved Self to $type1 (should be B)")
+        LOGGER.info("Resolved Self to $type1 (should be B)")
         assertTrue(type1 is ClassType)
         assertTrue((type1 as ClassType).clazz.name == "B")
-        println("Fields[$type1]: ${type1.clazz.fields}")
+        LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
         assertFalse(type1.clazz.fields.any { it.name == "other" })
     }
 
@@ -207,7 +210,7 @@ class TypeResolutionTest {
             val tested = B(null).other!!
         """.trimIndent()
         )
-        println("Resolved Self to $type (should be B)")
+        LOGGER.info("Resolved Self to $type (should be B)")
         assertTrue(type is ClassType)
         assertTrue((type as ClassType).clazz.name == "B")
     }

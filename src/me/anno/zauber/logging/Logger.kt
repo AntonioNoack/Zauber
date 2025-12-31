@@ -12,7 +12,7 @@ class Logger(val name: String, val debug: Boolean) {
             val lines = message.split('\n')
             infoImpl(prefix, lines.first(), stream)
             for (i in 1 until lines.size) {
-                println("    " + lines[i])
+                stream.println("    " + lines[i])
             }
         }
     }

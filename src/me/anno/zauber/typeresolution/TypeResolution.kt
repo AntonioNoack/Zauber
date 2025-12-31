@@ -91,6 +91,8 @@ object TypeResolution {
         }
     }
 
+    var depth = 0
+
     /**
      * resolve the type for a given expression;
      * todo expr can be a lambda,
@@ -104,9 +106,9 @@ object TypeResolution {
         if (alreadyResolved != null) {
             return alreadyResolved
         } else {
-            LOGGER.info("Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
+            LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
             val type = expr.resolveType(context)
-            LOGGER.info("Resolved type of $expr to $type")
+            LOGGER.info("[${depth--}] Resolved type of $expr to $type")
             expr.resolvedType = type
             return type
         }
@@ -150,13 +152,6 @@ object TypeResolution {
         }
     }
 
-    fun removeNullFromType(type: Type): Type {
-        return if (type is UnionType && NullType in type.types) {
-            if (type.types.size == 2) type.types.first { it != NullType }
-            else UnionType(type.types - NullType)
-        } else type
-    }
-
     fun findType(
         scope: Scope, // 2nd, recursive as long as fileName == parentScope.fileName
         selfScope: Type?, // 1st, surface-level only
@@ -186,24 +181,4 @@ object TypeResolution {
             scope = scope.parentIfSameFile ?: return null
         }
     }
-
-    fun applyTypeAlias(
-        typeParameters: List<Type>?,
-        leftTypeParameters: List<Parameter>,
-        rightType: Type
-    ): ClassType {
-        when (rightType) {
-            is ClassType -> {
-                if (leftTypeParameters.isEmpty()) {
-                    check(typeParameters.isNullOrEmpty())
-                    // no extra types get applied
-                    return rightType
-                }
-
-                TODO("$typeParameters x $leftTypeParameters -> ${rightType.clazz.pathStr}<${rightType.typeParameters}>")
-            }
-            else -> throw NotImplementedError("applyTypeAlias to target $rightType")
-        }
-    }
-
 }

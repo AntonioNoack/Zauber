@@ -4,7 +4,6 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.astbuilder.*
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.tokenizer.TokenList
-import me.anno.zauber.types.BooleanUtils.and
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import java.util.concurrent.atomic.AtomicInteger
@@ -56,10 +55,11 @@ class Scope(val name: String, val parent: Scope? = null) {
     /**
      * for each if/else-chain, these shall be filled in
      * */
-    var branchCondition: Expression? = null
+    var branchConditions: List<Expression> = emptyList()
 
     fun addCondition(condition: Expression) {
-        branchCondition = branchCondition?.and(condition) ?: condition
+        if (condition in branchConditions) return
+        branchConditions += condition
     }
 
     var primaryConstructorScope: Scope? = null

@@ -3,13 +3,11 @@ package me.anno.zauber.astbuilder.expression
 import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.findType
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
-import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
-class NameExpression(
+class MemberNameExpression(
     val name: String,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
@@ -22,8 +20,9 @@ class NameExpression(
                         astBuilder.tokens.equals(origin - 1, "?.") -> true
                 else -> false
             }
-            return if (isChild) NameExpression(name, scope, origin)
-            else {
+            return if (isChild) {
+                MemberNameExpression(name, scope, origin)
+            } else {
                 val nameAsImport = astBuilder.imports.firstOrNull { it.name == name }?.path
                 if (nameAsImport != null) {
                     ImportedExpression(nameAsImport, scope, origin)
@@ -35,7 +34,8 @@ class NameExpression(
                     //  -> for the whole hierarchy, try to find fields and parent classes
                     // when this is executed, the field might not yet be known
                     //  -> and we must respect the hierarchy -> we can only execute this later on
-                    NameExpression(name, scope, origin)
+                    // todo if a type is named like that, use the type...
+                    LazyFieldOrTypeExpression(name, scope, origin)
                 }
             }
         }
@@ -43,15 +43,12 @@ class NameExpression(
 
     override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String = name
-    override fun clone(scope: Scope) = NameExpression(name, scope, origin)
+    override fun clone(scope: Scope) = MemberNameExpression(name, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
         val field = resolveField(context, name, null)
         if (field != null) return field.getValueType(context)
-
-        val type = findType(context.codeScope, context.selfType, name)
-        if (type != null) return type
 
         throw IllegalStateException(
             "Missing field/type '${name}' in ${context.selfType}, ${context.codeScope}, " +
