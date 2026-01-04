@@ -75,7 +75,7 @@ object ASTClassScanner {
 
             nextPackage.typeParameters = genericParams
             nextPackage.hasTypeParameters = true
-            println("Defined type parameters for ${nextPackage.pathStr}")
+            if (false) println("Defined type parameters for ${nextPackage.pathStr}")
 
             if (tokens.equals(j, "private")) j++
             if (tokens.equals(j, "protected")) j++
@@ -115,7 +115,7 @@ object ASTClassScanner {
                     val childScope = currPackage.getOrPut(name, ScopeType.ENUM_ENTRY_CLASS)
                     childScope.typeParameters = emptyList()
                     childScope.hasTypeParameters = true
-                    println("Defined type parameters for ${nextPackage.pathStr}.$name")
+                    if (false) println("Defined type parameters for ${nextPackage.pathStr}.$name")
 
                     // skip value parameters
                     if (tokens.equals(j, "(")) {

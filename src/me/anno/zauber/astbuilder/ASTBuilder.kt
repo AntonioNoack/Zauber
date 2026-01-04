@@ -452,8 +452,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         // body (or just = expression)
         val body = pushScope(methodScope) {
             if (tokens.equals(i, "=")) {
-                i++ // skip =
-                readExpression()
+                val origin = origin(i++) // skip =
+                ReturnExpression(readExpression(), null, methodScope, origin)
             } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 if (returnType == null) returnType = UnitType
                 pushBlock(ScopeType.METHOD_BODY, methodScope.name) { readMethodBody() }
@@ -1928,6 +1928,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
             is DoubleColonPrefix -> false // some lambda -> no
             is NamedTypeExpression -> false
+            is TryCatchBlock -> false // already a split on its own, or is it?
             else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
         }
     }

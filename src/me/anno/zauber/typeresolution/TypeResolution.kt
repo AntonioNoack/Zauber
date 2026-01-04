@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile
+import me.anno.zauber.Compile.f1
 import me.anno.zauber.astbuilder.NamedParameter
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.logging.LogManager
@@ -12,6 +13,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
+import kotlin.math.max
 
 /**
  * Resolve types step by step, might fail, but should be stable at least.
@@ -21,9 +23,13 @@ object TypeResolution {
     private val LOGGER = LogManager.getLogger(TypeResolution::class)
 
     val langScope by lazy { Compile.root.getOrPut("zauber", null) }
+    var numSuccesses = 0
+    var numFailures = 0
 
     fun resolveTypesAndNames(root: Scope) {
         forEachScope(root, ::resolveTypesAndNamesImpl)
+        val successRate = (numSuccesses * 100f) / max(numSuccesses + numFailures, 1)
+        LOGGER.info("Resolved fields and methods, $numSuccesses successes (${successRate.f1()}%)")
     }
 
     fun forEachScope(scope: Scope, callback: (Scope) -> Unit) {
@@ -50,23 +56,32 @@ object TypeResolution {
         val scopeSelfType = getSelfType(scope)
         val children = scope.children
         for (i in children.indices) {
-            val method = children[i].selfAsMethod ?: continue
-            getMethodReturnType(scopeSelfType, method)
+            try {
+                val method = children[i].selfAsMethod ?: continue
+                getMethodReturnType(scopeSelfType, method)
+                numSuccesses++
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                numFailures++
+                // continue anyway for now
+            }
         }
         for (field in scope.fields) {
             val initialValue = field.initialValue ?: field.getterExpr
             if (field.valueType == null && initialValue != null) {
                 LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
                 LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
-                //try {
-                val selfType = field.selfType ?: scopeSelfType
-                val context = ResolutionContext(field.declaredScope, selfType, false, null)
-                field.valueType = resolveType(context, initialValue)
-                LOGGER.info("Resolved $field to ${field.valueType}")
-                /*} catch (e: Throwable) {
+                try {
+                    val selfType = field.selfType ?: scopeSelfType
+                    val context = ResolutionContext(field.declaredScope, selfType, false, null)
+                    field.valueType = resolveType(context, initialValue)
+                    LOGGER.info("Resolved $field to ${field.valueType}")
+                    numSuccesses++
+                } catch (e: Throwable) {
                     e.printStackTrace()
+                    numFailures++
                     // continue anyway for now
-                }*/
+                }
             }
         }
         if (false) LOGGER.info("${scope.fileName}: ${scope.pathStr}, ${scope.fields.size}f, ${scope.methods.size}m, ${scope.code.size}c")

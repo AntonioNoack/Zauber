@@ -169,6 +169,7 @@ object Compile {
         lastTime = t6
     }
 
+    fun Float.f1() = "%.1f".format(this)
     fun Float.f3() = "%.3f".format(this)
 
     fun printPackages(root: Scope, depth: Int) {

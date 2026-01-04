@@ -5,6 +5,8 @@ import java.util.*
 
 class Logger(val name: String, val debug: Boolean) {
 
+    private val knownWarnings = HashSet<String>()
+
     private fun infoImpl(prefix: String, message: String, stream: PrintStream) {
         if ('\n' !in message) {
             stream.println("[${getTime()},$name:$prefix] $message")
@@ -22,7 +24,9 @@ class Logger(val name: String, val debug: Boolean) {
     }
 
     fun warn(message: String) {
-        infoImpl("ERR", message, System.err)
+        if (knownWarnings.add(message)) {
+            infoImpl("ERR", message, System.err)
+        }
     }
 
     fun debug(message: String) {
