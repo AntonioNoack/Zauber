@@ -1,4 +1,4 @@
-package me.anno.zauber.generator.c
+package me.anno.zauber.generator.cpp
 
 import me.anno.zauber.astbuilder.controlflow.IfElseBranch
 import me.anno.zauber.astbuilder.controlflow.ReturnExpression
@@ -13,11 +13,11 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import java.io.File
 
-// todo this is the final boss:
-//  all allocations, shared references, GC, inheritance etc must be implemented by us
-object CSourceGenerator: Generator() {
+// todo compared to C, this has inheritance built-in, which
+//  we can directly use; and it has ready-made shared references
+object CppSourceGenerator: Generator() {
 
-    // todo generate runnable C code from what we parsed
+    // todo generate runnable C++ code from what we parsed
     // todo just produce all code for now as-is
 
     // todo we need .h and .c files...
@@ -71,7 +71,7 @@ object CSourceGenerator: Generator() {
 
         generateCode(root)
 
-        val dstFile = File(dst, "Root.c")
+        val dstFile = File(dst, "Root.cpp")
         dstFile.parentFile.mkdirs()
         dstFile.writeText(builder.toString())
     }
