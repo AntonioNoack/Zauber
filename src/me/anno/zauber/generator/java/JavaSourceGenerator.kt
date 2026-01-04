@@ -15,6 +15,8 @@ import java.io.File
 //  big difference: stack-based
 object JavaSourceGenerator : Generator() {
 
+    private val blacklistedPaths = listOf(listOf("java"))
+
     override fun generateCode(dst: File, root: Scope) {
         val writer = DeltaWriter(dst)
         try {
@@ -49,6 +51,18 @@ object JavaSourceGenerator : Generator() {
             is GenericType if (type.scope == scope) -> {
                 builder.append(type.name)
             }
+            is LambdaType -> {
+                // todo define all these classes...
+                // todo add respective import...
+                builder.append("zauber.Function").append(type.parameters.size)
+                    .append('<')
+                for (param in type.parameters) {
+                    appendType(param.type, scope)
+                    builder.append(", ")
+                }
+                appendType(type.returnType, scope)
+                builder.append('>')
+            }
             else -> builder.append(type.toString())
         }
     }
@@ -82,7 +96,7 @@ object JavaSourceGenerator : Generator() {
 
             writer.write(file, builder.toString())
             builder.clear()
-        } else if (scopeType == ScopeType.PACKAGE || scopeType == null) {
+        } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
             if (scopeType == ScopeType.PACKAGE &&
                 (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())
             ) {
@@ -123,17 +137,19 @@ object JavaSourceGenerator : Generator() {
         // todo imports ->
         //  collect them in a dry-run :)
 
-        val type = when (scope.scopeType) {
-            ScopeType.ENUM_CLASS -> "public enum"
-            ScopeType.NORMAL_CLASS -> "public class"
-            ScopeType.INTERFACE -> "public interface"
-            ScopeType.OBJECT -> "public final class"
-            ScopeType.PACKAGE -> "public final class"
-            ScopeType.ENUM_ENTRY_CLASS -> ""
-            else -> scope.scopeType.toString()
+        if (scope.scopeType != ScopeType.ENUM_ENTRY_CLASS) {
+            builder.append("public ")
+            val type = when (scope.scopeType) {
+                ScopeType.ENUM_CLASS -> "enum"
+                ScopeType.NORMAL_CLASS -> "class"
+                ScopeType.INTERFACE -> "interface"
+                ScopeType.OBJECT -> "final class"
+                ScopeType.PACKAGE -> "final class"
+                else -> scope.scopeType.toString()
+            }
+            if ("abstract" in scope.keywords) builder.append("abstract ")
+            builder.append(type).append(' ')
         }
-
-        if (type.isNotEmpty()) builder.append(type).append(' ')
         builder.append(name)
 
         appendTypeParams(scope)
@@ -215,9 +231,15 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendMethod(scope: Scope, method: Method) {
         val selfType = method.selfType
-        val isBySelf = selfType == scope.typeWithoutArgs
+        val isBySelf = selfType == scope.typeWithoutArgs ||
+                "override" in method.keywords ||
+                "abstract" in method.keywords
         if ("override" in method.keywords) builder.append("@Override ")
+        if ("abstract" in method.keywords && scope.scopeType != ScopeType.INTERFACE) {
+            builder.append("abstract ")
+        }
         builder.append("public ")
+        if (!isBySelf) builder.append("static ")
         appendType(method.returnType ?: NullableAnyType, scope)
         builder.append(' ').append(method.name)
         builder.append('(')
@@ -238,6 +260,7 @@ object JavaSourceGenerator : Generator() {
             }
         } else {
             builder.append(";")
+            nextLine()
         }
     }
 
