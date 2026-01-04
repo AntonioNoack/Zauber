@@ -1,28 +1,31 @@
 package me.anno.zauber.astbuilder.expression
 
-import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Type
+import me.anno.zauber.astbuilder.Field
 
-// todo generate a temporary variable, and then just assign all of them in an expression list :)
-class DestructuringAssignment(
-    val names: List<String>, val initialValue: Expression,
-    val isVar: Boolean, val isLateinit: Boolean
-) : Expression(initialValue.scope, initialValue.origin) {
-
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(initialValue)
+fun createDestructuringAssignment(
+    names: List<String>, initialValue: Expression,
+    isVar: Boolean, isLateinit: Boolean
+): Expression {
+    check(!isLateinit)
+    val scope = initialValue.scope
+    val origin = initialValue.origin
+    val tmpField = scope.generateField(initialValue)
+    val result = ArrayList<Expression>(1 + names.size)
+    val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
+    result.add(AssignmentExpression(tmpFieldExpr, initialValue))
+    for (i in names.indices) {
+        val name = names[i]
+        if (name == "_") continue
+        val newValue = NamedCallExpression(
+            tmpFieldExpr, "component${i + 1}",
+            emptyList(), emptyList(), scope, origin
+        )
+        val newField = Field(
+            scope, isVar, !isVar, null, name,
+            null, newValue, emptyList(), origin
+        )
+        val newFieldExpr = FieldExpression(newField, scope, origin)
+        result.add(AssignmentExpression(newFieldExpr, newValue))
     }
-
-    override fun toStringImpl(depth: Int): String {
-        return (if (isVar) if (isLateinit) "lateinit var" else "var " else "val ") +
-                "(${names.joinToString()}) = ${initialValue.toString(depth)}"
-    }
-
-    override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
-
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
-
-    override fun clone(scope: Scope) = DestructuringAssignment(names, initialValue.clone(scope), isVar, isLateinit)
-
+    return ExpressionList(result, scope, origin)
 }

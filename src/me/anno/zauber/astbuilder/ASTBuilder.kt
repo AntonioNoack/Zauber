@@ -1925,7 +1925,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         expr.valueParameters.any { exprSplitsScope(it.value) } ||
                         (expr.base is MemberNameExpression && expr.base.name == "check") // this check is a little too loose
             }
-            is AssignmentExpression, is DestructuringAssignment -> true // explicit yes
+            is AssignmentExpression -> true // explicit yes
             is PrefixExpression -> exprSplitsScope(expr.base)
             is PostfixExpression -> exprSplitsScope(expr.base)
             is AssignIfMutableExpr -> true // we don't know better yet
@@ -1940,7 +1940,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    private fun readDestructuring(isVar: Boolean, isLateinit: Boolean): DestructuringAssignment {
+    private fun readDestructuring(isVar: Boolean, isLateinit: Boolean): Expression {
         val names = ArrayList<String>()
         pushCall {
             while (i < tokens.size) {
@@ -1955,7 +1955,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             i++ // skip =
             readExpression()
         } else throw IllegalStateException("Expected value for destructuring at ${tokens.err(i)}")
-        return DestructuringAssignment(names, value, isVar, isLateinit)
+        return createDestructuringAssignment(names, value, isVar, isLateinit)
     }
 
     private fun readDeclaration(isVar: Boolean, isLateinit: Boolean = false): Expression {
