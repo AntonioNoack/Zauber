@@ -3,6 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.Compile.stdlib
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.types.StandardTypes.standardClasses
+import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
@@ -18,7 +19,7 @@ class GenericTest {
     fun testTypeWithGenerics() {
         assertEquals(
             ClassType(
-                standardClasses["ArrayList"]!!,
+                ArrayListType.clazz,
                 listOf(ClassType(IntType.clazz, null))
             ),
             TypeResolutionTest.testTypeResolution("val tested: ArrayList<Int>")
@@ -31,7 +32,7 @@ class GenericTest {
 
         assertEquals(
             ClassType(
-                standardClasses["ArrayList"]!!,
+                ArrayListType.clazz,
                 listOf(ClassType(IntType.clazz, null))
             ),
             TypeResolutionTest.testTypeResolution("val tested = ArrayList<Int>(8)")

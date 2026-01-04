@@ -4,7 +4,6 @@ fun <V> emptyList(): List<V> = Array(0)
 
 interface List<V> : Collection<V> {
     operator fun get(index: Int): V
-
     fun isEmpty(): Boolean
 }
 

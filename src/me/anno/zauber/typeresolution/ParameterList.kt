@@ -13,7 +13,7 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
 
     override val size: Int get() = generics.size
 
-    constructor(generics: List<Parameter>, types: List<Type>) : this(generics) {
+    constructor(generics: List<Parameter>, types: List<Type?>) : this(generics) {
         check(generics.size == types.size)
         for (i in types.indices) {
             set(i, types[i], InsertMode.READ_ONLY)
@@ -52,7 +52,8 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     override fun iterator(): Iterator<Type> = listIterator(0)
     override fun containsAll(elements: Collection<Type>): Boolean = types.toList().containsAll(elements)
 
-    override fun get(index: Int): Type = types[index]!!
+    fun getOrNull(index: Int): Type? = types.getOrNull(index)
+    override fun get(index: Int): Type = types[index]!!// ?: generics[index].type
     override fun indexOf(element: Type): Int = types.indexOf(element)
     override fun lastIndexOf(element: Type): Int = types.lastIndexOf(element)
     override fun listIterator(): ListIterator<Type> = listIterator(0)
@@ -81,10 +82,10 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     operator fun plus(other: ParameterList): ParameterList {
         val result = ParameterList(this.generics + other.generics)
         for (i in generics.indices) {
-            set(i, types[i], insertModes[i])
+            result.set(i, types[i], insertModes[i])
         }
         for (i in other.generics.indices) {
-            set(i + generics.size, other.types[i], other.insertModes[i])
+            result.set(i + generics.size, other.types[i], other.insertModes[i])
         }
         return result
     }
@@ -92,7 +93,7 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     override fun subList(fromIndex: Int, toIndex: Int): ParameterList {
         return ParameterList(
             generics.subList(fromIndex, toIndex),
-            List(toIndex - fromIndex) { types[it + fromIndex]!! }
+            List(toIndex - fromIndex) { types[it + fromIndex] }
         )
     }
 
@@ -121,7 +122,7 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         if (insertModes.all { it == InsertMode.READ_ONLY }) return this
         val copy = ParameterList(generics)
         for (i in generics.indices) {
-            copy.set(i, types[i]!!, InsertMode.READ_ONLY)
+            copy.set(i, types[i], InsertMode.READ_ONLY)
         }
         return copy
     }

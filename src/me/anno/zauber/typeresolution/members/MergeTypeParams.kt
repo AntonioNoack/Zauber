@@ -25,13 +25,18 @@ object MergeTypeParams {
         selfParams: List<Parameter>,
     ): ParameterList {
 
+        if (selfType !is ClassType || selfType.typeParameters == null) {
+            if (selfParams.isEmpty()) return emptyParameterList()
+            return ParameterList(selfParams)
+        }
+
+        println("MergeSelfPart($selfType, $selfParams)")
         val expectedSelfParams = selfParams.size
-        val actualSelfParams = (selfType as? ClassType)?.typeParameters?.size ?: 0
+        val actualSelfParams = selfType.typeParameters.size
         check(actualSelfParams == expectedSelfParams)
 
         if (actualSelfParams == 0) return emptyParameterList()
-        selfType as ClassType
-        return selfType.typeParameters!!
+        return selfType.typeParameters
     }
 
     fun mergeCallPart(

@@ -23,6 +23,7 @@ import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.SelfType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.UnknownType
 import kotlin.math.max
 import kotlin.math.min
 
@@ -1350,7 +1351,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         if (tokens.equals(i, "*")) {
             i++
-            return NullableAnyType
+            return UnknownType
         }
 
         if (tokens.equals(i, TokenType.OPEN_CALL)) {

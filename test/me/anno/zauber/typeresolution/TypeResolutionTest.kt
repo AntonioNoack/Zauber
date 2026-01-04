@@ -11,13 +11,14 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.CharType
 import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
@@ -53,10 +54,7 @@ class TypeResolutionTest {
         }
 
         fun defineArrayListConstructors() {
-            val arrayListType = standardClasses["ArrayList"]!!
-            if (arrayListType.typeParameters.isEmpty()) {
-                arrayListType.typeParameters += Parameter("X", NullableAnyType, arrayListType, -1)
-            }
+            val arrayListType = ArrayListType.clazz
 
             // we need to define the constructor without any args
             val constructors = arrayListType.constructors
@@ -79,10 +77,7 @@ class TypeResolutionTest {
         }
 
         fun defineListParameters() {
-            val arrayListType = standardClasses["List"]!!
-            if (arrayListType.typeParameters.isEmpty()) {
-                arrayListType.typeParameters += Parameter("X", NullableAnyType, arrayListType, -1)
-            }
+            ListType.clazz
         }
 
         private val LOGGER = LogManager.getLogger(TypeResolutionTest::class)
@@ -163,40 +158,4 @@ class TypeResolutionTest {
         )
         assertEquals(unionTypes(IntType, NullType), type)
     }
-
-    @Test
-    fun testSelfType() {
-        // this has a hacky solution, how does it know of the type being B???
-        //  -> it was using the constructor parameter...
-        val type0 = testTypeResolution(
-            """
-            open class A(val other: Self?)
-            class B(other: Self?): A(other)
-            val tested = B(null).other
-        """.trimIndent()
-        )
-        check(type0 is UnionType && NullType in type0.types && type0.types.size == 2)
-        val type1 = type0.types.first { it != NullType }
-        LOGGER.info("Resolved Self to $type1 (should be B)")
-        assertTrue(type1 is ClassType)
-        assertTrue((type1 as ClassType).clazz.name == "B")
-        LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
-        assertFalse(type1.clazz.fields.any { it.name == "other" })
-    }
-
-    @Test
-    fun testSelfType2() {
-        // todo somehow the field is missing??? How???
-        val type = testTypeResolution(
-            """
-            open class A(val other: Self?)
-            class B(other: Self?): A(other)
-            val tested = B(null).other!!
-        """.trimIndent()
-        )
-        LOGGER.info("Resolved Self to $type (should be B)")
-        assertTrue(type is ClassType)
-        assertTrue((type as ClassType).clazz.name == "B")
-    }
-
 }

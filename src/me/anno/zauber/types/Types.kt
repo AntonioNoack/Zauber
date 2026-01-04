@@ -60,6 +60,10 @@ object Types {
     val NothingType = getType("Nothing", 0)
     val BooleanType = getType("Boolean", 0)
     val ArrayType = getType("Array", 1)
+    val ListType = getType("List", 1)
+    val ArrayListType = getType("ArrayList", 1)
+    val MapType = getType("Map", 2)
+    val PairType = getType("Pair", 2)
 
     // todo yes, it is Iterable<*>, but * = Nothing still feels wrong :/
     val AnyIterableType = ClassType(getScope("Iterable", 1), listOf(NothingType))

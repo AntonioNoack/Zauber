@@ -13,8 +13,10 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
+import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
@@ -121,7 +123,7 @@ class IsSubTypeOfTest {
     @Test
     fun testTypeParameters() {
         defineArrayListConstructors()
-        val listType = standardClasses["ArrayList"]!!
+        val listType = ArrayListType.clazz
         assertEquals(1, listType.typeParameters.size)
 
         val scope = """
@@ -136,7 +138,8 @@ class IsSubTypeOfTest {
         assertFalse(isSubTypeOf(listOfB, listOfA))
     }
 
-    private val list = ParameterList(1)
+    private val list = ParameterList(listOf(ListType.clazz.typeParameters[0]))
+
     fun getClearedList(): ParameterList {
         list.clear()
         return list
@@ -225,7 +228,7 @@ class IsSubTypeOfTest {
     @Test
     fun testInferredAsParameterType() {
         defineArrayListConstructors()
-        val listType = standardClasses["ArrayList"]!!
+        val listType = ArrayListType.clazz
         testInferred { ClassType(listType, listOf(it)) }
     }
 

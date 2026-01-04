@@ -7,6 +7,7 @@ import me.anno.zauber.typeresolution.members.ResolvedCallable.Companion.resolveG
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
+import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.impl.*
 
 /**
@@ -119,6 +120,15 @@ object Inheritance {
     ): Boolean {
 
         if (expectedType == actualType) return true
+
+        if (expectedType == UnknownType) return true
+        if (actualType == UnknownType) {
+            // todo use the bounds of the generics instead, not 'Any?'
+            return isSubTypeOf(
+                expectedType, NullableAnyType,
+                expectedTypeParams, actualTypeParameters, insertMode
+            )
+        }
 
         if (expectedType is NotType) {
             return !isSubTypeOf(
