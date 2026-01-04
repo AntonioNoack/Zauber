@@ -2,10 +2,9 @@ package zauber
 
 fun <V> emptyList(): List<V> = Array(0)
 
-interface List<V> : Iterable<V> {
+interface List<V> : Collection<V> {
     operator fun get(index: Int): V
 
-    val size: Int
     fun isEmpty(): Boolean
 }
 

@@ -77,16 +77,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     var currPackage = root
     var i = 0
 
-    fun readPath(): Scope {
-        check(tokens.equals(i, TokenType.NAME))
-        var path = root.getOrPut(tokens.toString(i++), null)
-        while (tokens.equals(i, ".") && tokens.equals(i + 1, TokenType.NAME)) {
-            path = path.getOrPut(tokens.toString(i + 1), null)
-            i += 2 // skip period and name
-        }
-        return path
-    }
-
     fun readTypePath(selfType: Type?): Type {
         check(tokens.equals(i, TokenType.NAME))
         val name0 = tokens.toString(i++)
@@ -536,33 +526,32 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return constructor
     }
 
+    private fun applyImport(import: Import) {
+        imports.add(import)
+        if (import.allChildren) {
+            for (child in import.path.children) {
+                currPackage.imports += Import2(child.name, child, false)
+            }
+        } else {
+            currPackage.imports += Import2(import.name, import.path, true)
+        }
+    }
+
     fun readFileLevel() {
         loop@ while (i < tokens.size) {
             if (LOGGER.debug) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
                 tokens.equals(i, "package") -> {
-                    i++ // skip 'package'
-                    currPackage = readPath()
+                    val (path, nextI) = tokens.readPath(i)
+                    currPackage = path
                     currPackage.mergeScopeTypes(ScopeType.PACKAGE)
+                    i = nextI
                 }
-                tokens.equals(i, "import") -> {
-                    i++ // skip 'import'
-                    val path = readPath()
-                    val allChildren = tokens.equals(i, ".*")
-                    if (allChildren) i++ // skip .* symbol
-                    val name = if (!allChildren && tokens.equals(i, "as") && tokens.equals(i + 1, TokenType.NAME)) {
-                        i++
-                        tokens.toString(i++)
-                    } else path.name
 
-                    imports.add(Import(path, allChildren, name))
-                    if (allChildren) {
-                        for (child in path.children) {
-                            currPackage.imports += Import2(child.name, child, false)
-                        }
-                    } else {
-                        currPackage.imports += Import2(name, path, true)
-                    }
+                tokens.equals(i, "import") -> {
+                    val (import, nextI) = tokens.readImport(i)
+                    i = nextI
+                    applyImport(import)
                 }
 
                 tokens.equals(i, "class") -> readClass()
@@ -1936,7 +1925,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         expr.valueParameters.any { exprSplitsScope(it.value) } ||
                         (expr.base is MemberNameExpression && expr.base.name == "check") // this check is a little too loose
             }
-            is AssignmentExpression -> true // explicit yes
+            is AssignmentExpression, is DestructuringAssignment -> true // explicit yes
             is PrefixExpression -> exprSplitsScope(expr.base)
             is PostfixExpression -> exprSplitsScope(expr.base)
             is AssignIfMutableExpr -> true // we don't know better yet

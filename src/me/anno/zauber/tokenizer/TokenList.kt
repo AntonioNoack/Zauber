@@ -1,6 +1,9 @@
 package me.anno.zauber.tokenizer
 
+import me.anno.zauber.Compile.root
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.types.Import
+import me.anno.zauber.types.Scope
 import kotlin.math.max
 
 // could be placed into a token list...
@@ -204,6 +207,7 @@ class TokenList(val src: String, val fileName: String) {
         size--
     }
 
+    @Suppress("DuplicatedCode")
     fun findToken(i0: Int, str: String): Int {
         var depth = 0
         for (i in i0 until size) {
@@ -220,6 +224,7 @@ class TokenList(val src: String, val fileName: String) {
         return -1
     }
 
+    @Suppress("DuplicatedCode")
     fun findToken(i0: Int, type: TokenType): Int {
         var depth = 0
         for (i in i0 until size) {
@@ -234,5 +239,30 @@ class TokenList(val src: String, val fileName: String) {
             }
         }
         return -1
+    }
+
+    fun readPath(i: Int): Pair<Scope, Int> {
+        var j = i + 1
+        check(equals(j, TokenType.NAME))
+        var path = root.getOrPut(toString(j++), null)
+        while (equals(j, ".") && equals(j + 1, TokenType.NAME)) {
+            path = path.getOrPut(toString(j + 1), null)
+            j += 2 // skip period and name
+        }
+        return path to j
+    }
+
+    fun readImport(i: Int): Pair<Import, Int> {
+        var (path, j) = readPath(i)
+        val allChildren = equals(j, ".*")
+        if (allChildren) j++
+        val name = if (!allChildren &&
+            equals(j, "as") &&
+            equals(j + 1, TokenType.NAME)
+        ) {
+            j++
+            toString(j++)
+        } else path.name
+        return Import(path, allChildren, name) to j
     }
 }

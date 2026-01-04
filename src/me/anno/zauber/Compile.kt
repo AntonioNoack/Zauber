@@ -1,7 +1,7 @@
 package me.anno.zauber
 
 import me.anno.zauber.astbuilder.ASTBuilder
-import me.anno.zauber.astbuilder.ASTClassScanner.findNamedClasses
+import me.anno.zauber.astbuilder.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
@@ -104,7 +104,7 @@ object Compile {
     fun collectNamedClassesForTypeResolution() {
         for (i in sources.indices) {
             val source = sources[i]
-            findNamedClasses(source)
+            collectNamedClasses(source)
         }
     }
 
