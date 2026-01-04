@@ -26,7 +26,9 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     companion object {
         private fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
             check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
-            check(clazz.typeParameters.size == typeParams.size)
+            check(clazz.typeParameters.size == typeParams.size){
+                "Incorrect number of typeParams for $clazz, expected ${clazz.typeParameters.size}, got ${typeParams.size}"
+            }
             val result = ParameterList(clazz.typeParameters)
             for (i in typeParams.indices) {
                 result.set(i, typeParams[i], InsertMode.READ_ONLY)
@@ -36,7 +38,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     }
 
     init {
-        check(typeParameters == null || typeParameters.none { it == null })
+        check(typeParameters == null || !typeParameters.containsNull())
     }
 
     override fun equals(other: Any?): Boolean {

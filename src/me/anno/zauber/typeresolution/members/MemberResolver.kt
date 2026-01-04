@@ -80,7 +80,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             val resolvedTypes = actualTypeParameters?.readonly()
                 ?: ParameterList(expectedTypeParameters)
 
-            val findGenericTypes = actualTypeParameters == null
+            val findGenericTypes = actualTypeParameters == null || actualTypeParameters.containsNull()
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
             val matchesSelfType = expectedSelfType == null || isSubTypeOf(

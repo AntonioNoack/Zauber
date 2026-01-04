@@ -801,7 +801,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             }
         }
         check(tokens.equals(i++, ">")) // skip >
-        scope.typeParameters += params
+        scope.typeParameters = params
         scope.hasTypeParameters = true
         return params
     }

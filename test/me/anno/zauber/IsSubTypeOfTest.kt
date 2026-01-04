@@ -203,7 +203,7 @@ class IsSubTypeOfTest {
                 listOf(floatParameter), getClearedList(), InsertMode.STRONG
             )
         )
-        assertNull(list[0])
+        assertNull(list.getOrNull(0))
 
         // inserting Floats is ofc fine, both strong and weak
         assertTrue(

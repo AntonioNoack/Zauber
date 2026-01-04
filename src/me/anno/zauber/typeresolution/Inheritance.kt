@@ -30,6 +30,13 @@ object Inheritance {
             expectedTypeParams.filterIndexed { index, _ -> actualTypeParameters.getOrNull(index) != null },
             actualTypeParameters.filterNotNull()
         )
+
+        if (insertMode == InsertMode.READ_ONLY &&
+            actualTypeParameters.types.any { it == null }
+        ) {
+            throw IllegalArgumentException("ReadOnly but unknown types?")
+        }
+
         if (expected.type != expectedType) {
             LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
         }
@@ -48,8 +55,9 @@ object Inheritance {
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
     ): Boolean {
-        LOGGER.info("checking $actualType instanceOf $expectedType")
-        LOGGER.info("  with generics $expectedTypeParams")
+        LOGGER.info("Checking $actualType instanceOf $expectedType")
+        LOGGER.info("  with generics $expectedTypeParams vs $actualTypeParameters")
+        LOGGER.info("  and insertMode $insertMode")
         val result = isSubTypeOfImpl(
             expectedType,
             actualType,
@@ -257,14 +265,13 @@ object Inheritance {
             return false
         }
 
-        LOGGER.info(
+        if (false) LOGGER.info(
             "checkingEq: $expectedType vs $actualType " +
                     "-> ${expectedType == actualType}"
         )
 
         if (expectedType == actualType) return true
         if (actualType is ClassType && expectedType is ClassType) {
-            // todo check generics
             if (expectedType.clazz == actualType.clazz) {
                 val actualGenerics = actualType.typeParameters
                 val expectedGenerics = expectedType.typeParameters
@@ -283,8 +290,7 @@ object Inheritance {
                     return true
                 }
 
-                val sufficient = actualType.classHasNoTypeParams()
-                val actualSize = actualGenerics?.size ?: if (sufficient) 0 else -1
+                val actualSize = actualGenerics.size
                 val expectedSize = expectedGenerics.size
                 LOGGER.info("Class vs Class (${actualType.clazz.name}), $actualSize vs $expectedSize, $insertMode")
 
@@ -294,20 +300,17 @@ object Inheritance {
                 }
 
                 // todo in/out now matters for the direction of the isSubTypeOf...
-                if (actualGenerics != null) {
-                    for (i in actualGenerics.indices) {
-                        // these may be null, if so, just accept them
-                        val expectedType = expectedGenerics[i] ?: return false//?: NullableAnyType
-                        val actualType = actualGenerics[i] ?: return false//?: NullableAnyType
-                        if (!isSubTypeOf(
-                                expectedType, actualType,
-                                expectedTypeParams, actualTypeParameters,
-                                insertMode,
-                            )
-                        ) return false
-                    }
+                for (i in actualGenerics.indices) {
+                    // these may be null, if so, just accept them
+                    val expectedType = expectedGenerics[i]
+                    val actualType = actualGenerics[i]
+                    if (!isSubTypeOf(
+                            expectedType, actualType,
+                            expectedTypeParams, actualTypeParameters,
+                            insertMode,
+                        )
+                    ) return false
                 }
-
                 return true
             }
 
@@ -356,7 +359,7 @@ object Inheritance {
             if (expectedType is GenericType || actualType is GenericType) {
                 val expectedType = if (expectedType is GenericType) expectedType.superBounds else expectedType
                 val actualType = if (actualType is GenericType) actualType.superBounds else expectedType
-                LOGGER.info("Using superBounds...")
+                LOGGER.info("Using superBounds for insertMode=READ_ONLY")
                 return isSubTypeOf(
                     expectedType, actualType,
                     expectedTypeParams, actualTypeParameters,

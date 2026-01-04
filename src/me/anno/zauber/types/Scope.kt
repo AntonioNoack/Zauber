@@ -38,6 +38,12 @@ class Scope(val name: String, val parent: Scope? = null) {
     var selfAsMethod: Method? = null
 
     var typeParameters: List<Parameter> = emptyList()
+        set(value) {
+            if (hasTypeParameters && field.size != value.size) {
+                throw IllegalArgumentException("Cannot set $pathStr.typeParameters to $value, expected ${field.size} entries")
+            }
+            field = value
+        }
     var hasTypeParameters = false
 
     val typeWithoutArgs = ClassType(this, null)

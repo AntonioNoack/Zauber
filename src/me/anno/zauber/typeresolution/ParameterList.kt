@@ -29,6 +29,8 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
      * */
     val insertModes = Array(size) { InsertMode.WEAK }
 
+    fun containsNull(): Boolean = null in types
+
     fun union(index: Int, newType: Type, newInsertMode: InsertMode): Boolean {
         val oldInsertMode = insertModes[index]
         return if (oldInsertMode == newInsertMode) {
@@ -122,7 +124,8 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         if (insertModes.all { it == InsertMode.READ_ONLY }) return this
         val copy = ParameterList(generics)
         for (i in generics.indices) {
-            copy.set(i, types[i], InsertMode.READ_ONLY)
+            val type = types[i] ?: continue // null stays weak
+            copy.set(i, type, InsertMode.READ_ONLY)
         }
         return copy
     }

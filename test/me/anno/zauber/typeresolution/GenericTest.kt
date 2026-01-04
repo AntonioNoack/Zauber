@@ -4,10 +4,13 @@ import me.anno.zauber.Compile.stdlib
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Types.ArrayListType
+import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.MapType
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types.PairType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -152,27 +155,16 @@ class GenericTest {
     }
 
     private fun registerPairParams() {
-        val pairClass = standardClasses["Pair"]!!
-        if (pairClass.typeParameters.size != 2) {
-            pairClass.typeParameters = listOf(
-                Parameter("F", NullableAnyType, pairClass, -1),
-                Parameter("S", NullableAnyType, pairClass, -1),
-            )
-        }
+        PairType.clazz
     }
 
     private fun registerArrayParams() {
-        val arrayClass = standardClasses["Pair"]!!
-        if (arrayClass.typeParameters.size != 1) {
-            arrayClass.typeParameters = listOf(
-                Parameter("V", NullableAnyType, arrayClass, -1),
-            )
-        }
+        ArrayType.clazz
     }
 
     @Test
     fun testTwoStackedGenericReturnTypes() {
-        val mapClass = standardClasses["Map"]!!
+        val mapClass = MapType.clazz
         registerMapParams()
         registerPairParams()
         registerArrayParams()
