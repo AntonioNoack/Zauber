@@ -806,7 +806,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     readType(null, true)
                 } else NullableAnyType
 
-                params.add(Parameter(false, true, false, name, type, null, scope, origin))
+                params.add(Parameter(name, type, scope, origin))
                 readComma()
             }
         }
@@ -945,7 +945,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val base = nameExpression(namePath, origin, this, currPackage)
                     CallExpression(base, typeArgs, args, origin + 1)
                 } else if (
-                    // todo validate that we have nothing before us...
+                // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
                     val i0 = i + 2
                     i-- // skipping over name

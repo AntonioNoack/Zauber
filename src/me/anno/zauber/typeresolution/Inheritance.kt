@@ -21,12 +21,12 @@ object Inheritance {
         expected: Parameter,
         actual: ValueParameter,
         expectedTypeParams: List<Parameter>,
-        actualTypeParameters: List<Type?>,
+        actualTypeParameters: ParameterList,
         insertMode: InsertMode
     ): Boolean {
         val expectedType = resolveGenerics(
             selfTypeIfNeeded, expected.type,
-            expectedTypeParams.filterIndexed { index, _ -> actualTypeParameters[index] != null },
+            expectedTypeParams.filterIndexed { index, _ -> actualTypeParameters.getOrNull(index) != null },
             actualTypeParameters.filterNotNull()
         )
         if (expected.type != expectedType) {
@@ -92,7 +92,7 @@ object Inheritance {
             // System.err.LOGGER.info("Available generic parameters: ${expectedTypeParams.map { "${it.scope.pathStr}.${it.name}" }}")
         }
 
-        actualTypeParameters as FillInParameterList
+        actualTypeParameters as ParameterList
 
         val expectedTypeParam = expectedTypeParams[typeParamIdx]
         if (!isSubTypeOf(
@@ -105,7 +105,7 @@ object Inheritance {
             )
         ) return false
 
-        val success = actualTypeParameters.union(typeParamIdx, actualType, insertMode == InsertMode.STRONG)
+        val success = actualTypeParameters.union(typeParamIdx, actualType, insertMode)
         LOGGER.info("Found Type[$success for $actualType @$insertMode]: [$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}")
         return success
     }

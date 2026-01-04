@@ -1,6 +1,7 @@
 package me.anno.zauber.astbuilder.expression
 
 import me.anno.zauber.astbuilder.Field
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.MemberResolver.Companion.findGenericsForMatch
 import me.anno.zauber.typeresolution.members.ResolvedField
@@ -20,13 +21,13 @@ class FieldExpression(
         val generics = findGenericsForMatch(
             field.selfType, if (field.selfType == null) null else context.selfType,
             field.valueType, context.targetType,
-            emptyList(), emptyList(),
+            emptyList(), emptyParameterList(),
             emptyList(), emptyList()
         )
         check(generics != null) {
             "Resolved field $field, but somehow the generics were incompatible???"
         }
-        val resolved = ResolvedField(generics, field, emptyList(), context)
+        val resolved = ResolvedField(generics, field, emptyParameterList(), context)
         return resolved.getValueType(context)
     }
 }

@@ -3,11 +3,12 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.astbuilder.Method
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
-class ResolvedMethod(ownerTypes: List<Type>, method: Method, callTypes: List<Type>, context: ResolutionContext) :
+class ResolvedMethod(ownerTypes: ParameterList, method: Method, callTypes: ParameterList, context: ResolutionContext) :
     ResolvedCallable<Method>(ownerTypes, callTypes, method, context) {
 
     override fun getTypeFromCall(): Type {

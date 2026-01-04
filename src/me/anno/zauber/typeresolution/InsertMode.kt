@@ -1,16 +1,16 @@
 package me.anno.zauber.typeresolution
 
-enum class InsertMode {
-    /**
-     * list should be union-ed
-     * */
-    STRONG,
+enum class InsertMode(val symbol: String) {
     /**
      * entries that are added are only weak
      * */
-    WEAK,
+    WEAK("w"),
+    /**
+     * list should be union-ed
+     * */
+    STRONG("s"),
     /**
      * list is read-only
      * */
-    READ_ONLY,
+    READ_ONLY("ro"),
 }

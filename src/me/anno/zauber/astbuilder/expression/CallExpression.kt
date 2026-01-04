@@ -39,8 +39,8 @@ class CallExpression(
     }
 
     override fun toStringImpl(depth: Int): String {
-        val depth = depth - 1
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
+        val base = base.toString(depth)
         return if (typeParameters != null && typeParameters.isEmpty()) {
             "($base)$valueParameters"
         } else "($base)<${typeParameters ?: "?"}>$valueParameters"

@@ -2,9 +2,10 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.FillInParameterList
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ResolvedCallable.Companion.resolveGenerics
@@ -27,11 +28,11 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             actualReturnType: Type?, // can help deducting types
 
             expectedTypeParameters: List<Parameter>,
-            actualTypeParameters: List<Type>?,
+            actualTypeParameters: ParameterList?,
 
             expectedValueParameters: List<Parameter>,
             actualValueParameters: List<ValueParameter>
-        ): List<Type>? { // found generic values for a match
+        ): ParameterList? { // found generic values for a match
 
             if (expectedSelfType is ClassType && expectedSelfType.clazz.scopeType?.isClassType() != true) {
                 throw IllegalArgumentException("Expected type cannot be $expectedSelfType, because type is unknown")
@@ -76,8 +77,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     return null
                 }
 
-            val resolvedTypes = actualTypeParameters
-                ?: FillInParameterList(expectedTypeParameters.size)
+            val resolvedTypes = actualTypeParameters?.readonly()
+                ?: ParameterList(expectedTypeParameters)
 
             val findGenericTypes = actualTypeParameters == null
 
@@ -132,7 +133,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     sortedValueParameters[i]
                 }
                 if (!isSubTypeOf(
-                        actualSelfType,mvParam, vParam,
+                        actualSelfType, mvParam, vParam,
                         expectedTypeParameters,
                         resolvedTypes,
                         if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
@@ -144,10 +145,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                 }
             }
 
-            val immutableList =
-                if (resolvedTypes is FillInParameterList) resolvedTypes.types.asList() else resolvedTypes
-            LOGGER.info("Found match: $immutableList")
-            return immutableList as List<Type>
+            LOGGER.info("Found match: $resolvedTypes")
+            return resolvedTypes.readonly()
         }
 
         /**
@@ -174,6 +173,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                     list[index] = valueParam
                 }
                 check(list.none { it == null })
+                @Suppress("UNCHECKED_CAST")
                 list.toList() as List<ValueParameter>
             } else valueParameters
         }
@@ -232,7 +232,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
         return scope.superCalls.firstNotNullOfOrNull { call ->
             val superType = call.type
             val genericNames = scope.typeParameters
-            val genericValues = call.type.typeParameters ?: emptyList()
+            val genericValues = call.type.typeParameters ?: emptyParameterList()
             val mappedSelfType = resolveGenerics(null, selfType, genericNames, genericValues) as ClassType
             val mappedTypeParameters = typeParameters?.map { paramType ->
                 resolveGenerics(selfType, paramType, genericNames, genericValues)

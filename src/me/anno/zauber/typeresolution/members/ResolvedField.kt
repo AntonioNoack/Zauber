@@ -6,6 +6,7 @@ import me.anno.zauber.astbuilder.expression.*
 import me.anno.zauber.astbuilder.expression.constants.SpecialValue
 import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Type
@@ -13,7 +14,7 @@ import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
-class ResolvedField(ownerTypes: List<Type>, field: Field, callTypes: List<Type>, context: ResolutionContext) :
+class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: ParameterList, context: ResolutionContext) :
     ResolvedCallable<Field>(ownerTypes, callTypes, field, context) {
 
     companion object {

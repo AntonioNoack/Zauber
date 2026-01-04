@@ -19,7 +19,7 @@ class GetClassFromValueExpression(val type: Expression, origin: Int) : Expressio
 
     override fun resolveType(context: ResolutionContext): Type {
         val base = TypeResolution.resolveType(context, type)
-        return ClassType(getScope("Class"), listOf(base))
+        return ClassType(getScope("Class", 1), listOf(base))
     }
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean = type.hasLambdaOrUnknownGenericsType()

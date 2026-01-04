@@ -144,8 +144,8 @@ class GenericTest {
         val mapClass = standardClasses["Map"]!!
         if (mapClass.typeParameters.size != 2) {
             mapClass.typeParameters = listOf(
-                Parameter(false, true, false, "K", NullableAnyType, null, mapClass, -1),
-                Parameter(false, true, false, "V", NullableAnyType, null, mapClass, -1),
+                Parameter("K", NullableAnyType, mapClass, -1),
+                Parameter("V", NullableAnyType, mapClass, -1),
             )
         }
     }
@@ -154,8 +154,8 @@ class GenericTest {
         val pairClass = standardClasses["Pair"]!!
         if (pairClass.typeParameters.size != 2) {
             pairClass.typeParameters = listOf(
-                Parameter(false, true, false, "F", NullableAnyType, null, pairClass, -1),
-                Parameter(false, true, false, "S", NullableAnyType, null, pairClass, -1),
+                Parameter("F", NullableAnyType, pairClass, -1),
+                Parameter("S", NullableAnyType, pairClass, -1),
             )
         }
     }
@@ -164,7 +164,7 @@ class GenericTest {
         val arrayClass = standardClasses["Pair"]!!
         if (arrayClass.typeParameters.size != 1) {
             arrayClass.typeParameters = listOf(
-                Parameter(false, true, false, "V", NullableAnyType, null, arrayClass, -1),
+                Parameter("V", NullableAnyType, arrayClass, -1),
             )
         }
     }
@@ -249,7 +249,7 @@ class GenericTest {
     }
 
     @Test
-    fun testLambdaInsideLambda(){
+    fun testLambdaInsideLambda() {
         // what about listOf("1,2,3").map{it.split(',').map{it.toInt()}}?
         //  can we somehow hide lambdas? I don't think so...
         val listType = standardClasses["List"]!!

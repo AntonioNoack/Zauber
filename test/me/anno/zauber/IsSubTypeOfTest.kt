@@ -4,9 +4,9 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.tokenizer.Tokenizer
-import me.anno.zauber.typeresolution.FillInParameterList
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.defineArrayListConstructors
 import me.anno.zauber.types.Scope
@@ -136,8 +136,8 @@ class IsSubTypeOfTest {
         assertFalse(isSubTypeOf(listOfB, listOfA))
     }
 
-    private val list = FillInParameterList(1)
-    fun getClearedList(): FillInParameterList {
+    private val list = ParameterList(1)
+    fun getClearedList(): ParameterList {
         list.clear()
         return list
     }
@@ -149,10 +149,7 @@ class IsSubTypeOfTest {
 
         // first check without bounds
         val anyOrNullGeneric = GenericType(scope, "V")
-        val anyOrNullParameter = Parameter(
-            false, true, false,
-            "V", NullableAnyType, null, scope, -1
-        )
+        val anyOrNullParameter = Parameter("V", NullableAnyType, scope, -1)
         scope.typeParameters = listOf(anyOrNullParameter)
 
         // parameter is available, writable -> true
@@ -193,10 +190,7 @@ class IsSubTypeOfTest {
 
         // now check generics with bounds
         val floatGeneric = GenericType(scope, "F")
-        val floatParameter = Parameter(
-            false, true, false,
-            "F", FloatType, null, scope, -1
-        )
+        val floatParameter = Parameter("F", FloatType, scope, -1)
         scope.typeParameters = listOf(floatParameter)
 
         // even the strong mode must respect type bounds

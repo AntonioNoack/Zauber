@@ -1,5 +1,7 @@
 package me.anno.zauber.types.impl
 
+import me.anno.zauber.typeresolution.InsertMode
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -7,7 +9,23 @@ import me.anno.zauber.types.Type
  * A scope, but also with optional type arguments,
  * e.g. ArrayList, ArrayList<Int> or Map<Key, Value>
  * */
-class ClassType(val clazz: Scope, val typeParameters: List<Type>?) : Type() {
+class ClassType(val clazz: Scope, val typeParameters: ParameterList?) : Type() {
+
+    constructor(clazz: Scope, typeParams: List<Type>?) : this(
+        clazz, if (typeParams == null) null
+        else createParamList(clazz, typeParams)
+    )
+
+    companion object {
+        private fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
+            check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
+            val list = ParameterList(clazz.typeParameters)
+            for (i in typeParams.indices) {
+                list.set(i, typeParams[i], InsertMode.READ_ONLY)
+            }
+            return list
+        }
+    }
 
     init {
         check(typeParameters == null || typeParameters.none { it == null })

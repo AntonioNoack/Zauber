@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
@@ -9,8 +10,8 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 abstract class ResolvedCallable<V>(
-    val ownerTypes: List<Type>,
-    val callTypes: List<Type>,
+    val ownerTypes: ParameterList,
+    val callTypes: ParameterList,
     val resolved: V,
     val context: ResolutionContext
 ) {
@@ -24,7 +25,7 @@ abstract class ResolvedCallable<V>(
         fun resolveGenerics(
             selfType: Type?, type: Type,
             genericNames: List<Parameter>,
-            genericValues: List<Type>
+            genericValues: ParameterList
         ): Type {
             if (genericNames.size != genericValues.size) {
                 LOGGER.warn("Expected same number of generic names and generic values, got ${genericNames.size} vs ${genericValues.size} ($type)")

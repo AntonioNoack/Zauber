@@ -1,14 +1,17 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Field
+import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.FillInParameterList
+import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
+import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -74,16 +77,6 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         valueParameters: List<ValueParameter>
     ): ResolvedField? {
         check(valueParameters.isEmpty())
-        /* check(typeParameters == null) /* not yet supported ?!? */
-
-         val generics = findGenericsForMatch(
-             field.selfType, if (field.selfType == null) null else selfType,
-             valueType, returnType,
-             field.selfTypeTypeParams + field.typeParameters, selfTypePramas + typeParameters,
-             emptyList(), emptyList()
-         ) ?: return null
-         val context = ResolutionContext(field.declaredScope, field.selfType, false, null)
-         return ResolvedField(generics, field, emptyList(), context)*/
 
         var fieldSelfParams = selfTypeToTypeParams(field.selfType)
         var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
@@ -92,22 +85,19 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             fieldSelfType = null
             fieldSelfParams = emptyList()
         }
-        var actualTypeParams = typeParameters
-        if (fieldSelfParams.isNotEmpty() && actualTypeParams != null) {
-            // todo issue: actualTypeParams = null has a special meaning!!!
-            //  we need to avoid that meaning, or must not make it non-null
-            check(selfType != null)
-            check(selfType is ClassType)
-            check(selfType.typeParameters?.size == fieldSelfParams.size)
-            check(actualTypeParams !is FillInParameterList)
-            actualTypeParams = selfType.typeParameters + (actualTypeParams ?: emptyList())
-        }
+
+        val actualTypeParams = mergeTypeParameters(
+            fieldSelfParams, fieldSelfType,
+            field.typeParameters, typeParameters,
+        )
+
         val generics = findGenericsForMatch(
             fieldSelfType, if (fieldSelfType == null) null else selfType,
             fieldReturnType, returnType,
             fieldSelfParams + field.typeParameters, actualTypeParams,
             emptyList(), valueParameters
         ) ?: return null
+
         val selfType = selfType ?: fieldSelfType
         val context = ResolutionContext(field.declaredScope, selfType, false, fieldReturnType)
         return ResolvedField(
@@ -116,11 +106,10 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         )
     }
 
+
     fun resolveFieldType(
-        context: ResolutionContext,
-        name: String,
-        typeParameters: List<Type>?,
-        origin: Int
+        context: ResolutionContext, name: String,
+        typeParameters: ParameterList?, origin: Int
     ): Type {
         LOGGER.info("typeParams: $typeParameters")
         val field = resolveField(context, name, typeParameters)
@@ -136,9 +125,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     }
 
     fun resolveField(
-        context: ResolutionContext,
-        name: String,
-        typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
+        context: ResolutionContext, name: String,
+        typeParameters: ParameterList?, // if provided, typically not the case (I've never seen it)
     ): ResolvedField? {
         val returnType = context.targetType
         val selfType = context.selfType

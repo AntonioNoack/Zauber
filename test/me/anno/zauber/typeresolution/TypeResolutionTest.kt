@@ -55,10 +55,7 @@ class TypeResolutionTest {
         fun defineArrayListConstructors() {
             val arrayListType = standardClasses["ArrayList"]!!
             if (arrayListType.typeParameters.isEmpty()) {
-                arrayListType.typeParameters += Parameter(
-                    false, false, false,
-                    "X", NullableAnyType, null, arrayListType, -1
-                )
+                arrayListType.typeParameters += Parameter("X", NullableAnyType, arrayListType, -1)
             }
 
             // we need to define the constructor without any args
@@ -74,12 +71,7 @@ class TypeResolutionTest {
             if (constructors.none { it.valueParameters.size == 1 }) {
                 val scope = arrayListType.getOrPut(arrayListType.generateName("constructor"), ScopeType.CONSTRUCTOR)
                 scope.selfAsConstructor = Constructor(
-                    listOf(
-                        Parameter(
-                            false, false, false, "size",
-                            IntType, null, arrayListType, -1
-                        ),
-                    ),
+                    listOf(Parameter("size", IntType, arrayListType, -1)),
                     scope, null, null,
                     emptyList(), -1
                 )
@@ -89,10 +81,7 @@ class TypeResolutionTest {
         fun defineListParameters() {
             val arrayListType = standardClasses["List"]!!
             if (arrayListType.typeParameters.isEmpty()) {
-                arrayListType.typeParameters += Parameter(
-                    false, false, false,
-                    "X", NullableAnyType, null, arrayListType, -1
-                )
+                arrayListType.typeParameters += Parameter("X", NullableAnyType, arrayListType, -1)
             }
         }
 
@@ -132,12 +121,7 @@ class TypeResolutionTest {
         if (constructors.none { it.valueParameters.size == 1 }) {
             val scope = intArrayType.getOrCreatePrimConstructorScope()
             scope.selfAsConstructor = Constructor(
-                listOf(
-                    Parameter(
-                        false, false, false,
-                        "size", IntType, null, intArrayType, -1
-                    )
-                ),
+                listOf(Parameter("size", IntType, intArrayType, -1)),
                 scope, null, null,
                 emptyList(), -1
             )

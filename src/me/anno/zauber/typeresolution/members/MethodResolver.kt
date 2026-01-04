@@ -4,12 +4,13 @@ import me.anno.zauber.astbuilder.Method
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.FillInParameterList
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
+import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -72,24 +73,20 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>
     ): ResolvedMethod? {
-        // todo resolve type params of method.typeParams and selfType.typeParams
+
         val methodSelfParams = selfTypeToTypeParams(method.selfType)
-        var actualTypeParams = typeParameters
-        if (methodSelfParams.isNotEmpty() && actualTypeParams != null) {
-            // todo issue: actualTypeParams = null has a special meaning!!!
-            //  we need to avoid that meaning, or must not make it non-null
-            check(selfType != null)
-            check(selfType is ClassType)
-            check(selfType.typeParameters?.size == methodSelfParams.size)
-            check(actualTypeParams !is FillInParameterList)
-            actualTypeParams = selfType.typeParameters + (actualTypeParams ?: emptyList())
-        }
+        val actualTypeParams = mergeTypeParameters(
+            methodSelfParams, selfType,
+            method.typeParameters, typeParameters,
+        )
+
         val generics = findGenericsForMatch(
             method.selfType, if (method.selfType == null) null else selfType,
             methodReturnType, returnType,
             methodSelfParams + method.typeParameters, actualTypeParams,
             method.valueParameters, valueParameters
         ) ?: return null
+
         val selfType = selfType ?: method.selfType
         val context = ResolutionContext(method.scope, selfType, false, returnType)
         return ResolvedMethod(

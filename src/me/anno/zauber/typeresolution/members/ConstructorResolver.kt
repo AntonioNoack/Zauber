@@ -1,7 +1,10 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Constructor
+import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Scope
@@ -75,6 +78,10 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
     ): ResolvedConstructor? {
+
+        val typeParameters = typeParameters
+            ?.toParameterList(constructor.selfType.clazz.typeParameters)
+
         val generics = findGenericsForMatch(
             null, null,
             memberReturnType, returnType,
@@ -86,5 +93,10 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             false, returnType
         )
         return ResolvedConstructor(generics, constructor, context)
+    }
+
+    fun List<Type>.toParameterList(generics: List<Parameter>): ParameterList {
+        if (isEmpty()) return emptyParameterList()
+        return ParameterList(generics, this)
     }
 }
