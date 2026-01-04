@@ -23,9 +23,7 @@ class ConstructorExpression(
     }
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean {
-        val forTypeParams = typeParameters?.any { it.containsGenerics() } ?: clazz.typeParameters.isNotEmpty()
-        val forValueParams = valueParameters.any { it.hasLambdaOrUnknownGenericsType() }
-        return forTypeParams || forValueParams
+        return typeParameters?.any { it.containsGenerics() } ?: clazz.typeParameters.isNotEmpty()
     }
 
     override fun resolveType(context: ResolutionContext): Type {

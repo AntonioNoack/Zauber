@@ -39,7 +39,7 @@ class CallExpression(
     }
 
     override fun toStringImpl(depth: Int): String {
-        val depth = depth-1
+        val depth = depth - 1
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         return if (typeParameters != null && typeParameters.isEmpty()) {
             "($base)$valueParameters"
@@ -52,6 +52,7 @@ class CallExpression(
     )
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean {
+        // todo if(typeParameters == null), then only if a method/constructor/field is known, that has that issue...
         return typeParameters == null ||
                 base.hasLambdaOrUnknownGenericsType() ||
                 valueParameters.any { it.value.hasLambdaOrUnknownGenericsType() }
@@ -61,8 +62,8 @@ class CallExpression(
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
         LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
-        // todo base can be a constructor, field or a method
-        // todo find the best matching candidate...
+        // base can be a constructor, field or a method
+        // find the best matching candidate...
         val returnType = context.targetType
         when (base) {
             is NamedCallExpression if base.name == "." -> {
@@ -72,14 +73,7 @@ class CallExpression(
                 val name = base.name
                 LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                val c = ConstructorResolver
-                val constructor = null1()
-                    ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
-                    ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
-                return resolveCallType(
-                    context, this, name, constructor,
-                    typeParameters, valueParameters
-                )
+                return resolveCallType(context, this, name, null, typeParameters, valueParameters)
             }
             is LazyFieldOrTypeExpression -> {
                 val name = base.name
@@ -89,28 +83,22 @@ class CallExpression(
                 val constructor = null1()
                     ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
-                return resolveCallType(
-                    context, this, name, constructor,
-                    typeParameters, valueParameters
-                )
+                return resolveCallType(context, this, name, constructor, typeParameters, valueParameters)
             }
             is ImportedExpression -> {
                 val name = base.nameAsImport.name
                 LOGGER.info("Find call '$name' with nameAsImport=${base.nameAsImport}")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
-                val constructor =
-                    c.findMemberInFile(base.nameAsImport, name, returnType, null, typeParameters, valueParameters)
-                        ?: findMemberInFile(
-                            base.nameAsImport.parent, name,
-                            returnType,
-                            base.nameAsImport.parent.ifIsClassScope()?.typeWithoutArgs,
-                            typeParameters, valueParameters
-                        )
-                return resolveCallType(
-                    context, this, name, constructor,
-                    typeParameters, valueParameters
-                )
+                val constructor = null1()
+                    ?: c.findMemberInFile(base.nameAsImport, name, returnType, null, typeParameters, valueParameters)
+                    ?: findMemberInFile(
+                        base.nameAsImport.parent, name,
+                        returnType,
+                        base.nameAsImport.parent.ifIsClassScope()?.typeWithoutArgs,
+                        typeParameters, valueParameters
+                    )
+                return resolveCallType(context, this, name, constructor, typeParameters, valueParameters)
             }
             else -> throw IllegalStateException(
                 "Resolve field/method for ${base.javaClass} ($base) " +

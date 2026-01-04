@@ -60,6 +60,7 @@ class IfElseBranch(
     )
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean {
+        println("Checking branch for unknown generics type: ${ifBranch.hasLambdaOrUnknownGenericsType()} || ${elseBranch?.hasLambdaOrUnknownGenericsType()}")
         return elseBranch != null && // if else is undefined, this has no return type
                 (ifBranch.hasLambdaOrUnknownGenericsType() || elseBranch.hasLambdaOrUnknownGenericsType())
     }

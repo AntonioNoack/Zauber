@@ -122,6 +122,7 @@ object TypeResolution {
         val contextWithoutTargetType = context.withTargetType(null)
         return base.map { param ->
             if (param.value.hasLambdaOrUnknownGenericsType()) {
+                LOGGER.info("Underdefined generics in $param :/")
                 UnderdefinedValueParameter(param, contextWithoutTargetType)
             } else {
                 val type = resolveType(contextWithoutTargetType, param.value)
