@@ -1,11 +1,10 @@
 package me.anno.zauber
 
-import me.anno.zauber.ast.rich.ASTBuilder
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
 import me.anno.zauber.generator.c.CSourceGenerator
+import me.anno.zauber.generator.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.Tokenizer
@@ -150,8 +149,14 @@ object Compile {
             TypeExpansion.resolveSpecificCalls(root)
         }
 
-        step("Create C-Code") {
-            CSourceGenerator.generateCode(File("./out/c"), root)
+        if (false) {
+            step("Create C-Code") {
+                CSourceGenerator.generateCode(File("./out/c"), root)
+            }
+        }
+
+        step("Create Java-Code") {
+            JavaSourceGenerator.generateCode(File("./out/java"), root)
         }
 
         printStats()

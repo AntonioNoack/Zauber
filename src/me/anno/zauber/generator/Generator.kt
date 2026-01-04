@@ -16,20 +16,25 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         repeat(depth) { builder.append("  ") }
     }
 
-    fun open() {
+    fun openBlock() {
         indent()
         depth++
     }
 
-    fun close() {
+    fun closeBlock() {
         depth--
         indent()
     }
 
+    fun nextLine() {
+        builder.append('\n')
+        indent()
+    }
+
     fun block(run: () -> Unit) {
-        open()
+        openBlock()
         run()
-        close()
+        closeBlock()
         builder.append(blockSuffix)
     }
 

@@ -205,7 +205,7 @@ object CSourceGenerator : Generator() {
                         builder.append("__isInstanceOf(")
                         writeExpr(expr.left, true)
                         builder.append(", ")
-                        builder.append(expr.right)
+                        builder.append(getName(expr.right))
                         builder.append(")")
                     }
                     is CompareOp -> {
@@ -220,7 +220,7 @@ object CSourceGenerator : Generator() {
                         writeExpr(expr.right, true)
                     }
                     is NamedTypeExpression -> {
-                        builder.append(expr.type)
+                        builder.append(getName(expr.type))
                     }
                     is AssignmentExpression -> {
                         writeExpr(expr.variableName, true)
@@ -268,7 +268,7 @@ object CSourceGenerator : Generator() {
             for (parent in scope.superCalls) {
                 // todo make them structs??? can already have resolved methods
                 // todo include all to-be-resolved (open/interface) methods
-                val pt = parent.type as ClassType
+                val pt = parent.type
                 indent()
                 builder.append("struct ").append(getName(pt.clazz)).append("_Class super").append(pt.clazz.name)
                     .append(";\n")
