@@ -3,6 +3,7 @@ package me.anno.zauber.astbuilder.expression
 import me.anno.zauber.astbuilder.ASTBuilder
 import me.anno.zauber.astbuilder.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution.findType
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -27,6 +28,10 @@ class MemberNameExpression(
                 if (nameAsImport != null) {
                     ImportedExpression(nameAsImport, scope, origin)
                 } else {
+
+                    val type = findType(scope, null, name)
+                    if (type != null) return NamedTypeExpression(type, scope, origin)
+
                     // try to find the field:
                     //  check super scopes until a class appears,
                     //  then check hierarchy scopes
@@ -34,8 +39,7 @@ class MemberNameExpression(
                     //  -> for the whole hierarchy, try to find fields and parent classes
                     // when this is executed, the field might not yet be known
                     //  -> and we must respect the hierarchy -> we can only execute this later on
-                    // todo if a type is named like that, use the type...
-                    LazyFieldOrTypeExpression(name, scope, origin)
+                    UnresolvedFieldExpression(name, scope, origin)
                 }
             }
         }

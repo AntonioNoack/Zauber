@@ -16,14 +16,10 @@ import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.NullType.typeOrNull
-import me.anno.zauber.types.impl.SelfType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
-import me.anno.zauber.types.impl.UnknownType
 import kotlin.math.max
 import kotlin.math.min
 
@@ -1564,39 +1560,27 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                             emptyList(), listOf(debugInfoParam), origin
                         )
                     }
-                    "as?" -> createCastExpression(expr, scope, origin) { scope ->
-                        SpecialValueExpression(SpecialValue.NULL, scope, origin)
-                    }
+                    "as?" -> createCastExpression(expr, scope, origin) { scope -> nullExpr(scope, origin) }
                     "is" -> IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
                     "!is" -> IsInstanceOfExpr(expr, readType(null, true), true, scope, origin)
                     "?:" -> createBranchExpression(
                         expr, scope, origin,
-                        { fieldExpr ->
-                            val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
-                            CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
-                        },
+                        { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
                         { fieldExpr, scope -> fieldExpr.clone(scope) }, // not null -> just the field
-                        { scope ->
-                            pushScope(scope) {
-                                readExpression()
-                            }
-                        },
+                        { scope -> pushScope(scope) { readExpression() } },
                     )
                     "?." -> createBranchExpression(
                         expr, scope, origin,
-                        { fieldExpr ->
-                            val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
-                            CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
-                        },
+                        { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
                         { fieldExpr, scope ->
                             pushScope(scope) {
-                                val dotOperator = operators["."]!!
-                                handleDotOperator(fieldExpr.clone(scope), dotOperator)
+                                handleDotOperator(
+                                    fieldExpr.clone(scope),
+                                    dotOperator
+                                )
                             }
                         },
-                        { scope ->
-                            SpecialValueExpression(SpecialValue.NULL, scope, origin)
-                        },
+                        { scope -> nullExpr(scope, origin) },
                     )
                     "." -> handleDotOperator(expr, op)
                     "&&", "||" -> {
@@ -1609,7 +1593,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     "::" -> {
                         if (tokens.equals(i, "class")) {
                             when (expr) {
-                                is LazyFieldOrTypeExpression -> {
+                                is UnresolvedFieldExpression -> {
                                     val i0 = i + 1
                                     i -= 2 // skipping over :: and name
                                     val type = readType(null, false)
@@ -1642,6 +1626,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         return expr
+    }
+
+    private fun nullExpr(scope: Scope, origin: Int): SpecialValueExpression {
+        return SpecialValueExpression(SpecialValue.NULL, scope, origin)
+    }
+
+    private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
+        val nullExpr = nullExpr(scope, origin)
+        return CheckEqualsOp(expr, nullExpr, false, true, scope, origin)
     }
 
     private fun readRHS(op: Operator): Expression =
@@ -1774,10 +1767,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val scope = currPackage
                 createBranchExpression(
                     expr, scope, origin,
-                    { fieldExpr ->
-                        val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
-                        CheckEqualsOp(fieldExpr, nullExpr, false, true, scope, origin)
-                    },
+                    { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
                     { fieldExpr, ifTrueScope ->
                         fieldExpr.clone(ifTrueScope)
                     }, { scope ->
@@ -1909,7 +1899,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is NumberExpression,
             is FieldExpression,
             is MemberNameExpression,
-            is LazyFieldOrTypeExpression,
+            is UnresolvedFieldExpression,
                 // todo if-else-branch can enforce a condition: if only one branch returns
             is IfElseBranch,
                 // todo while-loop without break can enforce a condition, too
@@ -1937,6 +1927,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             is BreakExpression, is ContinueExpression -> false // execution ends here anyway
             is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
             is DoubleColonPrefix -> false // some lambda -> no
+            is NamedTypeExpression -> false
             else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
         }
     }

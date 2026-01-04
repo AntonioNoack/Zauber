@@ -50,7 +50,7 @@ class Field(
         val initialValue = initialValue
         if (initialValue != null) {
             val newContext = context.withCodeScope(initialValue.scope)
-            LOGGER.info("Resolving field using initialValue: $initialValue, codeScope: ${newContext.codeScope}, selfScope: ${newContext.selfScope}")
+            LOGGER.info("Resolving field ${selfType}.${name} using initialValue: $initialValue, codeScope: ${newContext.codeScope}, selfScope: ${newContext.selfScope}")
             return TypeResolution.resolveType(newContext, initialValue)
         }
 

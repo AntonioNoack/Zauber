@@ -2,7 +2,6 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile
 import me.anno.zauber.astbuilder.NamedParameter
-import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.astbuilder.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
@@ -157,7 +156,7 @@ object TypeResolution {
         scope: Scope, // 2nd, recursive as long as fileName == parentScope.fileName
         selfScope: Type?, // 1st, surface-level only
         name: String
-    ): ClassType? = findType(typeToScope(selfScope), name) ?: findType(scope, name)
+    ): Type? = findType(typeToScope(selfScope), name) ?: findType(scope, name)
 
     fun typeToScope(type: Type?): Scope? {
         return when (type) {
@@ -174,11 +173,16 @@ object TypeResolution {
         }
     }
 
-    fun findType(scope: Scope?, name: String): ClassType? {
+    fun findType(scope: Scope?, name: String): Type? {
         var scope = scope ?: return null
         while (true) {
-            val match = scope.children.firstOrNull { it.name == name }
-            if (match != null) return ClassType(match, null)
+
+            val selfMatch = scope.children.firstOrNull { it.name == name }
+            if (selfMatch != null) return ClassType(selfMatch, null)
+
+            val genericsMatch = scope.typeParameters.firstOrNull { it.name == name }
+            if (genericsMatch != null) return GenericType(genericsMatch.scope, genericsMatch.name)
+
             scope = scope.parentIfSameFile ?: return null
         }
     }

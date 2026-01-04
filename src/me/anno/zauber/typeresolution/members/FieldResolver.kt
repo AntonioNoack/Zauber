@@ -91,6 +91,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             field.typeParameters, typeParameters,
         )
 
+        LOGGER.info("Resolving generics for field $field")
         val generics = findGenericsForMatch(
             fieldSelfType, if (fieldSelfType == null) null else selfType,
             fieldReturnType, returnType,

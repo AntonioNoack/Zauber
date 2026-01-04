@@ -30,7 +30,6 @@ object MergeTypeParams {
             return ParameterList(selfParams)
         }
 
-        println("MergeSelfPart($selfType, $selfParams)")
         val expectedSelfParams = selfParams.size
         val actualSelfParams = selfType.typeParameters.size
         check(actualSelfParams == expectedSelfParams)

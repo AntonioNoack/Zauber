@@ -95,7 +95,7 @@ class NamedCallExpression(
                         parameter.name, null, origin
                     )
                 }
-                is LazyFieldOrTypeExpression -> {
+                is UnresolvedFieldExpression -> {
                     // todo replace own generics, because we don't know them yet
                     /*val selfType = context.selfType
                     val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
@@ -121,7 +121,7 @@ class NamedCallExpression(
                                 parameter.typeParameters, valueParameters
                             )
                         }
-                        is LazyFieldOrTypeExpression -> {
+                        is UnresolvedFieldExpression -> {
                             val constructor = null
                             // todo for lambdas, baseType must be known for their type to be resolved
                             val valueParameters = resolveValueParameters(context, parameter.valueParameters)

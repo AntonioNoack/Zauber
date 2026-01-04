@@ -6,6 +6,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.findMemberInFile
 import me.anno.zauber.typeresolution.members.MethodResolver.null1
@@ -75,15 +76,35 @@ class CallExpression(
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 return resolveCallType(context, this, name, null, typeParameters, valueParameters)
             }
-            is LazyFieldOrTypeExpression -> {
+            is UnresolvedFieldExpression -> {
                 val name = base.name
                 LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
-                val constructor = null1()
+                val constructor = null1() // todo do we need this constructor-stuff??? I don't think so, it's not a type
                     ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
                 return resolveCallType(context, this, name, constructor, typeParameters, valueParameters)
+            }
+            is NamedTypeExpression -> {
+                val baseType = base.type
+                val baseScope = typeToScope(baseType)
+                    ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
+                check(baseScope.hasTypeParameters)
+                if (baseScope.typeParameters.isEmpty()) {
+                    // constructor is very clear
+                    return baseScope.typeWithoutArgs
+                } else {
+                    val constructor = ConstructorResolver
+                        .findMemberInScopeImpl(
+                            baseScope, baseScope.name, context.targetType, context.selfType,
+                            typeParameters, valueParameters
+                        )
+                    if (constructor == null) {
+                        throw IllegalStateException("Missing constructor for $baseType")
+                    }
+                    return constructor.getTypeFromCall()
+                }
             }
             is ImportedExpression -> {
                 val name = base.nameAsImport.name

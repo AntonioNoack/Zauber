@@ -80,6 +80,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             method.typeParameters, typeParameters,
         )
 
+        LOGGER.info("Resolving generics for method $method")
         val generics = findGenericsForMatch(
             method.selfType, if (method.selfType == null) null else selfType,
             methodReturnType, returnType,

@@ -74,7 +74,7 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
                         field2?.resolved == field
                     } else false
                 }
-                is LazyFieldOrTypeExpression -> {
+                is UnresolvedFieldExpression -> {
                     if (expr.name == field.name) {
                         val field2 = resolveField(context, expr.name, null)
                         field2?.resolved == field

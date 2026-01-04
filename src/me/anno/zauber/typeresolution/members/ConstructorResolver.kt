@@ -40,7 +40,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         return null
     }
 
-    private fun findMemberInScopeImpl(
+    fun findMemberInScopeImpl(
         scope: Scope, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
@@ -82,6 +82,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         val typeParameters = typeParameters
             ?.toParameterList(constructor.selfType.clazz.typeParameters)
 
+        LOGGER.info("Resolving generics for constructor $constructor")
         val generics = findGenericsForMatch(
             null, null,
             memberReturnType, returnType,

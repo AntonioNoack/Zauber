@@ -61,3 +61,5 @@ val operators = mapOf(
     "::" to Operator("::", 30, Assoc.LEFT),
     // add more as needed
 )
+
+val dotOperator = operators["."]!!

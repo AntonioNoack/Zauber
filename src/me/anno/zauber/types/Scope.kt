@@ -78,8 +78,11 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun addField(field: Field) {
-        if (fields.any { it.name == field.name }) {
-            val other = fields.first { it.name == field.name }
+        val other = fields.firstOrNull {
+            it.name == field.name &&
+                    (it.isVal || it.isVar) == (field.isVal || field.isVar)
+        }
+        if (other != null) {
             throw IllegalStateException(
                 "Each field must only be declared once per scope [$pathStr], " +
                         "${field.name} at ${TokenListIndex.resolveOrigin(field.origin)} vs ${

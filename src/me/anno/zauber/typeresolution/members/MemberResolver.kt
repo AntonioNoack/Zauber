@@ -2,9 +2,9 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.astbuilder.Parameter
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.ValueParameterImpl
@@ -83,66 +83,81 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             val findGenericTypes = actualTypeParameters == null || actualTypeParameters.containsNull()
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
-            val matchesSelfType = expectedSelfType == null || isSubTypeOf(
-                expectedSelfType, actualSelfType!!,
-                expectedTypeParameters,
-                resolvedTypes,
-                if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
-            )
+            if (expectedSelfType != null && actualSelfType != expectedSelfType) {
+                LOGGER.info("Start checking self-type")
+                val matchesSelfType = isSubTypeOf(
+                    expectedSelfType, actualSelfType!!,
+                    expectedTypeParameters,
+                    resolvedTypes,
+                    if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
+                )
+                LOGGER.info("Done checking self-type")
 
-            if (!matchesSelfType) {
-                LOGGER.info("  selfType-mismatch: $actualSelfType !is $expectedSelfType")
-                return null
+                if (!matchesSelfType) {
+                    LOGGER.info("  selfType-mismatch: $actualSelfType !is $expectedSelfType")
+                    return null
+                }
             }
 
             // todo this should only be executed sometimes...
             //  missing generic parameters can be temporarily inserted...
             // LOGGER.info("matchesReturnType($expectedReturnType vs $actualReturnType)")
-            val matchesReturnType = expectedReturnType == null || actualReturnType == null ||
-                    isSubTypeOf(
-                        expectedReturnType,
-                        actualReturnType,
-                        expectedTypeParameters,
-                        resolvedTypes,
-                        if (findGenericTypes) InsertMode.WEAK else InsertMode.READ_ONLY,
-                    )
+            if (expectedReturnType != null && actualReturnType != null && findGenericTypes) {
+                LOGGER.info("Start checking return-type")
+                val matchesReturnType = isSubTypeOf(
+                    expectedReturnType,
+                    actualReturnType,
+                    expectedTypeParameters,
+                    resolvedTypes,
+                    InsertMode.WEAK,
+                )
+                LOGGER.info("Done checking return-type")
 
-            if (!matchesReturnType) {
-                LOGGER.info("  returnType-mismatch: $actualReturnType !is $expectedReturnType")
-                return null
-            }
-
-            for (i in expectedValueParameters.indices) {
-                val mvParam = expectedValueParameters[i]
-                val vParam = if (mvParam.isVararg) {
-
-                    val expectedParamArrayType = mvParam.type
-                    check(expectedParamArrayType is ClassType)
-                    check(expectedParamArrayType.clazz == ArrayType.clazz)
-                    check(expectedParamArrayType.typeParameters?.size == 1)
-                    // todo we might need to replace generics here...
-                    val expectedParamEntryType = expectedParamArrayType.typeParameters[0]
-
-                    // if star, use it as-is
-                    val commonType = sortedValueParameters.subList(i, sortedValueParameters.size)
-                        .map { it.getType(expectedParamEntryType) }
-                        .reduce { a, b -> unionTypes(a, b) }
-                    val joinedType = ClassType(ArrayType.clazz, listOf(commonType))
-                    ValueParameterImpl(null, joinedType)
-                } else {
-                    sortedValueParameters[i]
-                }
-                if (!isSubTypeOf(
-                        actualSelfType, mvParam, vParam,
-                        expectedTypeParameters,
-                        resolvedTypes,
-                        if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
-                    )
-                ) {
-                    val type = vParam.getType(mvParam.type)
-                    LOGGER.info("  type mismatch: $type is not always a ${mvParam.type}")
+                if (!matchesReturnType) {
+                    LOGGER.info("  returnType-mismatch: $actualReturnType !is $expectedReturnType")
                     return null
                 }
+            }
+
+            if (expectedValueParameters.isNotEmpty()) {
+                LOGGER.info("Start checking arguments")
+                for (i in expectedValueParameters.indices) {
+                    val mvParam = expectedValueParameters[i]
+                    LOGGER.info("Start checking argument[$i]: $mvParam vs ${actualValueParameters[i]}")
+                    val vParam = if (mvParam.isVararg) {
+
+                        val expectedParamArrayType = mvParam.type
+                        check(expectedParamArrayType is ClassType)
+                        check(expectedParamArrayType.clazz == ArrayType.clazz)
+                        check(expectedParamArrayType.typeParameters?.size == 1)
+                        // todo we might need to replace generics here...
+                        val expectedParamEntryType = expectedParamArrayType.typeParameters[0]
+
+                        // if star, use it as-is
+                        val commonType = sortedValueParameters.subList(i, sortedValueParameters.size)
+                            .map { it.getType(expectedParamEntryType) }
+                            .reduce { a, b -> unionTypes(a, b) }
+                        val joinedType = ClassType(ArrayType.clazz, listOf(commonType))
+                        ValueParameterImpl(null, joinedType)
+                    } else {
+                        sortedValueParameters[i]
+                    }
+                    if (!isSubTypeOf(
+                            actualSelfType, mvParam, vParam,
+                            expectedTypeParameters,
+                            resolvedTypes,
+                            if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
+                        )
+                    ) {
+                        val type = vParam.getType(mvParam.type)
+                        LOGGER.info("  type mismatch: $type is not always a ${mvParam.type}")
+                        LOGGER.info("End checking arguments")
+                        LOGGER.info("End checking argument[$i]")
+                        return null
+                    }
+                    LOGGER.info("End checking argument[$i]")
+                }
+                LOGGER.info("End checking arguments")
             }
 
             LOGGER.info("Found match: $resolvedTypes")

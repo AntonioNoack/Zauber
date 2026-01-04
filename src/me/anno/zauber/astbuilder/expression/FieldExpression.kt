@@ -18,6 +18,7 @@ class FieldExpression(
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
+        println("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
         val generics = findGenericsForMatch(
             field.selfType, if (field.selfType == null) null else context.selfType,
             field.valueType, context.targetType,
