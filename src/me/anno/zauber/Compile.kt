@@ -1,8 +1,8 @@
 package me.anno.zauber
 
-import me.anno.zauber.astbuilder.ASTBuilder
-import me.anno.zauber.astbuilder.ASTClassScanner.collectNamedClasses
-import me.anno.zauber.astbuilder.expression.Expression
+import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
 import me.anno.zauber.generator.c.CSourceGenerator
@@ -111,7 +111,7 @@ object Compile {
     fun buildASTs() {
         for (i in sources.indices) {
             val source = sources[i]
-            ASTBuilder(source, root).readFileLevel()
+            _root_ide_package_.me.anno.zauber.ast.rich.ASTBuilder(source, root).readFileLevel()
         }
     }
 
@@ -158,7 +158,7 @@ object Compile {
     }
 
     private fun printStats() {
-        LOGGER.info("Num Expressions: ${Expression.numExpressionsCreated}")
+        LOGGER.info("Num Expressions: ${_root_ide_package_.me.anno.zauber.ast.rich.expression.Expression.numExpressionsCreated}")
         // 658k expressions 😲 (1µs/element at the moment)
     }
 

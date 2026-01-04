@@ -1,11 +1,11 @@
 package me.anno.zauber.generator.cpp
 
-import me.anno.zauber.astbuilder.controlflow.IfElseBranch
-import me.anno.zauber.astbuilder.controlflow.ReturnExpression
-import me.anno.zauber.astbuilder.controlflow.WhileLoop
-import me.anno.zauber.astbuilder.expression.Expression
-import me.anno.zauber.astbuilder.expression.ExpressionList
-import me.anno.zauber.astbuilder.expression.MemberNameExpression
+import me.anno.zauber.ast.rich.controlflow.IfElseBranch
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.controlflow.WhileLoop
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.MemberNameExpression
 import me.anno.zauber.generator.Generator
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -15,7 +15,7 @@ import java.io.File
 
 // todo compared to C, this has inheritance built-in, which
 //  we can directly use; and it has ready-made shared references
-object CppSourceGenerator: Generator() {
+object CppSourceGenerator : Generator() {
 
     // todo generate runnable C++ code from what we parsed
     // todo just produce all code for now as-is

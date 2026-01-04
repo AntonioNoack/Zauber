@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 

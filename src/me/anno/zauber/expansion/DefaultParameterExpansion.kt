@@ -1,12 +1,12 @@
 package me.anno.zauber.expansion
 
-import me.anno.zauber.astbuilder.*
-import me.anno.zauber.astbuilder.expression.CallExpression
-import me.anno.zauber.astbuilder.expression.ExpressionList
-import me.anno.zauber.astbuilder.expression.MemberNameExpression
-import me.anno.zauber.astbuilder.expression.NamedCallExpression
-import me.anno.zauber.astbuilder.expression.constants.SpecialValue
-import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.expression.CallExpression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.forEachScope
 import me.anno.zauber.types.Scope

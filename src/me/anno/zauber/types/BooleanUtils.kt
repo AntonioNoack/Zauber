@@ -1,7 +1,7 @@
 package me.anno.zauber.types
 
-import me.anno.zauber.astbuilder.NamedParameter
-import me.anno.zauber.astbuilder.expression.*
+import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.types.Types.BooleanType
 
 object BooleanUtils {

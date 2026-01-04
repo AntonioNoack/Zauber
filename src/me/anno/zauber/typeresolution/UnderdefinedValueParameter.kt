@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.astbuilder.NamedParameter
+import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.types.Type

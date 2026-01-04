@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.astbuilder.Parameter
-import me.anno.zauber.astbuilder.SuperCall
+import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.ResolvedCallable.Companion.resolveGenerics
 import me.anno.zauber.types.Scope

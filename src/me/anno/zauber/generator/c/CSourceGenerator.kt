@@ -1,10 +1,10 @@
 package me.anno.zauber.generator.c
 
-import me.anno.zauber.astbuilder.controlflow.*
-import me.anno.zauber.astbuilder.expression.*
-import me.anno.zauber.astbuilder.expression.constants.NumberExpression
-import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
-import me.anno.zauber.astbuilder.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.controlflow.*
+import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.generator.Generator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
@@ -56,14 +56,9 @@ object CSourceGenerator : Generator() {
                 ScopeType.METHOD -> {
                     writeMethod(scope)
                 }
-                else -> {
-                    if (scopeType.isClassType()) {
-                        writeClassReflectionStruct(scope)
-                        writeClassInstanceStruct(scope)
-                    } else {
-                        indent()
-                        builder.append("// todo: ").append(scope.name).append(" (${scope.scopeType})").append('\n')
-                    }
+                else -> if (scopeType.isClassType()) {
+                    writeClassReflectionStruct(scope)
+                    writeClassInstanceStruct(scope)
                 }
             }
             for (child in scope.children) {

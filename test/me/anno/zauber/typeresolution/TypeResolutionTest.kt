@@ -1,9 +1,9 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.astbuilder.ASTBuilder
-import me.anno.zauber.astbuilder.Constructor
-import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.Tokenizer

@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.stdlib
-import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.ArrayType

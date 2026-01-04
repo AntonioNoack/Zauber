@@ -1,8 +1,8 @@
 package me.anno.zauber
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.astbuilder.ASTBuilder
-import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.tokenizer.Tokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode

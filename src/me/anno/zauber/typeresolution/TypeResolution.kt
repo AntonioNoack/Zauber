@@ -2,8 +2,8 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile
 import me.anno.zauber.Compile.f1
-import me.anno.zauber.astbuilder.NamedParameter
-import me.anno.zauber.astbuilder.expression.Expression
+import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope

@@ -1,12 +1,12 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.astbuilder.Field
-import me.anno.zauber.astbuilder.controlflow.IfElseBranch
-import me.anno.zauber.astbuilder.expression.*
-import me.anno.zauber.astbuilder.expression.constants.NumberExpression
-import me.anno.zauber.astbuilder.expression.constants.SpecialValue
-import me.anno.zauber.astbuilder.expression.constants.SpecialValueExpression
-import me.anno.zauber.astbuilder.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.controlflow.IfElseBranch
+import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext

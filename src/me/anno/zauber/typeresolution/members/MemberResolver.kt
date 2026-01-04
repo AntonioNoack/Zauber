@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.astbuilder.Parameter
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
