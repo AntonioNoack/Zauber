@@ -66,7 +66,7 @@ value class Long : Number {
 
     operator fun minus(other: Int): Long = minus(other.toLong())
     operator fun minus(other: Long): Long = native("this - other")
-    operator fun minus(other: Half): Half = minus(toHalf())
+    operator fun minus(other: Half): Half = toHalf() - other
     operator fun minus(other: Float): Float = toFloat() - other
     operator fun minus(other: Double): Double = toDouble() - other
 
@@ -78,13 +78,13 @@ value class Long : Number {
 
     operator fun div(other: Int): Long = div(other.toLong())
     operator fun div(other: Long): Long = native("this / other")
-    operator fun div(other: Half): Half = div(toHalf())
+    operator fun div(other: Half): Half = toHalf() / other
     operator fun div(other: Float): Float = toFloat() / other
     operator fun div(other: Double): Double = toDouble() / other
 
     operator fun rem(other: Int): Long = rem(other.toLong())
     operator fun rem(other: Long): Long = native("this % other")
-    operator fun rem(other: Half): Half = minus(toHalf())
+    operator fun rem(other: Half): Half = toHalf() % other
     operator fun rem(other: Float): Float = toFloat() % other
     operator fun rem(other: Double): Double = toDouble() % other
 
