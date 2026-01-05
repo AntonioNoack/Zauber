@@ -9,8 +9,8 @@ enum class ScopeType {
     NORMAL_CLASS,
     INLINE_CLASS,
     INTERFACE,
-    ENUM_CLASS,
-    ENUM_ENTRY_CLASS,
+    ENUM_CLASS,  // limited instances, val name: String, val ordinal: Int, fun entries()
+    ENUM_ENTRY_CLASS, // objects with enum_class as type
     OBJECT,
 
     // methods

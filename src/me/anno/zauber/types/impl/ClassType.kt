@@ -26,7 +26,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     companion object {
         private fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
             check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
-            check(clazz.typeParameters.size == typeParams.size){
+            check(clazz.typeParameters.size == typeParams.size) {
                 "Incorrect number of typeParams for $clazz, expected ${clazz.typeParameters.size}, got ${typeParams.size}"
             }
             val result = ParameterList(clazz.typeParameters)
@@ -37,9 +37,11 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         }
     }
 
-    init {
-        check(typeParameters == null || !typeParameters.containsNull())
-    }
+    /*init {
+        check(typeParameters == null || !typeParameters.containsNull()) {
+            "At least one unknown type parameter: $typeParameters"
+        }
+    }*/
 
     override fun equals(other: Any?): Boolean {
         return other is ClassType &&
@@ -61,11 +63,11 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     override fun toStringImpl(depth: Int): String {
         val className = if (clazz.name == "Companion") clazz.pathStr else clazz.name
         var asString = className
-        if (typeParameters == null || typeParameters.isNotEmpty()) {
+        if (typeParameters == null) {
+            asString += "<?>"
+        } else if (typeParameters.isNotEmpty()) {
             asString += if (depth > 0) {
-                typeParameters?.joinToString(",", "<", ">") {
-                    it.toString(depth)
-                } ?: "<?>"
+                typeParameters.toString("<", ">", depth)
             } else {
                 "..."
             }

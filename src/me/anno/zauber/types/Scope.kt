@@ -24,14 +24,18 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val code = ArrayList<Expression>()
 
-    val constructors: List<Constructor> get() = children.mapNotNull { it.selfAsConstructor }
-    val methods: List<Method> get() = children.mapNotNull { it.selfAsMethod }
+    val constructors: List<Constructor>
+        get() = children.mapNotNull { it.selfAsConstructor }
+    val methods: List<Method>
+        get() = children.mapNotNull { it.selfAsMethod }
     val fields = ArrayList<Field>()
 
     val superCalls = ArrayList<SuperCall>()
     val superCallNames = ArrayList<SuperCallName>()
 
-    val enumValues = ArrayList<EnumEntry>()
+    val enumValues: List<Scope>
+        get() = children.filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
+
     var typeAlias: Type? = null
 
     var selfAsConstructor: Constructor? = null

@@ -136,9 +136,9 @@ object Compile {
         }
 
         // todo when all expressions are parsed, we can replace more names with being method names / specific fields
+        //  -> we could even do that while parsing the AST, because we now have a step before that 🤔
 
         if (false) printPackages(root, 0)
-
 
         step("Creating Default Parameter Functions") {
             createDefaultParameterFunctions(root)

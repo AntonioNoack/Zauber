@@ -105,8 +105,12 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     }
 
     override fun toString(): String {
-        return indices.joinToString(", ", "[", "]") { idx ->
-            "(${insertModes[idx].symbol})${types[idx]}"
+        return toString("[", "]")
+    }
+
+    fun toString(prefix: String, postfix: String, depth: Int = 10): String {
+        return indices.joinToString(", ", prefix, postfix) { idx ->
+            "(${insertModes[idx].symbol})${types[idx]?.toString(depth)}"
         }
     }
 

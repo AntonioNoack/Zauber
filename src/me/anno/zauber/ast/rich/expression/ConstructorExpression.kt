@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -8,13 +9,13 @@ import me.anno.zauber.types.impl.ClassType
 class ConstructorExpression(
     val clazz: Scope,
     val typeParameters: List<Type>?,
-    val valueParameters: List<Expression>,
+    val valueParameters: List<NamedParameter>,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
         for (i in valueParameters.indices) {
-            callback(valueParameters[i])
+            callback(valueParameters[i].value)
         }
     }
 

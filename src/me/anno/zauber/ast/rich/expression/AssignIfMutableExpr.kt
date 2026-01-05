@@ -45,7 +45,7 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         val neededCall: Method
     )
 
-    private fun resolveMethod(context: ResolutionContext): ResolveResult {
+    fun resolveMethod(context: ResolutionContext): ResolveResult {
         val field = findField(left, context)
         val isFieldMutable = field?.isMutable == true
         val leftType = TypeResolution.resolveType(context, left)

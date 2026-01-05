@@ -302,8 +302,8 @@ object Inheritance {
                 // todo in/out now matters for the direction of the isSubTypeOf...
                 for (i in actualGenerics.indices) {
                     // these may be null, if so, just accept them
-                    val expectedType = expectedGenerics[i]
-                    val actualType = actualGenerics[i]
+                    val expectedType = expectedGenerics.getOrNull(i) ?: continue
+                    val actualType = actualGenerics.getOrNull(i) ?: continue
                     if (!isSubTypeOf(
                             expectedType, actualType,
                             expectedTypeParams, actualTypeParameters,

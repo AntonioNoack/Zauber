@@ -17,7 +17,10 @@ import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.*
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
@@ -37,6 +40,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     companion object {
 
         private val LOGGER = LogManager.getLogger(ASTBuilder::class)
+
+        val synthetic = "synthetic"
+        val syntheticList = listOf(synthetic)
 
         val fileLevelKeywords = listOf(
             "enum", "private", "protected", "fun", "class", "data", "value",
@@ -280,8 +286,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     }
 
     private fun readEnumBody(): Int {
+
+        val origin0 = origin(i)
         var endIndex = tokens.findToken(i, ";")
         if (endIndex < 0) endIndex = tokens.size
+        val classScope = currPackage
         push(endIndex) {
             while (i < tokens.size) {
                 // read enum value
@@ -290,23 +299,70 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                 val origin = origin(i)
                 val name = tokens.toString(i++)
-                val typeParams = readTypeParams(null)
-                val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                val typeParameters = readTypeParams(null)
+                val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                     pushCall { readParamExpressions() }
                 } else emptyList()
 
-                val scope = readClassBody(name, emptyList(), ScopeType.ENUM_ENTRY_CLASS)
-                val entry = EnumEntry(name, typeParams, params, scope, origin)
-                scope.objectField = Field(
-                    currPackage, null, false, null,
-                    name, currPackage.typeWithoutArgs, null, emptyList(), origin
+                val keywords = packKeywords()
+                val entryScope = readClassBody(name, emptyList(), ScopeType.ENUM_ENTRY_CLASS)
+                val initialValue =
+                    ConstructorExpression(classScope, typeParameters, valueParameters, classScope, origin)
+                entryScope.objectField = Field(
+                    classScope, null, false, null,
+                    name, classScope.typeWithoutArgs, initialValue, keywords, origin
                 )
 
-                currPackage.enumValues.add(entry)
                 readComma()
             }
         }
+
+        createEnumProperties(classScope, origin0)
         return endIndex
+    }
+
+    private fun createEnumProperties(enumScope: Scope, origin: Int) {
+
+        // todo we also need to add then as constructor properties,
+        //  and add them into all constructors...
+        Field(
+            enumScope, enumScope.typeWithoutArgs, false, null,
+            "name", StringType, null, syntheticList, origin
+        )
+
+        Field(
+            enumScope, enumScope.typeWithoutArgs, false, null,
+            "ordinal", IntType, null, syntheticList, origin
+        )
+
+        val scope = enumScope.getOrPut("Companion", ScopeType.OBJECT)
+        scope.hasTypeParameters = true
+
+        val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
+        val initialValue = CallExpression(
+            MemberNameExpression("listOf", scope, origin),
+            listOf(listType), enumScope.enumValues.map {
+                val field = it.objectField!!
+                val expr = FieldExpression(field, scope, origin)
+                NamedParameter(null, expr)
+            }, origin
+        )
+
+        val entriesField = Field(
+            scope, scope.typeWithoutArgs, false,
+            null, "__entries", listType,
+            initialValue, syntheticList, origin
+        )
+
+        pushScope(scope) {
+            pushScope(ScopeType.METHOD, "entries") { methodScope ->
+                methodScope.selfAsMethod = Method(
+                    scope.typeWithoutArgs, "entries", emptyList(), emptyList(),
+                    methodScope, listType, emptyList(), FieldExpression(entriesField, methodScope, origin),
+                    syntheticList, origin
+                )
+            }
+        }
     }
 
     var lastField: Field? = null
@@ -626,6 +682,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     }
 
     fun packKeywords(): List<String> {
+        if (keywords.isEmpty()) return emptyList()
         val tmp = ArrayList(keywords)
         keywords.clear()
         return tmp
