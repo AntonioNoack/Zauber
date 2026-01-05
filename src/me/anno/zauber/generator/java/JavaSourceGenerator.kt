@@ -239,9 +239,19 @@ object JavaSourceGenerator : Generator() {
         if (body != null) {
             val context = ResolutionContext(scope, method.selfType, true, null)
             writeBlock {
-                builder.append("/* $body */")
+                try {
+                    val simplified = ASTSimplifier.simplify(context, body)
+                    val lines = simplified.entry.toString().split('\n')
+                        .mapIndexed { index, string ->
+                            if (index == 0) string
+                            else "  ".repeat(depth + 1) + " $string"
+                        }.joinToString("\n")
+                    builder.append("/* $lines */")
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    builder.append("/* $body */")
+                }
                 nextLine()
-                ASTSimplifier.simplify(context, body)
             }
         } else {
             builder.append(";")

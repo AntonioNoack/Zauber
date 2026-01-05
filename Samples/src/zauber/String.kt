@@ -20,6 +20,10 @@ class String(
         check(endIndex <= size)
         return String(content, startIndex + offset, endIndex - startIndex)
     }
+
+    operator fun plus(other:Any?): String {
+        TODO()
+    }
 }
 
 fun check(b: Boolean) {

@@ -1,9 +1,7 @@
 package me.anno.zauber.ast.simple
 
-import java.util.concurrent.atomic.AtomicInteger
+class SimpleField(val id: Int) {
 
-class SimpleField {
-    val uuid = Companion.uuid.getAndIncrement()
     var numReads = 0
 
     fun get(): SimpleField {
@@ -11,7 +9,8 @@ class SimpleField {
         return this
     }
 
-    companion object {
-        private val uuid = AtomicInteger()
+    override fun toString(): String {
+        return "%$id"
     }
+
 }
