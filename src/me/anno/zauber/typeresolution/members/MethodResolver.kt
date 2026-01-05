@@ -2,9 +2,9 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -14,7 +14,6 @@ import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
@@ -58,7 +57,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 method.selfType ?: scopeSelfType,
                 false, null
             )
-            method.returnType = resolveType(context, method.body!!)
+            var body = method.body!!
+            if (body is ReturnExpression) body = body.value!!
+            method.returnType = resolveType(context, body)
         }
         return method.returnType
     }
