@@ -21,15 +21,14 @@ object TypeResolution {
 
     var catchFailures = false
 
-    init {
-        if (catchFailures) {
-            LogManager.disableLoggers(
-                "TypeResolution,Inheritance," +
-                        "MemberResolver,ConstructorResolver,MethodResolver,FieldResolver," +
-                        "ResolvedField,ResolvedMethod,CallExpression,Field,ResolvedCallable," +
-                        "LambdaExpression,UnderdefinedValueParameter,FieldExpression"
-            )
-        }
+    fun doCatchFailures() {
+        catchFailures = true
+        LogManager.disableLoggers(
+            "TypeResolution,Inheritance," +
+                    "MemberResolver,ConstructorResolver,MethodResolver,FieldResolver," +
+                    "ResolvedField,ResolvedMethod,CallExpression,Field,ResolvedCallable," +
+                    "LambdaExpression,UnderdefinedValueParameter,FieldExpression"
+        )
     }
 
     val langScope by lazy { Compile.root.getOrPut("zauber", null) }

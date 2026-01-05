@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 
 private val LOGGER = LogManager.getLogger("BinaryOp")
 
@@ -50,6 +51,28 @@ fun ASTBuilder.binaryOp(
             }
         }
         "=" -> AssignmentExpression(left, right)
+        "." -> {
+            val typeParameters: List<Type> = emptyList()
+            when (right) {
+                is NamedCallExpression -> {
+                    // todo ideally, this would be handled by association-order...
+                    // reorder stack from left to right
+                    val leftAndMiddle = DotExpression(left, typeParameters, right.base, left.scope, left.origin)
+                    NamedCallExpression(
+                        leftAndMiddle, right.name,
+                        right.typeParameters, right.valueParameters,
+                        right.scope, right.origin
+                    )
+                }
+                is DotExpression -> {
+                    // todo ideally, this would be handled by association-order...
+                    // reorder stack from left to right
+                    val leftAndMiddle = DotExpression(left, typeParameters, right.left, left.scope, left.origin)
+                    DotExpression(leftAndMiddle, right.typeParameters, right.right, right.scope, right.origin)
+                }
+                else -> DotExpression(left, typeParameters, right, right.scope, right.origin)
+            }
+        }
         else -> {
             if (symbol.endsWith('=')) {
                 // todo oh no, to know whether this is mutable or not,
@@ -64,19 +87,6 @@ fun ASTBuilder.binaryOp(
                     right.scope, right.origin
                 )
                 PrefixExpression(PrefixType.NOT, right.origin, base)
-            } else if (symbol == "." && right is NamedCallExpression) {
-                // todo ideally, this would be handled by association-order...
-                // reorder stack from left to right
-                val leftAndMiddle = NamedCallExpression(
-                    left, ".", emptyList(),
-                    listOf(NamedParameter(null, right.base)),
-                    left.scope, left.origin
-                )
-                NamedCallExpression(
-                    leftAndMiddle, right.name,
-                    right.typeParameters, right.valueParameters,
-                    right.scope, right.origin
-                )
             } else {
                 val methodName = lookupBinaryOp(symbol)
                 val param = NamedParameter(null, right)

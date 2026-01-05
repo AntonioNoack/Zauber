@@ -67,7 +67,7 @@ class CallExpression(
         // find the best matching candidate...
         val returnType = context.targetType
         when (base) {
-            is NamedCallExpression if base.name == "." -> {
+            is DotExpression -> {
                 TODO("Find method/field ${base}($valueParameters)")
             }
             is MemberNameExpression -> {

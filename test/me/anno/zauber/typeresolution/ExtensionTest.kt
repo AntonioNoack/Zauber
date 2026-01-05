@@ -187,4 +187,71 @@ class ExtensionTest {
         )
     }
 
+    @Test
+    fun testExtensionMethodToMethod() {
+        assertEquals(
+            IntType,
+            TypeResolutionTest.testTypeResolution(
+                """
+                class Impl() {
+                    fun calc() = 0
+                }
+                fun Impl.get() = calc()
+                
+                val tested = Impl().get()
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testExtensionMethodToField() {
+        assertEquals(
+            IntType,
+            TypeResolutionTest.testTypeResolution(
+                """
+                class Impl {
+                    val calc = 0
+                }
+                fun Impl.get() = calc
+                
+                val tested = Impl().get()
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testExtensionFieldToMethod() {
+        assertEquals(
+            IntType,
+            TypeResolutionTest.testTypeResolution(
+                """
+                class Impl {
+                    fun calc() = 0
+                }
+                val Impl.value = calc()
+                
+                val tested = Impl().value
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testExtensionFieldToField() {
+        assertEquals(
+            IntType,
+            TypeResolutionTest.testTypeResolution(
+                """
+                class Impl {
+                    val calc = 0
+                }
+                val Impl.value = calc
+                
+                val tested = Impl().value
+            """.trimIndent()
+            )
+        )
+    }
 }

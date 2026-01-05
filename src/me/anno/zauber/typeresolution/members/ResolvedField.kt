@@ -100,7 +100,7 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         fun getUniqueValueType(expr: Expression): Type? {
             return when (expr) {
                 is SpecialValueExpression if expr.value == SpecialValue.NULL -> NullType
-                is NamedCallExpression, is CallExpression -> null // we could check their return type...
+                is NamedCallExpression, is CallExpression, is DotExpression -> null // we could check their return type...
                 is StringExpression -> StringType
                 else -> throw NotImplementedError("Get unique value for $expr (${expr.javaClass.simpleName})")
             }

@@ -1,5 +1,6 @@
 package me.anno.zauber
 
+import me.anno.zauber.ast.rich.ASTBuilder
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
@@ -110,7 +111,7 @@ object Compile {
     fun buildASTs() {
         for (i in sources.indices) {
             val source = sources[i]
-            _root_ide_package_.me.anno.zauber.ast.rich.ASTBuilder(source, root).readFileLevel()
+            ASTBuilder(source, root).readFileLevel()
         }
     }
 
@@ -119,6 +120,8 @@ object Compile {
         // todo compile and run our samples, and confirm all tests work as expected (write unit tests as samples)
 
         step("JDK-Overhead") {}
+
+        TypeResolution.doCatchFailures()
 
         step("Reading & Tokenizing") {
             tokenizeSources()

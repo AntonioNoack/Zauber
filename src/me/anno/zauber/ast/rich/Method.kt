@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -19,6 +22,15 @@ class Method(
 ) {
 
     var backingField: Field? = null
+
+    fun resolveReturnType(context: ResolutionContext): Type {
+        val returnType = returnType
+        if (returnType != null) return returnType
+
+        var body = body
+        if (body is ReturnExpression) body = body.value
+        return TypeResolution.resolveType(context, body!!)
+    }
 
     override fun toString(): String {
         val builder = StringBuilder()

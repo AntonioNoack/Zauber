@@ -1624,11 +1624,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val originI = origin(i)
                 val symbol = tokens.toString(i++)
                 val expr1 = nameExpression(name, originI, this, currPackage)
-                val param1 = NamedParameter(null, expr1)
-                val left = NamedCallExpression(
-                    expr, ".", null,
-                    listOf(param1), expr.scope, originI
-                )
+                val left = DotExpression(expr, null, expr1, expr.scope, originI)
                 val right = readExpression()
                 AssignIfMutableExpr(left, symbol, right)
             }
@@ -1875,6 +1871,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 exprSplitsScope(expr.base) ||
                         expr.valueParameters.any { exprSplitsScope(it.value) }
             }
+            is DotExpression -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
             is ReturnExpression,
             is ThrowExpression -> false // should these split the scope??? nothing after can happen
             is CallExpression -> {
