@@ -6,7 +6,7 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.types.Scope
 
 class SimpleBranch(
-    val condition: SimpleField, val ifTrue: SimpleBlock, val ifFalse: SimpleBlock,
+    val condition: SimpleField, val ifTrue: SimpleBlock?, val ifFalse: SimpleBlock?,
     scope: Scope, origin: Int
 ) : SimpleExpression(scope, origin) {
     override fun toString(): String {

@@ -1,8 +1,10 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.types.Scope
 
-class SimpleBlock(val graph: SimpleGraph) {
+class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
+    SimpleExpression(scope, origin) {
 
     fun add(expr: SimpleExpression) {
         instructions.add(expr)

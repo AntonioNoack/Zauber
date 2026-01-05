@@ -1,9 +1,17 @@
 package me.anno.zauber.ast.simple.controlflow
 
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.types.Scope
 
 /**
- * while(condition) { body }
+ * while(true) { body }
  * */
-class SimpleLoop(val condition: SimpleField, val body: SimpleBlock)
+class SimpleLoop(val body: SimpleBlock, scope: Scope, origin: Int) :
+    SimpleExpression(scope, origin) {
+
+    override fun toString(): String {
+        return "while(true) { $body }"
+    }
+}
