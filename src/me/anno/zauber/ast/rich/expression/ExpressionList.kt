@@ -7,11 +7,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 
 class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Expression(scope, origin) {
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        for (i in list.indices) {
-            callback(list[i])
-        }
-    }
 
     override fun toStringImpl(depth: Int): String {
         return "[${list.joinToString("; ") { it.toString(depth) }}]"

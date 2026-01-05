@@ -8,11 +8,6 @@ import me.anno.zauber.types.Type
 class WhileLoop(val condition: Expression, val body: Expression, val label: String?) :
     Expression(condition.scope, condition.origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(condition)
-        callback(body)
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "${if (label != null) "$label@" else ""} while(${condition.toString(depth)}) { ${body.toString(depth)} }"
     }

@@ -8,8 +8,6 @@ import me.anno.zauber.types.impl.ClassType
 
 class GetClassFromTypeExpression(val base: Type, scope: Scope, origin: Int) : Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
-
     override fun toStringImpl(depth: Int): String {
         return "${base.toString(depth)}::class"
     }

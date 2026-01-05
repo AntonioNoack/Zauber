@@ -18,7 +18,6 @@ class FieldExpression(
         private val LOGGER = LogManager.getLogger(FieldExpression::class)
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String = field.toString(depth)
     override fun clone(scope: Scope) = FieldExpression(field, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false

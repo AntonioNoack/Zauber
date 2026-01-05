@@ -8,7 +8,6 @@ class NamedTypeExpression(
     val type: Type,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String = type.toString()
     override fun clone(scope: Scope) = NamedTypeExpression(type, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false

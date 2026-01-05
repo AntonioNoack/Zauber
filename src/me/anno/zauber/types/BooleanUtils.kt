@@ -7,7 +7,10 @@ import me.anno.zauber.types.Types.BooleanType
 object BooleanUtils {
     fun Expression.not(): Expression {
         // undo a not
-        if (this is PrefixExpression && this.type == PrefixType.NOT) {
+        if (this is NamedCallExpression &&
+            name == "not" &&
+            base.resolvedType == BooleanType
+        ) {
             return base
         }
 
@@ -23,9 +26,10 @@ object BooleanUtils {
         }
 
         resolvedType = BooleanType
-        return PrefixExpression(PrefixType.NOT, origin, this).apply {
-            resolvedType = BooleanType
-        }
+        return NamedCallExpression(
+            this, "not", emptyList(),
+            emptyList(), scope, origin
+        )
     }
 
     fun Expression.and(other: Expression): Expression {

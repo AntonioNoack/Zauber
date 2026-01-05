@@ -135,23 +135,6 @@ object ASTSimplifier {
                 dst
             }
             // todo PrefixExpression should be solved by calling functions, too
-            is PostfixExpression -> {
-                // todo this should be solved by calling functions; there is no reason
-                //  for having a separate class
-
-                val base = simplifyImpl(context, expr.base, addToBlock, graph, true)
-                // todo this calls .inc and .dec, and reassigns the value -> this must be a field
-                //  or something with get() and set() logic...
-                when (expr.type) {
-                    PostfixType.INCREMENT -> {
-
-                    }
-                    PostfixType.DECREMENT -> {
-
-                    }
-                }
-                TODO("Implement post++ and post--")
-            }
             else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
         }
     }

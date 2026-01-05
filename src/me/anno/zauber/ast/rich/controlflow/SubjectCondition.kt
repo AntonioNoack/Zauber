@@ -1,7 +1,10 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.ASTBuilder
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
+import me.anno.zauber.ast.rich.expression.binaryOp
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -19,7 +22,7 @@ class SubjectCondition(
             SubjectConditionType.INSTANCEOF ->
                 buildIsExpr(this, subject, newScope)
             SubjectConditionType.NOT_INSTANCEOF ->
-                PrefixExpression(PrefixType.NOT, subject.origin, buildIsExpr(this, subject, newScope))
+                buildIsExpr(this, subject, newScope).not()
             SubjectConditionType.CONTAINS, SubjectConditionType.NOT_CONTAINS ->
                 astBuilder.binaryOp(newScope, subject, subjectConditionType.symbol, value!!)
         }

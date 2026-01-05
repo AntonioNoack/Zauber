@@ -54,7 +54,9 @@ class Scope(val name: String, val parent: Scope? = null) {
     val typeWithoutArgs = ClassType(this, null)
     val typeWithArgs by lazy {
         if (scopeType != ScopeType.PACKAGE) {
-            check(hasTypeParameters)
+            check(hasTypeParameters) {
+                "Missing type parameters for $pathStr"
+            }
             check(scopeType?.isClassType() == true)
         }
         ClassType(

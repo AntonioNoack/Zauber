@@ -909,13 +909,26 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             tokens.equals(i, "super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i++))
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i), currPackage, origin(i++))
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i), currPackage, origin(i++))
-            tokens.equals(i, "!") -> PrefixExpression(PrefixType.NOT, origin(i++), readExpression())
-            tokens.equals(i, "-") -> PrefixExpression(PrefixType.MINUS, origin(i++), readExpression())
-            tokens.equals(i, "++") -> PrefixExpression(PrefixType.INCREMENT, origin(i++), readExpression())
-            tokens.equals(i, "--") -> PrefixExpression(PrefixType.DECREMENT, origin(i++), readExpression())
-            tokens.equals(i, "*") -> PrefixExpression(PrefixType.ARRAY_TO_VARARGS, origin(i++), readExpression())
+            tokens.equals(i, "!") -> {
+                val origin = origin(i++)
+                val base = readExpression()
+                NamedCallExpression(base, "not", null, emptyList(), currPackage, origin)
+            }
             tokens.equals(i, "+") -> {
-                i++; readPrefix()
+                val origin = origin(i++)
+                val base = readExpression()
+                NamedCallExpression(base, "unaryPlus", null, emptyList(), currPackage, origin)
+            }
+            tokens.equals(i, "-") -> {
+                val origin = origin(i++)
+                val base = readExpression()
+                NamedCallExpression(base, "unaryMinus", null, emptyList(), currPackage, origin)
+            }
+            tokens.equals(i, "++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin(i++), readExpression())
+            tokens.equals(i, "--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin(i++), readExpression())
+            tokens.equals(i, "*") -> {
+                i++ // skip star
+                ArrayToVarargsStar(readExpression())
             }
             tokens.equals(i, "::") -> {
                 val origin = origin(i++)
@@ -1067,12 +1080,12 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return WhileLoop(condition, body, label)
     }
 
-    private fun readDoWhileLoop(label: String?): Expression {
+    private fun readDoWhileLoop(label: String?): WhileLoop {
         i++
         val body = readBodyOrExpression()
         check(tokens.equals(i++, "while"))
         val condition = readExpressionCondition()
-        return DoWhileLoop(body = body, condition = condition, label)
+        return createWhileLoop(body = body, condition = condition, label)
     }
 
     private fun readForLoop(label: String?): Expression {
@@ -1797,8 +1810,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val lambdaParam = NamedParameter(null, lambda)
                 CallExpression(expr, null, listOf(lambdaParam), origin)
             }
-            tokens.equals(i, "++") -> PostfixExpression(expr, PostfixType.INCREMENT, origin(i++))
-            tokens.equals(i, "--") -> PostfixExpression(expr, PostfixType.DECREMENT, origin(i++))
+            tokens.equals(i, "++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i++))
+            tokens.equals(i, "--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i++))
             tokens.equals(i, "!!") -> {
                 val origin = origin(i++)
                 val scope = currPackage
@@ -1961,8 +1974,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         (expr.base is MemberNameExpression && expr.base.name == "check") // this check is a little too loose
             }
             is AssignmentExpression -> true // explicit yes
-            is PrefixExpression -> exprSplitsScope(expr.base)
-            is PostfixExpression -> exprSplitsScope(expr.base)
             is AssignIfMutableExpr -> true // we don't know better yet
             is ExpressionList -> expr.list.any { exprSplitsScope(it) }
             is CompareOp -> exprSplitsScope(expr.value)

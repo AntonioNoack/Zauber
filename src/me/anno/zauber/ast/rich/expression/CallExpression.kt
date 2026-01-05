@@ -33,13 +33,6 @@ class CallExpression(
         check(base !is MemberNameExpression || base.name != "?.")
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(base)
-        for (i in valueParameters.indices) {
-            callback(valueParameters[i].value)
-        }
-    }
-
     override fun toStringImpl(depth: Int): String {
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         val base = base.toString(depth)

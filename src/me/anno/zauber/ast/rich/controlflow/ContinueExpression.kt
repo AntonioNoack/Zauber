@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 
 class ContinueExpression(val label: String?, scope: Scope, origin: Int) : Expression(scope, origin) {
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
+
     override fun toStringImpl(depth: Int): String {
         return if (label != null) "continue@$label" else "continue"
     }

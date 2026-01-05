@@ -10,7 +10,7 @@ import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.impl.NullType
 
 class SpecialValueExpression(val value: SpecialValue, scope: Scope, origin: Int) : Expression(scope, origin) {
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
+
     override fun toStringImpl(depth: Int): String = value.name.lowercase()
     override fun resolveType(context: ResolutionContext): Type {
         return when (value) {

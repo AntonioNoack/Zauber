@@ -3,9 +3,8 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.Compile
 import me.anno.zauber.Compile.f1
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.PrefixExpression
-import me.anno.zauber.ast.rich.expression.PrefixType
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
@@ -151,7 +150,7 @@ object TypeResolution {
         // target-type does not apply to parameters
         val contextWithoutTargetType = context.withTargetType(null)
         return base.map { param ->
-            val hasVarargStar = param.value is PrefixExpression && param.value.type == PrefixType.ARRAY_TO_VARARGS
+            val hasVarargStar = param.value is ArrayToVarargsStar
             if (param.value.hasLambdaOrUnknownGenericsType()) {
                 LOGGER.info("Underdefined generics in $param :/")
                 UnderdefinedValueParameter(param, contextWithoutTargetType, hasVarargStar)

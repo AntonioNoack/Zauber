@@ -10,7 +10,6 @@ import me.anno.zauber.types.Type
 class DoubleColonPrefix(val left: Scope, val methodName: String, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String {
         return "($left)::$methodName"
     }

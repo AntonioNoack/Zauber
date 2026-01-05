@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -82,11 +83,10 @@ fun ASTBuilder.binaryOp(
             } else if (symbol.startsWith("!")) {
                 val methodName = lookupBinaryOp(symbol.substring(1))
                 val param = NamedParameter(null, right)
-                val base = NamedCallExpression(
+                NamedCallExpression(
                     left, methodName, emptyList(), listOf(param),
                     right.scope, right.origin
-                )
-                PrefixExpression(PrefixType.NOT, right.origin, base)
+                ).not()
             } else {
                 val methodName = lookupBinaryOp(symbol)
                 val param = NamedParameter(null, right)

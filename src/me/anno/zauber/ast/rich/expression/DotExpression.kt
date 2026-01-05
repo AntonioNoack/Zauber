@@ -27,11 +27,6 @@ class DotExpression(
             throw IllegalStateException(".-stack must be within base, not in parameter: $this")
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(left)
-        callback(right)
-    }
-
     override fun clone(scope: Scope) = DotExpression(
         left.clone(scope), typeParameters,
         right.clone(scope),

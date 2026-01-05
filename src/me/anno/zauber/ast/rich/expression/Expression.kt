@@ -13,7 +13,6 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * */
     var resolvedType: Type? = null
 
-    abstract fun forEachExpr(callback: (Expression) -> Unit)
     abstract fun resolveType(context: ResolutionContext): Type
 
     fun exprHasNoType(context: ResolutionContext): Type {

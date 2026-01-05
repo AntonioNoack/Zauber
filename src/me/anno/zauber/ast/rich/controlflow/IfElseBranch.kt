@@ -40,12 +40,6 @@ class IfElseBranch(
         }
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(condition)
-        callback(ifBranch)
-        if (elseBranch != null) callback(elseBranch)
-    }
-
     override fun resolveType(context: ResolutionContext): Type {
         return if (elseBranch == null) {
             exprHasNoType(context)

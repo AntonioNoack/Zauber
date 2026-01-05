@@ -45,7 +45,6 @@ class MemberNameExpression(
         }
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String = name
     override fun clone(scope: Scope) = MemberNameExpression(name, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false

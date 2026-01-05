@@ -9,10 +9,6 @@ import me.anno.zauber.types.Types.NothingType
 class ReturnExpression(val value: Expression, val label: String?, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(value)
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "return ${value.toString(depth)}"
     }

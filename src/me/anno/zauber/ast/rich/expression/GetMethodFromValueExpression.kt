@@ -10,7 +10,6 @@ import me.anno.zauber.types.Type
 class GetMethodFromValueExpression(val base: Expression, val name: String, origin: Int) :
     Expression(base.scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String {
         return "${base.toString(depth)}::$name"
     }

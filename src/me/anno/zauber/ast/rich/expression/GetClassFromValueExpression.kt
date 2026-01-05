@@ -9,10 +9,6 @@ import me.anno.zauber.types.impl.ClassType
 
 class GetClassFromValueExpression(val type: Expression, origin: Int) : Expression(type.scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(type)
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "(${type.toString(depth)})::class"
     }

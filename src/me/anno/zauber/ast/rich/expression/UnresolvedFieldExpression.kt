@@ -12,7 +12,6 @@ class UnresolvedFieldExpression(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String = name
     override fun clone(scope: Scope) = UnresolvedFieldExpression(name, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false

@@ -23,13 +23,6 @@ class NamedCallExpression(
         check(name != "?.")
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(base)
-        for (i in valueParameters.indices) {
-            callback(valueParameters[i].value)
-        }
-    }
-
     override fun clone(scope: Scope) = NamedCallExpression(
         base.clone(scope), name, typeParameters,
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) },

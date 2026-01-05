@@ -11,10 +11,6 @@ import me.anno.zauber.types.Types.BooleanType
 class IsInstanceOfExpr(val left: Expression, val right: Type, val negated: Boolean, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(left)
-    }
-
     val symbol: String get() = if (negated) "!is" else "is"
 
     override fun toStringImpl(depth: Int): String {

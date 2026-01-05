@@ -2,15 +2,13 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.PrefixExpression
-import me.anno.zauber.ast.rich.expression.PrefixType
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.types.BooleanUtils.not
 
-@Suppress("FunctionName")
-fun DoWhileLoop(body: Expression, condition: Expression, label: String?): Expression {
+fun createWhileLoop(body: Expression, condition: Expression, label: String?): WhileLoop {
     val origin = body.origin
-    val negatedCondition = PrefixExpression(PrefixType.NOT, origin, condition)
+    val negatedCondition = condition.not()
     val breakI = BreakExpression(label, body.scope, origin)
     val newBody = ExpressionList(
         listOf(

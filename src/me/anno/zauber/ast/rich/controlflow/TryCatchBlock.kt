@@ -10,15 +10,6 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val finallyExpression: Expression?) :
     Expression(tryBody.scope, tryBody.origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(tryBody)
-        for (catch in catches) {
-            callback(catch.handler)
-        }
-        if (finallyExpression != null)
-            callback(finallyExpression)
-    }
-
     override fun resolveType(context: ResolutionContext): Type {
         val bodyType = TypeResolution.resolveType(context, tryBody)
         val catchTypes = catches.map {

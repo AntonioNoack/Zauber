@@ -230,14 +230,6 @@ object CSourceGenerator : Generator() {
                     is FieldExpression -> {
                         builder.append(expr.field.name)
                     }
-                    is PrefixExpression -> {
-                        builder.append(expr.type.symbol)
-                        writeExpr(expr.base, true)
-                    }
-                    is PostfixExpression -> {
-                        writeExpr(expr.base, true)
-                        builder.append(expr.type.symbol)
-                    }
                     is SpecialValueExpression -> {
                         builder.append(expr.value.symbol)
                     }

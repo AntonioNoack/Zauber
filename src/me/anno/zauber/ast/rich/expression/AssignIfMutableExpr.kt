@@ -15,11 +15,6 @@ import me.anno.zauber.types.Type
 class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: Expression) :
     Expression(left.scope, right.origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(left)
-        callback(right)
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "${left.toString(depth)} $symbol ${right.toString(depth)}"
     }

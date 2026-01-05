@@ -14,11 +14,6 @@ import me.anno.zauber.types.Type
 class AssignmentExpression(var variableName: Expression, var newValue: Expression) :
     Expression(newValue.scope, newValue.origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(variableName)
-        callback(newValue)
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "$variableName=${newValue.toString(depth)}"
     }

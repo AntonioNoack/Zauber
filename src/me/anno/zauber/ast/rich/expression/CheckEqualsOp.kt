@@ -11,11 +11,6 @@ class CheckEqualsOp(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(left)
-        callback(right)
-    }
-
     val symbol: String
         get() = when {
             byPointer && negated -> "!=="

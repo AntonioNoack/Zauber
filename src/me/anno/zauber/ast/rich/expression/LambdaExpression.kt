@@ -19,10 +19,6 @@ class LambdaExpression(
         private val LOGGER = LogManager.getLogger(LambdaExpression::class)
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(body)
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "LambdaExpr(${variables ?: "?"} -> ${body.toString(depth)})"
     }

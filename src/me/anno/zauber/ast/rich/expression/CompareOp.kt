@@ -6,9 +6,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 
 class CompareOp(val value: Expression, val type: CompareType) : Expression(value.scope, value.origin) {
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        callback(value)
-    }
 
     override fun toStringImpl(depth: Int): String {
         return "(${value.toString(depth)}) ${type.symbol} 0"

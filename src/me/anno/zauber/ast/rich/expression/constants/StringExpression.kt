@@ -12,7 +12,6 @@ class StringExpression(val value: String, scope: Scope, origin: Int) : Expressio
         resolvedType = StringType
     }
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {}
     override fun toStringImpl(depth: Int): String = "\"$value\""
 
     override fun resolveType(context: ResolutionContext): Type {

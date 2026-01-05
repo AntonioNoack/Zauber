@@ -13,12 +13,6 @@ class ConstructorExpression(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
-    override fun forEachExpr(callback: (Expression) -> Unit) {
-        for (i in valueParameters.indices) {
-            callback(valueParameters[i].value)
-        }
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "new($clazz)(${valueParameters.joinToString { it.toString(depth) }})"
     }
