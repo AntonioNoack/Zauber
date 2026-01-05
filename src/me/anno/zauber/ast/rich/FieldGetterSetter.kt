@@ -59,7 +59,7 @@ object FieldGetterSetter {
             val setterFieldName = tokens.toString(i++)
             check(setterFieldName != "field")
 
-            if (LOGGER.debug) LOGGER.debug("found set ${field.name}, $setterFieldName")
+            if (LOGGER.enableDebug) LOGGER.debug("found set ${field.name}, $setterFieldName")
             check(tokens.equals(i++, TokenType.CLOSE_CALL))
 
             pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->

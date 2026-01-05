@@ -62,7 +62,7 @@ class CallExpression(
     override fun resolveType(context: ResolutionContext): Type {
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
-        LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
+        if (LOGGER.enableInfo) LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
         // base can be a constructor, field or a method
         // find the best matching candidate...
         val returnType = context.targetType
@@ -72,13 +72,13 @@ class CallExpression(
             }
             is MemberNameExpression -> {
                 val name = base.name
-                LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+                if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 return resolveCallType(context, this, name, null, typeParameters, valueParameters)
             }
             is UnresolvedFieldExpression -> {
                 val name = base.name
-                LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+                if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
                 val constructor = null1() // todo do we need this constructor-stuff??? I don't think so, it's not a type
@@ -108,7 +108,7 @@ class CallExpression(
             }
             is ImportedExpression -> {
                 val name = base.nameAsImport.name
-                LOGGER.info("Find call '$name' with nameAsImport=${base.nameAsImport}")
+                if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=${base.nameAsImport}")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
                 val constructor = null1()

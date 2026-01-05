@@ -1,5 +1,6 @@
 package me.anno.zauber.generator
 
+import me.anno.zauber.logging.LogManager
 import java.io.File
 
 /**
@@ -8,6 +9,10 @@ import java.io.File
  * saves a lot of disk ops, if few files change
  * */
 class DeltaWriter(val root: File) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(DeltaWriter::class)
+    }
 
     private val oldContent = HashMap<File, String?>()
     private val newContent = HashMap<File, String?>()
@@ -39,14 +44,21 @@ class DeltaWriter(val root: File) {
     }
 
     fun finish() {
+        var numDeleted = 0
+        var numChanged = 0
         for (file in oldContent.keys) {
-            if (file !in newContent) file.delete()
+            if (file !in newContent) {
+                file.delete()
+                numDeleted++
+            }
         }
         for ((file, content) in newContent) {
             if (content != null && content != oldContent[file]) {
                 file.parentFile.mkdirs()
                 file.writeText(content)
+                numChanged++
             }
         }
+        LOGGER.info("Changed $numChanged and deleted $numDeleted files")
     }
 }

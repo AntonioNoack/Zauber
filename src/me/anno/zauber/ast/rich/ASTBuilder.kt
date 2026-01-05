@@ -348,7 +348,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             name, valueType, initialValue, keywords, origin
         )
         field.typeParameters = typeParameters
-        if (LOGGER.debug) LOGGER.debug("read field $name: $valueType = $initialValue")
+        if (LOGGER.enableDebug) LOGGER.debug("read field $name: $valueType = $initialValue")
 
         finishLastField()
         lastField = field
@@ -438,7 +438,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
 
-        if (LOGGER.debug) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
+        if (LOGGER.enableDebug) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
 
         // parse parameters (...)
         check(tokens.equals(i, TokenType.OPEN_CALL))
@@ -489,7 +489,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val origin = origin(i)
         val keywords = packKeywords()
 
-        if (LOGGER.debug) LOGGER.debug("constructor(...")
+        if (LOGGER.enableDebug) LOGGER.debug("constructor(...")
 
         // parse parameters (...)
         check(tokens.equals(i, TokenType.OPEN_CALL))
@@ -546,7 +546,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     fun readFileLevel() {
         loop@ while (i < tokens.size) {
-            if (LOGGER.debug) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
+            if (LOGGER.enableDebug) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
                 tokens.equals(i, "package") -> {
                     val (path, nextI) = tokens.readPath(i)
@@ -655,7 +655,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             val value = readExpression()
             val param = NamedParameter(name, value)
             params.add(param)
-            if (LOGGER.debug) LOGGER.debug("read param: $param")
+            if (LOGGER.enableDebug) LOGGER.debug("read param: $param")
             readComma()
         }
         return params
@@ -886,7 +886,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     // constructor or function call with type args
                     val start = i
                     val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-                    if (LOGGER.debug) LOGGER.debug(
+                    if (LOGGER.enableDebug) LOGGER.debug(
                         "tokens for params: ${
                             (start..end).map { idx ->
                                 "${tokens.getType(idx)}(${tokens.toString(idx)})"
@@ -1079,10 +1079,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     private fun readSubjectConditions(nextArrow: Int): List<SubjectCondition?> {
         val conditions = ArrayList<SubjectCondition?>()
-        if (LOGGER.debug) LOGGER.debug("reading conditions, ${tokens.toString(i, nextArrow)}")
+        if (LOGGER.enableDebug) LOGGER.debug("reading conditions, ${tokens.toString(i, nextArrow)}")
         push(nextArrow) {
             while (i < tokens.size) {
-                if (LOGGER.debug) LOGGER.debug("  reading condition $nextArrow,$i,${tokens.err(i)}")
+                if (LOGGER.enableDebug) LOGGER.debug("  reading condition $nextArrow,$i,${tokens.err(i)}")
                 when {
                     tokens.equals(i, "else") -> {
                         i++; conditions.add(null)
@@ -1118,7 +1118,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         conditions.add(SubjectCondition(value, null, SubjectConditionType.EQUALS, extra))
                     }
                 }
-                if (LOGGER.debug) LOGGER.debug("  read condition '${conditions.last()}'")
+                if (LOGGER.enableDebug) LOGGER.debug("  read condition '${conditions.last()}'")
                 readComma()
             }
         }
@@ -1147,12 +1147,12 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val originalI = i
                     i = j + 1 // after is/!is/as/as?
                     val type = readType(null, false)
-                    if (LOGGER.debug) LOGGER.debug("skipping over type '$type'")
+                    if (LOGGER.enableDebug) LOGGER.debug("skipping over type '$type'")
                     j = i - 1 // continue after the type; -1, because will be incremented immediately after
                     i = originalI
                 }
                 depth == 0 && tokens.equals(j, "->") -> {
-                    if (LOGGER.debug) LOGGER.debug("found arrow at ${tokens.err(j)}")
+                    if (LOGGER.enableDebug) LOGGER.debug("found arrow at ${tokens.err(j)}")
                     return j
                 }
                 tokens.equals(j, TokenType.OPEN_BLOCK) ||
@@ -1194,15 +1194,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     private fun readReturn(label: String?): ReturnExpression {
         val origin = origin(i++) // skip return
-        if (LOGGER.debug) LOGGER.debug("reading return")
+        if (LOGGER.enableDebug) LOGGER.debug("reading return")
         if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
             !tokens.equals(i, TokenType.COMMA)
         ) {
             val value = readExpression()
-            if (LOGGER.debug) LOGGER.debug("  with value $value")
+            if (LOGGER.enableDebug) LOGGER.debug("  with value $value")
             return ReturnExpression(value, label, currPackage, origin)
         } else {
-            if (LOGGER.debug) LOGGER.debug("  without value")
+            if (LOGGER.enableDebug) LOGGER.debug("  without value")
             return ReturnExpression(null, label, currPackage, origin)
         }
     }
@@ -1240,7 +1240,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         var i = i + 1
         while (depth > 0) {
             if (i >= tokens.size) return false // reached end without closing the block
-            if (LOGGER.debug) LOGGER.debug("  check ${tokens.err(i)} for type-args-compatibility")
+            if (LOGGER.enableDebug) LOGGER.debug("  check ${tokens.err(i)} for type-args-compatibility")
             // todo support annotations here?
             when {
                 tokens.equals(i, TokenType.COMMA) -> {} // ok
@@ -1350,7 +1350,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     private fun readTypeParams(selfType: Type?): List<Type>? {
         if (i < tokens.size) {
-            if (LOGGER.debug) LOGGER.debug("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
+            if (LOGGER.enableDebug) LOGGER.debug("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
         }
         // having type arguments means they no longer need to be resolved
         // todo any method call without them must resolve which ones and how many there are, e.g. mapOf, listOf, ...
@@ -1453,7 +1453,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                                 currPackage
                                     .getOrPut(tokens.toString(i), tokens.fileName, null)
                                     .keywords.add(listenType)
-                                if (LOGGER.debug) LOGGER.debug("found ${tokens.toString(i)} in $currPackage")
+                                if (LOGGER.enableDebug) LOGGER.debug("found ${tokens.toString(i)} in $currPackage")
                                 listen = -1
                                 listenType = ""
                             }
@@ -1473,7 +1473,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     fun readExpression(minPrecedence: Int = 0): Expression {
         var expr = readPrefix()
-        if (LOGGER.debug) LOGGER.debug("prefix: $expr")
+        if (LOGGER.enableDebug) LOGGER.debug("prefix: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
@@ -1503,7 +1503,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 }
             }
 
-            if (LOGGER.debug) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
+            if (LOGGER.enableDebug) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
 
             val op = operators[symbol]
             if (op == null) {
@@ -1807,7 +1807,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val originalScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
-        if (LOGGER.debug) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
+        if (LOGGER.enableDebug) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
         if (debug) tokens.printTokensInBlocks(i)
         while (i < tokens.size) {
             val oldSize = result.size
@@ -1829,7 +1829,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 }
                 else -> {
                     result.add(readExpression())
-                    if (LOGGER.debug) LOGGER.debug("block += ${result.last()}")
+                    if (LOGGER.enableDebug) LOGGER.debug("block += ${result.last()}")
                 }
             }
 
@@ -1933,15 +1933,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             TODO("read val Vector3d.v get() = x+y")
         }
 
-        if (LOGGER.debug) LOGGER.debug("reading var/val $name")
+        if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
         val type = if (tokens.equals(i, ":")) {
-            if (LOGGER.debug) LOGGER.debug("skipping : for type")
+            if (LOGGER.enableDebug) LOGGER.debug("skipping : for type")
             i++ // skip :
             readType(null, true).apply {
-                if (LOGGER.debug) LOGGER.debug("type: $this")
+                if (LOGGER.enableDebug) LOGGER.debug("type: $this")
             }
         } else {
-            if (LOGGER.debug) LOGGER.debug("no type present")
+            if (LOGGER.enableDebug) LOGGER.debug("no type present")
             null
         }
 

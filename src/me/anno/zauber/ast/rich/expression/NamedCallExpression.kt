@@ -110,14 +110,14 @@ class NamedCallExpression(
                     )
                 }
                 is CallExpression -> {
-                    when (val baseName = parameter.base) {
+                    when (val base = parameter.base) {
                         is MemberNameExpression -> {
                             val constructor = null
                             // todo for lambdas, baseType must be known for their type to be resolved
                             val valueParameters = resolveValueParameters(context, parameter.valueParameters)
                             return resolveCallType(
                                 context.withSelfType(baseType),
-                                this, baseName.name, constructor,
+                                this, base.name, constructor,
                                 parameter.typeParameters, valueParameters
                             )
                         }
@@ -127,11 +127,11 @@ class NamedCallExpression(
                             val valueParameters = resolveValueParameters(context, parameter.valueParameters)
                             return resolveCallType(
                                 context.withSelfType(baseType),
-                                this, baseName.name, constructor,
+                                this, base.name, constructor,
                                 parameter.typeParameters, valueParameters
                             )
                         }
-                        else -> throw NotImplementedError()
+                        else -> throw NotImplementedError("Resolve type of call $base (${base.javaClass.simpleName})")
                     }
                 }
                 else -> TODO("dot-operator with $parameter (${parameter.javaClass.simpleName}) in ${resolveOrigin(origin)}")

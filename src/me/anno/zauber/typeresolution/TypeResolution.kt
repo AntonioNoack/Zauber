@@ -9,11 +9,7 @@ import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.AndType
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.impl.*
 import kotlin.math.max
 
 /**
@@ -23,12 +19,31 @@ object TypeResolution {
 
     private val LOGGER = LogManager.getLogger(TypeResolution::class)
 
+    var catchFailures = true
+
+    init {
+        if (catchFailures) {
+            LogManager.disableLoggers(
+                "TypeResolution,Inheritance," +
+                        "MemberResolver,ConstructorResolver,MethodResolver,FieldResolver," +
+                        "ResolvedField,ResolvedMethod,CallExpression,Field,ResolvedCallable," +
+                        "LambdaExpression,UnderdefinedValueParameter,FieldExpression"
+            )
+        }
+    }
+
     val langScope by lazy { Compile.root.getOrPut("zauber", null) }
     var numSuccesses = 0
     var numFailures = 0
 
     fun resolveTypesAndNames(root: Scope) {
         forEachScope(root, ::resolveTypesAndNamesImpl)
+        if (LOGGER.enableInfo) printStats()
+    }
+
+    private fun printStats() {
+        // todo why is this not executed???
+        Thread.sleep(1000) // wait for warnings to settle before printing
         val successRate = (numSuccesses * 100f) / max(numSuccesses + numFailures, 1)
         LOGGER.info("Resolved fields and methods, $numSuccesses successes (${successRate.f1()}%)")
     }
@@ -62,6 +77,7 @@ object TypeResolution {
                 getMethodReturnType(scopeSelfType, method)
                 numSuccesses++
             } catch (e: Throwable) {
+                if (!catchFailures) throw e
                 e.printStackTrace()
                 numFailures++
                 // continue anyway for now
@@ -79,6 +95,7 @@ object TypeResolution {
                     LOGGER.info("Resolved $field to ${field.valueType}")
                     numSuccesses++
                 } catch (e: Throwable) {
+                    if (!catchFailures) throw e
                     e.printStackTrace()
                     numFailures++
                     // continue anyway for now

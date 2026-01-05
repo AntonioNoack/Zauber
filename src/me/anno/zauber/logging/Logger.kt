@@ -3,7 +3,10 @@ package me.anno.zauber.logging
 import java.io.PrintStream
 import java.util.*
 
-class Logger(val name: String, val debug: Boolean) {
+class Logger(val name: String, var enableDebug: Boolean) {
+
+    var enableInfo: Boolean = true
+    var enableWarn: Boolean = true
 
     private val knownWarnings = HashSet<String>()
 
@@ -20,17 +23,17 @@ class Logger(val name: String, val debug: Boolean) {
     }
 
     fun info(message: String) {
-        infoImpl("INFO", message, System.out)
+        if (enableInfo) infoImpl("INFO", message, System.out)
     }
 
     fun warn(message: String) {
-        if (knownWarnings.add(message)) {
+        if (enableWarn && knownWarnings.add(message)) {
             infoImpl("ERR", message, System.err)
         }
     }
 
     fun debug(message: String) {
-        if (debug) infoImpl("DEBUG", message, System.out)
+        if (enableDebug) infoImpl("DEBUG", message, System.out)
     }
 
     companion object {
