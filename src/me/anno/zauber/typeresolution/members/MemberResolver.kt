@@ -2,20 +2,20 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.ValueParameterImpl
-import me.anno.zauber.typeresolution.members.ResolvedCallable.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
-abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
+abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
     companion object {
         private val LOGGER = LogManager.getLogger(MemberResolver::class)
@@ -124,24 +124,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
                 for (i in expectedValueParameters.indices) {
                     val mvParam = expectedValueParameters[i]
                     LOGGER.info("Start checking argument[$i]: $mvParam vs ${actualValueParameters[i]}")
-                    val vParam = if (mvParam.isVararg) {
-
-                        val expectedParamArrayType = mvParam.type
-                        check(expectedParamArrayType is ClassType)
-                        check(expectedParamArrayType.clazz == ArrayType.clazz)
-                        check(expectedParamArrayType.typeParameters?.size == 1)
-                        // todo we might need to replace generics here...
-                        val expectedParamEntryType = expectedParamArrayType.typeParameters[0]
-
-                        // if star, use it as-is
-                        val commonType = sortedValueParameters.subList(i, sortedValueParameters.size)
-                            .map { it.getType(expectedParamEntryType) }
-                            .reduce { a, b -> unionTypes(a, b) }
-                        val joinedType = ClassType(ArrayType.clazz, listOf(commonType))
-                        ValueParameterImpl(null, joinedType)
-                    } else {
-                        sortedValueParameters[i]
-                    }
+                    val vParam = sortedValueParameters[i]
                     if (!isSubTypeOf(
                             actualSelfType, mvParam, vParam,
                             expectedTypeParameters,
@@ -163,39 +146,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedCallable<Resource>> {
             LOGGER.info("Found match: $resolvedTypes")
             return resolvedTypes.readonly()
         }
-
-        /**
-         * Change the order of value parameters if needed.
-         * execution order must remain unchanged!
-         * */
-        private fun resolveNamedParameters(
-            methodValueParameters: List<Parameter>,
-            valueParameters: List<ValueParameter>
-        ): List<ValueParameter>? {
-            return if (valueParameters.any { it.name != null }) {
-                val list = arrayOfNulls<ValueParameter>(valueParameters.size)
-                for (valueParam in valueParameters) {
-                    val name = valueParam.name ?: continue
-                    val index = methodValueParameters.indexOfFirst { it.name == name }
-                    if (index < 0) return null
-                    check(list[index] == null)
-                    list[index] = valueParam
-                }
-                var index = 0
-                for (valueParam in valueParameters) {
-                    if (valueParam.name != null) continue
-                    while (list[index] != null) index++
-                    list[index] = valueParam
-                }
-                check(list.none { it == null })
-                @Suppress("UNCHECKED_CAST")
-                list.toList() as List<ValueParameter>
-            } else valueParameters
-        }
     }
-
-    // todo we should probably automatically detect underdefined methods (fields), and mark them as such,
-    //  so we can the under-defined mechanism for methods (fields) that don't need it
 
     /**
      * finds a method, returns the method and any inserted type parameters

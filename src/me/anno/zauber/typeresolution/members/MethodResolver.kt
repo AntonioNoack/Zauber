@@ -93,14 +93,14 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         )
     }
 
-    fun resolveCallType(
+    fun resolveCallable(
         context: ResolutionContext,
         expr: Expression,
         name: String,
-        constructor: ResolvedCallable<*>?,
+        constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-    ): Type {
+    ): ResolvedMember<*> {
         val targetType = context.targetType
         val selfType = context.selfType
         val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters)
@@ -109,8 +109,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             ?: f.findMemberInHierarchy(context.selfScope, name, selfType, targetType, typeParameters, valueParameters)
             ?: f.findMemberInFile(context.codeScope, name, selfType, targetType, typeParameters, valueParameters)
             ?: f.findMemberInFile(langScope, name, selfType, targetType, typeParameters, valueParameters)
-        val candidates =
-            listOfNotNull(method?.getTypeFromCall(), field?.getTypeFromCall())
+        val candidates = listOfNotNull(method, field)
         if (candidates.isEmpty()) {
             val selfScope = context.selfScope
             val codeScope = context.codeScope
@@ -124,6 +123,18 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         }
         if (candidates.size > 1) throw IllegalStateException("Cannot have both a method and a type with the same name '$name': $candidates")
         return candidates.first()
+    }
+
+    fun resolveCallType(
+        context: ResolutionContext,
+        expr: Expression,
+        name: String,
+        constructor: ResolvedMember<*>?,
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+    ): Type {
+        val callable = resolveCallable(context, expr, name, constructor, typeParameters, valueParameters)
+        return callable.getTypeFromCall()
     }
 
     fun resolveMethod(

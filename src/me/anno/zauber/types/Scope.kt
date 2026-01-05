@@ -4,6 +4,7 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.tokenizer.TokenList
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import java.util.concurrent.atomic.AtomicInteger
@@ -51,6 +52,17 @@ class Scope(val name: String, val parent: Scope? = null) {
     var hasTypeParameters = false
 
     val typeWithoutArgs = ClassType(this, null)
+    val typeWithArgs by lazy {
+        if (scopeType != ScopeType.PACKAGE) {
+            check(hasTypeParameters)
+            check(scopeType?.isClassType() == true)
+        }
+        ClassType(
+            this, ParameterList(
+                typeParameters,
+                typeParameters.map { GenericType(it.scope, it.name) })
+        )
+    }
 
     /**
      * used for type resolution

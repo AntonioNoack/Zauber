@@ -8,7 +8,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
 class ResolvedConstructor(ownerTypes: ParameterList, constructor: Constructor, context: ResolutionContext) :
-    ResolvedCallable<Constructor>(ownerTypes, emptyParameterList(), constructor, context) {
+    ResolvedMember<Constructor>(ownerTypes, emptyParameterList(), constructor, context) {
 
     override fun getTypeFromCall(): Type {
         return ClassType(resolved.selfType.clazz, ownerTypes)

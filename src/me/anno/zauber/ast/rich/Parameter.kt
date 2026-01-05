@@ -3,6 +3,8 @@ package me.anno.zauber.ast.rich
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.impl.ClassType
 
 /**
  * type or value parameter
@@ -17,6 +19,14 @@ class Parameter(
     val scope: Scope,
     val origin: Int
 ) {
+
+    init {
+        if (isVararg) {
+            check(type is ClassType)
+            check(type.clazz == ArrayType.clazz)
+            check(type.typeParameters?.size == 1)
+        }
+    }
 
     constructor(name: String, type: Type, scope: Scope, origin: Int) :
             this(false, true, false, name, type, null, scope, origin)

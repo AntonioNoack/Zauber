@@ -2,8 +2,10 @@ package me.anno.zauber.generator.java
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.generator.DeltaWriter
 import me.anno.zauber.generator.Generator
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -42,8 +44,9 @@ object JavaSourceGenerator : Generator() {
         when (type) {
             is ClassType -> appendClassType(type, scope)
             is UnionType if type.types.size == 2 && NullType in type.types -> {
-                builder.append("@org.jetbrains.annotations.Nullable ")
+                // builder.append("@org.jetbrains.annotations.Nullable ")
                 appendType(type.types.first { it != NullType }, scope)
+                builder.append("/* or null */")
             }
             is SelfType if (type.scope == scope) -> {
                 builder.append(scope.name)
@@ -51,6 +54,7 @@ object JavaSourceGenerator : Generator() {
             is GenericType if (type.scope == scope) -> {
                 builder.append(type.name)
             }
+            UnknownType -> builder.append('?')
             is LambdaType -> {
                 // todo define all these classes...
                 // todo add respective import...
@@ -137,50 +141,25 @@ object JavaSourceGenerator : Generator() {
         // todo imports ->
         //  collect them in a dry-run :)
 
-        if (scope.scopeType != ScopeType.ENUM_ENTRY_CLASS) {
-            builder.append("public ")
-            val type = when (scope.scopeType) {
-                ScopeType.ENUM_CLASS -> "enum"
-                ScopeType.NORMAL_CLASS -> "class"
-                ScopeType.INTERFACE -> "interface"
-                ScopeType.OBJECT -> "final class"
-                ScopeType.PACKAGE -> "final class"
-                else -> scope.scopeType.toString()
-            }
-            if ("abstract" in scope.keywords) builder.append("abstract ")
-            builder.append(type).append(' ')
+
+        builder.append("public ")
+        val type = when (scope.scopeType) {
+            ScopeType.ENUM_CLASS -> "final class"
+            ScopeType.NORMAL_CLASS -> "class"
+            ScopeType.INTERFACE -> "interface"
+            ScopeType.OBJECT -> "final class"
+            ScopeType.ENUM_ENTRY_CLASS -> "final class"
+            ScopeType.PACKAGE -> "final class"
+            else -> scope.scopeType.toString()
         }
+        if ("abstract" in scope.keywords) builder.append("abstract ")
+        builder.append(type).append(' ')
         builder.append(name)
 
         appendTypeParams(scope)
-
-        if (scope.scopeType != ScopeType.ENUM_CLASS &&
-            scope.scopeType != ScopeType.ENUM_ENTRY_CLASS
-        ) {
-            // todo not supported in Java :(
-            //  -> we can solve that issue by defining our own enum class:
-            //  just create our own static instances
-            appendSuperTypes(scope)
-        }
+        appendSuperTypes(scope)
 
         writeBlock {
-
-            if (scope.scopeType == ScopeType.ENUM_CLASS) {
-                val entries = scope.children.filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
-                for ((index, child) in entries.withIndex()) {
-                    if (index > 0) {
-                        while (builder.last() in " \n") builder.setLength(builder.length - 1)
-                        builder.append(", ")
-                        nextLine()
-                    }
-                    generateInside(child.name, child)
-                }
-                if (entries.isNotEmpty()) {
-                    while (builder.last() in " \n") builder.setLength(builder.length - 1)
-                }
-                builder.append(';')
-                nextLine()
-            }
 
             appendFields(scope)
 
@@ -195,7 +174,7 @@ object JavaSourceGenerator : Generator() {
             if (scope.scopeType != ScopeType.PACKAGE) {
                 for (child in scope.children) {
                     val childType = child.scopeType ?: continue
-                    if (childType.isClassType() && childType != ScopeType.ENUM_ENTRY_CLASS) {
+                    if (childType.isClassType()) {
                         generateInside(child.name, child)
                     }
                 }
@@ -210,13 +189,14 @@ object JavaSourceGenerator : Generator() {
             // todo write getter and setter
             // todo check whether this fields needs a backing field
 
-            if (field.selfType != scope) continue
+            if (field.selfType != scope.typeWithArgs) continue
             appendBackingField(scope, field)
         }
     }
 
     private fun appendBackingField(scope: Scope, field: Field) {
         if (field.byParameter == null) {
+            if (!field.isMutable) builder.append("final ")
             appendType(field.valueType ?: NullableAnyType, scope)
             builder.append(' ').append(field.name).append(';')
             nextLine()
@@ -232,7 +212,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendMethod(scope: Scope, method: Method) {
 
         val selfType = method.selfType
-        val isBySelf = selfType == scope.typeWithoutArgs ||
+        val isBySelf = selfType == scope.typeWithArgs ||
                 "override" in method.keywords ||
                 "abstract" in method.keywords
         if ("override" in method.keywords) builder.append("@Override ")
@@ -257,8 +237,11 @@ object JavaSourceGenerator : Generator() {
         builder.append(')')
         val body = method.body
         if (body != null) {
+            val context = ResolutionContext(scope, method.selfType, true, null)
             writeBlock {
-
+                builder.append("/* $body */")
+                nextLine()
+                ASTSimplifier.simplify(context, body)
             }
         } else {
             builder.append(";")

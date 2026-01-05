@@ -11,7 +11,8 @@ import me.anno.zauber.types.Type
 class UnderdefinedValueParameter(
     val param: NamedParameter,
     val context: ResolutionContext,
-) : ValueParameter(param.name) {
+    hasVarargStar: Boolean
+) : ValueParameter(param.name, hasVarargStar) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(UnderdefinedValueParameter::class)

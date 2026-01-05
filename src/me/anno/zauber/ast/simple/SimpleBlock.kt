@@ -1,9 +1,17 @@
 package me.anno.zauber.ast.simple
 
-import com.sun.media.sound.SimpleInstrument
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.expression.Expression
 
 class SimpleBlock {
-    val declaredFields = ArrayList<Field>()
-    val instructions = ArrayList<SimpleInstrument>()
+
+    fun add(expr: SimpleExpression) {
+        instructions.add(expr)
+    }
+
+    fun field(expr: Expression): SimpleField {
+        return SimpleField()
+    }
+
+    val declaredFields = ArrayList<SimpleField>()
+    val instructions = ArrayList<SimpleExpression>()
 }

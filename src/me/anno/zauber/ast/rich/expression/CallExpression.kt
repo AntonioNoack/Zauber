@@ -10,7 +10,8 @@ import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.findMemberInFile
 import me.anno.zauber.typeresolution.members.MethodResolver.null1
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
+import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
+import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -60,6 +61,10 @@ class CallExpression(
     }
 
     override fun resolveType(context: ResolutionContext): Type {
+        return resolveMethod(context).getTypeFromCall()
+    }
+
+    fun resolveMethod(context: ResolutionContext): ResolvedMember<*> {
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
         if (LOGGER.enableInfo) LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
@@ -74,7 +79,7 @@ class CallExpression(
                 val name = base.name
                 if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                return resolveCallType(context, this, name, null, typeParameters, valueParameters)
+                return resolveCallable(context, this, name, null, typeParameters, valueParameters)
             }
             is UnresolvedFieldExpression -> {
                 val name = base.name
@@ -84,17 +89,17 @@ class CallExpression(
                 val constructor = null1() // todo do we need this constructor-stuff??? I don't think so, it's not a type
                     ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
-                return resolveCallType(context, this, name, constructor, typeParameters, valueParameters)
+                return resolveCallable(context, this, name, constructor, typeParameters, valueParameters)
             }
             is NamedTypeExpression -> {
                 val baseType = base.type
                 val baseScope = typeToScope(baseType)
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
                 check(baseScope.hasTypeParameters)
-                if (baseScope.typeParameters.isEmpty()) {
+                /*if (baseScope.typeParameters.isEmpty()) {
                     // constructor is very clear
                     return baseScope.typeWithoutArgs
-                } else {
+                } else {*/
                     val constructor = ConstructorResolver
                         .findMemberInScopeImpl(
                             baseScope, baseScope.name, context.targetType, context.selfType,
@@ -103,8 +108,8 @@ class CallExpression(
                     if (constructor == null) {
                         throw IllegalStateException("Missing constructor for $baseType")
                     }
-                    return constructor.getTypeFromCall()
-                }
+                    return constructor
+                //}
             }
             is ImportedExpression -> {
                 val name = base.nameAsImport.name
@@ -119,7 +124,7 @@ class CallExpression(
                         base.nameAsImport.parent.ifIsClassScope()?.typeWithoutArgs,
                         typeParameters, valueParameters
                     )
-                return resolveCallType(context, this, name, constructor, typeParameters, valueParameters)
+                return resolveCallable(context, this, name, constructor, typeParameters, valueParameters)
             }
             else -> throw IllegalStateException(
                 "Resolve field/method for ${base.javaClass} ($base) " +

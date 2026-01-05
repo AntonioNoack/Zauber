@@ -3,7 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.members.ResolvedCallable.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType

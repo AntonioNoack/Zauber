@@ -1,11 +1,14 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveFieldType
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -21,7 +24,7 @@ class DotExpression(
 
     init {
         if (right is DotExpression)
-            throw IllegalStateException("NamedCall-stack must be within base, not in parameter: $this")
+            throw IllegalStateException(".-stack must be within base, not in parameter: $this")
     }
 
     override fun forEachExpr(callback: (Expression) -> Unit) {
@@ -49,6 +52,47 @@ class DotExpression(
             "$base$typeParams.${right.toString(depth)}"
         } else {
             "($base)$typeParams.${right.toString(depth)}"
+        }
+    }
+
+    fun resolveField(context: ResolutionContext): ResolvedField? {
+        val baseType = TypeResolution.resolveType(
+            /* targetLambdaType seems not easily deductible */
+            context.withTargetType(null),
+            left,
+        )
+
+        when (right) {
+            is MemberNameExpression -> {
+                // todo replace own generics, because we don't know them yet
+                /*val selfType = context.selfType
+                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
+                    resolveGenerics(
+                        baseType,
+                        selfType.clazz.typeParameters,
+                        selfType.clazz.typeParameters.map { it.type })
+                } else baseType*/
+                return FieldResolver.resolveField(
+                    context.withSelfType(baseType),
+                    right.name, null,
+                )
+            }
+            is UnresolvedFieldExpression -> {
+                // todo replace own generics, because we don't know them yet
+                /*val selfType = context.selfType
+                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
+                    resolveGenerics(
+                        baseType,
+                        selfType.clazz.typeParameters,
+                        selfType.clazz.typeParameters.map { it.type })
+                } else baseType*/
+                return FieldResolver.resolveField(
+                    context.withSelfType(baseType),
+                    right.name, null,
+                )
+            }
+            is CallExpression -> return null /* not a field */
+            else -> TODO("dot-operator with $right (${right.javaClass.simpleName}) in ${resolveOrigin(origin)}")
         }
     }
 

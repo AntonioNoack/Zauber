@@ -4,6 +4,8 @@ import me.anno.zauber.Compile
 import me.anno.zauber.Compile.f1
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.PrefixExpression
+import me.anno.zauber.ast.rich.expression.PrefixType
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
@@ -107,8 +109,7 @@ object TypeResolution {
         while (true) {
             val scopeType = scope.scopeType
             if (scopeType != null && scopeType.isClassType()) {
-                val typeParams = scope.typeParameters.map { GenericType(scope, it.name) }
-                return ClassType(scope, typeParams)
+                return scope.typeWithArgs
             }
             // if inside method, we need to check method.selfType
             if (scopeType == ScopeType.METHOD) {
@@ -150,12 +151,13 @@ object TypeResolution {
         // target-type does not apply to parameters
         val contextWithoutTargetType = context.withTargetType(null)
         return base.map { param ->
+            val hasVarargStar = param.value is PrefixExpression && param.value.type == PrefixType.ARRAY_TO_VARARGS
             if (param.value.hasLambdaOrUnknownGenericsType()) {
                 LOGGER.info("Underdefined generics in $param :/")
-                UnderdefinedValueParameter(param, contextWithoutTargetType)
+                UnderdefinedValueParameter(param, contextWithoutTargetType, hasVarargStar)
             } else {
                 val type = resolveType(contextWithoutTargetType, param.value)
-                ValueParameterImpl(param.name, type)
+                ValueParameterImpl(param.name, type, hasVarargStar)
             }
         }
     }

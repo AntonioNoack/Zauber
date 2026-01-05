@@ -9,7 +9,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
-abstract class ResolvedCallable<V>(
+abstract class ResolvedMember<V>(
     val ownerTypes: ParameterList,
     val callTypes: ParameterList,
     val resolved: V,
@@ -20,7 +20,7 @@ abstract class ResolvedCallable<V>(
 
     companion object {
 
-        private val LOGGER = LogManager.getLogger(ResolvedCallable::class)
+        private val LOGGER = LogManager.getLogger(ResolvedMember::class)
 
         fun resolveGenerics(
             selfType: Type?, type: Type,

@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.BooleanUtils.not
@@ -13,6 +14,10 @@ class IfElseBranch(
     val condition: Expression, val ifBranch: Expression, val elseBranch: Expression?,
     addToScope: Boolean = true
 ) : Expression(condition.scope, condition.origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(IfElseBranch::class)
+    }
 
     init {
         check(ifBranch.scope != elseBranch?.scope)
@@ -60,7 +65,9 @@ class IfElseBranch(
     )
 
     override fun hasLambdaOrUnknownGenericsType(): Boolean {
-        println("Checking branch for unknown generics type: ${ifBranch.hasLambdaOrUnknownGenericsType()} || ${elseBranch?.hasLambdaOrUnknownGenericsType()}")
+        if (LOGGER.enableInfo) {
+            LOGGER.info("Checking branch for unknown generics type: ${ifBranch.hasLambdaOrUnknownGenericsType()} || ${elseBranch?.hasLambdaOrUnknownGenericsType()}")
+        }
         return elseBranch != null && // if else is undefined, this has no return type
                 (ifBranch.hasLambdaOrUnknownGenericsType() || elseBranch.hasLambdaOrUnknownGenericsType())
     }

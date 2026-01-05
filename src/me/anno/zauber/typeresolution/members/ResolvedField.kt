@@ -18,7 +18,7 @@ import me.anno.zauber.types.impl.NullType
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
 class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: ParameterList, context: ResolutionContext) :
-    ResolvedCallable<Field>(ownerTypes, callTypes, field, context) {
+    ResolvedMember<Field>(ownerTypes, callTypes, field, context) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ResolvedField::class)
@@ -90,6 +90,10 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
                         exprIsField(field, expr.ifBranch, context) &&
                         exprIsField(field, expr.elseBranch, context)
                 is NumberExpression, is StringExpression -> false
+                is DotExpression -> {
+                    val field = expr.resolveField(context)
+                    field?.resolved == field
+                }
                 else -> throw NotImplementedError("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
             }
         }

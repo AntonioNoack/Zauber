@@ -67,6 +67,13 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         )
 
         var debug = false
+
+        val unitInstance by lazy {
+            val scope = UnitType.clazz
+            val field = scope.objectField!!
+            FieldExpression(field, scope, -1)
+        }
+
     }
 
     val imports = ArrayList<Import>()
@@ -291,7 +298,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         var endIndex = tokens.findToken(i, ";")
         if (endIndex < 0) endIndex = tokens.size
         val classScope = currPackage
+        val scope = classScope.getOrPut("Companion", ScopeType.OBJECT)
         push(endIndex) {
+            var ordinal = 0
             while (i < tokens.size) {
                 // read enum value
                 readAnnotations()
@@ -306,10 +315,17 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                 val keywords = packKeywords()
                 val entryScope = readClassBody(name, emptyList(), ScopeType.ENUM_ENTRY_CLASS)
-                val initialValue =
-                    ConstructorExpression(classScope, typeParameters, valueParameters, classScope, origin)
+                // todo add name and id as parameters
+                val extraValueParameters = listOf(
+                    NamedParameter(null, NumberExpression((ordinal++).toString(), scope, origin)),
+                    NamedParameter(null, StringExpression(name, scope, origin)),
+                )
+                val initialValue = ConstructorExpression(
+                    classScope, typeParameters,
+                    extraValueParameters + valueParameters, classScope, origin
+                )
                 entryScope.objectField = Field(
-                    classScope, null, false, null,
+                    scope, scope.typeWithoutArgs, false, null,
                     name, classScope.typeWithoutArgs, initialValue, keywords, origin
                 )
 
@@ -317,11 +333,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             }
         }
 
-        createEnumProperties(classScope, origin0)
+        createEnumProperties(scope, classScope, origin0)
         return endIndex
     }
 
-    private fun createEnumProperties(enumScope: Scope, origin: Int) {
+    private fun createEnumProperties(scope: Scope, enumScope: Scope, origin: Int) {
 
         // todo we also need to add then as constructor properties,
         //  and add them into all constructors...
@@ -335,7 +351,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             "ordinal", IntType, null, syntheticList, origin
         )
 
-        val scope = enumScope.getOrPut("Companion", ScopeType.OBJECT)
         scope.hasTypeParameters = true
 
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
@@ -1263,7 +1278,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             return ReturnExpression(value, label, currPackage, origin)
         } else {
             if (LOGGER.enableDebug) LOGGER.debug("  without value")
-            return ReturnExpression(null, label, currPackage, origin)
+            return ReturnExpression(unitInstance, label, currPackage, origin)
         }
     }
 
