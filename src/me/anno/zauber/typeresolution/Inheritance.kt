@@ -128,8 +128,9 @@ object Inheritance {
     ): Boolean {
 
         if (expectedType == actualType) return true
-
+        if (expectedType == NullableAnyType) return true
         if (expectedType == UnknownType) return true
+
         if (actualType == UnknownType) {
             // todo use the bounds of the generics instead, not 'Any?'
             return isSubTypeOf(

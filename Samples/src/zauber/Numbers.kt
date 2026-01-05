@@ -11,14 +11,40 @@ interface Number : Comparable<Self> {
 }
 
 value class Int : Number {
+
     operator fun plus(other: Int): Int = native("this + other")
+    operator fun plus(other: Long): Long = toLong() + other
+    operator fun plus(other: Half): Half = toHalf() + other
+    operator fun plus(other: Float): Float = toFloat() + other
+    operator fun plus(other: Double): Double = toDouble() + other
+
     operator fun minus(other: Int): Int = native("this - other")
+    operator fun minus(other: Long): Long = toLong() - other
+    operator fun minus(other: Half): Half = toHalf() - other
+    operator fun minus(other: Float): Float = toFloat() - other
+    operator fun minus(other: Double): Double = toDouble() - other
+
     operator fun times(other: Int): Int = native("this * other")
+    operator fun times(other: Long): Long = toLong() * other
+    operator fun times(other: Half): Half = toHalf() * other
+    operator fun times(other: Float): Float = toFloat() * other
+    operator fun times(other: Double): Double = toDouble() * other
+
     operator fun div(other: Int): Int = native("this / other")
+    operator fun div(other: Long): Long = toLong() / other
+    operator fun div(other: Half): Half = toHalf() / other
+    operator fun div(other: Float): Float = toFloat() / other
+    operator fun div(other: Double): Double = toDouble() / other
+
     operator fun rem(other: Int): Int = native("this % other")
+    operator fun rem(other: Long): Long = toLong() % other
+    operator fun rem(other: Half): Half = toHalf() % other
+    operator fun rem(other: Float): Float = toFloat() % other
+    operator fun rem(other: Double): Double = toDouble() % other
 
     fun toInt(): Int = this
     fun toLong(): Long = native("s64(this)")
+    fun toHalf(): Half = native("f16(this)")
     fun toFloat(): Float = native("f32(this)")
     fun toDouble(): Double = native("f64(this)")
 
@@ -31,14 +57,40 @@ value class Int : Number {
 }
 
 value class Long : Number {
+
+    operator fun plus(other: Int): Long = plus(other.toLong())
     operator fun plus(other: Long): Long = native("this + other")
+    operator fun plus(other: Half): Half = toHalf() + other
+    operator fun plus(other: Float): Float = toFloat() + other
+    operator fun plus(other: Double): Double = toDouble() + other
+
+    operator fun minus(other: Int): Long = minus(other.toLong())
     operator fun minus(other: Long): Long = native("this - other")
+    operator fun minus(other: Half): Half = minus(toHalf())
+    operator fun minus(other: Float): Float = toFloat() - other
+    operator fun minus(other: Double): Double = toDouble() - other
+
+    operator fun times(other: Int): Long = times(other.toLong())
     operator fun times(other: Long): Long = native("this * other")
+    operator fun times(other: Half): Half = toHalf() * other
+    operator fun times(other: Float): Float = toFloat() * other
+    operator fun times(other: Double): Double = toDouble() * other
+
+    operator fun div(other: Int): Long = div(other.toLong())
     operator fun div(other: Long): Long = native("this / other")
+    operator fun div(other: Half): Half = div(toHalf())
+    operator fun div(other: Float): Float = toFloat() / other
+    operator fun div(other: Double): Double = toDouble() / other
+
+    operator fun rem(other: Int): Long = rem(other.toLong())
     operator fun rem(other: Long): Long = native("this % other")
+    operator fun rem(other: Half): Half = minus(toHalf())
+    operator fun rem(other: Float): Float = toFloat() % other
+    operator fun rem(other: Double): Double = toDouble() % other
 
     fun toInt(): Int = native("s32(this)")
     fun toLong(): Long = this
+    fun toHalf(): Half = native("f16(this)") // this is stupid, half has a smaller range...
     fun toFloat(): Float = native("f32(this)")
     fun toDouble(): Double = native("f64(this)")
 
@@ -51,6 +103,7 @@ value class Long : Number {
 }
 
 value class Half : Number {
+
     operator fun plus(other: Half): Half = native("this + other")
     operator fun minus(other: Half): Half = native("this - other")
     operator fun times(other: Half): Half = native("this * other")
@@ -59,6 +112,7 @@ value class Half : Number {
 
     fun toInt(): Int = native("s32(this)")
     fun toLong(): Long = native("s64(this)")
+    fun toHalf(): Half = this
     fun toFloat(): Float = native("s32(this)")
     fun toDouble(): Double = native("f64(this)")
 
@@ -76,6 +130,7 @@ value class Float : Number {
 
     fun toInt(): Int = native("s32(this)")
     fun toLong(): Long = native("s64(this)")
+    fun toHalf(): Half = native("f16(this)")
     fun toFloat(): Float = this
     fun toDouble(): Double = native("f64(this)")
 
@@ -96,6 +151,7 @@ value class Double : Number {
 
     fun toInt(): Int = native("s32(this)")
     fun toLong(): Long = native("s64(this)")
+    fun toHalf(): Half = native("f16(this)")
     fun toFloat(): Float = native("f32(this)")
     fun toDouble(): Double = this
 
