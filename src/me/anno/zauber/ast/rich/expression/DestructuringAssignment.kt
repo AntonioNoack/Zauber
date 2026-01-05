@@ -4,12 +4,11 @@ import me.anno.zauber.ast.rich.Field
 
 fun createDestructuringAssignment(
     names: List<String>, initialValue: Expression,
-    isVar: Boolean, isLateinit: Boolean
+    isMutable: Boolean
 ): Expression {
-    check(!isLateinit)
     val scope = initialValue.scope
     val origin = initialValue.origin
-    val tmpField = scope.generateField(initialValue)
+    val tmpField = scope.generateImmutableField(initialValue)
     val result = ArrayList<Expression>(1 + names.size)
     val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
     result.add(AssignmentExpression(tmpFieldExpr, initialValue))
@@ -21,8 +20,8 @@ fun createDestructuringAssignment(
             emptyList(), emptyList(), scope, origin
         )
         val newField = Field(
-            scope, isVar, !isVar, null, name,
-            null, newValue, emptyList(), origin
+            scope, null, isMutable, null,
+            name, null, newValue, emptyList(), origin
         )
         val newFieldExpr = FieldExpression(newField, scope, origin)
         result.add(AssignmentExpression(newFieldExpr, newValue))

@@ -29,7 +29,7 @@ object FieldGetterSetter {
         pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
             val origin = origin(i)
             val backingField = Field(
-                getterScope, true, false, field.selfType,
+                getterScope, field.selfType, true, true,
                 "field", field.valueType, field.initialValue ?: field.getterExpr,
                 emptyList(), origin
             )
@@ -88,7 +88,7 @@ object FieldGetterSetter {
         scope: Scope, origin: Int,
     ): Field {
         return Field(
-            scope, true, false, field.selfType,
+            scope, field.selfType, false, /* todo we actually have a parameter */null,
             fieldName, field.valueType, field.initialValue ?: field.getterExpr,
             emptyList(), origin
         )
@@ -99,7 +99,7 @@ object FieldGetterSetter {
         scope: Scope, origin: Int
     ): Field {
         return Field(
-            scope, true, false, field.selfType,
+            scope, field.selfType, field.isMutable, null,
             "field", field.valueType, field.initialValue ?: field.getterExpr,
             emptyList(), origin
         )
@@ -116,7 +116,7 @@ object FieldGetterSetter {
                     createGetterMethod(field, null, backingField, getterScope, origin)
                 }
             }
-            if (field.isVar && field.setter == null) {
+            if (field.isMutable && field.setter == null) {
                 pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->
                     val backingField = createBackingField(field, setterScope, origin)
                     val valueField = createValueField(field, "__field", setterScope, origin)

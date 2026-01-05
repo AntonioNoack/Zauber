@@ -45,7 +45,7 @@ fun forLoop(
     val iteratorFieldName = scope.generateName("for")
     val iterator = iterableToIterator(iterable)
     val iteratorField = Field(
-        scope, false, true, null,
+        scope, null, false, null,
         iteratorFieldName, null, iterable,
         emptyList(), origin
     )

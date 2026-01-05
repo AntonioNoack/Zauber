@@ -50,7 +50,7 @@ class LambdaExpression(
                             val autoParamName = "it"
                             LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
                             Field(
-                                bodyScope, false, true, null,
+                                bodyScope,  null,false, param0,
                                 autoParamName, type, null,
                                 emptyList(), origin
                             )

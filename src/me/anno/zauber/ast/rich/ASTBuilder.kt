@@ -217,8 +217,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         scope.hasTypeParameters = true // no type-params are supported
         scope.objectField = Field(
-            scope, false, true, null,
-            "__instance__",
+            scope, null, false, null, "__instance__",
             ClassType(scope, emptyList()),
             /* todo should we set initialValue? */ null, emptyList(), origin
         )
@@ -299,7 +298,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val scope = readClassBody(name, emptyList(), ScopeType.ENUM_ENTRY_CLASS)
                 val entry = EnumEntry(name, typeParams, params, scope, origin)
                 scope.objectField = Field(
-                    currPackage, false, true, null,
+                    currPackage, null, false, null,
                     name, currPackage.typeWithoutArgs, null, emptyList(), origin
                 )
 
@@ -312,7 +311,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     var lastField: Field? = null
 
-    private fun readFieldInClass(isVar: Boolean) {
+    private fun readFieldInClass(isMutable: Boolean) {
         val origin = origin(i++)// skip var/val
 
         val fieldScope = currPackage // todo is this fine??
@@ -344,7 +343,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         val field = Field(
-            currPackage, isVar, !isVar, selfType,
+            currPackage, selfType, isMutable, null,
             name, valueType, initialValue, keywords, origin
         )
         field.typeParameters = typeParameters
@@ -696,11 +695,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     } else null
 
                     val keywords = packKeywords()
-                    result.add(Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin))
+                    val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
+                    result.add(parameter)
 
                     val fieldScope = if (isVar || isVal) currPackage else secondaryScope
                     // automatically gets added to fieldScope
-                    Field(fieldScope, isVar, isVal, selfType, name, type, initialValue, keywords, origin)
+                    Field(
+                        fieldScope, selfType, isVar, parameter,
+                        name, type, initialValue, keywords, origin
+                    )
 
                     readComma()
                 }
@@ -1041,7 +1044,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             val body = readBodyOrExpression()
             val pseudoInitial = iterableToNextExpr(iterable)
             val variableField = Field(
-                body.scope, false, true, null,
+                body.scope, null, true, false,
                 name, variableType, pseudoInitial, emptyList(), origin
             )
             return forLoop(variableField, iterable, body, label)
@@ -1663,7 +1666,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         ifFalseExpr: (Scope) -> Expression,
     ): Expression {
         // we need to store the variable in a temporary field
-        val tmpField = scope.generateField(expr)
+        val tmpField = scope.generateImmutableField(expr)
         val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
         val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
         val fieldExpr = FieldExpression(tmpField, scope, origin)
@@ -1752,17 +1755,22 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             tokens.push(arrow) {
                 while (i < tokens.size) {
                     if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        val names = ArrayList<String>()
+                        val names = ArrayList<LambdaVariable>()
                         pushCall {
                             while (i < tokens.size) {
                                 if (tokens.equals(i, TokenType.NAME)) {
                                     val origin = origin(i)
                                     val name = tokens.toString(i++)
-                                    names.add(name)
+                                    val type = if (tokens.equals(i, ":")) {
+                                        i++
+                                        readType(null, true)
+                                    } else null
+                                    val parameter = LambdaVariable(type, name)
+                                    names.add(parameter)
                                     // to do we neither know type nor initial value :/, both come from the called function/set variable
                                     Field( // this is more of a parameter...
-                                        currPackage, false, true, null, name,
-                                        null, null, emptyList(), origin
+                                        currPackage, null, false, parameter,
+                                        name, null, null, emptyList(), origin
                                     )
                                 } else throw IllegalStateException("Expected name")
                                 readComma()
@@ -1776,11 +1784,12 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                             i++
                             readType(null, true)
                         } else null
-                        variables.add(LambdaVariable(type, name))
+                        val parameter = LambdaVariable(type, name)
+                        variables.add(parameter)
                         // to do we neither know type nor initial value :/, both come from the called function/set variable
                         Field( // this is more of a parameter...
-                            currPackage, false, true, null, name,
-                            null, null, emptyList(), origin
+                            currPackage, null, true, parameter,
+                            name, null, null, emptyList(), origin
                         )
                     } else throw NotImplementedError()
                     readComma()
@@ -1896,7 +1905,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    private fun readDestructuring(isVar: Boolean, isLateinit: Boolean): Expression {
+    private fun readDestructuring(isMutable: Boolean): Expression {
         val names = ArrayList<String>()
         pushCall {
             while (i < tokens.size) {
@@ -1911,14 +1920,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             i++ // skip =
             readExpression()
         } else throw IllegalStateException("Expected value for destructuring at ${tokens.err(i)}")
-        return createDestructuringAssignment(names, value, isVar, isLateinit)
+        return createDestructuringAssignment(names, value, isMutable)
     }
 
-    private fun readDeclaration(isVar: Boolean, isLateinit: Boolean = false): Expression {
+    private fun readDeclaration(isMutable: Boolean, isLateinit: Boolean = false): Expression {
         i++ // skip var/val
 
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            return readDestructuring(isVar, isLateinit)
+            check(!isLateinit) // is immediately assigned -> cannot be lateinit
+            return readDestructuring(isMutable)
         }
 
         check(tokens.equals(i, TokenType.NAME))
@@ -1949,7 +1959,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         // define variable in the scope
         val field = Field(
-            currPackage, isVar, !isVar, getSelfType(currPackage),
+            currPackage, getSelfType(currPackage), isMutable, null,
             name, type, value, emptyList(), origin
         )
 

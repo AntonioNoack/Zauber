@@ -10,9 +10,10 @@ import me.anno.zauber.types.Type
 
 class Field(
     var declaredScope: Scope,
-    val isVar: Boolean,
-    val isVal: Boolean,
     val selfType: Type?, // may be null inside methods, owner is stack, kind of
+    val isMutable: Boolean,
+    val byParameter: Any?, // Parameter | LambdaParameter | null
+
     val name: String,
     var valueType: Type?,
     val initialValue: Expression?,

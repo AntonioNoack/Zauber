@@ -37,7 +37,7 @@ fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases
     val subjectName = scope.generateName("subject")
     val value = if (subject is AssignmentExpression) subject.newValue else subject
     val field = Field(
-        scope, false, true, scope.typeWithoutArgs, subjectName,
+        scope, scope.typeWithoutArgs, false, null, subjectName,
         null, value, emptyList(), origin
     )
 
@@ -66,8 +66,8 @@ fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases
                 // todo this more-specific field is only valid until fieldName is assigned, again, then we have to use unionType
                 // todo this is also only valid, if no other thread/function could write to the field
                 Field(
-                    caseScope, false, false, null, fieldName,
-                    jointType, null, emptyList(), origin
+                    caseScope, null, false, null,
+                    fieldName, jointType, null, emptyList(), origin
                 )
             }
         }

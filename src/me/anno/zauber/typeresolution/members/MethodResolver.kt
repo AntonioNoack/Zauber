@@ -103,11 +103,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): Type {
         val targetType = context.targetType
         val selfType = context.selfType
-        val m = MethodResolver
-        val method = constructor
-            ?: m.findMemberInHierarchy(context.selfScope, name, targetType, selfType, typeParameters, valueParameters)
-            ?: m.findMemberInFile(context.codeScope, name, targetType, selfType, typeParameters, valueParameters)
-            ?: m.findMemberInFile(langScope, name, targetType, selfType, typeParameters, valueParameters)
+        val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters)
         val f = FieldResolver
         val field = null1()
             ?: f.findMemberInHierarchy(context.selfScope, name, selfType, targetType, typeParameters, valueParameters)
@@ -128,6 +124,20 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         }
         if (candidates.size > 1) throw IllegalStateException("Cannot have both a method and a type with the same name '$name': $candidates")
         return candidates.first()
+    }
+
+    fun resolveMethod(
+        context: ResolutionContext,
+        name: String,
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+    ): ResolvedMethod? {
+        val targetType = context.targetType
+        val selfType = context.selfType
+        val m = MethodResolver
+        return m.findMemberInHierarchy(context.selfScope, name, targetType, selfType, typeParameters, valueParameters)
+            ?: m.findMemberInFile(context.codeScope, name, targetType, selfType, typeParameters, valueParameters)
+            ?: m.findMemberInFile(langScope, name, targetType, selfType, typeParameters, valueParameters)
     }
 
     fun null1(): ResolvedField? {

@@ -109,7 +109,6 @@ fun lookupBinaryOp(symbol: String): String {
         ".." -> "rangeTo"
         "..<" -> "rangeUntil"
         "in" -> "contains"
-        ".", ".?", "?:" -> symbol
         else -> {
             LOGGER.warn("Unknown binary op: $symbol")
             symbol

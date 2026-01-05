@@ -12,15 +12,15 @@ fun destructuringForLoop(
     val origin = iterable.origin
     val fullName = scope.generateName("destruct")
     val fullVariable = Field(
-        scope, false, true,
-        scope.typeWithoutArgs, fullName,
-        null, null,
+        scope, null,
+        false, null,
+        fullName, null, null,
         emptyList(), origin
     )
     val fields = variableNames.map { varName ->
         Field(
-            scope, false, true,
-            scope.typeWithoutArgs, varName,
+            scope, null,
+            false, null, varName,
             null, null,
             emptyList(), origin
         )

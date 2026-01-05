@@ -80,7 +80,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun addField(field: Field) {
         val other = fields.firstOrNull {
             it.name == field.name &&
-                    (it.isVal || it.isVar) == (field.isVal || field.isVar)
+                    (it.byParameter != null) == (field.byParameter != null)
         }
         if (other != null) {
             throw IllegalStateException(
@@ -318,10 +318,10 @@ class Scope(val name: String, val parent: Scope? = null) {
             } else null
         }
 
-    fun generateField(initialValue: Expression): Field {
-        val name = generateName("field")
+    fun generateImmutableField(initialValue: Expression): Field {
+        val name = generateName("tmpField")
         return Field(
-            this, false, true, null,
+            this, null, false, null,
             name, null, initialValue, emptyList(), initialValue.origin
         )
     }

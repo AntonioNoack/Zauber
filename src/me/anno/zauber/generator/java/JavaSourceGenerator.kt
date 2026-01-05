@@ -216,7 +216,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendBackingField(scope: Scope, field: Field) {
-        if (field.isVar || field.isVal) {
+        if (field.byParameter == null) {
             appendType(field.valueType ?: NullableAnyType, scope)
             builder.append(' ').append(field.name).append(';')
             nextLine()
