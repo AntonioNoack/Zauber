@@ -2,6 +2,8 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.types.BooleanUtils.not
 
 fun createWhileLoop(body: Expression, condition: Expression, label: String?): WhileLoop {
@@ -14,5 +16,5 @@ fun createWhileLoop(body: Expression, condition: Expression, label: String?): Wh
             IfElseBranch(negatedCondition, breakI, null)
         ), body.scope, origin
     )
-    return WhileLoop(TRUEExpr, newBody, label)
+    return WhileLoop(SpecialValueExpression(SpecialValue.TRUE, body.scope, origin), newBody, label)
 }
