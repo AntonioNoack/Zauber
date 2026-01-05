@@ -75,6 +75,16 @@ inline fun <V, R> List<V>.map(transform: (V) -> R): List<R> {
     return List<R>(size) { transform(this[it]) }
 }
 
+fun <V> List<V>.joinToString(separator: String = ",", prefix: String = "[", postfix: String = "]"): String {
+    var result = prefix
+    for(i in indices) {
+        if (i > 0) result += separator
+        result += this[i]
+    }
+    result += postfix
+    return result
+}
+
 data class IndexedValue<V>(val index: Int, val value: V)
 
 interface MutableList<V> : List<V> {

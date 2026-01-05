@@ -15,4 +15,8 @@ class SimpleMerge(
     val elseBlock: SimpleBlock,
     val elseField: SimpleField,
     val base: Expression
-) : SimpleAssignmentExpression(dst, base.scope, base.origin)
+) : SimpleAssignmentExpression(dst, base.scope, base.origin) {
+    override fun toString(): String {
+        return "$dst = Merge($ifField, $elseField)"
+    }
+}

@@ -95,16 +95,16 @@ object ASTSimplifier {
                     expr, expr.name, constructor,
                     expr.typeParameters, valueParameters
                 )
-                return simplifyCall(context, expr, addToBlock, graph, expr.base, expr.valueParameters, method)
+                simplifyCall(context, expr, addToBlock, graph, expr.base, expr.valueParameters, method)
             }
             is CallExpression -> {
                 val method = expr.resolveMethod(context)
-                return simplifyCall(context, expr, addToBlock, graph, expr.base, expr.valueParameters, method)
+                simplifyCall(context, expr, addToBlock, graph, expr.base, expr.valueParameters, method)
             }
             is SpecialValueExpression -> {
                 val dst = addToBlock.field(expr)
                 addToBlock.add(SimpleSpecialValue(dst, expr))
-                return dst
+                dst
             }
             is UnresolvedFieldExpression -> {
                 val field = expr.resolveField(context)
@@ -113,34 +113,69 @@ object ASTSimplifier {
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                 val dst = addToBlock.field(expr)
                 addToBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
-                return dst
+                dst
             }
             is NumberExpression -> {
                 val dst = addToBlock.field(expr)
                 addToBlock.add(SimpleNumber(dst, expr))
-                return dst
+                dst
             }
             is StringExpression -> {
                 val dst = addToBlock.field(expr)
                 addToBlock.add(SimpleString(dst, expr))
-                return dst
+                dst
             }
-            is IfElseBranch -> {
+            is IfElseBranch -> simplifyBranch(context, expr, addToBlock, graph, needsValue)
+            is DotExpression -> {
+                val field = expr.resolveField(context)
+                    ?: TODO("Implement dot-expression on call or similar")
+                val self = simplifyImpl(context, expr.left, addToBlock, graph, true)
                 val dst = addToBlock.field(expr)
-                val condition = simplifyImpl(context, expr.condition, addToBlock, graph, true)!!
-                // todo if not condition, create unreachable...
-                val ifBlock = graph.addBlock()
-                val elseBlock = graph.addBlock()
-                val ifValue = simplifyImpl(context, expr, ifBlock, graph, true)
-                val elseValue = simplifyImpl(context, expr, elseBlock, graph, true)
-                addToBlock.add(SimpleBranch(condition, ifBlock, elseBlock, expr.scope, expr.origin))
-                return if (ifValue != null && elseValue != null) {
-                    addToBlock.add(SimpleMerge(dst, ifBlock, ifValue, elseBlock, elseValue, expr))
-                    dst
-                } else ifValue ?: elseValue
+                addToBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
+                dst
+            }
+            // todo PrefixExpression should be solved by calling functions, too
+            is PostfixExpression -> {
+                // todo this should be solved by calling functions; there is no reason
+                //  for having a separate class
+
+                val base = simplifyImpl(context, expr.base, addToBlock, graph, true)
+                // todo this calls .inc and .dec, and reassigns the value -> this must be a field
+                //  or something with get() and set() logic...
+                when (expr.type) {
+                    PostfixType.INCREMENT -> {
+
+                    }
+                    PostfixType.DECREMENT -> {
+
+                    }
+                }
+                TODO("Implement post++ and post--")
             }
             else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
         }
+    }
+
+    private fun simplifyBranch(
+        context: ResolutionContext,
+        expr: IfElseBranch,
+        addToBlock: SimpleBlock,
+        graph: SimpleGraph,
+        needsValue: Boolean,
+    ): SimpleField? {
+        val dst = addToBlock.field(expr)
+        val condition = simplifyImpl(context, expr.condition, addToBlock, graph, true)
+            ?: throw IllegalStateException("Condition for if didn't return a field")
+        // todo if not condition, create unreachable...
+        val ifBlock = graph.addBlock()
+        val elseBlock = graph.addBlock()
+        val ifValue = simplifyImpl(context.withCodeScope(expr.ifBranch.scope), expr, ifBlock, graph, true)
+        val elseValue = simplifyImpl(context.withCodeScope(expr.elseBranch!!.scope), expr, elseBlock, graph, true)
+        addToBlock.add(SimpleBranch(condition, ifBlock, elseBlock, expr.scope, expr.origin))
+        return if (ifValue != null && elseValue != null) {
+            addToBlock.add(SimpleMerge(dst, ifBlock, ifValue, elseBlock, elseValue, expr))
+            dst
+        } else ifValue ?: elseValue
     }
 
     private fun simplifyCall(
@@ -153,14 +188,16 @@ object ASTSimplifier {
         exprValueParameters: List<NamedParameter>,
 
         method0: ResolvedMember<*>,
-    ): SimpleField {
+    ): SimpleField? {
         when (val method = method0.resolved) {
             is Method -> {
-                val base = simplifyImpl(context, exprBase, addToBlock, graph, true)!!
+                val base = simplifyImpl(context, exprBase, addToBlock, graph, true)
+                    ?: return null
                 val params =
                     reorderParameters(exprValueParameters, method.valueParameters, expr.scope, expr.origin)
                         .map { parameter ->
-                            simplifyImpl(context, parameter, addToBlock, graph, true)!!
+                            simplifyImpl(context, parameter, addToBlock, graph, true)
+                                ?: return null
                         }
                 // then execute it
                 val dst = addToBlock.field(expr)
@@ -175,7 +212,8 @@ object ASTSimplifier {
                         method.valueParameters,
                         expr.scope, expr.origin
                     ).map { parameter ->
-                        simplifyImpl(context, parameter, addToBlock, graph, true)!!
+                        simplifyImpl(context, parameter, addToBlock, graph, true)
+                            ?: return null
                     }
                 // then execute it
                 val dst = addToBlock.field(expr)

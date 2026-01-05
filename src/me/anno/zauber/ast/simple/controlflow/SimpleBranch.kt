@@ -8,4 +8,8 @@ import me.anno.zauber.types.Scope
 class SimpleBranch(
     val condition: SimpleField, val ifTrue: SimpleBlock, val ifFalse: SimpleBlock,
     scope: Scope, origin: Int
-) : SimpleExpression(scope, origin)
+) : SimpleExpression(scope, origin) {
+    override fun toString(): String {
+        return "if ($condition) { $ifTrue } else { $ifFalse; }"
+    }
+}
