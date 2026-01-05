@@ -22,6 +22,9 @@ value class Int : Number {
     fun toFloat(): Float = native("f32(this)")
     fun toDouble(): Double = native("f64(this)")
 
+    fun inc(): Int = this + 1
+    fun dec(): Int = this - 1
+
     override fun compareTo(other: Self): Int {
         return if (this > other) +1 else if (this >= other) 0 else -1
     }
@@ -38,6 +41,9 @@ value class Long : Number {
     fun toLong(): Long = this
     fun toFloat(): Float = native("f32(this)")
     fun toDouble(): Double = native("f64(this)")
+
+    fun inc(): Long = this + 1L
+    fun dec(): Long = this - 1L
 
     override fun compareTo(other: Self): kotlin.Int {
         return if (this > other) +1 else if (this >= other) 0 else -1
@@ -73,6 +79,9 @@ value class Float : Number {
     fun toFloat(): Float = this
     fun toDouble(): Double = native("f64(this)")
 
+    fun inc(): Float = this + 1f
+    fun dec(): Float = this - 1f
+
     override fun compareTo(other: Float): Int {
         return if (this > other) +1 else if (this >= other) 0 else -1
     }
@@ -89,6 +98,9 @@ value class Double : Number {
     fun toLong(): Long = native("s64(this)")
     fun toFloat(): Float = native("f32(this)")
     fun toDouble(): Double = this
+
+    fun inc(): Double = this + 1.0
+    fun dec(): Double = this - 1.0
 
     override fun compareTo(other: Double): Int {
         return if (this > other) +1 else if (this >= other) 0 else -1

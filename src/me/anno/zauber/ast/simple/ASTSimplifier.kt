@@ -64,14 +64,28 @@ object ASTSimplifier {
 
             is AssignmentExpression -> {
                 // todo get all stuff on the left
-                val dstExpr = expr.variableName as FieldExpression
-                val newValue = simplifyImpl(context, expr.newValue, addToBlock, graph, true)
-                    ?: return null
-                val self: SimpleField? =
-                    null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                // todo we should call the setter, if there is one
-                addToBlock.add(SimpleSetField(self, dstExpr.field, newValue, expr.scope, expr.origin))
-                voidField
+                when (val dstExpr = expr.variableName) {
+                    is FieldExpression -> {
+                        val newValue = simplifyImpl(context, expr.newValue, addToBlock, graph, true)
+                            ?: return null
+                        val self: SimpleField? =
+                            null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
+                        // todo we should call the setter, if there is one
+                        addToBlock.add(SimpleSetField(self, dstExpr.field, newValue, expr.scope, expr.origin))
+                        voidField
+                    }
+                    is UnresolvedFieldExpression -> {
+                        val newValue = simplifyImpl(context, expr.newValue, addToBlock, graph, true)
+                            ?: return null
+                        val self: SimpleField? =
+                            null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
+                        // todo we should call the setter, if there is one
+                        val field = dstExpr.resolveField(context)!!.resolved
+                        addToBlock.add(SimpleSetField(self, field, newValue, expr.scope, expr.origin))
+                        voidField
+                    }
+                    else -> throw NotImplementedError("Implement assignment to ${expr.variableName} (${expr.variableName.javaClass.simpleName})")
+                }
             }
             is CompareOp -> {
                 val base = simplifyImpl(context, expr.value, addToBlock, graph, true) ?: return null

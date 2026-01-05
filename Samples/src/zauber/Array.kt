@@ -13,3 +13,7 @@ class Array<V>(override val size: Int) : List<V> {
 
     override fun iterator(): Iterator<V> = SimpleListIterator(this, 0)
 }
+
+fun <V> arrayOfNulls(size: Int): Array<V?> {
+    return Array<V?>(size)
+}
