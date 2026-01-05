@@ -203,9 +203,9 @@ object CSourceGenerator : Generator() {
                     }
                     is IsInstanceOfExpr -> {
                         builder.append("__isInstanceOf(")
-                        writeExpr(expr.left, true)
+                        writeExpr(expr.instance, true)
                         builder.append(", ")
-                        builder.append(getName(expr.right))
+                        builder.append(getName(expr.type))
                         builder.append(")")
                     }
                     is CompareOp -> {

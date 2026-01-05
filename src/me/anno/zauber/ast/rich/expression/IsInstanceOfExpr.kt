@@ -5,22 +5,19 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 
-/**
- * [is, !is]
- * */
-class IsInstanceOfExpr(val left: Expression, val right: Type, val negated: Boolean, scope: Scope, origin: Int) :
+class IsInstanceOfExpr(val instance: Expression, val type: Type, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
-    val symbol: String get() = if (negated) "!is" else "is"
+    val symbol: String get() = "is"
 
     override fun toStringImpl(depth: Int): String {
-        return "(${left.toString(depth)})$symbol($right)"
+        return "(${instance.toString(depth)})is($type)"
     }
 
     override fun resolveType(context: ResolutionContext): Type = BooleanType
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false // always boolean
 
     override fun clone(scope: Scope): Expression {
-        return IsInstanceOfExpr(left.clone(scope), right, negated, scope, origin)
+        return IsInstanceOfExpr(instance.clone(scope), type, scope, origin)
     }
 }

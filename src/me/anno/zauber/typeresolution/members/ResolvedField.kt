@@ -43,8 +43,8 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         fun applyConditionToType(field: Field, type: Type, expr: Expression, context: ResolutionContext): Type {
             return when (expr) {
                 is IsInstanceOfExpr -> {
-                    if (exprIsField(field, expr.left, context)) {
-                        andTypes(expr.right, type)
+                    if (exprIsField(field, expr.instance, context)) {
+                        andTypes(expr.type, type)
                     } else type
                 }
                 is CheckEqualsOp -> {

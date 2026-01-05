@@ -125,6 +125,13 @@ object ASTSimplifier {
                 addToBlock.add(SimpleString(dst, expr))
                 dst
             }
+            is IsInstanceOfExpr -> {
+                val src = simplifyImpl(context, expr.instance, addToBlock, graph, true)
+                    ?: return null
+                val dst = addToBlock.field(expr)
+                addToBlock.add(SimpleInstanceOf(dst, src, expr.type, expr.scope, expr.origin))
+                dst
+            }
             is IfElseBranch -> simplifyBranch(context, expr, addToBlock, graph, needsValue)
             is DotExpression -> {
                 val field = expr.resolveField(context)

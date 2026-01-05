@@ -21,7 +21,7 @@ class String(
         return String(content, startIndex + offset, endIndex - startIndex)
     }
 
-    operator fun plus(other:Any?): String {
+    operator fun plus(other: Any?): String {
         TODO()
     }
 }

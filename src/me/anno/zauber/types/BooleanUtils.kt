@@ -14,13 +14,6 @@ object BooleanUtils {
             return base
         }
 
-        if (this is IsInstanceOfExpr) {
-            return IsInstanceOfExpr(
-                left, right, !negated,
-                scope, origin
-            )
-        }
-
         if (this is CheckEqualsOp) {
             return CheckEqualsOp(left, right, byPointer, !negated, scope, origin)
         }

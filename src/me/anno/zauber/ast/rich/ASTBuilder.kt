@@ -15,6 +15,7 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.*
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
@@ -1019,6 +1020,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         val name = currPackage.generateName("lambda")
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
+        clazz.hasTypeParameters = true
 
         readClassBody(name, emptyList(), ScopeType.INLINE_CLASS)
         return ConstructorExpression(clazz, emptyList(), emptyList(), currPackage, origin)
@@ -1031,6 +1033,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         val name = currPackage.generateName("inline")
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
+        clazz.hasTypeParameters = true
 
         val bodyIndex = tokens.findToken(i, TokenType.OPEN_BLOCK)
         check(bodyIndex > i)
@@ -1615,8 +1618,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         )
                     }
                     "as?" -> createCastExpression(expr, scope, origin) { scope -> nullExpr(scope, origin) }
-                    "is" -> IsInstanceOfExpr(expr, readType(null, true), false, scope, origin)
-                    "!is" -> IsInstanceOfExpr(expr, readType(null, true), true, scope, origin)
+                    "is" -> IsInstanceOfExpr(expr, readType(null, true), scope, origin)
+                    "!is" -> IsInstanceOfExpr(expr, readType(null, true), scope, origin).not()
                     "?:" -> createBranchExpression(
                         expr, scope, origin,
                         { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
@@ -1738,7 +1741,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     ): Expression {
         val type = readType(null, true)
         return createBranchExpression(expr, scope, origin, { fieldExpr ->
-            IsInstanceOfExpr(fieldExpr, type, false, scope, origin)
+            IsInstanceOfExpr(fieldExpr, type, scope, origin)
         }, { fieldExpr, ifTrueScope ->
             fieldExpr.clone(ifTrueScope)
         }, ifFalseExpr)

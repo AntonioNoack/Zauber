@@ -34,7 +34,7 @@ class SubjectCondition(
             is LambdaType -> lambdaTypeToClassType(expr.type)
             else -> throw NotImplementedError("Handle is ${expr.type?.javaClass}")
         }
-        return IsInstanceOfExpr(subject, type, false, newScope, subject.origin)
+        return IsInstanceOfExpr(subject, type, newScope, subject.origin)
     }
 
     override fun toString(): String {
