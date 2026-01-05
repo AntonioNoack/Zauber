@@ -9,5 +9,7 @@ import me.anno.zauber.types.Scope
  *  return
  *  if/else/while/goto
  *  we may as well already resolve calls as far as possible :)
+ *
+ * todo this is effectively LLVM IR, just that names can be used multiple times
  * */
 abstract class SimpleExpression(val scope: Scope, val origin: Int)

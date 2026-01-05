@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.simple.controlflow
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.simple.SimpleExpression
+import me.anno.zauber.ast.simple.SimpleBlock
 
-class SimpleLoop(val condition: Field, val body: List<SimpleExpression>)
+/**
+ * while(condition) { body }
+ * */
+class SimpleLoop(val condition: Field, val body: SimpleBlock)
