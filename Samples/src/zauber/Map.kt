@@ -20,3 +20,9 @@ private class TrivialMap<K, V>(vararg val entries: Pair<K, V>) : Map<K, V> {
 fun <K, V> mapOf(vararg entries: Pair<K, V>): Map<K, V> {
     return TrivialMap<K, V>(*entries)
 }
+
+data class MapEntry<K, V>(val key: K, val value: V)
+
+fun <K, V, R> Map<K, V>.mapValues(mapping: (MapEntry<K, V>) -> R): Map<K, R> {
+    TODO()
+}

@@ -51,7 +51,7 @@ abstract class ResolvedCallable<V>(
                     }
                     ClassType(type.clazz, newTypeArgs)
                 }
-                NullType -> type
+                NullType, UnknownType -> type
                 is LambdaType -> {
                     LambdaType(type.parameters.map {
                         val newType = resolveGenerics(selfType, it.type, genericNames, genericValues)
@@ -62,7 +62,7 @@ abstract class ResolvedCallable<V>(
                     LOGGER.warn("SelfType missing... ${type.scope}")
                     type.scope.typeWithoutArgs
                 }
-                else -> throw NotImplementedError("Resolve generics in $type")
+                else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
             }
         }
     }

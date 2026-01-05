@@ -198,7 +198,7 @@ object TypeResolution {
         var scope = scope ?: return null
         while (true) {
 
-            val selfMatch = scope.children.firstOrNull { it.name == name }
+            val selfMatch = scope.children.firstOrNull { it.name == name && it.scopeType?.isClassType() == true }
             if (selfMatch != null) return ClassType(selfMatch, null)
 
             val genericsMatch = scope.typeParameters.firstOrNull { it.name == name }
