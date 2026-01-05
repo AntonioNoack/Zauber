@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 
 class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
     SimpleExpression(scope, origin) {
@@ -10,8 +10,8 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
         instructions.add(expr)
     }
 
-    fun field(expr: Expression): SimpleField {
-        val field = SimpleField(graph.numFields++)
+    fun field(type: Type): SimpleField {
+        val field = SimpleField(type, graph.numFields++)
         declaredFields.add(field)
         return field
     }

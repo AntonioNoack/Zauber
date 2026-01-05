@@ -1,7 +1,8 @@
 package me.anno.zauber.ast.simple
 
-// todo we should make these fields typed (mainly for WASM)
-class SimpleField(val id: Int) {
+import me.anno.zauber.types.Type
+
+class SimpleField(val type: Type, val id: Int) {
 
     var numReads = 0
 
@@ -11,7 +12,7 @@ class SimpleField(val id: Int) {
     }
 
     override fun toString(): String {
-        return "%$id"
+        return "%$id[$type]"
     }
 
 }

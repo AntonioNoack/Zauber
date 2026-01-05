@@ -10,6 +10,7 @@ import me.anno.zauber.ast.rich.controlflow.ThrowExpression
 import me.anno.zauber.ast.rich.controlflow.WhileLoop
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
@@ -25,10 +26,14 @@ import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.impl.NullType
 
 object ASTSimplifier {
 
-    val voidField = SimpleField(-1)
+    val voidField = SimpleField(UnitType, -1)
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
         val graph = SimpleGraph(expr.scope, expr.origin)
@@ -93,7 +98,7 @@ object ASTSimplifier {
             }
             is CompareOp -> {
                 val base = simplifyImpl(context, expr.value, currBlock, graph, true) ?: return null
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(BooleanType)
                 currBlock.add(SimpleCompare(dst, base, expr.type, expr.scope, expr.origin))
                 dst
             }
@@ -120,7 +125,11 @@ object ASTSimplifier {
                 simplifyCall(context, expr, currBlock, graph, expr.base, expr.valueParameters, method)
             }
             is SpecialValueExpression -> {
-                val dst = currBlock.field(expr)
+                val type = when (expr.value) {
+                    SpecialValue.NULL -> NullType
+                    else -> TODO("Resolve type of $expr")
+                }
+                val dst = currBlock.field(type)
                 currBlock.add(SimpleSpecialValue(dst, expr))
                 dst
             }
@@ -129,24 +138,24 @@ object ASTSimplifier {
                     ?: throw IllegalStateException("Failed to resolve field $expr")
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(field.getTypeFromCall())
                 currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
                 dst
             }
             is NumberExpression -> {
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(expr.resolvedType!!)
                 currBlock.add(SimpleNumber(dst, expr))
                 dst
             }
             is StringExpression -> {
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(StringType)
                 currBlock.add(SimpleString(dst, expr))
                 dst
             }
             is IsInstanceOfExpr -> {
                 val src = simplifyImpl(context, expr.instance, currBlock, graph, true)
                     ?: return null
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(BooleanType)
                 currBlock.add(SimpleInstanceOf(dst, src, expr.type, expr.scope, expr.origin))
                 dst
             }
@@ -156,7 +165,7 @@ object ASTSimplifier {
                 val field = expr.resolveField(context)
                     ?: TODO("Implement dot-expression on call or similar")
                 val self = simplifyImpl(context, expr.left, currBlock, graph, true)
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(field.getTypeFromCall())
                 currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
                 dst
             }
@@ -208,7 +217,7 @@ object ASTSimplifier {
         graph: SimpleGraph,
         needsValue: Boolean,
     ): SimpleField? {
-        val dst = currBlock.field(expr)
+        val dst = currBlock.field(TypeResolution.resolveType(context, expr))
         val condition = simplifyImpl(context, expr.condition, currBlock, graph, true)
             ?: throw IllegalStateException("Condition for if didn't return a field")
         // todo if not condition, create unreachable...
@@ -247,7 +256,7 @@ object ASTSimplifier {
                                 ?: return null
                         }
                 // then execute it
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(method0.getTypeFromCall())
                 currBlock.add(SimpleCall(dst, method, base, params, expr.scope, expr.origin))
                 return dst
             }
@@ -263,7 +272,7 @@ object ASTSimplifier {
                             ?: return null
                     }
                 // then execute it
-                val dst = currBlock.field(expr)
+                val dst = currBlock.field(method0.getTypeFromCall())
                 currBlock.add(SimpleConstructor(dst, method, params, expr.scope, expr.origin))
                 return dst
             }
