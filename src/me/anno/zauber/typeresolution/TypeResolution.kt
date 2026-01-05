@@ -19,7 +19,7 @@ object TypeResolution {
 
     private val LOGGER = LogManager.getLogger(TypeResolution::class)
 
-    var catchFailures = true
+    var catchFailures = false
 
     init {
         if (catchFailures) {
@@ -42,8 +42,6 @@ object TypeResolution {
     }
 
     private fun printStats() {
-        // todo why is this not executed???
-        Thread.sleep(1000) // wait for warnings to settle before printing
         val successRate = (numSuccesses * 100f) / max(numSuccesses + numFailures, 1)
         LOGGER.info("Resolved fields and methods, $numSuccesses successes (${successRate.f1()}%)")
     }

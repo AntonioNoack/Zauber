@@ -13,6 +13,7 @@ class ResolvedMethod(ownerTypes: ParameterList, method: Method, callTypes: Param
 
     override fun getTypeFromCall(): Type {
         val method = resolved
+        LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
         val ownerNames = selfTypeToTypeParams(method.selfType)
         val selfType = if (method.selfType != null) context.selfType else null
         val inGeneral = method.returnType!!

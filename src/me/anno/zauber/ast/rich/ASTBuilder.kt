@@ -463,7 +463,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val body = pushScope(methodScope) {
             if (tokens.equals(i, "=")) {
                 val origin = origin(i++) // skip =
-                ReturnExpression(readExpression(), null, methodScope, origin)
+                val expr = readExpression()
+                if (returnType == null) expr
+                else ReturnExpression(expr, null, methodScope, origin)
             } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 if (returnType == null) returnType = UnitType
                 pushBlock(ScopeType.METHOD_BODY, methodScope.name) { readMethodBody() }
