@@ -17,6 +17,9 @@ class Method(
     val keywords: List<String>,
     val origin: Int
 ) {
+
+    var backingField: Field? = null
+
     override fun toString(): String {
         val builder = StringBuilder()
         builder.append("fun ")

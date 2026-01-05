@@ -24,13 +24,10 @@ class Field(
         private val LOGGER = LogManager.getLogger(Field::class)
     }
 
-    var privateGet = false
-    var privateSet = false
+    var getter: Method? = null
+    var setter: Method? = null
 
     var getterExpr: Expression? = null
-
-    var setterFieldName: String = "value"
-    var setterExpr: Expression? = null
 
     val selfTypeTypeParams: List<Parameter>
         get() = selfTypeToTypeParams(selfType)

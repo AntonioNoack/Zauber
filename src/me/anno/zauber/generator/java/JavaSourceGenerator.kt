@@ -230,6 +230,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendMethod(scope: Scope, method: Method) {
+
         val selfType = method.selfType
         val isBySelf = selfType == scope.typeWithoutArgs ||
                 "override" in method.keywords ||
@@ -238,6 +239,7 @@ object JavaSourceGenerator : Generator() {
         if ("abstract" in method.keywords && scope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
         }
+
         builder.append("public ")
         if (!isBySelf) builder.append("static ")
         appendType(method.returnType ?: NullableAnyType, scope)

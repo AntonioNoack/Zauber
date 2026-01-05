@@ -1,5 +1,8 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
+import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
+import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.MemberNameExpression.Companion.nameExpression
@@ -156,7 +159,12 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         popGenericParams()
     }
 
-    private inline fun <R> pushScope(name: String, scopeType: ScopeType, callback: (Scope) -> R): R {
+    inline fun <R> pushScope(scopeType: ScopeType, prefix: String, callback: (Scope) -> R): R {
+        val name = currPackage.generateName(prefix)
+        return pushScope(name, scopeType, callback)
+    }
+
+    inline fun <R> pushScope(name: String, scopeType: ScopeType, callback: (Scope) -> R): R {
         val parent = currPackage
         val child = parent.getOrPut(name, scopeType)
         currPackage = child
@@ -341,6 +349,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         )
         field.typeParameters = typeParameters
         if (LOGGER.debug) LOGGER.debug("read field $name: $valueType = $initialValue")
+
+        finishLastField()
         lastField = field
     }
 
@@ -571,53 +581,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     }
                 }
 
-                tokens.equals(i, "get") -> {
-                    check(tokens.equals(++i, TokenType.OPEN_CALL))
-                    check(tokens.equals(++i, TokenType.CLOSE_CALL))
-
-                    i++ // skipping )
-
-                    val field = lastField!!
-                    field.privateGet = keywords.remove("private")
-
-                    if (tokens.equals(i, ":")) {
-                        i++
-                        field.valueType = readType(null, true)
-                        LOGGER.info("Defined lastField $field as ${field.valueType}")
-                    }
-
-                    when {
-                        tokens.equals(i, "=") -> {
-                            i++ // skip =
-                            field.getterExpr = readExpression()
-                        }
-                        tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                            field.getterExpr = pushBlock(ScopeType.FIELD_GETTER, "${field.name}:get") {
-                                readMethodBody()
-                            }
-                        }
-                        else -> throw IllegalStateException("Expected = or {} after get() at ${tokens.err(i)}")
-                    }
-                }
-                tokens.equals(i, "set") -> {
-                    i++ // skip set
-                    val field = lastField!!
-                    field.privateSet = keywords.remove("private")
-                    if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        check(tokens.equals(++i, TokenType.NAME))
-                        field.setterFieldName = tokens.toString(i++)
-                        if (LOGGER.debug) LOGGER.debug("found set ${field.name}, ${field.setterFieldName}")
-                        check(tokens.equals(i++, TokenType.CLOSE_CALL))
-                        field.setterExpr = if (tokens.equals(i, "=")) {
-                            i++ // skip =
-                            readExpression()
-                        } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                            pushBlock(ScopeType.FIELD_SETTER, "${field.name}:set") {
-                                readMethodBody()
-                            }
-                        } else null
-                    }// else LOGGER.info("found set without anything else, ${field.name}")
-                }
+                tokens.equals(i, "get") -> readGetter()
+                tokens.equals(i, "set") -> readSetter()
 
                 tokens.equals(i, "@") -> annotations.add(readAnnotation())
 
@@ -629,6 +594,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 else -> throw NotImplementedError("Unknown token at ${tokens.err(i)}")
             }
         }
+        finishLastField()
     }
 
     fun readTypeAlias() {
@@ -846,7 +812,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    private fun origin(i: Int): Int {
+    fun origin(i: Int): Int {
         return TokenListIndex.getIndex(tokens, i)
     }
 
@@ -1312,7 +1278,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return true
     }
 
-    private fun readType(
+    fun readType(
         selfType: Type? = null, allowSubTypes: Boolean,
         isAndType: Boolean = false
     ): Type {
@@ -1424,7 +1390,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return result
     }
 
-    private fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
+    fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
         val name = scopeName ?: currPackage.generateName(scopeType.name)
         return pushScope(name, scopeType) { childScope ->
             childScope.keywords.add(scopeType.name)
@@ -1505,7 +1471,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return result
     }
 
-    private fun readExpression(minPrecedence: Int = 0): Expression {
+    fun readExpression(minPrecedence: Int = 0): Expression {
         var expr = readPrefix()
         if (LOGGER.debug) LOGGER.debug("prefix: $expr")
 
@@ -1797,7 +1763,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                                     val origin = origin(i)
                                     val name = tokens.toString(i++)
                                     names.add(name)
-                                    // todo we neither know type nor initial value :/, both come from the called function/set variable
+                                    // to do we neither know type nor initial value :/, both come from the called function/set variable
                                     Field( // this is more of a parameter...
                                         currPackage, false, true, null, name,
                                         null, null, emptyList(), origin
@@ -1815,7 +1781,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                             readType(null, true)
                         } else null
                         variables.add(LambdaVariable(type, name))
-                        // todo we neither know type nor initial value :/, both come from the called function/set variable
+                        // to do we neither know type nor initial value :/, both come from the called function/set variable
                         Field( // this is more of a parameter...
                             currPackage, false, true, null, name,
                             null, null, emptyList(), origin
@@ -1837,7 +1803,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         else if (i < tokens.size) throw IllegalStateException("Expected comma at ${tokens.err(i)}")
     }
 
-    private fun readMethodBody(): ExpressionList {
+    fun readMethodBody(): ExpressionList {
         val originalScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()

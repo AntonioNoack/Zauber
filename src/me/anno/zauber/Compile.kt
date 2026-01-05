@@ -137,7 +137,7 @@ object Compile {
         if (false) printPackages(root, 0)
 
 
-        step("Create Default Parameter Functions") {
+        step("Creating Default Parameter Functions") {
             createDefaultParameterFunctions(root)
         }
 
@@ -150,12 +150,12 @@ object Compile {
         }
 
         if (false) {
-            step("Create C-Code") {
+            step("Creating C-Code") {
                 CSourceGenerator.generateCode(File("./out/c"), root)
             }
         }
 
-        step("Create Java-Code") {
+        step("Creating Java-Code") {
             JavaSourceGenerator.generateCode(File("./out/java"), root)
         }
 

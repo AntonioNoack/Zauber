@@ -9,6 +9,7 @@ import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.AndType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
@@ -178,6 +179,11 @@ object TypeResolution {
             null, NullType -> null
             is ClassType -> type.clazz
             is UnionType -> {
+                val scopes = type.types.mapNotNull { typeToScope(it) }
+                if (scopes.distinct().size == 1) scopes.first()
+                else null
+            }
+            is AndType -> {
                 val scopes = type.types.mapNotNull { typeToScope(it) }
                 if (scopes.distinct().size == 1) scopes.first()
                 else null
