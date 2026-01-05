@@ -138,7 +138,7 @@ object ASTSimplifier {
                     ?: throw IllegalStateException("Failed to resolve field $expr")
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                val dst = currBlock.field(field.getTypeFromCall())
+                val dst = currBlock.field(field.getValueType(context))
                 currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
                 dst
             }

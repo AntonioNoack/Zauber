@@ -136,7 +136,7 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         val baseType = getValueType(this.context /* todo is this correct??? */)
         // this must be a fun-interface, and we need to get the return type of the call...
         //  luckily, there is only a single method, but unfortunately, we need the call parameters...
-        TODO("Not yet implemented")
+        TODO("get type from calling on a field (must be some kind of fun-interface): $baseType")
     }
 
     override fun toString(): String {
