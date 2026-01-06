@@ -14,10 +14,10 @@ abstract class PreprocessorTestBase {
         val tokenized = files.mapValues { (fileName, source) ->
             CTokenizer(source, fileName, true).tokenize()
         }
-        println("Tokenized:")
+        /*println("Tokenized:")
         for ((fileName, tokens) in tokenized) {
             println("  '$fileName': ${tokens.toDebugString()}")
-        }
+        }*/
         val pp = Preprocessor(tokenized) { _, name -> name }
         return pp.preprocess(fileName)
     }

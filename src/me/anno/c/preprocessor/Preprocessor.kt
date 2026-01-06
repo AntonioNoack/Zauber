@@ -23,7 +23,7 @@ class Preprocessor(
     }
 
     private fun preprocess(input: TokenList, i0: Int, i1: Int, output: TokenBuilder) {
-        println("Handling block [$i0,$i1] from ${input.err(i0)} to ${input.err(i1 - 1)}")
+        // println("Handling block [$i0,$i1] from ${input.err(i0)} to ${input.err(i1 - 1)}")
         var i = i0
         while (i < i1) {
             i = if (isDirective(input, i)) {
@@ -44,7 +44,7 @@ class Preprocessor(
         check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
             "Expected directive name, but got ${tokens.err(i)}"
         }
-        println("Handling directive ${tokens.err(i)}")
+        // println("Handling directive ${tokens.err(i)}")
         when (tokens.toString(i++)) {
             "define" -> i = handleDefine(tokens, i) - 1
             "undef" -> macros.remove(tokens.toString(i))
@@ -158,38 +158,57 @@ class Preprocessor(
                 val args = readMacroArgs(tokens, ++i)
                 i = tokens.findBlockEnd(i - 1, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
 
-                macro.body.forEachIndexed { idx, bodyIndex ->
+                fun insert(bodyIndex: Int) {
+                    val argumentIndex = args.indices.indexOfFirst { index ->
+                        macro.tokens.equals(bodyIndex, macro.params[index])
+                    }
+                    if (argumentIndex == -1) {
+                        expandOrCopy(macro.tokens, bodyIndex, out, depth)
+                    } else {
+                        val args = args[argumentIndex]
+                        var i = args.first()
+                        while (i <= args.last()) {
+                            i = expandOrCopy(tokens, i, out, depth)
+                        }
+                    }
+                }
+
+                var bodyIndex = macro.body.first
+                while (bodyIndex <= macro.body.last) {
                     if (macro.tokens.equals(bodyIndex, "##")) {
-                        val prev = macro.body.first + idx - 1
-                        val next = macro.body.first + idx + 1
-
-                        val left = substituteOrToken(prev, args, macro, macro.tokens)
-                        val right = substituteOrToken(next, args, macro, macro.tokens)
-
-                        pasteTokens(tokens, left, right, out)
+                        insert(bodyIndex + 1) // insert B
+                        out.tokens.joinLastTwoTokens(TokenType.NAME) // join A and B
+                        bodyIndex++ // skip B
                     } else if (macro.tokens.equals(bodyIndex, "#")) {
-                        val param = macro.tokens.toString(macro.body.first + idx + 1)
+                        val param = macro.tokens.toString(bodyIndex + 1)
                         val argIndex = macro.params.indexOf(param)
                         if (argIndex >= 0) {
                             stringifyArg(tokens, args[argIndex], out)
+                            bodyIndex++
                         }
                     } else {
-                        expandOrCopy(tokens, bodyIndex, out, depth)
+                        insert(bodyIndex)
                     }
+                    bodyIndex++
                 }
                 i
             }
         }
     }
 
+    private fun TokenList.joinLastTwoTokens(type: TokenType) {
+        val last = size - 1
+        setI1(last - 1, getI1(last))
+        setType(last - 1, type)
+        size = last
+    }
+
     private fun stringifyArg(
-        tokens: TokenList,
-        arg: List<Int>,
-        out: TokenBuilder
+        tokens: TokenList, arg: List<Int>, out: TokenBuilder
     ) {
         val start = tokens.getI0(arg.first())
         val end = tokens.getI1(arg.last())
-        out.addRange(TokenType.STRING, start, end, tokens)
+        out.addRangePlusQuotes(TokenType.STRING, start, end, tokens)
     }
 
     private fun readMacroArgs(tokens: TokenList, i0: Int): List<List<Int>> {
@@ -244,7 +263,7 @@ class Preprocessor(
     ): Int {
         val exprTokens = collectLine(tokens, i0)
         val cond = evalIfExpression(tokens, exprTokens)
-        println("if-condition: $cond")
+        // println("if-condition: $cond")
         return handleIfCommon(tokens, exprTokens.last, out, cond)
     }
 
@@ -307,7 +326,6 @@ class Preprocessor(
         }
 
         val expanded = expanded0.tokens
-        println("Expanded tokens: ${expanded.toDebugString()}")
 
         // Step 2: normalize tokens
         val values = ArrayList<Any>()
@@ -316,7 +334,6 @@ class Preprocessor(
             when {
                 expanded.equals(i, "defined") -> {
                     val name = expanded.toString(i + 2)
-                    println("Checking defined '$name', prev: ${expanded.err(i + 1)}, next: ${expanded.err(i + 3)}")
                     values += name in macros
                     i += 4
                 }
@@ -330,7 +347,7 @@ class Preprocessor(
             i++
         }
 
-        println("eval $values")
+        // println("eval $values")
 
         return evalBooleanExpr(values)
     }
@@ -423,27 +440,4 @@ class Preprocessor(
         }
         return tokens.size
     }
-
-    private fun pasteTokens(tokens: TokenList, left: Int, right: Int, out: TokenBuilder) {
-        val i0 = tokens.getI0(left)
-        val i1 = tokens.getI1(right)
-        out.addRange(TokenType.NAME, i0, i1, tokens)
-    }
-
-    private fun substituteOrToken(
-        index: Int,
-        args: List<List<Int>>,
-        macro: FunctionMacro,
-        tokens: TokenList
-    ): Int {
-        val name = tokens.toString(index)
-        val argIndex = macro.params.indexOf(name)
-        return if (argIndex >= 0) args[argIndex].first() else index
-    }
 }
-
-
-
-
-
-

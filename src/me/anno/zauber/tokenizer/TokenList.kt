@@ -118,6 +118,9 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     fun getI0(i: Int) = offsets[i * 2]
     fun getI1(i: Int) = offsets[i * 2 + 1]
+    fun setI1(i: Int, value: Int) {
+        offsets[i * 2 + 1] = value
+    }
 
     fun add(type: TokenType, i0: Int, i1: Int) {
         if (size == tokenTypes.size) {
