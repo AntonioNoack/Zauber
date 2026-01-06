@@ -7,10 +7,19 @@ This is a modern programming language with focus on usability, performance, and 
 This project is still in its infancy, but I really do want a language without compromises and
 constantly thinking about switching from Kotlin to Zig or Rust.
 
-Main motivation is
+## Learn Zauber
+
+I've also written a small blog/tutorial in this project to get you started:
+[Learn Zauber today](Learn).
+
+The compiler is not working yet, so...
+
+## Motivation
+
+My main motivation is
 - a) [CodeGeneration] being able to generate IO code automatically (making reflections compile time, and therefore cheaper)
 - b) [GC Overhead] not constantly having to think about native-types-as-generics/short-lived-objects-Overhead and GC-lag
-- c) [GPU Debugging] being able to run and debug GLSL code on the CPU
+- c) [GPU Debugging] being able to run and debug GLSL code on the CPU (by compiling Zauber to both LOL)
 - d) [Native Performance], [JNI Overhead], [Vectorization] not being constantly reminded that my code could run twice as fast
 - e) [Libraries] lots of libraries are written in C/C++, but finding/creating bindings is always a pain
 
@@ -48,7 +57,10 @@ Ideally much faster.
 - [ ] Basic GC for JVM-style objects (default for Kotlin compatibility)
 - [ ] Different Allocators
 - [ ] ...
-- [ ] Compile the compiler using the compiler
+- [ ] Compile and run the compiler using Zauber
+- [ ] Compile and run Rem's Engine using Zauber
+- [ ] Compile to a native language (or LLVM IR)
+- [ ] Compile to WASM (for running in the browser & safe containers)
 
 ## Type Definitions
 
@@ -80,9 +92,17 @@ val cheapEnum: String["a","b","c"] = "a"
 ```kotlin
 data class Vec2i(val x: Int, val y: Int)
 value var x = Vec2i(0,0) // will be stored on the stack
-val y = Vec2i(0,0) // will be ref-counted
-value val array = Array(10) { Vec2i(it,it*it) } // constant size -> can be stored on the stack
+val y = Vec2i(0,0) // will be ref-counted or GCed
+value val array = Array(10) { Vec2i(it,it*it) } // all entries will share one GC/type-overhead; constant size -> could be stored on the stack
+val floatArray = arrayOf(0f, 1f, 2f) // 4 bytes per entry, because type can be shared, and floats is marked as a value class
 ```
+
+floatArrayOf() etc will become obsolete and will be marked as deprecated, because arrayOf() has the same meaning.
+
+### Reflection
+
+I'd like the reflection API to be completely comptime like in Zig,
+so if you don't use it, you don't need the (space)overhead.
 
 ### Progress Estimation
 
