@@ -276,9 +276,10 @@ object JavaSourceGenerator : Generator() {
 
         builder.append("public ")
         if (!isBySelf) builder.append("static ")
+        appendTypeParameterDeclaration(method.typeParameters, scope)
         appendType(method.returnType ?: NullableAnyType, scope, false)
         builder.append(' ').append(method.name)
-        appendParameterDeclaration(if (!isBySelf) selfType else null, method.valueParameters, scope)
+        appendValueParameterDeclaration(if (!isBySelf) selfType else null, method.valueParameters, scope)
         val body = method.body
         if (body != null) {
             val context = ResolutionContext(scope, method.selfType, true, null)
@@ -291,7 +292,7 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendConstructor(scope: Scope, constructor: Constructor) {
         builder.append("public ").append(scope.name)
-        appendParameterDeclaration(null, constructor.valueParameters, scope)
+        appendValueParameterDeclaration(null, constructor.valueParameters, scope)
         // todo append extra body-block for super-call
         val body = constructor.body
 
@@ -313,7 +314,28 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendParameterDeclaration(selfTypeIfNecessary: Type?, valueParameters: List<Parameter>, scope: Scope) {
+    private fun appendTypeParameterDeclaration(
+        valueParameters: List<Parameter>,
+        scope: Scope
+    ) {
+        if (valueParameters.isEmpty()) return
+        builder.append('<')
+        for (param in valueParameters) {
+            if (!builder.endsWith("<")) builder.append(", ")
+            builder.append(param.name)
+            if (param.type != AnyType && param.type != NullableAnyType) {
+                builder.append(": ")
+                appendType(param.type, scope, false)
+            }
+        }
+        builder.append("> ")
+    }
+
+    private fun appendValueParameterDeclaration(
+        selfTypeIfNecessary: Type?,
+        valueParameters: List<Parameter>,
+        scope: Scope
+    ) {
         builder.append('(')
         if (selfTypeIfNecessary != null) {
             appendType(selfTypeIfNecessary, scope, false)
