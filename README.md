@@ -10,7 +10,7 @@ constantly thinking about switching from Kotlin to Zig or Rust.
 ## Learn Zauber
 
 I've also written a small blog/tutorial in this project to get you started:
-[Learn Zauber today](Learn).
+[Learn Zauber today](Learn/01_Introduction.md).
 
 The compiler is not working yet, so...
 
