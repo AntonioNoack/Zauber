@@ -234,7 +234,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         keywords.add("object")
         val keywords = packKeywords()
 
-        if (tokens.equals(i, "(")) {
+        if (tokens.equals(i, "(") || tokens.equals(i, "<")) {
             throw IllegalStateException("Objects only exist once, so they cannot have constructor parameters.")
         }
 
@@ -665,7 +665,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         keywords.add("fun"); i++
                         readInterface()
                     } else {
-                        println("reading method at ${tokens.err(i)}")
                         readMethod()
                     }
                 }

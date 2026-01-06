@@ -1,6 +1,8 @@
 # Zauber
 
-This is a modern programming language with focus on usability, performance, and safety.
+This is a modern programming language with focus on usability, performance, and memory-safety.
+
+<img src="assets/Logo.png" alt="Mascot for Zauber" style="width:15em"/>
 
 This project is still in its infancy, but I really do want a language without compromises and
 constantly thinking about switching from Kotlin to Zig or Rust.

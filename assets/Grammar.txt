@@ -1,4 +1,7 @@
 
+// todo we could describe the whole logic here :),
+//  but I think that is better done in Markdown with explanations
+
 Digit = { '0'-'9' }
 HexDigit = { '0'-'9', 'A'-'F', 'a'-'f' }
 Integer = (Digit)[1..]
