@@ -6,7 +6,9 @@ Any normal Kotlin code (<2.0?) shall be valid Zauber code.
 ## Variables
 
 Variables are either mutable (var) or immutable (val).
-Function parameters are always immutable.
+Mutability is shallow, but value classes always are fully immutable, so you can create deep immutable structures.
+
+Method and constructor parameters are always immutable, but can easily be shadowed with a mutable version.
 
 Variable names should be camelCase.
 
@@ -20,6 +22,7 @@ someImmutableVariable++ // compiler error: Cannot mutate an immutable field.
 
 The compiler will give its best (within reason) to automatically deduct the type of each field.
 When it is not possible (buggy), or you want faster compile times, you can declare it yourself:
+
 ```kotlin
 val someInt: Int = 0
 val someOtherInt: Int = 0f // compiler error: Cannot assign Float to Int
@@ -175,13 +178,38 @@ You should keep expressions on the right compact to retain legibility.
 ## Chars & Strings
 
 Just like in Kotlin, Strings have many useful methods attached to them,
-but they have inherited cruft from Java, and Java from times before Unicode.
+but they have inherited cruft from Java, and Java from times before Emojis.
 
 Their set of letters is always UTF-8, and they will be stored as such.
 Access of 'chars' is deprecated.
 The type 'Char' is deprecated, because there are more than 65k letters in Unicode.
 
-## Unsafe Operations
+## Getters and Setters
+
+Fields may have custom getter and setter functions, and they will be executed when you read/write that field,
+but please keep them simple.
+
+```
+var ctr = 0
+    get() {
+        println("Accessing ctr, value: $field") // calling 'ctr' here would result in a stack overflow by recursion
+        return field
+    }
+    set(value) {
+        // field is the underlying field; it only is available in the getter and setter scopes
+        field = value
+        println("Set ctr to $ctr") // prints the state, but invokes the getter; use 'field' to avoid that.
+    }
+val someSampleField
+    get() = ctr++ // automatically calls getter and setter
+val someFieldWithPrivateSetter
+    private set // can only be set from within this scope (class/package/block...)
+```
+
+These getter/setter functions solve the discussion in Java:
+Always just call the fields, but there may be some logic behind it where necessary.
+
+## Unsafe Number Operations
 
 I like safe algorithms, so like Zig,
 and mathematical operations are limited to their safe (without overflow) ranges,
