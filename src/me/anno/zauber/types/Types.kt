@@ -56,6 +56,7 @@ object Types {
     val ULongType = getType("ULong", 0)
     val HalfType = getType("Half", 0)
     val StringType = getType("String", 0)
+    val NumberType = getType("Number", 0)
     val ThrowableType = getType("Throwable", 0)
     val NothingType = getType("Nothing", 0)
     val BooleanType = getType("Boolean", 0)

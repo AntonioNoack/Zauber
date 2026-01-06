@@ -15,6 +15,7 @@ enum class Ownership {
     /**
      * mutable,
      * owned by runtime, { class-index, pointer data }
+     * before data, there must be the GC-header (size, counter)
      * e.g. List<String>, Thread
      *
      * can be converted to OWNED by creating a light-weight struct { owner, data-pointer }

@@ -21,6 +21,7 @@ import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types.NumberType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.*
@@ -91,6 +92,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     var currPackage = root
     var i = 0
 
+    /**
+     * ClassType | SelfType
+     * */
     fun readTypePath(selfType: Type?): Type {
         check(tokens.equals(i, TokenType.NAME))
         val name0 = tokens.toString(i++)
@@ -255,6 +259,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
+    /**
+     * looks for new keywords, or reading depth < 0 by brackets
+     * */
     private fun findEndOfSuperCalls(i0: Int): Int {
         var depth = 0
         for (i in i0 until tokens.size) {
@@ -309,7 +316,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                 val origin = origin(i)
                 val name = tokens.toString(i++)
-                val typeParameters = readTypeParams(null)
+                val typeParameters = readTypeParameters(null)
                 val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                     pushCall { readParamExpressions() }
                 } else emptyList()
@@ -967,7 +974,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             tokens.equals(i, TokenType.NAME) -> {
                 val origin = origin(i)
                 val namePath = tokens.toString(i++)
-                val typeArgs = readTypeParams(null)
+                val typeArgs = readTypeParameters(null)
                 if (
                     tokens.equals(i, TokenType.OPEN_CALL) &&
                     tokens.isSameLine(i - 1, i)
@@ -1052,6 +1059,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val i0 = i
         val type = readType(selfType, true) as? ClassType
             ?: throw IllegalStateException("SuperType must be a ClassType, at ${tokens.err(i0)}")
+
+        println("read super call type: $type")
 
         val valueParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             pushCall { readParamExpressions() }
@@ -1336,6 +1345,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             when {
                 tokens.equals(i, TokenType.COMMA) -> {} // ok
                 tokens.equals(i, TokenType.NAME) -> {} // ok
+                tokens.equals(i, TokenType.STRING) ||
+                        tokens.equals(i, TokenType.NUMBER) -> {} // comptime values
                 tokens.equals(i, "<") -> depth++
                 tokens.equals(i, ">") -> depth--
                 tokens.equals(i, "?") ||
@@ -1354,8 +1365,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         tokens.equals(i, TokenType.OPEN_ARRAY) ||
                         tokens.equals(i, TokenType.CLOSE_ARRAY) ||
                         tokens.equals(i, TokenType.SYMBOL) ||
-                        tokens.equals(i, TokenType.STRING) ||
-                        tokens.equals(i, TokenType.NUMBER) ||
                         tokens.equals(i, TokenType.APPEND_STRING) ||
                         tokens.equals(i, "val") ||
                         tokens.equals(i, "var") ||
@@ -1369,17 +1378,24 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return true
     }
 
+    fun readType(selfType: Type?, allowSubTypes: Boolean): Type {
+        return readType(
+            selfType, allowSubTypes,
+            isAndType = false, insideTypeParams = false
+        )
+    }
+
     fun readType(
-        selfType: Type? = null, allowSubTypes: Boolean,
-        isAndType: Boolean = false
+        selfType: Type?, allowSubTypes: Boolean,
+        isAndType: Boolean, insideTypeParams: Boolean
     ): Type {
         val negate = tokens.equals(i, "!")
         if (negate) i++
 
-        var base = readTypeExpr(selfType, allowSubTypes)
+        var base = readTypeExpr(selfType, allowSubTypes, insideTypeParams)
         if (allowSubTypes && tokens.equals(i, ".")) {
             i++
-            base = readType(base, true, isAndType)
+            base = readType(base, true, isAndType, insideTypeParams)
             return if (negate) base.not() else base
         }
 
@@ -1391,16 +1407,16 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (negate) base = base.not()
         while (tokens.equals(i, "&")) {
             i++
-            base = andTypes(base, readType(null, allowSubTypes, true))
+            base = andTypes(base, readType(null, allowSubTypes, true, insideTypeParams))
         }
         if (!isAndType && tokens.equals(i, "|")) {
             i++
-            return unionTypes(base, readType(null, allowSubTypes, false))
+            return unionTypes(base, readType(null, allowSubTypes, false, insideTypeParams))
         }
         return base
     }
 
-    private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean): Type {
+    private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type {
 
         if (tokens.equals(i, "*")) {
             i++
@@ -1419,6 +1435,24 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             }
         }
 
+        if (tokens.equals(i, TokenType.NUMBER)) {
+            if (!insideTypeParams) {
+                throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+            }
+            val value = tokens.toString(i++)
+            println("read comptime value: $value")
+            return ComptimeValue(NumberType, listOf(value))
+        }
+
+        if (tokens.equals(i, TokenType.STRING)) {
+            if (!insideTypeParams) {
+                throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+            }
+            val value = tokens.toString(i++)
+            println("read comptime value: \"$value\"")
+            return ComptimeValue(StringType, listOf(value))
+        }
+
         val path = readTypePath(selfType) // e.g. ArrayList
         val subType = if (allowSubTypes && tokens.equals(i, ".") && tokens.equals(i + 1, "(")) {
             i++ // skip ., and then read lambda/inner subtype
@@ -1431,7 +1465,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             )
         } else null
 
-        val typeArgs = readTypeParams(selfType)
+        val typeArgs = readTypeParameters(selfType)
         val baseType =
             if (path is ClassType) ClassType(path.clazz, typeArgs)
             else if (typeArgs == null) path
@@ -1439,7 +1473,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return baseType
     }
 
-    private fun readTypeParams(selfType: Type?): List<Type>? {
+    private fun readTypeParameters(selfType: Type?): List<Type>? {
         if (i < tokens.size) {
             if (LOGGER.enableDebug) LOGGER.debug("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
         }
@@ -1456,7 +1490,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             // todo store these (?)
             if (tokens.equals(i, "in")) i++
             if (tokens.equals(i, "out")) i++
-            args.add(readType(selfType, true)) // recursive type
+            args.add(
+                readType(
+                    selfType,
+                    allowSubTypes = true,
+                    isAndType = false,
+                    insideTypeParams = true
+                )
+            ) // recursive type
             when {
                 tokens.equals(i, TokenType.COMMA) -> i++
                 tokens.equals(i, ">") -> {
