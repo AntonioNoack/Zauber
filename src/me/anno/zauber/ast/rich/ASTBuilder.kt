@@ -1437,7 +1437,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val parameters = pushCall { readLambdaParameter() }
                 i = endI + 2 // skip ) and ->
                 val returnType = readType(selfType, true)
-                return LambdaType(parameters, returnType)
+                return LambdaType(null, parameters, returnType)
             } else {
                 return pushCall { readType(selfType, true) }
             }
@@ -1462,22 +1462,26 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         val path = readTypePath(selfType) // e.g. ArrayList
-        val subType = if (allowSubTypes && tokens.equals(i, ".") && tokens.equals(i + 1, "(")) {
-            i++ // skip ., and then read lambda/inner subtype
-            readType(selfType, true)
-            // todo if the type is a lambda, the outer type sets the scope...
-            //  can we unify this??? an outer class kind of is like an extra scope...
-            TODO(
-                "We somehow need to support types like Map<K,V>.Iterator<J>, where Iterator is an inner class... " +
-                        "or we just forbid inner classes"
-            )
-        } else null
+
+        // todo We somehow need to support types like Map<K,V>.Iterator<J>, where Iterator is an inner class...
+        //    or we just forbid inner classes"
+
 
         val typeArgs = readTypeParameters(selfType)
         val baseType =
             if (path is ClassType) ClassType(path.clazz, typeArgs)
             else if (typeArgs == null) path
-            else throw IllegalStateException("Cannot combine $path with $typeArgs and $subType")
+            else throw IllegalStateException("Cannot combine $path with $typeArgs")
+
+        if (allowSubTypes && tokens.equals(i, ".")) {
+            i++ // skip ., and then read lambda/inner subtype
+            val childType = readType(selfType, true)
+            val joinedType = if (childType is LambdaType && childType.scopeType == null) {
+                LambdaType(baseType, childType.parameters, childType.returnType)
+            } else SubType(baseType, childType)
+            return joinedType
+        }
+
         return baseType
     }
 

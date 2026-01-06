@@ -46,7 +46,7 @@ class LambdaExpression(
                             val autoParamName = "it"
                             LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
                             Field(
-                                bodyScope,  null,false, param0,
+                                bodyScope, null, false, param0,
                                 autoParamName, type, null,
                                 emptyList(), origin
                             )
@@ -61,22 +61,26 @@ class LambdaExpression(
 
                 check(variables?.size == targetLambdaType.parameters.size)
 
-                val resolvedReturnType = if (targetLambdaType.returnType.containsGenerics()) {
+                var bodyContext = bodyContext
+                val newScopeType = targetLambdaType.scopeType // todo replace generics inside this one?
+                if (newScopeType != null) bodyContext = bodyContext.withSelfType(newScopeType)
+
+                val newReturnType = if (targetLambdaType.returnType.containsGenerics()) {
                     // we need to inspect the contents
                     TypeResolution.resolveType(bodyContext, body)
                 } else targetLambdaType.returnType // trust-me-bro
-                val parameters = variables!!.mapIndexed { index, param ->
+                val newParameters = variables!!.mapIndexed { index, param ->
                     val type = param.type ?: targetLambdaType.parameters[index].type
                     LambdaParameter(param.name, type)
                 }
-                return LambdaType(parameters, resolvedReturnType)
+                return LambdaType(newScopeType, newParameters, newReturnType)
             }
             null -> {
                 // else 'it' is not defined
                 if (variables == null) variables = emptyList()
 
                 val returnType = TypeResolution.resolveType(bodyContext, body)
-                return LambdaType(variables!!.map {
+                return LambdaType(null, variables!!.map {
                     LambdaParameter(it.name, it.type!!)
                 }, returnType)
             }

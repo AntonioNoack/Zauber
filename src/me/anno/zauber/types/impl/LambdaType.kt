@@ -7,9 +7,14 @@ import me.anno.zauber.types.Type
  * Lambda type, with always known parameter types...
  * (A,B,C) -> R
  * */
-class LambdaType(val parameters: List<LambdaParameter>, val returnType: Type) : Type() {
+class LambdaType(
+    val scopeType: Type?,
+    val parameters: List<LambdaParameter>,
+    val returnType: Type
+) : Type() {
     override fun toStringImpl(depth: Int): String {
-        return "LambdaType((${
+        val scopeType = if (scopeType != null) "${scopeType.toString(depth)}." else null
+        return "LambdaType($scopeType(${
             parameters.joinToString(", ") {
                 if (it.name != null) "${it.name}=${it.type.toString(depth)}"
                 else it.type.toString(depth)

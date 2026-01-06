@@ -35,3 +35,12 @@ fun interface Function7<P0, P1, P2, P3, P4, P5, P6, R> {
 fun interface Function8<P0, P1, P2, P3, P4, P5, P6, P7, R> {
     fun call(p0: P0, p1: P1, p2: P2, p3: P3, p4: P4, p5: P5, p6: P6, p7: P7): R
 }
+
+inline fun <V, R> V.run(runnable: V.() -> R): R {
+    return runnable()
+}
+
+inline fun <V, R> V.apply(runnable: V.() -> Unit): V {
+    runnable()
+    return this
+}

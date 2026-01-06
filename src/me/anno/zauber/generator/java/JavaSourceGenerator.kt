@@ -275,7 +275,9 @@ object JavaSourceGenerator : Generator() {
         }
 
         builder.append("public ")
+        if ("external" in method.keywords) builder.append("native ")
         if (!isBySelf) builder.append("static ")
+
         appendTypeParameterDeclaration(method.typeParameters, scope)
         appendType(method.returnType ?: NullableAnyType, scope, false)
         builder.append(' ').append(method.name)
