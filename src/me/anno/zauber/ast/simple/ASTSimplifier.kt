@@ -33,7 +33,8 @@ import me.anno.zauber.types.impl.NullType
 
 object ASTSimplifier {
 
-    val voidField = SimpleField(UnitType, -1)
+    val voidField = SimpleField(UnitType, Ownership.COMPTIME, -1)
+    val booleanOwnership = Ownership.COMPTIME
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
         val graph = SimpleGraph(expr.scope, expr.origin)
@@ -98,7 +99,7 @@ object ASTSimplifier {
             }
             is CompareOp -> {
                 val base = simplifyImpl(context, expr.value, currBlock, graph, true) ?: return null
-                val dst = currBlock.field(BooleanType)
+                val dst = currBlock.field(BooleanType, booleanOwnership)
                 currBlock.add(SimpleCompare(dst, base, expr.type, expr.scope, expr.origin))
                 dst
             }
@@ -148,14 +149,14 @@ object ASTSimplifier {
                 dst
             }
             is StringExpression -> {
-                val dst = currBlock.field(StringType)
+                val dst = currBlock.field(StringType, Ownership.COMPTIME)
                 currBlock.add(SimpleString(dst, expr))
                 dst
             }
             is IsInstanceOfExpr -> {
                 val src = simplifyImpl(context, expr.instance, currBlock, graph, true)
                     ?: return null
-                val dst = currBlock.field(BooleanType)
+                val dst = currBlock.field(BooleanType, booleanOwnership)
                 currBlock.add(SimpleInstanceOf(dst, src, expr.type, expr.scope, expr.origin))
                 dst
             }

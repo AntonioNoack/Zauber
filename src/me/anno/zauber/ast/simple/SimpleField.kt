@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.zauber.types.Type
 
-class SimpleField(val type: Type, val id: Int) {
+class SimpleField(val type: Type, val ownership: Ownership, val id: Int) {
 
     var numReads = 0
 
@@ -14,5 +14,4 @@ class SimpleField(val type: Type, val id: Int) {
     override fun toString(): String {
         return "%$id[$type]"
     }
-
 }

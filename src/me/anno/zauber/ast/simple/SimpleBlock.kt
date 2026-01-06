@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.zauber.generator.c.CSourceGenerator.isValueType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -10,8 +11,12 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
         instructions.add(expr)
     }
 
-    fun field(type: Type): SimpleField {
-        val field = SimpleField(type, graph.numFields++)
+    fun field(
+        type: Type, ownership: Ownership =
+            if (type.isValueType()) Ownership.VALUE
+            else Ownership.SHARED
+    ): SimpleField {
+        val field = SimpleField(type, ownership, graph.numFields++)
         declaredFields.add(field)
         return field
     }
