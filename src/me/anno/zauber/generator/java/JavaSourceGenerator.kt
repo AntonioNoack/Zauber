@@ -201,7 +201,10 @@ object JavaSourceGenerator : Generator() {
         writeBlock {
 
             appendFields(scope)
-            appendInitBlocks(scope)
+
+            val primConstructorScope = scope.primaryConstructorScope
+            if (primConstructorScope != null) appendInitBlocks(primConstructorScope)
+
             appendConstructors(scope)
             appendMethods(scope)
 
@@ -391,8 +394,11 @@ object JavaSourceGenerator : Generator() {
                     builder.append(expr.field.name)
                 }
             }
+            is SimpleCompare -> {
+                builder.append1(expr.base).append(' ')
+                builder.append(expr.type.symbol).append(" 0")
+            }
             is SimpleCall -> {
-
                 val methodName = expr.method.name
                 val done = when (expr.valueParameters.size) {
                     0 -> {
@@ -402,6 +408,8 @@ object JavaSourceGenerator : Generator() {
                         } else false
                     }
                     1 -> {
+                        // todo compareTo is a problem for the numbers:
+                        //  we must call their static function
                         val supportsType = when (expr.base.type) {
                             StringType, ByteType, ShortType, CharType, IntType, LongType, FloatType, DoubleType -> true
                             else -> false
@@ -424,14 +432,22 @@ object JavaSourceGenerator : Generator() {
                 }
                 if (!done) {
                     builder.append1(expr.base).append('.')
-                    builder.append(methodName).append('(')
-                    for (i in expr.valueParameters.indices) {
-                        if (i > 0) builder.append(", ")
-                        val parameter = expr.valueParameters[i]
-                        builder.append1(parameter)
-                    }
-                    builder.append(')')
+                    builder.append(expr.method.name)
+                    appendValueParams(expr.valueParameters)
                 }
+            }
+            is SimpleConstructor -> {
+                builder.append("new ")
+                appendType(expr.method.selfType, expr.scope, false)
+                appendValueParams(expr.valueParameters)
+            }
+            is SimpleSelfConstructor -> {
+                when (expr.isThis) {
+                    true -> builder.append("this")
+                    false -> builder.append("super")
+                }
+                appendValueParams(expr.valueParameters)
+                builder.append(';')
             }
             is SimpleReturn -> {
                 builder.append("return ").append1(expr.field).append(';')
@@ -442,6 +458,16 @@ object JavaSourceGenerator : Generator() {
         }
         if (expr is SimpleAssignmentExpression) builder.append(';')
         if (expr !is SimpleBlock && expr !is SimpleBranch) nextLine()
+    }
+
+    private fun appendValueParams(valueParameters: List<SimpleField>) {
+        builder.append('(')
+        for (i in valueParameters.indices) {
+            if (i > 0) builder.append(", ")
+            val parameter = valueParameters[i]
+            builder.append1(parameter)
+        }
+        builder.append(')')
     }
 
     private fun appendTypeParams(scope: Scope) {

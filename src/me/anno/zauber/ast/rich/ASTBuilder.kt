@@ -330,7 +330,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 )
                 val initialValue = ConstructorExpression(
                     classScope, typeParameters,
-                    extraValueParameters + valueParameters, classScope, origin
+                    extraValueParameters + valueParameters,
+                    null, classScope, origin
                 )
                 entryScope.objectField = Field(
                     scope, scope.typeWithoutArgs, false, null,
@@ -572,9 +573,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         // parse parameters (...)
         check(tokens.equals(i, TokenType.OPEN_CALL))
         lateinit var parameters: List<Parameter>
-        val clazz = currPackage
+        val classScope = currPackage
         val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR_PARAMS) { scope ->
-            val selfType = ClassType(clazz, null)
+            val selfType = ClassType(classScope, null)
             parameters = pushCall { readParamDeclarations(selfType, scope) }
             scope
         }
@@ -590,7 +591,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 pushCall { readParamExpressions() }
             } else emptyList()
-            InnerSuperCall(target, params, constructorScope, origin)
+            InnerSuperCall(target, params, classScope, origin)
         } else null
 
         // body (or just = expression)
@@ -1030,7 +1031,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         clazz.hasTypeParameters = true
 
         readClassBody(name, emptyList(), ScopeType.INLINE_CLASS)
-        return ConstructorExpression(clazz, emptyList(), emptyList(), currPackage, origin)
+        return ConstructorExpression(
+            clazz, emptyList(), emptyList(),
+            null, currPackage, origin
+        )
     }
 
     private fun readInlineClass(): Expression {
@@ -1052,7 +1056,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
         i = bodyIndex
         readClassBody(name, emptyList(), ScopeType.INLINE_CLASS)
-        return ConstructorExpression(clazz, emptyList(), emptyList(), currPackage, origin)
+        return ConstructorExpression(
+            clazz, emptyList(), emptyList(),
+            null, currPackage, origin
+        )
     }
 
     private fun readSuperCall(selfType: Type): SuperCall {

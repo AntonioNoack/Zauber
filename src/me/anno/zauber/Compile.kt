@@ -28,7 +28,8 @@ import java.io.File
 
 // todo inline functions
 // todo expand generics
-// todo generate Java from SimpleAST
+// todo function coloring: async, throws, pure (no side-effects -> comptime)
+// todo generate .toString(), .equals() and .hashCode for data classes unless already defined
 
 // if-conditions help us find what type something is...
 //  but we need to understand what's possible and how the code flows...

@@ -1,8 +1,6 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.rich.expression.CallExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.ConstructorExpression
 import me.anno.zauber.types.Scope
 
 enum class InnerSuperCallTarget {
@@ -13,12 +11,15 @@ enum class InnerSuperCallTarget {
 class InnerSuperCall(
     val target: InnerSuperCallTarget,
     val valueParameters: List<NamedParameter>,
-    val scope: Scope,
+    val classScope: Scope,
     val origin: Int
 ) {
-    fun toExpr(): CallExpression {
-        val nameType = if (target == InnerSuperCallTarget.THIS) SpecialValue.THIS else SpecialValue.SUPER
-        val name = SpecialValueExpression(nameType, scope, origin)
-        return CallExpression(name, emptyList(), valueParameters, origin)
+    fun toExpr(): ConstructorExpression {
+        val clazz = if (target == InnerSuperCallTarget.THIS) classScope else classScope.superCalls[0].type.clazz
+        check(clazz.scopeType?.isClassType() == true)
+        return ConstructorExpression(
+            clazz, emptyList(), valueParameters,
+            target == InnerSuperCallTarget.THIS, classScope, origin
+        )
     }
 }

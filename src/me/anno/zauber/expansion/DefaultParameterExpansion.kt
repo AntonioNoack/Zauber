@@ -21,7 +21,7 @@ object DefaultParameterExpansion {
         forEachScope(scope) { scopeI ->
             when (scopeI.scopeType) {
                 ScopeType.METHOD ->
-                    createDefaultParameterFunction(scopeI)
+                    createDefaultParameterMethod(scopeI)
                 ScopeType.PRIMARY_CONSTRUCTOR, ScopeType.CONSTRUCTOR ->
                     createDefaultParameterConstructor(scopeI)
                 else -> {}
@@ -29,9 +29,9 @@ object DefaultParameterExpansion {
         }
     }
 
-    private fun createDefaultParameterFunction(scope: Scope) {
-        val scopeParent = scope.parent ?: return
-        val self = scope.selfAsMethod ?: return
+    private fun createDefaultParameterMethod(methodScope: Scope) {
+        val scopeParent = methodScope.parent ?: return
+        val self = methodScope.selfAsMethod ?: return
         val valueParameters = self.valueParameters
         for (i in valueParameters.lastIndex downTo 0) {
             val param = valueParameters[i]
@@ -91,9 +91,9 @@ object DefaultParameterExpansion {
     }
 
 
-    private fun createDefaultParameterConstructor(scope: Scope) {
-        val scopeParent = scope.parent ?: return
-        val self = scope.selfAsConstructor ?: return
+    private fun createDefaultParameterConstructor(constructorScope: Scope) {
+        val classScope = constructorScope.parent ?: return
+        val self = constructorScope.selfAsConstructor ?: return
         val valueParameters = self.valueParameters
         for (i in valueParameters.lastIndex downTo 0) {
             val param = valueParameters[i]
@@ -101,7 +101,7 @@ object DefaultParameterExpansion {
 
             // check if class has another function with that parameter defined
             val expectedParamsForMatch = self.valueParameters.subList(0, i).map { param -> param.type }
-            val match = scopeParent.children.firstOrNull {
+            val match = classScope.children.firstOrNull {
                 val method = it.selfAsConstructor
                 method != null &&
                         method.selfType == self.selfType &&
@@ -115,8 +115,8 @@ object DefaultParameterExpansion {
 
             val origin = self.origin
 
-            val scopeName = scopeParent.generateName("constructor")
-            val scope = scopeParent.getOrPut(scopeName, ScopeType.CONSTRUCTOR)
+            val scopeName = classScope.generateName("constructor")
+            val scope = classScope.getOrPut(scopeName, ScopeType.CONSTRUCTOR)
             scope.typeParameters = self.typeParameters
 
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
@@ -128,7 +128,7 @@ object DefaultParameterExpansion {
 
             val superCall = InnerSuperCall(
                 InnerSuperCallTarget.THIS, newValueParameters,
-                scope, self.origin // is this fine?
+                classScope, self.origin // is this fine?
             )
             val newConstructor = Constructor(
                 self.valueParameters.subList(0, i),

@@ -2,14 +2,17 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.ConstructorResolver
+import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
 
 class ConstructorExpression(
     val clazz: Scope,
     val typeParameters: List<Type>?,
     val valueParameters: List<NamedParameter>,
+    val selfIfInsideConstructor: Boolean?,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
@@ -22,9 +25,19 @@ class ConstructorExpression(
     }
 
     override fun resolveType(context: ResolutionContext): Type {
-        return ClassType(clazz, typeParameters)
+        return resolveMethod(context).getTypeFromCall()
     }
 
-    override fun clone(scope: Scope) =
-        ConstructorExpression(clazz, typeParameters, valueParameters.map { it.clone(scope) }, scope, origin)
+    override fun clone(scope: Scope) = ConstructorExpression(
+        clazz, typeParameters, valueParameters.map { it.clone(scope) },
+        selfIfInsideConstructor, scope, origin
+    )
+
+    fun resolveMethod(context: ResolutionContext): ResolvedConstructor {
+        val valueParameters = resolveValueParameters(context, valueParameters)
+        return ConstructorResolver.findMemberInScope(
+            clazz, clazz.name, context.targetType,
+            null, typeParameters, valueParameters
+        ) ?: throw IllegalStateException("Missing constructor $clazz($valueParameters)")
+    }
 }
