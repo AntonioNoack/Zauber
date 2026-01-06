@@ -221,5 +221,47 @@ Maybe call them OverflowInt/OverflowLong?
 I also like clamping float operations (forbidding Infinity and NaN), and disabling denormalized floats for performance,
 but I wonder what the performance impact of the former is/how good hardware support is... .
 Depending on the result, they will or will not be the default.
+ClampedFloat?
 
+## When Statements (Switch-Case)
 
+Just like Kotlin, Zauber supports advanced switch-case logic in the following ways:
+
+When statement with value:
+```kotlin
+when (value) {
+    1, 2, 3 -> {} // list of values, separated by comma
+    in listOf(1,2,3), in SetABC -> {} // container checks
+    is Float -> {} // type checks
+    4 if (value * value > 9) -> {} // with if-clause
+    5, is Float, in ABC if (value + 1 % 3 == 0) -> {} // any combination, with additional if-clause 
+    else -> {} // any other case
+}
+```
+
+When statement from conditions:
+```kotlin
+when {
+    // here, each branch must be some boolean condition
+    value == 1 || value in listOf(1,2,3) -> {}
+    else -> {}
+}
+```
+
+If all cases are covered, or an else-branch is present, the result of each branch can be taken as a value.
+
+## C/C++-Interop
+
+Interacting with languages like C needs definitions.
+For the start, there will be external functions:
+```kotlin
+external fun malloc(size: Pointer): Pointer?
+```
+
+later, I'd like us to implement a C compiler as part of this compiler, such that we can just "include" and .h file,
+and use its API directly without manual JNI code.
+
+## JVM Interop
+
+When we compile Zauber to Java or JVM Bytecode, we should be able to easily interop, otherwise,
+we probably have to go the C-way.
