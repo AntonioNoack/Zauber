@@ -44,7 +44,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         private val LOGGER = LogManager.getLogger(ASTBuilder::class)
 
-        val synthetic = "synthetic"
+        const val synthetic = "synthetic"
         val syntheticList = listOf(synthetic)
 
         val fileLevelKeywords = listOf(
@@ -419,10 +419,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val name = tokens.toString(i++)
 
         val keywords = packKeywords()
-        val valueType = if (tokens.equals(i, ":")) {
-            i++
-            readType(selfType, true)
-        } else null
+        val valueType = readTypeOrNull(selfType)
 
         val primScope = fieldScope.getOrCreatePrimConstructorScope()
         val initialValue = pushScope(primScope) {
@@ -549,11 +546,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         // optional return type
-        var returnType = if (tokens.equals(i, ":")) {
-            i++ // skip :
-            readType(selfType, true)
-        } else null
-
+        var returnType = readTypeOrNull(selfType)
         val extraConditions = readWhereConditions()
 
         // body (or just = expression)
@@ -861,11 +854,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 // name might be needed for the type, so register it already here
                 genericParams.last()[name] = GenericType(scope, name)
 
-                val type = if (tokens.equals(i, ":")) {
-                    i++ // skip :
-                    readType(null, true)
-                        ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
-                } else NullableAnyType
+                val type = readTypeOrNull() ?: NullableAnyType
 
                 params.add(Parameter(name, type, scope, origin))
                 readComma()
@@ -1135,16 +1124,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         lateinit var iterable: Expression
         if (tokens.equals(i + 1, TokenType.OPEN_CALL)) {
             // destructuring expression
-            val names = ArrayList<String>()
+            lateinit var names: List<FieldDeclaration>
             pushCall {
                 check(tokens.equals(i, TokenType.OPEN_CALL))
-                pushCall {
-                    while (i < tokens.size) {
-                        check(tokens.equals(i, TokenType.NAME))
-                        names.add(tokens.toString(i++))
-                        readComma()
-                    }
-                }
+                names = readDestructuringFields()
                 // to do type?
                 check(tokens.equals(i++, "in"))
                 iterable = readExpression()
@@ -1159,10 +1142,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             pushCall {
                 check(tokens.equals(i, TokenType.NAME))
                 name = tokens.toString(i++)
-                variableType = if (tokens.equals(i, ":")) {
-                    i++ // skip :
-                    readType(null, true)
-                } else null
+                variableType = readTypeOrNull()
                 // to do type?
                 check(tokens.equals(i++, "in"))
                 iterable = readExpression()
@@ -1939,10 +1919,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                                 if (tokens.equals(i, TokenType.NAME)) {
                                     val origin = origin(i)
                                     val name = tokens.toString(i++)
-                                    val type = if (tokens.equals(i, ":")) {
-                                        i++
-                                        readType(null, true)
-                                    } else null
+                                    val type = readTypeOrNull()
                                     val parameter = LambdaVariable(type, name)
                                     names.add(parameter)
                                     // to do we neither know type nor initial value :/, both come from the called function/set variable
@@ -1958,10 +1935,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     } else if (tokens.equals(i, TokenType.NAME)) {
                         val origin = origin(i)
                         val name = tokens.toString(i++)
-                        val type = if (tokens.equals(i, ":")) {
-                            i++
-                            readType(null, true)
-                        } else null
+                        val type = readTypeOrNull()
                         val parameter = LambdaVariable(type, name)
                         variables.add(parameter)
                         // to do we neither know type nor initial value :/, both come from the called function/set variable
@@ -2081,22 +2055,34 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    private fun readDestructuring(isMutable: Boolean): Expression {
-        val names = ArrayList<String>()
+    private fun readDestructuringFields(): List<FieldDeclaration> {
+        val names = ArrayList<FieldDeclaration>()
         pushCall {
             while (i < tokens.size) {
                 check(tokens.equals(i, TokenType.NAME))
-                names.add(tokens.toString(i++))
-                if (tokens.equals(i, ":"))
-                    throw NotImplementedError("Read type in destructuring at ${tokens.err(i)}")
+                val name = tokens.toString(i++)
+                val type = readTypeOrNull()
+                names.add(FieldDeclaration(name, type))
                 readComma()
             }
         }
+        return names
+    }
+
+    private fun readDestructuring(isMutable: Boolean): Expression {
+        val names = readDestructuringFields()
         val value = if (tokens.equals(i, "=")) {
             i++ // skip =
             readExpression()
         } else throw IllegalStateException("Expected value for destructuring at ${tokens.err(i)}")
         return createDestructuringAssignment(names, value, isMutable)
+    }
+
+    private fun readTypeOrNull(selfType: Type? = null): Type? {
+        return if (tokens.equals(i, ":")) {
+            i++ // skip :
+            readType(selfType, true)
+        } else null
     }
 
     private fun readDeclaration(isMutable: Boolean, isLateinit: Boolean = false): Expression {
@@ -2117,17 +2103,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
 
         if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
-        val type = if (tokens.equals(i, ":")) {
-            if (LOGGER.enableDebug) LOGGER.debug("skipping : for type")
-            i++ // skip :
-            readType(null, true).apply {
-                if (LOGGER.enableDebug) LOGGER.debug("type: $this")
-            }
-        } else {
-            if (LOGGER.enableDebug) LOGGER.debug("no type present")
-            null
-        }
 
+        val type = readTypeOrNull()
         val value = if (tokens.equals(i, "=")) {
             i++ // skip =
             readExpression()

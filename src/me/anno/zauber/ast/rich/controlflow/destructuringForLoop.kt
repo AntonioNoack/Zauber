@@ -1,12 +1,13 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.FieldDeclaration
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.types.Scope
 
 fun destructuringForLoop(
     scope: Scope,
-    variableNames: List<String>, iterable: Expression,
+    variableNames: List<FieldDeclaration>, iterable: Expression,
     body: Expression, label: String?
 ): Expression {
     val origin = iterable.origin
@@ -17,25 +18,26 @@ fun destructuringForLoop(
         fullName, null, null,
         emptyList(), origin
     )
-    val fields = variableNames.map { varName ->
-        Field(
+    val fields = variableNames.map { fieldDeclaration ->
+        // todo if _, don't create a field
+        if (fieldDeclaration.name != "_") Field(
             scope, null,
-            false, null, varName,
-            null, null,
+            false, null, fieldDeclaration.name,
+            fieldDeclaration.type, null,
             emptyList(), origin
-        )
+        ) else null
     }
     val fullExpr = FieldExpression(fullVariable, scope, origin)
     val newBody = ExpressionList(
         variableNames
             .withIndex()
-            .filter { it.value != "_" }
+            .filter { it.value.name != "_" }
             .map { (index, _) ->
                 val newValue = NamedCallExpression(
                     fullExpr, "component${index + 1}", emptyList(),
                     emptyList(), scope, origin
                 )
-                val variableName = FieldExpression(fields[index], scope, origin)
+                val variableName = FieldExpression(fields[index]!!, scope, origin)
                 AssignmentExpression(variableName, newValue)
             } + body, scope, origin
     )

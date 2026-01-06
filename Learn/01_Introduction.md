@@ -215,7 +215,7 @@ I like safe algorithms, so like Zig,
 and mathematical operations are limited to their safe (without overflow) ranges,
 and any violation will throw an error.
 
-zauber.math.UnsafeInt/UnsafeLong will define types, where overflow is well defined.
+zauber.math.UnsafeInt/UnsafeLong will define types, where overflow is well-defined.
 Maybe call them OverflowInt/OverflowLong?
 
 I also like clamping float operations (forbidding Infinity and NaN), and disabling denormalized floats for performance,
