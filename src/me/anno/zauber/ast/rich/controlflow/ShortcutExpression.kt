@@ -24,7 +24,7 @@ fun shortcutExpressionI(
 ): Expression {
     return when (operator) {
         ShortcutOperator.AND -> {
-            val falseExpression = SpecialValueExpression(SpecialValue.TRUE, scope, origin)
+            val falseExpression = SpecialValueExpression(SpecialValue.FALSE, scope, origin)
             IfElseBranch(left, rightWithScope, falseExpression)
         }
         ShortcutOperator.OR -> {

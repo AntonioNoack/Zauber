@@ -55,6 +55,22 @@ class JavaGenerationTest {
         //  that sounds like a good plan :)
         val source = """
             data class Test(val x: Int, val y: Long)
+            
+            // utilities in standard library necessary for generation:
+            package zauber
+            class Any {
+                open fun hashCode(): Int = 0
+                open fun toString(): String = ""
+                open fun equals(other: Any?): Boolean = this === other
+            }
+            class String {
+                fun plus(other: Any?): String
+            }
+            class Int {
+                fun plus(other: Int): Int
+                fun times(other: Int): Int
+            }
+            class Long {}
         """.trimIndent()
         val expected = """
             public final class Test {

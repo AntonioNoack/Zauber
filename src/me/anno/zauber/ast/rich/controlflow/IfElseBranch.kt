@@ -20,7 +20,9 @@ class IfElseBranch(
     }
 
     init {
-        check(ifBranch.scope != elseBranch?.scope)
+        check(ifBranch.scope != elseBranch?.scope){
+            "IfBranch and ElseBranch must have different scopes. ${ifBranch.scope}"
+        }
         check(
             ifBranch.scope != condition.scope ||
                     ifBranch is SpecialValueExpression

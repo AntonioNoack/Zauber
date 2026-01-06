@@ -28,6 +28,8 @@ class Parameter(
         }
     }
 
+    var field: Field? = null
+
     constructor(name: String, type: Type, scope: Scope, origin: Int) :
             this(false, true, false, name, type, null, scope, origin)
 

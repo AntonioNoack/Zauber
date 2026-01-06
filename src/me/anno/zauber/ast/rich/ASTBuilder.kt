@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
@@ -75,7 +76,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             val field = scope.objectField!!
             FieldExpression(field, scope, -1)
         }
-
     }
 
     val imports = ArrayList<Import>()
@@ -290,11 +290,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     }
 
     private fun readClassBody(name: String, keywords: List<String>, scopeType: ScopeType): Scope {
-        val scope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        scope.keywords.addAll(keywords)
+        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
+        classScope.keywords.addAll(keywords)
 
         if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            pushBlock(scopeType, name) {
+            pushBlock(classScope) {
                 if ("enum" in keywords) {
                     val endIndex = readEnumBody()
                     i = min(endIndex + 1, tokens.size) // skipping over semicolon
@@ -302,7 +302,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 readFileLevel()
             }
         }
-        return scope
+
+        if ("data" in keywords || "value" in keywords) {
+            pushScope(classScope) {
+                finishDataClass(classScope)
+            }
+        }
+
+        return classScope
     }
 
     private fun readEnumBody(): Int {
@@ -793,7 +800,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                     val fieldScope = if (isVar || isVal) currPackage else secondaryScope
                     // automatically gets added to fieldScope
-                    Field(
+                    parameter.field = Field(
                         fieldScope, selfType, isVar, if (isVar || isVal) null else parameter,
                         name, type, initialValue, keywords, origin
                     )

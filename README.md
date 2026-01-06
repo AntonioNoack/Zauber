@@ -7,7 +7,7 @@ constantly thinking about switching from Kotlin to Zig or Rust.
 
 Main motivation is
 - a) [CodeGeneration] being able to generate IO code automatically (making reflections compile time, and therefore cheaper)
-- b) [GC Overhead] not constantly having to think about native-types-as-generics/shoft-lived-objects-Overhead and GC-lag
+- b) [GC Overhead] not constantly having to think about native-types-as-generics/short-lived-objects-Overhead and GC-lag
 - c) [GPU Debugging] being able to run and debug GLSL code on the CPU
 - d) [Native Performance], [JNI Overhead], [Vectorization] not being constantly reminded that my code could run twice as fast
 - e) [Libraries] lots of libraries are written in C/C++, but finding/creating bindings is always a pain
