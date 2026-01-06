@@ -81,15 +81,6 @@ class CTokenizer(
         return tokens
     }
 
-    private fun isLineStart(): Boolean {
-        var j = i - 1
-        while (j >= 0 && src[j].isWhitespace()) {
-            if (src[j] == '\n') return true
-            j--
-        }
-        return i == 0
-    }
-
     private fun skipLineComment() {
         i += 2
         while (i < n && src[i] != '\n') i++
