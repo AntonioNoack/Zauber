@@ -128,9 +128,9 @@ object FieldGetterSetter {
     }
 
     private fun needsGetter(field: Field): Boolean {
-        // (override | open | parent is interface)
-        if ("override" in field.keywords || "open" in field.keywords) return true
-        if (field.declaredScope.scopeType == ScopeType.INTERFACE) return true
+        if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
+        if (field.declaredScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
+        if (field.declaredScope.scopeType == ScopeType.OBJECT) return true // to ensure initialization
         return false
     }
 

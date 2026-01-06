@@ -234,6 +234,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         keywords.add("object")
         val keywords = packKeywords()
 
+        if (tokens.equals(i, "(")) {
+            throw IllegalStateException("Objects only exist once, so they cannot have constructor parameters.")
+        }
+
         val scope = currPackage.getOrPut(name, tokens.fileName, ScopeType.OBJECT)
         readSuperCalls(scope, true)
         readClassBody(name, keywords, ScopeType.OBJECT)

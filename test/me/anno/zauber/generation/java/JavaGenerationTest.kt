@@ -50,6 +50,20 @@ class JavaGenerationTest {
     }
 
     @Test
+    fun testSimpleObject() {
+        val source = """
+            object Test
+        """.trimIndent()
+        val expected = """
+            public final class Test {
+              private static final Test __instance__ = new Test();
+              private Test() {}
+            }
+        """.trimIndent()
+        assertEquals(expected, testClassGeneration(source))
+    }
+
+    @Test
     fun testGeneratesDataClass() {
         // todo this test is much too complicated, but maybe we can test the main components?
         //  that sounds like a good plan :)
