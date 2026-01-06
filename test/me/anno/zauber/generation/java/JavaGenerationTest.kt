@@ -3,7 +3,7 @@ package me.anno.zauber.generation.java
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.tokenizer.Tokenizer
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,7 +14,7 @@ class JavaGenerationTest {
     companion object {
         fun testClassGeneration(code: String): String {
             val testScopeName = "test${ctr++}"
-            val tokens = Tokenizer(
+            val tokens = ZauberTokenizer(
                 """
             package $testScopeName
             

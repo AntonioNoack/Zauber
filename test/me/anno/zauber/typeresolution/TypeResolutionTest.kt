@@ -8,7 +8,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.tokenizer.Tokenizer
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.StandardTypes.standardClasses
@@ -39,7 +39,7 @@ class TypeResolutionTest {
 
         fun testTypeResolution(code: String): Type {
             val testScopeName = "test${ctr++}"
-            val tokens = Tokenizer(
+            val tokens = ZauberTokenizer(
                 """
             package $testScopeName
             
@@ -57,7 +57,7 @@ class TypeResolutionTest {
 
         fun testMethodBodyResolution(code: String): List<Type> {
             val testScopeName = "test${ctr++}"
-            val tokens = Tokenizer(
+            val tokens = ZauberTokenizer(
                 """
             package $testScopeName
             

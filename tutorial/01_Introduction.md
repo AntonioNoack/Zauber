@@ -258,8 +258,8 @@ For the start, there will be external functions:
 external fun malloc(size: Pointer): Pointer?
 ```
 
-later, I'd like us to implement a C compiler as part of this compiler, such that we can just "include" and .h file,
-and use its API directly without manual JNI code.
+later, I'd like us to implement a C compiler as part of this compiler, such that we can just "include" .h files,
+and use their API directly without manual JNI code.
 
 ## JVM Interop
 

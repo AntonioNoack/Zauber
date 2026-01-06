@@ -8,7 +8,7 @@ import me.anno.zauber.generation.c.CSourceGenerator
 import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
-import me.anno.zauber.tokenizer.Tokenizer
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Scope
 import java.io.File
@@ -75,7 +75,7 @@ object Compile {
         } else if (file.extension == "kt") {
             val text = file.readText()
             val fileName = file.absolutePath.substring(rootLen)
-            val source = Tokenizer(text, fileName).tokenize()
+            val source = ZauberTokenizer(text, fileName).tokenize()
             sources.add(source)
             packageScope.sources.add(source)
         }

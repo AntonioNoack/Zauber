@@ -3,14 +3,13 @@ package me.anno.zauber
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ASTBuilder
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.tokenizer.Tokenizer
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.defineArrayListConstructors
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayListType
@@ -32,7 +31,7 @@ class IsSubTypeOfTest {
     companion object {
         fun String.testInheritance(): Scope {
             val testScopeName = "test${ctr++}"
-            val tokens = Tokenizer(
+            val tokens = ZauberTokenizer(
                 """
             package $testScopeName
             

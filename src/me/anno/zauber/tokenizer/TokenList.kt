@@ -6,8 +6,7 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import kotlin.math.max
 
-// could be placed into a token list...
-class TokenList(val src: String, val fileName: String) {
+class TokenList(val source: CharSequence, val fileName: String) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(TokenList::class)
@@ -109,7 +108,7 @@ class TokenList(val src: String, val fileName: String) {
 
     fun err(i: Int): String {
         val i = max(i, 0)
-        val before = src.substring(0, getI0(i))
+        val before = source.substring(0, getI0(i))
         val lineNumber = before.count { it == '\n' } + 1
         val lastLineBreak = before.lastIndexOf('\n')
         val pos0 = getI0(i) - lastLineBreak
@@ -122,26 +121,27 @@ class TokenList(val src: String, val fileName: String) {
 
     fun add(type: TokenType, i0: Int, i1: Int) {
         if (size == tokenTypes.size) {
+            // resizing
             tokenTypes = tokenTypes.copyOf(size * 2)
             offsets = offsets.copyOf(size * 4)
         }
 
         if (i0 > i1) throw IllegalStateException("i0 > i1, $i0 > $i1 in $fileName")
-        if (i1 > src.length) throw IllegalStateException("i1 > src.len, $i1 > ${src.length} in $fileName")
+        if (i1 > source.length) throw IllegalStateException("i1 > src.len, $i1 > ${source.length} in $fileName")
 
         if (size > 0 && type == TokenType.SYMBOL &&
             getType(size - 1) == TokenType.SYMBOL &&
             i0 == offsets[size * 2 - 1] &&
-            src[i0] != ';' &&
-            src[i0 - 1] != ';' &&
-            (src[i0] != '>' || src[i0 - 1] == '-') && // ?>
-            (src[i0 - 1] != '>' || src[i0] == '=') && // >?, >>, >>., but allow >=
-            !(src[i0 - 1] == '<' && src[i0] == '*') && // <*>
-            !(src[i0 - 1] == '*' && src[i0] == '>') && // <*>
-            !(src[i0 - 1] == '!' && src[i0] in ":.") && // !!::, !!.
-            !(src[i0 - 1] == '.' && src[i0] in "+-") && // ..+3.0, ..-3.0
-            !(src[i0 - 1] in "&|" && src[i0] == '!') && // &!, |!
-            (src[i0 - 1] != '=' || src[i0] == '=')
+            source[i0] != ';' &&
+            source[i0 - 1] != ';' &&
+            (source[i0] != '>' || source[i0 - 1] == '-') && // ?>
+            (source[i0 - 1] != '>' || source[i0] == '=') && // >?, >>, >>., but allow >=
+            !(source[i0 - 1] == '<' && source[i0] == '*') && // <*>
+            !(source[i0 - 1] == '*' && source[i0] == '>') && // <*>
+            !(source[i0 - 1] == '!' && source[i0] in ":.") && // !!::, !!.
+            !(source[i0 - 1] == '.' && source[i0] in "+-") && // ..+3.0, ..-3.0
+            !(source[i0 - 1] in "&|" && source[i0] == '!') && // &!, |!
+            (source[i0 - 1] != '=' || source[i0] == '=')
         ) {
             // todo only accept a symbol if the previous is not =, or the current one is =, too
             // extend symbol
@@ -165,7 +165,7 @@ class TokenList(val src: String, val fileName: String) {
         val i1 = getI1(i)
         if (i1 - i0 != str.length) return false
         return str.indices.all { strIndex ->
-            str[strIndex] == src[i0 + strIndex]
+            str[strIndex] == source[i0 + strIndex]
         }
     }
 
@@ -177,11 +177,11 @@ class TokenList(val src: String, val fileName: String) {
 
     fun toString(i: Int): String {
         if (i >= size) throw IndexOutOfBoundsException("$i >= $size, ${TokenType.entries[tokenTypes[i].toInt()]}")
-        return src.substring(getI0(i), getI1(i))
+        return source.substring(getI0(i), getI1(i))
     }
 
     fun endsWith(i: Int, ch: Char): Boolean {
-        return src[getI1(i) - 1] == ch
+        return source[getI1(i) - 1] == ch
     }
 
     fun toString(i0: Int, i1: Int): String {
@@ -191,14 +191,14 @@ class TokenList(val src: String, val fileName: String) {
     }
 
     fun toStringUnsafe(i: Int): String {
-        return src.substring(getI0(i), getI1(i))
+        return source.substring(getI0(i), getI1(i))
     }
 
     fun isSameLine(tokenI: Int, tokenJ: Int): Boolean {
         val i0 = getI0(tokenI)
         val i1 = getI1(tokenJ)
         for (i in i0 until i1) {
-            if (src[i] == '\n') return false
+            if (source[i] == '\n') return false
         }
         return true
     }

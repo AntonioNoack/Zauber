@@ -1,6 +1,6 @@
 package me.anno.zauber.tokenizer
 
-class Tokenizer(val src: String, fileName: String) {
+class ZauberTokenizer(val src: String, fileName: String) {
 
     companion object {
         private val hardKeywords = listOf(
