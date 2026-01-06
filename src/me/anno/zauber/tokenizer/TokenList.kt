@@ -265,4 +265,9 @@ class TokenList(val source: CharSequence, val fileName: String) {
         } else path.name
         return Import(path, allChildren, name) to j
     }
+
+    fun toDebugString(): String =
+        (0 until size).joinToString(" ") {
+            toString(it)
+        }
 }

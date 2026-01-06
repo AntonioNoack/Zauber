@@ -18,17 +18,20 @@ class Preprocessor(
     fun preprocess(fileName: String): TokenList {
         val input = files[fileName] ?: error("File not found: $fileName")
         val output = TokenBuilder(fileName)
+        preprocess(input, 0, input.size, output)
+        return output.tokens
+    }
 
-        var i = 0
-        while (i < input.size) {
+    private fun preprocess(input: TokenList, i0: Int, i1: Int, output: TokenBuilder) {
+        println("Handling block [$i0,$i1] from ${input.err(i0)} to ${input.err(i1 - 1)}")
+        var i = i0
+        while (i < i1) {
             i = if (isDirective(input, i)) {
                 handleDirective(input, i, output)
             } else {
                 expandOrCopy(input, i, output, 0)
             }
         }
-
-        return output.tokens
     }
 
     private fun isDirective(tokens: TokenList, i: Int): Boolean {
@@ -41,9 +44,10 @@ class Preprocessor(
         check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
             "Expected directive name, but got ${tokens.err(i)}"
         }
+        println("Handling directive ${tokens.err(i)}")
         when (tokens.toString(i++)) {
-            "define" -> i = handleDefine(tokens, i)
-            "undef" -> macros.remove(tokens.toString(i++))
+            "define" -> i = handleDefine(tokens, i) - 1
+            "undef" -> macros.remove(tokens.toString(i))
             "include" -> handleInclude(tokens, i, out)
             "ifdef" -> i = handleIfDefined(tokens, i, true, out)
             "ifndef" -> i = handleIfDefined(tokens, i, false, out)
@@ -99,14 +103,22 @@ class Preprocessor(
     }
 
     private fun expandOrCopy(
-        tokens: TokenList,
-        i: Int,
+        tokens: TokenList, i: Int,
         out: TokenBuilder,
         depth: Int
     ): Int {
         if (depth > MAX_EXPANSION_DEPTH) {
             out.addToken(tokens, i)
             return i + 1
+        }
+
+        if (tokens.equals(i, "defined")) {
+            // copy defined(identifier) verbatim
+            out.addToken(tokens, i) // defined
+            out.addToken(tokens, i + 1)
+            out.addToken(tokens, i + 2) // raw NAME, no expansion
+            out.addToken(tokens, i + 3)
+            return i + 4
         }
 
         if (tokens.getType(i) == TokenType.NAME) {
@@ -218,88 +230,74 @@ class Preprocessor(
     }
 
     private fun handleIfDefined(
-        tokens: TokenList,
-        i0: Int,
-        positive: Boolean,
-        out: TokenBuilder
+        tokens: TokenList, i0: Int,
+        positive: Boolean, out: TokenBuilder
     ): Int {
         val name = tokens.toString(i0)
-        val cond = { macros.containsKey(name) == positive }
+        val cond = macros.containsKey(name) == positive
         return handleIfCommon(tokens, i0, out, cond)
     }
 
     private fun handleIfExpression(
-        tokens: TokenList,
-        i0: Int,
+        tokens: TokenList, i0: Int,
         out: TokenBuilder
     ): Int {
         val exprTokens = collectLine(tokens, i0)
-        val cond = { evalIfExpression(tokens, exprTokens) }
+        val cond = evalIfExpression(tokens, exprTokens)
+        println("if-condition: $cond")
         return handleIfCommon(tokens, exprTokens.last, out, cond)
     }
 
     private fun handleIfCommon(
-        tokens: TokenList,
-        i0: Int,
+        input: TokenList, i0: Int,
         out: TokenBuilder,
-        firstCond: () -> Boolean
+        firstCond: Boolean
     ): Int {
 
-        val branches = ArrayList<IfBranch>()
         var i: Int
-        var activeCond = firstCond
-
-        var blockStart = skipLine(tokens, i0)
-        println("Skipped first line from $i0 to $blockStart")
+        var nextIsTrue = firstCond
+        var anyWasTrue = false
+        var blockStart = skipLine(input, i0)
 
         loop@ while (true) {
-            val blockEnd = findNextDirective(tokens, blockStart)
-            println("Block start/end: $blockStart .. $blockEnd")
-            branches += IfBranch(activeCond, blockStart, blockEnd)
+            var blockEnd = findNextDirective(input, blockStart)
+            while (input.equals(blockEnd, "#") &&
+                input.toString(blockEnd + 1) !in listOf("elif", "else", "endif")
+            ) {
+                val blockEnd0 = blockEnd
+                blockEnd = skipLine(input, blockEnd)
+                blockEnd = findNextDirective(input, blockEnd)
+                check(blockEnd > blockEnd0)
+            }
+
+            if (nextIsTrue) {
+                anyWasTrue = true
+                preprocess(input, blockStart, blockEnd, out)
+            }
 
             i = blockEnd
-            if (!tokens.equals(i, "#")) break
+            if (!input.equals(i, "#")) {
+                return i
+            }
             i++
 
-            when (tokens.toString(i++)) {
+            when (input.toString(i++)) {
                 "elif" -> {
-                    val expr = collectLine(tokens, i)
-                    activeCond = { evalIfExpression(tokens, expr) }
-                    blockStart = skipLine(tokens, i + expr.last + 1 - expr.first)
-                    println("Skipped line from $i to $blockStart")
+                    val expr = collectLine(input, i)
+                    nextIsTrue = !anyWasTrue && evalIfExpression(input, expr)
+                    blockStart = skipLine(input, i + expr.last - expr.first)
                 }
                 "else" -> {
-                    activeCond = { true }
-                    blockStart = skipLine(tokens, i - 1)
-                    println("Skipped line from $i to $blockStart")
+                    nextIsTrue = !anyWasTrue
+                    blockStart = skipLine(input, i - 1)
                 }
-                "endif" -> {
-                    i = skipLine(tokens, i - 1)
-                    break@loop
-                }
-                else -> error("Invalid directive inside #if: ${tokens.err(i - 1)}")
+                "endif" -> return skipLine(input, i - 1)
+                else -> error("Invalid directive inside #if: ${input.err(i - 1)}")
             }
         }
-
-        // emit first matching branch
-        println("Checking ${branches.size} branches")
-        for (b in branches) {
-            if (b.shouldEmit()) {
-                println("Branch $b returned true")
-                emitRange(tokens, b.start, b.end, out)
-                break
-            } else {
-                println("Branch $b returned false")
-            }
-        }
-
-        return i
     }
 
-    private fun evalIfExpression(
-        tokens: TokenList,
-        expr: IntRange
-    ): Boolean {
+    private fun evalIfExpression(tokens: TokenList, expr: IntRange): Boolean {
 
         // Step 1: expand macros
         val expanded0 = TokenBuilder(tokens.fileName)
@@ -309,6 +307,7 @@ class Preprocessor(
         }
 
         val expanded = expanded0.tokens
+        println("Expanded tokens: ${expanded.toDebugString()}")
 
         // Step 2: normalize tokens
         val values = ArrayList<Any>()
@@ -317,7 +316,8 @@ class Preprocessor(
             when {
                 expanded.equals(i, "defined") -> {
                     val name = expanded.toString(i + 2)
-                    values += macros.containsKey(name)
+                    println("Checking defined '$name', prev: ${expanded.err(i + 1)}, next: ${expanded.err(i + 3)}")
+                    values += name in macros
                     i += 4
                 }
                 expanded.getType(i) == TokenType.NUMBER ->
@@ -329,6 +329,8 @@ class Preprocessor(
             }
             i++
         }
+
+        println("eval $values")
 
         return evalBooleanExpr(values)
     }
@@ -420,12 +422,6 @@ class Preprocessor(
             i++
         }
         return tokens.size
-    }
-
-    private fun emitRange(src: TokenList, i0: Int, i1: Int, dst: TokenBuilder) {
-        for (i in i0 until i1) {
-            dst.addToken(src, i)
-        }
     }
 
     private fun pasteTokens(tokens: TokenList, left: Int, right: Int, out: TokenBuilder) {

@@ -33,8 +33,4 @@ abstract class PreprocessorTestBase {
     private fun normalize(s: String): String =
         s.trim().replace(Regex("\\s+"), " ")
 
-    fun TokenList.toDebugString(): String =
-        (0 until size).joinToString(" ") {
-            toString(it)
-        }
 }
