@@ -234,6 +234,7 @@ object ASTSimplifier {
                         currBlock.add(SimpleGetField(dst, self = null, field, expr.scope, expr.origin))
                         dst
                     }
+                    // todo it might be a field...
                     else -> {
                         TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
                     }

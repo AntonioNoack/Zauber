@@ -1,4 +1,4 @@
-package me.anno.zauber.generator.java
+package me.anno.zauber.generation.java
 
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
@@ -12,8 +12,8 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.generator.DeltaWriter
-import me.anno.zauber.generator.Generator
+import me.anno.zauber.generation.DeltaWriter
+import me.anno.zauber.generation.Generator
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -137,8 +137,7 @@ object JavaSourceGenerator : Generator() {
             appendPackage(scope.path.dropLast(1))
             generateInside(scope.name, scope)
 
-            writer.write(file, builder.toString())
-            builder.clear()
+            writer.write(file, finish())
         } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
             if (scopeType == ScopeType.PACKAGE &&
                 (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())
@@ -149,8 +148,7 @@ object JavaSourceGenerator : Generator() {
                 appendPackage(scope.path)
                 generateInside(name, scope)
 
-                writer.write(file, builder.toString())
-                builder.clear()
+                writer.write(file, finish())
             }
 
             for (child in scope.children) {
@@ -269,7 +267,12 @@ object JavaSourceGenerator : Generator() {
         val isBySelf = selfType == classScope.typeWithArgs ||
                 "override" in method.keywords ||
                 "abstract" in method.keywords
-        if ("override" in method.keywords) builder.append("@Override ")
+
+        if ("override" in method.keywords) {
+            builder.append("@Override")
+            nextLine()
+        }
+
         if ("abstract" in method.keywords && classScope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
         }
@@ -418,6 +421,21 @@ object JavaSourceGenerator : Generator() {
                     builder.append(expr.field.name)
                 }
             }
+            is SimpleSetField -> {
+                if (expr.self != null) {
+                    builder.append1(expr.self).append('.')
+                }
+                val setter = expr.field.setter
+                if (setter != null) {
+                    builder.append(setter.name).append('(')
+                    builder.append1(expr.src)
+                    builder.append(')')
+                } else {
+                    builder.append(expr.field.name)
+                        .append(" = ").append1(expr.src)
+                }
+                builder.append(';')
+            }
             is SimpleCompare -> {
                 builder.append1(expr.base).append(' ')
                 builder.append(expr.type.symbol).append(" 0")
@@ -512,7 +530,7 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendSuperTypes(scope: Scope) {
         val superCall0 = scope.superCalls.firstOrNull { it.valueParams != null }
-        if (superCall0 != null) {
+        if (superCall0 != null && superCall0.type != AnyType) {
             builder.append(" extends ")
             appendClassType(superCall0.type, scope, false)
         }

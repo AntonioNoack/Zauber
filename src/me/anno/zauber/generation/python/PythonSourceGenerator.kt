@@ -1,6 +1,6 @@
-package me.anno.zauber.generator.python
+package me.anno.zauber.generation.python
 
-import me.anno.zauber.generator.Generator
+import me.anno.zauber.generation.Generator
 import me.anno.zauber.types.Scope
 import java.io.File
 

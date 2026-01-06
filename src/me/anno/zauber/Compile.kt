@@ -4,8 +4,8 @@ import me.anno.zauber.ast.rich.ASTBuilder
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
-import me.anno.zauber.generator.c.CSourceGenerator
-import me.anno.zauber.generator.java.JavaSourceGenerator
+import me.anno.zauber.generation.c.CSourceGenerator
+import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.Tokenizer

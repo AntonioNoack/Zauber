@@ -95,4 +95,5 @@ data class IndexedValue<V>(val index: Int, val value: V)
 interface MutableList<V> : List<V> {
     operator fun set(index: Int, value: V): V
     fun add(element: V): Boolean
+    fun addAll(elements: Collection<V>): Boolean
 }

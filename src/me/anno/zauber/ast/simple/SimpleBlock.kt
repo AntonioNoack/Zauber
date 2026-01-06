@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.generator.c.CSourceGenerator.isValueType
+import me.anno.zauber.generation.c.CSourceGenerator.isValueType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 

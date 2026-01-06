@@ -1,6 +1,6 @@
-package me.anno.zauber.generator.glsl
+package me.anno.zauber.generation.glsl
 
-import me.anno.zauber.generator.Generator
+import me.anno.zauber.generation.Generator
 import me.anno.zauber.types.Scope
 import java.io.File
 

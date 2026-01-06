@@ -20,12 +20,23 @@ class ArrayList<V>(capacity: Int = 16) : MutableList<V> {
         return prev
     }
 
-    override fun add(element: V): Boolean {
-        if (size == content.size) {
-            val newSize = max(16, content.size * 2)
+    private fun ensureExtra(extra: Int) {
+        if (this.size + extra >= content.size) {
+            val newSize = max(16, max(content.size * 2, content.size + extra))
             content = content.copyOf(newSize)
         }
+    }
+
+    override fun add(element: V): Boolean {
+        ensureExtra(1)
         content[size++] = element
+        return true
+    }
+
+    override fun addAll(elements: Collection<V>): Boolean {
+        if(elements.isEmpty()) return false
+        ensureExtra(elements.size)
+        for (element in elements) add(element)
         return true
     }
 

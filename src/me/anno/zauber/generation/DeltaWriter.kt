@@ -1,4 +1,4 @@
-package me.anno.zauber.generator
+package me.anno.zauber.generation
 
 import me.anno.zauber.logging.LogManager
 import java.io.File

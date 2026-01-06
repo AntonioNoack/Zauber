@@ -1,6 +1,6 @@
-package me.anno.zauber.generator.rust
+package me.anno.zauber.generation.rust
 
-import me.anno.zauber.generator.Generator
+import me.anno.zauber.generation.Generator
 import me.anno.zauber.types.Scope
 import java.io.File
 

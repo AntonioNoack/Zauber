@@ -1,4 +1,4 @@
-package me.anno.zauber.generator
+package me.anno.zauber.generation
 
 import me.anno.zauber.types.Scope
 import java.io.File
@@ -36,6 +36,12 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         run()
         closeBlock()
         builder.append(blockSuffix)
+    }
+
+    fun finish(): String {
+        val str = builder.toString()
+        builder.clear()
+        return str
     }
 
     abstract fun generateCode(dst: File, root: Scope)

@@ -1,25 +1,23 @@
-package me.anno.zauber.generator.c
+package me.anno.zauber.generation.cpp
 
-import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.*
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.generator.Generator
-import me.anno.zauber.logging.LogManager
+import me.anno.zauber.ast.rich.controlflow.IfElseBranch
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.controlflow.WhileLoop
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.MemberNameExpression
+import me.anno.zauber.generation.Generator
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import java.io.File
 
-// todo this is the final boss:
-//  all allocations, shared references, GC, inheritance etc must be implemented by us
-object CSourceGenerator : Generator() {
+// todo compared to C, this has inheritance built-in, which
+//  we can directly use; and it has ready-made shared references
+object CppSourceGenerator : Generator() {
 
-    private val LOGGER = LogManager.getLogger(CSourceGenerator::class)
-
-    // todo generate runnable C code from what we parsed
+    // todo generate runnable C++ code from what we parsed
     // todo just produce all code for now as-is
 
     // todo we need .h and .c files...
@@ -39,7 +37,6 @@ object CSourceGenerator : Generator() {
     }
 
     override fun generateCode(dst: File, root: Scope) {
-        builder.clear()
         dst.deleteRecursively()
 
         fun generateCode(scope: Scope) {
@@ -56,9 +53,14 @@ object CSourceGenerator : Generator() {
                 ScopeType.METHOD -> {
                     writeMethod(scope)
                 }
-                else -> if (scopeType.isClassType()) {
-                    writeClassReflectionStruct(scope)
-                    writeClassInstanceStruct(scope)
+                else -> {
+                    if (scopeType.isClassType()) {
+                        writeClassReflectionStruct(scope)
+                        writeClassInstanceStruct(scope)
+                    } else {
+                        indent()
+                        builder.append("// todo: ").append(scope.name).append(" (${scope.scopeType})").append('\n')
+                    }
                 }
             }
             for (child in scope.children) {
@@ -68,9 +70,9 @@ object CSourceGenerator : Generator() {
 
         generateCode(root)
 
-        val dstFile = File(dst, "Root.c")
+        val dstFile = File(dst, "Root.cpp")
         dstFile.parentFile.mkdirs()
-        dstFile.writeText(builder.toString())
+        dstFile.writeText(finish())
     }
 
     fun writeMethod(scope: Scope) {
@@ -105,10 +107,7 @@ object CSourceGenerator : Generator() {
 
             builder.append(") {\n")
 
-            fun writeExpr(expr: Expression, needsValue: Boolean, source: Expression? = null) {
-                // todo depending on source, decide whether we need brackets
-                val needsBrackets = needsValue
-                if (needsBrackets) builder.append('(')
+            fun writeExpr(expr: Expression, needsValue: Boolean) {
                 when (expr) {
                     is IfElseBranch -> {
                         block {
@@ -140,9 +139,6 @@ object CSourceGenerator : Generator() {
                             builder.append("\n")
                             indent()
                             writeExpr(entry, needsValue)
-                            if (entry !is ExpressionList) {
-                                builder.append(';')
-                            }
                         }
                     }
                     is ReturnExpression -> {
@@ -158,90 +154,12 @@ object CSourceGenerator : Generator() {
                     is MemberNameExpression -> {
                         builder.append(expr.name)
                     }
-                    is StringExpression -> {
-                        // todo escape? is it already escaped?
-                        builder.append('"').append(expr.value).append('"')
-                    }
-                    is NumberExpression -> {
-                        // todo remove f/d suffix
-                        // todo additional lld suffix for longs...
-                        builder.append(expr.value)
-                    }
-                    is ContinueExpression -> {
-                        // todo if no label is assigned, define our own
-                        // todo goto end-of-block label?
-                        builder.append("continue /* @${expr.label} */")
-                    }
-                    is BreakExpression -> {
-                        // todo if no label is assigned, define our own
-                        // todo goto end-after-block label
-                        builder.append("break /* @${expr.label} */")
-                    }
-                    is NamedCallExpression -> {
-                        // todo append default values
-                        // todo write them in the correct order (without naming)
-                        // todo place return type argument
-                        writeExpr(expr.base, true)
-                        builder.append('.').append(expr.name).append('(')
-                        for ((i, param) in expr.valueParameters.withIndex()) {
-                            if (i > 0) builder.append(", ")
-                            writeExpr(param.value, true)
-                        }
-                        builder.append(')')
-                    }
-                    is CallExpression -> {
-                        // todo append default values
-                        // todo write them in the correct order (without naming)
-                        // todo place return type argument
-                        writeExpr(expr.base, true)
-                        builder.append('(')
-                        for ((i, param) in expr.valueParameters.withIndex()) {
-                            if (i > 0) builder.append(", ")
-                            writeExpr(param.value, true)
-                        }
-                        builder.append(')')
-                    }
-                    is IsInstanceOfExpr -> {
-                        builder.append("__isInstanceOf(")
-                        writeExpr(expr.instance, true)
-                        builder.append(", ")
-                        builder.append(getName(expr.type))
-                        builder.append(")")
-                    }
-                    is CompareOp -> {
-                        builder.append('(')
-                        writeExpr(expr.value, true)
-                        builder.append(expr.type.symbol)
-                        builder.append("0)")
-                    }
-                    is CheckEqualsOp -> {
-                        writeExpr(expr.left, true)
-                        builder.append(expr.symbol)
-                        writeExpr(expr.right, true)
-                    }
-                    is NamedTypeExpression -> {
-                        builder.append(getName(expr.type))
-                    }
-                    is AssignmentExpression -> {
-                        writeExpr(expr.variableName, true)
-                        builder.append("=")
-                        writeExpr(expr.newValue, true)
-                    }
-                    is FieldExpression -> {
-                        builder.append(expr.field.name)
-                    }
-                    is SpecialValueExpression -> {
-                        builder.append(expr.value.symbol)
-                    }
-                    is UnresolvedFieldExpression -> {
-                        builder.append(expr.name)
-                    }
                     else -> {
-                        LOGGER.warn("Implement writing ${expr.javaClass.simpleName}")
+                        RuntimeException(" Write ${expr.javaClass}: $expr")
+                            .printStackTrace()
                         builder.append("/* $expr */")
                     }
                 }
-                if (needsBrackets) builder.append(')')
             }
 
             val body = self.body
@@ -260,7 +178,7 @@ object CSourceGenerator : Generator() {
             for (parent in scope.superCalls) {
                 // todo make them structs??? can already have resolved methods
                 // todo include all to-be-resolved (open/interface) methods
-                val pt = parent.type
+                val pt = parent.type as ClassType
                 indent()
                 builder.append("struct ").append(getName(pt.clazz)).append("_Class super").append(pt.clazz.name)
                     .append(";\n")
