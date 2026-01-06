@@ -1,14 +1,13 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.FieldResolver
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveFieldType
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
+import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedField
+import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -50,13 +49,16 @@ class DotExpression(
         }
     }
 
-    fun resolveField(context: ResolutionContext): ResolvedField? {
-        val baseType = TypeResolution.resolveType(
+    fun getBaseType(context: ResolutionContext): Type {
+        return TypeResolution.resolveType(
             /* targetLambdaType seems not easily deductible */
             context.withTargetType(null),
             left,
         )
 
+    }
+
+    fun resolveField(context: ResolutionContext, baseType: Type): ResolvedField? {
         when (right) {
             is MemberNameExpression -> {
                 // todo replace own generics, because we don't know them yet
@@ -91,66 +93,45 @@ class DotExpression(
         }
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
-        val baseType = TypeResolution.resolveType(
-            /* targetLambdaType seems not easily deductible */
-            context.withTargetType(null),
-            left,
-        )
-
-        when (right) {
+    fun resolveCallable(context: ResolutionContext, baseType: Type): ResolvedMember<*> {
+        right as CallExpression
+        when (val base = right.base) {
             is MemberNameExpression -> {
-                // todo replace own generics, because we don't know them yet
-                /*val selfType = context.selfType
-                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
-                    resolveGenerics(
-                        baseType,
-                        selfType.clazz.typeParameters,
-                        selfType.clazz.typeParameters.map { it.type })
-                } else baseType*/
-                return resolveFieldType(
+                val constructor = null
+                // todo for lambdas, baseType must be known for their type to be resolved
+                val valueParameters = resolveValueParameters(context, right.valueParameters)
+                return resolveCallable(
                     context.withSelfType(baseType),
-                    right.name, null, origin
+                    this, base.name, constructor,
+                    right.typeParameters, valueParameters
                 )
             }
             is UnresolvedFieldExpression -> {
-                // todo replace own generics, because we don't know them yet
-                /*val selfType = context.selfType
-                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
-                    resolveGenerics(
-                        baseType,
-                        selfType.clazz.typeParameters,
-                        selfType.clazz.typeParameters.map { it.type })
-                } else baseType*/
-                return resolveFieldType(
+                val constructor = null
+                // todo for lambdas, baseType must be known for their type to be resolved
+                val valueParameters = resolveValueParameters(context, right.valueParameters)
+                return resolveCallable(
                     context.withSelfType(baseType),
-                    right.name, null, origin
+                    this, base.name, constructor,
+                    right.typeParameters, valueParameters
                 )
             }
+            else -> throw NotImplementedError("Resolve type of call $base (${base.javaClass.simpleName})")
+        }
+    }
+
+    override fun resolveType(context: ResolutionContext): Type {
+        val baseType = getBaseType(context)
+        when (right) {
+            is MemberNameExpression,
+            is UnresolvedFieldExpression -> {
+                val field = resolveField(context, baseType)
+                    ?: throw IllegalStateException("Failed to resolve field $right on $baseType")
+                return field.getValueType(context)
+            }
             is CallExpression -> {
-                when (val base = right.base) {
-                    is MemberNameExpression -> {
-                        val constructor = null
-                        // todo for lambdas, baseType must be known for their type to be resolved
-                        val valueParameters = resolveValueParameters(context, right.valueParameters)
-                        return resolveCallType(
-                            context.withSelfType(baseType),
-                            this, base.name, constructor,
-                            right.typeParameters, valueParameters
-                        )
-                    }
-                    is UnresolvedFieldExpression -> {
-                        val constructor = null
-                        // todo for lambdas, baseType must be known for their type to be resolved
-                        val valueParameters = resolveValueParameters(context, right.valueParameters)
-                        return resolveCallType(
-                            context.withSelfType(baseType),
-                            this, base.name, constructor,
-                            right.typeParameters, valueParameters
-                        )
-                    }
-                    else -> throw NotImplementedError("Resolve type of call $base (${base.javaClass.simpleName})")
-                }
+                val callable = resolveCallable(context, baseType)
+                return callable.getTypeFromCall()
             }
             else -> TODO("dot-operator with $right (${right.javaClass.simpleName}) in ${resolveOrigin(origin)}")
         }

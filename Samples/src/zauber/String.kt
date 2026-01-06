@@ -8,6 +8,9 @@ class String(
 
     constructor(content: ByteArray): this(content, 0, content.size)
 
+    @Deprecated("Use size for API consistency")
+    val length: Int get() = size
+
     override fun get(index: Int): Char {
         check(index in 0 until size)
         return content[offset + index].toInt().and(255).toChar()
@@ -22,10 +25,11 @@ class String(
     }
 
     operator fun plus(other: Any?): String {
-        TODO()
+        // todo we could avoid a lot of StringBuilder complexity by concatenating Strings only when we need it...
+        TODO("Implement String.plus")
     }
-}
 
-fun check(b: Boolean) {
-    if (!b) throw IllegalStateException()
+    fun format(vararg args: Any?): String {
+        TODO("Implement String.format()")
+    }
 }

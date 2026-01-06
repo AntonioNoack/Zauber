@@ -14,6 +14,10 @@ class Array<V>(override val size: Int) : List<V> {
     override fun iterator(): Iterator<V> = SimpleListIterator(this, 0)
 }
 
+fun <V> arrayOf(vararg values: V): Array<V> {
+    return values
+}
+
 fun <V> arrayOfNulls(size: Int): Array<V?> {
     return Array<V?>(size)
 }

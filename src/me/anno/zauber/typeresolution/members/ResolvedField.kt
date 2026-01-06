@@ -91,7 +91,8 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
                         exprIsField(field, expr.elseBranch, context)
                 is NumberExpression, is StringExpression -> false
                 is DotExpression -> {
-                    val field = expr.resolveField(context)
+                    val baseType = expr.getBaseType(context)
+                    val field = expr.resolveField(context, baseType)
                     field?.resolved == field
                 }
                 else -> throw NotImplementedError("Is $expr (${expr.javaClass.simpleName}) the same as $field?")
