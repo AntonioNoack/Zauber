@@ -5,14 +5,14 @@ import me.anno.zauber.types.Scope
 class SimpleGraph(scope: Scope, origin: Int) {
 
     var numFields = 0
-    val entry = SimpleBlock(this, scope, origin)
+    val startBlock = SimpleBlock(this, scope, origin)
     val blocks = ArrayList<SimpleBlock>()
 
     val continueLabels = HashMap<String?, SimpleBlock>()
     val breakLabels = HashMap<String?, SimpleBlock>()
 
     init {
-        blocks.add(entry)
+        blocks.add(startBlock)
     }
 
     fun addBlock(scope: Scope, origin: Int): SimpleBlock {

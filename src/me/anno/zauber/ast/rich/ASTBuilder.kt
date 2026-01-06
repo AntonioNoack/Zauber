@@ -583,14 +583,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val superCall = if (tokens.equals(i, ":")) {
             i++
             check(tokens.equals(i, "this") || tokens.equals(i, "super"))
-            // val origin = origin(i)
+            val origin = origin(i)
             val target = if (tokens.equals(i++, "super"))
                 InnerSuperCallTarget.SUPER else InnerSuperCallTarget.THIS
             // val typeParams = readTypeParams(null) // <- not supported
             val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 pushCall { readParamExpressions() }
             } else emptyList()
-            InnerSuperCall(target, params)
+            InnerSuperCall(target, params, constructorScope, origin)
         } else null
 
         // body (or just = expression)
@@ -742,7 +742,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     fun readParamDeclarations(
         selfType: Type?,
-        secondaryScope: Scope
+        secondaryScope: Scope,
     ): List<Parameter> {
         // todo when this has its own '=', this needs its own scope...,
         //  and that scope could be inherited by the function body...
@@ -781,7 +781,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val fieldScope = if (isVar || isVal) currPackage else secondaryScope
                     // automatically gets added to fieldScope
                     Field(
-                        fieldScope, selfType, isVar, parameter,
+                        fieldScope, selfType, isVar, if (isVar || isVal) null else parameter,
                         name, type, initialValue, keywords, origin
                     )
 
@@ -1346,7 +1346,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 tokens.equals(i, TokenType.COMMA) -> {} // ok
                 tokens.equals(i, TokenType.NAME) -> {} // ok
                 tokens.equals(i, TokenType.STRING) ||
-                        tokens.equals(i, TokenType.NUMBER) -> {} // comptime values
+                        tokens.equals(i, TokenType.NUMBER) -> {
+                } // comptime values
                 tokens.equals(i, "<") -> depth++
                 tokens.equals(i, ">") -> depth--
                 tokens.equals(i, "?") ||

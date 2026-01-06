@@ -192,6 +192,8 @@ object TypeResolution {
     fun typeToScope(type: Type?): Scope? {
         return when (type) {
             null, NullType -> null
+            is NotType -> null
+            is ComptimeValue -> typeToScope(type.type)
             is ClassType -> type.clazz
             is UnionType -> {
                 val scopes = type.types.mapNotNull { typeToScope(it) }

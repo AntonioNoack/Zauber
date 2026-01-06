@@ -55,7 +55,18 @@ class DotExpression(
             context.withTargetType(null),
             left,
         )
+    }
 
+    fun isFieldType(): Boolean {
+        return when (right) {
+            is MemberNameExpression,
+            is UnresolvedFieldExpression -> true
+            else -> false
+        }
+    }
+
+    fun isMethodType(): Boolean {
+        return right is CallExpression
     }
 
     fun resolveField(context: ResolutionContext, baseType: Type): ResolvedField? {
@@ -122,14 +133,13 @@ class DotExpression(
 
     override fun resolveType(context: ResolutionContext): Type {
         val baseType = getBaseType(context)
-        when (right) {
-            is MemberNameExpression,
-            is UnresolvedFieldExpression -> {
+        when {
+            isFieldType() -> {
                 val field = resolveField(context, baseType)
                     ?: throw IllegalStateException("Failed to resolve field $right on $baseType")
                 return field.getValueType(context)
             }
-            is CallExpression -> {
+            isMethodType() -> {
                 val callable = resolveCallable(context, baseType)
                 return callable.getTypeFromCall()
             }

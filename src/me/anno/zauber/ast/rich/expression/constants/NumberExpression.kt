@@ -14,21 +14,20 @@ import me.anno.zauber.types.Types.UIntType
 import me.anno.zauber.types.Types.ULongType
 import me.anno.zauber.types.impl.ClassType
 
+// todo the "true" type of this also could be "ComptimeValue", because it is :)
 class NumberExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
 
-    init {
-        // based on the string content, decide what type this is
-        resolvedType = when {
-            value.startsWith("'") -> CharType
-            value.startsWith("0x", true) ||
-                    value.startsWith("-0x", true) -> resolveIntType()
-            value.endsWith('h', true) -> HalfType
-            value.endsWith('f', true) -> FloatType
-            value.endsWith('d', true) -> DoubleType
-            // does Kotlin have numbers with binary exponent? -> no, but it might be useful...
-            value.contains('.') || value.contains('e', true) -> DoubleType
-            else -> resolveIntType()
-        }
+    // based on the string content, decide what type this is
+    val resolvedType0 = when {
+        value.startsWith("'") -> CharType
+        value.startsWith("0x", true) ||
+                value.startsWith("-0x", true) -> resolveIntType()
+        value.endsWith('h', true) -> HalfType
+        value.endsWith('f', true) -> FloatType
+        value.endsWith('d', true) -> DoubleType
+        // does Kotlin have numbers with binary exponent? -> no, but it might be useful...
+        value.contains('.') || value.contains('e', true) -> DoubleType
+        else -> resolveIntType()
     }
 
     private fun resolveIntType(): ClassType {
@@ -48,7 +47,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     }
 
     override fun resolveType(context: ResolutionContext): Type {
-        return resolvedType!!
+        // todo if resolvedType is int, but context requests byte or short,
+        //  and the value fits, then return that instead
+        return resolvedType0
     }
 
     override fun clone(scope: Scope) = NumberExpression(value, scope, origin)

@@ -1,15 +1,35 @@
 package me.anno.zauber.generator.java
 
+import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleExpression
+import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.controlflow.SimpleBranch
+import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generator.DeltaWriter
 import me.anno.zauber.generator.Generator
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.AnyType
+import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.ByteType
+import me.anno.zauber.types.Types.CharType
+import me.anno.zauber.types.Types.DoubleType
+import me.anno.zauber.types.Types.FloatType
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types.ShortType
+import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.*
 import java.io.File
 
@@ -40,12 +60,14 @@ object JavaSourceGenerator : Generator() {
     // todo if a type is defined twice, we still need the full path
     // todo if the parent is the same as scope.parent, we can skip the import
 
-    fun appendType(type: Type, scope: Scope) {
+    fun appendType(type: Type, scope: Scope, isGeneric: Boolean) {
         when (type) {
-            is ClassType -> appendClassType(type, scope)
+            NullType -> builder.append("Object /* null */")
+            NothingType -> builder.append("Object /* Nothing */")
+            is ClassType -> appendClassType(type, scope, isGeneric)
             is UnionType if type.types.size == 2 && NullType in type.types -> {
                 // builder.append("@org.jetbrains.annotations.Nullable ")
-                appendType(type.types.first { it != NullType }, scope)
+                appendType(type.types.first { it != NullType }, scope, isGeneric)
                 builder.append("/* or null */")
             }
             is SelfType if (type.scope == scope) -> {
@@ -61,24 +83,41 @@ object JavaSourceGenerator : Generator() {
                 builder.append("zauber.Function").append(type.parameters.size)
                     .append('<')
                 for (param in type.parameters) {
-                    appendType(param.type, scope)
+                    appendType(param.type, scope, true)
                     builder.append(", ")
                 }
-                appendType(type.returnType, scope)
+                appendType(type.returnType, scope, true)
                 builder.append('>')
             }
-            else -> builder.append(type.toString())
+            is GenericType -> builder.append(type.name)
+            else -> {
+                builder.append("Object /* $type */")
+            }
         }
     }
 
-    fun appendClassType(type: ClassType, scope: Scope) {
-        builder.append(type.clazz.pathStr)
+    fun appendClassType(type: ClassType, scope: Scope, isGeneric: Boolean) {
+
+        when (type.clazz) {
+            StringType.clazz -> builder.append("String")
+            IntType.clazz -> builder.append(if (isGeneric) "Integer" else "int")
+            LongType.clazz -> builder.append(if (isGeneric) "Long" else "long")
+            FloatType.clazz -> builder.append(if (isGeneric) "Float" else "float")
+            DoubleType.clazz -> builder.append(if (isGeneric) "Double" else "double")
+            BooleanType.clazz -> builder.append(if (isGeneric) "Boolean" else "boolean")
+            ByteType.clazz -> builder.append(if (isGeneric) "Byte" else "byte")
+            ShortType.clazz -> builder.append(if (isGeneric) "Short" else "short")
+            CharType.clazz -> builder.append(if (isGeneric) "Char" else "char")
+            AnyType.clazz -> builder.append("Object")
+            else -> builder.append(type.clazz.pathStr)
+        }
+
         val params = type.typeParameters
         if (!params.isNullOrEmpty()) {
             builder.append('<')
             for ((i, param) in params.withIndex()) {
                 if (i > 0) builder.append(", ")
-                appendType(param, scope)
+                appendType(param, scope, true)
             }
             builder.append('>')
         }
@@ -162,12 +201,8 @@ object JavaSourceGenerator : Generator() {
         writeBlock {
 
             appendFields(scope)
-
-            // todo define static instance
-            // todo do we make companions a static instance or extra classes???
-
-            // todo define constructors
-
+            appendInitBlocks(scope)
+            appendConstructors(scope)
             appendMethods(scope)
 
             // inner classes
@@ -178,6 +213,15 @@ object JavaSourceGenerator : Generator() {
                         generateInside(child.name, child)
                     }
                 }
+            }
+        }
+    }
+
+    private fun appendInitBlocks(scope: Scope) {
+        for (body in scope.code) {
+            writeBlock {
+                val context = ResolutionContext(scope, scope.typeWithArgs, true, null)
+                appendCode(context, body)
             }
         }
     }
@@ -196,8 +240,9 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendBackingField(scope: Scope, field: Field) {
         if (field.byParameter == null) {
+            builder.append("public ")
             if (!field.isMutable) builder.append("final ")
-            appendType(field.valueType ?: NullableAnyType, scope)
+            appendType(field.valueType ?: NullableAnyType, scope, false)
             builder.append(' ').append(field.name).append(';')
             nextLine()
         }
@@ -206,6 +251,12 @@ object JavaSourceGenerator : Generator() {
     private fun appendMethods(scope: Scope) {
         for (method in scope.methods) {
             appendMethod(scope, method)
+        }
+    }
+
+    private fun appendConstructors(scope: Scope) {
+        for (constructor in scope.constructors) {
+            appendConstructor(scope, constructor)
         }
     }
 
@@ -222,41 +273,175 @@ object JavaSourceGenerator : Generator() {
 
         builder.append("public ")
         if (!isBySelf) builder.append("static ")
-        appendType(method.returnType ?: NullableAnyType, scope)
+        appendType(method.returnType ?: NullableAnyType, scope, false)
         builder.append(' ').append(method.name)
-        builder.append('(')
-        if (!isBySelf && selfType != null) {
-            appendType(selfType, scope)
-            builder.append(" __self")
-        }
-        for (param in method.valueParameters) {
-            if (!builder.endsWith("(")) builder.append(", ")
-            appendType(param.type, scope)
-            builder.append(' ').append(param.name)
-        }
-        builder.append(')')
+        appendParameterDeclaration(if (!isBySelf) selfType else null, method.valueParameters, scope)
         val body = method.body
         if (body != null) {
             val context = ResolutionContext(scope, method.selfType, true, null)
-            writeBlock {
-                try {
-                    val simplified = ASTSimplifier.simplify(context, body)
-                    val lines = simplified.entry.toString().split('\n')
-                        .mapIndexed { index, string ->
-                            if (index == 0) string
-                            else "  ".repeat(depth + 1) + " $string"
-                        }.joinToString("\n")
-                    builder.append("/* $lines */")
-                } catch (e: Throwable) {
-                    e.printStackTrace()
-                    builder.append("/* [${e.javaClass.simpleName}: ${e.message}] $body */")
-                }
-                nextLine()
-            }
+            appendCode(context, body)
         } else {
             builder.append(";")
             nextLine()
         }
+    }
+
+    private fun appendConstructor(scope: Scope, constructor: Constructor) {
+        builder.append("public ").append(scope.name)
+        appendParameterDeclaration(null, constructor.valueParameters, scope)
+        // todo append extra body-block for super-call
+        val body = constructor.body
+
+        val context = ResolutionContext(scope, constructor.selfType, true, null)
+        val superCall = constructor.superCall
+        when {
+            superCall != null -> {
+                writeBlock {
+                    // todo I think this must be in one line... complicated...
+                    appendCodeWithoutBlock(context, superCall.toExpr())
+                    if (body != null) appendCode(context, body)
+                }
+            }
+            body != null -> appendCode(context, body)
+            else -> {
+                builder.append(" {}")
+                nextLine()
+            }
+        }
+    }
+
+    private fun appendParameterDeclaration(selfTypeIfNecessary: Type?, valueParameters: List<Parameter>, scope: Scope) {
+        builder.append('(')
+        if (selfTypeIfNecessary != null) {
+            appendType(selfTypeIfNecessary, scope, false)
+            builder.append(" __self")
+        }
+        for (param in valueParameters) {
+            if (!builder.endsWith("(")) builder.append(", ")
+            appendType(param.type, scope, false)
+            builder.append(' ').append(param.name)
+        }
+        builder.append(')')
+    }
+
+    private fun appendCode(context: ResolutionContext, body: Expression) {
+        writeBlock {
+            appendCodeWithoutBlock(context, body)
+        }
+    }
+
+    private fun appendCodeWithoutBlock(context: ResolutionContext, body: Expression) {
+        try {
+            val simplified = ASTSimplifier.simplify(context, body)
+            appendSimplifiedAST(simplified.startBlock)
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            builder.append("/* [${e.javaClass.simpleName}: ${e.message}] $body */")
+        }
+        nextLine()
+    }
+
+    private fun appendAssign(expression: SimpleAssignmentExpression) {
+        val dst = expression.dst
+        builder.append("final ")
+        appendType(dst.type, expression.scope, false)
+        builder.append(' ').append1(dst).append(" = ")
+    }
+
+    private fun StringBuilder.append1(field: SimpleField): StringBuilder {
+        append("tmp").append(field.id)
+        return this
+    }
+
+    private fun appendSimplifiedAST(expr: SimpleExpression) {
+        if (expr is SimpleAssignmentExpression) appendAssign(expr)
+        when (expr) {
+            is SimpleBlock -> {
+                val instr = expr.instructions
+                for (i in instr.indices) {
+                    appendSimplifiedAST(instr[i])
+                }
+            }
+            is SimpleBranch -> {
+                builder.append("if (").append1(expr.condition).append(')')
+                writeBlock {
+                    appendSimplifiedAST(expr.ifTrue)
+                }
+                builder.append(" else ")
+                writeBlock {
+                    appendSimplifiedAST(expr.ifFalse)
+                }
+            }
+            is SimpleString -> {
+                builder.append('"').append(expr.base.value).append('"')
+            }
+            is SimpleNumber -> {
+                // todo remove suffixes, that are not supported by Java
+                //  and instead cast the value to the target
+                builder.append(expr.base.value)
+            }
+            is SimpleGetField -> {
+                if (expr.self != null) {
+                    builder.append1(expr.self).append('.')
+                }
+                val getter = expr.field.getter
+                if (getter != null) {
+                    builder.append(getter.name).append("()")
+                } else {
+                    builder.append(expr.field.name)
+                }
+            }
+            is SimpleCall -> {
+
+                val methodName = expr.method.name
+                val done = when (expr.valueParameters.size) {
+                    0 -> {
+                        if (expr.base.type == BooleanType && methodName == "not") {
+                            builder.append('!').append1(expr.base)
+                            true
+                        } else false
+                    }
+                    1 -> {
+                        val supportsType = when (expr.base.type) {
+                            StringType, ByteType, ShortType, CharType, IntType, LongType, FloatType, DoubleType -> true
+                            else -> false
+                        }
+                        val symbol = when (methodName) {
+                            "plus" -> " + "
+                            "minus" -> " - "
+                            "times" -> " * "
+                            "div" -> " / "
+                            "rem" -> " % "
+                            else -> null
+                        }
+                        if (supportsType && symbol != null) {
+                            builder.append1(expr.base).append(symbol)
+                            builder.append1(expr.valueParameters[0])
+                            true
+                        } else false
+                    }
+                    else -> false
+                }
+                if (!done) {
+                    builder.append1(expr.base).append('.')
+                    builder.append(methodName).append('(')
+                    for (i in expr.valueParameters.indices) {
+                        if (i > 0) builder.append(", ")
+                        val parameter = expr.valueParameters[i]
+                        builder.append1(parameter)
+                    }
+                    builder.append(')')
+                }
+            }
+            is SimpleReturn -> {
+                builder.append("return ").append1(expr.field).append(';')
+            }
+            else -> {
+                builder.append("/* ${expr.javaClass.simpleName}: $expr */")
+            }
+        }
+        if (expr is SimpleAssignmentExpression) builder.append(';')
+        if (expr !is SimpleBlock && expr !is SimpleBranch) nextLine()
     }
 
     private fun appendTypeParams(scope: Scope) {
@@ -268,7 +453,7 @@ object JavaSourceGenerator : Generator() {
                 builder.append(param.name)
                 if (param.type != NullableAnyType) {
                     builder.append(" extends ")
-                    appendType(param.type, scope)
+                    appendType(param.type, scope, false)
                 }
             }
             builder.append('>')
@@ -279,13 +464,13 @@ object JavaSourceGenerator : Generator() {
         val superCall0 = scope.superCalls.firstOrNull { it.valueParams != null }
         if (superCall0 != null) {
             builder.append(" extends ")
-            appendClassType(superCall0.type, scope)
+            appendClassType(superCall0.type, scope, false)
         }
         val implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
         for (superCall in scope.superCalls) {
             if (superCall.valueParams != null) continue
             builder.append(implementsKeyword)
-            appendClassType(superCall.type, scope)
+            appendClassType(superCall.type, scope, false)
         }
     }
 }

@@ -49,7 +49,9 @@ object MergeTypeParams {
 
         val expectedCallParams = callTypes.size
         val actualCallParams = callParams.size
-        check(actualCallParams == expectedCallParams)
+        check(actualCallParams == expectedCallParams) {
+            "Expected same number of call parameters, but got $actualCallParams instead of $expectedCallParams"
+        }
 
         if (callParams is ParameterList) return callParams
         return ParameterList(callTypes, callParams)

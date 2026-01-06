@@ -26,7 +26,11 @@ import java.io.File
 //  so once we know all function names known to a scope (or everything), we can already decide many cases
 // -> yes/no, it easily gets difficult ^^
 
-// todo if-conditions help us find what type something is...
+// todo inline functions
+// todo expand generics
+// todo generate Java from SimpleAST
+
+// if-conditions help us find what type something is...
 //  but we need to understand what's possible and how the code flows...
 // -> partially done, but early exit remains an issue
 

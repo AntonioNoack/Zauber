@@ -126,7 +126,10 @@ object DefaultParameterExpansion {
                 NamedParameter(parameter.name, value)
             }
 
-            val superCall = InnerSuperCall(InnerSuperCallTarget.THIS, newValueParameters)
+            val superCall = InnerSuperCall(
+                InnerSuperCallTarget.THIS, newValueParameters,
+                scope, self.origin // is this fine?
+            )
             val newConstructor = Constructor(
                 self.valueParameters.subList(0, i),
                 scope, superCall, ExpressionList(emptyList(), scope, origin),

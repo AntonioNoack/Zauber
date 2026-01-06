@@ -26,6 +26,7 @@ import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
@@ -38,7 +39,7 @@ object ASTSimplifier {
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
         val graph = SimpleGraph(expr.scope, expr.origin)
-        simplifyImpl(context, expr, graph.entry, graph, false)
+        simplifyImpl(context, expr, graph.startBlock, graph, false)
         return graph
     }
 
@@ -176,17 +177,51 @@ object ASTSimplifier {
                 val baseType = expr.getBaseType(context)
 
                 val right = expr.right
-                if (right is CallExpression) {
-                    val method = expr.resolveCallable(context, baseType)
-                    simplifyCall(context, expr, currBlock, graph, left, right.valueParameters, method)
-                } else {
-                    val field = expr.resolveField(context, baseType)
-                        ?: TODO("Implement dot-expression on call or similar")
-                    val self = simplifyImpl(context, left, currBlock, graph, true)
-                    val dst = currBlock.field(field.getValueType(context))
-                    currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
-                    dst
+                when {
+                    expr.isFieldType() -> {
+                        val field = expr.resolveField(context, baseType)
+                            ?: TODO("Unresolved field for field type")
+                        val self = simplifyImpl(context, left, currBlock, graph, true)
+                        val dst = currBlock.field(field.getValueType(context))
+                        currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
+                        dst
+                    }
+                    expr.isMethodType() -> {
+                        right as CallExpression
+                        val method = expr.resolveCallable(context, baseType)
+                        simplifyCall(context, expr, currBlock, graph, left, right.valueParameters, method)
+                    }
+                    else -> {
+                        TODO("Resolve DotExpression with type ${expr.right.javaClass.simpleName}")
+                    }
                 }
+            }
+            is ImportedExpression -> {
+                val import = expr.nameAsImport
+                when (import.scopeType) {
+                    ScopeType.OBJECT -> {
+                        val field = import.objectField
+                            ?: throw IllegalStateException("Missing object field for ${import.pathStr}")
+                        val valueType = field.deductValueType(context)
+                        val dst = currBlock.field(valueType)
+                        currBlock.add(SimpleGetField(dst, self = null, field, expr.scope, expr.origin))
+                        dst
+                    }
+                    else -> {
+                        TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
+                    }
+                }
+            }
+            is CheckEqualsOp -> {
+                val a = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
+                val b = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
+                val dst = currBlock.field(BooleanType, booleanOwnership)
+                if (expr.byPointer) {
+                    SimpleCheckIdentical(dst, a, b, expr.negated, expr.scope, expr.origin)
+                } else {
+                    SimpleCheckEquals(dst, a, b, expr.negated, expr.scope, expr.origin)
+                }
+                dst
             }
             else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
         }

@@ -10,8 +10,10 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NumberType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType
@@ -49,8 +51,8 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
                 }
                 is CheckEqualsOp -> {
                     val newType = when {
-                        exprIsField(field, expr.left, context) -> getUniqueValueType(expr.right)
-                        exprIsField(field, expr.right, context) -> getUniqueValueType(expr.left)
+                        exprIsField(field, expr.left, context) -> getUniqueValueType(context, expr.right)
+                        exprIsField(field, expr.right, context) -> getUniqueValueType(context, expr.left)
                         else -> null
                     }
                     if (newType != null) {
@@ -102,13 +104,8 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         /**
          * If value == expr, then value must have a special type:
          * */
-        fun getUniqueValueType(expr: Expression): Type? {
-            return when (expr) {
-                is SpecialValueExpression if expr.value == SpecialValue.NULL -> NullType
-                is NamedCallExpression, is CallExpression, is DotExpression -> null // we could check their return type...
-                is StringExpression -> StringType
-                else -> throw NotImplementedError("Get unique value for $expr (${expr.javaClass.simpleName})")
-            }
+        fun getUniqueValueType(context: ResolutionContext, expr: Expression): Type? {
+            return TypeResolution.resolveType(context, expr)
         }
     }
 

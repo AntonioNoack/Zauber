@@ -10,7 +10,7 @@ interface Number : Comparable<Self> {
     operator fun rem(other: Self): Self
 }
 
-value class Int : Number {
+value class Int(val value: NativeI32) : Number {
 
     operator fun plus(other: Int): Int = native("this + other")
     operator fun plus(other: Long): Long = toLong() + other
@@ -56,7 +56,7 @@ value class Int : Number {
     }
 }
 
-value class Long : Number {
+value class Long(val value: NativeI64) : Number {
 
     operator fun plus(other: Int): Long = plus(other.toLong())
     operator fun plus(other: Long): Long = native("this + other")
@@ -102,7 +102,7 @@ value class Long : Number {
     }
 }
 
-value class Half : Number {
+value class Half(val value: NativeF16) : Number {
 
     operator fun plus(other: Half): Half = native("this + other")
     operator fun minus(other: Half): Half = native("this - other")
@@ -121,7 +121,7 @@ value class Half : Number {
     }
 }
 
-value class Float : Number {
+value class Float(val value: NativeF32) : Number {
     operator fun plus(other: Float): Float = native("this + other")
     operator fun minus(other: Float): Float = native("this - other")
     operator fun times(other: Float): Float = native("this * other")
@@ -142,7 +142,7 @@ value class Float : Number {
     }
 }
 
-value class Double : Number {
+value class Double(val value: NativeF64) : Number {
     operator fun plus(other: Double): Double = native("this + other")
     operator fun minus(other: Double): Double = native("this - other")
     operator fun times(other: Double): Double = native("this * other")
