@@ -107,7 +107,7 @@ object JavaSourceGenerator : Generator() {
             BooleanType.clazz -> builder.append(if (isGeneric) "Boolean" else "boolean")
             ByteType.clazz -> builder.append(if (isGeneric) "Byte" else "byte")
             ShortType.clazz -> builder.append(if (isGeneric) "Short" else "short")
-            CharType.clazz -> builder.append(if (isGeneric) "Char" else "char")
+            CharType.clazz -> builder.append(if (isGeneric) "Character" else "char")
             AnyType.clazz -> builder.append("Object")
             else -> builder.append(type.clazz.pathStr)
         }
@@ -251,9 +251,9 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendMethods(scope: Scope) {
-        for (method in scope.methods) {
-            appendMethod(scope, method)
+    private fun appendMethods(classScope: Scope) {
+        for (method in classScope.methods) {
+            appendMethod(classScope, method)
         }
     }
 
@@ -263,28 +263,28 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendMethod(scope: Scope, method: Method) {
+    private fun appendMethod(classScope: Scope, method: Method) {
 
         val selfType = method.selfType
-        val isBySelf = selfType == scope.typeWithArgs ||
+        val isBySelf = selfType == classScope.typeWithArgs ||
                 "override" in method.keywords ||
                 "abstract" in method.keywords
         if ("override" in method.keywords) builder.append("@Override ")
-        if ("abstract" in method.keywords && scope.scopeType != ScopeType.INTERFACE) {
+        if ("abstract" in method.keywords && classScope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
         }
 
-        builder.append("public ")
+        if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
         if ("external" in method.keywords) builder.append("native ")
         if (!isBySelf) builder.append("static ")
 
-        appendTypeParameterDeclaration(method.typeParameters, scope)
-        appendType(method.returnType ?: NullableAnyType, scope, false)
+        appendTypeParameterDeclaration(method.typeParameters, classScope)
+        appendType(method.returnType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
-        appendValueParameterDeclaration(if (!isBySelf) selfType else null, method.valueParameters, scope)
+        appendValueParameterDeclaration(if (!isBySelf) selfType else null, method.valueParameters, classScope)
         val body = method.body
         if (body != null) {
-            val context = ResolutionContext(scope, method.selfType, true, null)
+            val context = ResolutionContext(classScope, method.selfType, true, null)
             appendCode(context, body)
         } else {
             builder.append(";")

@@ -87,7 +87,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     }
 
     // todo assign them appropriately
-    val annotations = ArrayList<me.anno.zauber.ast.rich.Annotation>()
+    val annotations = ArrayList<Annotation>()
 
     var currPackage = root
     var i = 0
@@ -95,7 +95,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     /**
      * ClassType | SelfType
      * */
-    fun readTypePath(selfType: Type?): Type {
+    fun readTypePath(selfType: Type?): Type? {
         check(tokens.equals(i, TokenType.NAME))
         val name0 = tokens.toString(i++)
         if (name0 == "Self") {// Special-meaning type
@@ -115,7 +115,12 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         var path = genericParams.last()[name0]
             ?: currPackage.resolveTypeOrNull(name0, this)
             ?: (selfType as? ClassType)?.clazz?.resolveType(name0, this)
-            ?: throw IllegalStateException("Unresolved type '$name0' in $currPackage/$selfType at ${tokens.err(i - 1)}")
+            ?: run {
+                i--
+                println("Unresolved type '$name0' in $currPackage/$selfType at ${tokens.err(i)}")
+                return null
+            }
+
         while (tokens.equals(i, ".") && tokens.equals(i + 1, TokenType.NAME)) {
             path = (path as ClassType).clazz.getOrPut(tokens.toString(i + 1), null).typeWithoutArgs
             i += 2 // skip period and name
@@ -460,6 +465,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 return type
             } else {
                 var type = readType(null, false)
+                    ?: return null
                 if (tokens.equals(i, "?.")) {
                     type = typeOrNull(type)
                     i++
@@ -482,8 +488,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                 val name = tokens.toString(i++)
                 i++ // skip comma
-                val type = readType(null, true)
-
+                val type = readTypeNotNull(null, true)
                 conditions.add(TypeCondition(name, type))
 
                 if (tokens.equals(i, ",") &&
@@ -520,7 +525,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (LOGGER.enableDebug) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
 
         // parse parameters (...)
-        check(tokens.equals(i, TokenType.OPEN_CALL))
+        check(tokens.equals(i, TokenType.OPEN_CALL)) {
+            "Expected () for method call $selfType.$name, but found ${tokens.err(i)}"
+        }
 
         lateinit var parameters: List<Parameter>
         pushScope(methodScope) {
@@ -646,7 +653,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     if (tokens.equals(i + 1, "interface")) {
                         keywords.add("fun"); i++
                         readInterface()
-                    } else readMethod()
+                    } else {
+                        println("reading method at ${tokens.err(i)}")
+                        readMethod()
+                    }
                 }
                 tokens.equals(i, "interface") -> readInterface()
                 tokens.equals(i, "constructor") -> readConstructor()
@@ -699,6 +709,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
         check(tokens.equals(i, TokenType.NAME))
         val path = readTypePath(null)
+            ?: throw IllegalStateException("Expected type for annotation at ${tokens.err(i)}")
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             pushCall { readParamExpressions() }
         } else emptyList()
@@ -767,7 +778,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     val isVararg = keywords.remove("vararg")
                     check(tokens.equals(i++, ":")) { "Expected colon in var/val at ${tokens.err(i - 1)}" }
 
-                    var type = readType(null, true) // <-- handles generics now
+                    var type = readTypeNotNull(null, true) // <-- handles generics now
+
                     if (isVararg) type = ClassType(ArrayType.clazz, listOf(type))
 
                     val initialValue = if (tokens.equals(i, "=")) {
@@ -803,9 +815,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             ) {
                 val name = tokens.toString(i)
                 i += 2
-                result.add(LambdaParameter(name, readType(null, true)))
+                val type = readTypeNotNull(null, true)
+                result.add(LambdaParameter(name, type))
             } else if (tokens.equals(i, TokenType.NAME)) {
-                result.add(LambdaParameter(null, readType(null, true)))
+                val type = readTypeNotNull(null, true)
+                result.add(LambdaParameter(null, type))
             } else throw IllegalStateException("Expected name: Type or name at ${tokens.err(i)}")
             readComma()
         }
@@ -840,6 +854,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 val type = if (tokens.equals(i, ":")) {
                     i++ // skip :
                     readType(null, true)
+                        ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
                 } else NullableAnyType
 
                 params.add(Parameter(name, type, scope, origin))
@@ -998,7 +1013,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
                     val i0 = i + 2
                     i-- // skipping over name
-                    val type = readType(null, false)
+                    val type = readTypeNotNull(null, false)
                     check(tokens.equals(i++, "::"))
                     check(tokens.equals(i++, "class"))
                     check(i == i0)
@@ -1066,8 +1081,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val i0 = i
         val type = readType(selfType, true) as? ClassType
             ?: throw IllegalStateException("SuperType must be a ClassType, at ${tokens.err(i0)}")
-
-        println("read super call type: $type")
 
         val valueParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             pushCall { readParamExpressions() }
@@ -1386,24 +1399,36 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return true
     }
 
-    fun readType(selfType: Type?, allowSubTypes: Boolean): Type {
+    fun readType(selfType: Type?, allowSubTypes: Boolean): Type? {
         return readType(
             selfType, allowSubTypes,
             isAndType = false, insideTypeParams = false
         )
     }
 
+    fun readTypeNotNull(selfType: Type?, allowSubTypes: Boolean): Type {
+        return readType(selfType, allowSubTypes)
+            ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+    }
+
     fun readType(
         selfType: Type?, allowSubTypes: Boolean,
         isAndType: Boolean, insideTypeParams: Boolean
-    ): Type {
+    ): Type? {
+        val i0 = i
         val negate = tokens.equals(i, "!")
         if (negate) i++
 
         var base = readTypeExpr(selfType, allowSubTypes, insideTypeParams)
+            ?: run {
+                i = i0 // undo any reading
+                return null
+            }
+
         if (allowSubTypes && tokens.equals(i, ".")) {
             i++
             base = readType(base, true, isAndType, insideTypeParams)
+                ?: throw IllegalStateException("Expected to be able to read subtype")
             return if (negate) base.not() else base
         }
 
@@ -1415,16 +1440,18 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (negate) base = base.not()
         while (tokens.equals(i, "&")) {
             i++
-            base = andTypes(base, readType(null, allowSubTypes, true, insideTypeParams))
+            val typeB = readType(null, allowSubTypes, true, insideTypeParams)!!
+            base = andTypes(base, typeB)
         }
         if (!isAndType && tokens.equals(i, "|")) {
             i++
-            return unionTypes(base, readType(null, allowSubTypes, false, insideTypeParams))
+            val typeB = readType(null, allowSubTypes, false, insideTypeParams)!!
+            return unionTypes(base, typeB)
         }
         return base
     }
 
-    private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type {
+    private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type? {
 
         if (tokens.equals(i, "*")) {
             i++
@@ -1436,7 +1463,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             if (tokens.equals(endI + 1, "->")) {
                 val parameters = pushCall { readLambdaParameter() }
                 i = endI + 2 // skip ) and ->
-                val returnType = readType(selfType, true)
+                val returnType = readTypeNotNull(selfType, true)
                 return LambdaType(null, parameters, returnType)
             } else {
                 return pushCall { readType(selfType, true) }
@@ -1448,7 +1475,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
             }
             val value = tokens.toString(i++)
-            println("read comptime value: $value")
             return ComptimeValue(NumberType, listOf(value))
         }
 
@@ -1457,11 +1483,11 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
             }
             val value = tokens.toString(i++)
-            println("read comptime value: \"$value\"")
             return ComptimeValue(StringType, listOf(value))
         }
 
         val path = readTypePath(selfType) // e.g. ArrayList
+            ?: return null
 
         // todo We somehow need to support types like Map<K,V>.Iterator<J>, where Iterator is an inner class...
         //    or we just forbid inner classes"
@@ -1475,7 +1501,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         if (allowSubTypes && tokens.equals(i, ".")) {
             i++ // skip ., and then read lambda/inner subtype
-            val childType = readType(selfType, true)
+            val childType = readTypeNotNull(selfType, true)
             val joinedType = if (childType is LambdaType && childType.scopeType == null) {
                 LambdaType(baseType, childType.parameters, childType.returnType)
             } else SubType(baseType, childType)
@@ -1502,14 +1528,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             // todo store these (?)
             if (tokens.equals(i, "in")) i++
             if (tokens.equals(i, "out")) i++
-            args.add(
-                readType(
-                    selfType,
-                    allowSubTypes = true,
-                    isAndType = false,
-                    insideTypeParams = true
-                )
-            ) // recursive type
+            val type = readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
+                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+            args.add(type) // recursive type
             when {
                 tokens.equals(i, TokenType.COMMA) -> i++
                 tokens.equals(i, ">") -> {
@@ -1671,8 +1692,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                         )
                     }
                     "as?" -> createCastExpression(expr, scope, origin) { scope -> nullExpr(scope, origin) }
-                    "is" -> IsInstanceOfExpr(expr, readType(null, true), scope, origin)
-                    "!is" -> IsInstanceOfExpr(expr, readType(null, true), scope, origin).not()
+                    "is" -> {
+                        val type = readTypeNotNull(null, true)
+                        IsInstanceOfExpr(expr, type, scope, origin)
+                    }
+                    "!is" -> {
+                        val type = readTypeNotNull(null, true)
+                        IsInstanceOfExpr(expr, type, scope, origin).not()
+                    }
                     "?:" -> createBranchExpression(
                         expr, scope, origin,
                         { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
@@ -1706,7 +1733,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                                 is UnresolvedFieldExpression -> {
                                     val i0 = i + 1
                                     i -= 2 // skipping over :: and name
-                                    val type = readType(null, false)
+                                    val type = readTypeNotNull(null, false)
                                     check(tokens.equals(i++, "::"))
                                     check(tokens.equals(i++, "class"))
                                     check(i == i0)
@@ -1792,7 +1819,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         expr: Expression, scope: Scope, origin: Int,
         ifFalseExpr: (Scope) -> Expression
     ): Expression {
-        val type = readType(null, true)
+        val type = readTypeNotNull(null, true)
         return createBranchExpression(expr, scope, origin, { fieldExpr ->
             IsInstanceOfExpr(fieldExpr, type, scope, origin)
         }, { fieldExpr, ifTrueScope ->

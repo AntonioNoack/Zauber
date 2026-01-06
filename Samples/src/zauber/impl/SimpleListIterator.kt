@@ -1,5 +1,8 @@
 package zauber.impl
 
+import zauber.Int
+import zauber.List
+
 class SimpleListIterator<V>(
     val base: List<V>,
     var index: Int = 0

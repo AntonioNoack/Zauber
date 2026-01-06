@@ -29,5 +29,5 @@ class ArrayList<V>(capacity: Int = 16) : MutableList<V> {
         return true
     }
 
-    override fun iterator(): Iterator<V> = SimpleListIterator(this, 0)
+    override fun listIterator(startIndex: Int): Iterator<V> = SimpleListIterator(this, startIndex)
 }

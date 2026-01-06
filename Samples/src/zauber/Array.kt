@@ -2,7 +2,6 @@ package zauber
 
 import zauber.impl.SimpleListIterator
 
-// todo is this a MutableList? Kind of yes, kind of no...
 class Array<V>(override val size: Int) : List<V> {
     private val address: NativePtr = calloc(sizeOf<V>() * size)
 
@@ -13,7 +12,7 @@ class Array<V>(override val size: Int) : List<V> {
     external fun copyOf(newSize: Int): Array<V>
     override fun isEmpty(): Boolean = size == 0
 
-    override fun iterator(): Iterator<V> = SimpleListIterator(this, 0)
+    override fun listIterator(startIndex: Int) = SimpleListIterator<V>(this, startIndex)
 }
 
 fun <V> arrayOf(vararg values: V): Array<V> {
@@ -24,5 +23,6 @@ fun <V> arrayOfNulls(size: Int): Array<V?> {
     return Array<V?>(size)
 }
 
-external fun sizeOf<V /* todo this needs Ownership information, too */ >(): Int
+/* todo V needs Ownership information, not just type information */
+external fun <V> sizeOf(): Int
 external fun calloc(sizeOf: Int): NativePtr
