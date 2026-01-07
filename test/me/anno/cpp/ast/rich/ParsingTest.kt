@@ -113,4 +113,46 @@ class ParsingTest {
         """.trimIndent()
         )
     }
+
+    @Test
+    fun testSimpleSwitchCase() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            void test(int x) {
+                switch(x) {
+                    case 0:
+                        test(x+1);
+                    case 1:
+                        break;
+                    case 2:
+                    default:
+                        break;
+                }
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testEvilSwitchCase() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            void test(int x) {
+                switch(x) {
+                // yes, this is allowed
+                    int y;
+                case 0:
+                    test(x+1);
+                case 1:
+                    break;
+                case 2:
+                default:
+                    break;
+                }
+            }
+        """.trimIndent()
+        )
+    }
 }

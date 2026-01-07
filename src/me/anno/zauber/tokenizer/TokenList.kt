@@ -38,7 +38,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     ): R = push(findBlockEnd(i, openStr, closeStr), readImpl)
 
     fun findBlockEnd(i: Int, open: TokenType, close: TokenType): Int {
-        check(equals(i, open))
+        check(equals(i, open)) { "Expected $open, got ${err(i)}" }
         var depth = 1
         var j = i + 1
         while (depth > 0) {

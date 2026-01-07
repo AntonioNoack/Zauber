@@ -392,6 +392,7 @@ class CppASTBuilder(
     fun readPrefix(): Expression {
         val origin = origin(i)
 
+        val label: String? = null
         return when {
             tokens.equals(i, "(") && looksLikeCast() -> {
                 consume("(")
@@ -445,12 +446,14 @@ class CppASTBuilder(
             tokens.equals(i, TokenType.STRING) ->
                 StringExpression(tokens.toString(i++), currPackage, origin)
 
-            consumeIf("return") -> readReturn(null)
+            consumeIf("return") -> readReturn(label)
 
             consumeIf("if") -> readIf()
-            consumeIf("do") -> readDoWhile(null) as Expression
-            consumeIf("while") -> readWhile(null) as Expression
-            consumeIf("switch") -> readSwitch(null) as Expression
+            consumeIf("do") -> readDoWhile(label)
+            consumeIf("while") -> readWhile(label)
+            consumeIf("switch") -> readSwitch(label)
+            consumeIf("continue") -> ContinueExpression(readLabel(), currPackage, origin)
+            consumeIf("break") -> BreakExpression(readLabel(), currPackage, origin)
 
             // todo try to resolve field immediately
             tokens.equals(i, TokenType.NAME) ->
@@ -464,6 +467,14 @@ class CppASTBuilder(
 
             else -> throw IllegalStateException("Unexpected token at ${tokens.err(i)}")
         }
+    }
+
+    private fun readLabel(): String? {
+        if (!consumeIf(";")) {
+            val label = tokens.toString(i++)
+            consume(";")
+            return label
+        } else return null
     }
 
     private fun readReturn(label: String?): ReturnExpression {

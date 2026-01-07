@@ -1,28 +1,56 @@
 package me.anno.cpp.ast.rich
 
-import me.anno.zauber.ast.rich.controlflow.SubjectCondition
-import me.anno.zauber.ast.rich.controlflow.SubjectConditionType
-import me.anno.zauber.ast.rich.controlflow.SubjectWhenCase
-import me.anno.zauber.ast.rich.controlflow.whenSubjectToIfElseChain
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.syntheticList
+import me.anno.zauber.ast.rich.controlflow.IfElseBranch
+import me.anno.zauber.ast.rich.controlflow.createDoWhileLoop
+import me.anno.zauber.ast.rich.controlflow.storeSubject
+import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
+import me.anno.zauber.types.Types.BooleanType
 
 fun CppASTBuilder.readSwitch(label: String?): Expression {
-    // `switch` already consumed
-    val subject = readExpressionCondition()
-    val scopeName = currPackage.generateName("switch")
-    val cases = ArrayList<SubjectWhenCase>()
-    val childScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
-        var defaultCase: Expression? = null
 
-        // todo if a block does not end with a 'break', we need to enter the next block
-        while (!tokens.equals(i, TokenType.CLOSE_BLOCK)) {
+    val switchValue0 = readExpressionCondition()
+    val switchValue = storeSubject(currPackage, switchValue0)
+
+    // `switch` already consumed
+    val bodyInstr = ArrayList<Expression>()
+    val origin = origin(i)
+
+    val trueExpr = SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
+    val falseExpr = SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
+
+    val scopeName = currPackage.generateName("switch")
+    val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
+
+        val noPrevBranch = Field(
+            scope, null, true, null,
+            "__hadPrevBranch", BooleanType, trueExpr, syntheticList, origin
+        )
+        val prevBranchContinues = Field(
+            scope, null, true, null,
+            "__prevBranchContinues", BooleanType, falseExpr, syntheticList, origin
+        )
+
+        val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)
+        val prevBranchContinueExpr = FieldExpression(prevBranchContinues, scope, origin)
+
+        // todo read declaration/imports before any block...
+
+        // if a block does not end with a 'break', we need to enter the next block
+        while (i < tokens.size) {
             when {
                 tokens.equals(i, "case") -> {
+                    // condition: (noPrevBranch & equals) | prevBranchContinues
                     val values = ArrayList<Expression>()
 
+                    val origin = origin(i)
                     // one or more `case X:`
                     do {
                         consume("case")
@@ -30,31 +58,67 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
                         consume(":")
                     } while (tokens.equals(i, "case"))
 
-                    val body = readCaseBody()
-                    val conditions = values.map {
-                        SubjectCondition(it, null, SubjectConditionType.EQUALS, null)
+                    val equalsCondition = values.map {
+                        CheckEqualsOp(
+                            it, switchValue, false, false,
+                            scope, origin
+                        ) as Expression
+                    }.reduce { a, b -> a.or(b) }
+                    val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...
+                    val totalCondition = normalCase.or(prevBranchContinueExpr)
+                    val scopeName = scope.generateName("case")
+                    lateinit var bodyScope1: Scope
+                    val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
+                        bodyScope1 = bodyScopeI
+                        readCaseBody()
                     }
-                    cases += SubjectWhenCase(conditions, scope, body)
+                    // we found a branch
+                    body.add(0, AssignmentExpression(noPrevBranchExpr, falseExpr))
+                    // we assume there is a break flag
+                    body.add(0, AssignmentExpression(prevBranchContinueExpr, falseExpr))
+                    // if the end is reached, we mark the continue flag
+                    body.add(AssignmentExpression(prevBranchContinueExpr, trueExpr))
+                    bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
                 }
                 consumeIf("default") -> {
-                    if (defaultCase != null)
-                        throw IllegalStateException("Duplicate default case at ${tokens.err(i)}")
+                    // condition: noPrevBranch | prevBranchContinue
                     consume(":")
-                    defaultCase = readCaseBody()
-                    cases += SubjectWhenCase(null, scope, defaultCase)
+                    val totalCondition = noPrevBranchExpr.or(prevBranchContinueExpr)
+                    val scopeName = scope.generateName("default")
+                    lateinit var bodyScope1: Scope
+                    val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
+                        bodyScope1 = bodyScopeI
+                        readCaseBody()
+                    }
+                    // flags are not interesting anymore after this
+                    bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
                 }
                 else -> throw IllegalStateException("Expected case/default in switch at ${tokens.err(i)}")
             }
         }
         scope
     }
-    return whenSubjectToIfElseChain(childScope, subject, cases)
+
+    val body = ExpressionList(bodyInstr, bodyScope, origin)
+    return createDoWhileLoop(body, trueExpr, label)
 }
 
-private fun CppASTBuilder.readCaseBody(): Expression {
-    val origin = origin(i)
-    val expressions = ArrayList<Expression>()
+private fun Expression.and(other: Expression): Expression {
+    return NamedCallExpression(
+        this, "and", emptyList(),
+        listOf(NamedParameter(null, other)), scope, origin
+    ).apply { resolvedType = BooleanType }
+}
 
+private fun Expression.or(other: Expression): Expression {
+    return NamedCallExpression(
+        this, "or", emptyList(),
+        listOf(NamedParameter(null, other)), scope, origin
+    ).apply { resolvedType = BooleanType }
+}
+
+private fun CppASTBuilder.readCaseBody(): ArrayList<Expression> {
+    val expressions = ArrayList<Expression>()
     while (i < tokens.size) {
         when {
             tokens.equals(i, "case") ||
@@ -64,6 +128,5 @@ private fun CppASTBuilder.readCaseBody(): Expression {
             else -> expressions += readExpression()
         }
     }
-
-    return ExpressionList(expressions, currPackage, origin)
+    return expressions
 }

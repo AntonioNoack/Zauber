@@ -32,11 +32,10 @@ fun lambdaTypeToClassType(lambdaType: LambdaType): ClassType {
     return ClassType(base, lambdaType.parameters.map { it.type })
 }
 
-fun ASTBuilderBase.whenSubjectToIfElseChain(
+fun storeSubject(
     scope: Scope,
     subject: Expression,
-    cases: List<SubjectWhenCase>
-): Expression {
+): FieldExpression {
     val origin = subject.origin
     val subjectName = scope.generateName("subject")
     val value = if (subject is AssignmentExpression) subject.newValue else subject
@@ -44,8 +43,16 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
         scope, scope.typeWithoutArgs, false, null, subjectName,
         null, value, emptyList(), origin
     )
+    return FieldExpression(field, scope, origin)
+}
 
-    val subjectExpr = FieldExpression(field, scope, origin)
+fun ASTBuilderBase.whenSubjectToIfElseChain(
+    scope: Scope,
+    subject: Expression,
+    cases: List<SubjectWhenCase>
+): Expression {
+    val origin = subject.origin
+    val subjectExpr = storeSubject(scope, subject)
     val assignment = AssignmentExpression(subjectExpr, subject)
     val cases = cases.map { case ->
         val condition =
