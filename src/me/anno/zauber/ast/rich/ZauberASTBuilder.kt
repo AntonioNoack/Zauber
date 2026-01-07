@@ -1249,7 +1249,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val origin = origin(i++) // skip return
         if (LOGGER.enableDebug) LOGGER.debug("reading return")
         if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
-            !tokens.equals(i, TokenType.COMMA)
+            !tokens.equals(i, ",", ";")
         ) {
             val value = readExpression()
             if (LOGGER.enableDebug) LOGGER.debug("  with value $value")

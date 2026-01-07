@@ -172,6 +172,14 @@ class TokenList(val source: CharSequence, val fileName: String) {
         }
     }
 
+    fun equals(i: Int, str: String, str2: String): Boolean {
+        return equals(i, str) || equals(i, str2)
+    }
+
+    fun equals(i: Int, str: String, str2: String, str3: String): Boolean {
+        return equals(i, str) || equals(i, str2) || equals(i, str3)
+    }
+
     @Suppress("POTENTIALLY_NON_REPORTED_ANNOTATION")
     @Deprecated("Don't use this method")
     override fun equals(other: Any?): Boolean {

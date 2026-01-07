@@ -5,10 +5,8 @@ import me.anno.cpp.tokenizer.CppTokenizer.Companion.cppKeywords
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.CastExpression.createCastExpression
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
-import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.controlflow.WhileLoop
-import me.anno.zauber.ast.rich.controlflow.createDoWhileLoop
-import me.anno.zauber.ast.rich.controlflow.shortcutExpressionI
+import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
+import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -25,6 +23,7 @@ import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 
 class CppASTBuilder(
@@ -43,6 +42,7 @@ class CppASTBuilder(
             "double" to DoubleType,
             "bool" to BooleanType,
             "char" to ByteType,
+            "void" to UnitType,
         )
     }
 
@@ -82,10 +82,12 @@ class CppASTBuilder(
         while (end < tokens.size) {
             when {
                 tokens.equals(end, ";") || tokens.equals(end, "=") -> {
-                    return readField(end)
+                    readField(end, true)
+                    return
                 }
                 tokens.equals(end, "(") -> {
-                    return readMethod(end)
+                    readMethod(end)
+                    return
                 }
             }
             end++
@@ -145,23 +147,69 @@ class CppASTBuilder(
         return type to name
     }
 
-    fun readField(typeNameEnd: Int) {
+    fun readField(typeNameEnd: Int, skipEnd: Boolean): Field {
         val origin = origin(i)
         val (type, name) = readTypeAndName(typeNameEnd)
         val initialValue = if (consumeIf("=")) readExpression() else null
 
-        Field(
+        val field = Field(
             currPackage, null, true, null,
             name, type, initialValue, packKeywords(), origin
         )
 
-        check(tokens.equals(i++, ";"))
+        if (skipEnd) check(tokens.equals(i++, ";", ",", ")"))
+        return field
     }
 
-    fun readMethod(typeNameEnd: Int) {
-        val (type, name) = readTypeAndName(typeNameEnd)
-        // float test(int run);
-        TODO("Read method from $i to $typeNameEnd")
+    private fun readArguments(): List<Parameter> {
+        // special case for a list without arguments
+        if (i + 1 == tokens.size && consumeIf("void")) {
+            return emptyList()
+        }
+        val arguments = ArrayList<Parameter>()
+        while (i < tokens.size) {
+            var end = i
+            var depth = 0
+            while (end < tokens.size) {
+                when {
+                    (tokens.equals(end, ",", "(")) && depth == 0 -> break
+                    tokens.equals(end, "(", "[", "{") -> depth++
+                    tokens.equals(end, ")", "]", "}") -> depth--
+                }
+                end++
+            }
+            val origin = origin(i)
+            val field = readField(end, false)
+            arguments.add(Parameter(field.name, field.valueType!!, currPackage, origin))
+            readComma()
+        }
+        return arguments
+    }
+
+    fun readMethod(typeNameEnd: Int): Method {
+        val origin = origin(i)
+        val (returnType, name) = readTypeAndName(typeNameEnd)
+        val genName = if (language == LanguageKind.C) name else currPackage.generateName("f:$name")
+        val methodScope = currPackage.getOrPut(genName, ScopeType.METHOD)
+        val keywords = packKeywords()
+        val arguments = pushScope(methodScope) {
+            pushCall { readArguments() }
+        }
+        val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+            pushBlock(methodScope) {
+                readBodyOrExpression()
+            }
+        } else {
+            consume(";")
+            null
+        }
+        // todo find self type, for fields, too
+        val method = Method(
+            null, name, emptyList(), arguments,
+            methodScope, returnType, emptyList(), body, keywords, origin
+        )
+        methodScope.selfAsMethod = method
+        return method
     }
 
     fun readEnum() {
@@ -397,6 +445,8 @@ class CppASTBuilder(
             tokens.equals(i, TokenType.STRING) ->
                 StringExpression(tokens.toString(i++), currPackage, origin)
 
+            consumeIf("return") -> readReturn(null)
+
             consumeIf("if") -> readIf()
             consumeIf("do") -> readDoWhile(null) as Expression
             consumeIf("while") -> readWhile(null) as Expression
@@ -414,6 +464,23 @@ class CppASTBuilder(
 
             else -> throw IllegalStateException("Unexpected token at ${tokens.err(i)}")
         }
+    }
+
+    private fun readReturn(label: String?): ReturnExpression {
+        val origin = origin(i) // skip return
+        if (LOGGER.enableDebug) LOGGER.debug("reading return")
+        val expr = if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
+            !tokens.equals(i, ",", ";")
+        ) {
+            val value = readExpression()
+            if (LOGGER.enableDebug) LOGGER.debug("  with value $value")
+            ReturnExpression(value, label, currPackage, origin)
+        } else {
+            if (LOGGER.enableDebug) LOGGER.debug("  without value")
+            ReturnExpression(unitInstance, label, currPackage, origin)
+        }
+        consume(";")
+        return expr
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {

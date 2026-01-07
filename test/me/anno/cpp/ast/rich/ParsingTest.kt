@@ -2,10 +2,13 @@ package me.anno.cpp.ast.rich
 
 import me.anno.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Types.UnitType
 import org.junit.jupiter.api.Test
 
 class ParsingTest {
@@ -29,6 +32,17 @@ class ParsingTest {
             val testScope = root.children.first { it.name == testScopeName }
             resolveTypesAndNames(testScope)
             return testScope
+        }
+
+        fun ensureUnitIsKnown() {
+            // todo how can we avoid duplicate assignments???
+            val tokens = ZauberTokenizer(
+                """
+            package zauber
+            object Unit
+        """.trimIndent(), "?"
+            ).tokenize()
+            ZauberASTBuilder(tokens, root).readFileLevel()
         }
     }
 
@@ -71,6 +85,30 @@ class ParsingTest {
             class Color {
                 int x;
                 int y = 0;
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testMethod() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            void main(int a, int b, int c) {
+                return;
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testVoidArgsMethod() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            void main(void) {
+                return;
             }
         """.trimIndent()
         )
