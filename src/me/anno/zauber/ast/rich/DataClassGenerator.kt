@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTBuilder.Companion.synthetic
+import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.synthetic
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.controlflow.shortcutExpressionI
 import me.anno.zauber.ast.rich.expression.*
@@ -59,7 +59,7 @@ object DataClassGenerator {
         }
     }
 
-    fun ASTBuilder.finishDataClass(classScope: Scope) {
+    fun ZauberASTBuilder.finishDataClass(classScope: Scope) {
 
         check(currPackage === classScope)
         val origin = origin(i)
@@ -103,7 +103,7 @@ object DataClassGenerator {
         }
     }
 
-    private fun ASTBuilder.generateHashCodeMethod(
+    private fun ZauberASTBuilder.generateHashCodeMethod(
         classScope: Scope, origin: Int,
         primaryFields: List<Field>
     ) {
@@ -132,7 +132,7 @@ object DataClassGenerator {
         )
     }
 
-    private fun ASTBuilder.generateToStringMethod(
+    private fun ZauberASTBuilder.generateToStringMethod(
         classScope: Scope, origin: Int,
         primaryFields: List<Field>
     ) {
@@ -160,7 +160,7 @@ object DataClassGenerator {
         )
     }
 
-    private fun ASTBuilder.generateEqualsAnyMethod(
+    private fun ZauberASTBuilder.generateEqualsAnyMethod(
         classScope: Scope, origin: Int,
         primaryFields: List<Field>
     ) {

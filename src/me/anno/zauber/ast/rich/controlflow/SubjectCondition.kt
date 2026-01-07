@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.controlflow
 
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.binaryOp
@@ -15,7 +15,7 @@ class SubjectCondition(
     val subjectConditionType: SubjectConditionType,
     val extraCondition: Expression?
 ) {
-    fun toExpression(astBuilder: ASTBuilder, subject: Expression, newScope: Scope): Expression {
+    fun toExpression(astBuilder: ASTBuilderBase, subject: Expression, newScope: Scope): Expression {
         return when (subjectConditionType) {
             SubjectConditionType.EQUALS ->
                 astBuilder.binaryOp(newScope, subject, "==", value!!)

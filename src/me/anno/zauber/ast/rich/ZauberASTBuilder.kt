@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.CastExpression.createBranchExpression
+import me.anno.zauber.ast.rich.CastExpression.createCastExpression
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
@@ -38,11 +40,11 @@ import kotlin.math.min
 //  -> we should be able to implement when() and for() using these
 //  -> do we even need macros when we have a good language? :)
 
-class ASTBuilder(val tokens: TokenList, val root: Scope) {
+class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, root) {
 
     companion object {
 
-        private val LOGGER = LogManager.getLogger(ASTBuilder::class)
+        private val LOGGER = LogManager.getLogger(ZauberASTBuilder::class)
 
         const val synthetic = "synthetic"
         val syntheticList = listOf(synthetic)
@@ -78,19 +80,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    val imports = ArrayList<Import>()
-    val keywords = ArrayList<String>()
-    val genericParams = ArrayList<HashMap<String, GenericType>>()
-
-    init {
-        genericParams.add(HashMap())
-    }
-
     // todo assign them appropriately
     val annotations = ArrayList<Annotation>()
-
-    var currPackage = root
-    var i = 0
 
     /**
      * ClassType | SelfType
@@ -180,28 +171,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
         readClassBody(name, keywords, scopeType)
         popGenericParams()
-    }
-
-    inline fun <R> pushScope(scopeType: ScopeType, prefix: String, callback: (Scope) -> R): R {
-        val name = currPackage.generateName(prefix)
-        return pushScope(name, scopeType, callback)
-    }
-
-    inline fun <R> pushScope(name: String, scopeType: ScopeType, callback: (Scope) -> R): R {
-        val parent = currPackage
-        val child = parent.getOrPut(name, scopeType)
-        currPackage = child
-        val value = callback(child)
-        currPackage = parent
-        return value
-    }
-
-    private inline fun <R> pushScope(scope: Scope, callback: () -> R): R {
-        val parent = currPackage
-        currPackage = scope
-        val value = callback()
-        currPackage = parent
-        return value
     }
 
     private fun readInterface() {
@@ -719,13 +688,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return Annotation(path, params)
     }
 
-    fun packKeywords(): List<String> {
-        if (keywords.isEmpty()) return emptyList()
-        val tmp = ArrayList(keywords)
-        keywords.clear()
-        return tmp
-    }
-
     fun collectNames(keywords1: List<String>) {
         for (keyword in keywords1) {
             if (!tokens.equals(i, TokenType.STRING) &&
@@ -829,14 +791,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return result
     }
 
-    fun pushGenericParams() {
-        genericParams.add(HashMap(genericParams.last()))
-    }
-
-    fun popGenericParams() {
-        genericParams.removeLast()
-    }
-
     fun readTypeParameterDeclarations(scope: Scope): List<Parameter> {
         pushGenericParams()
         if (!tokens.equals(i, "<")) return emptyList()
@@ -910,10 +864,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    fun origin(i: Int): Int {
-        return TokenListIndex.getIndex(tokens, i)
-    }
-
     private fun readPrefix(): Expression {
 
         val label =
@@ -966,8 +916,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             tokens.equals(i, "while") -> readWhileLoop(label)
             tokens.equals(i, "do") -> readDoWhileLoop(label)
             tokens.equals(i, "for") -> readForLoop(label)
-            tokens.equals(i, "when") -> {
-                i++
+            consumeIf("when") -> {
                 when {
                     tokens.equals(i, TokenType.OPEN_CALL) -> readWhenWithSubject()
                     tokens.equals(i, TokenType.OPEN_BLOCK) -> readWhenWithConditions()
@@ -976,9 +925,9 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             }
             tokens.equals(i, "try") -> readTryCatch()
             tokens.equals(i, "return") -> readReturn(label)
-            tokens.equals(i, "throw") -> ThrowExpression(origin(i++), readExpression())
-            tokens.equals(i, "break") -> BreakExpression(label, currPackage, origin(i++))
-            tokens.equals(i, "continue") -> ContinueExpression(label, currPackage, origin(i++))
+            consumeIf("throw") -> ThrowExpression(origin(i - 1), readExpression())
+            consumeIf("break") -> BreakExpression(label, currPackage, origin(i - 1))
+            consumeIf("continue") -> ContinueExpression(label, currPackage, origin(i - 1))
 
             tokens.equals(i, "object") &&
                     tokens.equals(i + 1, TokenType.OPEN_BLOCK) -> readInlineClass0()
@@ -1105,22 +1054,22 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
     }
 
     private fun readWhileLoop(label: String?): WhileLoop {
-        i++
+        consume("while")
         val condition = readExpressionCondition()
         val body = readBodyOrExpression()
         return WhileLoop(condition, body, label)
     }
 
     private fun readDoWhileLoop(label: String?): WhileLoop {
-        i++
+        consume("do")
         val body = readBodyOrExpression()
         check(tokens.equals(i++, "while"))
         val condition = readExpressionCondition()
-        return createWhileLoop(body = body, condition = condition, label)
+        return createDoWhileLoop(body = body, condition = condition, label)
     }
 
     private fun readForLoop(label: String?): Expression {
-        i++ // skip for
+        consume("for")
         lateinit var iterable: Expression
         if (tokens.equals(i + 1, TokenType.OPEN_CALL)) {
             // destructuring expression
@@ -1187,25 +1136,24 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return whenSubjectToIfElseChain(childScope, subject, cases)
     }
 
-    private fun readSubjectConditions(nextArrow: Int): List<SubjectCondition?> {
-        val conditions = ArrayList<SubjectCondition?>()
+    private fun readSubjectConditions(nextArrow: Int): List<SubjectCondition>? {
+        val conditions = ArrayList<SubjectCondition>()
         if (LOGGER.enableDebug) LOGGER.debug("reading conditions, ${tokens.toString(i, nextArrow)}")
+        var hadElse = false
         push(nextArrow) {
             while (i < tokens.size) {
                 if (LOGGER.enableDebug) LOGGER.debug("  reading condition $nextArrow,$i,${tokens.err(i)}")
                 when {
-                    tokens.equals(i, "else") -> {
-                        i++; conditions.add(null)
+                    consumeIf("else") -> {
+                        hadElse = true
+                        return@push null
                     }
                     tokens.equals(i, "in") || tokens.equals(i, "!in") -> {
                         val symbol =
                             if (tokens.toString(i++) == "in") SubjectConditionType.CONTAINS
                             else SubjectConditionType.NOT_CONTAINS
                         val value = readExpression()
-                        val extra = if (tokens.equals(i, "if")) {
-                            i++
-                            readExpression()
-                        } else null
+                        val extra = if (consumeIf("if")) readExpression() else null
                         conditions.add(SubjectCondition(value, null, symbol, extra))
                     }
                     tokens.equals(i, "is") || tokens.equals(i, "!is") -> {
@@ -1213,18 +1161,12 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                             if (tokens.toString(i++) == "is") SubjectConditionType.INSTANCEOF
                             else SubjectConditionType.NOT_INSTANCEOF
                         val type = readType(null, false)
-                        val extra = if (tokens.equals(i, "if")) {
-                            i++
-                            readExpression()
-                        } else null
+                        val extra = if (consumeIf("if")) readExpression() else null
                         conditions.add(SubjectCondition(null, type, symbol, extra))
                     }
                     else -> {
                         val value = readExpression()
-                        val extra = if (tokens.equals(i, "if")) {
-                            i++
-                            readExpression()
-                        } else null
+                        val extra = if (consumeIf("if")) readExpression() else null
                         conditions.add(SubjectCondition(value, null, SubjectConditionType.EQUALS, extra))
                     }
                 }
@@ -1232,9 +1174,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 readComma()
             }
         }
-        if (conditions.isEmpty()) {
+        if (hadElse == conditions.isEmpty()) {
             throw IllegalStateException("Missing conditions at ${tokens.err(i)}")
         }
+        if (hadElse) return null
         return conditions
     }
 
@@ -1479,10 +1422,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         val path = readTypePath(selfType) // e.g. ArrayList
             ?: return null
 
-        // todo We somehow need to support types like Map<K,V>.Iterator<J>, where Iterator is an inner class...
-        //    or we just forbid inner classes"
-
-
         val typeArgs = readTypeParameters(selfType)
         val baseType =
             if (path is ClassType) ClassType(path.clazz, typeArgs)
@@ -1533,18 +1472,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return args
     }
 
-    private fun <R> pushCall(readImpl: () -> R): R {
-        val result = tokens.push(i++, TokenType.OPEN_CALL, TokenType.CLOSE_CALL, readImpl)
-        i++ // skip )
-        return result
-    }
-
-    private fun <R> pushArray(readImpl: () -> R): R {
-        val result = tokens.push(i++, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY, readImpl)
-        i++ // skip ]
-        return result
-    }
-
     fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
         val name = scopeName ?: currPackage.generateName(scopeType.name)
         return pushScope(name, scopeType) { childScope ->
@@ -1558,7 +1485,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         }
     }
 
-    private fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
+    fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
         return pushScope(scope) {
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             scanBlockForNewTypes(i, blockEnd)
@@ -1626,6 +1553,15 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return result
     }
 
+    private fun nullExpr(scope: Scope, origin: Int): SpecialValueExpression {
+        return SpecialValueExpression(SpecialValue.NULL, scope, origin)
+    }
+
+    private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
+        val nullExpr = nullExpr(scope, origin)
+        return CheckEqualsOp(expr, nullExpr, false, true, scope, origin)
+    }
+
     fun readExpression(minPrecedence: Int = 0): Expression {
         var expr = readPrefix()
         if (LOGGER.enableDebug) LOGGER.debug("prefix: $expr")
@@ -1673,7 +1609,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
                 val scope = currPackage
                 expr = when (symbol) {
-                    "as" -> createCastExpression(expr, scope, origin) { ifFalseScope ->
+                    "as" -> createCastExpression(
+                        expr, scope, origin,
+                        readTypeNotNull(null, true)
+                    ) { ifFalseScope ->
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                         val debugInfoParam = NamedParameter(null, debugInfoExpr)
                         CallExpression(
@@ -1681,7 +1620,10 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                             emptyList(), listOf(debugInfoParam), origin
                         )
                     }
-                    "as?" -> createCastExpression(expr, scope, origin) { scope -> nullExpr(scope, origin) }
+                    "as?" -> createCastExpression(
+                        expr, scope, origin,
+                        readTypeNotNull(null, true)
+                    ) { scope -> nullExpr(scope, origin) }
                     "is" -> {
                         val type = readTypeNotNull(null, true)
                         IsInstanceOfExpr(expr, type, scope, origin)
@@ -1755,15 +1697,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return expr
     }
 
-    private fun nullExpr(scope: Scope, origin: Int): SpecialValueExpression {
-        return SpecialValueExpression(SpecialValue.NULL, scope, origin)
-    }
-
-    private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
-        val nullExpr = nullExpr(scope, origin)
-        return CheckEqualsOp(expr, nullExpr, false, true, scope, origin)
-    }
-
     private fun readRHS(op: Operator): Expression =
         readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
 
@@ -1803,42 +1736,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                 !tokens.equals(i + 1, "!=") &&
                 !tokens.equals(i + 1, "===") &&
                 !tokens.equals(i + 1, "!==")
-    }
-
-    private fun createCastExpression(
-        expr: Expression, scope: Scope, origin: Int,
-        ifFalseExpr: (Scope) -> Expression
-    ): Expression {
-        val type = readTypeNotNull(null, true)
-        return createBranchExpression(expr, scope, origin, { fieldExpr ->
-            IsInstanceOfExpr(fieldExpr, type, scope, origin)
-        }, { fieldExpr, ifTrueScope ->
-            fieldExpr.clone(ifTrueScope)
-        }, ifFalseExpr)
-    }
-
-    private fun createBranchExpression(
-        expr: Expression, scope: Scope, origin: Int,
-        condition: (FieldExpression) -> Expression,
-        ifTrueExpr: (FieldExpression, Scope) -> Expression,
-        ifFalseExpr: (Scope) -> Expression,
-    ): Expression {
-        // we need to store the variable in a temporary field
-        val tmpField = scope.generateImmutableField(expr)
-        val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
-        val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
-        val fieldExpr = FieldExpression(tmpField, scope, origin)
-        val condition = condition(fieldExpr)
-        val ifTrueExpr = ifTrueExpr(fieldExpr, ifTrueScope)
-        val ifFalseExpr = ifFalseExpr(ifFalseScope)
-        return ExpressionList(
-            listOf(
-                AssignmentExpression(fieldExpr, expr),
-                IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
-            ), scope, origin
-        )/*.apply {
-            LOGGER.info("Created branch: $this")
-        }*/
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {
@@ -1955,11 +1852,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return LambdaExpression(variables, currPackage, body)
     }
 
-    private fun readComma() {
-        if (tokens.equals(i, TokenType.COMMA)) i++
-        else if (i < tokens.size) throw IllegalStateException("Expected comma at ${tokens.err(i)}")
-    }
-
     fun readMethodBody(): ExpressionList {
         val originalScope = currPackage
         val origin = origin(i)
@@ -1972,7 +1864,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
                     throw IllegalStateException("} in the middle at ${tokens.err(i)}")
-                tokens.equals(i, ";") -> i++ // skip
+                consumeIf(";") -> {} // skip
                 tokens.equals(i, "@") -> annotations.add(readAnnotation())
                 tokens.equals(i, "val") -> result.add(readDeclaration(false))
                 tokens.equals(i, "var") -> result.add(readDeclaration(true))
@@ -1980,8 +1872,8 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
                     // just read the method, it gets added to the scope
                     readMethod()
                 }
-                tokens.equals(i, "lateinit") -> {
-                    check(tokens.equals(++i, "var"))
+                consumeIf("lateinit") -> {
+                    check(tokens.equals(i, "var"))
                     result.add(readDeclaration(true, isLateinit = true))
                 }
                 else -> {
@@ -2015,46 +1907,6 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         return code
     }
 
-    private fun exprSplitsScope(expr: Expression): Boolean {
-        return when (expr) {
-            is SpecialValueExpression,
-            is StringExpression,
-            is NumberExpression,
-            is FieldExpression,
-            is MemberNameExpression,
-            is UnresolvedFieldExpression,
-                // todo if-else-branch can enforce a condition: if only one branch returns
-            is IfElseBranch,
-                // todo while-loop without break can enforce a condition, too
-            is WhileLoop -> false
-            is IsInstanceOfExpr -> true // all these (as, as?, is, is?) can change type information...
-            is NamedCallExpression -> {
-                exprSplitsScope(expr.base) ||
-                        expr.valueParameters.any { exprSplitsScope(it.value) }
-            }
-            is DotExpression -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
-            is ReturnExpression,
-            is ThrowExpression -> false // should these split the scope??? nothing after can happen
-            is CallExpression -> {
-                exprSplitsScope(expr.base) ||
-                        expr.valueParameters.any { exprSplitsScope(it.value) } ||
-                        (expr.base is MemberNameExpression && expr.base.name == "check") // this check is a little too loose
-            }
-            is AssignmentExpression -> true // explicit yes
-            is AssignIfMutableExpr -> true // we don't know better yet
-            is ExpressionList -> expr.list.any { exprSplitsScope(it) }
-            is CompareOp -> exprSplitsScope(expr.value)
-            is ImportedExpression -> false // I guess not...
-            is LambdaExpression -> false // I don't think so
-            is BreakExpression, is ContinueExpression -> false // execution ends here anyway
-            is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
-            is DoubleColonPrefix -> false // some lambda -> no
-            is NamedTypeExpression -> false
-            is TryCatchBlock -> false // already a split on its own, or is it?
-            else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
-        }
-    }
-
     private fun readDestructuringFields(): List<FieldDeclaration> {
         val names = ArrayList<FieldDeclaration>()
         pushCall {
@@ -2071,16 +1923,14 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
 
     private fun readDestructuring(isMutable: Boolean): Expression {
         val names = readDestructuringFields()
-        val value = if (tokens.equals(i, "=")) {
-            i++ // skip =
+        val value = if (consumeIf("=")) {
             readExpression()
         } else throw IllegalStateException("Expected value for destructuring at ${tokens.err(i)}")
         return createDestructuringAssignment(names, value, isMutable)
     }
 
     private fun readTypeOrNull(selfType: Type? = null): Type? {
-        return if (tokens.equals(i, ":")) {
-            i++ // skip :
+        return if (consumeIf(":")) {
             readType(selfType, true)
         } else null
     }
@@ -2105,8 +1955,7 @@ class ASTBuilder(val tokens: TokenList, val root: Scope) {
         if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
 
         val type = readTypeOrNull()
-        val value = if (tokens.equals(i, "=")) {
-            i++ // skip =
+        val value = if (consumeIf("=")) {
             readExpression()
         } else null
 

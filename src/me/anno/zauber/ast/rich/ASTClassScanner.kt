@@ -113,7 +113,6 @@ object ASTClassScanner {
                     val name = tokens.toString(j++)
 
                     val childScope = currPackage.getOrPut(name, ScopeType.ENUM_ENTRY_CLASS)
-                    childScope.typeParameters = emptyList()
                     childScope.hasTypeParameters = true
                     if (false) println("Defined type parameters for ${nextPackage.pathStr}.$name")
 

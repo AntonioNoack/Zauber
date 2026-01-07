@@ -1,6 +1,6 @@
-package me.anno.c.preprocessor
+package me.anno.cpp.preprocessor
 
-import me.anno.c.tokenizer.CTokenizer
+import me.anno.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.tokenizer.TokenList
 import org.junit.jupiter.api.Assertions
 
@@ -12,7 +12,7 @@ abstract class PreprocessorTestBase {
 
     protected fun preprocess(files: Map<String, String>, fileName: String): TokenList {
         val tokenized = files.mapValues { (fileName, source) ->
-            CTokenizer(source, fileName, true).tokenize()
+            CppTokenizer(source, fileName, true).tokenize()
         }
         /*println("Tokenized:")
         for ((fileName, tokens) in tokenized) {

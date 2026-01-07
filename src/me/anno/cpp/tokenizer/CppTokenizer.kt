@@ -1,9 +1,9 @@
-package me.anno.c.tokenizer
+package me.anno.cpp.tokenizer
 
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 
-class CTokenizer(
+class CppTokenizer(
     val src: String,
     fileName: String,
     val isCNotCxx: Boolean
@@ -11,7 +11,7 @@ class CTokenizer(
 
     companion object {
 
-        private val cKeywords = setOf(
+        val cKeywords = setOf(
             "auto", "break", "case", "char", "const", "continue",
             "default", "do", "double", "else", "enum", "extern",
             "float", "for", "goto", "if", "inline", "int", "long",
@@ -23,7 +23,7 @@ class CTokenizer(
             "_Thread_local"
         )
 
-        private val cppKeywords = cKeywords + setOf(
+        val cppKeywords = cKeywords + setOf(
             "alignas", "alignof", "and", "and_eq", "asm", "bitand",
             "bitor", "bool", "catch", "char16_t", "char32_t",
             "class", "compl", "constexpr", "decltype", "delete",

@@ -172,6 +172,12 @@ class TokenList(val source: CharSequence, val fileName: String) {
         }
     }
 
+    @Suppress("POTENTIALLY_NON_REPORTED_ANNOTATION")
+    @Deprecated("Don't use this method")
+    override fun equals(other: Any?): Boolean {
+        throw IllegalStateException("Incorrect equals used")
+    }
+
     override fun toString(): String {
         return List(size) { i ->
             "${getType(i)}(${toString(i)})"

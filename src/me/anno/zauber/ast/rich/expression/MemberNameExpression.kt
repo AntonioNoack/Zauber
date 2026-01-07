@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ASTBuilderBase
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.findType
@@ -14,7 +15,7 @@ class MemberNameExpression(
 ) : Expression(scope, origin) {
 
     companion object {
-        fun nameExpression(name: String, origin: Int, astBuilder: ASTBuilder, scope: Scope): Expression {
+        fun nameExpression(name: String, origin: Int, astBuilder: ASTBuilderBase, scope: Scope): Expression {
             // todo check whether something is in front (some sort of period/accessor)
             val isChild = when {
                 astBuilder.tokens.equals(origin - 1, ".") ||

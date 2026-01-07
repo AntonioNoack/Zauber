@@ -1,7 +1,7 @@
 package me.anno.zauber
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -38,7 +38,7 @@ class IsSubTypeOfTest {
             $this
         """.trimIndent(), "?"
             ).tokenize()
-            ASTBuilder(tokens, root).readFileLevel()
+            ZauberASTBuilder(tokens, root).readFileLevel()
             return root.children.first { it.name == testScopeName }
         }
 

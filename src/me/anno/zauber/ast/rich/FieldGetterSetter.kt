@@ -14,7 +14,7 @@ object FieldGetterSetter {
 
     private val LOGGER = LogManager.getLogger(FieldGetterSetter::class)
 
-    fun ASTBuilder.readGetter() {
+    fun ZauberASTBuilder.readGetter() {
         check(tokens.equals(++i, TokenType.OPEN_CALL))
         check(tokens.equals(++i, TokenType.CLOSE_CALL))
 
@@ -50,7 +50,7 @@ object FieldGetterSetter {
         }
     }
 
-    fun ASTBuilder.readSetter() {
+    fun ZauberASTBuilder.readSetter() {
         i++ // skip set
         val field = lastField!!
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -105,7 +105,7 @@ object FieldGetterSetter {
         )
     }
 
-    fun ASTBuilder.finishLastField() {
+    fun ZauberASTBuilder.finishLastField() {
         val field = lastField ?: return
         if (needsGetter(field)) {
             keywords.clear()
@@ -134,7 +134,7 @@ object FieldGetterSetter {
         return false
     }
 
-    fun ASTBuilder.createGetterMethod(
+    fun ZauberASTBuilder.createGetterMethod(
         field: Field, expr: Expression?, backingField: Field,
         scope: Scope, origin: Int
     ) {
@@ -153,7 +153,7 @@ object FieldGetterSetter {
         field.getter = method
     }
 
-    fun ASTBuilder.createSetterMethod(
+    fun ZauberASTBuilder.createSetterMethod(
         field: Field, expr: Expression?,
         backingField: Field, valueField: Field,
         scope: Scope, origin: Int,

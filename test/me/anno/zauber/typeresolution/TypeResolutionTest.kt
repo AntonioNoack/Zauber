@@ -1,13 +1,12 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.ScopeType
@@ -46,7 +45,7 @@ class TypeResolutionTest {
             $code
         """.trimIndent(), "?"
             ).tokenize()
-            ASTBuilder(tokens, root).readFileLevel()
+            ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             resolveTypesAndNames(testScope)
@@ -64,7 +63,7 @@ class TypeResolutionTest {
             $code
         """.trimIndent(), "?"
             ).tokenize()
-            ASTBuilder(tokens, root).readFileLevel()
+            ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             resolveTypesAndNames(testScope)
@@ -114,9 +113,6 @@ class TypeResolutionTest {
         fun defineListParameters() {
             ListType.clazz
         }
-
-        private val LOGGER = LogManager.getLogger(TypeResolutionTest::class)
-
     }
 
     @Test

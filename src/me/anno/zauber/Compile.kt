@@ -1,6 +1,6 @@
 package me.anno.zauber
 
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeExpansion
@@ -116,7 +116,7 @@ object Compile {
     fun buildASTs() {
         for (i in sources.indices) {
             val source = sources[i]
-            ASTBuilder(source, root).readFileLevel()
+            ZauberASTBuilder(source, root).readFileLevel()
         }
     }
 

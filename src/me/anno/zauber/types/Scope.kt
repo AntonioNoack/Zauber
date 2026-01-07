@@ -246,7 +246,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         return null
     }
 
-    fun resolveTypeOrNull(name: String, astBuilder: ASTBuilder): Type? =
+    fun resolveTypeOrNull(name: String, astBuilder: ASTBuilderBase): Type? =
         resolveTypeOrNull(name, astBuilder.imports, true)
 
     fun resolveTypeOrNull(
@@ -308,14 +308,14 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun resolveType(
         name: String, typeParameters: List<Parameter>,
-        functionScope: Scope, astBuilder: ASTBuilder,
+        functionScope: Scope, astBuilder: ASTBuilderBase,
     ): Type {
         val typeParam = typeParameters.firstOrNull { it.name == name }
         if (typeParam != null) return GenericType(functionScope, typeParam.name)
         return resolveType(name, astBuilder)
     }
 
-    fun resolveType(name: String, astBuilder: ASTBuilder): Type {
+    fun resolveType(name: String, astBuilder: ASTBuilderBase): Type {
         val name = if (name == "kotlin") "zauber" else name
         return resolveTypeOrNull(name, astBuilder)
             ?: throw IllegalStateException("Unresolved type '$name' in $this, children: ${children.map { it.name }}")

@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -18,7 +18,7 @@ private fun compareTo(left: Expression, right: Expression) =
     )
 
 @Suppress("IntroduceWhenSubject") // this feature is experimental, why is it recommended???
-fun ASTBuilder.binaryOp(
+fun ASTBuilderBase.binaryOp(
     scope: Scope, left: Expression, symbol: String, right: Expression,
     origin: Int = left.origin
 ): Expression {

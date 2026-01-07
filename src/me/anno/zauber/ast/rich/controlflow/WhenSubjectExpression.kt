@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.logging.LogManager
@@ -14,15 +14,15 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 private val LOGGER = LogManager.getLogger("WhenSubjectExpression")
 
-class SubjectWhenCase(val conditions: List<SubjectCondition?>, val conditionScope: Scope, val body: Expression) {
+class SubjectWhenCase(val conditions: List<SubjectCondition>?, val conditionScope: Scope, val body: Expression) {
 
     override fun toString(): String {
-        return "${conditions.joinToString(", ")} -> { $body }"
+        return "${conditions?.joinToString(", ") ?: "else"} -> { $body }"
     }
 
-    fun toCondition(astBuilder: ASTBuilder, subject: Expression): Expression {
+    fun toCondition(astBuilder: ASTBuilderBase, subject: Expression): Expression {
         val scope = conditionScope
-        val expressions = conditions.map { condition -> condition!!.toExpression(astBuilder, subject, scope) }
+        val expressions = conditions!!.map { condition -> condition.toExpression(astBuilder, subject, scope) }
         return expressions.reduce { a, b -> shortcutExpression(a, ShortcutOperator.OR, b, scope, a.origin) }
     }
 }
@@ -32,7 +32,11 @@ fun lambdaTypeToClassType(lambdaType: LambdaType): ClassType {
     return ClassType(base, lambdaType.parameters.map { it.type })
 }
 
-fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases: List<SubjectWhenCase>): Expression {
+fun ASTBuilderBase.whenSubjectToIfElseChain(
+    scope: Scope,
+    subject: Expression,
+    cases: List<SubjectWhenCase>
+): Expression {
     val origin = subject.origin
     val subjectName = scope.generateName("subject")
     val value = if (subject is AssignmentExpression) subject.newValue else subject
@@ -45,12 +49,12 @@ fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases
     val assignment = AssignmentExpression(subjectExpr, subject)
     val cases = cases.map { case ->
         val condition =
-            if (null !in case.conditions) {
+            if (case.conditions != null) {
                 case.toCondition(this, subjectExpr)
             } else null // else-case
         // if all conditions are 'is X',
         //  then join them together, and insert a field with more specific type...
-        if (case.conditions.all { it != null && it.subjectConditionType == SubjectConditionType.INSTANCEOF }) {
+        if (case.conditions != null && case.conditions.all { it.subjectConditionType == SubjectConditionType.INSTANCEOF }) {
             val fieldName = when (subject) {
                 is AssignmentExpression -> when (val name = subject.variableName) {
                     is MemberNameExpression -> name.name
@@ -62,7 +66,7 @@ fun ASTBuilder.whenSubjectToIfElseChain(scope: Scope, subject: Expression, cases
             }
             if (fieldName != null) {
                 val caseScope = case.body.scope
-                val jointType = case.conditions.map { it!!.type!! }.reduce { a, b -> unionTypes(a, b) }
+                val jointType = case.conditions.map { it.type!! }.reduce { a, b -> unionTypes(a, b) }
                 // todo this more-specific field is only valid until fieldName is assigned, again, then we have to use unionType
                 // todo this is also only valid, if no other thread/function could write to the field
                 Field(

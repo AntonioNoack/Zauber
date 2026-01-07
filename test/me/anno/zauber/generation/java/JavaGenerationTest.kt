@@ -1,7 +1,7 @@
 package me.anno.zauber.generation.java
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
@@ -21,7 +21,7 @@ class JavaGenerationTest {
             $code
         """.trimIndent(), "?"
             ).tokenize()
-            ASTBuilder(tokens, root).readFileLevel()
+            ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             resolveTypesAndNames(testScope)
