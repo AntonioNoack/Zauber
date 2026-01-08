@@ -1,7 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -12,6 +11,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
@@ -105,22 +105,25 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         )
     }
 
+    private fun getOuterClassDepth(scope: Scope?): Int {
+        var scope = scope
+        while (scope != null) {
+            if (scope.scopeType?.isClassType() == true) {
+                return scope.path.size
+            }
 
-    fun resolveFieldType(
-        context: ResolutionContext, name: String,
-        typeParameters: ParameterList?, origin: Int
-    ): Type {
-        LOGGER.info("typeParams: $typeParameters")
-        val field = resolveField(context, name, typeParameters)
-        if (field == null) {
-            val selfScope = context.selfScope
-            val codeScope = context.codeScope
-            throw IllegalStateException(
-                "Could not resolve field ${selfScope?.pathStr}.'$name'<$typeParameters> " +
-                        "in ${resolveOrigin(origin)}, scopes: ${codeScope.pathStr}"
-            )
+            scope = scope.parentIfSameFile
         }
-        return field.getValueType(context)
+        return -1
+    }
+
+    private fun isScopeAvailable(maybeSelfScope: Scope, originalSelfScope: Int): Boolean {
+        return when (maybeSelfScope.scopeType) {
+            ScopeType.INLINE_CLASS, ScopeType.PACKAGE, ScopeType.OBJECT -> true // only one instance
+            ScopeType.INTERFACE, ScopeType.NORMAL_CLASS, ScopeType.ENUM_CLASS ->
+                maybeSelfScope.path.size >= originalSelfScope
+            else -> true // idk
+        }
     }
 
     fun resolveField(
@@ -131,10 +134,26 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$name': $typeParameters, selfType: $selfType")
         val valueParameters = emptyList<ValueParameter>()
-        val field = MethodResolver.null1()
-            ?: findMemberInHierarchy(context.selfScope, name, returnType, selfType, typeParameters, valueParameters)
-            ?: findMemberInFile(context.codeScope, name, returnType, selfType, typeParameters, valueParameters)
-            ?: findMemberInFile(langScope, name, returnType, selfType, typeParameters, valueParameters)
+
+        var field: ResolvedField? = null
+        var maybeSelfScope = context.selfScope
+        val outerClassDepth = getOuterClassDepth(maybeSelfScope)
+        while (maybeSelfScope != null && field == null) {
+            if (isScopeAvailable(maybeSelfScope, outerClassDepth)) {
+                println("Checking for field '$name' in $maybeSelfScope")
+                field = findMemberInHierarchy(
+                    maybeSelfScope, name, returnType,
+                    if (maybeSelfScope == context.selfType) selfType
+                    else maybeSelfScope.typeWithoutArgs, typeParameters, valueParameters
+                )
+            } else println("Skipping scope '$maybeSelfScope'")
+
+            maybeSelfScope = maybeSelfScope.parentIfSameFile
+        }
+
+        field =
+            field ?: findMemberInFile(context.codeScope, name, returnType, selfType, typeParameters, valueParameters)
+        field = field ?: findMemberInFile(langScope, name, returnType, selfType, typeParameters, valueParameters)
         return field
     }
 

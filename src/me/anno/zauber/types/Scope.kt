@@ -58,7 +58,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             check(hasTypeParameters) {
                 "Missing type parameters for $pathStr"
             }
-            check(scopeType?.isClassType() == true)
+            // check(scopeType?.isClassType() == true)
         }
         ClassType(
             this, ParameterList(

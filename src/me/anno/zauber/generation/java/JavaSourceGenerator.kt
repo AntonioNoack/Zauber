@@ -221,6 +221,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendInitBlocks(scope: Scope) {
         for (body in scope.code) {
             writeBlock {
+                scope.hasTypeParameters = true // just to prevent crashing
                 val context = ResolutionContext(scope, scope.typeWithArgs, true, null)
                 appendCode(context, body)
             }

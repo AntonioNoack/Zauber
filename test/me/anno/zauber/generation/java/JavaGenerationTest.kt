@@ -7,6 +7,7 @@ import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class JavaGenerationTest {
@@ -47,6 +48,29 @@ class JavaGenerationTest {
             }
         """.trimIndent()
         assertEquals(expected, testClassGeneration(source))
+    }
+
+    @Test
+    fun testPrimaryConstructorCode() {
+        val source1 = """
+            class Test {
+                val x: Int = 5
+            }
+        """.trimIndent()
+        val source2 = """
+            class Test {
+                val x: Int
+                init {
+                    x = 5
+                }
+            }
+        """.trimIndent()
+        val actual1 = testClassGeneration(source1)
+        val actual2 = testClassGeneration(source2)
+        println("Generated1:\n$actual1")
+        println("Generated2:\n$actual2")
+        assertEquals(actual2, actual1)
+        assertTrue("x = " in actual1 && " = 5" in actual1)
     }
 
     @Test

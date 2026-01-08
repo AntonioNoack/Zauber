@@ -94,7 +94,9 @@ object ASTSimplifier {
                         val self: SimpleField? =
                             null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                         // todo we should call the setter, if there is one
-                        val field = dstExpr.resolveField(context)!!.resolved
+                        val field0 = dstExpr.resolveField(context.withAllowTypeless(false))
+                            ?: throw IllegalStateException("Failed to resolve field from $dstExpr in $context")
+                        val field = field0.resolved
                         currBlock.add(SimpleSetField(self, field, newValue, expr.scope, expr.origin))
                         voidField
                     }
@@ -180,7 +182,8 @@ object ASTSimplifier {
                 dst
             }
             is NumberExpression -> {
-                val dst = currBlock.field(expr.resolvedType!!)
+                val type = TypeResolution.resolveType(context, expr)
+                val dst = currBlock.field(type)
                 currBlock.add(SimpleNumber(dst, expr))
                 dst
             }

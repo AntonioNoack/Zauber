@@ -379,10 +379,10 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     private fun readFieldInClass(isMutable: Boolean) {
         val origin = origin(i++)// skip var/val
 
-        val fieldScope = currPackage // todo is this fine??
-        val typeParameters = readTypeParameterDeclarations(fieldScope)
-        val selfType = readFieldOrMethodSelfType(typeParameters, fieldScope)
-            ?: getSelfType(fieldScope)
+        val classScope = currPackage // todo is this fine??
+        val typeParameters = readTypeParameterDeclarations(classScope)
+        val selfType = readFieldOrMethodSelfType(typeParameters, classScope)
+            ?: getSelfType(classScope)
 
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
@@ -390,8 +390,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val keywords = packKeywords()
         val valueType = readTypeOrNull(selfType)
 
-        val primScope = fieldScope.getOrCreatePrimConstructorScope()
-        val initialValue = pushScope(primScope) {
+        val constructorScope = classScope.getOrCreatePrimConstructorScope()
+        val initialValue = pushScope(constructorScope) {
             // println("Fields in primary constructor for $primScope: ${primScope.fields}")
             if (tokens.equals(i, "=")) {
                 i++
@@ -409,6 +409,11 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             name, valueType, initialValue, keywords, origin
         )
         field.typeParameters = typeParameters
+        if (initialValue != null) {
+            val fieldExpr = FieldExpression(field, classScope, origin)
+            constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
+        }
+
         if (LOGGER.enableDebug) LOGGER.debug("read field $name: $valueType = $initialValue")
 
         finishLastField()

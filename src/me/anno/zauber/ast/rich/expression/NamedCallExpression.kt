@@ -1,11 +1,9 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.NamedParameter
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveFieldType
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
