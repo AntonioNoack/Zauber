@@ -4,10 +4,7 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.controlflow.ThrowExpression
-import me.anno.zauber.ast.rich.controlflow.WhileLoop
+import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -37,6 +34,11 @@ object ASTSimplifier {
 
     val voidField = SimpleField(UnitType, Ownership.COMPTIME, -1)
     val booleanOwnership = Ownership.COMPTIME
+
+    // todo inline functions
+    // todo calculate labels for break/continue
+    // todo calculate what errors a function throws,
+    //  and handle all possibilities after each call
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
         val graph = SimpleGraph(expr.scope, expr.origin)
@@ -141,7 +143,7 @@ object ASTSimplifier {
                 )
             }
             is SpecialValueExpression -> {
-                val type = when (expr.value) {
+                val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
                     else -> TODO("Resolve type of $expr")
                 }
@@ -195,7 +197,8 @@ object ASTSimplifier {
                 dst
             }
             is IfElseBranch -> simplifyBranch(context, expr, currBlock, graph, needsValue)
-            is WhileLoop -> simplifyLoop(context, expr, currBlock, graph, needsValue)
+            is WhileLoop -> simplifyWhile(context, expr, currBlock, graph, needsValue)
+            is DoWhileLoop -> simplifyDoWhile(context, expr, currBlock, graph, needsValue)
             is DotExpression -> {
                 val left = expr.left
                 val baseType = expr.getBaseType(context)
@@ -255,7 +258,7 @@ object ASTSimplifier {
         }
     }
 
-    private fun simplifyLoop(
+    private fun simplifyWhile(
         context: ResolutionContext,
         expr: WhileLoop,
         currBlock: SimpleBlock,
@@ -283,6 +286,45 @@ object ASTSimplifier {
 
         val loop = SimpleLoop(insideBlock, scope, origin)
         currBlock.add(beforeBlock) // as a label
+        currBlock.add(loop) // looping itself
+        currBlock.add(afterBlock) // as a label & where to continue
+
+        // todo we need to somehow split any further instructions
+        //  to be placed into afterBlock, not currBlock
+        return voidField // no return value is supported
+    }
+
+    private fun simplifyDoWhile(
+        context: ResolutionContext,
+        expr: DoWhileLoop,
+        currBlock: SimpleBlock,
+        graph: SimpleGraph,
+        needsValue: Boolean,
+    ): SimpleField {
+
+        val scope = expr.scope
+        val origin = expr.origin
+
+        val label = expr.label
+        val afterBlock = graph.addBlock(scope, origin)
+        val insideBlock = graph.addBlock(scope, origin)
+        val continueBlock = graph.addBlock(scope, origin)
+        graph.breakLabels[label] = afterBlock
+        graph.continueLabels[label] = continueBlock
+
+        // add body to insideBlock
+        simplifyImpl(context.withCodeScope(expr.body.scope), expr.body, insideBlock, graph, needsValue)
+
+        insideBlock.add(continueBlock) // as a label
+
+        // add condition and jump to insideBlock
+        val condition = simplifyImpl(
+            context.withCodeScope(expr.condition.scope),
+            expr.condition.not(), continueBlock, graph, needsValue
+        ) ?: throw IllegalStateException("Condition should return a boolean, not Nothing")
+        continueBlock.add(SimpleGoto(condition, afterBlock, scope, origin))
+
+        val loop = SimpleLoop(insideBlock, scope, origin)
         currBlock.add(loop) // looping itself
         currBlock.add(afterBlock) // as a label & where to continue
 

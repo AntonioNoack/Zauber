@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.syntheticList
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.controlflow.createDoWhileLoop
+import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -41,7 +41,9 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
         val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)
         val prevBranchContinueExpr = FieldExpression(prevBranchContinues, scope, origin)
 
-        // todo read declaration/imports before any block...
+        if (i < tokens.size && !tokens.equals(i, "case", "default")) {
+            readCaseBody() // not executed, but read for fields
+        }
 
         // if a block does not end with a 'break', we need to enter the next block
         while (i < tokens.size) {
@@ -64,14 +66,17 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
                             scope, origin
                         ) as Expression
                     }.reduce { a, b -> a.or(b) }
+
                     val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...
                     val totalCondition = normalCase.or(prevBranchContinueExpr)
+
                     val scopeName = scope.generateName("case")
                     lateinit var bodyScope1: Scope
                     val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
                         bodyScope1 = bodyScopeI
                         readCaseBody()
                     }
+
                     // we found a branch
                     body.add(0, AssignmentExpression(noPrevBranchExpr, falseExpr))
                     // we assume there is a break flag
@@ -100,7 +105,7 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
     }
 
     val body = ExpressionList(bodyInstr, bodyScope, origin)
-    return createDoWhileLoop(body, trueExpr, label)
+    return createNamedBlock(body, label, currPackage, origin)
 }
 
 private fun Expression.and(other: Expression): Expression {

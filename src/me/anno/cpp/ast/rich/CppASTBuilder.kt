@@ -302,11 +302,11 @@ class CppASTBuilder(
         return WhileLoop(condition, body, label)
     }
 
-    private fun readDoWhile(label: String?): WhileLoop {
+    private fun readDoWhile(label: String?): DoWhileLoop {
         val body = readBodyOrExpression()
         check(tokens.equals(i++, "while"))
         val condition = readExpressionCondition()
-        return createDoWhileLoop(body = body, condition = condition, label)
+        return DoWhileLoop(body = body, condition = condition, label)
     }
 
     fun readExpression(minPrecedence: Int = 0): Expression {

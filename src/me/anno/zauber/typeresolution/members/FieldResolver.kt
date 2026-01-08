@@ -53,7 +53,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             val expr = (field.initialValue ?: field.getterExpr)!!
             LOGGER.info("Resolving valueType($field), initial/getter: $expr")
             val context = ResolutionContext(
-                field.declaredScope,//.innerScope,
+                field.codeScope,//.innerScope,
                 field.selfType ?: scopeSelfType,
                 false, null
             )
@@ -98,7 +98,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         ) ?: return null
 
         val selfType = selfType ?: fieldSelfType
-        val context = ResolutionContext(field.declaredScope, selfType, false, fieldReturnType)
+        val context = ResolutionContext(field.codeScope, selfType, false, fieldReturnType)
         return ResolvedField(
             generics.subList(0, fieldSelfParams.size), field,
             generics.subList(fieldSelfParams.size, generics.size), context

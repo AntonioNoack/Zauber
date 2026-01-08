@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.controlflow.BreakExpression
 import me.anno.zauber.ast.rich.controlflow.ContinueExpression
+import me.anno.zauber.ast.rich.controlflow.DoWhileLoop
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.controlflow.ThrowExpression
@@ -132,7 +133,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
                 // todo if-else-branch can enforce a condition: if only one branch returns
             is IfElseBranch,
                 // todo while-loop without break can enforce a condition, too
-            is WhileLoop -> false
+            is WhileLoop, is DoWhileLoop -> false
             is IsInstanceOfExpr -> true // all these (as, as?, is, is?) can change type information...
             is NamedCallExpression -> {
                 exprSplitsScope(expr.base) ||

@@ -9,7 +9,7 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class Field(
-    var declaredScope: Scope,
+    var codeScope: Scope,
     val selfType: Type?, // may be null inside methods, owner is stack, kind of
     val isMutable: Boolean,
     val byParameter: Any?, // Parameter | LambdaParameter | null
@@ -36,7 +36,7 @@ class Field(
     var typeParameters: List<Parameter> = emptyList()
 
     init {
-        declaredScope.addField(this)
+        codeScope.addField(this)
     }
 
     fun deductValueType(context: ResolutionContext): Type {
@@ -76,8 +76,8 @@ class Field(
     }
 
     fun moveToScope(newScope: Scope) {
-        check(declaredScope.fields.remove(this))
-        declaredScope = newScope
+        check(codeScope.fields.remove(this))
+        codeScope = newScope
         newScope.addField(this)
     }
 }

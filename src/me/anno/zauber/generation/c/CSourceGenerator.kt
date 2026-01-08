@@ -125,13 +125,22 @@ object CSourceGenerator : Generator() {
                         }
                     }
                     is WhileLoop -> {
+                        builder.append("while (")
+                        writeExpr(expr.condition, true)
+                        builder.append(") {\n")
                         block {
-                            builder.append("while (")
-                            writeExpr(expr.condition, true)
-                            builder.append(") {\n")
                             indent()
                             writeExpr(expr.body, false)
                         }
+                    }
+                    is DoWhileLoop -> {
+                        builder.append("do {\n")
+                        block {
+                            writeExpr(expr.body, false)
+                        }
+                        builder.append("while (")
+                        writeExpr(expr.condition, true)
+                        builder.append(") {\n")
                     }
                     is ExpressionList -> {
                         // check(!needsValue) // todo if needs value, we somehow need to extract the last one...
@@ -146,13 +155,9 @@ object CSourceGenerator : Generator() {
                     }
                     is ReturnExpression -> {
                         val value = expr.value
-                        if (value != null) {
-                            builder.append("return ")
-                            writeExpr(value, true)
-                            builder.append(";\n")
-                        } else {
-                            builder.append("return;\n")
-                        }
+                        builder.append("return ")
+                        writeExpr(value, true)
+                        builder.append(";\n")
                     }
                     is MemberNameExpression -> {
                         builder.append(expr.name)
@@ -230,7 +235,7 @@ object CSourceGenerator : Generator() {
                         builder.append(expr.field.name)
                     }
                     is SpecialValueExpression -> {
-                        builder.append(expr.value.symbol)
+                        builder.append(expr.type.symbol)
                     }
                     is UnresolvedFieldExpression -> {
                         builder.append(expr.name)

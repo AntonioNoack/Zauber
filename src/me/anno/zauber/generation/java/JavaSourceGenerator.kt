@@ -441,18 +441,18 @@ object JavaSourceGenerator : Generator() {
                 builder.append(expr.type.symbol).append(" 0")
             }
             is SimpleCall -> {
-                val methodName = expr.method.name
+                val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
                     0 -> {
-                        if (expr.base.type == BooleanType && methodName == "not") {
-                            builder.append('!').append1(expr.base)
+                        if (expr.self.type == BooleanType && methodName == "not") {
+                            builder.append('!').append1(expr.self)
                             true
                         } else false
                     }
                     1 -> {
                         // todo compareTo is a problem for the numbers:
                         //  we must call their static function
-                        val supportsType = when (expr.base.type) {
+                        val supportsType = when (expr.self.type) {
                             StringType, ByteType, ShortType, CharType, IntType, LongType, FloatType, DoubleType -> true
                             else -> false
                         }
@@ -465,7 +465,7 @@ object JavaSourceGenerator : Generator() {
                             else -> null
                         }
                         if (supportsType && symbol != null) {
-                            builder.append1(expr.base).append(symbol)
+                            builder.append1(expr.self).append(symbol)
                             builder.append1(expr.valueParameters[0])
                             true
                         } else false
@@ -473,8 +473,8 @@ object JavaSourceGenerator : Generator() {
                     else -> false
                 }
                 if (!done) {
-                    builder.append1(expr.base).append('.')
-                    builder.append(expr.method.name)
+                    builder.append1(expr.self).append('.')
+                    builder.append(expr.methodName)
                     appendValueParams(expr.valueParameters)
                 }
             }

@@ -1,20 +1,24 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.types.BooleanUtils.not
+import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 
-fun createDoWhileLoop(body: Expression, condition: Expression, label: String?): WhileLoop {
-    val origin = body.origin
-    val negatedCondition = condition.not()
-    val breakI = BreakExpression(label, body.scope, origin)
-    val newBody = ExpressionList(
-        listOf(
-            condition,
-            IfElseBranch(negatedCondition, breakI, null)
-        ), body.scope, origin
-    )
-    return WhileLoop(SpecialValueExpression(SpecialValue.TRUE, body.scope, origin), newBody, label)
+/**
+ * cannot easily be converted to a while-loop, because continue needs to run the evaluation!
+ * */
+class DoWhileLoop(val body: Expression, val condition: Expression, val label: String?) :
+    Expression(condition.scope, condition.origin) {
+
+    override fun toStringImpl(depth: Int): String {
+        return "${if (label != null) "$label@" else ""} do { ${body.toString(depth)} } while (${condition.toString(depth)})"
+    }
+
+    override fun resolveType(context: ResolutionContext): Type =exprHasNoType(context)
+    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // this has no return value
+
+    override fun clone(scope: Scope) =
+        DoWhileLoop(body = body.clone(body.scope), condition = condition.clone(scope), label)
+
 }

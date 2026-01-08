@@ -29,6 +29,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         get() = children.mapNotNull { it.selfAsConstructor }
     val methods: List<Method>
         get() = children.mapNotNull { it.selfAsMethod }
+
     val fields = ArrayList<Field>()
 
     val superCalls = ArrayList<SuperCall>()

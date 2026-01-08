@@ -3,7 +3,7 @@ package me.anno.zauber
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.TypeExpansion
+import me.anno.zauber.expansion.TypeSpecialization
 import me.anno.zauber.generation.c.CSourceGenerator
 import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
@@ -154,7 +154,7 @@ object Compile {
         }
 
         step("Resolving Specific Calls") {
-            TypeExpansion.resolveSpecificCalls(root)
+            TypeSpecialization.specializeAllGenerics(root)
         }
 
         if (false) {

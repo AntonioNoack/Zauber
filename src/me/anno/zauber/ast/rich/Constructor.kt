@@ -2,19 +2,25 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 
 class Constructor(
-    val valueParameters: List<Parameter>,
-    val scope: Scope,
+    valueParameters: List<Parameter>,
+    scope: Scope,
     val superCall: InnerSuperCall?,
-    val body: Expression?,
-    val keywords: List<String>,
-    val origin: Int
+    body: Expression?,
+    keywords: List<String>,
+    origin: Int
+) : MethodLike(
+    scope.parent!!.typeWithoutArgs,
+    emptyList(), valueParameters,
+    UnitType, scope, body, keywords, origin
 ) {
 
-    val selfType: ClassType get() = scope.parent!!.typeWithoutArgs
-    val typeParameters: List<Parameter> get() = emptyList()
+    override val selfType: ClassType
+        get() = super.selfType as ClassType
 
     override fun toString(): String {
         return "new ${selfType.clazz.pathStr}($valueParameters) { ... }"

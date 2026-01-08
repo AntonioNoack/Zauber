@@ -9,6 +9,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() {
 

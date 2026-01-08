@@ -212,7 +212,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         readClassBody(name, keywords, ScopeType.OBJECT)
 
         scope.hasTypeParameters = true // no type-params are supported
-        scope.objectField = Field(
+        if (scope.objectField == null) scope.objectField = Field(
             scope, null, false, null, "__instance__",
             ClassType(scope, emptyList()),
             /* todo should we set initialValue? */ null, emptyList(), origin
@@ -1060,12 +1060,12 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return WhileLoop(condition, body, label)
     }
 
-    private fun readDoWhileLoop(label: String?): WhileLoop {
+    private fun readDoWhileLoop(label: String?): DoWhileLoop {
         consume("do")
         val body = readBodyOrExpression()
         check(tokens.equals(i++, "while"))
         val condition = readExpressionCondition()
-        return createDoWhileLoop(body = body, condition = condition, label)
+        return DoWhileLoop(body = body, condition = condition, label)
     }
 
     private fun readForLoop(label: String?): Expression {

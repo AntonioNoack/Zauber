@@ -8,10 +8,9 @@ import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Types.UnitType
 import org.junit.jupiter.api.Test
 
-class ParsingTest {
+class CppParsingTest {
 
     companion object {
         fun testCppParsing(code: String): Scope {
@@ -25,8 +24,6 @@ class ParsingTest {
             val tokens = CppTokenizer(raw, "main.c", false).tokenize()
             // println("Tokens: $tokens")
 
-            // todo run the preprocessor?
-
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFile()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
@@ -35,7 +32,6 @@ class ParsingTest {
         }
 
         fun ensureUnitIsKnown() {
-            // todo how can we avoid duplicate assignments???
             val tokens = ZauberTokenizer(
                 """
             package zauber
@@ -129,6 +125,59 @@ class ParsingTest {
                     default:
                         break;
                 }
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testDeclarationInMethod() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            void main(void) {
+                int x = 0;
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testCallInMethod() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            void main(void) {
+                main();
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testAssignmentInMethod() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            int x;
+            void main(void) {
+                x = 5;
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testDeepAssignmentInMethod() {
+        ensureUnitIsKnown()
+        testCppParsing(
+            """
+            struct Vec {
+                int x;
+            };
+            void main(void) {
+                struct Vec v;
+                v.x = 5;
             }
         """.trimIndent()
         )

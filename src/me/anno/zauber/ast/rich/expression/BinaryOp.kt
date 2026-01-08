@@ -35,12 +35,12 @@ fun ASTBuilderBase.binaryOp(
         "::" -> {
             fun getBase(): Scope = when {
                 // left is VariableExpression -> scope.resolveType(left.name, this) as Scope
-                left is SpecialValueExpression && left.value == SpecialValue.THIS -> scope
+                left is SpecialValueExpression && left.type == SpecialValue.THIS -> scope
                 else -> throw NotImplementedError("GetBase($left::$right at ${tokens.err(i)})")
             }
 
             val leftIsType = left is MemberNameExpression && left.name[0].isUpperCase() ||
-                    left is SpecialValueExpression && left.value == SpecialValue.THIS
+                    left is SpecialValueExpression && left.type == SpecialValue.THIS
             when {
                 leftIsType && right is MemberNameExpression -> {
                     GetMethodFromTypeExpression(getBase(), right.name, right.scope, right.origin)

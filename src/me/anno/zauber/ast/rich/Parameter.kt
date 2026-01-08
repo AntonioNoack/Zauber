@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
@@ -29,6 +30,7 @@ class Parameter(
     }
 
     var field: Field? = null
+    var simpleField: SimpleField? = null
 
     constructor(name: String, type: Type, scope: Scope, origin: Int) :
             this(false, true, false, name, type, null, scope, origin)
