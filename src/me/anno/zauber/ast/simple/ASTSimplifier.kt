@@ -155,7 +155,7 @@ object ASTSimplifier {
             }
             is UnresolvedFieldExpression -> {
                 val field = expr.resolveField(context)
-                    ?: throw IllegalStateException("Failed to resolve field $expr")
+                    ?: throw IllegalStateException("Failed to resolve field '${expr.name}' in scope ${expr.scope}")
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                 val dst = currBlock.field(field.getValueType(context))

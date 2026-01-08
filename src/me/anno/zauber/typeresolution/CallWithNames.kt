@@ -36,15 +36,15 @@ object CallWithNames {
             anyIsVararg
         ) {
 
-            val list = arrayOfNulls<ValueParameter>(actualParameters.size)
+            val result = arrayOfNulls<ValueParameter>(actualParameters.size)
 
             // first assign all names slots
             for (valueParam in actualParameters) {
                 val name = valueParam.name ?: continue
                 val index = expectedParameters.indexOfFirst { it.name == name }
                 if (index < 0) return null
-                check(list[index] == null)
-                list[index] = valueParam
+                check(result[index] == null)
+                result[index] = valueParam
             }
 
             // then all unnamed
@@ -55,15 +55,15 @@ object CallWithNames {
             for (j in actualParameters.indices) {
                 val valueParam = actualParameters[j]
                 if (valueParam.name != null) continue
-                while (list[index] != null) index++
+                while (result[index] != null) index++
 
                 val ev = expectedParameters[index]
                 if (!ev.isVararg && valueParam.hasVarargStar) return null // incompatible
                 val isNormal = !ev.isVararg || valueParam.hasVarargStar
                 if (isNormal) {
-                    list[index++] = valueParam
+                    result[index++] = valueParam
                 } else {
-                    check(index == list.lastIndex) { "vararg must be in last place" }
+                    check(index == result.lastIndex) { "vararg must be in last place, $index vs ${result.lastIndex}" }
                     // collect all varargs
                     val type0 = ev.type as ClassType
                     val targetType = type0.typeParameters!![0]
@@ -72,21 +72,21 @@ object CallWithNames {
                         .map { it.getType(targetType) }
                         .reduce { a, b -> unionTypes(a, b) }
                     val arrayType = ClassType(type0.clazz, listOf(values))
-                    list[index++] = ValueParameterImpl(null, arrayType, true)
+                    result[index++] = ValueParameterImpl(null, arrayType, true)
                     break
                 }
             }
 
-            if (index == list.lastIndex) {
+            if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
                 check(ev.isVararg) { "Expected vararg in last place" }
-                list[index] = ValueParameterImpl(null, ev.type, true)
+                result[index] = ValueParameterImpl(null, ev.type, true)
             }
 
-            check(list.none { it == null })
+            check(result.none { it == null })
 
             @Suppress("UNCHECKED_CAST")
-            list.toList() as List<ValueParameter>
+            result.toList() as List<ValueParameter>
         } else actualParameters
     }
 
@@ -116,15 +116,15 @@ object CallWithNames {
             anyIsVararg
         ) {
 
-            val list = arrayOfNulls<Expression>(actualParameters.size)
+            val result = arrayOfNulls<Expression>(actualParameters.size)
 
             // first assign all names slots
             for (valueParam in actualParameters) {
                 val name = valueParam.name ?: continue
                 val index = expectedParameters.indexOfFirst { it.name == name }
                 if (index < 0) return null
-                check(list[index] == null)
-                list[index] = valueParam.value
+                check(result[index] == null)
+                result[index] = valueParam.value
             }
 
             // then all unnamed
@@ -135,20 +135,20 @@ object CallWithNames {
             for (j in actualParameters.indices) {
                 val valueParam = actualParameters[j]
                 if (valueParam.name != null) continue
-                while (list[index] != null) index++
+                while (result[index] != null) index++
 
                 val ev = expectedParameters[index]
                 val vpHasVarargStar = false
                 if (!ev.isVararg && vpHasVarargStar) return null // incompatible
                 val isNormal = !ev.isVararg || vpHasVarargStar
                 if (isNormal) {
-                    list[index++] = valueParam.value
+                    result[index++] = valueParam.value
                 } else {
-                    check(index == list.lastIndex) { "vararg must be in last place" }
+                    check(index == result.lastIndex) { "vararg must be in last place, $index vs ${result.lastIndex}" }
                     // collect all varargs
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }
-                    list[index++] = CallExpression(
+                    result[index++] = CallExpression(
                         MemberNameExpression("arrayOf", scope, origin),
                         emptyList(), values, origin
                     )
@@ -156,21 +156,21 @@ object CallWithNames {
                 }
             }
 
-            if (index == list.lastIndex) {
+            if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
                 val arrayType = ev.type as ClassType
                 val instanceType = arrayType.typeParameters!![0]
                 check(ev.isVararg) { "Expected vararg in last place" }
-                list[index] = CallExpression(
+                result[index] = CallExpression(
                     MemberNameExpression("arrayOf", scope, origin),
                     listOf(instanceType), emptyList(), origin
                 )
             }
 
-            check(list.none { it == null })
+            check(result.none { it == null })
 
             @Suppress("UNCHECKED_CAST")
-            list.toList() as List<Expression>
+            result.toList() as List<Expression>
         } else actualParameters.map { it.value }
     }
 
