@@ -140,13 +140,13 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         val outerClassDepth = getOuterClassDepth(maybeSelfScope)
         while (maybeSelfScope != null && field == null) {
             if (isScopeAvailable(maybeSelfScope, outerClassDepth)) {
-                println("Checking for field '$name' in $maybeSelfScope")
+                // println("Checking for field '$name' in $maybeSelfScope")
                 field = findMemberInHierarchy(
                     maybeSelfScope, name, returnType,
                     if (maybeSelfScope == context.selfType) selfType
                     else maybeSelfScope.typeWithoutArgs, typeParameters, valueParameters
                 )
-            } else println("Skipping scope '$maybeSelfScope'")
+            }// else println("Skipping scope '$maybeSelfScope'")
 
             maybeSelfScope = maybeSelfScope.parentIfSameFile
         }

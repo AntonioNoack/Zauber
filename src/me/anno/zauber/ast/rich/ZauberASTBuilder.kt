@@ -1179,7 +1179,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 readComma()
             }
         }
-        if (hadElse == conditions.isEmpty()) {
+        if (!hadElse && conditions.isEmpty()) {
             throw IllegalStateException("Missing conditions at ${tokens.err(i)}")
         }
         if (hadElse) return null

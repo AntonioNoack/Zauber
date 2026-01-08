@@ -184,8 +184,11 @@ object ASTClassScanner {
                                 continue // without i++
                             }
 
-                            tokens.equals(i, "object") && !tokens.equals(i - 1, "companion") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
+                            tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
+                                    && !tokens.equals(i + 1, ":") && listening.last() -> {
+                                check(tokens.equals(++i, TokenType.NAME)) {
+                                    "Expected name for object, but got ${tokens.err(i)}"
+                                }
                                 val name = tokens.toString(i++)
                                 foundNamedScope(name, "object")
                                 continue // without i++

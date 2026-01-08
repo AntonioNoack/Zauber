@@ -2,6 +2,11 @@ package zauber
 
 interface Map<K, V> {
     operator fun get(key: K): V?
+
+    interface Entry<K, V> {
+        val key: K
+        val value: V
+    }
 }
 
 interface MutableMap<K, V> : Map<K, V> {
