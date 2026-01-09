@@ -6,10 +6,12 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
 
 object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() {
 
@@ -67,7 +69,45 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             LOGGER.info("Match($constructor): $match")
             if (match != null) return match
         }
+        if (scope.scopeType == ScopeType.TYPE_ALIAS) {
+            return getByTypeAlias(scope, name, returnType, selfType, typeParameters, valueParameters)
+        }
         return null
+    }
+
+    private fun getByTypeAlias(
+        scope: Scope, name: String,
+
+        returnType: Type?, // sometimes, we know what to expect from the return type
+        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
+
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+    ): ResolvedConstructor? {
+
+        val newType = scope.selfAsTypeAlias!!
+        val typeParameters0 = typeParameters
+            ?.toParameterList(scope.typeParameters)
+
+        val newType2 = if (typeParameters0 != null) resolveGenerics(
+            selfType, newType,
+            scope.typeParameters,
+            typeParameters0
+        ) else newType
+
+        val typeParameters2 = typeParameters?.map { typeParam ->
+            resolveGenerics(
+                selfType, typeParam,
+                scope.typeParameters,
+                typeParameters0!!
+            )
+        }
+
+        val scope = typeToScope(newType2)!!
+        return findMemberInScopeImpl(
+            scope, scope.name, returnType, selfType,
+            typeParameters2, valueParameters
+        )
     }
 
     private fun findMemberMatch(

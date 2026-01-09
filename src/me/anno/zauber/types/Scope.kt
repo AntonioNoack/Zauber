@@ -40,7 +40,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     val enumEntries: List<Scope>
         get() = children.filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
 
-    var typeAlias: Type? = null
+    var selfAsTypeAlias: Type? = null
 
     var selfAsConstructor: Constructor? = null
     var selfAsMethod: Method? = null

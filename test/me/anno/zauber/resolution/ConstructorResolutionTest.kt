@@ -20,15 +20,16 @@ class ConstructorResolutionTest {
 
     @Test
     fun testWithShadowing() {
+        // todo constructor is provided by self & by import
     }
 
     @Test
     fun testWithImport() {
         val code = """
-        import helper004m.X
+        import helper006c.X
         val tested = X(0).x
         
-        package helper004c
+        package helper006c
         class X(val x: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
@@ -39,10 +40,10 @@ class ConstructorResolutionTest {
     @Test
     fun testWithImportAndAS() {
         val code = """
-        import helper004m.X as Z
+        import helper005c.X as Z
         val tested = Z(0).x
         
-        package helper004c
+        package helper005c
         class X(val x: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
@@ -65,7 +66,7 @@ class ConstructorResolutionTest {
     @Test
     fun testWithImportedTypeAliasAndAS() {
         val code = """
-        import helper004m.Y as Z
+        import helper004c.Y as Z
         val tested = Z(0).x
         
         package helper004c
@@ -76,4 +77,6 @@ class ConstructorResolutionTest {
         val actualType = scope.getField("tested").valueType!!
         assertEquals(IntType, actualType)
     }
+
+    // todo test resolver prefers methods over fields when calling
 }

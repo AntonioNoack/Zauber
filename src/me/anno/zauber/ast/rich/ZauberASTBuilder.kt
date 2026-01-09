@@ -688,7 +688,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
         check(tokens.equals(i++, "="))
         val trueType = readType(null, true)
-        pseudoScope.typeAlias = trueType
+        pseudoScope.selfAsTypeAlias = trueType
     }
 
     fun readAnnotation(): Annotation {

@@ -90,29 +90,32 @@ class CallExpression(
                         typeParameters, valueParameters
                     )
                     if (importedMethod != null) return importedMethod
+
+                    val importedConstructor = ConstructorResolver
+                        .findMemberInScopeImpl(
+                            nameAsImport, nameAsImport.name, context.targetType, context.selfType,
+                            typeParameters, valueParameters
+                        )
+                    if (importedConstructor != null) return importedConstructor
                 }
 
-                MethodResolver.printScopeForMissingMethod(context, this,name,  typeParameters, valueParameters)
+                MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
             is NamedTypeExpression -> {
+
                 val baseType = base.type
                 val baseScope = typeToScope(baseType)
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
                 check(baseScope.hasTypeParameters)
-                /*if (baseScope.typeParameters.isEmpty()) {
-                    // constructor is very clear
-                    return baseScope.typeWithoutArgs
-                } else {*/
+
                 val constructor = ConstructorResolver
                     .findMemberInScopeImpl(
                         baseScope, baseScope.name, context.targetType, context.selfType,
                         typeParameters, valueParameters
                     )
-                if (constructor == null) {
-                    throw IllegalStateException("Missing constructor for $baseType")
-                }
+
+                constructor ?: throw IllegalStateException("Missing constructor for $baseType")
                 return constructor
-                //}
             }
             is ImportedMember -> {
                 val name = base.nameAsImport.name
