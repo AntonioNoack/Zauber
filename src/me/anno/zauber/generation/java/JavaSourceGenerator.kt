@@ -229,15 +229,14 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendFields(scope: Scope) {
-        val fields = scope.fields
+    private fun appendFields(classScope: Scope) {
+        val fields = classScope.fields
         for (field in fields) {
 
-            // todo write getter and setter
-            // todo check whether this fields needs a backing field
+            // todo decide whether this fields needs a backing field
 
-            if (field.selfType != scope.typeWithArgs) continue
-            appendBackingField(scope, field)
+            if (field.selfType != classScope.typeWithArgs) continue
+            appendBackingField(classScope, field)
         }
     }
 
@@ -312,6 +311,9 @@ object JavaSourceGenerator : Generator() {
             // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
             if (superCall != null) {
                 appendCodeWithoutBlock(context, superCall.toExpr())
+            } else {
+                builder.append("// no super call")
+                nextLine()
             }
             if (isPrimaryConstructor) {
                 for (parameter in constructor.valueParameters) {
@@ -547,14 +549,14 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendSuperTypes(scope: Scope) {
-        val superCall0 = scope.superCalls.firstOrNull { it.valueParams != null }
+        val superCall0 = scope.superCalls.firstOrNull { it.valueParameters != null }
         if (superCall0 != null && superCall0.type != AnyType) {
             builder.append(" extends ")
             appendClassType(superCall0.type, scope, false)
         }
         val implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
         for (superCall in scope.superCalls) {
-            if (superCall.valueParams != null) continue
+            if (superCall.valueParameters != null) continue
             builder.append(implementsKeyword)
             appendClassType(superCall.type, scope, false)
         }

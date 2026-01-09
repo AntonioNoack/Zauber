@@ -5,6 +5,6 @@ import me.anno.zauber.types.impl.ClassType
 
 class SuperCall(
     val type: ClassType,
-    val valueParams: List<NamedParameter>?,
+    val valueParameters: List<NamedParameter>?,
     val delegate: Expression?
 )

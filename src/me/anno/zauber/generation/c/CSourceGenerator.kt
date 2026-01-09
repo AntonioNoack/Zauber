@@ -279,7 +279,7 @@ object CSourceGenerator : Generator() {
             // super class as a field
             for (parent in scope.superCalls) {
                 // only primary super instance is needed, the rest should be put into Class
-                if (parent.valueParams == null) continue
+                if (parent.valueParameters == null) continue
                 val pt = parent.type as ClassType
                 indent()
                 builder.append("struct ").append(getName(pt.clazz)).append(" superStruct;\n")

@@ -36,7 +36,7 @@ object FieldGetterSetter {
             val getterExpr = when {
                 tokens.equals(i, "=") -> {
                     i++ // skip =
-                    readExpression()
+                    ReturnExpression(readExpression(), null, getterScope, origin)
                 }
                 tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                     pushBlock(ScopeType.EXPRESSION, null) {
@@ -139,19 +139,21 @@ object FieldGetterSetter {
 
     fun ZauberASTBuilder.createGetterMethod(
         field: Field, expr: Expression?, backingField: Field,
-        scope: Scope, origin: Int
+        getterScope: Scope, origin: Int
     ) {
         val expr = expr ?: if (needsGetter(field)) {
-            FieldExpression(backingField, scope, origin)
+            val fieldExpr = FieldExpression(backingField, getterScope, origin)
+            ReturnExpression(fieldExpr, null, getterScope, origin)
         } else return
 
         val methodName = "get${field.name.capitalize()}"
         val method = Method(
             field.selfType, methodName, emptyList(), emptyList(),
-            scope, field.valueType, emptyList(),
+            getterScope, field.valueType, emptyList(),
             expr, packKeywords(), origin
         )
         method.backingField = backingField
+        getterScope.selfAsMethod = method
         field.getterExpr = expr
         field.getter = method
     }
@@ -159,23 +161,24 @@ object FieldGetterSetter {
     fun ZauberASTBuilder.createSetterMethod(
         field: Field, expr: Expression?,
         backingField: Field, valueField: Field,
-        scope: Scope, origin: Int,
+        setterScope: Scope, origin: Int,
     ) {
         val expr = expr ?: if (needsGetter(field)) {
-            val backingExpr = FieldExpression(backingField, scope, origin)
-            val valueExpr = FieldExpression(valueField, scope, origin)
+            val backingExpr = FieldExpression(backingField, setterScope, origin)
+            val valueExpr = FieldExpression(valueField, setterScope, origin)
             AssignmentExpression(backingExpr, valueExpr)
         } else return
 
         val methodName = "set${field.name.capitalize()}"
-        val parameter = Parameter(valueField.name, field.valueType ?: TypeOfField(field), scope, origin)
+        val parameter = Parameter(valueField.name, field.valueType ?: TypeOfField(field), setterScope, origin)
         val method = Method(
             field.selfType, methodName, emptyList(),
-            listOf(parameter), scope,
+            listOf(parameter), setterScope,
             UnitType, emptyList(),
             expr, packKeywords(), origin
         )
         method.backingField = backingField
+        setterScope.selfAsMethod = method
         field.setter = method
     }
 

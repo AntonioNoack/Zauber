@@ -123,6 +123,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         check(tokens.equals(i, TokenType.NAME)) {
             "Expected name after 'class' at ${tokens.err(i)}"
         }
+
+        val origin = origin(i)
         val name = tokens.toString(i++)
 
         val keywords = packKeywords()
@@ -131,11 +133,11 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             else if ("enum" in keywords) ScopeType.ENUM_CLASS
             else ScopeType.NORMAL_CLASS
 
-        val clazz = currPackage.getOrPut(name, tokens.fileName, scopeType)
+        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
 
-        val typeParameters = readTypeParameterDeclarations(clazz)
-        clazz.typeParameters = typeParameters
-        clazz.hasTypeParameters = true
+        val typeParameters = readTypeParameterDeclarations(classScope)
+        classScope.typeParameters = typeParameters
+        classScope.hasTypeParameters = true
 
         val privatePrimaryConstructor = tokens.equals(i, "private")
         if (privatePrimaryConstructor) i++
@@ -145,24 +147,27 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         if (tokens.equals(i, "constructor")) i++
         val constructorOrigin = origin(i)
         val constructorParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val primaryConstructorScope = clazz.getOrCreatePrimConstructorScope()
+            val primaryConstructorScope = classScope.getOrCreatePrimConstructorScope()
             val parameters = pushScope(primaryConstructorScope) {
-                val selfType = ClassType(clazz, null)
-                pushCall { readParameterDeclarations(selfType, primaryConstructorScope) }
+                val selfType = ClassType(classScope, null)
+                pushCall { readParameterDeclarations(selfType, classScope) }
             }
             for (field in primaryConstructorScope.fields) {
-                clazz.addField(field)
+                classScope.addField(field)
             }
             parameters
         } else null
 
-        val needsSuperCall = clazz != AnyType.clazz
-        readSuperCalls(clazz, needsSuperCall)
+        val needsSuperCall = classScope != AnyType.clazz
+        readSuperCalls(classScope, needsSuperCall)
 
-        val scope = clazz.getOrCreatePrimConstructorScope()
+        val scope = classScope.getOrCreatePrimConstructorScope()
+        val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
         val primaryConstructor = Constructor(
             constructorParams ?: emptyList(),
-            scope, null, null,
+            scope, if (primarySuperCall != null) {
+                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, classScope, origin)
+            } else null, null,
             if (privatePrimaryConstructor) listOf("private") else emptyList(),
             constructorOrigin
         )
@@ -733,7 +738,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return params
     }
 
-    fun readParameterDeclarations(selfType: Type?, methodScope: Scope): List<Parameter> {
+    fun readParameterDeclarations(selfType: Type?, classScope: Scope): List<Parameter> {
         // todo when this has its own '=', this needs its own scope...,
         //  and that scope could be inherited by the function body...
         val result = ArrayList<Parameter>()
@@ -769,7 +774,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
                     result.add(parameter)
 
-                    val fieldScope = if (isVar || isVal) currPackage else methodScope
+                    val fieldScope = if (isVar || isVal) classScope else currPackage
                     // automatically gets added to fieldScope
                     parameter.field = Field(
                         fieldScope, selfType, isVar, if (isVar || isVal) null else parameter,
