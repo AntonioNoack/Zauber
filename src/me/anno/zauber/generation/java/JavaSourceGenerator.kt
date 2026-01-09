@@ -1,20 +1,12 @@
 package me.anno.zauber.generation.java
 
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.ASTSimplifier
-import me.anno.zauber.ast.simple.SimpleBlock
-import me.anno.zauber.ast.simple.SimpleExpression
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.controlflow.SimpleBranch
-import me.anno.zauber.ast.simple.controlflow.SimpleReturn
-import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.DeltaWriter
 import me.anno.zauber.generation.Generator
+import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
+import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -310,7 +302,7 @@ object JavaSourceGenerator : Generator() {
         writeBlock {
             // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
             if (superCall != null) {
-                appendCodeWithoutBlock(context, superCall.toExpr())
+                appendSuperCall(context, superCall)
             } else {
                 builder.append("// no super call")
                 nextLine()
@@ -380,156 +372,6 @@ object JavaSourceGenerator : Generator() {
             builder.append("/* [${e.javaClass.simpleName}: ${e.message}] $body */")
         }
         nextLine()
-    }
-
-    private fun appendAssign(expression: SimpleAssignmentExpression) {
-        val dst = expression.dst
-        builder.append("final ")
-        appendType(dst.type, expression.scope, false)
-        builder.append(' ').append1(dst).append(" = ")
-    }
-
-    private fun StringBuilder.append1(field: SimpleField): StringBuilder {
-        append("tmp").append(field.id)
-        return this
-    }
-
-    private fun appendSimplifiedAST(expr: SimpleExpression) {
-        if (expr is SimpleAssignmentExpression) appendAssign(expr)
-        when (expr) {
-            is SimpleBlock -> {
-                val instr = expr.instructions
-                for (i in instr.indices) {
-                    appendSimplifiedAST(instr[i])
-                }
-            }
-            is SimpleBranch -> {
-                builder.append("if (").append1(expr.condition).append(')')
-                writeBlock {
-                    appendSimplifiedAST(expr.ifTrue)
-                }
-                builder.append(" else ")
-                writeBlock {
-                    appendSimplifiedAST(expr.ifFalse)
-                }
-            }
-            is SimpleString -> {
-                builder.append('"').append(expr.base.value).append('"')
-            }
-            is SimpleNumber -> {
-                // todo remove suffixes, that are not supported by Java
-                //  and instead cast the value to the target
-                builder.append(expr.base.value)
-            }
-            is SimpleGetField -> {
-                if (expr.self != null) {
-                    builder.append1(expr.self).append('.')
-                }
-                val getter = expr.field.getter
-                if (getter != null) {
-                    builder.append(getter.name).append("()")
-                } else {
-                    builder.append(expr.field.name)
-                }
-            }
-            is SimpleSetField -> {
-                if (expr.self != null) {
-                    builder.append1(expr.self).append('.')
-                }
-                val setter = expr.field.setter
-                if (setter != null) {
-                    builder.append(setter.name).append('(')
-                    builder.append1(expr.src)
-                    builder.append(')')
-                } else {
-                    builder.append(expr.field.name)
-                        .append(" = ").append1(expr.src)
-                }
-                builder.append(';')
-            }
-            is SimpleCompare -> {
-                builder.append1(expr.base).append(' ')
-                builder.append(expr.type.symbol).append(" 0")
-            }
-            is SimpleSpecialValue -> {
-                when (expr.base.type) {
-                    SpecialValue.TRUE -> builder.append("true")
-                    SpecialValue.FALSE -> builder.append("false")
-                    SpecialValue.NULL -> builder.append("null")
-                    SpecialValue.THIS -> builder.append("this")
-                    SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
-                }
-            }
-            is SimpleCall -> {
-                val methodName = expr.methodName
-                val done = when (expr.valueParameters.size) {
-                    0 -> {
-                        if (expr.self.type == BooleanType && methodName == "not") {
-                            builder.append('!').append1(expr.self)
-                            true
-                        } else false
-                    }
-                    1 -> {
-                        // todo compareTo is a problem for the numbers:
-                        //  we must call their static function
-                        val supportsType = when (expr.self.type) {
-                            StringType, ByteType, ShortType, CharType, IntType, LongType, FloatType, DoubleType -> true
-                            else -> false
-                        }
-                        val symbol = when (methodName) {
-                            "plus" -> " + "
-                            "minus" -> " - "
-                            "times" -> " * "
-                            "div" -> " / "
-                            "rem" -> " % "
-                            else -> null
-                        }
-                        if (supportsType && symbol != null) {
-                            builder.append1(expr.self).append(symbol)
-                            builder.append1(expr.valueParameters[0])
-                            true
-                        } else false
-                    }
-                    else -> false
-                }
-                if (!done) {
-                    builder.append1(expr.self).append('.')
-                    builder.append(expr.methodName)
-                    appendValueParams(expr.valueParameters)
-                }
-            }
-            is SimpleConstructor -> {
-                builder.append("new ")
-                appendType(expr.method.selfType, expr.scope, false)
-                appendValueParams(expr.valueParameters)
-            }
-            is SimpleSelfConstructor -> {
-                when (expr.isThis) {
-                    true -> builder.append("this")
-                    false -> builder.append("super")
-                }
-                appendValueParams(expr.valueParameters)
-                builder.append(';')
-            }
-            is SimpleReturn -> {
-                builder.append("return ").append1(expr.field).append(';')
-            }
-            else -> {
-                builder.append("/* ${expr.javaClass.simpleName}: $expr */")
-            }
-        }
-        if (expr is SimpleAssignmentExpression) builder.append(';')
-        if (expr !is SimpleBlock && expr !is SimpleBranch) nextLine()
-    }
-
-    private fun appendValueParams(valueParameters: List<SimpleField>) {
-        builder.append('(')
-        for (i in valueParameters.indices) {
-            if (i > 0) builder.append(", ")
-            val parameter = valueParameters[i]
-            builder.append1(parameter)
-        }
-        builder.append(')')
     }
 
     private fun appendTypeParams(scope: Scope) {
