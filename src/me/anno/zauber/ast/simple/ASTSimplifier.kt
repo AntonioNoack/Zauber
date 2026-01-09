@@ -147,6 +147,7 @@ object ASTSimplifier {
             is SpecialValueExpression -> {
                 val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
+                    SpecialValue.TRUE, SpecialValue.FALSE -> BooleanType
                     else -> TODO("Resolve type of $expr")
                 }
                 val dst = currBlock.field(type)

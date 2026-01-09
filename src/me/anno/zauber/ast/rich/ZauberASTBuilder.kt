@@ -145,22 +145,19 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         if (tokens.equals(i, "constructor")) i++
         val constructorOrigin = origin(i)
         val constructorParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val primScope = clazz.getOrCreatePrimConstructorScope()
-            pushScope(primScope) {
+            val primaryConstructorScope = clazz.getOrCreatePrimConstructorScope()
+            val parameters = pushScope(primaryConstructorScope) {
                 val selfType = ClassType(clazz, null)
-                pushCall { readParamDeclarations(selfType, primScope) }
+                pushCall { readParameterDeclarations(selfType, primaryConstructorScope) }
             }
+            for (field in primaryConstructorScope.fields) {
+                clazz.addField(field)
+            }
+            parameters
         } else null
 
         val needsSuperCall = clazz != AnyType.clazz
         readSuperCalls(clazz, needsSuperCall)
-
-        if (constructorParams != null) {
-            val prim = clazz.getOrCreatePrimConstructorScope()
-            for (field in prim.fields) {
-                clazz.addField(field)
-            }
-        }
 
         val scope = clazz.getOrCreatePrimConstructorScope()
         val primaryConstructor = Constructor(
@@ -529,7 +526,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         pushScope(methodScope) {
             parameters = pushCall {
                 val selfType = ClassType(clazz, null)
-                readParamDeclarations(selfType, methodScope)
+                readParameterDeclarations(selfType, methodScope)
             }
         }
 
@@ -573,10 +570,10 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         check(tokens.equals(i, TokenType.OPEN_CALL))
         lateinit var parameters: List<Parameter>
         val classScope = currPackage
-        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { scope ->
+        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { methodScope ->
             val selfType = ClassType(classScope, null)
-            parameters = pushCall { readParamDeclarations(selfType, scope) }
-            scope
+            parameters = pushCall { readParameterDeclarations(selfType, methodScope) }
+            methodScope
         }
 
         // optional return type
@@ -736,10 +733,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return params
     }
 
-    fun readParamDeclarations(
-        selfType: Type?,
-        secondaryScope: Scope,
-    ): List<Parameter> {
+    fun readParameterDeclarations(selfType: Type?, methodScope: Scope): List<Parameter> {
         // todo when this has its own '=', this needs its own scope...,
         //  and that scope could be inherited by the function body...
         val result = ArrayList<Parameter>()
@@ -775,7 +769,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
                     result.add(parameter)
 
-                    val fieldScope = if (isVar || isVal) currPackage else secondaryScope
+                    val fieldScope = if (isVar || isVal) currPackage else methodScope
                     // automatically gets added to fieldScope
                     parameter.field = Field(
                         fieldScope, selfType, isVar, if (isVar || isVal) null else parameter,
@@ -1286,7 +1280,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             check(tokens.equals(++i, TokenType.OPEN_CALL))
             val catchName = currPackage.generateName("catch")
             val catchScope = currPackage.getOrPut(catchName, ScopeType.METHOD_BODY)
-            val params = pushCall { readParamDeclarations(null, catchScope) }
+            val params = pushCall { readParameterDeclarations(null, catchScope) }
             check(params.size == 1)
             val handler = readBodyOrExpression()
             catches.add(Catch(params[0], handler))

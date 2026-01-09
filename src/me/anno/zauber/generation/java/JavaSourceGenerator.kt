@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleExpression
@@ -200,8 +201,8 @@ object JavaSourceGenerator : Generator() {
 
             appendFields(scope)
 
-            val primConstructorScope = scope.primaryConstructorScope
-            if (primConstructorScope != null) appendInitBlocks(primConstructorScope)
+            val primaryConstructorScope = scope.primaryConstructorScope
+            if (primaryConstructorScope != null) appendInitBlocks(primaryConstructorScope)
 
             appendConstructors(scope)
             appendMethods(scope)
@@ -256,9 +257,9 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendConstructors(scope: Scope) {
-        for (constructor in scope.constructors) {
-            appendConstructor(scope, constructor)
+    private fun appendConstructors(classScope: Scope) {
+        for (constructor in classScope.constructors) {
+            appendConstructor(classScope, constructor)
         }
     }
 
@@ -296,26 +297,33 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendConstructor(scope: Scope, constructor: Constructor) {
-        builder.append("public ").append(scope.name)
-        appendValueParameterDeclaration(null, constructor.valueParameters, scope)
+    private fun appendConstructor(classScope: Scope, constructor: Constructor) {
+        builder.append("public ").append(classScope.name)
+        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
         // todo append extra body-block for super-call
         val body = constructor.body
 
-        val context = ResolutionContext(scope, constructor.selfType, true, null)
+        val isPrimaryConstructor = constructor == classScope.primaryConstructorScope?.selfAsConstructor
+
+        val context = ResolutionContext(classScope, constructor.selfType, true, null)
         val superCall = constructor.superCall
-        when {
-            superCall != null -> {
-                writeBlock {
-                    // todo I think this must be in one line... complicated...
-                    appendCodeWithoutBlock(context, superCall.toExpr())
-                    if (body != null) appendCode(context, body)
+
+        writeBlock {
+            // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
+            if (superCall != null) {
+                appendCodeWithoutBlock(context, superCall.toExpr())
+            }
+            if (isPrimaryConstructor) {
+                for (parameter in constructor.valueParameters) {
+                    if (!parameter.isVar && !parameter.isVal) continue
+                    val name = parameter.name
+                    builder.append("this.").append(name).append(" = ")
+                        .append(name).append(';')
+                    nextLine()
                 }
             }
-            body != null -> appendCode(context, body)
-            else -> {
-                builder.append(" {}")
-                nextLine()
+            if (body != null) {
+                appendCode(context, body)
             }
         }
     }
@@ -440,6 +448,15 @@ object JavaSourceGenerator : Generator() {
             is SimpleCompare -> {
                 builder.append1(expr.base).append(' ')
                 builder.append(expr.type.symbol).append(" 0")
+            }
+            is SimpleSpecialValue -> {
+                when (expr.base.type) {
+                    SpecialValue.TRUE -> builder.append("true")
+                    SpecialValue.FALSE -> builder.append("false")
+                    SpecialValue.NULL -> builder.append("null")
+                    SpecialValue.THIS -> builder.append("this")
+                    SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
+                }
             }
             is SimpleCall -> {
                 val methodName = expr.methodName
