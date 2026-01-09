@@ -22,7 +22,7 @@ object DefaultParameterExpansion {
             when (scopeI.scopeType) {
                 ScopeType.METHOD ->
                     createDefaultParameterMethod(scopeI)
-                ScopeType.PRIMARY_CONSTRUCTOR, ScopeType.CONSTRUCTOR ->
+                ScopeType.CONSTRUCTOR ->
                     createDefaultParameterConstructor(scopeI)
                 else -> {}
             }

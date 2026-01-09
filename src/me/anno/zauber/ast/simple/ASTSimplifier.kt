@@ -122,9 +122,9 @@ object ASTSimplifier {
                 val constructor = null
                 val method = resolveCallable(
                     context.withSelfType(calleeType),
-                    expr, expr.name, constructor,
+                    expr.name, constructor,
                     expr.typeParameters, valueParameters
-                )
+                ) ?: throw IllegalStateException("Call could not be resolved, check imports?")
                 simplifyCall(
                     context, expr, currBlock, graph, expr.base,
                     expr.valueParameters, method, null
@@ -164,7 +164,7 @@ object ASTSimplifier {
             }
             is FieldExpression -> {
                 val field = expr.field
-                val valueType = field.deductValueType(context)
+                val valueType = field.resolveValueType(context)
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                 val dst = currBlock.field(valueType)
@@ -229,13 +229,13 @@ object ASTSimplifier {
                     }
                 }
             }
-            is ImportedExpression -> {
+            is ImportedMember -> {
                 val import = expr.nameAsImport
                 when (import.scopeType) {
                     ScopeType.OBJECT -> {
                         val field = import.objectField
                             ?: throw IllegalStateException("Missing object field for ${import.pathStr}")
-                        val valueType = field.deductValueType(context)
+                        val valueType = field.resolveValueType(context)
                         val dst = currBlock.field(valueType)
                         currBlock.add(SimpleGetField(dst, self = null, field, expr.scope, expr.origin))
                         dst

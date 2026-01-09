@@ -8,33 +8,58 @@ enum class ScopeType {
     // classes
     NORMAL_CLASS,
     INLINE_CLASS,
+    INNER_CLASS,
+
     INTERFACE,
     ENUM_CLASS,  // limited instances, val name: String, val ordinal: Int, fun entries()
     ENUM_ENTRY_CLASS, // objects with enum_class as type
+
     OBJECT,
+    COMPANION_OBJECT,
 
     // methods
+    /**
+     * definition space for method arguments
+     * */
     METHOD,
+
+    /**
+     * definition space for constructor arguments
+     * */
     CONSTRUCTOR,
-    CONSTRUCTOR_PARAMS,
-    PRIMARY_CONSTRUCTOR,
+
     FIELD_GETTER,
     FIELD_SETTER,
     LAMBDA,
-    METHOD_BODY,
+    // METHOD_BODY,
 
     // inside expressions
-    EXPRESSION,
+    METHOD_BODY,
     WHEN_CASES,
     WHEN_ELSE;
 
+    fun isClassType(): Boolean {
+        return when (this) {
+            NORMAL_CLASS, INTERFACE,
+            ENUM_CLASS, ENUM_ENTRY_CLASS,
+            OBJECT, INLINE_CLASS -> true
+            else -> false
+        }
+    }
 
-     fun isClassType(): Boolean {
-         return when(this) {
-             NORMAL_CLASS, INTERFACE,
-             ENUM_CLASS, ENUM_ENTRY_CLASS,
-             OBJECT, INLINE_CLASS -> true
-             else -> false
-         }
-     }
+    fun isInsideExpression(): Boolean {
+        return when (this) {
+            FIELD_GETTER,
+            FIELD_SETTER,
+            LAMBDA,
+            METHOD_BODY,
+            WHEN_CASES,
+            WHEN_ELSE -> true
+            else -> false
+        }
+    }
+
+    companion object {
+        val EXPRESSION = METHOD_BODY
+    }
 }

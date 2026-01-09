@@ -18,7 +18,7 @@ import me.anno.zauber.ast.rich.expression.DoubleColonPrefix
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.FieldExpression
-import me.anno.zauber.ast.rich.expression.ImportedExpression
+import me.anno.zauber.ast.rich.expression.ImportedMember
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.LambdaExpression
 import me.anno.zauber.ast.rich.expression.MemberNameExpression
@@ -151,7 +151,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
             is AssignIfMutableExpr -> true // we don't know better yet
             is ExpressionList -> expr.list.any { exprSplitsScope(it) }
             is CompareOp -> exprSplitsScope(expr.value)
-            is ImportedExpression -> false // I guess not...
+            is ImportedMember -> false // I guess not...
             is LambdaExpression -> false // I don't think so
             is BreakExpression, is ContinueExpression -> false // execution ends here anyway
             is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)

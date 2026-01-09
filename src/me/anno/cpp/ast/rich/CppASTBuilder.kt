@@ -456,8 +456,9 @@ class CppASTBuilder(
             consumeIf("break") -> BreakExpression(readLabel(), currPackage, origin)
 
             // todo try to resolve field immediately
-            tokens.equals(i, TokenType.NAME) ->
-                UnresolvedFieldExpression(tokens.toString(i++), currPackage, origin)
+            tokens.equals(i, TokenType.NAME) -> {
+                UnresolvedFieldExpression(tokens.toString(i++), null, currPackage, origin)
+            }
 
             consumeIf("(") -> {
                 val expr = readExpression()
@@ -520,7 +521,7 @@ class CppASTBuilder(
 
     private fun handleDot(expr: Expression, origin: Int): Expression {
         val name = tokens.toString(i++)
-        val rhs = UnresolvedFieldExpression(name, expr.scope, origin)
+        val rhs = UnresolvedFieldExpression(name, null, expr.scope, origin)
         return DotExpression(expr, null, rhs, expr.scope, origin)
     }
 

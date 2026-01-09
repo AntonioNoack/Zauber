@@ -5,6 +5,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.FieldResolver
+import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
@@ -70,6 +71,7 @@ class DotExpression(
     }
 
     fun resolveField(context: ResolutionContext, baseType: Type): ResolvedField? {
+        println("resolveField(): LHS: $baseType, RHS: ${right.javaClass.simpleName}")
         when (right) {
             is MemberNameExpression -> {
                 // todo replace own generics, because we don't know them yet
@@ -113,19 +115,32 @@ class DotExpression(
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
                 return resolveCallable(
                     context.withSelfType(baseType),
-                    this, base.name, constructor,
+                    base.name, constructor,
                     right.typeParameters, valueParameters
-                )
+                ) ?: throw IllegalStateException("Call could not be resolved, check imports?")
             }
             is UnresolvedFieldExpression -> {
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
-                return resolveCallable(
-                    context.withSelfType(baseType),
-                    this, base.name, constructor,
+                val context = context.withSelfType(baseType)
+                val resolvedMethod = resolveCallable(
+                    context, base.name, constructor,
                     right.typeParameters, valueParameters
                 )
+                if (resolvedMethod != null) return resolvedMethod
+
+                val nameAsImport = base.nameAsImport
+                if (nameAsImport != null) {
+                    val importedMethod = MethodResolver.findMemberInScope(
+                        nameAsImport.parent, nameAsImport.name,
+                        context.targetType, baseType,
+                        typeParameters, valueParameters
+                    )
+                    if (importedMethod != null) return importedMethod
+                }
+
+                MethodResolver.printScopeForMissingMethod(context, this, base.name, typeParameters, valueParameters)
             }
             else -> throw NotImplementedError("Resolve type of call $base (${base.javaClass.simpleName})")
         }

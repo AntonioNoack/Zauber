@@ -39,7 +39,7 @@ class Field(
         codeScope.addField(this)
     }
 
-    fun deductValueType(context: ResolutionContext): Type {
+    fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
         if (valueType != null) {
             return valueType

@@ -4,6 +4,7 @@ import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 
 /**
@@ -61,7 +62,10 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     }
 
     override fun toStringImpl(depth: Int): String {
-        val className = if (clazz.name == "Companion") clazz.pathStr else clazz.name
+        val className =
+            if (clazz.name == "Companion") clazz.pathStr
+            else if (clazz.scopeType == ScopeType.ENUM_ENTRY_CLASS) "${clazz.parent?.name}.${clazz.name}"
+            else clazz.name
         var asString = className
         if (typeParameters == null) {
             asString += "<?>"

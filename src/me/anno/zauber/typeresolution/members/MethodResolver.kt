@@ -8,6 +8,8 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
+import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.members.FieldResolver.resolveInCodeScope
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
@@ -95,46 +97,43 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun resolveCallable(
         context: ResolutionContext,
-        expr: Expression,
         name: String,
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-    ): ResolvedMember<*> {
-        val targetType = context.targetType
-        val selfType = context.selfType
+    ): ResolvedMember<*>? {
         val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters)
-        val f = FieldResolver
-        val field = null1()
-            ?: f.findMemberInHierarchy(context.selfScope, name, selfType, targetType, typeParameters, valueParameters)
-            ?: f.findMemberInFile(context.codeScope, name, selfType, targetType, typeParameters, valueParameters)
-            ?: f.findMemberInFile(langScope, name, selfType, targetType, typeParameters, valueParameters)
-        val candidates = listOfNotNull(method, field)
-        if (candidates.isEmpty()) {
-            val selfScope = context.selfScope
-            val codeScope = context.codeScope
-            LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
-            LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
-            LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
-            throw IllegalStateException(
-                "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
-                        "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"
-            )
+        val field = resolveField(context, name, typeParameters)
+        if (method != null && field != null) {
+            LOGGER.warn("Having both a method and a field named '$name' in ${context.codeScope}")
         }
-        if (candidates.size > 1) throw IllegalStateException("Cannot have both a method and a type with the same name '$name': $candidates")
-        return candidates.first()
+        return method ?: field
+    }
+
+    fun printScopeForMissingMethod(
+        context: ResolutionContext, expr: Expression, name: String,
+        typeParameters: List<Type>?, valueParameters: List<ValueParameter>
+    ): Nothing {
+        val selfScope = context.selfScope
+        val codeScope = context.codeScope
+        LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
+        LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
+        LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
+        throw IllegalStateException(
+            "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
+                    "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"
+        )
     }
 
     fun resolveCallType(
         context: ResolutionContext,
-        expr: Expression,
         name: String,
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-    ): Type {
-        val callable = resolveCallable(context, expr, name, constructor, typeParameters, valueParameters)
-        return callable.getTypeFromCall()
+    ): Type? {
+        return resolveCallable(context, name, constructor, typeParameters, valueParameters)
+            ?.getTypeFromCall()
     }
 
     fun resolveMethod(
@@ -143,12 +142,12 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
     ): ResolvedMethod? {
-        val targetType = context.targetType
-        val selfType = context.selfType
-        val m = MethodResolver
-        return m.findMemberInHierarchy(context.selfScope, name, targetType, selfType, typeParameters, valueParameters)
-            ?: m.findMemberInFile(context.codeScope, name, targetType, selfType, typeParameters, valueParameters)
-            ?: m.findMemberInFile(langScope, name, targetType, selfType, typeParameters, valueParameters)
+        return resolveInCodeScope(context) { scope, selfType ->
+            findMemberInHierarchy(
+                scope, name, context.targetType,
+                selfType, typeParameters, valueParameters
+            )
+        }
     }
 
     fun null1(): ResolvedField? {

@@ -29,13 +29,15 @@ class Scope(val name: String, val parent: Scope? = null) {
         get() = children.mapNotNull { it.selfAsConstructor }
     val methods: List<Method>
         get() = children.mapNotNull { it.selfAsMethod }
+    val companionObject: Scope?
+        get() = children.firstOrNull { it.scopeType == ScopeType.COMPANION_OBJECT }
 
     val fields = ArrayList<Field>()
 
     val superCalls = ArrayList<SuperCall>()
     val superCallNames = ArrayList<SuperCallName>()
 
-    val enumValues: List<Scope>
+    val enumEntries: List<Scope>
         get() = children.filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
 
     var typeAlias: Type? = null
@@ -55,9 +57,9 @@ class Scope(val name: String, val parent: Scope? = null) {
     val typeWithoutArgs = ClassType(this, null)
     val typeWithArgs by lazy {
         if (scopeType != ScopeType.PACKAGE) {
-            check(hasTypeParameters) {
+            /*check(hasTypeParameters) {
                 "Missing type parameters for $pathStr"
-            }
+            }*/
             // check(scopeType?.isClassType() == true)
         }
         ClassType(
@@ -90,7 +92,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     var primaryConstructorScope: Scope? = null
     fun getOrCreatePrimConstructorScope(): Scope {
         return primaryConstructorScope ?: run {
-            val scope = getOrPut("prim", ScopeType.PRIMARY_CONSTRUCTOR)
+            val scope = getOrPut("prim", ScopeType.CONSTRUCTOR)
             primaryConstructorScope = scope
             scope
         }
@@ -114,6 +116,42 @@ class Scope(val name: String, val parent: Scope? = null) {
         fields.add(field)
     }
 
+    fun ScopeType?.getClassHierarchy(): Int {
+        return when (this) {
+            null -> -1
+            ScopeType.PACKAGE -> 0
+            ScopeType.NORMAL_CLASS,
+            ScopeType.ENUM_CLASS,
+            ScopeType.INTERFACE,
+            ScopeType.OBJECT -> 1
+            ScopeType.COMPANION_OBJECT -> 2
+            ScopeType.ENUM_ENTRY_CLASS -> 3
+            ScopeType.INNER_CLASS -> 4
+            ScopeType.CONSTRUCTOR,
+            ScopeType.FIELD_GETTER,
+            ScopeType.FIELD_SETTER,
+            ScopeType.INLINE_CLASS,
+            ScopeType.METHOD,
+            ScopeType.METHOD_BODY,
+            ScopeType.LAMBDA,
+            ScopeType.WHEN_CASES,
+            ScopeType.WHEN_ELSE -> 6
+            ScopeType.TYPE_ALIAS -> 7
+            else -> throw NotImplementedError("What is the hierarchy of $this?")
+        }
+    }
+
+    fun scopeHierarchyIsAllowed(self: ScopeType?, child: ScopeType?): Boolean {
+        if (child == null) return true // exception for imports
+        if ((self == ScopeType.METHOD_BODY || self == ScopeType.METHOD) && child == ScopeType.NORMAL_CLASS) {
+            return true // exception for named classes inside methods
+        }
+        if (self == ScopeType.COMPANION_OBJECT &&
+            child == ScopeType.COMPANION_OBJECT
+        ) return false // only one is allowed
+        return self.getClassHierarchy() <= child.getClassHierarchy()
+    }
+
     fun getOrPut(name: String, scopeType: ScopeType?): Scope {
 
         // hack, because Kotlin forbids us from defining functions inside Kotlin scope
@@ -132,6 +170,10 @@ class Scope(val name: String, val parent: Scope? = null) {
             return child
         }
 
+        check(scopeHierarchyIsAllowed(this.scopeType, scopeType)) {
+            "$scopeType cannot be placed inside ${this.scopeType} ($pathStr.$name)"
+        }
+
         child = Scope(name, this)
         child.scopeType = scopeType
         children.add(child)
@@ -143,6 +185,10 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (scopeType != null) {
             if (self.scopeType == null || self.scopeType == scopeType) self.scopeType = scopeType
             else throw IllegalStateException("ScopeType conflict! ${self.scopeType} vs $scopeType")
+        }
+        val parentType = parent?.scopeType
+        if (!scopeHierarchyIsAllowed(parentType, scopeType)) {
+            throw IllegalStateException("$scopeType cannot be placed inside $parentType} ($pathStr)")
         }
     }
 

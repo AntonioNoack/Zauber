@@ -9,11 +9,12 @@ import me.anno.zauber.types.Type
 
 class UnresolvedFieldExpression(
     val name: String,
+    val nameAsImport: Scope?,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String = name
-    override fun clone(scope: Scope) = UnresolvedFieldExpression(name, scope, origin)
+    override fun clone(scope: Scope) = UnresolvedFieldExpression(name, nameAsImport, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
 
     fun resolveField(context: ResolutionContext): ResolvedField? {
@@ -25,6 +26,12 @@ class UnresolvedFieldExpression(
         val context = context.withCodeScope(scope)
         val field = resolveField(context, name, null)
         if (field != null) return field.getValueType(context)
+
+        val nameAsImport = nameAsImport
+        if (nameAsImport != null) {
+            return ImportedMember(nameAsImport, scope, origin)
+                .resolveType(context)
+        }
 
         throw IllegalStateException(
             "Missing field '${name}' in ${context.selfType}, ${context.codeScope}, " +

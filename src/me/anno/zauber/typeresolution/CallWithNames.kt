@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.CallExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.MemberNameExpression
@@ -31,12 +32,12 @@ object CallWithNames {
             }
         }
 
-        return if (actualParameters.any { it.name != null } ||
+        return if (actualParameters.any { it.name != null || it.hasVarargStar } ||
             actualParameters.size != expectedParameters.size ||
             anyIsVararg
         ) {
 
-            val result = arrayOfNulls<ValueParameter>(actualParameters.size)
+            val result = arrayOfNulls<ValueParameter>(expectedParameters.size)
 
             // first assign all names slots
             for (valueParam in actualParameters) {
@@ -111,7 +112,7 @@ object CallWithNames {
             }
         }
 
-        return if (actualParameters.any { it.name != null } ||
+        return if (actualParameters.any { it.name != null || it.value is ArrayToVarargsStar } ||
             actualParameters.size != expectedParameters.size ||
             anyIsVararg
         ) {

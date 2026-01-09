@@ -4,7 +4,6 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.logging.LogManager
@@ -13,10 +12,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NumberType
-import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
-import me.anno.zauber.types.impl.NullType
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
 class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: ParameterList, context: ResolutionContext) :
@@ -122,7 +118,7 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         val ownerNames = field.selfTypeTypeParams
         val selfType = field.selfType
 
-        val valueType = field.deductValueType(context)
+        val valueType = field.resolveValueType(context)
         val forType = resolveGenerics(selfType, valueType, ownerNames, ownerTypes)
         val forCall = resolveGenerics(selfType, forType, field.typeParameters, callTypes)
 

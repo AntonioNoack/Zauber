@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -53,10 +54,14 @@ class NamedCallExpression(
         val valueParameters = resolveValueParameters(context, valueParameters)
 
         val constructor = null
+        val context = context.withSelfType(calleeType)
         return resolveCallType(
-            context.withSelfType(calleeType),
-            this, name, constructor,
+            context,
+            name, constructor,
             typeParameters, valueParameters
+        ) ?: MethodResolver.printScopeForMissingMethod(
+            context, this, name,
+            typeParameters, valueParameters,
         )
     }
 

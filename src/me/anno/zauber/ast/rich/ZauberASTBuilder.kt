@@ -120,14 +120,16 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readClass() {
-        check(tokens.equals(++i, TokenType.NAME))
+        check(tokens.equals(i, TokenType.NAME)) {
+            "Expected name after 'class' at ${tokens.err(i)}"
+        }
         val name = tokens.toString(i++)
 
         val keywords = packKeywords()
         val scopeType =
-            if ("enum" in keywords) ScopeType.ENUM_CLASS
+            if ("inner" in keywords) ScopeType.INNER_CLASS
+            else if ("enum" in keywords) ScopeType.ENUM_CLASS
             else ScopeType.NORMAL_CLASS
-
 
         val clazz = currPackage.getOrPut(name, tokens.fileName, scopeType)
 
@@ -194,22 +196,28 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readObject() {
-        val origin = origin(i)
-        val name = if (tokens.equals(++i, TokenType.NAME)) {
+        val origin = origin(i++)
+        val isCompanionObject = "companion" in keywords
+        val name = if (tokens.equals(i, TokenType.NAME)) {
             tokens.toString(i++)
-        } else if (keywords.remove("companion")) {
+        } else if (isCompanionObject) {
             "Companion"
-        } else throw IllegalStateException("Missing object name")
-        keywords.add("object")
-        val keywords = packKeywords()
+        } else throw IllegalStateException("Missing object name at ${tokens.err(i)}")
 
-        if (tokens.equals(i, "(") || tokens.equals(i, "<")) {
+        if (tokens.equals(i, "(", "<")) {
             throw IllegalStateException("Objects only exist once, so they cannot have constructor parameters.")
         }
 
-        val scope = currPackage.getOrPut(name, tokens.fileName, ScopeType.OBJECT)
+        keywords.add("object")
+        val keywords = packKeywords()
+        val scopeType =
+            if (isCompanionObject) ScopeType.COMPANION_OBJECT
+            else ScopeType.OBJECT
+        // println("Read object '$name' with keywords: $keywords in scope $currPackage")
+
+        val scope = currPackage.getOrPut(name, tokens.fileName, scopeType)
         readSuperCalls(scope, true)
-        readClassBody(name, keywords, ScopeType.OBJECT)
+        readClassBody(name, keywords, scopeType)
 
         scope.hasTypeParameters = true // no type-params are supported
         if (scope.objectField == null) scope.objectField = Field(
@@ -217,6 +225,12 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             ClassType(scope, emptyList()),
             /* todo should we set initialValue? */ null, emptyList(), origin
         )
+
+        if (isCompanionObject) {
+            check(currPackage.companionObject != null) {
+                "Expected class to have companion object"
+            }
+        }
     }
 
     private fun readSuperCalls(clazz: Scope, needsEntry: Boolean) {
@@ -291,7 +305,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         var endIndex = tokens.findToken(i, ";")
         if (endIndex < 0) endIndex = tokens.size
         val classScope = currPackage
-        val scope = classScope.getOrPut("Companion", ScopeType.OBJECT)
+        val scope = classScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
         push(endIndex) {
             var ordinal = 0
             while (i < tokens.size) {
@@ -350,7 +364,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
         val initialValue = CallExpression(
             MemberNameExpression("listOf", scope, origin),
-            listOf(listType), enumScope.enumValues.map {
+            listOf(listType), enumScope.enumEntries.map {
                 val field = it.objectField!!
                 val expr = FieldExpression(field, scope, origin)
                 NamedParameter(null, expr)
@@ -530,7 +544,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 ReturnExpression(readExpression(), null, methodScope, origin)
             } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 if (returnType == null) returnType = UnitType
-                pushBlock(ScopeType.METHOD_BODY, methodScope.name) { readMethodBody() }
+                pushBlock(methodScope) { readMethodBody() }
             } else {
                 if (returnType == null) returnType = UnitType
                 null
@@ -559,7 +573,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         check(tokens.equals(i, TokenType.OPEN_CALL))
         lateinit var parameters: List<Parameter>
         val classScope = currPackage
-        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR_PARAMS) { scope ->
+        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { scope ->
             val selfType = ClassType(classScope, null)
             parameters = pushCall { readParamDeclarations(selfType, scope) }
             scope
@@ -625,7 +639,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     applyImport(import)
                 }
 
-                tokens.equals(i, "class") -> readClass()
+                consumeIf("class") -> readClass()
                 tokens.equals(i, "object") -> readObject()
                 tokens.equals(i, "fun") -> {
                     if (tokens.equals(i + 1, "interface")) {
@@ -880,36 +894,35 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 val annotation = readAnnotation()
                 AnnotatedExpression(annotation, readPrefix())
             }
-            tokens.equals(i, "null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin(i++))
-            tokens.equals(i, "true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i++))
-            tokens.equals(i, "false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i++))
-            tokens.equals(i, "this") -> SpecialValueExpression(SpecialValue.THIS, currPackage, origin(i++))
-            tokens.equals(i, "super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i++))
+            consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin(i - 1))
+            consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
+            consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i - 1))
+            consumeIf("this") -> SpecialValueExpression(SpecialValue.THIS, currPackage, origin(i - 1))
+            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i - 1))
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i), currPackage, origin(i++))
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i), currPackage, origin(i++))
-            tokens.equals(i, "!") -> {
-                val origin = origin(i++)
+            consumeIf("!") -> {
+                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "not", null, emptyList(), currPackage, origin)
             }
-            tokens.equals(i, "+") -> {
-                val origin = origin(i++)
+            consumeIf("+") -> {
+                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "unaryPlus", null, emptyList(), currPackage, origin)
             }
-            tokens.equals(i, "-") -> {
-                val origin = origin(i++)
+            consumeIf("-") -> {
+                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "unaryMinus", null, emptyList(), currPackage, origin)
             }
-            tokens.equals(i, "++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin(i++), readExpression())
-            tokens.equals(i, "--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin(i++), readExpression())
-            tokens.equals(i, "*") -> {
-                i++ // skip star
+            consumeIf("++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin(i - 1), readExpression())
+            consumeIf("--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin(i - 1), readExpression())
+            consumeIf("*") -> {
                 ArrayToVarargsStar(readExpression())
             }
-            tokens.equals(i, "::") -> {
-                val origin = origin(i++)
+            consumeIf("::") -> {
+                val origin = origin(i - 1)
                 check(tokens.equals(i, TokenType.NAME))
                 val name = tokens.toString(i++)
                 // :: means a function of the current class
@@ -1506,7 +1519,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     private fun scanBlockForNewTypes(i0: Int, i1: Int) {
         var depth = 0
         var listen = -1
-        var listenType = ""
+        var listenType: ScopeType? = null
         var typeDepth = 0
         for (i in i0 until i1) {
             when (tokens.getType(i)) {
@@ -1525,24 +1538,26 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                             // tokens.equals(i, "fun") ||
                             tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
                                 listen = i
-                                listenType = "class"
+                                listenType =
+                                    if (tokens.equals(i - 1, "inner")) ScopeType.INNER_CLASS
+                                    else if (tokens.equals(i - 1, "enum")) ScopeType.ENUM_CLASS
+                                    else ScopeType.NORMAL_CLASS
                             }
                             tokens.equals(i, "object") && !tokens.equals(i + 1, ":") -> {
                                 listen = i
-                                listenType = "object"
+                                listenType = ScopeType.OBJECT
                             }
                             tokens.equals(i, "interface") -> {
                                 listen = i
-                                listenType = "interface"
+                                listenType = ScopeType.INTERFACE
                             }
                             typeDepth == 0 && tokens.equals(i, TokenType.NAME) && listen >= 0 &&
                                     fileLevelKeywords.none { keyword -> tokens.equals(i, keyword) } -> {
                                 currPackage
-                                    .getOrPut(tokens.toString(i), tokens.fileName, null)
-                                    .keywords.add(listenType)
+                                    .getOrPut(tokens.toString(i), tokens.fileName, listenType)
                                 if (LOGGER.enableDebug) LOGGER.debug("found ${tokens.toString(i)} in $currPackage")
                                 listen = -1
-                                listenType = ""
+                                listenType = null
                             }
                         }
                     }
@@ -1881,6 +1896,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     check(tokens.equals(i, "var"))
                     result.add(readDeclaration(true, isLateinit = true))
                 }
+                consumeIf("class") -> readClass()
                 else -> {
                     result.add(readExpression())
                     if (LOGGER.enableDebug) LOGGER.debug("block += ${result.last()}")

@@ -8,6 +8,7 @@ import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.members.ConstructorResolver
+import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.findMemberInFile
 import me.anno.zauber.typeresolution.members.MethodResolver.null1
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
@@ -27,10 +28,6 @@ class CallExpression(
 
     companion object {
         private val LOGGER = LogManager.getLogger(CallExpression::class)
-    }
-
-    init {
-        check(base !is MemberNameExpression || base.name != "?.")
     }
 
     override fun toStringImpl(depth: Int): String {
@@ -72,7 +69,8 @@ class CallExpression(
                 val name = base.name
                 if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                return resolveCallable(context, this, name, null, typeParameters, valueParameters)
+                return resolveCallable(context, name, null, typeParameters, valueParameters)
+                    ?: MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
             is UnresolvedFieldExpression -> {
                 val name = base.name
@@ -82,7 +80,19 @@ class CallExpression(
                 val constructor = null1() // todo do we need this constructor-stuff??? I don't think so, it's not a type
                     ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
-                return resolveCallable(context, this, name, constructor, typeParameters, valueParameters)
+                val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters)
+                if (byMethodCall != null) return byMethodCall
+
+                val nameAsImport = base.nameAsImport
+                if (nameAsImport != null) {
+                    val importedMethod = MethodResolver.findMemberInScope(
+                        nameAsImport.parent, nameAsImport.name, context.targetType, context.selfType,
+                        typeParameters, valueParameters
+                    )
+                    if (importedMethod != null) return importedMethod
+                }
+
+                MethodResolver.printScopeForMissingMethod(context, this,name,  typeParameters, valueParameters)
             }
             is NamedTypeExpression -> {
                 val baseType = base.type
@@ -93,18 +103,18 @@ class CallExpression(
                     // constructor is very clear
                     return baseScope.typeWithoutArgs
                 } else {*/
-                    val constructor = ConstructorResolver
-                        .findMemberInScopeImpl(
-                            baseScope, baseScope.name, context.targetType, context.selfType,
-                            typeParameters, valueParameters
-                        )
-                    if (constructor == null) {
-                        throw IllegalStateException("Missing constructor for $baseType")
-                    }
-                    return constructor
+                val constructor = ConstructorResolver
+                    .findMemberInScopeImpl(
+                        baseScope, baseScope.name, context.targetType, context.selfType,
+                        typeParameters, valueParameters
+                    )
+                if (constructor == null) {
+                    throw IllegalStateException("Missing constructor for $baseType")
+                }
+                return constructor
                 //}
             }
-            is ImportedExpression -> {
+            is ImportedMember -> {
                 val name = base.nameAsImport.name
                 if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=${base.nameAsImport}")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
@@ -117,7 +127,8 @@ class CallExpression(
                         base.nameAsImport.parent.ifIsClassScope()?.typeWithoutArgs,
                         typeParameters, valueParameters
                     )
-                return resolveCallable(context, this, name, constructor, typeParameters, valueParameters)
+                return resolveCallable(context, name, constructor, typeParameters, valueParameters)
+                    ?: throw IllegalStateException("Call could not be resolved, check imports?")
             }
             else -> throw IllegalStateException(
                 "Resolve field/method for ${base.javaClass} ($base) " +

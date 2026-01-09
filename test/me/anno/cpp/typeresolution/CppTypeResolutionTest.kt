@@ -12,16 +12,16 @@ import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class TypeResolutionTest {
+class CppTypeResolutionTest {
 
     companion object {
 
         fun testCppTypeResolution(code: String): Type {
             val testScopeName = "test${ctr++}"
             val raw = """
-            package $testScopeName
-            
+            namespace $testScopeName {
             $code
+            }
         """.trimIndent()
 
             val tokens = CppTokenizer(raw, "main.c", false).tokenize()

@@ -7,13 +7,16 @@ import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.GenericType
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
@@ -55,8 +58,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
             val isVararg = expectedValueParameters.lastOrNull()?.isVararg == true
             if (isVararg) {
-                if (expectedValueParameters.size > actualValueParameters.size) {
-                    LOGGER.info("  param-size too low")
+                if (expectedValueParameters.size > actualValueParameters.size + 1) {
+                    LOGGER.info("  param-size too low, ${expectedValueParameters.size} vs ${actualValueParameters.size}")
                     return null
                 }
             } else {
@@ -76,6 +79,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     LOGGER.info("  param-name mismatch")
                     return null
                 }
+
+            check(sortedValueParameters.size == expectedValueParameters.size) {
+                "Incorrectly sorted value parameters, expected ${expectedValueParameters.size} but got ${sortedValueParameters.size}"
+            }
 
             val resolvedTypes = actualTypeParameters?.readonly()
                 ?: ParameterList(expectedTypeParameters)
@@ -123,8 +130,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 LOGGER.info("Start checking arguments")
                 for (i in expectedValueParameters.indices) {
                     val mvParam = expectedValueParameters[i]
-                    LOGGER.info("Start checking argument[$i]: $mvParam vs ${actualValueParameters[i]}")
                     val vParam = sortedValueParameters[i]
+                    LOGGER.info("Start checking argument[$i]: $mvParam vs $vParam")
                     if (!isSubTypeOf(
                             actualSelfType, mvParam, vParam,
                             expectedTypeParameters,
@@ -186,7 +193,16 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>
     ): Resolved? {
-        if (scope == null || selfType !is ClassType) return null
+        if (scope == null) return null
+
+        var selfType = selfType
+        while (selfType is GenericType) {
+            selfType = selfType.superBounds
+        }
+        if (selfType !is ClassType) {
+            println("Skipping hierarchy search, because selfType !is ClassType: $selfType")
+            return null
+        }
 
         val method = findMemberInScope(
             scope, name,
@@ -223,5 +239,135 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>
     ): Resolved?
+
+    private fun getOuterClassDepth(scope: Scope?): Int {
+        var scope = scope
+        while (scope != null) {
+            if (scope.scopeType?.isClassType() == true) {
+                return scope.path.size
+            }
+
+            scope = scope.parentIfSameFile
+        }
+        return -1
+    }
+
+    fun <R : Any> resolveInCodeScope(context: ResolutionContext, callback: (scope: Scope, selfType: Type) -> R?): R? {
+        if (context.selfScope != null && context.selfType != null) {
+            println("Checking[0] ${context.selfScope} with ${context.selfType}")
+            val result = callback(context.selfScope, context.selfType)
+            if (result != null) return result
+
+            val selfCompanion = context.selfScope.companionObject
+            if (selfCompanion != null) {
+                println("Checking[0] $selfCompanion")
+                val result = callback(selfCompanion, selfCompanion.typeWithArgs)
+                if (result != null) return result
+            } else println("${context.selfScope} has no companion")
+        }
+
+        val scopes = ArrayList<Scope>()
+        val selfTypes = ArrayList<Type?>()
+        listScopeTypeCandidates(context, scopes, selfTypes)
+
+        println("Scopes: $scopes, selfTypes: $selfTypes")
+
+        // selfType goes over all scopes below it...
+        // println("Scopes: $scopes")
+        // println("Types: $selfTypes")
+        for (scopeIndex in scopes.indices) {
+            val scope = scopes[scopeIndex] // should be unique by itself
+            var lastType: Type? = NothingType // to avoid duplicate checking
+            var hadUnit = false
+            for (typeIndex in 0..scopeIndex) {
+                val type = selfTypes[typeIndex]
+                if (type == lastType || (type == null && hadUnit)) continue
+                println("Checking $scope with $type")
+                val result = callback(scope, type ?: context.selfType ?: UnitType)
+                if (result != null) return result
+                lastType = type
+                if (type == null) hadUnit = true
+            }
+        }
+        return null
+    }
+
+    private fun listScopeTypeCandidates(
+        context: ResolutionContext,
+        scopes: ArrayList<Scope>,
+        selfTypes: ArrayList<Type?>,
+    ) {
+        listScopeTypeCandidates(context) { scope, selfType ->
+            scopes.add(scope)
+            val selfType = // replace useless package types with Unit s.t. we need to check fewer cases
+                if (selfType is ClassType && selfType.clazz.scopeType?.isClassType() != true)
+                    null else selfType
+            selfTypes.add(selfType)
+
+            // if scope has a companion object, list that, too
+            // unless we're already inside it...
+            val companionObject = scope.companionObject
+            if (companionObject != null && companionObject != scopes.getOrNull(scopes.size - 2)) {
+                scopes.add(companionObject)
+                selfTypes.add(selfType)
+            }
+        }
+    }
+
+    private fun listScopeTypeCandidates(
+        context: ResolutionContext,
+        callback: (scope: Scope, selfType: Type) -> Unit
+    ) {
+        var scope: Scope? = context.codeScope
+        val outerClassDepth = getOuterClassDepth(scope)
+        while (scope != null) {
+            if (isScopeAvailable(scope, outerClassDepth)) {
+                // println("Checking for field '$name' in $maybeSelfScope")
+                val selfType = resolveTypeFromScoping(scope, context)
+                callback(scope, selfType)
+            } else println("Skipping scope '$scope'")
+            scope = scope.parentIfSameFile
+        }
+    }
+
+    private fun resolveTypeFromScoping(candidateScope: Scope, context: ResolutionContext): Type {
+        var candidateScope: Scope = candidateScope
+        while (candidateScope.scopeType?.isInsideExpression() == true) {
+            candidateScope = candidateScope.parentIfSameFile ?: break
+        }
+        if (candidateScope == context.selfType) {
+            // println("Found context.selfType: $candidateScope")
+            return context.selfType
+        }
+        // if candidateScope is method & has self type, use that instead
+        val selfAsMethod = candidateScope.selfAsMethod
+        if (selfAsMethod != null) {
+            val selfType = selfAsMethod.selfType
+            if (selfType != null) {
+                // println("Found method.selfType: $selfType")
+                return selfType
+            }
+        }
+        if (candidateScope.scopeType?.isClassType() == true ||
+            candidateScope.scopeType == ScopeType.PACKAGE
+        ) {
+            // println("Found class: $candidateScope")
+            return candidateScope.typeWithoutArgs
+        }
+        // println("Using scope blindly: $candidateScope")
+        return candidateScope.typeWithoutArgs
+    }
+
+    private fun isScopeAvailable(scope: Scope, originalSelfScope: Int): Boolean {
+        return when (scope.scopeType) {
+            // todo we need to filter by visibility
+            ScopeType.INLINE_CLASS, ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.ENUM_CLASS,
+            ScopeType.METHOD, ScopeType.METHOD_BODY, ScopeType.WHEN_CASES, ScopeType.WHEN_ELSE,
+            ScopeType.LAMBDA -> true // only one instance
+            ScopeType.INTERFACE, ScopeType.NORMAL_CLASS ->
+                scope.path.size >= originalSelfScope
+            else -> true // idk
+        }
+    }
 
 }

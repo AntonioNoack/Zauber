@@ -131,7 +131,9 @@ object FieldGetterSetter {
         return true // just to make our lives easier in testing
         if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
         if (field.codeScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
-        if (field.codeScope.scopeType == ScopeType.OBJECT) return true // to ensure initialization
+        if (field.codeScope.scopeType == ScopeType.OBJECT ||
+            field.codeScope.scopeType == ScopeType.COMPANION_OBJECT
+        ) return true // to ensure initialization
         return false
     }
 

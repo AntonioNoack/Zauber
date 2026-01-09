@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.findType
@@ -25,23 +24,18 @@ class MemberNameExpression(
             return if (isChild) {
                 MemberNameExpression(name, scope, origin)
             } else {
+                val type = findType(scope, null, name)
+                if (type != null) return NamedTypeExpression(type, scope, origin)
+
                 val nameAsImport = astBuilder.imports.firstOrNull { it.name == name }?.path
-                if (nameAsImport != null) {
-                    ImportedExpression(nameAsImport, scope, origin)
-                } else {
-
-                    val type = findType(scope, null, name)
-                    if (type != null) return NamedTypeExpression(type, scope, origin)
-
-                    // try to find the field:
-                    //  check super scopes until a class appears,
-                    //  then check hierarchy scopes
-                    //  -> inner classes (anonymous inline classes) have access to multiple scopes
-                    //  -> for the whole hierarchy, try to find fields and parent classes
-                    // when this is executed, the field might not yet be known
-                    //  -> and we must respect the hierarchy -> we can only execute this later on
-                    UnresolvedFieldExpression(name, scope, origin)
-                }
+                // try to find the field:
+                //  check super scopes until a class appears,
+                //  then check hierarchy scopes
+                //  -> inner classes (anonymous inline classes) have access to multiple scopes
+                //  -> for the whole hierarchy, try to find fields and parent classes
+                // when this is executed, the field might not yet be known
+                //  -> and we must respect the hierarchy -> we can only execute this later on
+                UnresolvedFieldExpression(name, nameAsImport, scope, origin)
             }
         }
     }

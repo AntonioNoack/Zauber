@@ -128,6 +128,9 @@ object ASTClassScanner {
 
                     if (tokens.equals(j, ",")) j++
                 }
+
+                currPackage.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+
                 i = j // skip stuff
 
             } else {

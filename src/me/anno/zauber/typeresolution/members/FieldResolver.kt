@@ -2,10 +2,8 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
-import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
@@ -13,6 +11,8 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeTo
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 
 object FieldResolver : MemberResolver<Field, ResolvedField>() {
@@ -105,56 +105,18 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         )
     }
 
-    private fun getOuterClassDepth(scope: Scope?): Int {
-        var scope = scope
-        while (scope != null) {
-            if (scope.scopeType?.isClassType() == true) {
-                return scope.path.size
-            }
-
-            scope = scope.parentIfSameFile
-        }
-        return -1
-    }
-
-    private fun isScopeAvailable(maybeSelfScope: Scope, originalSelfScope: Int): Boolean {
-        return when (maybeSelfScope.scopeType) {
-            ScopeType.INLINE_CLASS, ScopeType.PACKAGE, ScopeType.OBJECT -> true // only one instance
-            ScopeType.INTERFACE, ScopeType.NORMAL_CLASS, ScopeType.ENUM_CLASS ->
-                maybeSelfScope.path.size >= originalSelfScope
-            else -> true // idk
-        }
-    }
-
     fun resolveField(
         context: ResolutionContext, name: String,
-        typeParameters: ParameterList?, // if provided, typically not the case (I've never seen it)
+        typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
     ): ResolvedField? {
-        val returnType = context.targetType
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$name': $typeParameters, selfType: $selfType")
-        val valueParameters = emptyList<ValueParameter>()
-
-        var field: ResolvedField? = null
-        var maybeSelfScope = context.selfScope
-        val outerClassDepth = getOuterClassDepth(maybeSelfScope)
-        while (maybeSelfScope != null && field == null) {
-            if (isScopeAvailable(maybeSelfScope, outerClassDepth)) {
-                // println("Checking for field '$name' in $maybeSelfScope")
-                field = findMemberInHierarchy(
-                    maybeSelfScope, name, returnType,
-                    if (maybeSelfScope == context.selfType) selfType
-                    else maybeSelfScope.typeWithoutArgs, typeParameters, valueParameters
-                )
-            }// else println("Skipping scope '$maybeSelfScope'")
-
-            maybeSelfScope = maybeSelfScope.parentIfSameFile
+        return resolveInCodeScope(context) { candidateScope, selfType ->
+            findMemberInHierarchy(
+                candidateScope, name, context.targetType,
+                selfType, typeParameters, emptyList()
+            )
         }
-
-        field =
-            field ?: findMemberInFile(context.codeScope, name, returnType, selfType, typeParameters, valueParameters)
-        field = field ?: findMemberInFile(langScope, name, returnType, selfType, typeParameters, valueParameters)
-        return field
     }
 
 }
