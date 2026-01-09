@@ -351,12 +351,12 @@ class MethodResolutionTest {
     @Test
     fun testCompanionBeingOptionalForImport() {
         val code = """
-        import helper004.Wrapper
+        import helper004m.Wrapper
         class Inner {
             val tested = Wrapper.x()
         }
         
-        package helper004
+        package helper004m
         class Wrapper {
             companion object {
                 fun x() = 0

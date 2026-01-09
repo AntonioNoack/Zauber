@@ -1,6 +1,8 @@
 package zauber
 
 import zauber.types.Self
+import zauber.IntRange
+import zauber.LongRange
 
 interface Number : Comparable<Self> {
     operator fun plus(other: Self): Self
@@ -54,6 +56,9 @@ value class Int(val value: NativeI32) : Number {
     override operator fun inc(): Int = this + 1
     override operator fun dec(): Int = this - 1
 
+    infix fun until(other: Int): IntRange = IntRange(this, other)
+    infix fun rangeTo(other: Int): IntRange = IntRange(this, other + 1)
+
     external override fun compareTo(other: Self): Int
 }
 
@@ -97,6 +102,9 @@ value class Long(val value: NativeI64) : Number {
 
     override operator fun inc(): Long = this + 1L
     override operator fun dec(): Long = this - 1L
+
+    infix fun until(other: Int): LongRange = LongRange(this, other)
+    infix fun rangeTo(other: Int): LongRange = LongRange(this, other + 1)
 
     external override fun compareTo(other: Self): Int
 }

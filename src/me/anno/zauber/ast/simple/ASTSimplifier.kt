@@ -251,12 +251,30 @@ object ASTSimplifier {
                 val a = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
                 val b = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
                 val dst = currBlock.field(BooleanType, booleanOwnership)
-                if (expr.byPointer) {
+                val call = if (expr.byPointer) {
                     SimpleCheckIdentical(dst, a, b, expr.negated, expr.scope, expr.origin)
                 } else {
                     SimpleCheckEquals(dst, a, b, expr.negated, expr.scope, expr.origin)
                 }
+                currBlock.add(call)
                 dst
+            }
+            is AssignIfMutableExpr -> {
+                val leftValue = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
+                val rightValue = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
+                val (_, _, dstField, method) = expr.resolveMethod(context)
+                val callResult = currBlock.field(method.getTypeFromCall())
+                val call = SimpleCall(callResult, method.resolved, leftValue, listOf(rightValue), expr.scope, expr.origin)
+                currBlock.add(call)
+                if (dstField != null) {
+                    // todo reassign field, if given
+                    val newValue = callResult
+                    val self: SimpleField? =
+                        null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
+                    // todo we should call the setter, if there is one
+                    currBlock.add(SimpleSetField(self, dstField, newValue, expr.scope, expr.origin))
+                }
+                voidField
             }
             else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
         }

@@ -1,11 +1,11 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
+import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -30,20 +30,14 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         }
     }
 
-    private fun getMethodOrNull(context: ResolutionContext, name: String, rightType: Type): Method? {
-        val resolved = MethodResolver.resolveMethod(
+    private fun getMethodOrNull(context: ResolutionContext, name: String, rightType: Type): ResolvedMethod? {
+        return MethodResolver.resolveMethod(
             context, name, null,
             listOf(ValueParameterImpl(null, rightType, false))
         )
-        return resolved?.resolved
     }
 
-    class ResolveResult(
-        val needsFieldAssignment: Field?,
-        val neededCall: Method
-    )
-
-    fun resolveMethod(context: ResolutionContext): ResolveResult {
+    fun resolveMethod(context: ResolutionContext): AssignIfMutableResolveResult {
         val field = findField(left, context)
         val isFieldMutable = field?.isMutable == true
         val leftType = TypeResolution.resolveType(context, left)
@@ -61,10 +55,10 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         }
 
         return if (isContentMutable) {
-            ResolveResult(null, plusAssignMethod)
+            AssignIfMutableResolveResult(leftType, rightType, null, plusAssignMethod)
         } else {
             check(plusMethod != null) { "Cannot resolve $leftType.plus($rightType)" }
-            ResolveResult(field, plusMethod)
+            AssignIfMutableResolveResult(leftType, rightType, field, plusMethod)
         }
     }
 

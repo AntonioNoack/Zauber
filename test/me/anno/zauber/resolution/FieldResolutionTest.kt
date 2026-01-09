@@ -334,12 +334,12 @@ class FieldResolutionTest {
     @Test
     fun testCompanionBeingOptionalForImport() {
         val code = """
-        import helper004.Wrapper
+        import helper004f.Wrapper
         class Inner {
             val tested = Wrapper.x
         }
         
-        package helper004
+        package helper004f
         class Wrapper {
             companion object {
                 val x = 0
