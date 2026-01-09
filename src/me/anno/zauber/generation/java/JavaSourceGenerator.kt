@@ -1,6 +1,9 @@
 package me.anno.zauber.generation.java
 
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.generation.DeltaWriter
@@ -223,6 +226,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendFields(classScope: Scope) {
+        if (classScope.scopeType == ScopeType.INTERFACE) return // no backing fields
         val fields = classScope.fields
         for (field in fields) {
 
@@ -273,6 +277,7 @@ object JavaSourceGenerator : Generator() {
 
         if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
         if ("external" in method.keywords) builder.append("native ")
+        if (classScope.scopeType == ScopeType.INTERFACE && method.body != null) builder.append("default ")
         if (!isBySelf) builder.append("static ")
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)

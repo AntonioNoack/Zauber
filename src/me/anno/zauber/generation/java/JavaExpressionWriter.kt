@@ -4,7 +4,10 @@ import me.anno.zauber.ast.rich.InnerSuperCall
 import me.anno.zauber.ast.rich.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.expression.DotExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 
 object JavaExpressionWriter {
@@ -30,6 +33,16 @@ object JavaExpressionWriter {
             }
             is UnresolvedFieldExpression -> {
                 builder.append(expression.name)
+            }
+            is MemberNameExpression -> {
+                builder.append(expression.name)
+            }
+            is NumberExpression -> {
+                builder.append(expression.value)
+            }
+            is StringExpression -> {
+                // todo do we need the quotes?
+                builder.append('"').append(expression.value).append('"')
             }
             else -> builder.append(expression).append("/* ")
                 .append(expression.javaClass.simpleName).append(" */")

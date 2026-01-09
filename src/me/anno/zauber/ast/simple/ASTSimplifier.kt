@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -153,7 +154,9 @@ object ASTSimplifier {
                 val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
                     SpecialValue.TRUE, SpecialValue.FALSE -> BooleanType
-                    else -> TODO("Resolve type of $expr")
+                    SpecialValue.THIS -> context.selfType
+                        ?: throw IllegalStateException("Missing selfType for $this in ${resolveOrigin(expr.origin)}")
+                    SpecialValue.SUPER -> throw IllegalStateException("Cannot store super in a field")
                 }
                 val dst = currBlock.field(type)
                 currBlock.add(SimpleSpecialValue(dst, expr))

@@ -141,9 +141,12 @@ object FieldGetterSetter {
         field: Field, expr: Expression?, backingField: Field,
         getterScope: Scope, origin: Int
     ) {
+        val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
         val expr = expr ?: if (needsGetter(field)) {
-            val fieldExpr = FieldExpression(backingField, getterScope, origin)
-            ReturnExpression(fieldExpr, null, getterScope, origin)
+            if (!isInterface) {
+                val fieldExpr = FieldExpression(backingField, getterScope, origin)
+                ReturnExpression(fieldExpr, null, getterScope, origin)
+            } else null
         } else return
 
         val methodName = "get${field.name.capitalize()}"
@@ -163,10 +166,13 @@ object FieldGetterSetter {
         backingField: Field, valueField: Field,
         setterScope: Scope, origin: Int,
     ) {
+        val isInterface = setterScope.parent?.scopeType == ScopeType.INTERFACE
         val expr = expr ?: if (needsGetter(field)) {
-            val backingExpr = FieldExpression(backingField, setterScope, origin)
-            val valueExpr = FieldExpression(valueField, setterScope, origin)
-            AssignmentExpression(backingExpr, valueExpr)
+            if (!isInterface) {
+                val backingExpr = FieldExpression(backingField, setterScope, origin)
+                val valueExpr = FieldExpression(valueField, setterScope, origin)
+                AssignmentExpression(backingExpr, valueExpr)
+            } else null
         } else return
 
         val methodName = "set${field.name.capitalize()}"
