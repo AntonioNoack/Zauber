@@ -113,11 +113,15 @@ class DotExpression(
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
+                val context = context.withSelfType(baseType)
                 return resolveCallable(
-                    context.withSelfType(baseType),
+                    context,
                     base.name, constructor,
                     right.typeParameters, valueParameters
-                ) ?: throw IllegalStateException("Call could not be resolved, check imports?")
+                ) ?: MethodResolver.printScopeForMissingMethod(
+                    context, this, base.name,
+                    right.typeParameters, valueParameters
+                )
             }
             is UnresolvedFieldExpression -> {
                 val constructor = null

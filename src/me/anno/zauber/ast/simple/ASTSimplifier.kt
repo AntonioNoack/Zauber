@@ -20,6 +20,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.BooleanUtils.not
@@ -120,11 +121,15 @@ object ASTSimplifier {
                 val valueParameters = resolveValueParameters(context, expr.valueParameters)
 
                 val constructor = null
+                val context = context.withSelfType(calleeType)
                 val method = resolveCallable(
-                    context.withSelfType(calleeType),
+                    context,
                     expr.name, constructor,
                     expr.typeParameters, valueParameters
-                ) ?: throw IllegalStateException("Call could not be resolved, check imports?")
+                ) ?: MethodResolver.printScopeForMissingMethod(
+                    context, expr, expr.name,
+                    expr.typeParameters, valueParameters
+                )
                 simplifyCall(
                     context, expr, currBlock, graph, expr.base,
                     expr.valueParameters, method, null
@@ -264,7 +269,8 @@ object ASTSimplifier {
                 val rightValue = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
                 val (_, _, dstField, method) = expr.resolveMethod(context)
                 val callResult = currBlock.field(method.getTypeFromCall())
-                val call = SimpleCall(callResult, method.resolved, leftValue, listOf(rightValue), expr.scope, expr.origin)
+                val call =
+                    SimpleCall(callResult, method.resolved, leftValue, listOf(rightValue), expr.scope, expr.origin)
                 currBlock.add(call)
                 if (dstField != null) {
                     // todo reassign field, if given

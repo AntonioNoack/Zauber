@@ -131,7 +131,7 @@ class CallExpression(
                         typeParameters, valueParameters
                     )
                 return resolveCallable(context, name, constructor, typeParameters, valueParameters)
-                    ?: throw IllegalStateException("Call could not be resolved, check imports?")
+                    ?: MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
             else -> throw IllegalStateException(
                 "Resolve field/method for ${base.javaClass} ($base) " +

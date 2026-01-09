@@ -108,8 +108,9 @@ object JavaSourceGenerator : Generator() {
         val params = type.typeParameters
         if (!params.isNullOrEmpty()) {
             builder.append('<')
-            for ((i, param) in params.withIndex()) {
+            for (i in params.indices) {
                 if (i > 0) builder.append(", ")
+                val param = params.getOrNull(i) ?: NullableAnyType
                 appendType(param, scope, true)
             }
             builder.append('>')

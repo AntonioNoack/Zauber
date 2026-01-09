@@ -1,8 +1,6 @@
 package zauber
 
 import zauber.types.Self
-import zauber.IntRange
-import zauber.LongRange
 
 interface Number : Comparable<Self> {
     operator fun plus(other: Self): Self
@@ -13,6 +11,9 @@ interface Number : Comparable<Self> {
 
     operator fun inc(): Self
     operator fun dec(): Self
+
+    operator fun unaryPlus(): Self = this
+    fun unaryMinus(): Self
 }
 
 value class Int(val value: NativeI32) : Number {
@@ -55,6 +56,8 @@ value class Int(val value: NativeI32) : Number {
 
     override operator fun inc(): Int = this + 1
     override operator fun dec(): Int = this - 1
+
+    external override fun unaryMinus(): Self
 
     infix fun until(other: Int): IntRange = IntRange(this, other)
     infix fun rangeTo(other: Int): IntRange = IntRange(this, other + 1)
@@ -103,6 +106,8 @@ value class Long(val value: NativeI64) : Number {
     override operator fun inc(): Long = this + 1L
     override operator fun dec(): Long = this - 1L
 
+    external override fun unaryMinus(): Self
+
     infix fun until(other: Int): LongRange = LongRange(this, other)
     infix fun rangeTo(other: Int): LongRange = LongRange(this, other + 1)
 
@@ -123,8 +128,10 @@ value class Half(val value: NativeF16) : Number {
     external fun toFloat(): Float
     external fun toDouble(): Double
 
-    override operator fun inc(): Half = this + 1h
-    override operator fun dec(): Half = this - 1h
+    override operator fun inc(): Half = this + 1
+    override operator fun dec(): Half = this - 1
+
+    external override fun unaryMinus(): Self
 
     external override fun compareTo(other: Self): Int
 }
@@ -145,6 +152,8 @@ value class Float(val value: NativeF32) : Number {
     override operator fun inc(): Float = this + 1f
     override operator fun dec(): Float = this - 1f
 
+    external override fun unaryMinus(): Self
+
     external override fun compareTo(other: Self): Int
 }
 
@@ -163,6 +172,8 @@ value class Double(val value: NativeF64) : Number {
 
     override operator fun inc(): Double = this + 1.0
     override operator fun dec(): Double = this - 1.0
+
+    external override fun unaryMinus(): Self
 
     external override fun compareTo(other: Self): Int
 }
