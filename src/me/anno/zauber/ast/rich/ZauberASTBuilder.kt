@@ -161,7 +161,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         } else null
 
         val needsSuperCall = classScope != AnyType.clazz
-        readSuperCalls(classScope, needsSuperCall)
+        readSuperCalls(classScope)
 
         val scope = classScope.getOrCreatePrimConstructorScope()
         val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
@@ -189,7 +189,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         clazz.typeParameters = readTypeParameterDeclarations(clazz)
         clazz.hasTypeParameters = true
 
-        readSuperCalls(clazz, false)
+        readSuperCalls(clazz)
         readClassBody(name, keywords, ScopeType.INTERFACE)
         popGenericParams()
     }
@@ -217,7 +217,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         // println("Read object '$name' with keywords: $keywords in scope $currPackage")
 
         val scope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        readSuperCalls(scope, true)
+        readSuperCalls(scope)
         readClassBody(name, keywords, scopeType)
 
         scope.hasTypeParameters = true // no type-params are supported
@@ -234,20 +234,21 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         }
     }
 
-    private fun readSuperCalls(clazz: Scope, needsEntry: Boolean) {
+    private fun readSuperCalls(classScope: Scope) {
         if (consumeIf(":")) {
             var endIndex = findEndOfSuperCalls(i)
             if (endIndex < 0) endIndex = tokens.size
             push(endIndex) {
                 while (i < tokens.size) {
-                    clazz.superCalls.add(readSuperCall(clazz.typeWithoutArgs))
+                    classScope.superCalls.add(readSuperCall(classScope.typeWithoutArgs))
                     readComma()
                 }
             }
             i = endIndex // index of {
         }
-        if (needsEntry && clazz.superCalls.isEmpty()) {
-            clazz.superCalls.add(SuperCall(AnyType, emptyList(), null))
+        val addAnyIfEmpty = classScope != AnyType.clazz
+        if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
+            classScope.superCalls.add(SuperCall(AnyType, emptyList(), null))
         }
     }
 
@@ -981,10 +982,9 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             consumeIf("continue") -> ContinueExpression(label, currPackage, origin(i - 1))
 
             tokens.equals(i, "object") &&
-                    tokens.equals(i + 1, TokenType.OPEN_BLOCK) -> readInlineClass0()
-
-            tokens.equals(i, "object") &&
-                    tokens.equals(i + 1, ":") -> readInlineClass()
+                    (tokens.equals(i + 1, ":") || tokens.equals(i + 1, TokenType.OPEN_BLOCK)) -> {
+                readInlineClass()
+            }
 
             tokens.equals(i, TokenType.NAME) -> {
                 val origin = origin(i)
@@ -1035,43 +1035,38 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         }
     }
 
-    private fun readInlineClass0(): Expression {
-        val origin = origin(i)
-        check(tokens.equals(i++, "object"))
-        check(tokens.equals(i, TokenType.OPEN_BLOCK))
+    private fun getNextOuterTypeParams(): List<Parameter> {
+        var scope: Scope? = currPackage
+        while (scope != null) {
+            val scopeType = scope.scopeType
+            if (scope.hasTypeParameters &&
+                (scopeType == ScopeType.METHOD ||
+                        (scopeType != null && scopeType.isClassType()))
+            ) {
+                return scope.typeParameters
+            }
 
-        val name = currPackage.generateName("lambda")
-        val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
-        clazz.hasTypeParameters = true
-
-        readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
-        return ConstructorExpression(
-            clazz, emptyList(), emptyList(),
-            null, currPackage, origin
-        )
+            scope = scope.parentIfSameFile
+        }
+        return emptyList()
     }
 
     private fun readInlineClass(): Expression {
         val origin = origin(i)
-        check(tokens.equals(i++, "object"))
-        check(tokens.equals(i++, ":"))
+        consume("object")
 
         val name = currPackage.generateName("inline")
-        val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
-        clazz.hasTypeParameters = true
+        val classScope = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
+        classScope.typeParameters = getNextOuterTypeParams()
+        classScope.hasTypeParameters = true
 
-        val bodyIndex = tokens.findToken(i, TokenType.OPEN_BLOCK)
-        check(bodyIndex > i)
-        push(bodyIndex) {
-            while (i < tokens.size) {
-                clazz.superCalls.add(readSuperCall(clazz.typeWithoutArgs))
-                readComma()
-            }
-        }
-        i = bodyIndex
+        readSuperCalls(classScope)
+
+        println("Inline class has the following type-params: ${classScope.typeParameters}")
+
         readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(
-            clazz, emptyList(), emptyList(),
+            classScope, emptyList(), emptyList(),
             null, currPackage, origin
         )
     }

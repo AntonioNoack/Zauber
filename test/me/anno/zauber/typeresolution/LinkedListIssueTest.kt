@@ -11,10 +11,6 @@ class LinkedListIssueTest {
         // todo solve next issue...
         testTypeResolution(
             """
-        class Array<V>(override val size: Int) : Iterable<V> {
-            external override operator fun get(index: Int): V
-            external operator fun set(index: Int, value: V)
-        }
         
         interface Iterator<V> {
             fun hasNext(): Boolean
@@ -23,6 +19,11 @@ class LinkedListIssueTest {
 
         interface Iterable<V> {
             operator fun iterator(): Iterator<V>
+        }
+        
+        class Array<V>(override val size: Int) : Iterable<V> {
+            external override operator fun get(index: Int): V
+            external operator fun set(index: Int, value: V)
         }
         
         class LinkedList<V>(capacity: Int = 16) : Iterable<V> {
@@ -68,6 +69,7 @@ class LinkedListIssueTest {
         package zauber
         class Int {
             external fun unaryMinus(): Int
+            external fun minus(other: Int): Int
         }
             """.trimIndent()
         )

@@ -1,5 +1,9 @@
 package zauber
 
+/**
+ * In most cases, you should not use this class.
+ * Use an Array, an ArrayList or List(size){} or .map{} instead, please.
+ * */
 class LinkedList<V>(capacity: Int = 16) : MutableList<V> {
 
     private val content = Array<V>(capacity)
