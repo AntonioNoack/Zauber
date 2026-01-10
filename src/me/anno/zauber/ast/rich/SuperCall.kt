@@ -7,4 +7,8 @@ class SuperCall(
     val type: ClassType,
     val valueParameters: List<NamedParameter>?,
     val delegate: Expression?
-)
+) {
+    override fun toString(): String {
+        return "$type($valueParameters) by $delegate"
+    }
+}

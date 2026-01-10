@@ -15,7 +15,7 @@ class Constructor(
     origin: Int
 ) : MethodLike(
     scope.parent!!.typeWithoutArgs,
-    emptyList(), valueParameters,
+    scope.typeParameters, valueParameters,
     UnitType, scope, body, keywords, origin
 ) {
 

@@ -16,18 +16,10 @@ class IntRangeIterator(var index: Int, val endExcl: Int, val step: Int = 1) : It
     }
 }
 
-infix fun Int.to(endIncl: Int): IntRange {
-    return IntRange(this, endIncl + 1, 1)
-}
-
 infix fun Int.until(endExcl: Int): IntRange {
     return IntRange(this, endExcl, 1)
 }
 
 operator fun Int.rangeTo(endIncl: Int): IntRange {
     return IntRange(this, endIncl + 1, 1)
-}
-
-operator fun Int.rangeUntil(endExcl: Int): IntRange {
-    return IntRange(this, endExcl, 1)
 }

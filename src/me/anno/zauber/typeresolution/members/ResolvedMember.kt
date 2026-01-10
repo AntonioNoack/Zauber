@@ -25,10 +25,16 @@ abstract class ResolvedMember<V>(
         fun resolveGenerics(
             selfType: Type?, type: Type,
             genericNames: List<Parameter>,
-            genericValues: ParameterList
+            genericValues: ParameterList?
         ): Type {
+            if (genericValues == null) return type
+
+            check(genericNames.size == genericValues.size) {
+                "Expected same number of generic names and generic values, got $genericNames vs $genericValues ($type)"
+            }
             if (genericNames.size != genericValues.size) {
                 LOGGER.warn("Expected same number of generic names and generic values, got ${genericNames.size} vs ${genericValues.size} ($type)")
+                return type
             }
             return when (type) {
                 is GenericType -> {

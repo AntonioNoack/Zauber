@@ -214,17 +214,22 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         return scope.superCalls.firstNotNullOfOrNull { call ->
             val superType = call.type
             val genericNames = scope.typeParameters
-            val genericValues = call.type.typeParameters ?: emptyParameterList()
-            val mappedSelfType = resolveGenerics(null, selfType, genericNames, genericValues) as ClassType
-            val mappedTypeParameters = typeParameters?.map { paramType ->
-                resolveGenerics(selfType, paramType, genericNames, genericValues)
+            val genericValues = call.type.typeParameters
+            if (genericValues == null || genericNames.size == genericValues.size) {
+                val mappedSelfType = resolveGenerics(null, selfType, genericNames, genericValues) as ClassType
+                val mappedTypeParameters = typeParameters?.map { paramType ->
+                    resolveGenerics(selfType, paramType, genericNames, genericValues)
+                }
+                check(superType.clazz != selfType.clazz)
+                findMemberInHierarchy(
+                    superType.clazz, origin, name,
+                    returnType, mappedSelfType,
+                    mappedTypeParameters, valueParameters
+                )
+            } else {
+                println("Skipping findMemberInHierarchy for $call, because generics are mismatched: $genericNames vs $genericValues")
+                null
             }
-            check(superType.clazz != selfType.clazz)
-            findMemberInHierarchy(
-                superType.clazz, origin, name,
-                returnType, mappedSelfType,
-                mappedTypeParameters, valueParameters
-            )
         }
     }
 

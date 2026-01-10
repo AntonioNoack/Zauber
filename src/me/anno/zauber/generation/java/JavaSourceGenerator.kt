@@ -176,7 +176,7 @@ object JavaSourceGenerator : Generator() {
             ScopeType.ENUM_CLASS -> "final class"
             ScopeType.NORMAL_CLASS -> "class"
             ScopeType.INTERFACE -> "interface"
-            ScopeType.OBJECT -> "final class"
+            ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> "final class"
             ScopeType.ENUM_ENTRY_CLASS -> "final class"
             ScopeType.PACKAGE -> "final class"
             else -> scope.scopeType.toString()
@@ -193,7 +193,9 @@ object JavaSourceGenerator : Generator() {
             appendFields(scope)
 
             val primaryConstructorScope = scope.primaryConstructorScope
-            if (primaryConstructorScope != null) appendInitBlocks(primaryConstructorScope)
+            if (primaryConstructorScope != null) {
+                appendInitBlocks(primaryConstructorScope)
+            }
 
             appendConstructors(scope)
             appendMethods(scope)
@@ -203,6 +205,8 @@ object JavaSourceGenerator : Generator() {
                 for (child in scope.children) {
                     val childType = child.scopeType ?: continue
                     if (childType.isClassType()) {
+                        // some spacing
+                        nextLine()
                         generateInside(child.name, child)
                     }
                 }
@@ -256,6 +260,9 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendMethod(classScope: Scope, method: Method) {
 
+        // some spacing
+        nextLine()
+
         val selfType = method.selfType
         val isBySelf = selfType == classScope.typeWithArgs ||
                 method.keywords.hasFlag(Keywords.OVERRIDE) ||
@@ -290,6 +297,10 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendConstructor(classScope: Scope, constructor: Constructor) {
+
+        // some spacing
+        nextLine()
+
         builder.append("public ").append(classScope.name)
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
         // todo append extra body-block for super-call
@@ -372,7 +383,6 @@ object JavaSourceGenerator : Generator() {
             e.printStackTrace()
             builder.append("/* [${e.javaClass.simpleName}: ${e.message}] $body */")
         }
-        nextLine()
     }
 
     private fun appendTypeParams(scope: Scope) {

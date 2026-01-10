@@ -149,18 +149,23 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         if (tokens.equals(i, "constructor")) i++
         val constructorOrigin = origin(i)
         val constructorParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val primaryConstructorScope = classScope.getOrCreatePrimConstructorScope()
-            val parameters = pushScope(primaryConstructorScope) {
+            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            var parameters = pushScope(constructorScope) {
                 val selfType = ClassType(classScope, null)
                 pushCall { readParameterDeclarations(selfType, classScope) }
             }
-            for (field in primaryConstructorScope.fields) {
+            if (scopeType == ScopeType.ENUM_CLASS) {
+                parameters = listOf(
+                    Parameter("ordinal", IntType, constructorScope, origin),
+                    Parameter("name", StringType, constructorScope, origin)
+                ) + parameters
+            }
+            for (field in constructorScope.fields) {
                 classScope.addField(field)
             }
             parameters
         } else null
 
-        val needsSuperCall = classScope != AnyType.clazz
         readSuperCalls(classScope)
 
         val scope = classScope.getOrCreatePrimConstructorScope()
@@ -307,6 +312,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         if (endIndex < 0) endIndex = tokens.size
         val classScope = currPackage
         val companionScope = classScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+        val primaryConstructorScope = companionScope.getOrCreatePrimConstructorScope()
         push(endIndex) {
             var ordinal = 0
             while (i < tokens.size) {
@@ -336,10 +342,14 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 val valueType =
                     if (classScope.typeParameters.isNotEmpty()) null // we need to resolve them
                     else classScope.typeWithArgs
-                entryScope.objectField = Field(
+                val field = Field(
                     companionScope, companionScope.typeWithoutArgs, false, null,
                     name, valueType, initialValue, keywords, origin
                 )
+                entryScope.objectField = field
+
+                val fieldExpr = FieldExpression(field, primaryConstructorScope, origin)
+                primaryConstructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
 
                 readComma()
             }
@@ -349,7 +359,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return endIndex
     }
 
-    private fun createEnumProperties(scope: Scope, enumScope: Scope, origin: Int) {
+    private fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Int) {
 
         // todo we also need to add then as constructor properties,
         //  and add them into all constructors...
@@ -363,29 +373,34 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             "ordinal", IntType, null, syntheticList, origin
         )
 
-        scope.hasTypeParameters = true
+        companionScope.hasTypeParameters = true
 
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
         val initialValue = CallExpression(
-            MemberNameExpression("listOf", scope, origin),
+            MemberNameExpression("listOf", companionScope, origin),
             listOf(listType), enumScope.enumEntries.map {
                 val field = it.objectField!!
-                val expr = FieldExpression(field, scope, origin)
+                val expr = FieldExpression(field, companionScope, origin)
                 NamedParameter(null, expr)
             }, origin
         )
 
         val entriesField = Field(
-            scope, scope.typeWithoutArgs, false,
+            companionScope, companionScope.typeWithoutArgs, false,
             null, "__entries", listType,
             initialValue, syntheticList, origin
         )
 
-        pushScope(scope) {
+        val constructorScope = companionScope.getOrCreatePrimConstructorScope()
+        val fieldExpr = FieldExpression(entriesField, constructorScope, origin)
+        constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
+
+        pushScope(companionScope) {
             pushScope(ScopeType.METHOD, "entries") { methodScope ->
                 methodScope.selfAsMethod = Method(
-                    scope.typeWithoutArgs, "entries", emptyList(), emptyList(),
-                    methodScope, listType, emptyList(), FieldExpression(entriesField, methodScope, origin),
+                    companionScope.typeWithoutArgs, "entries", emptyList(), emptyList(),
+                    methodScope, listType, emptyList(),
+                    ReturnExpression(FieldExpression(entriesField, methodScope, origin), null, methodScope, origin),
                     syntheticList, origin
                 )
             }
@@ -575,10 +590,18 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         check(tokens.equals(i, TokenType.OPEN_CALL))
         lateinit var parameters: List<Parameter>
         val classScope = currPackage
-        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { methodScope ->
+        val isEnumClass = classScope.scopeType == ScopeType.ENUM_CLASS
+
+        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { constructorScope ->
             val selfType = ClassType(classScope, null)
-            parameters = pushCall { readParameterDeclarations(selfType, methodScope) }
-            methodScope
+            parameters = pushCall { readParameterDeclarations(selfType, constructorScope) }
+            if (isEnumClass) {
+                parameters = listOf(
+                    Parameter("ordinal", IntType, constructorScope, origin),
+                    Parameter("name", StringType, constructorScope, origin)
+                ) + parameters
+            }
+            constructorScope
         }
 
         // optional return type
@@ -589,10 +612,16 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             val target = if (tokens.equals(i++, "super"))
                 InnerSuperCallTarget.SUPER else InnerSuperCallTarget.THIS
             // val typeParams = readTypeParams(null) // <- not supported
-            val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+            var parameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 pushCall { readParamExpressions() }
             } else emptyList()
-            InnerSuperCall(target, params, classScope, origin)
+            if (isEnumClass) {
+                parameters = listOf(
+                    NamedParameter("ordinal", UnresolvedFieldExpression("ordinal", null, constructorScope, origin)),
+                    NamedParameter("name", UnresolvedFieldExpression("name", null, constructorScope, origin))
+                ) + parameters
+            }
+            InnerSuperCall(target, parameters, classScope, origin)
         } else null
 
         // body (or just = expression)

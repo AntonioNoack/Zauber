@@ -15,18 +15,10 @@ class LongRangeIterator(var index: Long, val endExcl: Long, val step: Long = 1L)
     }
 }
 
-infix fun Long.to(endIncl: Long): LongRange {
-    return LongRange(this, endIncl + 1, 1)
-}
-
 infix fun Long.until(endExcl: Long): LongRange {
     return LongRange(this, endExcl, 1)
 }
 
 operator fun Long.rangeTo(endIncl: Long): LongRange {
     return LongRange(this, endIncl + 1, 1)
-}
-
-operator fun Long.rangeUntil(endExcl: Long): LongRange {
-    return LongRange(this, endExcl, 1)
 }
