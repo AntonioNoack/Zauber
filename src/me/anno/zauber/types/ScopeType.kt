@@ -47,6 +47,13 @@ enum class ScopeType {
         }
     }
 
+    fun isObject(): Boolean {
+        return when (this) {
+            OBJECT, COMPANION_OBJECT -> true
+            else -> false
+        }
+    }
+
     fun isInsideExpression(): Boolean {
         return when (this) {
             FIELD_GETTER,

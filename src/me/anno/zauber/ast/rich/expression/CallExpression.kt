@@ -86,11 +86,26 @@ class CallExpression(
 
                 val nameAsImport = base.nameAsImport
                 if (nameAsImport != null) {
-                    val importedMethod = MethodResolver.findMemberInScope(
-                        nameAsImport.parent, origin, nameAsImport.name, context.targetType, context.selfType,
-                        typeParameters, valueParameters
-                    )
-                    if (importedMethod != null) return importedMethod
+                    val methodOwner = nameAsImport.parent
+                    if (methodOwner != null) {
+                        val methodSelfType = if (methodOwner.scopeType?.isObject() == true)
+                            methodOwner.typeWithArgs else context.selfType
+                        val importedMethod = MethodResolver.findMemberInScope(
+                            methodOwner, origin, nameAsImport.name, context.targetType, methodSelfType,
+                            typeParameters, valueParameters
+                        )
+                        if (importedMethod != null) return importedMethod
+
+                        val methodCompanion = methodOwner.companionObject
+                        if (methodCompanion != null) {
+                            val methodSelfType = methodCompanion.typeWithArgs
+                            val importedMethod = MethodResolver.findMemberInScope(
+                                methodCompanion, origin, nameAsImport.name, context.targetType, methodSelfType,
+                                typeParameters, valueParameters
+                            )
+                            if (importedMethod != null) return importedMethod
+                        }
+                    }
 
                     val importedConstructor = ConstructorResolver
                         .findMemberInScopeImpl(

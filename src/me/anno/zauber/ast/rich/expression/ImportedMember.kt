@@ -22,7 +22,7 @@ class ImportedMember(
 
     override fun resolveType(context: ResolutionContext): Type {
         return when (nameAsImport.scopeType) {
-            ScopeType.OBJECT -> nameAsImport.typeWithArgs
+            ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> nameAsImport.typeWithArgs
             ScopeType.NORMAL_CLASS, ScopeType.INTERFACE, ScopeType.ENUM_CLASS -> {
                 val parentCompanion = nameAsImport.companionObject
                 if (parentCompanion != null) return parentCompanion.typeWithArgs

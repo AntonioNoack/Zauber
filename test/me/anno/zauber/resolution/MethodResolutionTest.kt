@@ -16,7 +16,7 @@ class MethodResolutionTest {
     fun testSimple() {
         val code = """
         object Target {
-            fun x() : Int = 0
+            fun x(): Int = 0
             class Inner {
                 val tested = x()
             }
@@ -31,7 +31,7 @@ class MethodResolutionTest {
     fun testInnerClass() {
         val code = """
         class Target {
-            fun x() : Int = 0
+            fun x(): Int = 0
             inner class Inner {
                 val tested = x()
             }
@@ -48,7 +48,7 @@ class MethodResolutionTest {
         object Shadowed {
             fun x(): Float = 0f
             object Target {
-                fun x() : Int = 0
+                fun x(): Int = 0
                 class Inner {
                     val tested = x()
                 }
@@ -65,7 +65,7 @@ class MethodResolutionTest {
         val code = """
         import helper001.Helper.x
         class Misleading {
-            fun x() : Float = 0
+            fun x(): Float = 0
             class Inner {
                 val tested = x()
             }
@@ -73,7 +73,7 @@ class MethodResolutionTest {
         
         package helper001
         object Helper {
-            fun x() : Int = 0
+            fun x(): Int = 0
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
@@ -86,14 +86,14 @@ class MethodResolutionTest {
         val code = """
         import helper001.x
         class Misleading {
-            fun x() : Float = 0
+            fun x(): Float = 0
             class Inner {
                 val tested = x()
             }
         }
         
         package helper001
-        fun x() : Int = 0
+        fun x(): Int = 0
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = scope["Misleading"]["Inner"].getField("tested").valueType!!
@@ -105,7 +105,7 @@ class MethodResolutionTest {
         val code = """
         import helper001.Helper.x
         object Target {
-            fun x() : Int = 0
+            fun x(): Int = 0
             class Inner {
                 val tested = x()
             }
@@ -113,7 +113,7 @@ class MethodResolutionTest {
         
         package helper001
         object Helper {
-            fun x() : Float = 0
+            fun x(): Float = 0
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
@@ -126,7 +126,7 @@ class MethodResolutionTest {
         val code = """
         import helper001.Helper.y as x
         class Misleading {
-            fun x() : Float = 0
+            fun x(): Float = 0
             class Inner {
                 val tested = x()
             }
@@ -146,7 +146,7 @@ class MethodResolutionTest {
     fun testNested() {
         val code = """
         object Target {
-            fun x() : Int = 0
+            fun x(): Int = 0
             class MisleadingNoInstance {
                 fun x(): Float = 0f
                 class NotInnerClassC {
@@ -226,7 +226,7 @@ class MethodResolutionTest {
         enum class Color {
             RED;
             
-            fun x() : Int = 0
+            fun x(): Int = 0
         }
         class Inner {
             val tested = Color.RED.x()
@@ -243,7 +243,7 @@ class MethodResolutionTest {
         enum class Color {
             RED;
             
-            fun x() : Int = 0
+            fun x(): Int = 0
             
             class Inner {
                 val tested = RED.x()
@@ -263,7 +263,7 @@ class MethodResolutionTest {
             enum class Color {
                 RED;
             
-                fun x() : Int = 0
+                fun x(): Int = 0
             }
         }
         """.trimIndent()
@@ -369,14 +369,54 @@ class MethodResolutionTest {
     }
 
     @Test
-    fun testCompanionBeingOptionalForImported() {
+    fun testExplicitCompanionForImported() {
         val code = """
-        import helper005.Wrapper.x
+        import helper011.Wrapper.Companion.x
         class Inner {
             val tested = x()
         }
         
-        package helper005
+        package helper011
+        class Wrapper {
+            companion object {
+                fun x() = 0
+            }
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope["Inner"].getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testExplicitCompanionForImported2() {
+        val code = """
+        import helper012.Wrapper.Companion
+        class Inner {
+            val tested = Companion.x()
+        }
+        
+        package helper012
+        class Wrapper {
+            companion object {
+                fun x() = 0
+            }
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope["Inner"].getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testCompanionBeingOptionalForImported() {
+        val code = """
+        import helper005m.Wrapper.x
+        class Inner {
+            val tested = x()
+        }
+        
+        package helper005m
         class Wrapper {
             companion object {
                 fun x() = 0
