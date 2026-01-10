@@ -3,6 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -97,7 +98,7 @@ class TypeResolutionTest {
                 scope.selfAsConstructor = Constructor(
                     emptyList(),
                     scope, null, null,
-                    emptyList(), -1
+                    Keywords.NONE, -1
                 )
             }
             if (constructors.none { it.valueParameters.size == 1 }) {
@@ -105,7 +106,7 @@ class TypeResolutionTest {
                 scope.selfAsConstructor = Constructor(
                     listOf(Parameter("size", IntType, arrayListType, -1)),
                     scope, null, null,
-                    emptyList(), -1
+                    Keywords.NONE, -1
                 )
             }
         }
@@ -149,7 +150,7 @@ class TypeResolutionTest {
             scope.selfAsConstructor = Constructor(
                 listOf(Parameter("size", IntType, intArrayType, -1)),
                 scope, null, null,
-                emptyList(), -1
+                Keywords.NONE, -1
             )
         }
         assertEquals(intArrayType.typeWithoutArgs, testTypeResolution("val tested = IntArray(5)"))
