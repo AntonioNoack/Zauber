@@ -216,7 +216,7 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendInitBlocks(classScope: Scope, scope: Scope) {
         for (body in scope.code) {
-            if (classScope.scopeType?.isObject() == true) builder.append("static ")
+            // if (classScope.scopeType?.isObject() == true) builder.append("static ")
             writeBlock {
                 scope.hasTypeParameters = true // just to prevent crashing
                 val context = ResolutionContext(scope, scope.typeWithArgs, true, null)
@@ -240,7 +240,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendBackingField(classScope: Scope, field: Field) {
         if (field.byParameter == null) {
             builder.append("public ")
-            if (classScope.scopeType?.isObject() == true) builder.append("static ")
+            if (field.name == "__instance__") builder.append("static ")
             if (!field.isMutable) builder.append("final ")
             appendType(field.valueType ?: NullableAnyType, classScope, false)
             builder.append(' ').append(field.name).append(';')
@@ -282,7 +282,7 @@ object JavaSourceGenerator : Generator() {
         if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
         if (method.keywords.hasFlag(Keywords.EXTERNAL)) builder.append("native ")
         if (classScope.scopeType == ScopeType.INTERFACE && method.body != null) builder.append("default ")
-        if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
+        // if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.returnType ?: NullableAnyType, classScope, false)

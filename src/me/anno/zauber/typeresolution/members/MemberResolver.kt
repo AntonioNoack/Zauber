@@ -8,6 +8,7 @@ import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
@@ -306,6 +307,12 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 hadLastType = true
                 if (type == null) hadUnit = true
             }
+        }
+
+        if (context.selfType != null) {
+            println("Checking[z] $langScope with ${context.selfType}")
+            val result = callback(langScope, context.selfType)
+            if (result != null) return result
         }
         return null
     }
