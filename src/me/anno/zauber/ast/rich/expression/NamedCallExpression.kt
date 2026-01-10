@@ -5,17 +5,21 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.MethodResolver
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallType
+import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
+import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class NamedCallExpression(
-    val base: Expression,
+    base: Expression,
     val name: String,
-    val typeParameters: List<Type>?,
-    val valueParameters: List<NamedParameter>,
+    typeParameters: List<Type>?,
+    valueParameters: List<NamedParameter>,
     scope: Scope, origin: Int
-) : Expression(scope, origin) {
+) : CallExpressionBase(
+    base, typeParameters,
+    valueParameters, scope, origin
+) {
 
     init {
         check(name != ".")
@@ -28,15 +32,6 @@ class NamedCallExpression(
         scope, origin
     )
 
-    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
-        val contextI = context.withCodeScope(scope)
-            .withTargetType(null /* unknown */)
-        // todo same as in callExpression: find if any candidate is underdefined
-        return typeParameters == null ||
-                base.hasLambdaOrUnknownGenericsType(contextI) ||
-                valueParameters.any { it.value.hasLambdaOrUnknownGenericsType(contextI) }
-    }
-
     override fun toStringImpl(depth: Int): String {
         val base = base.toString(depth)
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
@@ -47,24 +42,25 @@ class NamedCallExpression(
         }
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
-        val calleeType = TypeResolution.resolveType(
-            /* target lambda type seems not deductible */
+    fun calculateBaseType(context: ResolutionContext): Type {
+        return TypeResolution.resolveType(
+            /* base type seems not deductible -> todo we could help it, if all candidates have the same base type */
             context.withTargetType(null),
             base,
         )
-        // todo type-args may be needed for type resolution
-        val valueParameters = resolveValueParameters(context, valueParameters)
+    }
 
+    override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
+        val baseType = calculateBaseType(context)
+        val valueParameters = resolveValueParameters(context, valueParameters)
         val constructor = null
-        val context = context.withSelfType(calleeType)
-        return resolveCallType(
-            context, name, constructor,
+        val contextI = context.withSelfType(baseType)
+        return resolveCallable(
+            contextI, name, constructor,
             typeParameters, valueParameters, origin
         ) ?: MethodResolver.printScopeForMissingMethod(
-            context, this, name,
+            contextI, this, name,
             typeParameters, valueParameters,
         )
     }
-
 }

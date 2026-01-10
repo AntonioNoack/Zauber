@@ -112,11 +112,7 @@ object ASTSimplifier {
                 dst
             }
             is NamedCallExpression -> {
-                val calleeType = TypeResolution.resolveType(
-                    /* target lambda type seems not deductible */
-                    context.withTargetType(null),
-                    expr.base,
-                )
+                val calleeType = expr.calculateBaseType(context)
 
                 // todo type-args may be needed for type resolution
                 val valueParameters = resolveValueParameters(context, expr.valueParameters)
@@ -137,7 +133,7 @@ object ASTSimplifier {
                 )
             }
             is CallExpression -> {
-                val method = expr.resolveMethod(context)
+                val method = expr.resolveCallable(context)
                 simplifyCall(
                     context, expr, currBlock, graph, expr.base,
                     expr.valueParameters, method, null

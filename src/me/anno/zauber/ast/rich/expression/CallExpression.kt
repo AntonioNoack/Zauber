@@ -20,11 +20,14 @@ import me.anno.zauber.types.Type
  * Calls base<typeParams>(valueParams)
  * */
 class CallExpression(
-    val base: Expression,
-    val typeParameters: List<Type>?,
-    val valueParameters: List<NamedParameter>,
+    base: Expression,
+    typeParameters: List<Type>?,
+    valueParameters: List<NamedParameter>,
     origin: Int
-) : Expression(base.scope, origin) {
+) : CallExpressionBase(
+    base, typeParameters,
+    valueParameters, base.scope, origin
+) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(CallExpression::class)
@@ -43,29 +46,7 @@ class CallExpression(
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) }, origin
     )
 
-    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
-        val contextI = context
-            .withCodeScope(scope)
-            .withTargetType(null /* unknown */)
-        if (base.hasLambdaOrUnknownGenericsType(contextI) ||
-            valueParameters.any { valueParameter ->
-                valueParameter.value.hasLambdaOrUnknownGenericsType(contextI)
-            }
-        ) return true
-
-        if (typeParameters != null) return false
-
-        // val context = ResolutionContext(scope,null,false,null)
-        // val tmpResolved = resolveMethod(context)
-        // todo if(typeParameters == null), then only if a method/constructor/field is known, that has that issue...
-        return true
-    }
-
-    override fun resolveType(context: ResolutionContext): Type {
-        return resolveMethod(context).getTypeFromCall()
-    }
-
-    fun resolveMethod(context: ResolutionContext): ResolvedMember<*> {
+    override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
         if (LOGGER.enableInfo) LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")

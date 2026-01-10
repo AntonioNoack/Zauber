@@ -128,18 +128,6 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         )
     }
 
-    fun resolveCallType(
-        context: ResolutionContext,
-        name: String,
-        constructor: ResolvedMember<*>?,
-        typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>,
-        origin: Int
-    ): Type? {
-        return resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
-            ?.getTypeFromCall()
-    }
-
     fun resolveMethod(
         context: ResolutionContext,
         name: String,
