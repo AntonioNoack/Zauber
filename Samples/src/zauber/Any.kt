@@ -9,4 +9,7 @@ class Any {
     open fun hashCode(): Int = System.identityHashCode(this)
 
     private external val clazz: KClass<Self>
+
+    @Deprecated("Only exists for JVM compatibility")
+    external val javaClass: Class<Any>
 }

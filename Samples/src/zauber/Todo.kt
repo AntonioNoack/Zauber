@@ -1,9 +1,5 @@
 package zauber
 
-fun TODO(): Nothing {
-    throw NotImplementedError()
-}
-
-fun TODO(message: String): Nothing {
+fun TODO(message: String? = null): Nothing {
     throw NotImplementedError(message)
 }

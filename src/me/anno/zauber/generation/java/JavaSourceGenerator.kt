@@ -384,6 +384,7 @@ object JavaSourceGenerator : Generator() {
         } catch (e: Throwable) {
             e.printStackTrace()
             builder.append("/* [${e.javaClass.simpleName}: ${e.message}] $body */")
+            nextLine()
         }
     }
 

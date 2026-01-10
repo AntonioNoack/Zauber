@@ -1,6 +1,5 @@
 package me.anno.zauber.generation.java
 
-import jdk.nashorn.internal.codegen.types.BooleanType
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleDeclaration
@@ -135,6 +134,11 @@ object JavaSimplifiedASTWriter {
             is SimpleCompare -> {
                 builder.append1(expr.base).append(' ')
                 builder.append(expr.type.symbol).append(" 0")
+            }
+            is SimpleInstanceOf -> {
+                // todo if type is ClassType, this is easy, else we need to build an expression...
+                builder.append1(expr.value).append(" instanceof ")
+                appendType(expr.type, expr.scope, false)
             }
             is SimpleSpecialValue -> {
                 when (expr.base.type) {
