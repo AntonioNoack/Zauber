@@ -13,7 +13,6 @@ import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGen
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
@@ -241,15 +240,28 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     ): Resolved?
 
     private fun getOuterClassDepth(scope: Scope?): Int {
-        var scope = scope
-        while (scope != null) {
-            if (scope.scopeType?.isClassType() == true) {
-                return scope.path.size
+        // if there is a method in the tree, we can use its class, too
+        //  -> find the lowest method
+        var scopeI = scope ?: return 0
+        var lowestMethodScope: Scope? = null
+        while (true) {
+            val scopeType = scopeI.scopeType
+            if (scopeType == ScopeType.METHOD) {
+                lowestMethodScope = scopeI
+            }
+            scopeI = scopeI.parentIfSameFile ?: break
+        }
+
+        var scopeJ = lowestMethodScope ?: scope
+        while (true) {
+            val scopeType = scopeJ.scopeType
+            if (scopeType?.isClassType() == true) {
+                return scopeJ.path.size
             }
 
-            scope = scope.parentIfSameFile
+            scopeJ = scopeJ.parentIfSameFile
+                ?: return scopeJ.path.size
         }
-        return -1
     }
 
     fun <R : Any> resolveInCodeScope(context: ResolutionContext, callback: (scope: Scope, selfType: Type) -> R?): R? {
@@ -321,6 +333,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     ) {
         var scope: Scope? = context.codeScope
         val outerClassDepth = getOuterClassDepth(scope)
+        println("Outer class depth: $outerClassDepth")
         while (scope != null) {
             if (isScopeAvailable(scope, outerClassDepth)) {
                 // println("Checking for field '$name' in $maybeSelfScope")

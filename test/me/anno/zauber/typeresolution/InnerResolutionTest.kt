@@ -4,9 +4,8 @@ import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolu
 import org.junit.jupiter.api.Test
 
 class InnerResolutionTest {
-    // why ever, this fails in real code...
     @Test
-    fun testInnerCallResolution() {
+    fun testResolvingMethodFromInsideInnerClass() {
         testTypeResolution(
             """
             interface Calculator {
