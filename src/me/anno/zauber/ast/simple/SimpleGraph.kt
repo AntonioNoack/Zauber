@@ -5,8 +5,8 @@ import me.anno.zauber.types.Scope
 class SimpleGraph(scope: Scope, origin: Int) {
 
     var numFields = 0
-    val startBlock = SimpleBlock(this, scope, origin)
     val blocks = ArrayList<SimpleBlock>()
+    val startBlock = SimpleBlock(this, scope, origin)
 
     val continueLabels = HashMap<String?, SimpleBlock>()
     val breakLabels = HashMap<String?, SimpleBlock>()

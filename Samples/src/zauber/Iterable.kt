@@ -24,9 +24,16 @@ interface Iterable<V> {
         return false
     }
 
-    fun firstOrNull(predicate: (V) -> Boolean): V? {
+    fun firstOrNull(): V? {
         for (element in this) {
             return element
+        }
+        return null
+    }
+
+    fun firstOrNull(predicate: (V) -> Boolean): V? {
+        for (element in this) {
+            if (predicate(element)) return element
         }
         return null
     }
@@ -35,10 +42,18 @@ interface Iterable<V> {
         return iterator().next()
     }
 
-    fun lastOrNull(predicate: (V) -> Boolean): V? {
+    fun lastOrNull(): V? {
         var value: V? = null
         for (element in this) {
             value = element
+        }
+        return value
+    }
+
+    fun lastOrNull(predicate: (V) -> Boolean): V? {
+        var value: V? = null
+        for (element in this) {
+            if (predicate(element)) value = element
         }
         return value
     }

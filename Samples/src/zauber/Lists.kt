@@ -17,9 +17,9 @@ interface List<V> : Collection<V> {
     fun lastIndexOf(element: V): Int
 
     override fun contains(element: V): Boolean = indexOf(element) >= 0
-    override fun firstOrNull(predicate: (V) -> Boolean): V? = getOrNull(0)
+    override fun firstOrNull(): V? = getOrNull(0)
     override fun first(): V = get(0)
-    override fun lastOrNull(predicate: (V) -> Boolean): V? = getOrNull(lastIndex)
+    override fun lastOrNull(): V? = getOrNull(lastIndex)
     override fun last(): V = get(lastIndex)
 }
 

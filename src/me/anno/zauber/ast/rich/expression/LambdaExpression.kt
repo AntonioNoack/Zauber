@@ -8,6 +8,7 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 
 class LambdaExpression(
@@ -84,6 +85,10 @@ class LambdaExpression(
                 return LambdaType(null, variables!!.map {
                     LambdaParameter(it.name, it.type!!)
                 }, returnType)
+            }
+            is ClassType -> {
+                // is this ok??? OMG, looks like it is fine
+                return targetLambdaType
             }
             else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
         }

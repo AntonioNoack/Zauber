@@ -8,6 +8,8 @@ import me.anno.zauber.types.Type
 class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
     SimpleExpression(scope, origin) {
 
+    val blockId = graph.blocks.size
+
     fun add(expr: SimpleExpression) {
         instructions.add(expr)
     }
@@ -16,13 +18,8 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
         type: Type, ownership: Ownership =
             if (type.isValueType()) Ownership.VALUE
             else Ownership.SHARED
-    ): SimpleField {
-        val field = SimpleField(type, ownership, graph.numFields++)
-        declaredFields.add(field)
-        return field
-    }
+    ): SimpleField = SimpleField(type, ownership, graph.numFields++)
 
-    val declaredFields = ArrayList<SimpleField>()
     val instructions = ArrayList<SimpleExpression>()
 
     override fun toString(): String {

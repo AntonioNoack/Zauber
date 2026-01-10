@@ -1,21 +1,16 @@
 package me.anno.zauber.generation.java
 
+import jdk.nashorn.internal.codegen.types.BooleanType
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
+import me.anno.zauber.ast.simple.controlflow.SimpleGoto
+import me.anno.zauber.ast.simple.controlflow.SimpleLoop
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
-import me.anno.zauber.ast.simple.expression.SimpleAssignmentExpression
-import me.anno.zauber.ast.simple.expression.SimpleCall
-import me.anno.zauber.ast.simple.expression.SimpleCompare
-import me.anno.zauber.ast.simple.expression.SimpleConstructor
-import me.anno.zauber.ast.simple.expression.SimpleGetField
-import me.anno.zauber.ast.simple.expression.SimpleNumber
-import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
-import me.anno.zauber.ast.simple.expression.SimpleSetField
-import me.anno.zauber.ast.simple.expression.SimpleSpecialValue
-import me.anno.zauber.ast.simple.expression.SimpleString
+import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.generation.java.JavaSourceGenerator.writeBlock
 import me.anno.zauber.types.Types.BooleanType
@@ -54,24 +49,54 @@ object JavaSimplifiedASTWriter {
         builder.append(')')
     }
 
-     fun appendSimplifiedAST(expr: SimpleExpression) {
+    fun appendSimplifiedAST(expr: SimpleExpression, loop: SimpleLoop? = null) {
         if (expr is SimpleAssignmentExpression) appendAssign(expr)
         when (expr) {
             is SimpleBlock -> {
                 val instr = expr.instructions
                 for (i in instr.indices) {
-                    appendSimplifiedAST(instr[i])
+                    appendSimplifiedAST(instr[i], loop)
                 }
             }
             is SimpleBranch -> {
                 builder.append("if (").append1(expr.condition).append(')')
                 writeBlock {
-                    appendSimplifiedAST(expr.ifTrue)
+                    appendSimplifiedAST(expr.ifTrue, loop)
                 }
                 builder.append(" else ")
                 writeBlock {
-                    appendSimplifiedAST(expr.ifFalse)
+                    appendSimplifiedAST(expr.ifFalse, loop)
                 }
+            }
+            is SimpleLoop -> {
+                builder.append("b").append(expr.body.blockId)
+                builder.append(": while (true)")
+                writeBlock {
+                    appendSimplifiedAST(expr.body, expr)
+                }
+            }
+            is SimpleGoto -> {
+                if (expr.condition != null) {
+                    builder.append("if (").append1(expr.condition).append(") ")
+                }
+                builder.append(if (expr.isBreak) "break" else "continue")
+                if (expr.bodyBlock != loop?.body) {
+                    builder.append(" b").append(expr.bodyBlock.blockId)
+                }
+                builder.append(';')
+            }
+            is SimpleDeclaration -> {
+                appendType(expr.type, expr.scope, false)
+                builder.append(' ').append(expr.name).append(" = ")
+                when (expr.type) {
+                    IntType, LongType,
+                    FloatType, DoubleType,
+                    ByteType, ShortType -> builder.append("0")
+                    CharType -> builder.append("(char) 0")
+                    BooleanType -> builder.append("false")
+                    else -> builder.append("null")
+                }
+                builder.append(';')
             }
             is SimpleString -> {
                 builder.append('"').append(expr.base.value).append('"')

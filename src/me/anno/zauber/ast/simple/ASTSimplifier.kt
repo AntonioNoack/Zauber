@@ -58,6 +58,14 @@ object ASTSimplifier {
         return when (expr) {
             is ExpressionList -> {
                 var result = voidField
+                for (field in expr.scope.fields) {
+                    if (field.byParameter == null &&
+                        currBlock.instructions.none { it is SimpleDeclaration && it.name == field.name }
+                    ) {
+                        val type = field.resolveValueType(context)
+                        currBlock.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
+                    }
+                }
                 for (expr in expr.list) {
                     result = simplifyImpl(context, expr, currBlock, graph, needsValue)
                         ?: return null
@@ -237,7 +245,7 @@ object ASTSimplifier {
             is ImportedMember -> {
                 val import = expr.nameAsImport
                 when (import.scopeType) {
-                    ScopeType.OBJECT -> {
+                    ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {
                         val field = import.objectField
                             ?: throw IllegalStateException("Missing object field for ${import.pathStr}")
                         val valueType = field.resolveValueType(context)
@@ -247,7 +255,7 @@ object ASTSimplifier {
                     }
                     // todo it might be a field...
                     else -> {
-                        TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
+                        TODO("Simplify importedMember: $expr")
                     }
                 }
             }
@@ -300,13 +308,19 @@ object ASTSimplifier {
         val afterBlock = graph.addBlock(scope, origin)
         val insideBlock = graph.addBlock(scope, origin)
         val beforeBlock = graph.addBlock(scope, origin)
-        graph.breakLabels[label] = afterBlock
-        graph.continueLabels[label] = beforeBlock
+
+        graph.breakLabels[null] = afterBlock
+        graph.continueLabels[null] = beforeBlock
+
+        if (label != null) {
+            graph.breakLabels[label] = afterBlock
+            graph.continueLabels[label] = beforeBlock
+        }
 
         // add condition and jump to insideBlock
         val condition = simplifyImpl(context, expr.condition.not(), insideBlock, graph, needsValue)
             ?: throw IllegalStateException("Condition should return a boolean, not Nothing")
-        insideBlock.add(SimpleGoto(condition, afterBlock, scope, origin))
+        insideBlock.add(SimpleGoto(condition, insideBlock, afterBlock, true, scope, origin))
 
         // add body to insideBlock
         simplifyImpl(context.withCodeScope(expr.body.scope), expr.body, insideBlock, graph, needsValue)
@@ -336,8 +350,13 @@ object ASTSimplifier {
         val afterBlock = graph.addBlock(scope, origin)
         val insideBlock = graph.addBlock(scope, origin)
         val continueBlock = graph.addBlock(scope, origin)
-        graph.breakLabels[label] = afterBlock
-        graph.continueLabels[label] = continueBlock
+
+        graph.breakLabels[null] = afterBlock
+        graph.continueLabels[null] = continueBlock
+        if (label != null) {
+            graph.breakLabels[label] = afterBlock
+            graph.continueLabels[label] = continueBlock
+        }
 
         // add body to insideBlock
         simplifyImpl(context.withCodeScope(expr.body.scope), expr.body, insideBlock, graph, needsValue)
@@ -349,7 +368,7 @@ object ASTSimplifier {
             context.withCodeScope(expr.condition.scope),
             expr.condition.not(), continueBlock, graph, needsValue
         ) ?: throw IllegalStateException("Condition should return a boolean, not Nothing")
-        continueBlock.add(SimpleGoto(condition, afterBlock, scope, origin))
+        continueBlock.add(SimpleGoto(condition, insideBlock, afterBlock, true, scope, origin))
 
         val loop = SimpleLoop(insideBlock, scope, origin)
         currBlock.add(loop) // looping itself
@@ -438,7 +457,7 @@ object ASTSimplifier {
                     return dst
                 }
             }
-            else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
+            else -> TODO("Simplify call ${expr.javaClass.simpleName}: $expr")
         }
     }
 
