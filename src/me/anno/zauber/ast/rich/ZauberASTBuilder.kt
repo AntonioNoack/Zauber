@@ -154,15 +154,22 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 val selfType = ClassType(classScope, null)
                 pushCall { readParameterDeclarations(selfType, classScope) }
             }
+            for (field in constructorScope.fields) {
+                classScope.addField(field)
+            }
             if (scopeType == ScopeType.ENUM_CLASS) {
                 parameters = listOf(
                     Parameter("ordinal", IntType, constructorScope, origin),
                     Parameter("name", StringType, constructorScope, origin)
                 ) + parameters
             }
-            for (field in constructorScope.fields) {
-                classScope.addField(field)
-            }
+            parameters
+        } else if (scopeType == ScopeType.ENUM_CLASS) {
+            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            val parameters = listOf(
+                Parameter("ordinal", IntType, constructorScope, origin),
+                Parameter("name", StringType, constructorScope, origin)
+            )
             parameters
         } else null
 
