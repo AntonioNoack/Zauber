@@ -860,13 +860,13 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 genericParams.last()[name] = GenericType(classScope, name)
 
                 val type = readTypeOrNull(classScope.typeWithoutArgs) ?: NullableAnyType
-                println("read type parameter '$name': $type")
+                // if you print type here, typeParameters may not be available yet, and cause an NPE
 
                 params.add(Parameter(name, type, classScope, origin))
                 readComma()
             }
         }
-        check(tokens.equals(i++, ">")) // skip >
+        consume(">")
         classScope.typeParameters = params
         classScope.hasTypeParameters = true
         return params
