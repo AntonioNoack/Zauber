@@ -26,11 +26,7 @@ object FieldGetterSetter {
         }
         pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
             val origin = origin(i)
-            val backingField = Field(
-                getterScope, field.selfType, true, true,
-                "field", field.valueType, field.initialValue ?: field.getterExpr,
-                Keywords.NONE, origin
-            )
+            val backingField = createBackingField(field, getterScope, origin)
             val getterExpr = when {
                 consumeIf("=") -> {
                     ReturnExpression(readExpression(), null, getterScope, origin)
@@ -124,12 +120,12 @@ object FieldGetterSetter {
 
     private fun needsGetter(field: Field): Boolean {
         return true // just to make our lives easier in testing
-       /* if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
-        if (field.codeScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
-        if (field.codeScope.scopeType == ScopeType.OBJECT ||
-            field.codeScope.scopeType == ScopeType.COMPANION_OBJECT
-        ) return true // to ensure initialization
-        return false*/
+        /* if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
+         if (field.codeScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
+         if (field.codeScope.scopeType == ScopeType.OBJECT ||
+             field.codeScope.scopeType == ScopeType.COMPANION_OBJECT
+         ) return true // to ensure initialization
+         return false*/
     }
 
     fun ZauberASTBuilder.createGetterMethod(

@@ -305,7 +305,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         var endIndex = tokens.findToken(i, ";")
         if (endIndex < 0) endIndex = tokens.size
         val classScope = currPackage
-        val scope = classScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+        val companionScope = classScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
         push(endIndex) {
             var ordinal = 0
             while (i < tokens.size) {
@@ -324,24 +324,27 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 val entryScope = readClassBody(name, Keywords.NONE, ScopeType.ENUM_ENTRY_CLASS)
                 // todo add name and id as parameters
                 val extraValueParameters = listOf(
-                    NamedParameter(null, NumberExpression((ordinal++).toString(), scope, origin)),
-                    NamedParameter(null, StringExpression(name, scope, origin)),
+                    NamedParameter(null, NumberExpression((ordinal++).toString(), companionScope, origin)),
+                    NamedParameter(null, StringExpression(name, companionScope, origin)),
                 )
                 val initialValue = ConstructorExpression(
                     classScope, typeParameters,
                     extraValueParameters + valueParameters,
                     null, classScope, origin
                 )
+                val valueType =
+                    if (classScope.typeParameters.isNotEmpty()) null // we need to resolve them
+                    else classScope.typeWithArgs
                 entryScope.objectField = Field(
-                    scope, scope.typeWithoutArgs, false, null,
-                    name, classScope.typeWithoutArgs, initialValue, keywords, origin
+                    companionScope, companionScope.typeWithoutArgs, false, null,
+                    name, valueType, initialValue, keywords, origin
                 )
 
                 readComma()
             }
         }
 
-        createEnumProperties(scope, classScope, origin0)
+        createEnumProperties(companionScope, classScope, origin0)
         return endIndex
     }
 

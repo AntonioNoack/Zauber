@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -53,7 +54,8 @@ class Field(
             return TypeResolution.resolveType(newContext, initialValue)
         }
 
-        val getterExpr = getterExpr
+        var getterExpr = getterExpr
+        if (getterExpr is ReturnExpression) getterExpr = getterExpr.value
         if (getterExpr != null) {
             val newContext = context
                 .withCodeScope(getterExpr.scope)

@@ -40,9 +40,9 @@ enum class ScopeType {
 
     fun isClassType(): Boolean {
         return when (this) {
-            NORMAL_CLASS, INTERFACE,
-            ENUM_CLASS, ENUM_ENTRY_CLASS,
-            OBJECT, INLINE_CLASS -> true
+            NORMAL_CLASS, ENUM_CLASS, INLINE_CLASS,
+            INTERFACE,
+            OBJECT, COMPANION_OBJECT -> true
             else -> false
         }
     }

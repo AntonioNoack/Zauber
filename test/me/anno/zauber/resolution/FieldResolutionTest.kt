@@ -261,7 +261,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!
-        val colorType = scope["Color"].typeWithoutArgs
+        val colorType = scope["Color"].typeWithArgs
         assertEquals(colorType, actualType)
     }
 
@@ -278,8 +278,8 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
-        val colorType = scope["Color"].typeWithoutArgs
-        assertEquals(colorType, actualType)
+        val expectedType = scope["Color"].typeWithArgs
+        assertEquals(expectedType, actualType)
     }
 
     @Test
@@ -296,6 +296,42 @@ class FieldResolutionTest {
         val actualType = scope["Inner"].getField("tested").valueType!!
         val colorType = scope["Inner"]["Color"].typeWithoutArgs
         assertEquals(colorType, actualType)
+    }
+
+    @Test
+    fun testExplicitCompanionForOther() {
+        val code = """
+        class Wrapper {
+            companion object {
+                val x = 0
+            }
+        }
+        
+        class Inner {
+            val tested = Wrapper.Companion.x
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope["Inner"].getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testObjectInClass() {
+        val code = """
+        class Wrapper {
+            object Inside {
+                val x = 0
+            }
+        }
+        
+        class Inner {
+            val tested = Wrapper.Inside.x
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope["Inner"].getField("tested").valueType!!
+        assertEquals(IntType, actualType)
     }
 
     @Test
@@ -394,13 +430,12 @@ class FieldResolutionTest {
 
     @Test
     fun testFieldExtensionInner() {
-        // todo why is this failing parsing???
         val code = """
         val Int.next get() = 0f
         class Inner {
             fun <V: Int> V.test(): Int {
                 class Tested {
-                    val tested = next
+                    val tested = next /* called on V */
                 }
             }
         }

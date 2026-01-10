@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
@@ -9,6 +10,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
@@ -41,6 +43,22 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             )
             if (match != null) return match
         }
+        for (child in scope.children) {
+            if (child.name != name ||
+                (child.scopeType != ScopeType.OBJECT &&
+                        child.scopeType != ScopeType.COMPANION_OBJECT)
+            ) continue
+
+            val field = child.fields.first { it.name == "__instance__" }
+            val valueType = getFieldReturnType(scopeSelfType, field, returnType)
+            val match = findMemberMatch(
+                field, valueType,
+                returnType, selfType,
+                typeParameters, valueParameters,
+                origin
+            )
+            if (match != null) return match
+        }
         return null
     }
 
@@ -52,7 +70,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
     private fun getFieldReturnType(scopeSelfType: Type?, field: Field): Type? {
         if (field.valueType == null) {
-            val expr = (field.initialValue ?: field.getterExpr)!!
+            var expr = (field.initialValue ?: field.getterExpr)!!
+            if (expr is ReturnExpression) expr = expr.value
             LOGGER.info("Resolving valueType($field), initial/getter: $expr")
             val context = ResolutionContext(
                 field.codeScope,//.innerScope,

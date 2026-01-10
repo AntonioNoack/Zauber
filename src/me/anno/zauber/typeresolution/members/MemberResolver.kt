@@ -260,7 +260,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
             val selfCompanion = context.selfScope.companionObject
             if (selfCompanion != null) {
-                println("Checking[0] $selfCompanion")
+                println("Checking[1] $selfCompanion")
                 val result = callback(selfCompanion, selfCompanion.typeWithArgs)
                 if (result != null) return result
             } else println("${context.selfScope} has no companion")
@@ -273,19 +273,20 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         println("Scopes: $scopes, selfTypes: $selfTypes")
 
         // selfType goes over all scopes below it...
-        // println("Scopes: $scopes")
-        // println("Types: $selfTypes")
         for (scopeIndex in scopes.indices) {
             val scope = scopes[scopeIndex] // should be unique by itself
-            var lastType: Type? = NothingType // to avoid duplicate checking
+            var lastType: Type? = null // to avoid duplicate checking
+            var hadLastType = false
             var hadUnit = false
             for (typeIndex in 0..scopeIndex) {
                 val type = selfTypes[typeIndex]
-                if (type == lastType || (type == null && hadUnit)) continue
-                println("Checking $scope with $type")
-                val result = callback(scope, type ?: context.selfType ?: UnitType)
+                if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue
+                println("Checking[i] $scope with $type")
+                val selfType = type ?: context.selfType ?: UnitType
+                val result = callback(scope, selfType)
                 if (result != null) return result
                 lastType = type
+                hadLastType = true
                 if (type == null) hadUnit = true
             }
         }
@@ -309,7 +310,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             val companionObject = scope.companionObject
             if (companionObject != null && companionObject != scopes.getOrNull(scopes.size - 2)) {
                 scopes.add(companionObject)
-                selfTypes.add(selfType)
+                selfTypes.add(companionObject.typeWithArgs)
             }
         }
     }

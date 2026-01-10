@@ -3,11 +3,9 @@ package me.anno.zauber.ast.rich.expression
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
-import me.anno.zauber.typeresolution.members.MemberResolver.Companion.findGenericsForMatch
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 

@@ -3,6 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.Compile
 import me.anno.zauber.Compile.f1
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
@@ -82,7 +83,8 @@ object TypeResolution {
             }
         }
         for (field in scope.fields) {
-            val initialValue = field.initialValue ?: field.getterExpr
+            var initialValue = field.initialValue ?: field.getterExpr
+            if (initialValue is ReturnExpression) initialValue = initialValue.value
             if (field.valueType == null && initialValue != null) {
                 LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
                 LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
@@ -216,7 +218,11 @@ object TypeResolution {
         while (true) {
 
             val selfMatch = scope.children.firstOrNull { it.name == name && it.scopeType?.isClassType() == true }
-            if (selfMatch != null) return ClassType(selfMatch, null)
+            if (selfMatch != null) {
+                val typeParams: List<Type>? =
+                    if (selfMatch.hasTypeParameters && selfMatch.typeParameters.isEmpty()) emptyList() else null
+                return ClassType(selfMatch, typeParams)
+            }
 
             val genericsMatch = scope.typeParameters.firstOrNull { it.name == name }
             if (genericsMatch != null) return GenericType(genericsMatch.scope, genericsMatch.name)

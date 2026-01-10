@@ -18,6 +18,12 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         else createParamList(clazz, typeParams)
     )
 
+    init {
+        if (clazz.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
+            throw IllegalStateException("Classes should use the general enum, not the entries")
+        }
+    }
+
     val typeParameters: ParameterList? = if (
         typeParameters == null &&
         clazz.hasTypeParameters &&
@@ -64,7 +70,6 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     override fun toStringImpl(depth: Int): String {
         val className =
             if (clazz.name == "Companion") clazz.pathStr
-            else if (clazz.scopeType == ScopeType.ENUM_ENTRY_CLASS) "${clazz.parent?.name}.${clazz.name}"
             else clazz.name
         var asString = className
         if (typeParameters == null) {
