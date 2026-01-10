@@ -67,6 +67,10 @@ abstract class ResolvedMember<V>(
                     LOGGER.warn("SelfType missing... ${type.scope}")
                     type.scope.typeWithoutArgs
                 }
+                is ThisType -> selfType ?: run {
+                    LOGGER.warn("ThisType missing... ${type.javaClass}")
+                    type.type
+                }
                 else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
             }
         }

@@ -85,24 +85,29 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     // todo assign them appropriately
     val annotations = ArrayList<Annotation>()
 
+    private fun resolveSelfType(selfType: Type?): Type {
+        if (selfType is ClassType) {
+            return selfType
+        } else {
+            check(selfType == null)
+            var scope = currPackage
+            while (scope.scopeType?.isClassType() != true) {
+                scope = scope.parent
+                    ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
+            }
+            return scope.typeWithoutArgs
+        }
+    }
+
     /**
      * ClassType | SelfType
      * */
     fun readTypePath(selfType: Type?): Type? {
         check(tokens.equals(i, TokenType.NAME))
         val name0 = tokens.toString(i++)
-        if (name0 == "Self") {// Special-meaning type
-            if (selfType is ClassType) {
-                return SelfType(selfType.clazz)
-            } else {
-                check(selfType == null)
-                var scope = currPackage
-                while (scope.scopeType?.isClassType() != true) {
-                    scope = scope.parent
-                        ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
-                }
-                return SelfType(scope)
-            }
+        when (name0) {
+            "Self" -> return SelfType((resolveSelfType(selfType) as ClassType).clazz)
+            "This" -> return ThisType(resolveSelfType(selfType))
         }
 
         var path = genericParams.last()[name0]

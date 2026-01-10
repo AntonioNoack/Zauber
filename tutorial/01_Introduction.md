@@ -87,12 +87,31 @@ typealias SomeIntersectionType = Long & Int // Nothing can fulfill this
 typealias SomeComplexType = Int? & !(Any?) // just Int, because it cannot be null
 ```
 
+During type resolution, union types may occur naturally,
+and then cause field/method-cannot-be-found errors.
+
+There is also a few special types, two of which are new compared to Kotlin:
+
+### Nothing Type
 Nothing is a type, which cannot have instances.
 If a field is declared with that type, that scope is considered unreachable.
 Proper unreachable code should be marked explicitly though, if non-trivial.
 
-During type resolution, union types may occur naturally,
-and then cause field/method-cannot-be-found errors.
+### Self Type
+Can be used on fields and methods and means, that that field needs to have the same class as what is being used.
+This is useful for enforcing that a .clone() function returns an instance of itself.
+
+### This Type
+Can be used for the builder pattern.
+Only 'this' may be returned from a function returning 'This'.
+
+For clone, you could even specify
+```kotlin
+fun clone(): Self&!This {
+    ...
+}
+```
+such that returning 'this' from .clone() becomes illegal. 
 
 ## Imports
 
