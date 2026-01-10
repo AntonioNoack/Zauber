@@ -13,7 +13,7 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
     }
 
     override fun resolveType(context: ResolutionContext): Type =exprHasNoType(context)
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // this has no return value
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
 
     override fun clone(scope: Scope) = WhileLoop(condition.clone(scope), body.clone(body.scope), label)
 

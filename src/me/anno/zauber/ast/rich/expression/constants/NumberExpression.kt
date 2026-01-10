@@ -54,5 +54,5 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
     override fun clone(scope: Scope) = NumberExpression(value, scope, origin)
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
 }

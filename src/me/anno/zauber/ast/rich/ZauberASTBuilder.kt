@@ -1716,6 +1716,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                         }
                     }
                     else -> {
+                        println("Reading RHS, symbol: $symbol")
                         val rhs = readRHS(op)
                         if (isInfix) {
                             val param = NamedParameter(null, rhs)

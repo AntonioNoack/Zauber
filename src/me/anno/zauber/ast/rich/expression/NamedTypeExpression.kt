@@ -10,6 +10,6 @@ class NamedTypeExpression(
 ) : Expression(scope, origin) {
     override fun toStringImpl(depth: Int): String = type.toString()
     override fun clone(scope: Scope) = NamedTypeExpression(type, scope, origin)
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun resolveType(context: ResolutionContext): Type = type
 }

@@ -150,14 +150,14 @@ object TypeResolution {
         base: List<NamedParameter>
     ): List<ValueParameter> {
         // target-type does not apply to parameters
-        val contextWithoutTargetType = context.withTargetType(null)
+        val contextI = context.withTargetType(null)
         return base.map { param ->
             val hasVarargStar = param.value is ArrayToVarargsStar
-            if (param.value.hasLambdaOrUnknownGenericsType()) {
+            if (param.value.hasLambdaOrUnknownGenericsType(contextI)) {
                 LOGGER.info("Underdefined generics in $param :/")
-                UnderdefinedValueParameter(param, contextWithoutTargetType, hasVarargStar)
+                UnderdefinedValueParameter(param, contextI, hasVarargStar)
             } else {
-                val type = resolveType(contextWithoutTargetType, param.value)
+                val type = resolveType(contextI, param.value)
                 ValueParameterImpl(param.name, type, hasVarargStar)
             }
         }

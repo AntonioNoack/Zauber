@@ -18,7 +18,7 @@ class AssignmentExpression(var variableName: Expression, var newValue: Expressio
         return "$variableName=${newValue.toString(depth)}"
     }
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // this has no return type
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type
     override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun clone(scope: Scope): Expression =
         AssignmentExpression(variableName.clone(scope), newValue.clone(scope))

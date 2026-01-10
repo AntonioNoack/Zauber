@@ -20,7 +20,7 @@ class ConstructorExpression(
         return "new($clazz)(${valueParameters.joinToString { it.toString(depth) }})"
     }
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         return typeParameters?.any { it.containsGenerics() } ?: clazz.typeParameters.isNotEmpty()
     }
 

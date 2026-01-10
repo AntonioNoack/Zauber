@@ -33,10 +33,13 @@ class DotExpression(
         scope, origin
     )
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
+        val contextI = context
+            .withCodeScope(scope)
+            .withTargetType(null /* unknown */)
         return typeParameters == null ||
-                left.hasLambdaOrUnknownGenericsType() ||
-                right.hasLambdaOrUnknownGenericsType()
+                left.hasLambdaOrUnknownGenericsType(contextI) ||
+                right.hasLambdaOrUnknownGenericsType(contextI)
     }
 
     override fun toStringImpl(depth: Int): String {

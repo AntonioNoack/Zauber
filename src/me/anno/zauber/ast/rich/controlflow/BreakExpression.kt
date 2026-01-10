@@ -17,5 +17,5 @@ class BreakExpression(val label: String?, scope: Scope, origin: Int) : Expressio
 
     override fun clone(scope: Scope): Expression = BreakExpression(label, scope, origin)
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // has no return type
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // has no return type
 }

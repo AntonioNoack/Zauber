@@ -44,7 +44,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * for lambdas, we need to know, because usually no other type information is available;
      * for unknown generics, we need them for the return type to be fully known
      * */
-    abstract fun hasLambdaOrUnknownGenericsType(): Boolean
+    abstract fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean
 
     companion object {
         var numExpressionsCreated = 0

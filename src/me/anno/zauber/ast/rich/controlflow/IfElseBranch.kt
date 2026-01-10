@@ -20,7 +20,7 @@ class IfElseBranch(
     }
 
     init {
-        check(ifBranch.scope != elseBranch?.scope){
+        check(ifBranch.scope != elseBranch?.scope) {
             "IfBranch and ElseBranch must have different scopes. ${ifBranch.scope}"
         }
         check(
@@ -60,12 +60,10 @@ class IfElseBranch(
         false
     )
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
-        if (LOGGER.enableInfo) {
-            LOGGER.info("Checking branch for unknown generics type: ${ifBranch.hasLambdaOrUnknownGenericsType()} || ${elseBranch?.hasLambdaOrUnknownGenericsType()}")
-        }
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         return elseBranch != null && // if else is undefined, this has no return type
-                (ifBranch.hasLambdaOrUnknownGenericsType() || elseBranch.hasLambdaOrUnknownGenericsType())
+                (ifBranch.hasLambdaOrUnknownGenericsType(context.withCodeScope(ifBranch.scope)) ||
+                        elseBranch.hasLambdaOrUnknownGenericsType(context.withCodeScope(elseBranch.scope)))
     }
 
     override fun toStringImpl(depth: Int): String {

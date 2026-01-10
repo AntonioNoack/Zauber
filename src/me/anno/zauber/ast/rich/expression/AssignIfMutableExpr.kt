@@ -68,7 +68,7 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         return exprHasNoType(context)
     }
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // UnitType
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // UnitType
 
     override fun clone(scope: Scope): Expression = AssignIfMutableExpr(left.clone(scope), symbol, right.clone(scope))
 }

@@ -42,7 +42,7 @@ class MemberNameExpression(
 
     override fun toStringImpl(depth: Int): String = name
     override fun clone(scope: Scope) = MemberNameExpression(name, scope, origin)
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
         val field = resolveField(context, name, null, origin)

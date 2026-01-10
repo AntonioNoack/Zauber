@@ -43,11 +43,22 @@ class CallExpression(
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) }, origin
     )
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
+        val contextI = context
+            .withCodeScope(scope)
+            .withTargetType(null /* unknown */)
+        if (base.hasLambdaOrUnknownGenericsType(contextI) ||
+            valueParameters.any { valueParameter ->
+                valueParameter.value.hasLambdaOrUnknownGenericsType(contextI)
+            }
+        ) return true
+
+        if (typeParameters != null) return false
+
+        // val context = ResolutionContext(scope,null,false,null)
+        // val tmpResolved = resolveMethod(context)
         // todo if(typeParameters == null), then only if a method/constructor/field is known, that has that issue...
-        return typeParameters == null ||
-                base.hasLambdaOrUnknownGenericsType() ||
-                valueParameters.any { it.value.hasLambdaOrUnknownGenericsType() }
+        return true
     }
 
     override fun resolveType(context: ResolutionContext): Type {
@@ -62,9 +73,6 @@ class CallExpression(
         // find the best matching candidate...
         val returnType = context.targetType
         when (base) {
-            is DotExpression -> {
-                TODO("Find method/field ${base}($valueParameters)")
-            }
             is MemberNameExpression -> {
                 val name = base.name
                 if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")

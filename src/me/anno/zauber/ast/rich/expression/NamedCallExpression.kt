@@ -28,10 +28,13 @@ class NamedCallExpression(
         scope, origin
     )
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
+        val contextI = context.withCodeScope(scope)
+            .withTargetType(null /* unknown */)
+        // todo same as in callExpression: find if any candidate is underdefined
         return typeParameters == null ||
-                base.hasLambdaOrUnknownGenericsType() ||
-                valueParameters.any { it.value.hasLambdaOrUnknownGenericsType() }
+                base.hasLambdaOrUnknownGenericsType(contextI) ||
+                valueParameters.any { it.value.hasLambdaOrUnknownGenericsType(contextI) }
     }
 
     override fun toStringImpl(depth: Int): String {

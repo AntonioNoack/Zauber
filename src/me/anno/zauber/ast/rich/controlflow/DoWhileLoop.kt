@@ -16,7 +16,7 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
     }
 
     override fun resolveType(context: ResolutionContext): Type =exprHasNoType(context)
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // this has no return value
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
 
     override fun clone(scope: Scope) =
         DoWhileLoop(body = body.clone(body.scope), condition = condition.clone(scope), label)

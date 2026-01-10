@@ -27,7 +27,7 @@ class LambdaExpression(
     // scope cannot be changed that easily, like with branches and loops
     override fun clone(scope: Scope) = LambdaExpression(variables, bodyScope, body.clone(bodyScope))
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = true
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
 
     override fun resolveType(context: ResolutionContext): Type {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")

@@ -17,7 +17,7 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
     }
 
     // todo if the base has some...
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = base.typeParameters.isNotEmpty()
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = base.typeParameters.isNotEmpty()
 
     override fun clone(scope: Scope) = GetMethodFromTypeExpression(base, name, scope, origin)
 

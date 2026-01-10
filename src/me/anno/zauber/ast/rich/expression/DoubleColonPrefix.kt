@@ -19,7 +19,7 @@ class DoubleColonPrefix(val left: Scope, val methodName: String, scope: Scope, o
         TODO("Not yet implemented")
     }
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = true
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
 
     override fun clone(scope: Scope) = DoubleColonPrefix(left, methodName, scope, origin)
 

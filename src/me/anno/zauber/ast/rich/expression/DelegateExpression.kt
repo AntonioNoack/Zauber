@@ -12,7 +12,7 @@ class DelegateExpression(val delegate: Expression) : Expression(delegate.scope, 
     }
 
     override fun resolveType(context: ResolutionContext): Type = delegate.resolveType(context)
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = delegate.hasLambdaOrUnknownGenericsType()
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = delegate.hasLambdaOrUnknownGenericsType(context)
 
     override fun clone(scope: Scope) = DelegateExpression(delegate.clone(scope))
 

@@ -15,7 +15,7 @@ class UnresolvedFieldExpression(
 
     override fun toStringImpl(depth: Int): String = name
     override fun clone(scope: Scope) = UnresolvedFieldExpression(name, nameAsImport, scope, origin)
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
 
     fun resolveField(context: ResolutionContext): ResolvedField? {
         val context = context.withCodeScope(scope)

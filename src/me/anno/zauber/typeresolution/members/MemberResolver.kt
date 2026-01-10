@@ -128,18 +128,18 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             if (expectedValueParameters.isNotEmpty()) {
                 LOGGER.info("Start checking arguments")
                 for (i in expectedValueParameters.indices) {
-                    val mvParam = expectedValueParameters[i]
-                    val vParam = sortedValueParameters[i]
-                    LOGGER.info("Start checking argument[$i]: $mvParam vs $vParam")
+                    val expectedValueParameter = expectedValueParameters[i]
+                    val actualValueParameter = sortedValueParameters[i]
+                    LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
                     if (!isSubTypeOf(
-                            actualSelfType, mvParam, vParam,
+                            actualSelfType, expectedValueParameter, actualValueParameter,
                             expectedTypeParameters,
                             resolvedTypes,
                             if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
                         )
                     ) {
-                        val type = vParam.getType(mvParam.type)
-                        LOGGER.info("  type mismatch: $type is not always a ${mvParam.type}")
+                        val type = actualValueParameter.getType(expectedValueParameter.type)
+                        LOGGER.info("  type mismatch: $type is not always a ${expectedValueParameter.type}")
                         LOGGER.info("End checking arguments")
                         LOGGER.info("End checking argument[$i]")
                         return null

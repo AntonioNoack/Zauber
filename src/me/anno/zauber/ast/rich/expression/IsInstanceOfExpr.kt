@@ -15,7 +15,7 @@ class IsInstanceOfExpr(val instance: Expression, val type: Type, scope: Scope, o
     }
 
     override fun resolveType(context: ResolutionContext): Type = BooleanType
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false // always boolean
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // always boolean
 
     override fun clone(scope: Scope): Expression {
         return IsInstanceOfExpr(instance.clone(scope), type, scope, origin)

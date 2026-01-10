@@ -28,10 +28,11 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
 
     override fun clone(scope: Scope) = ExpressionList(list.map { it.clone(scope) }, scope, origin)
 
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         // todo if there is a 'Nothing'-returning expression, return false
         val last = list.lastOrNull() ?: return false
-        return last.hasLambdaOrUnknownGenericsType()
+        val contextI = context.withCodeScope(scope)
+        return last.hasLambdaOrUnknownGenericsType(contextI)
     }
 
 }

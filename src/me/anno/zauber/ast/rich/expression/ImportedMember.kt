@@ -18,7 +18,7 @@ class ImportedMember(
     override fun clone(scope: Scope) = ImportedMember(nameAsImport, scope, origin)
 
     // todo it might have...
-    override fun hasLambdaOrUnknownGenericsType(): Boolean = false
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
         return when (nameAsImport.scopeType) {

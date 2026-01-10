@@ -20,7 +20,7 @@ class GetMethodFromValueExpression(val base: Expression, val name: String, origi
     }
 
     // todo or if the resolved method has some...
-    override fun hasLambdaOrUnknownGenericsType(): Boolean {
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         return true // base.hasLambdaOrUnknownGenericsType()
     }
 
