@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.FieldDeclaration
+import me.anno.zauber.ast.rich.Keywords
 
 fun createDestructuringAssignment(
     names: List<FieldDeclaration>, initialValue: Expression,
@@ -22,7 +23,7 @@ fun createDestructuringAssignment(
         )
         val newField = Field(
             scope, null, isMutable, null,
-            name.name, name.type, newValue, emptyList(), origin
+            name.name, name.type, newValue, Keywords.NONE, origin
         )
         val newFieldExpr = FieldExpression(newField, scope, origin)
         result.add(AssignmentExpression(newFieldExpr, newValue))

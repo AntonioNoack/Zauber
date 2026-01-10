@@ -1,6 +1,7 @@
 package me.anno.zauber.types
 
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.tokenizer.TokenList
@@ -19,7 +20,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     var fileName: String? = parent?.fileName
 
-    val keywords = ArrayList<String>()
+    var keywords : KeywordSet = 0
     val children = ArrayList<Scope>()
     val sources = ArrayList<TokenList>()
 
@@ -387,7 +388,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         val name = generateName("tmpField")
         return Field(
             this, null, false, null,
-            name, null, initialValue, emptyList(), initialValue.origin
+            name, null, initialValue, Keywords.NONE, initialValue.origin
         )
     }
 

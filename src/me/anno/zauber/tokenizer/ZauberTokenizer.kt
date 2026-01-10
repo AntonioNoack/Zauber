@@ -3,10 +3,11 @@ package me.anno.zauber.tokenizer
 class ZauberTokenizer(val src: String, fileName: String) {
 
     companion object {
-        private val hardKeywords = listOf(
+        private val KEYWORDS = listOf(
             "true", "false", "null",
             "class", "interface", "object", "package",
-            "val", "var", "fun",
+            "val", "var", "vararg", "lateinit", "fun",
+            "abstract", "override",
 
             "if", "else", "do", "while", "when", "for",
             "return", "break", "throw", "continue",
@@ -180,7 +181,7 @@ class ZauberTokenizer(val src: String, fileName: String) {
         for (i in 0 until tokens.size) {
             if (tokens.getType(i) == TokenType.NAME) {
                 val asString = tokens.toString(i)
-                if (asString in hardKeywords) {
+                if (asString in KEYWORDS) {
                     tokens.setType(i, TokenType.KEYWORD)
                 }
             }

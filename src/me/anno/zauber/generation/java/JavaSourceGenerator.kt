@@ -2,6 +2,8 @@ package me.anno.zauber.generation.java
 
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
@@ -186,7 +188,7 @@ object JavaSourceGenerator : Generator() {
             ScopeType.PACKAGE -> "final class"
             else -> scope.scopeType.toString()
         }
-        if ("abstract" in scope.keywords) builder.append("abstract ")
+        if (scope.keywords.hasFlag(Keywords.ABSTRACT)) builder.append("abstract ")
         builder.append(type).append(' ')
         builder.append(name)
 
@@ -263,20 +265,20 @@ object JavaSourceGenerator : Generator() {
 
         val selfType = method.selfType
         val isBySelf = selfType == classScope.typeWithArgs ||
-                "override" in method.keywords ||
-                "abstract" in method.keywords
+                method.keywords.hasFlag(Keywords.OVERRIDE) ||
+                method.keywords.hasFlag(Keywords.ABSTRACT)
 
-        if ("override" in method.keywords) {
+        if (method.keywords.hasFlag(Keywords.OVERRIDE)) {
             builder.append("@Override")
             nextLine()
         }
 
-        if ("abstract" in method.keywords && classScope.scopeType != ScopeType.INTERFACE) {
+        if (method.keywords.hasFlag(Keywords.ABSTRACT) && classScope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
         }
 
         if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
-        if ("external" in method.keywords) builder.append("native ")
+        if (method.keywords.hasFlag(Keywords.EXTERNAL)) builder.append("native ")
         if (classScope.scopeType == ScopeType.INTERFACE && method.body != null) builder.append("default ")
         if (!isBySelf) builder.append("static ")
 

@@ -54,7 +54,8 @@ class CppASTBuilder(
             // println("Reading file $i < ${tokens.size}")
             when {
                 consumeIf("namespace") -> readNamespace()
-                tokens.equals(i, "class") || tokens.equals(i, "struct") -> readStructOrClass()
+                consumeIf("class") -> readStructOrClass(false)
+                consumeIf("struct") -> readStructOrClass(true)
                 consumeIf("enum") -> readEnum()
                 consumeIf("using") -> {
                     consume("namespace")
@@ -63,17 +64,6 @@ class CppASTBuilder(
                 consumeIf("typedef") -> readTypeAlias()
                 else -> readFieldOrMethod()
             }
-        }
-    }
-
-    fun consumeKeyword() {
-        while (i < tokens.size) {
-            val keyword = knownKeywords.firstOrNull { keyword ->
-                tokens.equals(i, keyword)
-            } ?: break
-            println("consumed keyword $keyword")
-            keywords.add(keyword)
-            i++
         }
     }
 
@@ -257,13 +247,13 @@ class CppASTBuilder(
         }
     }
 
-    fun readStructOrClass() {
-        keywords.add(tokens.toString(i++)) // class/struct
+    fun readStructOrClass(isStruct: Boolean) {
+        if (isStruct) keywords += Keywords.CPP_STRUCT
         check(tokens.equals(i, TokenType.NAME)) { "Expected class name at ${tokens.err(i)}" }
         val name = tokens.toString(i++)
         val classScope = currPackage.getOrPut(name, ScopeType.NORMAL_CLASS)
         classScope.hasTypeParameters = true
-        classScope.keywords.addAll(packKeywords())
+        classScope.keywords = classScope.keywords or packKeywords()
         pushBlock(classScope) {
             readFile()
         }
@@ -554,8 +544,6 @@ class CppASTBuilder(
     fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
         val name = scopeName ?: currPackage.generateName(scopeType.name)
         return pushScope(name, scopeType) { childScope ->
-            childScope.keywords.add(scopeType.name)
-
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             // scanBlockForNewTypes(i, blockEnd)
             val result = tokens.push(blockEnd) { readImpl(childScope) }

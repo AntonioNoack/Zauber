@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -17,7 +18,7 @@ class Field(
     val name: String,
     var valueType: Type?,
     val initialValue: Expression?,
-    val keywords: List<String>,
+    val keywords: KeywordSet,
     val origin: Int
 ) {
 

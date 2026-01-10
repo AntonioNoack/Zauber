@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
@@ -38,9 +40,9 @@ object ASTClassScanner {
             hadNamedScope = false
         }
 
-        fun foundNamedScope(name: String, listenType: String) {
-            nextPackage = currPackage.getOrPut(name, null)
-            nextPackage.keywords.add(listenType)
+        fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType?,) {
+            nextPackage = currPackage.getOrPut(name, scopeType)
+            nextPackage.keywords = nextPackage.keywords or listenType
             nextPackage.fileName = tokens.fileName
 
             // LOGGER.info("discovered $nextPackage")
@@ -101,7 +103,7 @@ object ASTClassScanner {
                 }
             }
 
-            if (listenType == "enum" && tokens.equals(j, "{")) {
+            if (scopeType == ScopeType.ENUM_CLASS && tokens.equals(j, "{")) {
                 hadNamedScope = true
                 handleBlockOpen()
                 j++
@@ -176,14 +178,21 @@ object ASTClassScanner {
                             tokens.equals(i, "class") && tokens.equals(i - 1, "enum") && listening.last() -> {
                                 check(tokens.equals(++i, TokenType.NAME))
                                 val name = tokens.toString(i++)
-                                foundNamedScope(name, "enum")
+                                foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
+                                continue // without i++
+                            }
+
+                            tokens.equals(i, "class") && tokens.equals(i - 1, "inner") && listening.last() -> {
+                                check(tokens.equals(++i, TokenType.NAME))
+                                val name = tokens.toString(i++)
+                                foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
                                 continue // without i++
                             }
 
                             tokens.equals(i, "class") && !tokens.equals(i - 1, "::") && listening.last() -> {
                                 check(tokens.equals(++i, TokenType.NAME))
                                 val name = tokens.toString(i++)
-                                foundNamedScope(name, "class")
+                                foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
                                 continue // without i++
                             }
 
@@ -193,7 +202,7 @@ object ASTClassScanner {
                                     "Expected name for object, but got ${tokens.err(i)}"
                                 }
                                 val name = tokens.toString(i++)
-                                foundNamedScope(name, "object")
+                                foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
                                 continue // without i++
                             }
                             tokens.equals(i, "companion") && listening.last() -> {
@@ -202,19 +211,25 @@ object ASTClassScanner {
                                 val name = if (tokens.equals(i, TokenType.NAME)) {
                                     tokens.toString(i++)
                                 } else "Companion"
-                                foundNamedScope(name, "companion")
+                                foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
+                                continue // without i++
+                            }
+                            tokens.equals(i, "interface") && tokens.equals(i-1,"fun") && listening.last() -> {
+                                check(tokens.equals(++i, TokenType.NAME))
+                                val name = tokens.toString(i++)
+                                foundNamedScope(name, Keywords.FUN_INTERFACE, ScopeType.INTERFACE)
                                 continue // without i++
                             }
                             tokens.equals(i, "interface") && listening.last() -> {
                                 check(tokens.equals(++i, TokenType.NAME))
                                 val name = tokens.toString(i++)
-                                foundNamedScope(name, "interface")
+                                foundNamedScope(name, Keywords.NONE, ScopeType.INTERFACE)
                                 continue // without i++
                             }
                             tokens.equals(i, "typealias") && listening.last() -> {
                                 check(tokens.equals(++i, TokenType.NAME))
                                 val name = tokens.toString(i++)
-                                foundNamedScope(name, "typealias")
+                                foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
                                 continue // without i++
                             }
                         }

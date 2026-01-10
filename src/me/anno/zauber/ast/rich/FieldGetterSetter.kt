@@ -29,7 +29,7 @@ object FieldGetterSetter {
             val backingField = Field(
                 getterScope, field.selfType, true, true,
                 "field", field.valueType, field.initialValue ?: field.getterExpr,
-                emptyList(), origin
+                Keywords.NONE, origin
             )
             val getterExpr = when {
                 consumeIf("=") -> {
@@ -85,7 +85,7 @@ object FieldGetterSetter {
         return Field(
             scope, field.selfType, false, /* todo we actually have a parameter */null,
             fieldName, field.valueType, field.initialValue ?: field.getterExpr,
-            emptyList(), origin
+            Keywords.NONE, origin
         )
     }
 
@@ -96,14 +96,14 @@ object FieldGetterSetter {
         return Field(
             scope, field.selfType, field.isMutable, null,
             "field", field.valueType, field.initialValue ?: field.getterExpr,
-            emptyList(), origin
+            Keywords.NONE, origin
         )
     }
 
     fun ZauberASTBuilder.finishLastField() {
         val field = lastField ?: return
         if (needsGetter(field)) {
-            keywords.clear()
+            keywords = 0
             val origin = field.origin
             if (field.getter == null) {
                 pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
@@ -124,12 +124,12 @@ object FieldGetterSetter {
 
     private fun needsGetter(field: Field): Boolean {
         return true // just to make our lives easier in testing
-        if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
+       /* if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
         if (field.codeScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
         if (field.codeScope.scopeType == ScopeType.OBJECT ||
             field.codeScope.scopeType == ScopeType.COMPANION_OBJECT
         ) return true // to ensure initialization
-        return false
+        return false*/
     }
 
     fun ZauberASTBuilder.createGetterMethod(

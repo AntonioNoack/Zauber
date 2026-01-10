@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich.controlflow
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
@@ -41,7 +42,7 @@ fun storeSubject(
     val value = if (subject is AssignmentExpression) subject.newValue else subject
     val field = Field(
         scope, scope.typeWithoutArgs, false, null, subjectName,
-        null, value, emptyList(), origin
+        null, value, Keywords.NONE, origin
     )
     return FieldExpression(field, scope, origin)
 }
@@ -78,7 +79,7 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
                 // todo this is also only valid, if no other thread/function could write to the field
                 Field(
                     caseScope, null, false, null,
-                    fieldName, jointType, null, emptyList(), origin
+                    fieldName, jointType, null, Keywords.NONE, origin
                 )
             }
         }

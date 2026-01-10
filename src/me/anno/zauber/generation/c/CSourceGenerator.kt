@@ -1,5 +1,7 @@
 package me.anno.zauber.generation.c
 
+import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -310,7 +312,7 @@ object CSourceGenerator : Generator() {
     fun Type?.isValueType(): Boolean {
         if (this == null) return false
         if (this is ClassType) {
-            return "value" in clazz.keywords
+            return clazz.keywords.hasFlag(Keywords.VALUE)
         }
         return false
     }

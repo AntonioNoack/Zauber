@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.UnitType
@@ -10,7 +11,7 @@ class Constructor(
     scope: Scope,
     val superCall: InnerSuperCall?,
     body: Expression?,
-    keywords: List<String>,
+    keywords: KeywordSet,
     origin: Int
 ) : MethodLike(
     scope.parent!!.typeWithoutArgs,

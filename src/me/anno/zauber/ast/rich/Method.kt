@@ -1,8 +1,8 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Scope
@@ -18,7 +18,7 @@ class Method(
     returnType: Type?,
     val extraConditions: List<TypeCondition>,
     body: Expression?,
-    keywords: List<String>,
+    keywords: KeywordSet,
     origin: Int
 ) : MethodLike(
     selfType, typeParameters, valueParameters, returnType,

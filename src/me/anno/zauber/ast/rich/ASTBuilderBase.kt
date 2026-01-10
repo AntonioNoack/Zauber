@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -14,16 +15,15 @@ import me.anno.zauber.types.impl.GenericType
 
 open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
-    val keywords = ArrayList<String>()
+    var keywords = 0
 
     var currPackage = root
     var i = 0
 
-    fun packKeywords(): List<String> {
-        if (keywords.isEmpty()) return emptyList()
-        val tmp = ArrayList(keywords)
-        keywords.clear()
-        return tmp
+    fun packKeywords(): KeywordSet {
+        val result = keywords
+        keywords = 0
+        return result
     }
 
     inline fun <R> pushScope(scopeType: ScopeType, prefix: String, callback: (Scope) -> R): R {

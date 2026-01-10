@@ -1,11 +1,13 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.CastExpression.createBranchExpression
 import me.anno.zauber.ast.rich.CastExpression.createCastExpression
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.MemberNameExpression.Companion.nameExpression
@@ -46,8 +48,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
         private val LOGGER = LogManager.getLogger(ZauberASTBuilder::class)
 
-        const val synthetic = "synthetic"
-        val syntheticList = listOf(synthetic)
+        const val synthetic = Keywords.SYNTHETIC
+        val syntheticList = Keywords.SYNTHETIC
 
         val fileLevelKeywords = listOf(
             "enum", "private", "protected", "fun", "class", "data", "value",
@@ -119,7 +121,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return path
     }
 
-    private fun readClass() {
+    private fun readClass(scopeType: ScopeType) {
         check(tokens.equals(i, TokenType.NAME)) {
             "Expected name after 'class' at ${tokens.err(i)}"
         }
@@ -128,11 +130,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val name = tokens.toString(i++)
 
         val keywords = packKeywords()
-        val scopeType =
-            if ("inner" in keywords) ScopeType.INNER_CLASS
-            else if ("enum" in keywords) ScopeType.ENUM_CLASS
-            else ScopeType.NORMAL_CLASS
-
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
 
         val typeParameters = readTypeParameterDeclarations(classScope)
@@ -168,7 +165,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             scope, if (primarySuperCall != null) {
                 InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, classScope, origin)
             } else null, null,
-            if (privatePrimaryConstructor) listOf("private") else emptyList(),
+            if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
             constructorOrigin
         )
         scope.selfAsConstructor = primaryConstructor
@@ -178,7 +175,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readInterface() {
-        keywords.add("interface")
         check(tokens.equals(i, TokenType.NAME)) {
             "Expected name after 'interface' at ${tokens.err(i)}"
         }
@@ -199,9 +195,9 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         }
     }
 
-    private fun readObject() {
-        val origin = origin(i++)
-        val isCompanionObject = "companion" in keywords
+    private fun readObject(scopeType: ScopeType) {
+        val origin = origin(i - 1)
+        val isCompanionObject = scopeType == ScopeType.COMPANION_OBJECT
         val name = if (tokens.equals(i, TokenType.NAME)) {
             tokens.toString(i++)
         } else if (isCompanionObject) {
@@ -212,11 +208,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             throw IllegalStateException("Objects only exist once, so they cannot have constructor parameters.")
         }
 
-        keywords.add("object")
         val keywords = packKeywords()
-        val scopeType =
-            if (isCompanionObject) ScopeType.COMPANION_OBJECT
-            else ScopeType.OBJECT
         // println("Read object '$name' with keywords: $keywords in scope $currPackage")
 
         val scope = currPackage.getOrPut(name, tokens.fileName, scopeType)
@@ -227,7 +219,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         if (scope.objectField == null) scope.objectField = Field(
             scope, null, false, null, "__instance__",
             ClassType(scope, emptyList()),
-            /* todo should we set initialValue? */ null, emptyList(), origin
+            /* todo should we set initialValue? */ null, Keywords.NONE, origin
         )
 
         if (isCompanionObject) {
@@ -279,13 +271,13 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return -1
     }
 
-    private fun readClassBody(name: String, keywords: List<String>, scopeType: ScopeType): Scope {
+    private fun readClassBody(name: String, keywords: KeywordSet, scopeType: ScopeType): Scope {
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        classScope.keywords.addAll(keywords)
+        classScope.keywords = classScope.keywords or keywords
 
         if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
             pushBlock(classScope) {
-                if ("enum" in keywords) {
+                if (classScope.scopeType == ScopeType.ENUM_CLASS) {
                     val endIndex = readEnumBody()
                     i = min(endIndex + 1, tokens.size) // skipping over semicolon
                 }
@@ -293,7 +285,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             }
         }
 
-        if ("data" in keywords || "value" in keywords) {
+        if (keywords.hasFlag(Keywords.DATA_CLASS) || keywords.hasFlag(Keywords.VALUE)) {
             pushScope(classScope) {
                 finishDataClass(classScope)
             }
@@ -324,7 +316,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 } else emptyList()
 
                 val keywords = packKeywords()
-                val entryScope = readClassBody(name, emptyList(), ScopeType.ENUM_ENTRY_CLASS)
+                val entryScope = readClassBody(name, Keywords.NONE, ScopeType.ENUM_ENTRY_CLASS)
                 // todo add name and id as parameters
                 val extraValueParameters = listOf(
                     NamedParameter(null, NumberExpression((ordinal++).toString(), scope, origin)),
@@ -639,11 +631,26 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     applyImport(import)
                 }
 
-                consumeIf("class") -> readClass()
-                tokens.equals(i, "object") -> readObject()
+                consumeIf("value") -> keywords = keywords or Keywords.VALUE
+
+                consumeIf("inner") -> {
+                    consume("class")
+                    readClass(ScopeType.INNER_CLASS)
+                }
+                consumeIf("enum") -> {
+                    consume("class")
+                    readClass(ScopeType.ENUM_CLASS)
+                }
+                consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+
+                consumeIf("companion") -> {
+                    consume("object")
+                    readObject(ScopeType.COMPANION_OBJECT)
+                }
+                consumeIf("object") -> readObject(ScopeType.OBJECT)
                 consumeIf("fun") -> {
                     if (consumeIf("interface")) {
-                        keywords.add("fun")
+                        keywords = keywords or Keywords.FUN_INTERFACE
                         readInterface()
                     } else {
                         readMethod()
@@ -666,8 +673,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
                 consumeIf("@") -> annotations.add(readAnnotation())
 
-                tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) ->
-                    collectNames(fileLevelKeywords)
+                tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) -> collectKeywords()
 
                 consumeIf(";") -> {}// just skip it
 
@@ -705,15 +711,26 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return Annotation(path, params)
     }
 
-    fun collectNames(keywords1: List<String>) {
-        for (keyword in keywords1) {
-            if (!tokens.equals(i, TokenType.STRING) &&
-                tokens.equals(i, keyword)
-            ) {
-                keywords.add(keyword)
-                i++
-                return
+    fun collectKeywords() {
+        if (!tokens.equals(i, TokenType.STRING)) {
+            keywords = keywords or when {
+                consumeIf("public") -> Keywords.PUBLIC
+                consumeIf("private") -> Keywords.PRIVATE
+                consumeIf("external") -> Keywords.EXTERNAL
+                consumeIf("open") -> Keywords.OPEN
+                consumeIf("override") -> Keywords.OVERRIDE
+                consumeIf("abstract") -> Keywords.ABSTRACT
+                consumeIf("operator") -> Keywords.OPERATOR
+                consumeIf("inline") -> Keywords.INLINE
+                consumeIf("infix") -> Keywords.INFIX
+                consumeIf("data") -> Keywords.DATA_CLASS
+                consumeIf("value") -> Keywords.VALUE
+                consumeIf("annotation") -> Keywords.ANNOTATION
+                consumeIf("sealed") -> Keywords.SEALED
+                consumeIf("const") -> Keywords.CONSTEXPR
+                else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
             }
+            return
         }
 
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
@@ -739,32 +756,44 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         //  and that scope could be inherited by the function body...
         val result = ArrayList<Parameter>()
         loop@ while (i < tokens.size) {
+
+            while (consumeIf("@")) {
+                annotations.add(readAnnotation())
+            }
+
+            while ((tokens.equals(i, TokenType.KEYWORD) || tokens.equals(i, TokenType.NAME)) &&
+                !tokens.equals(i + 1, ":")
+            ) {
+                keywords = keywords or when {
+                    consumeIf("private") -> Keywords.PRIVATE
+                    consumeIf("public") -> Keywords.PUBLIC
+                    consumeIf("protected") -> Keywords.PROTECTED
+                    consumeIf("override") -> Keywords.OVERRIDE
+                    consumeIf("open") -> Keywords.OPEN
+                    consumeIf("value") -> Keywords.VALUE
+                    else -> break
+                }
+            }
+
+            val isVararg = consumeIf("vararg")
+            val isVar = consumeIf("var")
+            val isVal = consumeIf("val")
+
             when {
-                consumeIf("@") -> annotations.add(readAnnotation())
                 tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) -> {
                     val origin = origin(i)
                     val name = tokens.toString(i++)
-                    if (name in paramLevelKeywords &&
-                        (tokens.equals(i, TokenType.NAME) ||
-                                tokens.equals(i, TokenType.KEYWORD))
-                    ) {
-                        keywords.add(name)
-                        continue@loop
-                    }
-
-                    val isVar = keywords.remove("var")
-                    val isVal = keywords.remove("val")
-                    val isVararg = keywords.remove("vararg")
                     check(tokens.equals(i++, ":")) { "Expected colon in var/val at ${tokens.err(i - 1)}" }
 
                     var type = readTypeNotNull(null, true) // <-- handles generics now
-
                     if (isVararg) type = ClassType(ArrayType.clazz, listOf(type))
 
                     val initialValue = if (tokens.equals(i, "=")) {
                         i++
                         readExpression()
                     } else null
+
+                    println("Found $name: $type = $initialValue")
 
                     val keywords = packKeywords()
                     val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
@@ -1006,7 +1035,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
         clazz.hasTypeParameters = true
 
-        readClassBody(name, emptyList(), ScopeType.INLINE_CLASS)
+        readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(
             clazz, emptyList(), emptyList(),
             null, currPackage, origin
@@ -1031,7 +1060,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             }
         }
         i = bodyIndex
-        readClassBody(name, emptyList(), ScopeType.INLINE_CLASS)
+        readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(
             clazz, emptyList(), emptyList(),
             null, currPackage, origin
@@ -1110,7 +1139,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             val pseudoInitial = iterableToNextExpr(iterable)
             val variableField = Field(
                 body.scope, null, true, false,
-                name, variableType, pseudoInitial, emptyList(), origin
+                name, variableType, pseudoInitial, Keywords.NONE, origin
             )
             return forLoop(variableField, iterable, body, label)
         }
@@ -1325,10 +1354,9 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                         tokens.equals(i, TokenType.CLOSE_ARRAY) ||
                         tokens.equals(i, TokenType.SYMBOL) ||
                         tokens.equals(i, TokenType.APPEND_STRING) ||
-                        tokens.equals(i, "val") ||
-                        tokens.equals(i, "var") ||
+                        tokens.equals(i, "val", "var") ||
                         tokens.equals(i, "else") ||
-                        tokens.equals(i, "fun") ||
+                        tokens.equals(i, "fun", "override") ||
                         tokens.equals(i, "this") -> return false
                 else -> throw NotImplementedError("Can ${tokens.err(i)} appear inside a type?")
             }
@@ -1480,8 +1508,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
         val name = scopeName ?: currPackage.generateName(scopeType.name)
         return pushScope(name, scopeType) { childScope ->
-            childScope.keywords.add(scopeType.name)
-
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             scanBlockForNewTypes(i, blockEnd)
             val result = tokens.push(blockEnd) { readImpl(childScope) }
@@ -1828,7 +1854,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                                     // to do we neither know type nor initial value :/, both come from the called function/set variable
                                     Field( // this is more of a parameter...
                                         currPackage, null, false, parameter,
-                                        name, null, null, emptyList(), origin
+                                        name, null, null, Keywords.NONE, origin
                                     )
                                 } else throw IllegalStateException("Expected name")
                                 readComma()
@@ -1844,7 +1870,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                         // to do we neither know type nor initial value :/, both come from the called function/set variable
                         Field( // this is more of a parameter...
                             currPackage, null, true, parameter,
-                            name, null, null, emptyList(), origin
+                            name, null, null, Keywords.NONE, origin
                         )
                     } else throw NotImplementedError()
                     readComma()
@@ -1882,7 +1908,11 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     consume("var")
                     result.add(readDeclaration(true, isLateinit = true))
                 }
-                consumeIf("class") -> readClass()
+
+                consumeIf("inner") -> throw IllegalStateException("Inner classes inside methods are not supported")
+                consumeIf("enum") -> throw IllegalStateException("Enum classes inside methods are not supported")
+                consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+
                 else -> {
                     result.add(readExpression())
                     if (LOGGER.enableDebug) LOGGER.debug("block += ${result.last()}")
@@ -1967,7 +1997,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         // define variable in the scope
         val field = Field(
             currPackage, getSelfType(currPackage), isMutable, null,
-            name, type, value, emptyList(), origin
+            name, type, value, Keywords.NONE, origin
         )
 
         return DeclarationExpression(currPackage, value, field)

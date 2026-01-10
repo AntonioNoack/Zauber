@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.synthetic
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.controlflow.shortcutExpressionI
 import me.anno.zauber.ast.rich.expression.*
@@ -22,7 +21,7 @@ object DataClassGenerator {
     val i31 = NumberExpression("31", root, -1)
     val i1 = NumberExpression("1", root, -1)
 
-    private val keywords = listOf(synthetic, "override")
+    private const val keywords = Keywords.SYNTHETIC or Keywords.OVERRIDE
 
     class ExpressionBuilder(var scope: Scope, val origin: Int, val type: Type) {
         var expr: Expression? = null
@@ -170,7 +169,7 @@ object DataClassGenerator {
             parameter = Parameter("other", NullableAnyType, scope, origin)
             val otherField = Field(
                 scope, null, false, parameter,
-                parameter.name, NullableAnyType, null, emptyList(), origin
+                parameter.name, NullableAnyType, null, Keywords.NONE, origin
             )
             parameter.field = otherField
             val otherInstanceExpr = FieldExpression(otherField, scope, origin)

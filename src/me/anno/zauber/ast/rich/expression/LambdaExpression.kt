@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -48,7 +49,7 @@ class LambdaExpression(
                             Field(
                                 bodyScope, null, false, param0,
                                 autoParamName, type, null,
-                                emptyList(), origin
+                                Keywords.NONE, origin
                             )
                             listOf(LambdaVariable(type, autoParamName))
                         }
