@@ -96,14 +96,14 @@ class CallExpression(
                         )
                         if (importedMethod != null) return importedMethod
 
-                        val methodCompanion = methodOwner.companionObject
-                        if (methodCompanion != null) {
-                            val methodSelfType = methodCompanion.typeWithArgs
-                            val importedMethod = MethodResolver.findMemberInScope(
-                                methodCompanion, origin, nameAsImport.name, context.targetType, methodSelfType,
+                        val ownerCompanion = methodOwner.companionObject
+                        if (ownerCompanion != null) {
+                            val companionSelfType = ownerCompanion.typeWithArgs
+                            val importedCompanionMethod = MethodResolver.findMemberInScope(
+                                ownerCompanion, origin, nameAsImport.name, context.targetType, companionSelfType,
                                 typeParameters, valueParameters
                             )
-                            if (importedMethod != null) return importedMethod
+                            if (importedCompanionMethod != null) return importedCompanionMethod
                         }
                     }
 
