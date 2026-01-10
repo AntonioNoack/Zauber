@@ -1,30 +1,7 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.rich.controlflow.BreakExpression
-import me.anno.zauber.ast.rich.controlflow.ContinueExpression
-import me.anno.zauber.ast.rich.controlflow.DoWhileLoop
-import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.controlflow.ThrowExpression
-import me.anno.zauber.ast.rich.controlflow.TryCatchBlock
-import me.anno.zauber.ast.rich.controlflow.WhileLoop
-import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr
-import me.anno.zauber.ast.rich.expression.AssignmentExpression
-import me.anno.zauber.ast.rich.expression.CallExpression
-import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.CompareOp
-import me.anno.zauber.ast.rich.expression.DotExpression
-import me.anno.zauber.ast.rich.expression.DoubleColonPrefix
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.FieldExpression
-import me.anno.zauber.ast.rich.expression.ImportedMember
-import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
-import me.anno.zauber.ast.rich.expression.LambdaExpression
-import me.anno.zauber.ast.rich.expression.MemberNameExpression
-import me.anno.zauber.ast.rich.expression.NamedCallExpression
-import me.anno.zauber.ast.rich.expression.NamedTypeExpression
-import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.controlflow.*
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -77,13 +54,13 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
     fun <R> pushCall(readImpl: () -> R): R {
         val result = tokens.push(i++, TokenType.OPEN_CALL, TokenType.CLOSE_CALL, readImpl)
-        i++ // skip )
+        consume(TokenType.CLOSE_CALL)
         return result
     }
 
     fun <R> pushArray(readImpl: () -> R): R {
         val result = tokens.push(i++, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY, readImpl)
-        i++ // skip ]
+        consume("]")
         return result
     }
 
@@ -99,8 +76,22 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         i++
     }
 
+    fun consume(expected: TokenType) {
+        check(tokens.equals(i, expected)) {
+            "Expected '$expected', but found ${tokens.err(i)}"
+        }
+        i++
+    }
+
     fun consumeIf(string: String): Boolean {
         return if (tokens.equals(i, string)) {
+            i++
+            true
+        } else false
+    }
+
+    fun consumeIf(type: TokenType): Boolean {
+        return if (tokens.equals(i, type)) {
             i++
             true
         } else false

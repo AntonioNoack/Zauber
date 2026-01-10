@@ -69,13 +69,13 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
             return when (expr) {
                 is MemberNameExpression -> {
                     if (expr.name == field.name) {
-                        val field2 = resolveField(context, expr.name, null)
+                        val field2 = resolveField(context, expr.name, null, expr.origin)
                         field2?.resolved == field
                     } else false
                 }
                 is UnresolvedFieldExpression -> {
                     if (expr.name == field.name) {
-                        val field2 = resolveField(context, expr.name, null)
+                        val field2 = resolveField(context, expr.name, null, expr.origin)
                         field2?.resolved == field
                     } else false
                 }
@@ -106,8 +106,10 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
     }
 
     init {
-        val ownerNames = field.selfTypeTypeParams
-        check(ownerNames.size == ownerTypes.size)
+        val ownerNames = field.selfTypeTypeParams(context.selfType)
+        check(ownerNames.size == ownerTypes.size) {
+            "Expected $ownerNames.size to be $ownerTypes.size for field $field"
+        }
         check(field.typeParameters.size == callTypes.size)
     }
 
@@ -115,7 +117,7 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         LOGGER.info("Getting type of $resolved in scope ${context.codeScope.pathStr}")
 
         val field = resolved
-        val ownerNames = field.selfTypeTypeParams
+        val ownerNames = field.selfTypeTypeParams(context.selfType)
         val selfType = field.selfType
 
         val valueType = field.resolveValueType(context)

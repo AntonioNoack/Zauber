@@ -56,9 +56,8 @@ class NamedCallExpression(
         val constructor = null
         val context = context.withSelfType(calleeType)
         return resolveCallType(
-            context,
-            name, constructor,
-            typeParameters, valueParameters
+            context, name, constructor,
+            typeParameters, valueParameters, origin
         ) ?: MethodResolver.printScopeForMissingMethod(
             context, this, name,
             typeParameters, valueParameters,

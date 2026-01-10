@@ -69,24 +69,25 @@ class CallExpression(
                 val name = base.name
                 if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                return resolveCallable(context, name, null, typeParameters, valueParameters)
+                return resolveCallable(context, name, null, typeParameters, valueParameters, origin)
                     ?: MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
             is UnresolvedFieldExpression -> {
                 val name = base.name
                 if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
+                val codeScope = context.codeScope
                 val c = ConstructorResolver
                 val constructor = null1() // todo do we need this constructor-stuff??? I don't think so, it's not a type
-                    ?: c.findMemberInFile(context.codeScope, name, returnType, null, typeParameters, valueParameters)
-                    ?: c.findMemberInFile(langScope, name, returnType, null, typeParameters, valueParameters)
-                val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters)
+                    ?: c.findMemberInFile(codeScope, origin, name, returnType, null, typeParameters, valueParameters)
+                    ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
+                val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
                 if (byMethodCall != null) return byMethodCall
 
                 val nameAsImport = base.nameAsImport
                 if (nameAsImport != null) {
                     val importedMethod = MethodResolver.findMemberInScope(
-                        nameAsImport.parent, nameAsImport.name, context.targetType, context.selfType,
+                        nameAsImport.parent, origin, nameAsImport.name, context.targetType, context.selfType,
                         typeParameters, valueParameters
                     )
                     if (importedMethod != null) return importedMethod
@@ -123,14 +124,15 @@ class CallExpression(
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
                 val constructor = null1()
-                    ?: c.findMemberInFile(base.nameAsImport, name, returnType, null, typeParameters, valueParameters)
-                    ?: findMemberInFile(
-                        base.nameAsImport.parent, name,
-                        returnType,
+                    ?: c.findMemberInFile(
+                        base.nameAsImport, origin, name, returnType,
+                        null, typeParameters, valueParameters
+                    ) ?: findMemberInFile(
+                        base.nameAsImport.parent, origin, name, returnType,
                         base.nameAsImport.parent.ifIsClassScope()?.typeWithoutArgs,
                         typeParameters, valueParameters
                     )
-                return resolveCallable(context, name, constructor, typeParameters, valueParameters)
+                return resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
                     ?: MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
             else -> throw IllegalStateException(

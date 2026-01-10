@@ -1,45 +1,32 @@
 package zauber
 
-import zauber.impl.SimpleListIterator
-
 fun <V> emptyList(): List<V> = Array(0)
 
 interface List<V> : Collection<V> {
+
     operator fun get(index: Int): V
-    fun isEmpty(): Boolean
+
+    fun getOrNull(index: Int): V? {
+        return if (index in 0 until size) this[index] else null
+    }
 
     override fun iterator(): Iterator<V> = listIterator(0)
-    fun listIterator(startIndex: Int = 0): SimpleListIterator<V>
+    fun listIterator(startIndex: Int = 0): ListIterator<V>
+
+    fun indexOf(element: V): Int
+    fun lastIndexOf(element: V): Int
+
+    override fun contains(element: V): Boolean = indexOf(element) >= 0
+    override fun firstOrNull(predicate: (V) -> Boolean): V? = getOrNull(0)
+    override fun first(): V = get(0)
+    override fun lastOrNull(predicate: (V) -> Boolean): V? = getOrNull(lastIndex)
+    override fun last(): V = get(lastIndex)
 }
 
 val List<*>.indices: IntRange get() = 0 until size
 
-fun <V> List<V>.firstOrNull(): V? {
-    return if (isEmpty()) null else this[0]
-}
-
-fun <V> List<V>.firstOrNull(predicate: (V) -> Boolean): V? {
-    for (i in indices) {
-        val element = this[i]
-        if (predicate(element)) return element
-    }
-    return null
-}
-
 val List<*>.lastIndex: Int
     get() = size - 1
-
-fun <V> List<V>.lastOrNull(): V? {
-    return if (isEmpty()) null else this[lastIndex]
-}
-
-fun <V> List<V>.lastOrNull(predicate: (V) -> Boolean): V? {
-    for (i in indices.reversed()) {
-        val element = this[i]
-        if (predicate(element)) return element
-    }
-    return null
-}
 
 fun <V> List<V>.withIndex(): List<IndexedValue<V>> {
     return List(size) {
@@ -82,7 +69,7 @@ inline fun <V, R> List<V>.map(transform: (V) -> R): List<R> {
 
 fun <V> List<V>.joinToString(separator: String = ",", prefix: String = "[", postfix: String = "]"): String {
     var result = prefix
-    for(i in indices) {
+    for (i in indices) {
         if (i > 0) result += separator
         result += this[i]
     }
@@ -92,8 +79,27 @@ fun <V> List<V>.joinToString(separator: String = ",", prefix: String = "[", post
 
 data class IndexedValue<V>(val index: Int, val value: V)
 
+// todo mutable iterable...
 interface MutableList<V> : List<V> {
     operator fun set(index: Int, value: V): V
+
     fun add(element: V): Boolean
+    fun add(index: Int, element: V): Boolean
     fun addAll(elements: Collection<V>): Boolean
+    fun remove(element: V): Boolean
+    fun removeAll(elements: Collection<V>): Boolean
+    fun removeAt(index: Int): V
+
+    fun removeFirst(): V
+    fun removeLast(): V
+
+    fun removeFirstOrNull(): V? {
+        return if (isEmpty()) null else removeFirst()
+    }
+
+    fun removeLastOrNull(): V? {
+        return if (isEmpty()) null else removeLast()
+    }
+
+    fun retainAll(elements: Collection<V>): Boolean
 }

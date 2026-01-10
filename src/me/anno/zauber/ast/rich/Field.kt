@@ -30,8 +30,8 @@ class Field(
 
     var getterExpr: Expression? = null
 
-    val selfTypeTypeParams: List<Parameter>
-        get() = selfTypeToTypeParams(selfType)
+    fun selfTypeTypeParams(givenSelfType: Type?): List<Parameter> =
+        selfTypeToTypeParams(selfType, givenSelfType)
 
     var typeParameters: List<Parameter> = emptyList()
 

@@ -15,10 +15,8 @@ object FieldGetterSetter {
     private val LOGGER = LogManager.getLogger(FieldGetterSetter::class)
 
     fun ZauberASTBuilder.readGetter() {
-        check(tokens.equals(++i, TokenType.OPEN_CALL))
-        check(tokens.equals(++i, TokenType.CLOSE_CALL))
-
-        i++ // skipping )
+        consume(TokenType.OPEN_CALL)
+        consume(TokenType.CLOSE_CALL)
 
         val field = lastField!!
         if (tokens.equals(i, ":")) {
@@ -34,8 +32,7 @@ object FieldGetterSetter {
                 emptyList(), origin
             )
             val getterExpr = when {
-                tokens.equals(i, "=") -> {
-                    i++ // skip =
+                consumeIf("=") -> {
                     ReturnExpression(readExpression(), null, getterScope, origin)
                 }
                 tokens.equals(i, TokenType.OPEN_BLOCK) -> {
@@ -51,7 +48,6 @@ object FieldGetterSetter {
     }
 
     fun ZauberASTBuilder.readSetter() {
-        i++ // skip set
         val field = lastField!!
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             check(tokens.equals(++i, TokenType.NAME))
@@ -67,8 +63,7 @@ object FieldGetterSetter {
                 val backingField = createBackingField(field, setterScope, origin)
                 val valueField = createValueField(field, setterFieldName, setterScope, origin)
                 val setterExpr = when {
-                    tokens.equals(i, "=") -> {
-                        i++ // skip =
+                    consumeIf("=") -> {
                         ReturnExpression(readExpression(), null, setterScope, origin)
                     }
                     tokens.equals(i, TokenType.OPEN_BLOCK) -> {

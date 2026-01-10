@@ -9,7 +9,6 @@ import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveInCodeScope
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
@@ -20,7 +19,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     private val LOGGER = LogManager.getLogger(MethodResolver::class)
 
     override fun findMemberInScope(
-        scope: Scope?, name: String,
+        scope: Scope?, origin: Int, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
@@ -42,7 +41,8 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             } else method.returnType // no resolution invoked (fast-path)
             val match = findMemberMatch(
                 method, methodReturnType, returnType,
-                selfType, typeParameters, valueParameters
+                selfType, typeParameters, valueParameters,
+                origin
             )
             if (match != null) return match
         }
@@ -70,13 +70,15 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
+        origin: Int
     ): ResolvedMethod? {
 
-        val methodSelfParams = selfTypeToTypeParams(method.selfType)
+        val methodSelfParams = selfTypeToTypeParams(method.selfType, selfType)
         val actualTypeParams = mergeTypeParameters(
             methodSelfParams, selfType,
             method.typeParameters, typeParameters,
+            origin
         )
 
         LOGGER.info("Resolving generics for method $method")
@@ -101,9 +103,10 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        origin: Int
     ): ResolvedMember<*>? {
-        val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters)
-        val field = resolveField(context, name, typeParameters)
+        val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters, origin)
+        val field = resolveField(context, name, typeParameters, origin)
         if (method != null && field != null) {
             LOGGER.warn("Having both a method and a field named '$name' in ${context.codeScope}")
         }
@@ -131,8 +134,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        origin: Int
     ): Type? {
-        return resolveCallable(context, name, constructor, typeParameters, valueParameters)
+        return resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
             ?.getTypeFromCall()
     }
 
@@ -141,10 +145,11 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         name: String,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        origin: Int
     ): ResolvedMethod? {
         return resolveInCodeScope(context) { scope, selfType ->
             findMemberInHierarchy(
-                scope, name, context.targetType,
+                scope, origin, name, context.targetType,
                 selfType, typeParameters, valueParameters
             )
         }

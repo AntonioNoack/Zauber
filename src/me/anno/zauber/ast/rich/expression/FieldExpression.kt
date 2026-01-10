@@ -1,11 +1,13 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.MemberResolver.Companion.findGenericsForMatch
-import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -24,16 +26,14 @@ class FieldExpression(
 
     override fun resolveType(context: ResolutionContext): Type {
         if (LOGGER.enableInfo) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
-        val generics = findGenericsForMatch(
-            field.selfType, if (field.selfType == null) null else context.selfType,
-            field.valueType, context.targetType,
-            emptyList(), emptyParameterList(),
-            emptyList(), emptyList()
-        )
-        check(generics != null) {
-            "Resolved field $field, but somehow the generics were incompatible???"
-        }
-        val resolved = ResolvedField(generics, field, emptyParameterList(), context)
+        val scopeSelfType = TypeResolution.getSelfType(field.codeScope)
+        val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
+        val resolved = FieldResolver.findMemberMatch(
+            field, fieldReturnType, context.targetType,
+            context.selfType,
+            null, emptyList(),
+            origin
+        ) ?: throw IllegalStateException("Generics could not be resolved for $field at ${resolveOrigin(origin)}")
         return resolved.getValueType(context)
     }
 }

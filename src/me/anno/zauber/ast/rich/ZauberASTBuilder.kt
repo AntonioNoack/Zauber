@@ -179,7 +179,9 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
     private fun readInterface() {
         keywords.add("interface")
-        check(tokens.equals(++i, TokenType.NAME))
+        check(tokens.equals(i, TokenType.NAME)) {
+            "Expected name after 'interface' at ${tokens.err(i)}"
+        }
         val name = tokens.toString(i++)
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
         val keywords = packKeywords()
@@ -192,7 +194,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readAnnotations() {
-        if (tokens.equals(i, "@")) {
+        if (consumeIf("@")) {
             annotations.add(readAnnotation())
         }
     }
@@ -236,8 +238,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readSuperCalls(clazz: Scope, needsEntry: Boolean) {
-        if (tokens.equals(i, ":")) {
-            i++ // skip :
+        if (consumeIf(":")) {
             var endIndex = findEndOfSuperCalls(i)
             if (endIndex < 0) endIndex = tokens.size
             push(endIndex) {
@@ -393,7 +394,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     var lastField: Field? = null
 
     private fun readFieldInClass(isMutable: Boolean) {
-        val origin = origin(i++)// skip var/val
+        val origin = origin(i - 1)
 
         val classScope = currPackage // todo is this fine??
         val typeParameters = readTypeParameterDeclarations(classScope)
@@ -476,8 +477,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readWhereConditions(): List<TypeCondition> {
-        return if (tokens.equals(i, "where")) {
-            i++ // skip where
+        return if (consumeIf("where")) {
             val conditions = ArrayList<TypeCondition>()
             while (true) {
 
@@ -485,7 +485,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 check(tokens.equals(i + 1, ":"))
 
                 val name = tokens.toString(i++)
-                i++ // skip comma
+                consume(TokenType.COMMA)
                 val type = readTypeNotNull(null, true)
                 conditions.add(TypeCondition(name, type))
 
@@ -493,7 +493,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     tokens.equals(i + 1, TokenType.NAME) &&
                     tokens.equals(i + 2, ":")
                 ) {
-                    i++ // skip comma and continue reading conditions
+                    // skip comma and continue reading conditions
+                    consume(TokenType.COMMA)
                 } else {
                     // done
                     break
@@ -504,7 +505,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readMethod(): Method {
-        val origin = origin(i++) // skip 'fun'
+        val origin = origin(i - 1)
 
         val keywords = packKeywords()
 
@@ -564,9 +565,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readConstructor(): Constructor {
-        i++ // skip 'constructor'
-
-        val origin = origin(i)
+        val origin = origin(i - 1)
         val keywords = packKeywords()
 
         if (LOGGER.enableDebug) LOGGER.debug("constructor(...")
@@ -597,8 +596,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
         // body (or just = expression)
         val body = pushScope(constructorScope) {
-            if (tokens.equals(i, "=")) {
-                i++ // skip =
+            if (consumeIf("=")) {
                 readExpression()
             } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 pushBlock(ScopeType.CONSTRUCTOR, null) { readMethodBody() }
@@ -643,35 +641,35 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
                 consumeIf("class") -> readClass()
                 tokens.equals(i, "object") -> readObject()
-                tokens.equals(i, "fun") -> {
-                    if (tokens.equals(i + 1, "interface")) {
-                        keywords.add("fun"); i++
+                consumeIf("fun") -> {
+                    if (consumeIf("interface")) {
+                        keywords.add("fun")
                         readInterface()
                     } else {
                         readMethod()
                     }
                 }
-                tokens.equals(i, "interface") -> readInterface()
-                tokens.equals(i, "constructor") -> readConstructor()
-                tokens.equals(i, "typealias") -> readTypeAlias()
-                tokens.equals(i, "var") -> readFieldInClass(true)
-                tokens.equals(i, "val") -> readFieldInClass(false)
-                tokens.equals(i, "init") -> {
-                    check(tokens.equals(++i, TokenType.OPEN_BLOCK))
+                consumeIf("interface") -> readInterface()
+                consumeIf("constructor") -> readConstructor()
+                consumeIf("typealias") -> readTypeAlias()
+                consumeIf("var") -> readFieldInClass(true)
+                consumeIf("val") -> readFieldInClass(false)
+                consumeIf("init") -> {
+                    check(tokens.equals(i, TokenType.OPEN_BLOCK))
                     pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
                         readMethodBody()
                     }
                 }
 
-                tokens.equals(i, "get") -> readGetter()
-                tokens.equals(i, "set") -> readSetter()
+                consumeIf("get") -> readGetter()
+                consumeIf("set") -> readSetter()
 
-                tokens.equals(i, "@") -> annotations.add(readAnnotation())
+                consumeIf("@") -> annotations.add(readAnnotation())
 
                 tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) ->
                     collectNames(fileLevelKeywords)
 
-                tokens.equals(i, ";") -> i++ // just skip it
+                consumeIf(";") -> {}// just skip it
 
                 else -> throw NotImplementedError("Unknown token at ${tokens.err(i)}")
             }
@@ -680,7 +678,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     fun readTypeAlias() {
-        check(tokens.equals(i++, "typealias"))
         check(tokens.equals(i, TokenType.NAME))
         val newName = tokens.toString(i++)
         val pseudoScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
@@ -692,7 +689,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     fun readAnnotation(): Annotation {
-        check(tokens.equals(i++, "@"))
         if (tokens.equals(i, TokenType.NAME) &&
             tokens.equals(i + 1, ":") &&
             tokens.equals(i + 2, TokenType.NAME)
@@ -744,7 +740,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val result = ArrayList<Parameter>()
         loop@ while (i < tokens.size) {
             when {
-                tokens.equals(i, "@") -> annotations.add(readAnnotation())
+                consumeIf("@") -> annotations.add(readAnnotation())
                 tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) -> {
                     val origin = origin(i)
                     val name = tokens.toString(i++)
@@ -940,8 +936,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     else -> throw IllegalStateException("Unexpected token after when at ${tokens.err(i)}")
                 }
             }
-            tokens.equals(i, "try") -> readTryCatch()
-            tokens.equals(i, "return") -> readReturn(label)
+            consumeIf("try") -> readTryCatch()
+            consumeIf("return") -> readReturn(label)
             consumeIf("throw") -> ThrowExpression(origin(i - 1), readExpression())
             consumeIf("break") -> BreakExpression(label, currPackage, origin(i - 1))
             consumeIf("continue") -> ContinueExpression(label, currPackage, origin(i - 1))
@@ -1051,11 +1047,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             pushCall { readParamExpressions() }
         } else null
 
-        val delegate = if (tokens.equals(i, "by")) {
-            i++ // skip by
-            readExpression()
-        } else null
-
+        val delegate = if (consumeIf("by")) readExpression() else null
         return SuperCall(type, valueParams, delegate)
     }
 
@@ -1127,8 +1119,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     private fun readWhenWithSubject(): Expression {
         val subject = pushCall {
             when {
-                tokens.equals(i, "val") -> readDeclaration(false, isLateinit = false)
-                tokens.equals(i, "var") -> readDeclaration(true, isLateinit = false)
+                consumeIf("val") -> readDeclaration(false, isLateinit = false)
+                consumeIf("var") -> readDeclaration(true, isLateinit = false)
                 else -> readExpression()
             }
         }
@@ -1263,7 +1255,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readReturn(label: String?): ReturnExpression {
-        val origin = origin(i++) // skip return
+        val origin = origin(i - 1)
         if (LOGGER.enableDebug) LOGGER.debug("reading return")
         if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
             !tokens.equals(i, ",", ";")
@@ -1278,7 +1270,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readTryCatch(): TryCatchBlock {
-        i++ // skip try
         val tryBody = readBodyOrExpression()
         val catches = ArrayList<Catch>()
         while (tokens.equals(i, "catch")) {
@@ -1290,10 +1281,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             val handler = readBodyOrExpression()
             catches.add(Catch(params[0], handler))
         }
-        val finally = if (tokens.equals(i, "finally")) {
-            i++ // skip finally
-            readBodyOrExpression()
-        } else null
+        val finally = if (consumeIf("finally")) readBodyOrExpression() else null
         return TryCatchBlock(tryBody, catches, finally)
     }
 
@@ -1445,8 +1433,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             else if (typeArgs == null) path
             else throw IllegalStateException("Cannot combine $path with $typeArgs")
 
-        if (allowSubTypes && tokens.equals(i, ".")) {
-            i++ // skip ., and then read lambda/inner subtype
+        if (allowSubTypes && consumeIf(".")) {
+            // read lambda/inner subtype
             val childType = readTypeNotNull(selfType, true)
             val joinedType = if (childType is LambdaType && childType.scopeType == null) {
                 LambdaType(baseType, childType.parameters, childType.returnType)
@@ -1497,7 +1485,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             scanBlockForNewTypes(i, blockEnd)
             val result = tokens.push(blockEnd) { readImpl(childScope) }
-            i++ // skip }
+            consume(TokenType.CLOSE_BLOCK)
             result
         }
     }
@@ -1507,7 +1495,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             scanBlockForNewTypes(i, blockEnd)
             val result = tokens.push(blockEnd) { readImpl(scope) }
-            i++ // skip }
+            consume(TokenType.CLOSE_BLOCK)
             result
         }
     }
@@ -1771,8 +1759,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 val origin = origin(i)
                 val params = pushArray { readParamExpressions() }
-                if (tokens.equals(i, "=")) {
-                    i++ // skip =
+                if (consumeIf("=")) {
                     val value = NamedParameter(null, readExpression())
                     NamedCallExpression(
                         expr, "set", null,
@@ -1863,7 +1850,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     readComma()
                 }
             }
-            i++ // skip ->
+            consume("->")
             variables
         } else null
         val body = readMethodBody()
@@ -1884,15 +1871,15 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
                     throw IllegalStateException("} in the middle at ${tokens.err(i)}")
                 consumeIf(";") -> {} // skip
-                tokens.equals(i, "@") -> annotations.add(readAnnotation())
-                tokens.equals(i, "val") -> result.add(readDeclaration(false))
-                tokens.equals(i, "var") -> result.add(readDeclaration(true))
-                tokens.equals(i, "fun") -> {
+                consumeIf("@") -> annotations.add(readAnnotation())
+                consumeIf("val") -> result.add(readDeclaration(false))
+                consumeIf("var") -> result.add(readDeclaration(true))
+                consumeIf("fun") -> {
                     // just read the method, it gets added to the scope
                     readMethod()
                 }
                 consumeIf("lateinit") -> {
-                    check(tokens.equals(i, "var"))
+                    consume("var")
                     result.add(readDeclaration(true, isLateinit = true))
                 }
                 consumeIf("class") -> readClass()
@@ -1956,8 +1943,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readDeclaration(isMutable: Boolean, isLateinit: Boolean = false): Expression {
-        i++ // skip var/val
-
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             check(!isLateinit) // is immediately assigned -> cannot be lateinit
             return readDestructuring(isMutable)

@@ -159,20 +159,21 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
      * finds a method, returns the method and any inserted type parameters
      * */
     fun findMemberInFile(
-        scope: Scope?, name: String,
+        scope: Scope?, origin: Int, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
-    ): Resolved? {
+        valueParameters: List<ValueParameter>,
+
+        ): Resolved? {
         var scope = scope ?: return null
         while (true) {
             val method = findMemberInScope(
-                scope, name,
+                scope, origin, name,
                 returnType, selfType,
-                typeParameters, valueParameters
+                typeParameters, valueParameters,
             )
             if (method != null) return method
 
@@ -185,7 +186,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
      * todo check whether this works... the first call should be checked whether expectedSelfType & scope are the same
      * */
     fun findMemberInHierarchy(
-        scope: Scope?, name: String,
+        scope: Scope?, origin: Int, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
@@ -205,7 +206,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         }
 
         val method = findMemberInScope(
-            scope, name,
+            scope, origin, name,
             returnType, selfType,
             typeParameters, valueParameters
         )
@@ -221,23 +222,22 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             }
             check(superType.clazz != selfType.clazz)
             findMemberInHierarchy(
-                superType.clazz, name,
-                returnType,
-                mappedSelfType,
-                mappedTypeParameters,
-                valueParameters
+                superType.clazz, origin, name,
+                returnType, mappedSelfType,
+                mappedTypeParameters, valueParameters
             )
         }
     }
 
     abstract fun findMemberInScope(
-        scope: Scope?, name: String,
+        scope: Scope?, origin: Int,
+        name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
     ): Resolved?
 
     private fun getOuterClassDepth(scope: Scope?): Int {

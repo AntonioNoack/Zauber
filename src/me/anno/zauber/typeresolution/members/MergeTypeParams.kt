@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
@@ -14,15 +15,17 @@ object MergeTypeParams {
 
         callTypes: List<Parameter>,
         callParams: List<Type>?,
+        origin: Int
     ): ParameterList {
-        val selfPart = mergeSelfPart(selfType, selfParams)
-        val callPart = mergeCallPart(callTypes, callParams)
+        val selfPart = mergeSelfPart(selfType, selfParams, origin)
+        val callPart = mergeCallPart(callTypes, callParams, origin)
         return selfPart + callPart
     }
 
     fun mergeSelfPart(
         selfType: Type?,
         selfParams: List<Parameter>,
+        origin: Int
     ): ParameterList {
 
         if (selfType !is ClassType || selfType.typeParameters == null) {
@@ -32,7 +35,10 @@ object MergeTypeParams {
 
         val expectedSelfParams = selfParams.size
         val actualSelfParams = selfType.typeParameters.size
-        check(actualSelfParams == expectedSelfParams)
+        check(actualSelfParams == expectedSelfParams) {
+            "Mismatch in number of self-typeParameters: " +
+                    "$selfParams vs $selfType at ${resolveOrigin(origin)}"
+        }
 
         if (actualSelfParams == 0) return emptyParameterList()
         return selfType.typeParameters
@@ -41,6 +47,7 @@ object MergeTypeParams {
     fun mergeCallPart(
         callTypes: List<Parameter>,
         callParams: List<Type>?,
+        origin: Int
     ): ParameterList {
 
         if (callParams == null) {
@@ -50,7 +57,8 @@ object MergeTypeParams {
         val expectedCallParams = callTypes.size
         val actualCallParams = callParams.size
         check(actualCallParams == expectedCallParams) {
-            "Expected same number of call parameters, but got $actualCallParams instead of $expectedCallParams"
+            "Expected same number of call parameters, " +
+                    "but got $actualCallParams instead of $expectedCallParams at ${resolveOrigin(origin)}"
         }
 
         if (callParams is ParameterList) return callParams

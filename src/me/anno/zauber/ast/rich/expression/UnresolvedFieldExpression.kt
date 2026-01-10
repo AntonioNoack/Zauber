@@ -19,12 +19,12 @@ class UnresolvedFieldExpression(
 
     fun resolveField(context: ResolutionContext): ResolvedField? {
         val context = context.withCodeScope(scope)
-        return resolveField(context, name, null)
+        return resolveField(context, name, null, origin)
     }
 
     override fun resolveType(context: ResolutionContext): Type {
         val context = context.withCodeScope(scope)
-        val field = resolveField(context, name, null)
+        val field = resolveField(context, name, null, origin)
         if (field != null) return field.getValueType(context)
 
         val nameAsImport = nameAsImport

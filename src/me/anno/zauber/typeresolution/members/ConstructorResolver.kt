@@ -18,7 +18,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
     private val LOGGER = LogManager.getLogger(ConstructorResolver::class)
 
     override fun findMemberInScope(
-        scope: Scope?, name: String,
+        scope: Scope?, origin: Int, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null

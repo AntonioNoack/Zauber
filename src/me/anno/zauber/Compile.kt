@@ -1,7 +1,7 @@
 package me.anno.zauber
 
-import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.TypeSpecialization
 import me.anno.zauber.generation.c.CSourceGenerator
@@ -126,7 +126,7 @@ object Compile {
 
         step("JDK-Overhead") {}
 
-        TypeResolution.doCatchFailures()
+        if (false) TypeResolution.doCatchFailures()
 
         step("Reading & Tokenizing") {
             tokenizeSources()

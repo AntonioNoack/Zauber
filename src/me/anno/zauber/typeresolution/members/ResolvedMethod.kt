@@ -14,7 +14,7 @@ class ResolvedMethod(ownerTypes: ParameterList, method: Method, callTypes: Param
     override fun getTypeFromCall(): Type {
         val method = resolved
         LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
-        val ownerNames = selfTypeToTypeParams(method.selfType)
+        val ownerNames = selfTypeToTypeParams(method.selfType, context.selfType)
         val selfType = if (method.selfType != null) context.selfType else null
         val inGeneral = method.resolveReturnType(context)
         val forSelf = resolveGenerics(selfType, inGeneral, ownerNames, ownerTypes)
@@ -30,8 +30,16 @@ class ResolvedMethod(ownerTypes: ParameterList, method: Method, callTypes: Param
     companion object {
         private val LOGGER = LogManager.getLogger(ResolvedMethod::class)
 
-        fun selfTypeToTypeParams(selfType: Type?): List<Parameter> {
-            return (selfType as? ClassType)?.clazz?.typeParameters ?: emptyList()
+        fun selfTypeToTypeParams(expectedSelfType: Type?, givenSelfType: Type?): List<Parameter> {
+            if (expectedSelfType !is ClassType) {
+                if (givenSelfType is ClassType) {
+                    return givenSelfType.clazz.typeParameters
+                }
+
+                println("Returning empty list, because $expectedSelfType !is ClassType")
+                return emptyList()
+            }
+            return expectedSelfType.clazz.typeParameters
         }
     }
 }

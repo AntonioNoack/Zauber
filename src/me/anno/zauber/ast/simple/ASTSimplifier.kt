@@ -126,7 +126,7 @@ object ASTSimplifier {
                 val method = resolveCallable(
                     context,
                     expr.name, constructor,
-                    expr.typeParameters, valueParameters
+                    expr.typeParameters, valueParameters, expr.origin,
                 ) ?: MethodResolver.printScopeForMissingMethod(
                     context, expr, expr.name,
                     expr.typeParameters, valueParameters
@@ -181,7 +181,7 @@ object ASTSimplifier {
                 dst
             }
             is MemberNameExpression -> {
-                val field = resolveField(context, expr.name, null)
+                val field = resolveField(context, expr.name, null, expr.origin)
                     ?: throw IllegalStateException("Missing field '${expr.name}'")
                 val valueType = field.getValueType(context)
                 val self: SimpleField? =

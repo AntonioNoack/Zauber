@@ -45,7 +45,7 @@ class MemberNameExpression(
     override fun hasLambdaOrUnknownGenericsType(): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
-        val field = resolveField(context, name, null)
+        val field = resolveField(context, name, null, origin)
         if (field != null) return field.getValueType(context)
 
         throw IllegalStateException(

@@ -283,9 +283,9 @@ class CppASTBuilder(
     }
 
     fun readExpressionCondition(): Expression {
-        consume("(")
+        consume(TokenType.OPEN_CALL)
         val condition = readExpression()
-        consume(")")
+        consume(TokenType.CLOSE_CALL)
         return condition
     }
 
@@ -395,9 +395,9 @@ class CppASTBuilder(
         val label: String? = null
         return when {
             tokens.equals(i, "(") && looksLikeCast() -> {
-                consume("(")
+                consume(TokenType.OPEN_CALL)
                 val type = readTypeNotNull(null, true)
-                consume(")")
+                consume(TokenType.CLOSE_CALL)
                 val expr = readPrefix()
                 createCastExpression(expr, currPackage, origin, type) { ifFalseScope ->
                     val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
@@ -412,7 +412,7 @@ class CppASTBuilder(
             consumeIf("sizeof") -> {
                 val value = if (consumeIf("(")) {
                     val type = readTypeNotNull(null, true)
-                    consume(")")
+                    consume(TokenType.CLOSE_CALL)
                     GetClassFromTypeExpression(type, currPackage, origin)
                 } else readPrefix()
                 NamedCallExpression(
@@ -462,7 +462,7 @@ class CppASTBuilder(
 
             consumeIf("(") -> {
                 val expr = readExpression()
-                consume(")")
+                consume(TokenType.CLOSE_CALL)
                 expr
             }
 
@@ -559,7 +559,7 @@ class CppASTBuilder(
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             // scanBlockForNewTypes(i, blockEnd)
             val result = tokens.push(blockEnd) { readImpl(childScope) }
-            i++ // skip }
+            consume(TokenType.CLOSE_BLOCK)
             result
         }
     }
@@ -569,7 +569,7 @@ class CppASTBuilder(
             val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
             // scanBlockForNewTypes(i, blockEnd)
             val result = tokens.push(blockEnd) { readImpl(scope) }
-            i++ // skip }
+            consume(TokenType.CLOSE_BLOCK)
             result
         }
     }

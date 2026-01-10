@@ -9,10 +9,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 
 object FieldResolver : MemberResolver<Field, ResolvedField>() {
@@ -20,7 +17,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     private val LOGGER = LogManager.getLogger(FieldResolver::class)
 
     override fun findMemberInScope(
-        scope: Scope?, name: String,
+        scope: Scope?, origin: Int, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
@@ -35,17 +32,22 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             if (field.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $field on $selfType, with target $returnType, can we deduct any generics from that?")
             }
-            val valueType = if (returnType != null) {
-                getFieldReturnType(scopeSelfType, field)
-            } else field.valueType // no resolution invoked (fast-path)
+            val valueType = getFieldReturnType(scopeSelfType, field, returnType)
             val match = findMemberMatch(
                 field, valueType,
                 returnType, selfType,
-                typeParameters, valueParameters
+                typeParameters, valueParameters,
+                origin
             )
             if (match != null) return match
         }
         return null
+    }
+
+    fun getFieldReturnType(scopeSelfType: Type?, field: Field, returnType: Type?): Type? {
+        return if (returnType != null) {
+            getFieldReturnType(scopeSelfType, field)
+        } else field.valueType // no resolution invoked (fast-path)
     }
 
     private fun getFieldReturnType(scopeSelfType: Type?, field: Field): Type? {
@@ -72,11 +74,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
+        origin: Int
     ): ResolvedField? {
         check(valueParameters.isEmpty())
 
-        var fieldSelfParams = selfTypeToTypeParams(field.selfType)
+        var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfType)
         var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
         if (fieldSelfType is ClassType && fieldSelfType.clazz.scopeType?.isClassType() != true) {
             LOGGER.info("Field had invalid selfType: $fieldSelfType")
@@ -87,6 +90,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         val actualTypeParams = mergeTypeParameters(
             fieldSelfParams, fieldSelfType,
             field.typeParameters, typeParameters,
+            origin
         )
 
         LOGGER.info("Resolving generics for field $field")
@@ -108,12 +112,13 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     fun resolveField(
         context: ResolutionContext, name: String,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
+        origin: Int
     ): ResolvedField? {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$name': $typeParameters, selfType: $selfType")
         return resolveInCodeScope(context) { candidateScope, selfType ->
             findMemberInHierarchy(
-                candidateScope, name, context.targetType,
+                candidateScope, origin, name, context.targetType,
                 selfType, typeParameters, emptyList()
             )
         }

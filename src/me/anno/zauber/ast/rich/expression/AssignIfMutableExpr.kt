@@ -33,7 +33,8 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
     private fun getMethodOrNull(context: ResolutionContext, name: String, rightType: Type): ResolvedMethod? {
         return MethodResolver.resolveMethod(
             context, name, null,
-            listOf(ValueParameterImpl(null, rightType, false))
+            listOf(ValueParameterImpl(null, rightType, false)),
+            origin,
         )
     }
 

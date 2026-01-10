@@ -70,7 +70,7 @@ object DataClassGenerator {
             .mapNotNull { it.field }
 
         val hashCodeMethod = MethodResolver.findMemberInScope(
-            classScope, "hashCode", IntType, classScope.typeWithoutArgs,
+            classScope, origin, "hashCode", IntType, classScope.typeWithoutArgs,
             emptyList(), emptyList()
         )
         if (hashCodeMethod == null) {
@@ -78,7 +78,7 @@ object DataClassGenerator {
         }
 
         val toStringMethod = MethodResolver.findMemberInScope(
-            classScope, "toString", StringType, classScope.typeWithoutArgs,
+            classScope, origin, "toString", StringType, classScope.typeWithoutArgs,
             emptyList(), emptyList()
         )
         if (toStringMethod == null) {
@@ -86,7 +86,7 @@ object DataClassGenerator {
         }
 
         val equalsAnyMethod = MethodResolver.findMemberInScope(
-            classScope, "equals", BooleanType, classScope.typeWithoutArgs,
+            classScope, origin, "equals", BooleanType, classScope.typeWithoutArgs,
             emptyList(), listOf(ValueParameterImpl(null, NullableAnyType, false))
         )
         if (equalsAnyMethod == null) {
@@ -94,7 +94,7 @@ object DataClassGenerator {
 
             // this is an optimization:
             val hasEqualsSelfMethod = MethodResolver.findMemberInScope(
-                classScope, "equals", BooleanType, classScope.typeWithoutArgs,
+                classScope, origin, "equals", BooleanType, classScope.typeWithoutArgs,
                 emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithoutArgs, false))
             ) != null
             if (!hasEqualsSelfMethod) {

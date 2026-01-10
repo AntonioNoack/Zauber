@@ -84,7 +84,7 @@ class DotExpression(
                 } else baseType*/
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
-                    right.name, null,
+                    right.name, null, origin,
                 )
             }
             is UnresolvedFieldExpression -> {
@@ -98,7 +98,7 @@ class DotExpression(
                 } else baseType*/
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
-                    right.name, null,
+                    right.name, null, origin,
                 )
             }
             is CallExpression -> return null /* not a field */
@@ -117,7 +117,7 @@ class DotExpression(
                 return resolveCallable(
                     context,
                     base.name, constructor,
-                    right.typeParameters, valueParameters
+                    right.typeParameters, valueParameters, origin,
                 ) ?: MethodResolver.printScopeForMissingMethod(
                     context, this, base.name,
                     right.typeParameters, valueParameters
@@ -130,16 +130,16 @@ class DotExpression(
                 val context = context.withSelfType(baseType)
                 val resolvedMethod = resolveCallable(
                     context, base.name, constructor,
-                    right.typeParameters, valueParameters
+                    right.typeParameters, valueParameters, origin,
                 )
                 if (resolvedMethod != null) return resolvedMethod
 
                 val nameAsImport = base.nameAsImport
                 if (nameAsImport != null) {
                     val importedMethod = MethodResolver.findMemberInScope(
-                        nameAsImport.parent, nameAsImport.name,
+                        nameAsImport.parent, origin, nameAsImport.name,
                         context.targetType, baseType,
-                        typeParameters, valueParameters
+                        typeParameters, valueParameters,
                     )
                     if (importedMethod != null) return importedMethod
                 }

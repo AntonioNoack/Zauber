@@ -129,7 +129,7 @@ private fun CppASTBuilder.readCaseBody(): ArrayList<Expression> {
             tokens.equals(i, "case") ||
                     tokens.equals(i, "default") ||
                     tokens.equals(i, TokenType.CLOSE_BLOCK) -> break
-            tokens.equals(i, ";") -> i++ // skip
+            consumeIf(";") -> {} // skip
             else -> expressions += readExpression()
         }
     }
