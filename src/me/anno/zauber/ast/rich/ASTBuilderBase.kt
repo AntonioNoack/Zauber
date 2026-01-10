@@ -66,7 +66,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
     fun readComma() {
         if (tokens.equals(i, TokenType.COMMA)) i++
-        else if (i < tokens.size) throw IllegalStateException("Expected comma at ${tokens.err(i)}")
+        else if (i < tokens.size) throw IllegalStateException("Expected comma, but got ${tokens.err(i)}")
     }
 
     fun consume(expected: String) {

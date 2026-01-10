@@ -50,4 +50,26 @@ class SelfTypeTest {
         assertTrue((type as ClassType).clazz.name == "B")
     }
 
+    @Test
+    fun testInterlinkedTypes() {
+        val type = testTypeResolution(
+            """
+            open class Node<L: Link<Self>>
+            open class Link<N: Node<Self>>(val from: N, val to: N)
+            
+            class IntNode(val value: Int): Node<IntLink>
+            class IntLink(from: IntNode, to: IntNode): Link<IntLink>(from, to)
+            
+            val from = IntNode(0)
+            val to = IntNode(1)
+            val link = IntLink(from, to)
+            
+            val tested = link.from
+        """.trimIndent()
+        )
+        assertTrue(type is ClassType && type.clazz.name == "IntNode") {
+            "Expected IntNode, but got $type"
+        }
+    }
+
 }

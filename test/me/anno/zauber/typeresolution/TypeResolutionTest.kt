@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Keywords
@@ -46,6 +47,7 @@ class TypeResolutionTest {
             $code
         """.trimIndent(), "?"
             ).tokenize()
+            collectNamedClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }

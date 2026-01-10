@@ -1,11 +1,7 @@
 package me.anno.zauber.generation.java
 
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.generation.DeltaWriter
@@ -68,12 +64,9 @@ object JavaSourceGenerator : Generator() {
                 appendType(type.types.first { it != NullType }, scope, isGeneric)
                 builder.append("/* or null */")
             }
-            is SelfType if (type.scope == scope) -> {
-                builder.append(scope.name)
-            }
-            is GenericType if (type.scope == scope) -> {
-                builder.append(type.name)
-            }
+            is SelfType if (type.scope == scope) -> builder.append(scope.name)
+            is ThisType -> appendType(type.type, scope, isGeneric)
+            is GenericType if (type.scope == scope) -> builder.append(type.name)
             UnknownType -> builder.append('?')
             is LambdaType -> {
                 // todo define all these classes...

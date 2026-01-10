@@ -85,7 +85,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     // todo assign them appropriately
     val annotations = ArrayList<Annotation>()
 
-    private fun resolveSelfType(selfType: Type?): Type {
+    private fun resolveSelfTypeI(selfType: Type?): Type {
         if (selfType is ClassType) {
             return selfType
         } else {
@@ -106,8 +106,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         check(tokens.equals(i, TokenType.NAME))
         val name0 = tokens.toString(i++)
         when (name0) {
-            "Self" -> return SelfType((resolveSelfType(selfType) as ClassType).clazz)
-            "This" -> return ThisType(resolveSelfType(selfType))
+            "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
+            "This" -> return ThisType(resolveSelfTypeI(selfType))
         }
 
         var path = genericParams.last()[name0]
@@ -839,7 +839,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return result
     }
 
-    fun readTypeParameterDeclarations(scope: Scope): List<Parameter> {
+    fun readTypeParameterDeclarations(classScope: Scope): List<Parameter> {
         pushGenericParams()
         if (!tokens.equals(i, "<")) return emptyList()
         val params = ArrayList<Parameter>()
@@ -854,17 +854,18 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 val name = tokens.toString(i++)
 
                 // name might be needed for the type, so register it already here
-                genericParams.last()[name] = GenericType(scope, name)
+                genericParams.last()[name] = GenericType(classScope, name)
 
-                val type = readTypeOrNull() ?: NullableAnyType
+                val type = readTypeOrNull(classScope.typeWithoutArgs) ?: NullableAnyType
+                println("read type parameter '$name': $type")
 
-                params.add(Parameter(name, type, scope, origin))
+                params.add(Parameter(name, type, classScope, origin))
                 readComma()
             }
         }
         check(tokens.equals(i++, ">")) // skip >
-        scope.typeParameters = params
-        scope.hasTypeParameters = true
+        classScope.typeParameters = params
+        classScope.hasTypeParameters = true
         return params
     }
 
@@ -1022,7 +1023,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 pushCall { readExpression() }
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) ->
-                pushBlock(ScopeType.LAMBDA, null) { readLambda() }
+                pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
 
             else -> {
                 tokens.printTokensInBlocks(max(i - 5, 0))
@@ -1134,7 +1135,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             pushCall {
                 check(tokens.equals(i, TokenType.NAME))
                 name = tokens.toString(i++)
-                variableType = readTypeOrNull()
+                variableType = readTypeOrNull(null)
                 // to do type?
                 check(tokens.equals(i++, "in"))
                 iterable = readExpression()
@@ -1783,7 +1784,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 val origin = origin(i)
                 val params = pushCall { readParamExpressions() }
                 if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                    pushBlock(ScopeType.LAMBDA, null) { params += NamedParameter(null, readLambda()) }
+                    pushBlock(ScopeType.LAMBDA, null) { params += NamedParameter(null, readLambda(null)) }
                 }
                 CallExpression(expr, null, params, origin)
             }
@@ -1813,7 +1814,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 val origin = origin(i)
-                val lambda = pushBlock(ScopeType.LAMBDA, null) { readLambda() }
+                val lambda = pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
                 val lambdaParam = NamedParameter(null, lambda)
                 CallExpression(expr, null, listOf(lambdaParam), origin)
             }
@@ -1840,7 +1841,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         }
     }
 
-    private fun readLambda(): Expression {
+    private fun readLambda(selfType: SelfType?): Expression {
         val arrow = tokens.findToken(i, "->")
         val variables = if (arrow >= 0) {
             val variables = ArrayList<LambdaVariable>()
@@ -1853,7 +1854,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                                 if (tokens.equals(i, TokenType.NAME)) {
                                     val origin = origin(i)
                                     val name = tokens.toString(i++)
-                                    val type = readTypeOrNull()
+                                    val type = readTypeOrNull(selfType)
                                     val parameter = LambdaVariable(type, name)
                                     names.add(parameter)
                                     // to do we neither know type nor initial value :/, both come from the called function/set variable
@@ -1869,7 +1870,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     } else if (tokens.equals(i, TokenType.NAME)) {
                         val origin = origin(i)
                         val name = tokens.toString(i++)
-                        val type = readTypeOrNull()
+                        val type = readTypeOrNull(selfType)
                         val parameter = LambdaVariable(type, name)
                         variables.add(parameter)
                         // to do we neither know type nor initial value :/, both come from the called function/set variable
@@ -1955,7 +1956,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             while (i < tokens.size) {
                 check(tokens.equals(i, TokenType.NAME))
                 val name = tokens.toString(i++)
-                val type = readTypeOrNull()
+                val type = readTypeOrNull(null)
                 names.add(FieldDeclaration(name, type))
                 readComma()
             }
@@ -1971,9 +1972,10 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         return createDestructuringAssignment(names, value, isMutable)
     }
 
-    private fun readTypeOrNull(selfType: Type? = null): Type? {
+    private fun readTypeOrNull(selfType: Type?): Type? {
         return if (consumeIf(":")) {
             readType(selfType, true)
+                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
         } else null
     }
 
@@ -1994,10 +1996,8 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
 
         if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
 
-        val type = readTypeOrNull()
-        val value = if (consumeIf("=")) {
-            readExpression()
-        } else null
+        val type = readTypeOrNull(null)
+        val value = if (consumeIf("=")) readExpression() else null
 
         // define variable in the scope
         val field = Field(

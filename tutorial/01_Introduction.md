@@ -101,6 +101,20 @@ Proper unreachable code should be marked explicitly though, if non-trivial.
 Can be used on fields and methods and means, that that field needs to have the same class as what is being used.
 This is useful for enforcing that a .clone() function returns an instance of itself.
 
+It also is useful for "recursive"/"interlinked" types, e.g.
+```kotlin
+class A<Bi: A>
+class B<Ai: B>
+```
+but now, since both classes have generics,
+we must specify them... ugly in Kotlin, especially when inheriting from these types,
+but in Zauber, we can say the following:
+```kotlin
+class A<Bi: B<Self>>
+class B<Ai: A<Self>>
+```
+
+
 ### This Type
 Can be used for the builder pattern.
 Only 'this' may be returned from a function returning 'This'.
