@@ -162,6 +162,9 @@ object JavaSimplifiedASTWriter {
             is SimpleCheckEquals -> {
                 // todo this could be converted into a SimpleBranch + SimpleCall
                 // todo simple types use ==, while complex types use .equals()
+
+                // todo if left cannot be null, skip null check
+                // todo if left side is a native field, use the static class for comparison
                 builder.append1(expr.left).append(" == null ? ")
                     .append1(expr.right).append(" == null : ")
                     .append1(expr.left).append(".equals(")

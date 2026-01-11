@@ -1,10 +1,12 @@
 package zauber
 
+import zauber.impl.SimpleListIterator
+import zauber.math.max
 import kotlin.ranges.downTo
 
-class StringBuilder(capacity: Int = 16) : CharSequence {
+class StringBuilder(capacity: Int = 16) : CharSequence, MutableList<Char> {
 
-    private val content = ByteArray(capacity)
+    private var content = ByteArray(capacity)
 
     override fun substring(startIndex: Int, endIndexExcl: Int): String {
         TODO("Not yet implemented")
@@ -12,9 +14,8 @@ class StringBuilder(capacity: Int = 16) : CharSequence {
 
     override fun get(index: Int): Char = content[index].toChar()
 
-    override fun listIterator(startIndex: Int): ListIterator<Char> {
-        TODO("Not yet implemented")
-    }
+    override fun listIterator(startIndex: Int): MutableListIterator<Char> =
+        SimpleMutableListIterator(this, startIndex)
 
     override fun indexOf(element: Char): Int {
         for (i in indices) {
@@ -34,21 +35,29 @@ class StringBuilder(capacity: Int = 16) : CharSequence {
         private set
 
     private fun ensureExtraSize(extra: Int) {
-        TODO()
+        if (content <= size + extra) return
+        val newSize = max(max(size + extra, content.size * 2), 16)
+        content = content.copyOf(newSize)
     }
 
-    fun append(char: Char) {
+    fun append(char: Char): This {
         ensureExtraSize(1)
         content[size++] = char
+        return this
     }
 
-    fun append(string: String) {
+    fun append(string: String): This {
         ensureExtraSize(string.length)
-        TODO()
+        val size0 = size
+        for (i in string.indices) {
+            content[size0 + i] = string[i].toByte()
+        }
+        size = size0 + string.length
+        return this
     }
 
-    fun append(other: Any?) {
-        append(other.toString())
+    fun append(other: Any?): This {
+        return append(other.toString())
     }
 
 }

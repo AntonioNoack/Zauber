@@ -74,8 +74,11 @@ class ZauberASTBuilder(
 
         val unitInstance by lazy {
             val scope = UnitType.clazz
-            val field = scope.objectField!!
-            FieldExpression(field, scope, -1)
+            if (scope.objectField == null) scope.objectField = Field(
+                scope, null, false, null, "__instance__",
+                scope.typeWithArgs, null, Keywords.NONE, -1
+            )
+            FieldExpression(scope.objectField!!, scope, -1)
         }
     }
 

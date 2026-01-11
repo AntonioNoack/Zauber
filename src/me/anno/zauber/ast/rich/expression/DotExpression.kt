@@ -63,6 +63,7 @@ class DotExpression(
 
     fun isFieldType(): Boolean {
         return when (right) {
+            is FieldExpression,
             is MemberNameExpression,
             is UnresolvedFieldExpression -> true
             else -> false
@@ -102,6 +103,20 @@ class DotExpression(
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
                     right.name, null, origin,
+                )
+            }
+            is FieldExpression -> {
+                // todo replace own generics, because we don't know them yet
+                /*val selfType = context.selfType
+                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
+                    resolveGenerics(
+                        baseType,
+                        selfType.clazz.typeParameters,
+                        selfType.clazz.typeParameters.map { it.type })
+                } else baseType*/
+                return FieldResolver.resolveField(
+                    context.withSelfType(baseType),
+                    right.field, null, origin,
                 )
             }
             is CallExpression -> return null /* not a field */

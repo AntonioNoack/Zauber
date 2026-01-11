@@ -135,12 +135,30 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     ): ResolvedField? {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$name': $typeParameters, selfType: $selfType")
+
         return resolveInCodeScope(context) { candidateScope, selfType ->
             findMemberInHierarchy(
                 candidateScope, origin, name, context.targetType,
                 selfType, typeParameters, emptyList()
             )
         }
+    }
+
+    fun resolveField(
+        context: ResolutionContext, field: Field,
+        typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
+        origin: Int
+    ): ResolvedField? {
+        val selfType = context.selfType
+        LOGGER.info("TypeParams for field '$field': $typeParameters, selfType: $selfType")
+
+        val valueType = getFieldReturnType(context.selfType, field, context.targetType)
+        return findMemberMatch(
+            field, valueType,
+            context.targetType, selfType,
+            typeParameters, emptyList(),
+            origin
+        )
     }
 
 }
