@@ -140,6 +140,18 @@ object JavaSimplifiedASTWriter {
                 builder.append1(expr.value).append(" instanceof ")
                 appendType(expr.type, expr.scope, false)
             }
+            is SimpleCheckEquals -> {
+                // todo this could be converted into a SimpleBranch + SimpleCall
+                // todo simple types use ==, while complex types use .equals()
+                builder.append1(expr.left).append(" == null ? ")
+                    .append1(expr.right).append(" == null : ")
+                    .append1(expr.left).append(".equals(")
+                    .append1(expr.right).append(")")
+            }
+            is SimpleCheckIdentical -> {
+                builder.append1(expr.left).append(" == ")
+                    .append1(expr.right)
+            }
             is SimpleSpecialValue -> {
                 when (expr.base.type) {
                     SpecialValue.TRUE -> builder.append("true")

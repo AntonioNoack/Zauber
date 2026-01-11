@@ -48,6 +48,15 @@ value class Int(val value: NativeI32) : Number {
     operator fun rem(other: Float): Float = toFloat() % other
     operator fun rem(other: Double): Double = toDouble() % other
 
+    external infix fun or(other: Int): Int
+    external infix fun and(other: Int): Int
+    external infix fun xor(other: Int): Int
+    external fun inv(): Int
+
+    infix fun or(other: Long): Long = toLong() or other
+    infix fun and(other: Long): Long = toLong() and other
+    infix fun xor(other: Long): Long = toLong() xor other
+
     fun toInt(): Int = this
     external fun toLong(): Long
     external fun toHalf(): Half
@@ -96,6 +105,15 @@ value class Long(val value: NativeI64) : Number {
     operator fun rem(other: Half): Half = toHalf() % other
     operator fun rem(other: Float): Float = toFloat() % other
     operator fun rem(other: Double): Double = toDouble() % other
+
+    external infix fun or(other: Long): Long
+    external infix fun and(other: Long): Long
+    external infix fun xor(other: Long): Long
+    external fun inv(): Long
+
+    infix fun or(other: Int): Long = or(other.toLong())
+    infix fun and(other: Int): Long = and(other.toLong())
+    infix fun xor(other: Int): Long = xor(other.toLong())
 
     external fun toInt(): Int
     fun toLong(): Long = this

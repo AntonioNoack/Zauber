@@ -136,4 +136,26 @@ class JavaGenerationTest {
         """.trimIndent()
         assertEquals(expected, testClassGeneration(source))
     }
+
+    @Test
+    fun testStackOverflowIssue() {
+        // fix the crash cause...
+        //  -> if else was accidentally recursive in ASTSimplifier
+        val code = testClassGeneration(
+            $$"""
+        open class S(val dst: Any?)
+        class Test(dst: Any?, val left: Any?, val right: Any?, val negated: Boolean): S(dst) {
+            override fun toString(): String {
+                return "$dst = $left ${if (negated) "!=" else "=="} $right"
+            }
+        }
+        
+        external fun String.plus(other: Any?): String
+        
+        package zauber
+        class String
+            """.trimIndent()
+        )
+        check("Exception" !in code && "Error" !in code) { code }
+    }
 }

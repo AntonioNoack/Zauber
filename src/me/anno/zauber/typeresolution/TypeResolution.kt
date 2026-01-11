@@ -38,8 +38,14 @@ object TypeResolution {
     var numFailures = 0
 
     fun resolveTypesAndNames(root: Scope) {
+        resetStats()
         forEachScope(root, ::resolveTypesAndNamesImpl)
         if (LOGGER.enableInfo) printStats()
+    }
+
+    private fun resetStats() {
+        numSuccesses = 0
+        numFailures = 0
     }
 
     private fun printStats() {
