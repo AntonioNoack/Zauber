@@ -407,7 +407,7 @@ object JavaSourceGenerator : Generator() {
                 builder.append(param.name)
                 if (param.type != NullableAnyType) {
                     builder.append(" extends ")
-                    appendType(param.type, scope, false)
+                    appendType(param.type, scope, true)
                 }
             }
             builder.append('>')
@@ -418,13 +418,13 @@ object JavaSourceGenerator : Generator() {
         val superCall0 = scope.superCalls.firstOrNull { it.valueParameters != null }
         if (superCall0 != null && superCall0.type != AnyType) {
             builder.append(" extends ")
-            appendClassType(superCall0.type, scope, false)
+            appendClassType(superCall0.type, scope, true)
         }
         val implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
         for (superCall in scope.superCalls) {
             if (superCall.valueParameters != null) continue
             builder.append(implementsKeyword)
-            appendClassType(superCall.type, scope, false)
+            appendClassType(superCall.type, scope, true)
         }
     }
 }

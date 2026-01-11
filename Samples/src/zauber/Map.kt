@@ -21,6 +21,8 @@ interface MutableMap<K, V> : Map<K, V> {
 
     @Deprecated("For Kotlin compatibility")
     fun put(key: K, value: V) = set(key, value)
+
+    override fun iterator(): MutableIterator<Map.Entry<K, V>>
 }
 
 private class TrivialMap<K, V>(vararg val entries: Pair<K, V>) : Map<K, V> {
@@ -42,7 +44,7 @@ private class TrivialMap<K, V>(vararg val entries: Pair<K, V>) : Map<K, V> {
         TODO("Not yet implemented")
     }
 
-    override fun iterator(): Iterator<Map.Entry<K, V>> {
+    override fun iterator(): MutableIterator<Map.Entry<K, V>> {
         TODO("Not yet implemented")
     }
 }
