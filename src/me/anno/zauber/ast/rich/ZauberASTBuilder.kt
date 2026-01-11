@@ -381,7 +381,7 @@ class ZauberASTBuilder(
 
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
         val initialValue = CallExpression(
-            MemberNameExpression("listOf", companionScope, origin),
+            UnresolvedFieldExpression("listOf", null, companionScope, origin),
             listOf(listType), enumScope.enumEntries.map {
                 val field = it.objectField!!
                 val expr = FieldExpression(field, companionScope, origin)
@@ -1682,7 +1682,7 @@ class ZauberASTBuilder(
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                         val debugInfoParam = NamedParameter(null, debugInfoExpr)
                         CallExpression(
-                            MemberNameExpression("throwNPE", ifFalseScope, origin),
+                            UnresolvedFieldExpression("throwNPE", null, ifFalseScope, origin),
                             emptyList(), listOf(debugInfoParam), origin
                         )
                     }
@@ -1709,15 +1709,12 @@ class ZauberASTBuilder(
                         { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
                         { fieldExpr, scope ->
                             pushScope(scope) {
-                                handleDotOperator(
-                                    fieldExpr.clone(scope),
-                                    dotOperator
-                                )
+                                handleDotOperator(fieldExpr.clone(scope))
                             }
                         },
                         { scope -> nullExpr(scope, origin) },
                     )
-                    "." -> handleDotOperator(expr, op)
+                    "." -> handleDotOperator(expr)
                     "&&", "||" -> {
                         val left = expr
                         val name = currPackage.generateName("shortcut")
@@ -1767,42 +1764,16 @@ class ZauberASTBuilder(
     private fun readRHS(op: Operator): Expression =
         readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
 
-    private fun handleDotOperator(expr: Expression, op: Operator): Expression {
-        return if (isNamedAssignment(tokens, i)) {
-            val name = tokens.toString(i++)
-            if (tokens.equals(i, "=")) {
-                val originI = origin(i++) // skip =
-                val value = readExpression()
-                val nameTitlecase = name[0].uppercaseChar() + name.substring(1)
-                val setterName = "set$nameTitlecase"
-                val param = NamedParameter(null, value)
-                NamedCallExpression(
-                    expr, setterName, null,
-                    listOf(param), expr.scope, originI
-                )
-            } else {
-                // +=, -=, *=, /=, ...
-                val originI = origin(i)
-                val symbol = tokens.toString(i++)
-                val expr1 = nameExpression(name, originI, this, currPackage)
-                val left = DotExpression(expr, null, expr1, expr.scope, originI)
-                val right = readExpression()
-                AssignIfMutableExpr(left, symbol, right)
-            }
-        } else {
-            val rhs = readRHS(op)
-            binaryOp(currPackage, expr, op.symbol, rhs)
+    private fun handleDotOperator(lhs: Expression): Expression {
+        val op = dotOperator
+        val rhs = readRHS(op)
+        if (rhs is CallExpression && rhs.base is MemberNameExpression) {
+            return NamedCallExpression(
+                lhs, rhs.base.name, rhs.typeParameters, rhs.valueParameters,
+                rhs.scope, rhs.origin
+            )
         }
-    }
-
-    private fun isNamedAssignment(tokens: TokenList, i: Int): Boolean {
-        return tokens.equals(i, TokenType.NAME) &&
-                tokens.equals(i + 1, TokenType.SYMBOL) &&
-                tokens.endsWith(i + 1, '=') &&
-                !tokens.equals(i + 1, "==") &&
-                !tokens.equals(i + 1, "!=") &&
-                !tokens.equals(i + 1, "===") &&
-                !tokens.equals(i + 1, "!==")
+        return binaryOp(currPackage, lhs, op.symbol, rhs)
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {
@@ -1846,8 +1817,8 @@ class ZauberASTBuilder(
                 val lambdaParam = NamedParameter(null, lambda)
                 CallExpression(expr, null, listOf(lambdaParam), origin)
             }
-            tokens.equals(i, "++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i++))
-            tokens.equals(i, "--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i++))
+            consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
+            consumeIf("--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i - 1))
             tokens.equals(i, "!!") -> {
                 val origin = origin(i++)
                 val scope = currPackage
@@ -1859,7 +1830,7 @@ class ZauberASTBuilder(
                     }, { scope ->
                         val debugInfoExpr = StringExpression(expr.toString(), scope, origin)
                         CallExpression(
-                            MemberNameExpression("throwNPE", scope, origin), emptyList(),
+                            UnresolvedFieldExpression("throwNPE", null, scope, origin), emptyList(),
                             listOf(NamedParameter(null, debugInfoExpr)), origin
                         )
                     }

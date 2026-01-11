@@ -393,7 +393,7 @@ class CppASTBuilder(
                     val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                     val debugInfoParam = NamedParameter(null, debugInfoExpr)
                     CallExpression(
-                        MemberNameExpression("throwNPE", ifFalseScope, origin),
+                        UnresolvedFieldExpression("throwNPE", null, ifFalseScope, origin),
                         emptyList(), listOf(debugInfoParam), origin
                     )
                 }
@@ -487,14 +487,15 @@ class CppASTBuilder(
 
     private fun tryReadPostfix(expr: Expression): Expression? {
         return when {
+            // todo how about <>()?
             tokens.equals(i, "(") -> {
                 val origin = origin(i)
-                val params = pushCall { readParamExpressions() }
-                CallExpression(expr, null, params, origin)
+                val valueParameters = pushCall { readValueParameters() }
+                CallExpression(expr, null, valueParameters, origin)
             }
             tokens.equals(i, "[") -> {
                 val origin = origin(i)
-                val params = pushArray { readParamExpressions() }
+                val params = pushArray { readValueParameters() }
                 NamedCallExpression(expr, "get", null, params, expr.scope, origin)
             }
             tokens.equals(i, "++") -> {
@@ -528,7 +529,7 @@ class CppASTBuilder(
         )
     }
 
-    fun readParamExpressions(): ArrayList<NamedParameter> {
+    fun readValueParameters(): ArrayList<NamedParameter> {
         val params = ArrayList<NamedParameter>()
         while (i < tokens.size) {
             val name = null // names are not supported

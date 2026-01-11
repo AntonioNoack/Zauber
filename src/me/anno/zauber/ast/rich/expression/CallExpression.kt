@@ -17,7 +17,7 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 /**
- * Calls base<typeParams>(valueParams)
+ * Calls base<typeParams>(valueParams), without anything on the left
  * */
 class CallExpression(
     base: Expression,
@@ -54,20 +54,16 @@ class CallExpression(
         // find the best matching candidate...
         val returnType = context.targetType
         when (base) {
-            is MemberNameExpression -> {
-                val name = base.name
-                if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
-                // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                return resolveCallable(context, name, null, typeParameters, valueParameters, origin)
-                    ?: MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
-            }
+            is MemberNameExpression ->
+                throw IllegalStateException("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
             is UnresolvedFieldExpression -> {
                 val name = base.name
-                if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+                if (LOGGER.enableInfo) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val codeScope = context.codeScope
                 val c = ConstructorResolver
-                val constructor = null1() // todo do we need this constructor-stuff??? I don't think so, it's not a type
+
+                val constructor = null1() // do we need this constructor-stuff? yes, we do, why ever
                     ?: c.findMemberInFile(codeScope, origin, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
                 val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
@@ -124,7 +120,7 @@ class CallExpression(
             }
             is ImportedMember -> {
                 val name = base.nameAsImport.name
-                if (LOGGER.enableInfo) LOGGER.info("Find call '$name' with nameAsImport=${base.nameAsImport}")
+                if (LOGGER.enableInfo) LOGGER.info("Find call[IM] '$name' with nameAsImport=${base.nameAsImport}")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
                 val constructor = null1()

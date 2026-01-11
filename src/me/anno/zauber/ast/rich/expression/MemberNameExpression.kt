@@ -8,6 +8,9 @@ import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
+/**
+ * Some name, which must have a dot before it -> member/extension field/method
+ * */
 class MemberNameExpression(
     val name: String,
     scope: Scope, origin: Int
@@ -15,7 +18,7 @@ class MemberNameExpression(
 
     companion object {
         fun nameExpression(name: String, origin: Int, astBuilder: ASTBuilderBase, scope: Scope): Expression {
-            // todo check whether something is in front (some sort of period/accessor)
+            // check whether something is in front (some sort of period/accessor)
             val isChild = when {
                 astBuilder.tokens.equals(origin - 1, ".") ||
                         astBuilder.tokens.equals(origin - 1, "?.") -> true

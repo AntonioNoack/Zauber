@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.expression.CallExpression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
@@ -60,14 +61,14 @@ object DefaultParameterExpansion {
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
-                    if (index < i) MemberNameExpression(parameter.name, scope, origin)
+                    if (index < i) UnresolvedFieldExpression(parameter.name, null, scope, origin)
                     else parameter.defaultValue!!
                 NamedParameter(parameter.name, value)
             }
 
             val newBody = if (self.selfType == null) {
                 CallExpression(
-                    MemberNameExpression(self.name!!, scope, origin),
+                    UnresolvedFieldExpression(self.name!!, null, scope, origin),
                     newTypeParameters, newValueParameters, origin
                 )
             } else {
@@ -121,7 +122,7 @@ object DefaultParameterExpansion {
 
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
-                    if (index < i) MemberNameExpression(parameter.name, scope, origin)
+                    if (index < i) UnresolvedFieldExpression(parameter.name, null, scope, origin)
                     else parameter.defaultValue!!
                 NamedParameter(parameter.name, value)
             }

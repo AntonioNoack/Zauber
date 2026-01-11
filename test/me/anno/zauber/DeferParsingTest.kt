@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class DeferParsingTest {
+
+    // todo tests for validating that defer and errdefer are executed in the correct order
+
     @Test
     fun testDeferParsing() {
         assertEquals(

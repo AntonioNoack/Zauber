@@ -1,5 +1,7 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.defineListParameters
+import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,7 +15,7 @@ class ExtensionTest {
     fun testExtensionMethods() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 fun Impl.get() = 0
@@ -28,7 +30,7 @@ class ExtensionTest {
     fun testExtensionFields() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 val Impl.value get() = 0
@@ -43,7 +45,7 @@ class ExtensionTest {
     fun testExtensionMethodsOnSuperClass() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Super()
                 class Impl(): Super()
@@ -59,7 +61,7 @@ class ExtensionTest {
     fun testExtensionFieldsOnSuperClass() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Super()
                 class Impl(): Super()
@@ -75,7 +77,7 @@ class ExtensionTest {
     fun testExtensionMethodsOnInterfaces() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 interface Func
                 class Impl(): Func
@@ -91,7 +93,7 @@ class ExtensionTest {
     fun testExtensionFieldOnInterfaces() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 interface Func
                 class Impl(): Func
@@ -105,11 +107,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByMethod() {
-        TypeResolutionTest.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 fun <V> Impl.get(): List<V>
@@ -124,11 +126,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionFieldsByField() {
-        TypeResolutionTest.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 val <V> Impl.value: List<V>
@@ -143,11 +145,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass() {
-        TypeResolutionTest.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl<V>()
                 // illegal syntax: V is not defined
@@ -165,12 +167,35 @@ class ExtensionTest {
     }
 
     @Test
-    fun testUnderdefinedExtensionFieldsByClass() {
-        TypeResolutionTest.defineListParameters()
+    fun testUnderdefinedExtensionMethodsByClass2() {
+        defineListParameters()
 
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
+                """
+                class Impl()
+                // illegal syntax: V is not defined
+                // fun Impl.get(): List<V> = emptyList()
+                // proper syntax:
+                fun <V> Impl.get(): List<V> = emptyList()
+                
+                fun <V> emptyList(): List<V>
+                fun sum(values: List<Int>): Int
+                
+                val tested = sum(Impl().get())
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testUnderdefinedExtensionFieldsByClass() {
+        defineListParameters()
+
+        assertEquals(
+            IntType,
+            testTypeResolution(
                 """
                 class Impl<V>()
                 // illegal syntax: V is not defined
@@ -191,7 +216,7 @@ class ExtensionTest {
     fun testExtensionMethodToMethod() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl() {
                     fun calc() = 0
@@ -208,7 +233,7 @@ class ExtensionTest {
     fun testExtensionMethodToField() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl {
                     val calc = 0
@@ -225,7 +250,7 @@ class ExtensionTest {
     fun testExtensionFieldToMethod() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl {
                     fun calc() = 0
@@ -242,7 +267,7 @@ class ExtensionTest {
     fun testExtensionFieldToField() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl {
                     val calc = 0

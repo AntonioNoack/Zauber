@@ -87,8 +87,6 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             val resolvedTypes = actualTypeParameters?.readonly()
                 ?: ParameterList(expectedTypeParameters)
 
-            val findGenericTypes = actualTypeParameters == null || actualTypeParameters.containsNull()
-
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
             if (expectedSelfType != null && actualSelfType != expectedSelfType) {
                 LOGGER.info("Start checking self-type")
@@ -96,7 +94,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     expectedSelfType, actualSelfType!!,
                     expectedTypeParameters,
                     resolvedTypes,
-                    if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
+                     InsertMode.STRONG
                 )
                 LOGGER.info("Done checking self-type")
 
@@ -109,7 +107,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             // todo this should only be executed sometimes...
             //  missing generic parameters can be temporarily inserted...
             // LOGGER.info("matchesReturnType($expectedReturnType vs $actualReturnType)")
-            if (expectedReturnType != null && actualReturnType != null && findGenericTypes) {
+            if (expectedReturnType != null && actualReturnType != null) {
                 LOGGER.info("Start checking return-type")
                 val matchesReturnType = isSubTypeOf(
                     expectedReturnType,
@@ -124,6 +122,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     LOGGER.info("  returnType-mismatch: $actualReturnType !is $expectedReturnType")
                     return null
                 }
+            } else {
+               LOGGER.info("Skipped return-type matching: " +
+                        "$expectedReturnType != null && " +
+                        "$actualReturnType != null")
             }
 
             if (expectedValueParameters.isNotEmpty()) {
@@ -136,7 +138,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                             actualSelfType, expectedValueParameter, actualValueParameter,
                             expectedTypeParameters,
                             resolvedTypes,
-                            if (findGenericTypes) InsertMode.STRONG else InsertMode.READ_ONLY
+                            InsertMode.STRONG
                         )
                     ) {
                         val type = actualValueParameter.getType(expectedValueParameter.type)
@@ -214,7 +216,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         return scope.superCalls.firstNotNullOfOrNull { call ->
             val superType = call.type
-            val genericNames = scope.typeParameters
+            val genericNames = call.type.clazz.typeParameters
             val genericValues = call.type.typeParameters
             if (genericValues == null || genericNames.size == genericValues.size) {
                 val mappedSelfType = resolveGenerics(null, selfType, genericNames, genericValues) as ClassType
@@ -228,7 +230,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     mappedTypeParameters, valueParameters
                 )
             } else {
-                println("Skipping findMemberInHierarchy for $call, because generics are mismatched: $genericNames vs $genericValues")
+                println("Skipping findMemberInHierarchy for $call, because generics are mismatched: $genericNames")
                 null
             }
         }
@@ -271,6 +273,9 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     }
 
     fun <R : Any> resolveInCodeScope(context: ResolutionContext, callback: (scope: Scope, selfType: Type) -> R?): R? {
+
+        println("ResolveInCodeScope(${context.codeScope}, ${context.selfScope}, ${context.selfType})")
+
         if (context.selfScope != null && context.selfType != null) {
             println("Checking[0] ${context.selfScope} with ${context.selfType}")
             val result = callback(context.selfScope, context.selfType)
@@ -290,6 +295,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         println("Scopes: $scopes, selfTypes: $selfTypes")
 
+        val selfType0 = selfTypes.firstOrNull() ?: UnitType
+
         // selfType goes over all scopes below it...
         for (scopeIndex in scopes.indices) {
             val scope = scopes[scopeIndex] // should be unique by itself
@@ -299,8 +306,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             for (typeIndex in 0..scopeIndex) {
                 val type = selfTypes[typeIndex]
                 if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue
-                println("Checking[i] $scope with $type")
-                val selfType = type ?: context.selfType ?: UnitType
+                val selfType = type ?: context.selfType ?: selfType0
+                println("Checking[i] $scope with $type -> $selfType0")
                 val result = callback(scope, selfType)
                 if (result != null) return result
                 lastType = type
@@ -345,7 +352,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     ) {
         var scope: Scope? = context.codeScope
         val outerClassDepth = getOuterClassDepth(scope)
-        println("Outer class depth: $outerClassDepth")
+        // println("Outer class depth: $outerClassDepth")
         while (scope != null) {
             if (isScopeAvailable(scope, outerClassDepth)) {
                 // println("Checking for field '$name' in $maybeSelfScope")

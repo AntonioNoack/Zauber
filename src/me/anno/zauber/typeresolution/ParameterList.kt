@@ -134,4 +134,13 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         return copy
     }
 
+    fun weak(): ParameterList {
+        val copy = ParameterList(generics)
+        for (i in generics.indices) {
+            val type = types[i] ?: continue // null stays weak
+            copy.set(i, type, InsertMode.WEAK)
+        }
+        return copy
+    }
+
 }

@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.CallExpression
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType
@@ -152,7 +152,7 @@ object CallWithNames {
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }
                     result[index++] = CallExpression(
-                        MemberNameExpression("arrayOf", scope, origin),
+                        UnresolvedFieldExpression("arrayOf", null, scope, origin),
                         emptyList(), values, origin
                     )
                     break
@@ -166,7 +166,7 @@ object CallWithNames {
                 check(ev.isVararg) { "Expected vararg in last place" }
                 // println("Using instanceType $instanceType for empty varargs")
                 result[index] = CallExpression(
-                    MemberNameExpression("arrayOf", scope, origin),
+                    UnresolvedFieldExpression("arrayOf", null, scope, origin),
                     listOf(instanceType), emptyList(), origin
                 )
             }
