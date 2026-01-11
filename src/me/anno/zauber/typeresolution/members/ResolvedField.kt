@@ -1,6 +1,8 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -10,9 +12,13 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.LambdaType
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
 class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: ParameterList, context: ResolutionContext) :
@@ -130,9 +136,37 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
 
     override fun getTypeFromCall(): Type {
         val baseType = getValueType(this.context /* todo is this correct??? */)
+        if (baseType is LambdaType) {
+            return baseType.returnType // easy-peasy :3
+        }
+
+        val funInterfaceType = resolveFunInterfaceType(baseType)
+        val method = funInterfaceType.clazz.methods.first()
+        // todo properly resolve the method...
+        return method.returnType
+            ?: TODO("Resolve return type of $method")
         // this must be a fun-interface, and we need to get the return type of the call...
         //  luckily, there is only a single method, but unfortunately, we need the call parameters...
-        TODO("get type from calling on a field (must be some kind of fun-interface): $baseType")
+    }
+
+    fun resolveFunInterfaceType(type: Type): ClassType {
+        val scope = typeToScope(type)
+            ?: throw IllegalStateException("Cannot resolve scope from $type for fun-interface")
+        val funScope = resolveFunInterfaceType(scope)
+            ?: throw IllegalStateException("Could not find fun-interface in $scope")
+        return funScope.typeWithoutArgs
+    }
+
+    // todo we could also support multiple interfaces, and choose the best match? good idea :)
+    fun resolveFunInterfaceType(scope: Scope): Scope? {
+        if (scope.keywords.hasFlag(Keywords.FUN_INTERFACE)) {
+            return scope
+        }
+        for (superCall in scope.superCalls) {
+            val byCall = resolveFunInterfaceType(superCall.type.clazz)
+            if (byCall != null) return byCall
+        }
+        return null
     }
 
     override fun toString(): String {

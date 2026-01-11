@@ -94,7 +94,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     expectedSelfType, actualSelfType!!,
                     expectedTypeParameters,
                     resolvedTypes,
-                     InsertMode.STRONG
+                    InsertMode.STRONG
                 )
                 LOGGER.info("Done checking self-type")
 
@@ -123,9 +123,11 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     return null
                 }
             } else {
-               LOGGER.info("Skipped return-type matching: " +
-                        "$expectedReturnType != null && " +
-                        "$actualReturnType != null")
+                LOGGER.info(
+                    "Skipped return-type matching: " +
+                            "$expectedReturnType != null && " +
+                            "$actualReturnType != null"
+                )
             }
 
             if (expectedValueParameters.isNotEmpty()) {
@@ -316,11 +318,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             }
         }
 
-        if (context.selfType != null) {
-            println("Checking[z] $langScope with ${context.selfType}")
-            val result = callback(langScope, context.selfType)
-            if (result != null) return result
-        }
+        println("Checking[z] $langScope with ${context.selfType ?: selfType0}")
+        val result = callback(langScope, context.selfType ?: selfType0)
+        if (result != null) return result
+
         return null
     }
 

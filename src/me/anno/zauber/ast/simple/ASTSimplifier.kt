@@ -397,17 +397,33 @@ object ASTSimplifier {
         val condition = simplifyImpl(context, expr.condition, currBlock, graph, true)
             ?: throw IllegalStateException("Condition for if didn't return a field")
         // todo if not condition, create unreachable...
-        val scope = expr.scope
-        val origin = expr.origin
-        val ifBlock = graph.addBlock(scope, origin)
-        val elseBlock = graph.addBlock(scope, origin)
-        val ifValue = simplifyImpl(context.withCodeScope(expr.ifBranch.scope), expr.ifBranch, ifBlock, graph, true)
-        val elseValue = simplifyImpl(context.withCodeScope(expr.elseBranch!!.scope), expr.elseBranch, elseBlock, graph, true)
-        currBlock.add(SimpleBranch(condition, ifBlock, elseBlock, scope, origin))
-        return if (ifValue != null && elseValue != null) {
-            currBlock.add(SimpleMerge(dst, ifBlock, ifValue, elseBlock, elseValue, expr))
-            dst
-        } else ifValue ?: elseValue
+        if (expr.elseBranch == null) {
+            val scope = expr.scope
+            val origin = expr.origin
+            val ifBlock = graph.addBlock(scope, origin)
+            val elseBlock = graph.addBlock(scope, origin)
+            simplifyImpl(context.withCodeScope(expr.ifBranch.scope), expr.ifBranch, ifBlock, graph, true)
+            currBlock.add(SimpleBranch(condition, ifBlock, elseBlock, scope, origin))
+            return voidField
+        } else {
+            val scope = expr.scope
+            val origin = expr.origin
+            val ifBlock = graph.addBlock(scope, origin)
+            val elseBlock = graph.addBlock(scope, origin)
+            val ifValue = simplifyImpl(
+                context.withCodeScope(expr.ifBranch.scope),
+                expr.ifBranch, ifBlock, graph, true
+            )
+            val elseValue = simplifyImpl(
+                context.withCodeScope(expr.elseBranch.scope),
+                expr.elseBranch, elseBlock, graph, true
+            )
+            currBlock.add(SimpleBranch(condition, ifBlock, elseBlock, scope, origin))
+            return if (ifValue != null && elseValue != null) {
+                currBlock.add(SimpleMerge(dst, ifBlock, ifValue, elseBlock, elseValue, expr))
+                dst
+            } else ifValue ?: elseValue
+        }
     }
 
     private fun simplifyCall(

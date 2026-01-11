@@ -2,12 +2,15 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
 object MergeTypeParams {
+
+    private val LOGGER = LogManager.getLogger(MergeTypeParams::class)
 
     fun mergeTypeParameters(
         selfParams: List<Parameter>,
@@ -23,25 +26,28 @@ object MergeTypeParams {
     }
 
     fun mergeSelfPart(
-        selfType: Type?,
-        selfParams: List<Parameter>,
+        actualSelfType: Type?,
+        expectedSelfParams: List<Parameter>,
         origin: Int
     ): ParameterList {
 
-        if (selfType !is ClassType || selfType.typeParameters == null) {
-            if (selfParams.isEmpty()) return emptyParameterList()
-            return ParameterList(selfParams)
+        if (actualSelfType !is ClassType || actualSelfType.typeParameters == null) {
+            if (expectedSelfParams.isEmpty()) return emptyParameterList()
+            return ParameterList(expectedSelfParams)
         }
 
-        val expectedSelfParams = selfParams.size
-        val actualSelfParams = selfType.typeParameters.size
-        check(actualSelfParams == expectedSelfParams) {
-            "Mismatch in number of self-typeParameters: " +
-                    "$selfParams vs $selfType at ${resolveOrigin(origin)}"
+        val numExpectedSelfParams = expectedSelfParams.size
+        val numActualSelfParams = actualSelfType.typeParameters.size
+        if (numActualSelfParams != numExpectedSelfParams) {
+            LOGGER.warn(
+                "Mismatch in number of self-typeParameters: " +
+                        "$expectedSelfParams vs $actualSelfType at ${resolveOrigin(origin)}"
+            )
+            return ParameterList(expectedSelfParams)
         }
 
-        if (actualSelfParams == 0) return emptyParameterList()
-        return selfType.typeParameters
+        if (numActualSelfParams == 0) return emptyParameterList()
+        return actualSelfType.typeParameters
     }
 
     fun mergeCallPart(

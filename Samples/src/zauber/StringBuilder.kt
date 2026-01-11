@@ -1,6 +1,6 @@
 package zauber
 
-import zauber.impl.SimpleListIterator
+import zauber.impl.SimpleMutableListIterator
 import zauber.math.max
 import kotlin.ranges.downTo
 
@@ -36,7 +36,7 @@ class StringBuilder(capacity: Int = 16) : CharSequence, MutableList<Char> {
 
     private fun ensureExtraSize(extra: Int) {
         if (content <= size + extra) return
-        val newSize = max(max(size + extra, content.size * 2), 16)
+        val newSize = max(size + extra, content.size * 2, 16)
         content = content.copyOf(newSize)
     }
 

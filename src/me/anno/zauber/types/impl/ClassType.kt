@@ -83,5 +83,4 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         }// else we know it's empty, because it's defined as such
         return asString
     }
-
 }

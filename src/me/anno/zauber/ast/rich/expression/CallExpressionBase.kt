@@ -31,10 +31,17 @@ abstract class CallExpressionBase(
 
         if (typeParameters != null) return false
 
-        return when (val resolved = resolveCallable(context).resolved) {
-            is Method, is Constructor -> resolved.hasUnderdefinedGenerics
-            is Field -> true // todo this must be some fun interface -> check whether it has underdefined generics
-            else -> throw NotImplementedError("Has $resolved underdefined generics?")
+        try {
+            return when (val resolved = resolveCallable(context).resolved) {
+                is Method, is Constructor -> resolved.hasUnderdefinedGenerics
+                is Field -> true // todo this must be some fun interface -> check whether it has underdefined generics
+                else -> throw NotImplementedError("Has $resolved underdefined generics?")
+            }
+        } catch (e: IllegalStateException) {
+            // this can fail, because some values may still be unknown
+            e.printStackTrace()
+            // we cannot be sure, better be safe
+            return true
         }
     }
 

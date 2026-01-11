@@ -1893,7 +1893,7 @@ class ZauberASTBuilder(
     }
 
     fun readMethodBody(): ExpressionList {
-        val originalScope = currPackage
+        val methodScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
         if (LOGGER.enableDebug) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
@@ -1938,9 +1938,9 @@ class ZauberASTBuilder(
                 splitIntoSubScope(oldNumFields, result)
             }
         }
-        val code = ExpressionList(result, originalScope, origin)
-        originalScope.code.add(code)
-        currPackage = originalScope // restore scope
+        val code = ExpressionList(result, methodScope, origin)
+        methodScope.code.add(code)
+        currPackage = methodScope // restore scope
         return code
     }
 

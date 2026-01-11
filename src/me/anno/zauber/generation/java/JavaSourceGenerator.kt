@@ -191,12 +191,6 @@ object JavaSourceGenerator : Generator() {
         writeBlock {
 
             appendFields(scope)
-
-            val primaryConstructorScope = scope.primaryConstructorScope
-            if (primaryConstructorScope != null) {
-                appendInitBlocks(scope, primaryConstructorScope)
-            }
-
             appendConstructors(scope)
             appendMethods(scope)
 
@@ -210,17 +204,6 @@ object JavaSourceGenerator : Generator() {
                         generateInside(child.name, child)
                     }
                 }
-            }
-        }
-    }
-
-    private fun appendInitBlocks(classScope: Scope, scope: Scope) {
-        for (body in scope.code) {
-            // if (classScope.scopeType?.isObject() == true) builder.append("static ")
-            writeBlock {
-                scope.hasTypeParameters = true // just to prevent crashing
-                val context = ResolutionContext(scope, scope.typeWithArgs, true, null)
-                appendCode(context, body)
             }
         }
     }
@@ -333,6 +316,11 @@ object JavaSourceGenerator : Generator() {
             if (body != null) {
                 appendCode(context, body)
             }
+            if (isPrimaryConstructor) {
+                for (body in constructor.scope.code) {
+                    appendCode(context, body)
+                }
+            }
         }
     }
 
@@ -346,7 +334,7 @@ object JavaSourceGenerator : Generator() {
             if (!builder.endsWith("<")) builder.append(", ")
             builder.append(param.name)
             if (param.type != AnyType && param.type != NullableAnyType) {
-                builder.append(": ")
+                builder.append(" extends ")
                 appendType(param.type, scope, false)
             }
         }
@@ -420,11 +408,12 @@ object JavaSourceGenerator : Generator() {
             builder.append(" extends ")
             appendClassType(superCall0.type, scope, true)
         }
-        val implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
+        var implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
         for (superCall in scope.superCalls) {
             if (superCall.valueParameters != null) continue
             builder.append(implementsKeyword)
             appendClassType(superCall.type, scope, true)
+            implementsKeyword = ", "
         }
     }
 }
