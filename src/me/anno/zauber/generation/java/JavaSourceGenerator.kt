@@ -383,7 +383,17 @@ object JavaSourceGenerator : Generator() {
             appendSimplifiedAST(simplified.startBlock)
         } catch (e: Throwable) {
             e.printStackTrace()
-            builder.append("/* [${e.javaClass.simpleName}: ${e.message}] $body */")
+            builder.append(
+                "/* [${e.javaClass.simpleName}: ${
+                    e.message.toString()
+                        .replace("/*", "[")
+                        .replace("*/", "]")
+                }] ${
+                    body.toString()
+                        .replace("/*", "[")
+                        .replace("*/", "]")
+                } */"
+            )
             nextLine()
         }
     }

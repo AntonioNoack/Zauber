@@ -7,10 +7,20 @@ interface Map<K, V> : Collection<Map.Entry<K, V>> {
         val key: K
         val value: V
     }
+
+    val keys: Set<K>
+    val values: Collection<V>
+
+    operator fun contains(key: K): Boolean = key in keys
+    fun containsKey(key: K): Boolean = key in keys
+    fun containsValue(value: V): Boolean = value in values
 }
 
 interface MutableMap<K, V> : Map<K, V> {
     operator fun set(key: K, value: V): V?
+
+    @Deprecated("For Kotlin compatibility")
+    fun put(key: K, value: V) = set(key, value)
 }
 
 private class TrivialMap<K, V>(vararg val entries: Pair<K, V>) : Map<K, V> {
