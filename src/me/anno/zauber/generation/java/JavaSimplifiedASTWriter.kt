@@ -28,12 +28,20 @@ object JavaSimplifiedASTWriter {
 
     fun appendAssign(expression: SimpleAssignmentExpression) {
         val dst = expression.dst
+        if (dst.mergeInfo != null) {
+            builder.append1(dst).append(" = ")
+            return
+        }
         builder.append("final ")
         appendType(dst.type, expression.scope, false)
         builder.append(' ').append1(dst).append(" = ")
     }
 
     fun StringBuilder.append1(field: SimpleField): StringBuilder {
+        var field = field
+        while (true) {
+            field = field.mergeInfo?.dst ?: break
+        }
         append("tmp").append(field.id)
         return this
     }
@@ -49,12 +57,23 @@ object JavaSimplifiedASTWriter {
     }
 
     fun appendSimplifiedAST(expr: SimpleExpression, loop: SimpleLoop? = null) {
+        if (expr is SimpleMerge) return
         if (expr is SimpleAssignmentExpression) appendAssign(expr)
         when (expr) {
             is SimpleBlock -> {
-                val instr = expr.instructions
-                for (i in instr.indices) {
-                    appendSimplifiedAST(instr[i], loop)
+                val instructions = expr.instructions
+                for (i in instructions.indices) {
+                    val instr = instructions[i]
+                    if (instr is SimpleMerge) {
+                        appendAssign(instr)
+                        builder.setLength(builder.length - 3) // remove " = "
+                        builder.append(';')
+                        JavaSourceGenerator.nextLine()
+                    }
+                }
+                for (i in instructions.indices) {
+                    val instr = instructions[i]
+                    appendSimplifiedAST(instr, loop)
                 }
             }
             is SimpleBranch -> {
