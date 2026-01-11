@@ -283,7 +283,65 @@ when {
 
 If all cases are covered, or an else-branch is present, the result of each branch can be taken as a value.
 
-## C/C++-Interop
+## defer and errdefer
+
+I really like the approach Zig takes for destructors to have them fully visible and directly next to the issuing code:
+Not only will Zauber have destructors, but it will give the ability to put things at the end of the block.
+
+defer will be executed in reverse order of the block after the statement was reached.
+errdefer will be executed in reverse order if anything was thrown in/through that block after the statement was reached.
+
+Both are meant as a way to clean up resources.
+
+Using a destructor:
+```kotlin
+class Destructible {
+    constructor() {
+        println("Instance was created")
+    }
+    override fun finalize() {
+        println("Instance was destroyed")
+    }
+}
+```
+
+Using defer:
+```kotlin
+fun something() {
+    val d = Destructible()
+    defer println("End of block reached")
+}
+```
+
+and this method will print this:
+```
+Instance was created
+End of block reached
+Instance was destroyed
+```
+
+Using errdefer:
+```kotlin
+fun something(x: Int) {
+    val d = Destructible()
+    errdefer println("X was invalid")
+    check(x > 0)
+}
+something(-1)
+```
+and this will crash, and print the following:
+```kotlin
+Instance was created
+X was invalid
+Instance was destroyed
+```
+
+## Using other languages
+
+Using existing libraries is important, so we'll try to make Zauber compatible with many environments.
+Ideally, calling into Python code and back would be easily possible, too 🤔.
+
+### C/C++-Interop
 
 Interacting with languages like C needs definitions.
 For the start, there will be external functions:
@@ -294,7 +352,7 @@ external fun malloc(size: Pointer): Pointer?
 later, I'd like us to implement a C compiler as part of this compiler, such that we can just "include" .h files,
 and use their API directly without manual JNI code.
 
-## JVM Interop
+### JVM Interop
 
 When we compile Zauber to Java or JVM Bytecode, we should be able to easily interop, otherwise,
 we probably have to go the C-way.

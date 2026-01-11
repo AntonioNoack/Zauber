@@ -15,6 +15,8 @@ class ZauberTokenizer(val src: String, fileName: String) {
 
             "super", "this",
             "try", "typealias", "typeof",
+
+            "defer", "errdefer"
         ).toSet()
     }
 

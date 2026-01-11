@@ -605,8 +605,7 @@ class CppASTBuilder(
                 currPackage.fields.size > oldNumFields
             ) {
                 val newFields = currPackage.fields.subList(oldNumFields, currPackage.fields.size)
-                val subName = currPackage.generateName("split")
-                val newScope = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
+                val newScope = currPackage.generate("split", ScopeType.METHOD_BODY)
                 for (field in newFields.reversed()) {
                     field.moveToScope(newScope)
                 }

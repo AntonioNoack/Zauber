@@ -17,23 +17,24 @@ object Keywords {
     const val EXTERNAL = 1024
     const val OPERATOR = 2 * 1024
     const val INLINE = 4 * 1024
-    const val INFIX = 8 * 1024
+    const val CROSS_INLINE = 8 * 1024
+    const val INFIX = 16 * 1024
 
     /**
      * class used for annotations;
      * is a pure value class, aka all members must be values and their properties must be, too
      * */
-    const val ANNOTATION = 16 * 1024
+    const val ANNOTATION = 32 * 1024
 
     /**
      * class cannot be extended by classes from other packages/modules
      * */
-    const val SEALED = 32 * 1024
+    const val SEALED = 64 * 1024
 
     /**
      * evaluated at compile time
      * */
-    const val CONSTEXPR = 64 * 1024
+    const val CONSTEXPR = 128 * 1024
 
     const val CPP_STRUCT = 1024 * 1024
 

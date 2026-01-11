@@ -116,7 +116,10 @@ object Compile {
     fun buildASTs() {
         for (i in sources.indices) {
             val source = sources[i]
-            ZauberASTBuilder(source, root).readFileLevel()
+            val language =
+                if (source.fileName.endsWith(".kt", true)) ZauberLanguage.KOTLIN
+                else ZauberLanguage.ZAUBER
+            ZauberASTBuilder(source, root, language).readFileLevel()
         }
     }
 
@@ -126,8 +129,8 @@ object Compile {
 
         step("JDK-Overhead") {}
 
-        if (false)
-            TypeResolution.doCatchFailures()
+        // if (false)
+        TypeResolution.doCatchFailures()
 
         step("Reading & Tokenizing") {
             tokenizeSources()

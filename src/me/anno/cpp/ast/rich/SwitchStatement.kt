@@ -1,8 +1,8 @@
 package me.anno.cpp.ast.rich
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.NamedParameter
-import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.syntheticList
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject
@@ -31,11 +31,11 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
 
         val noPrevBranch = Field(
             scope, null, true, null,
-            "__hadPrevBranch", BooleanType, trueExpr, syntheticList, origin
+            "__hadPrevBranch", BooleanType, trueExpr,  Keywords.SYNTHETIC, origin
         )
         val prevBranchContinues = Field(
             scope, null, true, null,
-            "__prevBranchContinues", BooleanType, falseExpr, syntheticList, origin
+            "__prevBranchContinues", BooleanType, falseExpr,  Keywords.SYNTHETIC, origin
         )
 
         val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)

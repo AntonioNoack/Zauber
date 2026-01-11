@@ -20,7 +20,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     var fileName: String? = parent?.fileName
 
-    var keywords : KeywordSet = 0
+    var keywords: KeywordSet = 0
     val children = ArrayList<Scope>()
     val sources = ArrayList<TokenList>()
 
@@ -138,7 +138,6 @@ class Scope(val name: String, val parent: Scope? = null) {
             ScopeType.WHEN_CASES,
             ScopeType.WHEN_ELSE -> 6
             ScopeType.TYPE_ALIAS -> 7
-            else -> throw NotImplementedError("What is the hierarchy of $this?")
         }
     }
 
@@ -151,6 +150,11 @@ class Scope(val name: String, val parent: Scope? = null) {
             child == ScopeType.COMPANION_OBJECT
         ) return false // only one is allowed
         return self.getClassHierarchy() <= child.getClassHierarchy()
+    }
+
+    fun generate(prefix: String, scopeType: ScopeType?): Scope {
+        val name = generateName(prefix)
+        return getOrPut(name, scopeType)
     }
 
     fun getOrPut(name: String, scopeType: ScopeType?): Scope {

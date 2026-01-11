@@ -12,8 +12,7 @@ fun shortcutExpression(
     scope: Scope, origin: Int
 ): Expression {
     // todo we should have created the new scope immediately
-    val bodyName = scope.generateName("shortcut")
-    val bodyScope = scope.getOrPut(bodyName, ScopeType.EXPRESSION)
+    val bodyScope = scope.generate("shortcut", ScopeType.EXPRESSION)
     val rightWithScope = right.clone(bodyScope)
     return shortcutExpressionI(left, operator, rightWithScope, scope, origin)
 }

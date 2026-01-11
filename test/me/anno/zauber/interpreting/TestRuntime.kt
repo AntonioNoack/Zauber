@@ -63,4 +63,6 @@ class TestRuntime {
         assertEquals(IntType, value.type.type)
         assertEquals(22, runtime.castToInt(value))
     }
+
+    // todo test defer and errdefer and destructors
 }

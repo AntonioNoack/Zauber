@@ -289,6 +289,13 @@ object ASTSimplifier {
                 }
                 voidField
             }
+            is LambdaExpression -> {
+                // todo if target is an inline function,
+                //  inline it here
+                // todo if not, create an instance accordingly
+
+                TODO("Simplify lambda ${expr.javaClass.simpleName}: $expr")
+            }
             else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
         }
     }

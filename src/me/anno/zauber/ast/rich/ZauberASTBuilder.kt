@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.CastExpression.createBranchExpression
 import me.anno.zauber.ast.rich.CastExpression.createCastExpression
@@ -28,6 +29,7 @@ import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.NumberType
 import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
@@ -42,14 +44,14 @@ import kotlin.math.min
 //  -> we should be able to implement when() and for() using these
 //  -> do we even need macros when we have a good language? :)
 
-class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, root) {
+class ZauberASTBuilder(
+    tokens: TokenList, root: Scope,
+    val language: ZauberLanguage = ZauberLanguage.ZAUBER
+) : ASTBuilderBase(tokens, root) {
 
     companion object {
 
         private val LOGGER = LogManager.getLogger(ZauberASTBuilder::class)
-
-        const val synthetic = Keywords.SYNTHETIC
-        val syntheticList = Keywords.SYNTHETIC
 
         val fileLevelKeywords = listOf(
             "enum", "private", "protected", "fun", "class", "data", "value",
@@ -57,11 +59,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             "override", "abstract", "open", "final", "operator",
             "const", "lateinit", "annotation", "internal", "inner", "sealed",
             "infix", "external"
-        )
-
-        val paramLevelKeywords = listOf(
-            "private", "protected", "var", "val", "open", "override",
-            "crossinline", "vararg", "final"
         )
 
         val supportedInfixFunctions = listOf(
@@ -372,12 +369,12 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         //  and add them into all constructors...
         Field(
             enumScope, enumScope.typeWithoutArgs, false, null,
-            "name", StringType, null, syntheticList, origin
+            "name", StringType, null, Keywords.SYNTHETIC, origin
         )
 
         Field(
             enumScope, enumScope.typeWithoutArgs, false, null,
-            "ordinal", IntType, null, syntheticList, origin
+            "ordinal", IntType, null, Keywords.SYNTHETIC, origin
         )
 
         companionScope.hasTypeParameters = true
@@ -395,7 +392,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
         val entriesField = Field(
             companionScope, companionScope.typeWithoutArgs, false,
             null, "__entries", listType,
-            initialValue, syntheticList, origin
+            initialValue, Keywords.SYNTHETIC, origin
         )
 
         val constructorScope = companionScope.getOrCreatePrimConstructorScope()
@@ -408,7 +405,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     companionScope.typeWithoutArgs, "entries", emptyList(), emptyList(),
                     methodScope, listType, emptyList(),
                     ReturnExpression(FieldExpression(entriesField, methodScope, origin), null, methodScope, origin),
-                    syntheticList, origin
+                    Keywords.SYNTHETIC, origin
                 )
             }
         }
@@ -816,6 +813,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                     consumeIf("override") -> Keywords.OVERRIDE
                     consumeIf("open") -> Keywords.OPEN
                     consumeIf("value") -> Keywords.VALUE
+                    consumeIf("crossinline") -> Keywords.CROSS_INLINE
                     else -> break
                 }
             }
@@ -960,7 +958,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             else null
 
         return when {
-            tokens.equals(i, "@") -> {
+            consumeIf("@") -> {
                 val annotation = readAnnotation()
                 AnnotatedExpression(annotation, readPrefix())
             }
@@ -999,11 +997,11 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 DoubleColonPrefix(currPackage, name, currPackage, origin)
             }
 
-            tokens.equals(i, "if") -> readIfBranch()
-            tokens.equals(i, "else") -> throw IllegalStateException("Unexpected else at ${tokens.err(i)}")
-            tokens.equals(i, "while") -> readWhileLoop(label)
-            tokens.equals(i, "do") -> readDoWhileLoop(label)
-            tokens.equals(i, "for") -> readForLoop(label)
+            consumeIf("if") -> readIfBranch()
+            consumeIf("else") -> throw IllegalStateException("Standalone 'else' at ${tokens.err(i - 1)}")
+            consumeIf("while") -> readWhileLoop(label)
+            consumeIf("do") -> readDoWhileLoop(label)
+            consumeIf("for") -> readForLoop(label)
             consumeIf("when") -> {
                 when {
                     tokens.equals(i, TokenType.OPEN_CALL) -> readWhenWithSubject()
@@ -1121,7 +1119,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readIfBranch(): IfElseBranch {
-        i++
         val condition = readExpressionCondition()
         val ifTrue = readBodyOrExpression()
         val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
@@ -1132,14 +1129,12 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readWhileLoop(label: String?): WhileLoop {
-        consume("while")
         val condition = readExpressionCondition()
         val body = readBodyOrExpression()
         return WhileLoop(condition, body, label)
     }
 
     private fun readDoWhileLoop(label: String?): DoWhileLoop {
-        consume("do")
         val body = readBodyOrExpression()
         check(tokens.equals(i++, "while"))
         val condition = readExpressionCondition()
@@ -1147,7 +1142,6 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     }
 
     private fun readForLoop(label: String?): Expression {
-        consume("for")
         lateinit var iterable: Expression
         if (tokens.equals(i + 1, TokenType.OPEN_CALL)) {
             // destructuring expression
@@ -1262,8 +1256,7 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
     private fun pushHelperScope() {
         // push a helper scope for if/else differentiation...
         val type = ScopeType.WHEN_ELSE
-        val name = currPackage.generateName(type.name)
-        currPackage = currPackage.getOrPut(name, type)
+        currPackage = currPackage.generate(type.name, type)
     }
 
     private fun findNextArrow(i0: Int): Int {
@@ -1954,6 +1947,9 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
                 consumeIf("enum") -> throw IllegalStateException("Enum classes inside methods are not supported")
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
 
+                language == ZauberLanguage.ZAUBER && consumeIf("defer") -> readDefer(result, origin(i - 1))
+                language == ZauberLanguage.ZAUBER && consumeIf("errdefer") -> readErrdefer(result, origin(i - 1))
+
                 else -> {
                     result.add(readExpression())
                     if (LOGGER.enableDebug) LOGGER.debug("block += ${result.last()}")
@@ -1964,25 +1960,103 @@ class ZauberASTBuilder(tokens: TokenList, root: Scope) : ASTBuilderBase(tokens, 
             // if expression contains assignment of any kind, or a check-call
             //  we must create a new sub-scope,
             //  because the types of our fields may have changed
-            if ((result.size > oldSize && exprSplitsScope(result.last()) && i < tokens.size) ||
-                currPackage.fields.size > oldNumFields
-            ) {
-                val newFields = currPackage.fields.subList(oldNumFields, currPackage.fields.size)
-                val subName = currPackage.generateName("split")
-                val newScope = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
-                for (field in newFields.reversed()) {
-                    field.moveToScope(newScope)
-                }
-                currPackage = newScope
-                val remainder = readMethodBody()
-                if (remainder.list.isNotEmpty()) result.add(remainder)
-                // else we can skip adding it, I think
+            if (shouldSplitIntoSubScope(oldSize, oldNumFields, result)) {
+                splitIntoSubScope(oldNumFields, result)
             }
         }
         val code = ExpressionList(result, originalScope, origin)
         originalScope.code.add(code)
         currPackage = originalScope // restore scope
         return code
+    }
+
+    /**
+     * convert defer into try { remainder } finally { action }
+     * */
+    private fun readDefer(result: ArrayList<Expression>, origin: Int) {
+        // todo constructor calls on values are defers, too
+        //  detect them immediately or when flattening the AST?
+        val action = readExpression()
+        val scope = currPackage
+        val subName = scope.generateName("defer")
+        val newScope = scope.getOrPut(subName, ScopeType.METHOD_BODY)
+        currPackage = newScope
+        val remainder = readMethodBody()
+        if (remainder.list.isNotEmpty()) {
+            val forTryBody = ArrayList(result)
+            result.clear()
+            result.add(
+                TryCatchBlock(
+                    ExpressionList(forTryBody, scope, origin),
+                    emptyList(),
+                    action
+                )
+            )
+        } else {
+            // can immediately be executed
+            result.add(action)
+        }
+    }
+
+    /**
+     * convert errdefer into try { body } catch { action; throw e }
+     * */
+    private fun readErrdefer(result: ArrayList<Expression>, origin: Int) {
+        val action = readExpression()
+        val scope = currPackage
+        val newScope = scope.generate("errdefer", ScopeType.METHOD_BODY)
+        currPackage = newScope
+        val errCatch = scope.generate("errdeferHandler", ScopeType.METHOD_BODY) // required for e-parameter
+        val remainder = readMethodBody()
+        if (remainder.list.isNotEmpty()) {
+            val forTryBody = ArrayList(result)
+            result.clear()
+
+            val parameter = Parameter("e", ThrowableType, errCatch, origin)
+            val exceptionField = Field(
+                errCatch, null, false, parameter,
+                parameter.name, ThrowableType, null, Keywords.NONE, origin
+            )
+            parameter.field = exceptionField
+            val throwImpl = ThrowExpression(origin, FieldExpression(exceptionField, errCatch, origin))
+
+            result.add(
+                TryCatchBlock(
+                    ExpressionList(forTryBody, scope, origin),
+                    listOf(Catch(parameter, ExpressionList(listOf(action, throwImpl), errCatch, origin))),
+                    null
+                )
+            )
+        } else {
+            // can immediately be executed,
+            //  but we don't need it, because we cannot crash on nothing
+        }
+    }
+
+    private fun shouldSplitIntoSubScope(oldSize: Int, oldNumFields: Int, result: ArrayList<Expression>): Boolean {
+        return (result.size > oldSize && exprSplitsScope(result.last()) && i < tokens.size) ||
+                currPackage.fields.size > oldNumFields
+    }
+
+    /**
+     * Splits the scope, so we can re-order assignments and declarations,
+     * such that
+     * fun main(val x: Int) {
+     *  var x = x-1
+     * }
+     * works.
+     * */
+    private fun splitIntoSubScope(oldNumFields: Int, result: ArrayList<Expression>) {
+        val newFields = currPackage.fields.subList(oldNumFields, currPackage.fields.size)
+        val subName = currPackage.generateName("split")
+        val newScope = currPackage.getOrPut(subName, ScopeType.METHOD_BODY)
+        for (field in newFields.reversed()) {
+            field.moveToScope(newScope)
+        }
+        currPackage = newScope
+        val remainder = readMethodBody()
+        if (remainder.list.isNotEmpty()) result.add(remainder)
+        // else we can skip adding it, I think
     }
 
     private fun readDestructuringFields(): List<FieldDeclaration> {
