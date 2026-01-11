@@ -84,21 +84,10 @@ object Inheritance {
         }
 
         if (typeParamIdx == -1) {
-            /*val generallyExpectedType = expectedType.superBounds
-            LOGGER.info("Missing $expectedType for $actualType, falling back to $generallyExpectedType")
-            return isSubTypeOf(
-                generallyExpectedType,
-                actualType,
-                expectedTypeParams,
-                actualTypeParameters,
-                insertMode
-            )*/
             if (insertMode != InsertMode.WEAK) {
                 LOGGER.warn("Missing generic parameter ${expectedType.name}, ignoring it")
             }// else can be safely ignored ;)
             return true
-            // System.err.LOGGER.info("Missing generic parameter ${expectedType.scope.pathStr}.${expectedType.name}, ignoring it")
-            // System.err.LOGGER.info("Available generic parameters: ${expectedTypeParams.map { "${it.scope.pathStr}.${it.name}" }}")
         }
 
         actualTypeParameters as ParameterList
@@ -126,6 +115,16 @@ object Inheritance {
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
     ): Boolean {
+
+        var expectedType = expectedType
+        if (expectedType is ClassType && expectedType.clazz.isTypeAlias()) {
+            expectedType = resolveTypeAlias(expectedType, expectedTypeParams, actualTypeParameters, insertMode)
+        }
+
+        var actualType = actualType
+        while (actualType is ClassType && actualType.clazz.isTypeAlias()) {
+            actualType = resolveTypeAlias(actualType, expectedTypeParams, actualTypeParameters, insertMode)
+        }
 
         if (expectedType == actualType) return true
         if (expectedType == NullableAnyType) return true
@@ -370,6 +369,21 @@ object Inheritance {
         }
 
         TODO("Is $actualType a $expectedType?, $expectedTypeParams, $actualTypeParameters [$insertMode]")
+    }
+
+    private fun resolveTypeAlias(
+        aliasType: ClassType,
+        expectedTypeParams: List<Parameter>,
+        actualTypeParameters: List<Type?>,
+        insertMode: InsertMode
+    ): Type {
+        val scope = aliasType.clazz
+        check(scope.isTypeAlias())
+        val genericNames = scope.typeParameters
+        if (genericNames.isEmpty() || aliasType.typeParameters == null)
+            return scope.selfAsTypeAlias!!
+        val genericValues = ParameterList(genericNames, aliasType.typeParameters)
+        return resolveGenerics(null, aliasType, genericNames, genericValues)
     }
 
     fun getSuperCalls(scope: Scope): List<SuperCall> {

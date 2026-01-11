@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
@@ -18,6 +19,10 @@ abstract class CallExpressionBase(
     val valueParameters: List<NamedParameter>,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(CallExpressionBase::class)
+    }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val contextI = context
@@ -39,7 +44,8 @@ abstract class CallExpressionBase(
             }
         } catch (e: IllegalStateException) {
             // this can fail, because some values may still be unknown
-            e.printStackTrace()
+            // e.printStackTrace()
+            LOGGER.info("Failed in hasLambdaOrUnknownGenericsType: ${e.message}")
             // we cannot be sure, better be safe
             return true
         }

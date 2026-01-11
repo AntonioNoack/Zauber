@@ -123,6 +123,7 @@ class ZauberASTBuilder(
             path = (path as ClassType).clazz.getOrPut(tokens.toString(i + 1), null).typeWithoutArgs
             i += 2 // skip period and name
         }
+
         return path
     }
 

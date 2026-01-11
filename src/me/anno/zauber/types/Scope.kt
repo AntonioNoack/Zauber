@@ -410,6 +410,10 @@ class Scope(val name: String, val parent: Scope? = null) {
         return hash
     }
 
+    fun isTypeAlias(): Boolean {
+        return scopeType == ScopeType.TYPE_ALIAS
+    }
+
     companion object {
         private val nextAnonymousName = AtomicInteger(0)
     }

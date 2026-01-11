@@ -8,7 +8,9 @@ import me.anno.zauber.generation.DeltaWriter
 import me.anno.zauber.generation.Generator
 import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
 import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -88,6 +90,19 @@ object JavaSourceGenerator : Generator() {
     }
 
     fun appendClassType(type: ClassType, scope: Scope, isGeneric: Boolean) {
+
+        if (type.clazz.scopeType == ScopeType.TYPE_ALIAS) {
+            val newType0 = type.clazz.selfAsTypeAlias!!
+            val genericNames = type.clazz.typeParameters
+            val genericValues = type.typeParameters
+            val newType = resolveGenerics(
+                null, /* used for 'This'/'Self' */ newType0, genericNames,
+                if (genericValues != null) ParameterList(genericNames, genericValues)
+                else ParameterList(genericNames),
+            )
+            appendType(newType, scope, isGeneric)
+            return
+        }
 
         when (type.clazz) {
             StringType.clazz -> builder.append("String")
