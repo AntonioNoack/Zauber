@@ -161,6 +161,13 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return i in 0 until size && getType(i) == type
     }
 
+    fun equals(i: Int, type: TokenType, type2: TokenType): Boolean {
+        return i in 0 until size && run {
+            val t = getType(i)
+            t == type || t == type2
+        }
+    }
+
     fun equals(i: Int, str: String): Boolean {
         if (i !in 0 until size) return false
         if (equals(i, TokenType.STRING)) return false
@@ -241,28 +248,11 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return -1
     }
 
-    @Suppress("DuplicatedCode")
-    fun findToken(i0: Int, type: TokenType): Int {
-        var depth = 0
-        for (i in i0 until size) {
-            when {
-                depth == 0 && equals(i, type) -> return i
-                equals(i, TokenType.OPEN_BLOCK) ||
-                        equals(i, TokenType.OPEN_ARRAY) ||
-                        equals(i, TokenType.OPEN_CALL) -> depth++
-                equals(i, TokenType.CLOSE_BLOCK) ||
-                        equals(i, TokenType.CLOSE_ARRAY) ||
-                        equals(i, TokenType.CLOSE_CALL) -> depth--
-            }
-        }
-        return -1
-    }
-
     fun readPath(i: Int): Pair<Scope, Int> {
         var j = i + 1
-        check(equals(j, TokenType.NAME))
+        check(equals(j, TokenType.NAME, TokenType.KEYWORD))
         var path = root.getOrPut(toString(j++), null)
-        while (equals(j, ".") && equals(j + 1, TokenType.NAME)) {
+        while (equals(j, ".") && equals(j + 1, TokenType.NAME, TokenType.KEYWORD)) {
             path = path.getOrPut(toString(j + 1), null)
             j += 2 // skip period and name
         }

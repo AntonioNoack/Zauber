@@ -796,6 +796,7 @@ class ZauberASTBuilder(
                 consumeIf("annotation") -> Keywords.ANNOTATION
                 consumeIf("sealed") -> Keywords.SEALED
                 consumeIf("const") -> Keywords.CONSTEXPR
+                consumeIf("final") -> Keywords.FINAL
                 else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
             }
             return
@@ -1210,15 +1211,18 @@ class ZauberASTBuilder(
             while (i < tokens.size) {
                 if (cases.isNotEmpty()) pushHelperScope()
                 val nextArrow = findNextArrow(i)
-                check(nextArrow > i)
+                check(nextArrow > i) {
+                    "Expected nextArrow for whenCases starting at ${tokens.err(i)}, but only found $nextArrow"
+                }
                 val conditions = readSubjectConditions(nextArrow)
                 val body = readBodyOrExpression()
-                if (false) {
+                if (true) {
                     LOGGER.info("next case:")
                     LOGGER.info("  condition-scope: ${currPackage.pathStr}")
-                    LOGGER.info("  body-scope: ${body.scope}")
+                    LOGGER.info("  body: $body")
                 }
                 cases.add(SubjectWhenCase(conditions, currPackage, body))
+                consumeIf(";")
             }
             childScope
         }
@@ -1434,6 +1438,8 @@ class ZauberASTBuilder(
         val i0 = i
         val negate = tokens.equals(i, "!")
         if (negate) i++
+
+        if (consumeIf("*")) return UnknownType
 
         var base = readTypeExpr(selfType, allowSubTypes, insideTypeParams)
             ?: run {
@@ -1813,7 +1819,9 @@ class ZauberASTBuilder(
                         expr, "set", null,
                         params + value, expr.scope, origin
                     )
-                } else if (tokens.equals(i, TokenType.SYMBOL) && tokens.endsWith(i, '=')) {
+                } else if (tokens.equals(i, TokenType.SYMBOL) && tokens.endsWith(i, '=') &&
+                    !(tokens.equals(i, "==", "!=") || tokens.equals(i, "!==", "==="))
+                ) {
                     val symbol = tokens.toString(i++)
                     val value = readExpression()
                     val call = NamedCallExpression(
@@ -1822,6 +1830,7 @@ class ZauberASTBuilder(
                     )
                     AssignIfMutableExpr(call, symbol, value)
                 } else {
+                    // array access is a getter
                     NamedCallExpression(
                         expr, "get", null,
                         params, expr.scope, origin

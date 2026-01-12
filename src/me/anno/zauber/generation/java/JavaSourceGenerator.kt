@@ -1,5 +1,6 @@
 package me.anno.zauber.generation.java
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
@@ -199,7 +200,10 @@ object JavaSourceGenerator : Generator() {
         builder.append("public ")
         val type = when (scope.scopeType) {
             ScopeType.ENUM_CLASS -> "final class"
-            ScopeType.NORMAL_CLASS -> "class"
+            ScopeType.NORMAL_CLASS -> {
+                val isFinal = isFinal(scope.keywords)
+                if (isFinal) "final class" else "class"
+            }
             ScopeType.INTERFACE -> "interface"
             ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> "final class"
             ScopeType.ENUM_ENTRY_CLASS -> "final class"
@@ -267,6 +271,13 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
+    private fun isFinal(keywords: KeywordSet): Boolean {
+        return keywords.hasFlag(Keywords.FINAL) || (
+                !keywords.hasFlag(Keywords.OPEN) &&
+                        !keywords.hasFlag(Keywords.OVERRIDE)
+                )
+    }
+
     private fun appendMethod(classScope: Scope, method: Method) {
 
         // some spacing
@@ -288,6 +299,7 @@ object JavaSourceGenerator : Generator() {
 
         if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
         if (method.keywords.hasFlag(Keywords.EXTERNAL)) builder.append("native ")
+        if (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.keywords)) builder.append("final ")
         if (classScope.scopeType == ScopeType.INTERFACE && method.body != null) builder.append("default ")
         // if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
 

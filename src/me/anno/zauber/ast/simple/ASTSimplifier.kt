@@ -237,7 +237,7 @@ object ASTSimplifier {
                 when {
                     expr.isFieldType() -> {
                         val field = expr.resolveField(context, baseType)
-                            ?: TODO("Unresolved field for field type")
+                            ?: TODO("Unresolved field for field type: (${expr.javaClass.simpleName}) $expr")
                         val self = simplifyImpl(context, left, currBlock, graph, true)
                         val dst = currBlock.field(field.getValueType(context))
                         currBlock.add(SimpleGetField(dst, self?.use(), field.resolved, expr.scope, expr.origin))

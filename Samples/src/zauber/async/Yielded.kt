@@ -1,6 +1,10 @@
 package zauber.async
 
 /**
- * return some critical state to the callee and finish execution
+ * return some intermediate state or information to the callee,
+ * and maybe later continue execution
  * */
-value class Yielded<R, T : Throwable, Y>(val value: Y) : Yieldable<R, T, Y>
+value class Yielded<R, T : Throwable, Y>(
+    val yieldedValue: Y,
+    val continueRunning: () -> Yielded<R, T, Y>
+) : Yieldable<R, T, Y>
