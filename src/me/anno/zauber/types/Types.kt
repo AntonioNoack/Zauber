@@ -65,6 +65,7 @@ object Types {
     val ArrayListType = getType("ArrayList", 1)
     val MapType = getType("Map", 2)
     val PairType = getType("Pair", 2)
+    val PromiseType = getType("zauber.async.Promise", 3)
 
     // todo yes, it is Iterable<*>, but * = Nothing still feels wrong :/
     val AnyIterableType = ClassType(getScope("Iterable", 1), listOf(NothingType))

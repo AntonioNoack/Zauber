@@ -1027,6 +1027,8 @@ class ZauberASTBuilder(
             consumeIf("try") -> readTryCatch()
             consumeIf("return") -> readReturn(label)
             consumeIf("throw") -> ThrowExpression(origin(i - 1), readExpression())
+            consumeIf("yield") -> YieldExpression(origin(i - 1), readExpression())
+            consumeIf("async") -> AsyncExpression(origin(i - 1), readExpression())
             consumeIf("break") -> BreakExpression(label, currPackage, origin(i - 1))
             consumeIf("continue") -> ContinueExpression(label, currPackage, origin(i - 1))
 

@@ -10,13 +10,14 @@ class ZauberTokenizer(val src: String, fileName: String) {
             "abstract", "override",
 
             "if", "else", "do", "while", "when", "for",
-            "return", "break", "throw", "continue",
+            "return", "throw", "yield", "break", "continue",
             "in", "!in", "is", "!is", "as", "as?",
 
             "super", "this",
             "try", "typealias", "typeof",
 
-            "defer", "errdefer"
+            // keywords custom to Zauber:
+            "defer", "errdefer", "async"
         ).toSet()
     }
 

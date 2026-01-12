@@ -3,4 +3,4 @@ package zauber.async
 /**
  * return some critical state to the callee and finish execution
  * */
-value class Yielded<R, T : Throwable, Y>(val value: Y) : Yieldable<R, T, Y>
+value class Thrown<R, T : Throwable, Y>(val value: T) : Yieldable<R, T, Y>
