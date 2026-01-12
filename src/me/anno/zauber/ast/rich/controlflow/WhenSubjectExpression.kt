@@ -74,7 +74,7 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
             }
             if (fieldName != null) {
                 val caseScope = case.body.scope
-                val jointType = case.conditions.map { it.type!! }.reduce { a, b -> unionTypes(a, b) }
+                val jointType = unionTypes(case.conditions.map { it.type!! })
                 // todo this more-specific field is only valid until fieldName is assigned, again, then we have to use unionType
                 // todo this is also only valid, if no other thread/function could write to the field
                 Field(

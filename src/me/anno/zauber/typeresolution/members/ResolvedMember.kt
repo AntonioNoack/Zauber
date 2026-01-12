@@ -42,9 +42,10 @@ abstract class ResolvedMember<V>(
                     genericValues.getOrNull(idx) ?: type
                 }
                 is UnionType -> {
-                    type.types.map { partType ->
+                    val types = type.types.map { partType ->
                         resolveGenerics(selfType, partType, genericNames, genericValues)
-                    }.reduce { a, b -> unionTypes(a, b) }
+                    }
+                    unionTypes(types)
                 }
                 is ClassType -> {
                     val typeArgs = type.typeParameters

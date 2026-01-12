@@ -72,8 +72,8 @@ object CallWithNames {
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }
                         .map { it.getType(targetType) }
-                        .reduce { a, b -> unionTypes(a, b) }
-                    val arrayType = ClassType(type0.clazz, listOf(values))
+                    val types = unionTypes(values)
+                    val arrayType = ClassType(type0.clazz, listOf(types))
                     result[index++] = ValueParameterImpl(null, arrayType, true)
                     break
                 }

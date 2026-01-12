@@ -14,8 +14,7 @@ class AndType(val types: List<Type>) : Type() {
             if (typeA is UnionType && typeB is NotType &&
                 typeB.type in typeA.types
             ) {
-                val filteredA = typeA.types.filter { it != typeB.type }
-                    .reduce { a, b -> unionTypes(a, b) }
+                val filteredA = unionTypes(typeA.types.filter { it != typeB.type })
                 return if (typeB.type == NullType) filteredA
                 else andTypes(filteredA, typeB)
             }

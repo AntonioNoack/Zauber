@@ -26,6 +26,16 @@ class UnionType(val types: List<Type>) : Type() {
             return UnionType(uniqueTypes)
         }
 
+        /**
+         * OR
+         * */
+        fun unionTypes(types: List<Type>): Type {
+            if (types.isEmpty()) return NothingType
+            val uniqueTypes = types.distinct()
+            if (uniqueTypes.size == 1) return uniqueTypes[0]
+            return UnionType(uniqueTypes)
+        }
+
         fun getTypes(type: Type): List<Type> {
             return if (type is UnionType) type.types else listOf(type)
         }
