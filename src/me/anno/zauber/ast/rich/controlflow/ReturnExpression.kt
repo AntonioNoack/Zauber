@@ -10,11 +10,11 @@ class ReturnExpression(val value: Expression, val label: String?, scope: Scope, 
     Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
-        return "return ${value.toString(depth)}"
+        return if (label == null) "return ${value.toString(depth)}"
+        else "return@$label ${value.toString(depth)}"
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // type is known: Nothing
     override fun resolveType(context: ResolutionContext): Type = NothingType
     override fun clone(scope: Scope) = ReturnExpression(value.clone(scope), label, scope, origin)
-
 }

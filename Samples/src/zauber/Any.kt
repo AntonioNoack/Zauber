@@ -3,7 +3,7 @@ package zauber
 import zauber.types.Self
 import kotlin.reflect.KClass
 
-class Any {
+open class Any {
 
     /**
      * Converts the instance into a readable representation
