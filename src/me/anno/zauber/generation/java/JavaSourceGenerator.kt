@@ -255,7 +255,7 @@ object JavaSourceGenerator : Generator() {
     private fun needsBackingField(field: Field): Boolean {
         val getter = field.getter
         val setter = field.setter
-        if (getter?.body?.needsBackingField(getter.scope) == true) return true
+        if (getter?.body == null || getter.body.needsBackingField(getter.scope)) return true
         if (setter?.body?.needsBackingField(setter.scope) == true) return true
         return false
     }
