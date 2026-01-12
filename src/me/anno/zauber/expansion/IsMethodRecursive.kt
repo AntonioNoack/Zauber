@@ -2,7 +2,7 @@ package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.MethodLike
 
-object IsMethodRecursive : FunctionColoring<MethodLike>(true) {
+object IsMethodRecursive : BoolMethodColoring<MethodLike>(true) {
     override fun getDependencies(func: MethodLike): List<MethodLike> {
         TODO("Not yet implemented")
     }

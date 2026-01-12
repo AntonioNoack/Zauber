@@ -3,10 +3,7 @@ package me.anno.zauber.expansion
 import me.anno.zauber.utils.RecursiveException
 import me.anno.zauber.utils.RecursiveLazy
 
-// todo we also need to collect, which error types a function can throw...
-//  or make it explicit...
-
-abstract class FunctionColoring<F>(val isRecursionColored: Boolean) {
+abstract class BoolMethodColoring<F>(val isRecursionColored: Boolean) {
     private val cache = HashMap<F, RecursiveLazy<Boolean>>()
 
     fun isColored(func: F): Boolean {
