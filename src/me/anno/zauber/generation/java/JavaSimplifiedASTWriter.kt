@@ -151,7 +151,7 @@ object JavaSimplifiedASTWriter {
                 builder.append(expr.base.value)
             }
             is SimpleGetField -> {
-                appendSelfForFieldAccess(expr.self, expr.field, expr.scope)
+                appendSelfForFieldAccess(method, expr.self, expr.field, expr.scope)
                 val field = expr.field
                 val getter = field.getter
                 if (getter != null) {
@@ -161,7 +161,7 @@ object JavaSimplifiedASTWriter {
                 }
             }
             is SimpleSetField -> {
-                appendSelfForFieldAccess(expr.self, expr.field, expr.scope)
+                appendSelfForFieldAccess(method, expr.self, expr.field, expr.scope)
                 val field = expr.field
                 val setter = field.setter
                 if (setter != null) {
@@ -297,7 +297,7 @@ object JavaSimplifiedASTWriter {
         if (expr !is SimpleBlock && expr !is SimpleBranch) JavaSourceGenerator.nextLine()
     }
 
-    fun appendSelfForFieldAccess(self: SimpleField?, field: Field, exprScope: Scope) {
+    fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
         if (self != null) {
             val needsCast = self.type != field.selfType
             if (needsCast) {
@@ -308,6 +308,8 @@ object JavaSimplifiedASTWriter {
             } else {
                 builder.append1(self).append('.')
             }
+        } else if (field.codeScope == method.scope.parent) {
+            builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this").append('.')
         }
     }
 
