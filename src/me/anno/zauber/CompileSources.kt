@@ -1,8 +1,6 @@
 package me.anno.zauber
 
-import jdk.nashorn.internal.parser.TokenKind
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
