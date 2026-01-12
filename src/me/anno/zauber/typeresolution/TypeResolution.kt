@@ -1,7 +1,6 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile
-import me.anno.zauber.Compile.f1
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
@@ -12,6 +11,7 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.utils.NumberUtils.f1
 import kotlin.math.max
 
 /**

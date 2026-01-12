@@ -1,19 +1,19 @@
 package me.anno.zauber.utils
 
-class Lazy2<V>(val generator: () -> V) {
+class RecursiveLazy<V>(val generator: () -> V) {
 
     enum class State {
-        FRESH,
+        UNINITIALIZED,
         GENERATING,
         HAS_VALUE
     }
 
-    var state = State.FRESH
+    var state = State.UNINITIALIZED
     private var valueI: V? = null
 
     val value: V
         get() = when (state) {
-            State.FRESH -> {
+            State.UNINITIALIZED -> {
                 state = State.GENERATING
                 valueI = generator()
                 state = State.HAS_VALUE
@@ -22,9 +22,7 @@ class Lazy2<V>(val generator: () -> V) {
             State.HAS_VALUE -> {
                 valueI as V
             }
-            State.GENERATING -> {
-                throw IllegalStateException("Recursive dependency")
-            }
+            State.GENERATING -> throw RecursiveException()
         }
 
 }

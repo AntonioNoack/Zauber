@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
@@ -11,6 +10,13 @@ import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Types.NullableAnyType
 
 object ASTClassScanner {
+
+    fun collectNamedClassesForTypeResolution(sources: List<TokenList>) {
+        for (i in sources.indices) {
+            val source = sources[i]
+            collectNamedClasses(source)
+        }
+    }
 
     /**
      * to make type-resolution immediately available/resolvable
