@@ -90,7 +90,7 @@ object TypeResolution {
         }
         for (field in scope.fields) {
             var initialValue = field.initialValue ?: field.getterExpr
-            if (initialValue is ReturnExpression) initialValue = initialValue.value
+            while (initialValue is ReturnExpression) initialValue = initialValue.value
             if (field.valueType == null && initialValue != null) {
                 LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
                 LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")

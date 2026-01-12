@@ -37,9 +37,7 @@ fun <N : SomeNumber> N.pow(power: Int): N {
     return result
 }
 
-fun <N : SomeFloat> atan(y: N, x: N): N {
-    return native("atan2(y,x)")
-}
+external fun <N : SomeFloat> atan(y: N, x: N): N
 
 fun <N : SomeFloat> N.reciprocal(): N {
     return 1f / this

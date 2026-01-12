@@ -71,7 +71,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     private fun getFieldReturnType(scopeSelfType: Type?, field: Field): Type? {
         if (field.valueType == null) {
             var expr = (field.initialValue ?: field.getterExpr)!!
-            if (expr is ReturnExpression) expr = expr.value
+            while (expr is ReturnExpression) expr = expr.value
             LOGGER.info("Resolving valueType($field), initial/getter: $expr")
             val context = ResolutionContext(
                 field.codeScope,//.innerScope,
@@ -134,7 +134,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         origin: Int
     ): ResolvedField? {
         val selfType = context.selfType
-        LOGGER.info("TypeParams for field '$name': $typeParameters, selfType: $selfType")
+        LOGGER.info("TypeParams for field '$name': $typeParameters, scope: ${context.codeScope}, selfType: $selfType, targetType: ${context.targetType}")
 
         return resolveInCodeScope(context) { candidateScope, selfType ->
             findMemberInHierarchy(

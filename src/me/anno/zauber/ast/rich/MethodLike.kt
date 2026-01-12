@@ -29,6 +29,8 @@ open class MethodLike(
                 valueParameters.none { valueParam -> valueParam.type.contains(genericType) }
     }
 
+    var selfTypeIfNecessary: Type? = null
+
     companion object {
         fun Type.contains(type: GenericType): Boolean {
             if (this == type) return true

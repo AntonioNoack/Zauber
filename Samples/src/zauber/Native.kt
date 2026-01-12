@@ -1,7 +1,5 @@
 package zauber
 
-fun <V> native(str: String): V = TODO(str) as V
-
 class Native<SizeInBits: Int>
 
 class NativeI1: Native<1>()

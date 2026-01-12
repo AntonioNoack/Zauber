@@ -8,7 +8,7 @@ class SimpleField(val type: Type, val ownership: Ownership, val id: Int) {
     var numReads = 0
     var mergeInfo: SimpleMerge? = null
 
-    fun get(): SimpleField {
+    fun use(): SimpleField {
         numReads++
         return this
     }

@@ -158,4 +158,82 @@ class JavaGenerationTest {
         )
         check("Exception" !in code && "Error" !in code) { code }
     }
+
+    @Test
+    fun testFieldResolution() {
+        val code = testClassGeneration(
+            """
+            data class Test<First, Second>(val first: First, val second: Second)
+
+            infix fun <F, S> F.to(other: S): Test<F, S> = Test(this, other)
+            
+            external fun Int.plus(other: Int): Int
+            external fun Int.times(other: Int): Int
+            external fun String.plus(other: Any?): String
+            
+            package zauber
+            class Int
+            class String
+        """.trimIndent()
+        )
+        check("Exception" !in code && "Error" !in code) { code }
+    }
+
+    @Test
+    fun testDataClass() {
+        val code = testClassGeneration(
+            """
+            data class Test<V>(val index: Int, val value: V)
+            
+            external fun Int.plus(other: Int): Int
+            external fun Int.times(other: Int): Int
+            external fun String.plus(other: Any?): String
+            
+            package zauber
+            class Int
+            class String
+        """.trimIndent()
+        )
+        check("Exception" !in code && "Error" !in code) { code }
+        check("int index;" in code) { code }
+        check("V value;" in code) { code }
+    }
+
+    @Test
+    fun testRunApply() {
+        val code = testClassGeneration(
+            """
+            class Test() {
+                fun <R> run(runnable: () -> R): R {
+                    return runnable()
+                }
+            }
+        """.trimIndent()
+        )
+        check("Exception" !in code && "Error" !in code) { code }
+    }
+
+    @Test
+    fun testRunWithReturnMismatch() {
+        val code = testClassGeneration(
+            """
+            class Test() {
+                fun runImpl(runnable: () -> Unit) {
+                    runnable()
+                }
+                fun test() {
+                    runImpl {
+                        "Some Value"
+                    }
+                }
+            }
+            
+            package zauber
+            fun interface Function0<R> {
+                fun call(): R
+            }
+        """.trimIndent()
+        )
+        check("Exception" !in code && "Error" !in code) { code }
+    }
 }

@@ -64,7 +64,7 @@ class LambdaExpression(
                 check(variables?.size == targetLambdaType.parameters.size)
 
                 var bodyContext = bodyContext
-                val newScopeType = targetLambdaType.scopeType // todo replace generics inside this one?
+                val newScopeType = targetLambdaType.selfType // todo replace generics inside this one?
                 if (newScopeType != null) bodyContext = bodyContext.withSelfType(newScopeType)
 
                 val newReturnType = if (targetLambdaType.returnType.containsGenerics()) {

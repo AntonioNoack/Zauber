@@ -85,16 +85,11 @@ object FieldGetterSetter {
         )
     }
 
-    private fun createBackingField(
-        field: Field,
-        scope: Scope, origin: Int
-    ): Field {
-        return Field(
-            scope, field.selfType, field.isMutable, null,
-            "field", field.valueType, field.initialValue ?: field.getterExpr,
-            Keywords.NONE, origin
-        )
-    }
+    private fun createBackingField(field: Field, scope: Scope, origin: Int): Field = Field(
+        scope, field.selfType, field.isMutable, null,
+        "field", field.valueType, field.initialValue ?: field.getterExpr,
+        Keywords.SYNTHETIC, origin
+    )
 
     fun ZauberASTBuilder.finishLastField() {
         val field = lastField ?: return

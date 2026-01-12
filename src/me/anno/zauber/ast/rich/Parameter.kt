@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.types.Scope
@@ -27,6 +28,19 @@ class Parameter(
             check(type.clazz == ArrayType.clazz)
             check(type.typeParameters?.size == 1)
         }
+    }
+
+    fun getOrCreateField(selfType: Type?, keywords: KeywordSet): Field {
+        val field0 = field
+        if (field0 != null) return field0
+
+        // automatically gets added to fieldScope
+        val field = Field(
+            scope, selfType, isVar, this,
+            name, type, defaultValue, keywords, origin
+        )
+        this.field = field
+        return field
     }
 
     var field: Field? = null

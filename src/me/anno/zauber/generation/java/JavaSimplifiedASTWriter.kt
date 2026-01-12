@@ -1,5 +1,7 @@
 package me.anno.zauber.generation.java
 
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleDeclaration
@@ -11,7 +13,10 @@ import me.anno.zauber.ast.simple.controlflow.SimpleLoop
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
+import me.anno.zauber.generation.java.JavaSourceGenerator.nativeTypes
 import me.anno.zauber.generation.java.JavaSourceGenerator.writeBlock
+import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.ByteType
 import me.anno.zauber.types.Types.CharType
@@ -21,10 +26,24 @@ import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnionType
 
 object JavaSimplifiedASTWriter {
 
     private val builder = JavaSourceGenerator.builder
+
+    fun canBeNull(type: Type): Boolean {
+        return when (type) {
+            NullType -> true
+            is ClassType -> false
+            is UnionType -> type.types.any { canBeNull(it) }
+            is GenericType -> canBeNull(type.superBounds)
+            else -> throw NotImplementedError()
+        }
+    }
 
     fun appendAssign(expression: SimpleAssignmentExpression) {
         val dst = expression.dst
@@ -46,19 +65,23 @@ object JavaSimplifiedASTWriter {
         return this
     }
 
-    fun appendValueParams(valueParameters: List<SimpleField>) {
-        builder.append('(')
+    fun appendValueParams(valueParameters: List<SimpleField>, withOpen: Boolean = true) {
+        if (withOpen) builder.append('(')
         for (i in valueParameters.indices) {
             if (i > 0) builder.append(", ")
             val parameter = valueParameters[i]
             builder.append1(parameter)
         }
-        builder.append(')')
+        if (withOpen) builder.append(')')
     }
 
-    fun appendSimplifiedAST(expr: SimpleExpression, loop: SimpleLoop? = null) {
+    fun appendSimplifiedAST(method: MethodLike, expr: SimpleExpression, loop: SimpleLoop? = null) {
         if (expr is SimpleMerge) return
-        if (expr is SimpleAssignmentExpression) appendAssign(expr)
+        if (expr is SimpleAssignmentExpression) {
+            if (expr.dst.numReads == 0) builder.append("/* ")
+            appendAssign(expr)
+            if (expr.dst.numReads == 0) builder.append("*/ ")
+        }
         when (expr) {
             is SimpleBlock -> {
                 val instructions = expr.instructions
@@ -73,24 +96,24 @@ object JavaSimplifiedASTWriter {
                 }
                 for (i in instructions.indices) {
                     val instr = instructions[i]
-                    appendSimplifiedAST(instr, loop)
+                    appendSimplifiedAST(method, instr, loop)
                 }
             }
             is SimpleBranch -> {
                 builder.append("if (").append1(expr.condition).append(')')
                 writeBlock {
-                    appendSimplifiedAST(expr.ifTrue, loop)
+                    appendSimplifiedAST(method, expr.ifTrue, loop)
                 }
                 builder.append(" else ")
                 writeBlock {
-                    appendSimplifiedAST(expr.ifFalse, loop)
+                    appendSimplifiedAST(method, expr.ifFalse, loop)
                 }
             }
             is SimpleLoop -> {
                 builder.append("b").append(expr.body.blockId)
                 builder.append(": while (true)")
                 writeBlock {
-                    appendSimplifiedAST(expr.body, expr)
+                    appendSimplifiedAST(method, expr.body, expr)
                 }
             }
             is SimpleGoto -> {
@@ -105,14 +128,17 @@ object JavaSimplifiedASTWriter {
             }
             is SimpleDeclaration -> {
                 appendType(expr.type, expr.scope, false)
-                builder.append(' ').append(expr.name).append(" = ")
-                when (expr.type) {
-                    IntType, LongType,
-                    FloatType, DoubleType,
-                    ByteType, ShortType -> builder.append("0")
-                    CharType -> builder.append("(char) 0")
-                    BooleanType -> builder.append("false")
-                    else -> builder.append("null")
+                builder.append(' ').append(expr.name)
+                if (false) {
+                    builder.append(" = ")
+                    when (expr.type) {
+                        IntType, LongType,
+                        FloatType, DoubleType,
+                        ByteType, ShortType -> builder.append("0")
+                        CharType -> builder.append("(char) 0")
+                        BooleanType -> builder.append("false")
+                        else -> builder.append("null")
+                    }
                 }
                 builder.append(';')
             }
@@ -125,27 +151,25 @@ object JavaSimplifiedASTWriter {
                 builder.append(expr.base.value)
             }
             is SimpleGetField -> {
-                if (expr.self != null) {
-                    builder.append1(expr.self).append('.')
-                }
-                val getter = expr.field.getter
+                appendSelfForFieldAccess(expr.self, expr.field, expr.scope)
+                val field = expr.field
+                val getter = field.getter
                 if (getter != null) {
                     builder.append(getter.name).append("()")
                 } else {
-                    builder.append(expr.field.name)
+                    builder.append(field.name)
                 }
             }
             is SimpleSetField -> {
-                if (expr.self != null) {
-                    builder.append1(expr.self).append('.')
-                }
-                val setter = expr.field.setter
+                appendSelfForFieldAccess(expr.self, expr.field, expr.scope)
+                val field = expr.field
+                val setter = field.setter
                 if (setter != null) {
                     builder.append(setter.name).append('(')
                     builder.append1(expr.src)
                     builder.append(')')
                 } else {
-                    builder.append(expr.field.name)
+                    builder.append(field.name)
                         .append(" = ").append1(expr.src)
                 }
                 builder.append(';')
@@ -165,10 +189,24 @@ object JavaSimplifiedASTWriter {
 
                 // todo if left cannot be null, skip null check
                 // todo if left side is a native field, use the static class for comparison
-                builder.append1(expr.left).append(" == null ? ")
-                    .append1(expr.right).append(" == null : ")
-                    .append1(expr.left).append(".equals(")
-                    .append1(expr.right).append(")")
+
+                val leftCanBeNull = canBeNull(expr.left.type)
+                val rightCanBeNull = canBeNull(expr.right.type)
+
+                val leftNative = nativeTypes[expr.left.type]
+                val rightNative = nativeTypes[expr.right.type]
+                if (leftNative != null && rightNative != null) {
+                    builder.append1(expr.left).append(" == ")
+                        .append1(expr.right)
+                } else if (leftCanBeNull || rightCanBeNull) {
+                    builder.append1(expr.left).append(" == null ? ")
+                        .append1(expr.right).append(" == null : ")
+                        .append1(expr.left).append(".equals(")
+                        .append1(expr.right).append(")")
+                } else {
+                    builder.append1(expr.left).append(".equals(")
+                        .append1(expr.right).append(")")
+                }
             }
             is SimpleCheckIdentical -> {
                 builder.append1(expr.left).append(" == ")
@@ -179,7 +217,9 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.TRUE -> builder.append("true")
                     SpecialValue.FALSE -> builder.append("false")
                     SpecialValue.NULL -> builder.append("null")
-                    SpecialValue.THIS -> builder.append("this")
+                    SpecialValue.THIS -> {
+                        builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
+                    }
                     SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
                 }
             }
@@ -196,7 +236,7 @@ object JavaSimplifiedASTWriter {
                         // todo compareTo is a problem for the numbers:
                         //  we must call their static function
                         val supportsType = when (expr.self.type) {
-                            StringType, ByteType, ShortType, CharType, IntType, LongType, FloatType, DoubleType -> true
+                            StringType, in nativeTypes -> true
                             else -> false
                         }
                         val symbol = when (methodName) {
@@ -216,14 +256,26 @@ object JavaSimplifiedASTWriter {
                     else -> false
                 }
                 if (!done) {
-                    builder.append1(expr.self).append('.')
-                    builder.append(expr.methodName)
-                    appendValueParams(expr.valueParameters)
+                    val needsCastForFirstValue = nativeTypes[expr.self.type]
+                    if (needsCastForFirstValue != null) {
+                        builder.append(needsCastForFirstValue.boxed).append('.')
+                        builder.append(expr.methodName).append('(')
+                        builder.append1(expr.self)
+                        if (expr.valueParameters.isNotEmpty()) {
+                            builder.append(", ")
+                            appendValueParams(expr.valueParameters, false)
+                        }
+                        builder.append(')')
+                    } else {
+                        builder.append1(expr.self).append('.')
+                        builder.append(expr.methodName)
+                        appendValueParams(expr.valueParameters)
+                    }
                 }
             }
             is SimpleConstructor -> {
                 builder.append("new ")
-                appendType(expr.method.selfType, expr.scope, false)
+                appendType(expr.method.selfType, expr.scope, true)
                 appendValueParams(expr.valueParameters)
             }
             is SimpleSelfConstructor -> {
@@ -243,6 +295,20 @@ object JavaSimplifiedASTWriter {
         }
         if (expr is SimpleAssignmentExpression) builder.append(';')
         if (expr !is SimpleBlock && expr !is SimpleBranch) JavaSourceGenerator.nextLine()
+    }
+
+    fun appendSelfForFieldAccess(self: SimpleField?, field: Field, exprScope: Scope) {
+        if (self != null) {
+            val needsCast = self.type != field.selfType
+            if (needsCast) {
+                builder.append("((")
+                appendType(field.selfType!!, exprScope, true)
+                builder.append(')')
+                builder.append1(self).append(").")
+            } else {
+                builder.append1(self).append('.')
+            }
+        }
     }
 
 }

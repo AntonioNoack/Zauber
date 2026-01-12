@@ -28,9 +28,7 @@ class FieldExpression(
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
         val resolved = FieldResolver.findMemberMatch(
             field, fieldReturnType, context.targetType,
-            context.selfType,
-            null, emptyList(),
-            origin
+            scopeSelfType, null, emptyList(), origin
         ) ?: throw IllegalStateException("Generics could not be resolved for $field at ${resolveOrigin(origin)}")
         return resolved.getValueType(context)
     }

@@ -78,6 +78,7 @@ class Field(
         }
     }
 
+    val originalScope: Scope = codeScope
     fun moveToScope(newScope: Scope) {
         check(codeScope.fields.remove(this))
         codeScope = newScope

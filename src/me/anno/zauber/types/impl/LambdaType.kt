@@ -8,12 +8,12 @@ import me.anno.zauber.types.Type
  * (A,B,C) -> R
  * */
 class LambdaType(
-    val scopeType: Type?,
+    val selfType: Type?,
     val parameters: List<LambdaParameter>,
     val returnType: Type
 ) : Type() {
     override fun toStringImpl(depth: Int): String {
-        val scopeType = if (scopeType != null) "${scopeType.toString(depth)}." else null
+        val scopeType = if (selfType != null) "${selfType.toString(depth)}." else null
         return "LambdaType($scopeType(${
             parameters.joinToString(", ") {
                 if (it.name != null) "${it.name}=${it.type.toString(depth)}"

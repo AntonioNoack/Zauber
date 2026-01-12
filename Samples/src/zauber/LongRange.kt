@@ -4,6 +4,8 @@ class LongRange(val from: Long, val endExcl: Long, val step: Long) : Iterable<Lo
     constructor(from: Long, endExcl: Long) : this(from, endExcl, 1L)
 
     override fun iterator(): Iterator<Long> = LongRangeIterator(from, endExcl)
+
+    infix fun step(step: Long): LongRange = LongRange(from, endExcl, step)
 }
 
 class LongRangeIterator(var index: Long, val endExcl: Long, val step: Long = 1L) : Iterator<Long> {
@@ -16,9 +18,9 @@ class LongRangeIterator(var index: Long, val endExcl: Long, val step: Long = 1L)
 }
 
 infix fun Long.until(endExcl: Long): LongRange {
-    return LongRange(this, endExcl, 1)
+    return LongRange(this, endExcl, 1L)
 }
 
 operator fun Long.rangeTo(endIncl: Long): LongRange {
-    return LongRange(this, endIncl + 1, 1)
+    return LongRange(this, endIncl + 1, 1L)
 }

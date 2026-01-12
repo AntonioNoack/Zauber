@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.MemberNameExpression.Companion.nameExpression
@@ -142,37 +143,32 @@ class ZauberASTBuilder(
         classScope.typeParameters = typeParameters
         classScope.hasTypeParameters = true
 
-        val privatePrimaryConstructor = tokens.equals(i, "private")
-        if (privatePrimaryConstructor) i++
+        val privatePrimaryConstructor = consumeIf("private")
 
         readAnnotations()
 
-        if (tokens.equals(i, "constructor")) i++
+        consumeIf("constructor")
+
         val constructorOrigin = origin(i)
-        val constructorParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
-            var parameters = pushScope(constructorScope) {
-                val selfType = ClassType(classScope, null)
-                pushCall { readParameterDeclarations(selfType, classScope) }
+        val constructorParams = readPrimaryConstructorParameters(classScope)
+        if (constructorParams != null) {
+            val scope = classScope.getOrCreatePrimConstructorScope()
+            for (parameter in constructorParams) {
+                if (parameter.isVal || parameter.isVar) {
+                    val parameterField = parameter.getOrCreateField(classScope.typeWithArgs, Keywords.NONE)
+                    val classField = Field(
+                        classScope, classScope.typeWithArgs, parameter.isVar,
+                        parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, parameter.origin
+                    )
+                    scope.code.add(
+                        AssignmentExpression(
+                            FieldExpression(classField, scope, parameter.origin),
+                            FieldExpression(parameterField, scope, parameter.origin)
+                        )
+                    )
+                }
             }
-            for (field in constructorScope.fields) {
-                classScope.addField(field)
-            }
-            if (scopeType == ScopeType.ENUM_CLASS) {
-                parameters = listOf(
-                    Parameter("ordinal", IntType, constructorScope, origin),
-                    Parameter("name", StringType, constructorScope, origin)
-                ) + parameters
-            }
-            parameters
-        } else if (scopeType == ScopeType.ENUM_CLASS) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
-            val parameters = listOf(
-                Parameter("ordinal", IntType, constructorScope, origin),
-                Parameter("name", StringType, constructorScope, origin)
-            )
-            parameters
-        } else null
+        }
 
         readSuperCalls(classScope)
 
@@ -190,6 +186,32 @@ class ZauberASTBuilder(
 
         readClassBody(name, keywords, scopeType)
         popGenericParams()
+    }
+
+    private fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
+        val scopeType = classScope.scopeType
+        val constructorOrigin = origin(i)
+        return if (tokens.equals(i, TokenType.OPEN_CALL)) {
+            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            var parameters = pushScope(constructorScope) {
+                val selfType = ClassType(classScope, null)
+                pushCall { readParameterDeclarations(selfType) }
+            }
+            if (scopeType == ScopeType.ENUM_CLASS) {
+                parameters = listOf(
+                    Parameter("ordinal", IntType, constructorScope, constructorOrigin),
+                    Parameter("name", StringType, constructorScope, constructorOrigin)
+                ) + parameters
+            }
+            parameters
+        } else if (scopeType == ScopeType.ENUM_CLASS) {
+            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            val parameters = listOf(
+                Parameter("ordinal", IntType, constructorScope, constructorOrigin),
+                Parameter("name", StringType, constructorScope, constructorOrigin)
+            )
+            parameters
+        } else null
     }
 
     private fun readInterface() {
@@ -556,7 +578,7 @@ class ZauberASTBuilder(
         pushScope(methodScope) {
             parameters = pushCall {
                 val selfType = ClassType(clazz, null)
-                readParameterDeclarations(selfType, methodScope)
+                readParameterDeclarations(selfType)
             }
         }
 
@@ -602,7 +624,7 @@ class ZauberASTBuilder(
 
         val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { constructorScope ->
             val selfType = ClassType(classScope, null)
-            parameters = pushCall { readParameterDeclarations(selfType, constructorScope) }
+            parameters = pushCall { readParameterDeclarations(selfType) }
             if (isEnumClass) {
                 parameters = listOf(
                     Parameter("ordinal", IntType, constructorScope, origin),
@@ -797,9 +819,7 @@ class ZauberASTBuilder(
         return params
     }
 
-    fun readParameterDeclarations(selfType: Type?, classScope: Scope): List<Parameter> {
-        // todo when this has its own '=', this needs its own scope...,
-        //  and that scope could be inherited by the function body...
+    fun readParameterDeclarations(selfType: Type?): List<Parameter> {
         val result = ArrayList<Parameter>()
         loop@ while (i < tokens.size) {
 
@@ -830,28 +850,19 @@ class ZauberASTBuilder(
                 tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) -> {
                     val origin = origin(i)
                     val name = tokens.toString(i++)
-                    check(tokens.equals(i++, ":")) { "Expected colon in var/val at ${tokens.err(i - 1)}" }
+                    consume(":")
 
                     var type = readTypeNotNull(null, true) // <-- handles generics now
                     if (isVararg) type = ClassType(ArrayType.clazz, listOf(type))
 
-                    val initialValue = if (tokens.equals(i, "=")) {
-                        i++
-                        readExpression()
-                    } else null
+                    val initialValue = if (consumeIf("=")) readExpression() else null
 
-                    println("Found $name: $type = $initialValue")
+                    println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
                     val keywords = packKeywords()
                     val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
+                    parameter.getOrCreateField(selfType, keywords)
                     result.add(parameter)
-
-                    val fieldScope = if (isVar || isVal) classScope else currPackage
-                    // automatically gets added to fieldScope
-                    parameter.field = Field(
-                        fieldScope, selfType, isVar, if (isVar || isVal) null else parameter,
-                        name, type, initialValue, keywords, origin
-                    )
 
                     readComma()
                 }
@@ -1342,7 +1353,7 @@ class ZauberASTBuilder(
             check(tokens.equals(++i, TokenType.OPEN_CALL))
             val catchName = currPackage.generateName("catch")
             val catchScope = currPackage.getOrPut(catchName, ScopeType.METHOD_BODY)
-            val params = pushCall { readParameterDeclarations(null, catchScope) }
+            val params = pushCall { readParameterDeclarations(null) }
             check(params.size == 1)
             val handler = readBodyOrExpression()
             catches.add(Catch(params[0], handler))
@@ -1501,7 +1512,7 @@ class ZauberASTBuilder(
         if (allowSubTypes && consumeIf(".")) {
             // read lambda/inner subtype
             val childType = readTypeNotNull(selfType, true)
-            val joinedType = if (childType is LambdaType && childType.scopeType == null) {
+            val joinedType = if (childType is LambdaType && childType.selfType == null) {
                 LambdaType(baseType, childType.parameters, childType.returnType)
             } else SubType(baseType, childType)
             return joinedType
@@ -1988,11 +1999,7 @@ class ZauberASTBuilder(
             result.clear()
 
             val parameter = Parameter("e", ThrowableType, errCatch, origin)
-            val exceptionField = Field(
-                errCatch, null, false, parameter,
-                parameter.name, ThrowableType, null, Keywords.NONE, origin
-            )
-            parameter.field = exceptionField
+            val exceptionField = parameter.getOrCreateField(null, Keywords.NONE)
             val throwImpl = ThrowExpression(origin, FieldExpression(exceptionField, errCatch, origin))
 
             result.add(

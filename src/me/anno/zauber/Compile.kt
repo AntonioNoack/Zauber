@@ -129,7 +129,7 @@ object Compile {
 
         step("JDK-Overhead") {}
 
-        if (false)
+        // if (false)
         TypeResolution.doCatchFailures()
 
         step("Reading & Tokenizing") {

@@ -59,8 +59,8 @@ abstract class ResolvedMember<V>(
                 }
                 NullType, UnknownType -> type
                 is LambdaType -> {
-                    val newSelfType = if (type.scopeType != null) {
-                        resolveGenerics(selfType, type.scopeType, genericNames, genericValues)
+                    val newSelfType = if (type.selfType != null) {
+                        resolveGenerics(selfType, type.selfType, genericNames, genericValues)
                     } else null
                     val newReturnType = resolveGenerics(selfType, type.returnType, genericNames, genericValues)
                     val newParameters = type.parameters.map {

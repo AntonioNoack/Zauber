@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.generation.DeltaWriter
 import me.anno.zauber.generation.Generator
 import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
@@ -33,6 +34,21 @@ import java.io.File
 //  big difference: stack-based
 object JavaSourceGenerator : Generator() {
 
+    val protectedTypes = mapOf(
+        StringType to BoxedType("java.lang.String", "java.lang.String"),
+        BooleanType to BoxedType("Boolean", "boolean"),
+        ByteType to BoxedType("Byte", "byte"),
+        ShortType to BoxedType("Short", "short"),
+        IntType to BoxedType("Integer", "int"),
+        LongType to BoxedType("Long", "long"),
+        CharType to BoxedType("Character", "char"),
+        FloatType to BoxedType("Float", "float"),
+        DoubleType to BoxedType("Double", "double"),
+        AnyType to BoxedType("Object", "Object")
+    )
+
+    val nativeTypes = protectedTypes.filter { (_, it) -> it.boxed != it.native }
+
     private val blacklistedPaths = listOf(listOf("java"))
 
     override fun generateCode(dst: File, root: Scope) {
@@ -56,18 +72,24 @@ object JavaSourceGenerator : Generator() {
     // todo if a type is defined twice, we still need the full path
     // todo if the parent is the same as scope.parent, we can skip the import
 
-    fun appendType(type: Type, scope: Scope, isGeneric: Boolean) {
+    fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
+        val protected = protectedTypes[type]
+        if (protected != null) {
+            builder.append(if (needsBoxedType) protected.boxed else protected.native)
+            return
+        }
+
         when (type) {
             NullType -> builder.append("Object /* null */")
             NothingType -> builder.append("Object /* Nothing */")
-            is ClassType -> appendClassType(type, scope, isGeneric)
+            is ClassType -> appendClassType(type, scope, needsBoxedType)
             is UnionType if type.types.size == 2 && NullType in type.types -> {
                 // builder.append("@org.jetbrains.annotations.Nullable ")
-                appendType(type.types.first { it != NullType }, scope, isGeneric)
+                appendType(type.types.first { it != NullType }, scope, needsBoxedType)
                 builder.append("/* or null */")
             }
             is SelfType if (type.scope == scope) -> builder.append(scope.name)
-            is ThisType -> appendType(type.type, scope, isGeneric)
+            is ThisType -> appendType(type.type, scope, needsBoxedType)
             is GenericType if (type.scope == scope) -> builder.append(type.name)
             UnknownType -> builder.append('?')
             is LambdaType -> {
@@ -104,19 +126,7 @@ object JavaSourceGenerator : Generator() {
             return
         }
 
-        when (type.clazz) {
-            StringType.clazz -> builder.append("String")
-            IntType.clazz -> builder.append(if (isGeneric) "Integer" else "int")
-            LongType.clazz -> builder.append(if (isGeneric) "Long" else "long")
-            FloatType.clazz -> builder.append(if (isGeneric) "Float" else "float")
-            DoubleType.clazz -> builder.append(if (isGeneric) "Double" else "double")
-            BooleanType.clazz -> builder.append(if (isGeneric) "Boolean" else "boolean")
-            ByteType.clazz -> builder.append(if (isGeneric) "Byte" else "byte")
-            ShortType.clazz -> builder.append(if (isGeneric) "Short" else "short")
-            CharType.clazz -> builder.append(if (isGeneric) "Character" else "char")
-            AnyType.clazz -> builder.append("Object")
-            else -> builder.append(type.clazz.pathStr)
-        }
+        builder.append(type.clazz.pathStr)
 
         val params = type.typeParameters
         if (!params.isNullOrEmpty()) {
@@ -231,19 +241,18 @@ object JavaSourceGenerator : Generator() {
             // todo decide whether this fields needs a backing field
 
             if (field.selfType != classScope.typeWithArgs) continue
+            if (!needsFieldByParameter(field.byParameter)) continue
             appendBackingField(classScope, field)
         }
     }
 
     private fun appendBackingField(classScope: Scope, field: Field) {
-        if (field.byParameter == null) {
-            builder.append("public ")
-            if (field.name == "__instance__") builder.append("static ")
-            if (!field.isMutable) builder.append("final ")
-            appendType(field.valueType ?: NullableAnyType, classScope, false)
-            builder.append(' ').append(field.name).append(';')
-            nextLine()
-        }
+        builder.append("public ")
+        if (field.name == "__instance__") builder.append("static ")
+        if (!field.isMutable) builder.append("final ")
+        appendType(field.valueType ?: NullableAnyType, classScope, false)
+        builder.append(' ').append(field.name).append(';')
+        nextLine()
     }
 
     private fun appendMethods(classScope: Scope) {
@@ -285,11 +294,13 @@ object JavaSourceGenerator : Generator() {
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.returnType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
-        appendValueParameterDeclaration(if (!isBySelf) selfType else null, method.valueParameters, classScope)
+        val selfTypeIfNecessary = if (!isBySelf) selfType else null
+        method.selfTypeIfNecessary = selfTypeIfNecessary
+        appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
         val body = method.body
         if (body != null) {
             val context = ResolutionContext(classScope, method.selfType, true, null)
-            appendCode(context, body)
+            appendCode(context, method, body)
         } else {
             builder.append(";")
             nextLine()
@@ -319,21 +330,12 @@ object JavaSourceGenerator : Generator() {
                 builder.append("// no super call")
                 nextLine()
             }
-            if (isPrimaryConstructor) {
-                for (parameter in constructor.valueParameters) {
-                    if (!parameter.isVar && !parameter.isVal) continue
-                    val name = parameter.name
-                    builder.append("this.").append(name).append(" = ")
-                        .append(name).append(';')
-                    nextLine()
-                }
-            }
             if (body != null) {
-                appendCode(context, body)
+                appendCode(context, constructor, body)
             }
             if (isPrimaryConstructor) {
                 for (body in constructor.scope.code) {
-                    appendCode(context, body)
+                    appendCode(context, constructor, body)
                 }
             }
         }
@@ -374,16 +376,16 @@ object JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
-    private fun appendCode(context: ResolutionContext, body: Expression) {
+    private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
         writeBlock {
-            appendCodeWithoutBlock(context, body)
+            appendCodeWithoutBlock(context, method, body)
         }
     }
 
-    private fun appendCodeWithoutBlock(context: ResolutionContext, body: Expression) {
+    private fun appendCodeWithoutBlock(context: ResolutionContext, method: MethodLike, body: Expression) {
         try {
             val simplified = ASTSimplifier.simplify(context, body)
-            appendSimplifiedAST(simplified.startBlock)
+            appendSimplifiedAST(method, simplified.startBlock)
         } catch (e: Throwable) {
             e.printStackTrace()
             builder.append(

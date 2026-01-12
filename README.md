@@ -62,6 +62,34 @@ Ideally much faster.
 - [ ] Compile to a native language (or LLVM IR)
 - [ ] Compile to WASM (for running in the browser & safe containers)
 
+## General Plan
+
+The following is a rough outline, if what this project wants to achieve ultimately:
+
+```mermaid
+flowchart TD
+    Kotlin --> Intermediate[Kotlin AST]
+    Java --> Intermediate
+    Rust --> Intermediate
+    Cpp[C/C++] --> Intermediate
+    Python --> Intermediate
+    Intermediate --> Simple0[Simple AST with Generics]
+    Simple0 --> Simple[Simple AST without Generics]
+    JVM[JVM Bytecode] --> Simple0
+    Simple --> C2[C/C++ or LLVM IR]
+    Simple --> WASM[WASM or JavaScript]
+    Simple --> GLSL
+    Simple --> Java2[Java or JVM Bytecode]
+```
+
+The Simple AST is just an AST, where all types, fields and methods have been resolved, and which is very stack-like,
+and with flat expressions.
+
+### Flat expressions example:
+
+`(1+2)*3` is split into two assignments:
+`tmp1 = 1+2` and `tmp2 = tmp1 * 3`.
+
 ## Type Definitions
 
 I want to be able to declare rich types like TypeScript,

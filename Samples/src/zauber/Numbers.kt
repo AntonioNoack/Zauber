@@ -155,17 +155,17 @@ value class Half(val value: NativeF16) : Number {
 }
 
 value class Float(val value: NativeF32) : Number {
-    operator fun plus(other: Float): Float = native("this + other")
-    operator fun minus(other: Float): Float = native("this - other")
-    operator fun times(other: Float): Float = native("this * other")
-    operator fun div(other: Float): Float = native("this / other")
-    operator fun rem(other: Float): Float = native("this % other")
+    external operator fun plus(other: Float): Float
+    external operator fun minus(other: Float): Float
+    external operator fun times(other: Float): Float
+    external operator fun div(other: Float): Float
+    external operator fun rem(other: Float): Float
 
-    fun toInt(): Int = native("s32(this)")
-    fun toLong(): Long = native("s64(this)")
-    fun toHalf(): Half = native("f16(this)")
+    external fun toInt(): Int
+    external fun toLong(): Long
+    external fun toHalf(): Half
     fun toFloat(): Float = this
-    fun toDouble(): Double = native("f64(this)")
+    external fun toDouble(): Double
 
     override operator fun inc(): Float = this + 1f
     override operator fun dec(): Float = this - 1f

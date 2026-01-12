@@ -58,15 +58,17 @@ class CallExpression(
                 throw IllegalStateException("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
             is UnresolvedFieldExpression -> {
                 val name = base.name
+                val context = context.withCodeScope(scope)
                 if (LOGGER.enableInfo) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                val codeScope = context.codeScope
                 val c = ConstructorResolver
 
                 val constructor = null1() // do we need this constructor-stuff? yes, we do, why ever
-                    ?: c.findMemberInFile(codeScope, origin, name, returnType, null, typeParameters, valueParameters)
+                    ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
+
                 val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
+                println("byMethodCall('$name')=$byMethodCall")
                 if (byMethodCall != null) return byMethodCall
 
                 val nameAsImport = base.nameAsImport

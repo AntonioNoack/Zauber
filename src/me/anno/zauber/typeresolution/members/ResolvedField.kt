@@ -13,9 +13,12 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
+import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.getScope
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
@@ -109,6 +112,26 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         fun getUniqueValueType(context: ResolutionContext, expr: Expression): Type? {
             return TypeResolution.resolveType(context, expr)
         }
+
+        fun resolveFunInterfaceType(type: Type): ClassType {
+            val scope = typeToScope(type)
+                ?: throw IllegalStateException("Cannot resolve scope from $type for fun-interface")
+            val funScope = resolveFunInterfaceType(scope)
+                ?: throw IllegalStateException("Could not find fun-interface in $scope")
+            return funScope.typeWithoutArgs
+        }
+
+        // todo we should also support multiple interfaces, and choose the best match
+        fun resolveFunInterfaceType(scope: Scope): Scope? {
+            if (scope.keywords.hasFlag(Keywords.FUN_INTERFACE)) {
+                return scope
+            }
+            for (superCall in scope.superCalls) {
+                val byCall = resolveFunInterfaceType(superCall.type.clazz)
+                if (byCall != null) return byCall
+            }
+            return null
+        }
     }
 
     init {
@@ -141,35 +164,45 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         }
 
         val funInterfaceType = resolveFunInterfaceType(baseType)
+        check(funInterfaceType.clazz.methods.size == 1) {
+            "Fun interfaces should only have one method, $funInterfaceType has ${funInterfaceType.clazz.methods}"
+        }
+        // todo having the parameters here would be really helpful for resolving the type...
         val method = funInterfaceType.clazz.methods.first()
-        // todo properly resolve the method...
-        return method.returnType
-            ?: TODO("Resolve return type of $method")
+        return method.resolveReturnType(context)
         // this must be a fun-interface, and we need to get the return type of the call...
         //  luckily, there is only a single method, but unfortunately, we need the call parameters...
     }
 
-    fun resolveFunInterfaceType(type: Type): ClassType {
-        val scope = typeToScope(type)
-            ?: throw IllegalStateException("Cannot resolve scope from $type for fun-interface")
-        val funScope = resolveFunInterfaceType(scope)
-            ?: throw IllegalStateException("Could not find fun-interface in $scope")
-        return funScope.typeWithoutArgs
-    }
-
-    // todo we could also support multiple interfaces, and choose the best match? good idea :)
-    fun resolveFunInterfaceType(scope: Scope): Scope? {
-        if (scope.keywords.hasFlag(Keywords.FUN_INTERFACE)) {
-            return scope
-        }
-        for (superCall in scope.superCalls) {
-            val byCall = resolveFunInterfaceType(superCall.type.clazz)
-            if (byCall != null) return byCall
-        }
-        return null
-    }
-
     override fun toString(): String {
         return "ResolvedField(field=$resolved)"
+    }
+
+    fun resolveCalledMethod(
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>
+    ): ResolvedMethod {
+        val baseType = getValueType(this.context /* todo is this correct??? */)
+        if (baseType is LambdaType) {
+            // check for self-type: it's another argument...
+            val numArguments = (if (baseType.selfType != null) 1 else 0) + baseType.parameters.size
+            val className = "Function$numArguments"
+            val lambdaClassScope = getScope(className, numArguments + 1)
+
+            val method = lambdaClassScope.methods.firstOrNull { it.name == "call" }
+                ?: throw IllegalStateException("Class $className is missing .call() method")
+
+            val scopeSelfType: Type? = null // todo this could be any 'this' available to us
+            val returnType = context.targetType
+            val methodReturnType = if (returnType != null) {
+                getMethodReturnType(scopeSelfType, method)
+            } else method.returnType // no resolution invoked (fast-path)
+            return MethodResolver.findMemberMatch(
+                method, methodReturnType, context.targetType, scopeSelfType,
+                typeParameters, valueParameters, resolved.origin
+            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda")
+        }
+
+        TODO("Resolve type parameters for $baseType call on a function interface")
     }
 }

@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 

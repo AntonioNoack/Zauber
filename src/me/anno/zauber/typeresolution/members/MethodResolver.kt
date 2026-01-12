@@ -106,11 +106,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         origin: Int
     ): ResolvedMember<*>? {
         val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters, origin)
-        val field = resolveField(context, name, typeParameters, origin)
-        if (method != null && field != null) {
-            LOGGER.warn("Having both a method and a field named '$name' in ${context.codeScope}")
-        }
-        return method ?: field
+        if (method != null) return method
+
+        return resolveField(context, name, typeParameters, origin)
     }
 
     fun printScopeForMissingMethod(

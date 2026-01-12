@@ -103,3 +103,7 @@ interface MutableList<V> : List<V> {
 
     fun retainAll(elements: Collection<V>): Boolean
 }
+
+fun repeat(count: Int, runnable: () -> Unit) {
+    for (i in 0 until count) runnable()
+}
