@@ -24,6 +24,8 @@ class GetMethodFromValueExpression(val base: Expression, val name: String, origi
         return true // base.hasLambdaOrUnknownGenericsType()
     }
 
+    override fun needsBackingField(methodScope: Scope): Boolean = base.needsBackingField(methodScope)
+
     override fun clone(scope: Scope) = GetMethodFromValueExpression(base.clone(scope), name, origin)
 
 }

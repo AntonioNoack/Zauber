@@ -21,6 +21,9 @@ class FieldExpression(
     override fun toStringImpl(depth: Int): String = field.toString(depth)
     override fun clone(scope: Scope) = FieldExpression(field, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return field.originalScope == methodScope && field.name == "field"
+    }
 
     override fun resolveType(context: ResolutionContext): Type {
         if (LOGGER.enableInfo) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")

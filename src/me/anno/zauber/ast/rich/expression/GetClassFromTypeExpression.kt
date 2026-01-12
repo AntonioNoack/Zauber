@@ -17,6 +17,7 @@ class GetClassFromTypeExpression(val base: Type, scope: Scope, origin: Int) : Ex
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
+    override fun needsBackingField(methodScope: Scope): Boolean = false
 
     override fun clone(scope: Scope) = GetClassFromTypeExpression(base, scope, origin)
 

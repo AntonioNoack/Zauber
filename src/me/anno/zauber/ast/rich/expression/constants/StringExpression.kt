@@ -21,5 +21,6 @@ class StringExpression(val value: String, scope: Scope, origin: Int) : Expressio
     override fun clone(scope: Scope) = StringExpression(value, scope, origin)
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
+    override fun needsBackingField(methodScope: Scope): Boolean = false
 
 }

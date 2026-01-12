@@ -35,4 +35,8 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
         return last.hasLambdaOrUnknownGenericsType(contextI)
     }
 
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return list.any { it.needsBackingField(methodScope) }
+    }
+
 }

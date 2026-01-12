@@ -15,6 +15,7 @@ class ThrowExpression(origin: Int, val value: Expression) : Expression(value.sco
 
     override fun resolveType(context: ResolutionContext): Type = NothingType
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // always Nothing
+    override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun clone(scope: Scope) = ThrowExpression(origin, value.clone(scope))
 
 }

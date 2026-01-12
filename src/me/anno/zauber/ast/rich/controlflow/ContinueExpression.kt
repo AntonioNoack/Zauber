@@ -16,4 +16,5 @@ class ContinueExpression(val label: String?, scope: Scope, origin: Int) : Expres
     override fun clone(scope: Scope): Expression = ContinueExpression(label, scope, origin)
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type
+    override fun needsBackingField(methodScope: Scope): Boolean = false
 }

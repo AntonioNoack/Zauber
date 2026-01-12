@@ -15,8 +15,10 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
         return "${if (label != null) "$label@" else ""} do { ${body.toString(depth)} } while (${condition.toString(depth)})"
     }
 
-    override fun resolveType(context: ResolutionContext): Type =exprHasNoType(context)
+    override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
+    override fun needsBackingField(methodScope: Scope): Boolean = condition.needsBackingField(methodScope) ||
+            body.needsBackingField(methodScope)
 
     override fun clone(scope: Scope) =
         DoWhileLoop(body = body.clone(body.scope), condition = condition.clone(scope), label)

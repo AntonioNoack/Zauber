@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -39,6 +40,10 @@ class CallExpression(
         return if (typeParameters != null && typeParameters.isEmpty()) {
             "($base)$valueParameters"
         } else "($base)<${typeParameters ?: "?"}>$valueParameters"
+    }
+
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return valueParameters.any { it.value.needsBackingField(methodScope) }
     }
 
     override fun clone(scope: Scope) = CallExpression(

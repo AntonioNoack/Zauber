@@ -25,6 +25,10 @@ class CheckEqualsOp(
 
     override fun resolveType(context: ResolutionContext): Type = BooleanType
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // result is always Boolean
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return left.needsBackingField(methodScope) || right.needsBackingField(methodScope)
+    }
+
     override fun clone(scope: Scope) =
         CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
 }

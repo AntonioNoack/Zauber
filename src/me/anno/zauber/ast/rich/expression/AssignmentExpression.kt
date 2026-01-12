@@ -20,6 +20,11 @@ class AssignmentExpression(var variableName: Expression, var newValue: Expressio
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type
     override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return variableName.needsBackingField(methodScope) ||
+                newValue.needsBackingField(methodScope)
+    }
+
     override fun clone(scope: Scope): Expression =
         AssignmentExpression(variableName.clone(scope), newValue.clone(scope))
 }

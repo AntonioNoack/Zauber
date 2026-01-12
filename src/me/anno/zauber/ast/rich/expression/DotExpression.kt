@@ -42,6 +42,11 @@ class DotExpression(
                 right.hasLambdaOrUnknownGenericsType(contextI)
     }
 
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return left.needsBackingField(methodScope) ||
+                right.needsBackingField(methodScope)
+    }
+
     override fun toStringImpl(depth: Int): String {
         val base = left.toString(depth)
         val typeParams = if (typeParameters.isNullOrEmpty()) null else

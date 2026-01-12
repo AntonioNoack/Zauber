@@ -29,6 +29,7 @@ class LambdaExpression(
     override fun clone(scope: Scope) = LambdaExpression(variables, bodyScope, body.clone(bodyScope))
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
+    override fun needsBackingField(methodScope: Scope): Boolean = body.needsBackingField(methodScope)
 
     override fun resolveType(context: ResolutionContext): Type {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")

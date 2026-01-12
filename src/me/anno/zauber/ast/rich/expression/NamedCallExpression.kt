@@ -32,6 +32,11 @@ class NamedCallExpression(
         scope, origin
     )
 
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return base.needsBackingField(methodScope) ||
+                valueParameters.any { it.value.needsBackingField(methodScope) }
+    }
+
     override fun toStringImpl(depth: Int): String {
         val base = base.toString(depth)
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }

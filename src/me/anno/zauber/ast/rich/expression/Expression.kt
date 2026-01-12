@@ -46,6 +46,11 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * */
     abstract fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean
 
+    /**
+     * whether the expression contains a FieldExpression with name == 'field' and scope == methodScope
+     * */
+    abstract fun needsBackingField(methodScope: Scope): Boolean
+
     companion object {
         var numExpressionsCreated = 0
             private set

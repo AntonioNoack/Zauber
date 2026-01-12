@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.BooleanUtils.not
@@ -14,10 +13,6 @@ class IfElseBranch(
     val condition: Expression, val ifBranch: Expression, val elseBranch: Expression?,
     addToScope: Boolean = true
 ) : Expression(condition.scope, condition.origin) {
-
-    companion object {
-        private val LOGGER = LogManager.getLogger(IfElseBranch::class)
-    }
 
     init {
         check(ifBranch.scope != elseBranch?.scope) {
@@ -64,6 +59,12 @@ class IfElseBranch(
         return elseBranch != null && // if else is undefined, this has no return type
                 (ifBranch.hasLambdaOrUnknownGenericsType(context.withCodeScope(ifBranch.scope)) ||
                         elseBranch.hasLambdaOrUnknownGenericsType(context.withCodeScope(elseBranch.scope)))
+    }
+
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return condition.needsBackingField(methodScope) ||
+                ifBranch.needsBackingField(methodScope) ||
+                elseBranch?.needsBackingField(methodScope) == true
     }
 
     override fun toStringImpl(depth: Int): String {

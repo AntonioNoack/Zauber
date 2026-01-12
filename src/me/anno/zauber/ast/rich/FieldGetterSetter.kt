@@ -105,7 +105,7 @@ object FieldGetterSetter {
             if (field.isMutable && field.setter == null) {
                 pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->
                     val backingField = createBackingField(field, setterScope, origin)
-                    val valueField = createValueField(field, "__field", setterScope, origin)
+                    val valueField = createValueField(field, "value", setterScope, origin)
                     createSetterMethod(field, null, backingField, valueField, setterScope, origin)
                 }
             }

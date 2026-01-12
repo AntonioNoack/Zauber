@@ -28,6 +28,10 @@ class ConstructorExpression(
         return resolveMethod(context).getTypeFromCall()
     }
 
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return valueParameters.any { it.value.needsBackingField(methodScope) }
+    }
+
     override fun clone(scope: Scope) = ConstructorExpression(
         clazz, typeParameters, valueParameters.map { it.clone(scope) },
         selfIfInsideConstructor, scope, origin

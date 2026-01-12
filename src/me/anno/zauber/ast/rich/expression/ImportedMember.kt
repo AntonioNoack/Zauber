@@ -19,6 +19,7 @@ class ImportedMember(
 
     // todo it might have...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
+    override fun needsBackingField(methodScope: Scope): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
         return when (nameAsImport.scopeType) {

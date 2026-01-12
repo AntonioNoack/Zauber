@@ -220,7 +220,7 @@ object ASTSimplifier {
                 dst
             }
             is IsInstanceOfExpr -> {
-                val src = simplifyImpl(context, expr.instance, currBlock, graph, true)
+                val src = simplifyImpl(context, expr.value, currBlock, graph, true)
                     ?: return null
                 val dst = currBlock.field(BooleanType, booleanOwnership)
                 currBlock.add(SimpleInstanceOf(dst, src.use(), expr.type, expr.scope, expr.origin))

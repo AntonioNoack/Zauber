@@ -17,6 +17,9 @@ class UnresolvedFieldExpression(
     override fun clone(scope: Scope) = UnresolvedFieldExpression(name, nameAsImport, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
 
+    // todo what if 'field' is shadowed?
+    override fun needsBackingField(methodScope: Scope): Boolean = name == "field"
+
     fun resolveField(context: ResolutionContext): ResolvedField? {
         val context = context.withCodeScope(scope)
         return resolveField(context, name, null, origin)

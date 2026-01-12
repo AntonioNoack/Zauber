@@ -209,7 +209,7 @@ object CSourceGenerator : Generator() {
                     }
                     is IsInstanceOfExpr -> {
                         builder.append("__isInstanceOf(")
-                        writeExpr(expr.instance, true)
+                        writeExpr(expr.value, true)
                         builder.append(", ")
                         builder.append(getName(expr.type))
                         builder.append(")")

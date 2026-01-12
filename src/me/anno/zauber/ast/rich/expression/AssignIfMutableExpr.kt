@@ -30,6 +30,11 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         }
     }
 
+    override fun needsBackingField(methodScope: Scope): Boolean {
+        return left.needsBackingField(methodScope) ||
+                right.needsBackingField(methodScope)
+    }
+
     private fun getMethodOrNull(context: ResolutionContext, name: String, rightType: Type): ResolvedMethod? {
         return MethodResolver.resolveMethod(
             context, name, null,

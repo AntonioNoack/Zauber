@@ -12,8 +12,10 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
         return "${if (label != null) "$label@" else ""} while(${condition.toString(depth)}) { ${body.toString(depth)} }"
     }
 
-    override fun resolveType(context: ResolutionContext): Type =exprHasNoType(context)
+    override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
+    override fun needsBackingField(methodScope: Scope): Boolean = condition.needsBackingField(methodScope) ||
+            body.needsBackingField(methodScope)
 
     override fun clone(scope: Scope) = WhileLoop(condition.clone(scope), body.clone(body.scope), label)
 
