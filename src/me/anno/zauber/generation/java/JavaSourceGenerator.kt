@@ -3,11 +3,7 @@ package me.anno.zauber.generation.java
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
-import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.expression.*
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.generation.DeltaWriter
@@ -256,8 +252,8 @@ object JavaSourceGenerator : Generator() {
         val getter = field.getter
         val setter = field.setter
         if (getter?.body == null || getter.body.needsBackingField(getter.scope)) return true
-        if (setter?.body?.needsBackingField(setter.scope) == true) return true
-        return false
+        if (setter?.body == null) return field.isMutable
+        return setter.body.needsBackingField(setter.scope)
     }
 
     private fun appendBackingField(classScope: Scope, field: Field) {
