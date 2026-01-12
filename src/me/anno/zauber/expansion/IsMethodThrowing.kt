@@ -6,7 +6,7 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 // todo we need to collect any yielded types and any thrown types
 
-object IsMethodYielding : MethodColoring<MethodLike, Type>() {
+object IsMethodThrowing : MethodColoring<MethodLike, Type>() {
 
     override fun getDependencies(func: MethodLike): List<MethodLike> {
         // todo check for any throw/yield instructions
