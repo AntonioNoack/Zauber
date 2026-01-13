@@ -13,6 +13,7 @@ import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.PairType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -264,6 +265,29 @@ class GenericTest {
                 class Int
                 class String
                 class Char
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testMixedList() {
+        val listType = standardClasses["List"]!!
+        val mixedType = unionTypes(listOf(StringType, IntType, FloatType))
+        assertEquals(
+            ClassType(listType, listOf(mixedType)),
+            TypeResolutionTest.testTypeResolution(
+                """
+                fun <V> listOf(vararg values: V): List<V>
+                
+                val tested = listOf("1", 1, 1f)
+                
+                // define types as classes
+                package zauber
+                interface List<V>
+                class Int
+                class String
+                class Float
             """.trimIndent()
             )
         )

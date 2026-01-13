@@ -11,6 +11,8 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr.Companion.plusAssignName
+import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -403,7 +405,10 @@ class ZauberASTBuilder(
 
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
         val initialValue = CallExpression(
-            UnresolvedFieldExpression("listOf", null, companionScope, origin),
+            UnresolvedFieldExpression(
+                "listOf", shouldBeResolvable,
+                companionScope, origin
+            ),
             listOf(listType), enumScope.enumEntries.map {
                 val field = it.objectField!!
                 val expr = FieldExpression(field, companionScope, origin)
@@ -618,7 +623,9 @@ class ZauberASTBuilder(
         val classScope = currPackage
         val isEnumClass = classScope.scopeType == ScopeType.ENUM_CLASS
 
-        val constructorScope = pushScope("constructor", ScopeType.CONSTRUCTOR) { constructorScope ->
+        // todo like with methods, we should create some hash, I think
+        val name = classScope.generateName("constructor")
+        val constructorScope = pushScope(name, ScopeType.CONSTRUCTOR) { constructorScope ->
             val selfType = ClassType(classScope, null)
             parameters = pushCall { readParameterDeclarations(selfType) }
             if (isEnumClass) {
@@ -643,8 +650,14 @@ class ZauberASTBuilder(
             } else emptyList()
             if (isEnumClass) {
                 parameters = listOf(
-                    NamedParameter("ordinal", UnresolvedFieldExpression("ordinal", null, constructorScope, origin)),
-                    NamedParameter("name", UnresolvedFieldExpression("name", null, constructorScope, origin))
+                    NamedParameter(
+                        "ordinal",
+                        UnresolvedFieldExpression("ordinal", shouldBeResolvable, constructorScope, origin)
+                    ),
+                    NamedParameter(
+                        "name",
+                        UnresolvedFieldExpression("name", shouldBeResolvable, constructorScope, origin)
+                    )
                 ) + parameters
             }
             InnerSuperCall(target, parameters, classScope, origin)
@@ -984,17 +997,17 @@ class ZauberASTBuilder(
             consumeIf("!") -> {
                 val origin = origin(i - 1)
                 val base = readExpression()
-                NamedCallExpression(base, "not", null, emptyList(), currPackage, origin)
+                NamedCallExpression(base, "not", currPackage, origin)
             }
             consumeIf("+") -> {
                 val origin = origin(i - 1)
                 val base = readExpression()
-                NamedCallExpression(base, "unaryPlus", null, emptyList(), currPackage, origin)
+                NamedCallExpression(base, "unaryPlus", currPackage, origin)
             }
             consumeIf("-") -> {
                 val origin = origin(i - 1)
                 val base = readExpression()
-                NamedCallExpression(base, "unaryMinus", null, emptyList(), currPackage, origin)
+                NamedCallExpression(base, "unaryMinus", currPackage, origin)
             }
             consumeIf("++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin(i - 1), readExpression())
             consumeIf("--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin(i - 1), readExpression())
@@ -1053,7 +1066,7 @@ class ZauberASTBuilder(
                         }"
                     )
                     val args = pushCall { readParamExpressions() }
-                    val base = nameExpression(namePath, origin, this, currPackage)
+                    val base = nameExpression(namePath, origin, currPackage)
                     CallExpression(base, typeArgs, args, origin + 1)
                 } else if (
                 // todo validate that we have nothing before us...
@@ -1066,7 +1079,7 @@ class ZauberASTBuilder(
                     check(i == i0)
                     GetClassFromTypeExpression(type, currPackage, origin)
                 } else {
-                    nameExpression(namePath, origin, this, currPackage)
+                    nameExpression(namePath, origin, currPackage)
                 }
             }
             tokens.equals(i, TokenType.OPEN_CALL) -> {
@@ -1699,7 +1712,7 @@ class ZauberASTBuilder(
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                         val debugInfoParam = NamedParameter(null, debugInfoExpr)
                         CallExpression(
-                            UnresolvedFieldExpression("throwNPE", null, ifFalseScope, origin),
+                            UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                             emptyList(), listOf(debugInfoParam), origin
                         )
                     }
@@ -1764,7 +1777,7 @@ class ZauberASTBuilder(
                         if (isInfix) {
                             val param = NamedParameter(null, rhs)
                             NamedCallExpression(
-                                expr, op.symbol, null,
+                                expr, op.symbol, nameAsImport(op.symbol), null,
                                 listOf(param), expr.scope, origin
                             )
                         } else {
@@ -1786,7 +1799,8 @@ class ZauberASTBuilder(
         val rhs = readRHS(op)
         if (rhs is CallExpression && rhs.base is MemberNameExpression) {
             return NamedCallExpression(
-                lhs, rhs.base.name, rhs.typeParameters, rhs.valueParameters,
+                lhs, rhs.base.name, rhs.base.nameAsImport,
+                rhs.typeParameters, rhs.valueParameters,
                 rhs.scope, rhs.origin
             )
         }
@@ -1810,8 +1824,8 @@ class ZauberASTBuilder(
                 if (consumeIf("=")) {
                     val value = NamedParameter(null, readExpression())
                     NamedCallExpression(
-                        expr, "set", null,
-                        params + value, expr.scope, origin
+                        expr, "set", nameAsImport("set"),
+                        null, params + value, expr.scope, origin
                     )
                 } else if (tokens.equals(i, TokenType.SYMBOL) && tokens.endsWith(i, '=') &&
                     !(tokens.equals(i, "==", "!=") || tokens.equals(i, "!==", "==="))
@@ -1819,15 +1833,20 @@ class ZauberASTBuilder(
                     val symbol = tokens.toString(i++)
                     val value = readExpression()
                     val call = NamedCallExpression(
-                        expr, "get/set", null,
-                        params, expr.scope, origin
+                        expr, "get/set", nameAsImport("get") + nameAsImport("set"),
+                        null, params, expr.scope, origin
                     )
-                    AssignIfMutableExpr(call, symbol, value)
+                    AssignIfMutableExpr(
+                        call, symbol,
+                        nameAsImport(plusName(symbol)),
+                        nameAsImport(plusAssignName(symbol)),
+                        value
+                    )
                 } else {
                     // array access is a getter
                     NamedCallExpression(
-                        expr, "get", null,
-                        params, expr.scope, origin
+                        expr, "get", nameAsImport("get"),
+                        null, params, expr.scope, origin
                     )
                 }
             }
@@ -1850,7 +1869,7 @@ class ZauberASTBuilder(
                     }, { scope ->
                         val debugInfoExpr = StringExpression(expr.toString(), scope, origin)
                         CallExpression(
-                            UnresolvedFieldExpression("throwNPE", null, scope, origin), emptyList(),
+                            UnresolvedFieldExpression("throwNPE", shouldBeResolvable, scope, origin), emptyList(),
                             listOf(NamedParameter(null, debugInfoExpr)), origin
                         )
                     }

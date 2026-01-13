@@ -114,16 +114,6 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        return other is ParameterList &&
-                other.generics == generics &&
-                other.types.contentEquals(types)
-    }
-
-    override fun hashCode(): Int {
-        return generics.hashCode() * 31 + types.contentHashCode()
-    }
-
     fun readonly(): ParameterList {
         if (insertModes.all { it == InsertMode.READ_ONLY }) return this
         val copy = ParameterList(generics)
@@ -143,4 +133,16 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         return copy
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ParameterList
+
+        return types.contentEquals(other.types)
+    }
+
+    override fun hashCode(): Int {
+        return types.contentHashCode()
+    }
 }

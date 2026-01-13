@@ -354,7 +354,11 @@ class CppASTBuilder(
                 "=" -> AssignmentExpression(expr, readExpression())
 
                 "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=" -> {
-                    AssignIfMutableExpr(expr, symbol, readExpression())
+                    AssignIfMutableExpr(
+                        expr, symbol,
+                        shouldBeResolvable, shouldBeResolvable,
+                        readExpression()
+                    )
                 }
 
                 else -> {
@@ -393,7 +397,7 @@ class CppASTBuilder(
                     val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                     val debugInfoParam = NamedParameter(null, debugInfoExpr)
                     CallExpression(
-                        UnresolvedFieldExpression("throwNPE", null, ifFalseScope, origin),
+                        UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                         emptyList(), listOf(debugInfoParam), origin
                     )
                 }
@@ -406,7 +410,7 @@ class CppASTBuilder(
                     GetClassFromTypeExpression(type, currPackage, origin)
                 } else readPrefix()
                 NamedCallExpression(
-                    value, "sizeof", null, emptyList(),
+                    value, "sizeof", shouldBeResolvable,
                     currPackage, origin
                 )
             }
@@ -416,18 +420,8 @@ class CppASTBuilder(
             consumeIf("--") ->
                 createPrefixExpression(InplaceModifyType.DECREMENT, origin, readPrefix())
 
-            consumeIf("*") -> {
-                NamedCallExpression(
-                    readPrefix(), "deref", null, emptyList(),
-                    currPackage, origin
-                )
-            }
-            consumeIf("&") -> {
-                NamedCallExpression(
-                    readPrefix(), "addr", null, emptyList(),
-                    currPackage, origin
-                )
-            }
+            consumeIf("*") -> NamedCallExpression(readPrefix(), "deref", nameAsImport("deref"), currPackage, origin)
+            consumeIf("&") -> NamedCallExpression(readPrefix(), "addr", nameAsImport("deref"), currPackage, origin)
             consumeIf("!") -> readPrefix().not()
 
             tokens.equals(i, TokenType.NUMBER) ->
@@ -447,7 +441,8 @@ class CppASTBuilder(
 
             // todo try to resolve field immediately
             tokens.equals(i, TokenType.NAME) -> {
-                UnresolvedFieldExpression(tokens.toString(i++), null, currPackage, origin)
+                val name = tokens.toString(i++)
+                UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
             }
 
             consumeIf("(") -> {
@@ -496,7 +491,7 @@ class CppASTBuilder(
             tokens.equals(i, "[") -> {
                 val origin = origin(i)
                 val params = pushArray { readValueParameters() }
-                NamedCallExpression(expr, "get", null, params, expr.scope, origin)
+                NamedCallExpression(expr, "get", nameAsImport("get"), null, params, expr.scope, origin)
             }
             tokens.equals(i, "++") -> {
                 val origin = origin(i++)
@@ -512,12 +507,12 @@ class CppASTBuilder(
 
     private fun handleDot(expr: Expression, origin: Int): Expression {
         val name = tokens.toString(i++)
-        val rhs = UnresolvedFieldExpression(name, null, expr.scope, origin)
+        val rhs = UnresolvedFieldExpression(name, nameAsImport(name), expr.scope, origin)
         return DotExpression(expr, null, rhs, expr.scope, origin)
     }
 
     private fun handleArrow(expr: Expression, origin: Int): Expression {
-        val deref = NamedCallExpression(expr, "deref", null, emptyList(), expr.scope, origin)
+        val deref = NamedCallExpression(expr, "deref", expr.scope, origin)
         return handleDot(deref, origin)
     }
 

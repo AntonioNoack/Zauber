@@ -1,11 +1,12 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.FieldDeclaration
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.types.Scope
 
-fun createDestructuringAssignment(
+fun ASTBuilderBase.createDestructuringAssignment(
     names: List<FieldDeclaration>, initialValue: Expression,
     isMutable: Boolean, fieldScope: Scope
 ): Expression {
@@ -18,9 +19,11 @@ fun createDestructuringAssignment(
     for (i in names.indices) {
         val name = names[i]
         if (name.name == "_") continue
+        val name1 = "component${i + 1}"
         val newValue = NamedCallExpression(
-            tmpFieldExpr, "component${i + 1}",
-            emptyList(), emptyList(), scope, origin
+            tmpFieldExpr,
+            name1, nameAsImport(name1),
+            scope, origin
         )
         val newField = Field(
             fieldScope, null, isMutable, null,

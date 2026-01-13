@@ -2,7 +2,6 @@ package me.anno.cpp.ast.rich
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Keywords
-import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject
@@ -31,11 +30,11 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
 
         val noPrevBranch = Field(
             scope, null, true, null,
-            "__hadPrevBranch", BooleanType, trueExpr,  Keywords.SYNTHETIC, origin
+            "__hadPrevBranch", BooleanType, trueExpr, Keywords.SYNTHETIC, origin
         )
         val prevBranchContinues = Field(
             scope, null, true, null,
-            "__prevBranchContinues", BooleanType, falseExpr,  Keywords.SYNTHETIC, origin
+            "__prevBranchContinues", BooleanType, falseExpr, Keywords.SYNTHETIC, origin
         )
 
         val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)
@@ -109,17 +108,13 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
 }
 
 private fun Expression.and(other: Expression): Expression {
-    return NamedCallExpression(
-        this, "and", emptyList(),
-        listOf(NamedParameter(null, other)), scope, origin
-    ).apply { resolvedType = BooleanType }
+    return NamedCallExpression(this, "and", other, scope, origin)
+        .apply { resolvedType = BooleanType }
 }
 
 private fun Expression.or(other: Expression): Expression {
-    return NamedCallExpression(
-        this, "or", emptyList(),
-        listOf(NamedParameter(null, other)), scope, origin
-    ).apply { resolvedType = BooleanType }
+    return NamedCallExpression(this, "or", other, scope, origin)
+        .apply { resolvedType = BooleanType }
 }
 
 private fun CppASTBuilder.readCaseBody(): ArrayList<Expression> {

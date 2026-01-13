@@ -5,21 +5,29 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.MethodResolver
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedMember
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class NamedCallExpression(
     base: Expression,
-    val name: String,
-    typeParameters: List<Type>?,
-    valueParameters: List<NamedParameter>,
+    val name: String, val nameAsImport: List<Import>,
+    typeParameters: List<Type>?, valueParameters: List<NamedParameter>,
     scope: Scope, origin: Int
 ) : CallExpressionBase(
     base, typeParameters,
     valueParameters, scope, origin
 ) {
+
+    constructor(base: Expression, name: String, scope: Scope, origin: Int) :
+            this(base, name, emptyList(), null, emptyList(), scope, origin)
+
+    constructor(base: Expression, name: String, nameAsImport: List<Import>, scope: Scope, origin: Int) :
+            this(base, name, nameAsImport, null, emptyList(), scope, origin)
+
+    constructor(base: Expression, name: String, other: Expression, scope: Scope, origin: Int) :
+            this(base, name, emptyList(), null, listOf(NamedParameter(null, other)), scope, origin)
 
     init {
         check(name != ".")
@@ -27,7 +35,7 @@ class NamedCallExpression(
     }
 
     override fun clone(scope: Scope) = NamedCallExpression(
-        base.clone(scope), name, typeParameters,
+        base.clone(scope), name, nameAsImport, typeParameters,
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) },
         scope, origin
     )
@@ -38,7 +46,7 @@ class NamedCallExpression(
     }
 
     override fun splitsScope(): Boolean {
-        return  base.splitsScope() ||
+        return base.splitsScope() ||
                 valueParameters.any { it.value.splitsScope() }
     }
 
@@ -65,8 +73,8 @@ class NamedCallExpression(
         val valueParameters = resolveValueParameters(context, valueParameters)
         val constructor = null
         val contextI = context.withSelfType(baseType)
-        return resolveCallable(
-            contextI, name, constructor,
+        return MethodResolver.resolveCallable(
+            contextI, name, nameAsImport, constructor,
             typeParameters, valueParameters, origin
         ) ?: MethodResolver.printScopeForMissingMethod(
             contextI, this, name,

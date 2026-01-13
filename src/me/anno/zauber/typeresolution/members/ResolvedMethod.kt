@@ -36,7 +36,7 @@ class ResolvedMethod(ownerTypes: ParameterList, method: Method, callTypes: Param
                     return givenSelfType.clazz.typeParameters
                 }
 
-                println("Returning empty list, because $expectedSelfType !is ClassType")
+                // println("Returning empty list, because $expectedSelfType !is ClassType")
                 return emptyList()
             }
             return expectedSelfType.clazz.typeParameters

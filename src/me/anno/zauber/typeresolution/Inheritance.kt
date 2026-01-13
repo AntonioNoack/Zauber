@@ -152,7 +152,7 @@ object Inheritance {
             )
         }
 
-        if (actualType is UnionType) {
+        if (actualType is UnionType && expectedType !is GenericType) {
             // everything must fit
             // first try without inserting types
             val t0 = actualType.types.all { allActual ->

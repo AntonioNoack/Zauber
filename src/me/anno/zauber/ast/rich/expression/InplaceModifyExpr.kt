@@ -1,19 +1,21 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.rich.ASTBuilderBase
+
 enum class InplaceModifyType(val symbol: String, val methodName: String) {
     INCREMENT("++", "inc"),
     DECREMENT("--", "dec")
 }
 
-fun createPrefixExpression(type: InplaceModifyType, origin: Int, base: Expression): Expression {
+fun ASTBuilderBase.createPrefixExpression(type: InplaceModifyType, origin: Int, base: Expression): Expression {
     return createPrePostfixExpression(base, type, origin, false)
 }
 
-fun createPostfixExpression(base: Expression, type: InplaceModifyType, origin: Int): Expression {
+fun ASTBuilderBase.createPostfixExpression(base: Expression, type: InplaceModifyType, origin: Int): Expression {
     return createPrePostfixExpression(base, type, origin, true)
 }
 
-private fun createPrePostfixExpression(
+private fun ASTBuilderBase.createPrePostfixExpression(
     base0: Expression, type: InplaceModifyType, origin: Int,
     returnBeforeChange: Boolean
 ): Expression {
@@ -21,14 +23,14 @@ private fun createPrePostfixExpression(
     val instr = ArrayList<Expression>()
     val afterChange = NamedCallExpression(
         getterSetter.beforeChange, type.methodName,
-        null, emptyList(), base0.scope, origin
+        nameAsImport(type.methodName), base0.scope, origin
     )
     instr.add(getterSetter.createSetter(afterChange))
     instr.add(if (returnBeforeChange) getterSetter.beforeChange else afterChange)
     return ExpressionList(instr, base0.scope, origin)
 }
 
-private abstract class GetterSetter(val beforeChange: Expression, ) {
+private abstract class GetterSetter(val beforeChange: Expression) {
     abstract fun createSetter(newValue: Expression): Expression
 }
 

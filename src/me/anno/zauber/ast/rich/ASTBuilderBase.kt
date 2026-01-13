@@ -101,4 +101,10 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         genericParams.removeLast()
     }
 
+    fun nameAsImport(name: String): List<Import> {
+        return imports.filter { it.name == name }
+    }
+
+    val shouldBeResolvable = emptyList<Import>()
+
 }

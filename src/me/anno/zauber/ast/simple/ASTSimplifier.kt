@@ -17,6 +17,7 @@ import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
@@ -123,7 +124,7 @@ object ASTSimplifier {
                             null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                         // todo we should call the setter, if there is one
                         val field0 = dstExpr.resolveField(context.withAllowTypeless(false))
-                            ?: throw IllegalStateException("Failed to resolve field from $dstExpr in $context")
+                            ?: throw IllegalStateException("[UnResField2] Failed to resolve field from $dstExpr in $context")
                         val field = field0.resolved
                         currBlock.add(SimpleSetField(self, field, newValue.use(), expr.scope, expr.origin))
                         voidField
@@ -147,7 +148,7 @@ object ASTSimplifier {
                 val context = context.withSelfType(calleeType)
                 val method = resolveCallable(
                     context,
-                    expr.name, constructor,
+                    expr.name, expr.nameAsImport, constructor,
                     expr.typeParameters, valueParameters, expr.origin,
                 ) ?: MethodResolver.printScopeForMissingMethod(
                     context, expr, expr.name,
@@ -190,7 +191,7 @@ object ASTSimplifier {
             }
             is UnresolvedFieldExpression -> {
                 val field = expr.resolveField(context)
-                    ?: throw IllegalStateException("Failed to resolve field '${expr.name}' in scope ${expr.scope}")
+                    ?: throw IllegalStateException("[UnResField] Failed to resolve field '${expr.name}' in scope ${expr.scope}")
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                 val dst = currBlock.field(field.getValueType(context))
@@ -199,7 +200,7 @@ object ASTSimplifier {
             }
             is FieldExpression -> simplifyFieldExpr(currBlock, context, expr)
             is MemberNameExpression -> {
-                val field = resolveField(context, expr.name, null, expr.origin)
+                val field = resolveField(context, expr.name, expr.nameAsImport, null, expr.origin)
                     ?: throw IllegalStateException("Missing field '${expr.name}'")
                 val valueType = field.getValueType(context)
                 val self: SimpleField? =
@@ -254,23 +255,6 @@ object ASTSimplifier {
                     }
                     else -> {
                         TODO("Resolve DotExpression with type ${expr.right.javaClass.simpleName}")
-                    }
-                }
-            }
-            is ImportedMember -> {
-                val import = expr.nameAsImport
-                when (import.scopeType) {
-                    ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {
-                        val field = import.objectField
-                            ?: throw IllegalStateException("Missing object field for ${import.pathStr}")
-                        val valueType = field.resolveValueType(context)
-                        val dst = currBlock.field(valueType)
-                        currBlock.add(SimpleGetField(dst, self = null, field, expr.scope, expr.origin))
-                        dst
-                    }
-                    // todo it might be a field...
-                    else -> {
-                        TODO("Simplify importedMember: $expr")
                     }
                 }
             }

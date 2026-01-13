@@ -78,13 +78,13 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
             return when (expr) {
                 is MemberNameExpression -> {
                     if (expr.name == field.name) {
-                        val field2 = resolveField(context, expr.name, null, expr.origin)
+                        val field2 = resolveField(context, expr.name, expr.nameAsImport, null, expr.origin)
                         field2?.resolved == field
                     } else false
                 }
                 is UnresolvedFieldExpression -> {
                     if (expr.name == field.name) {
-                        val field2 = resolveField(context, expr.name, null, expr.origin)
+                        val field2 = resolveField(context, expr.name, expr.nameAsImport, null, expr.origin)
                         field2?.resolved == field
                     } else false
                 }

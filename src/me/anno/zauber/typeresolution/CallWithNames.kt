@@ -152,7 +152,7 @@ object CallWithNames {
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }
                     result[index++] = CallExpression(
-                        UnresolvedFieldExpression("arrayOf", null, scope, origin),
+                        UnresolvedFieldExpression("arrayOf", emptyList(), scope, origin),
                         emptyList(), values, origin
                     )
                     break
@@ -166,7 +166,7 @@ object CallWithNames {
                 check(ev.isVararg) { "Expected vararg in last place" }
                 // println("Using instanceType $instanceType for empty varargs")
                 result[index] = CallExpression(
-                    UnresolvedFieldExpression("arrayOf", null, scope, origin),
+                    UnresolvedFieldExpression("arrayOf", emptyList(), scope, origin),
                     listOf(instanceType), emptyList(), origin
                 )
             }

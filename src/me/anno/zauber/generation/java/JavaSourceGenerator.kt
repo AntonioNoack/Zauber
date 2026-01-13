@@ -272,9 +272,6 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendConstructors(classScope: Scope) {
-        builder.append("/* ${classScope.constructors.size} constructors */\n")
-        nextLine()
-
         for (constructor in classScope.constructors) {
             appendConstructor(classScope, constructor)
         }

@@ -1,9 +1,10 @@
 package me.anno.zauber.ast.rich.expression
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.sym
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr.Companion.plusAssignName
+import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
@@ -13,9 +14,9 @@ import me.anno.zauber.types.Type
 
 private val LOGGER = LogManager.getLogger("BinaryOp")
 
-private fun compareTo(left: Expression, right: Expression) =
+private fun ASTBuilderBase.compareTo(left: Expression, right: Expression) =
     NamedCallExpression(
-        left, "compareTo", emptyList(),
+        left, "compareTo", nameAsImport("compareTo"), emptyList(),
         listOf(NamedParameter(null, right)), right.scope, right.origin
     )
 
@@ -62,7 +63,7 @@ fun ASTBuilderBase.binaryOp(
                     // reorder stack from left to right
                     val leftAndMiddle = DotExpression(left, typeParameters, right.base, left.scope, left.origin)
                     NamedCallExpression(
-                        leftAndMiddle, right.name,
+                        leftAndMiddle, right.name, right.nameAsImport,
                         right.typeParameters, right.valueParameters,
                         right.scope, right.origin
                     )
@@ -83,7 +84,8 @@ fun ASTBuilderBase.binaryOp(
             val methodName = lookupBinaryOp("in", origin)
             val param = NamedParameter(null, FieldExpression(leftTmp, scope, origin))
             val expr = NamedCallExpression(
-                right, methodName, emptyList(), listOf(param),
+                right, methodName, nameAsImport(methodName),
+                emptyList(), listOf(param),
                 right.scope, right.origin
             )
             if (symbol == "in") expr else expr.not()
@@ -93,19 +95,26 @@ fun ASTBuilderBase.binaryOp(
                 // todo oh no, to know whether this is mutable or not,
                 //  we have to know all types, because left may be really complicated,
                 //  e.g. a["5",3].x()() += 17
-                AssignIfMutableExpr(left, symbol, right)
+                // todo add correct plusAsImport
+                AssignIfMutableExpr(
+                    left, symbol,
+                    nameAsImport(plusName(symbol)),
+                    nameAsImport(plusAssignName(symbol)), right
+                )
             } else if (symbol.startsWith("!")) {
                 val methodName = lookupBinaryOp(symbol.substring(1), origin)
                 val param = NamedParameter(null, right)
                 NamedCallExpression(
-                    left, methodName, emptyList(), listOf(param),
+                    left, methodName, nameAsImport(methodName),
+                    null, listOf(param),
                     right.scope, right.origin
                 ).not()
             } else {
                 val methodName = lookupBinaryOp(symbol, origin)
                 val param = NamedParameter(null, right)
                 NamedCallExpression(
-                    left, methodName, emptyList(), listOf(param),
+                    left, methodName, nameAsImport(methodName),
+                    null, listOf(param),
                     right.scope, right.origin
                 )
             }

@@ -11,6 +11,7 @@ import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -137,9 +138,9 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     val actualValueParameter = sortedValueParameters[i]
                     LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
                     if (!isSubTypeOf(
-                            actualSelfType, expectedValueParameter, actualValueParameter,
-                            expectedTypeParameters,
-                            resolvedTypes,
+                            actualSelfType,
+                            expectedValueParameter, actualValueParameter,
+                            expectedTypeParameters, resolvedTypes,
                             InsertMode.STRONG
                         )
                     ) {
@@ -205,7 +206,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             selfType = selfType.superBounds
         }
         if (selfType !is ClassType) {
-            println("Skipping hierarchy search, because selfType !is ClassType: $selfType")
+            // println("Skipping hierarchy search, because selfType !is ClassType: $selfType")
             return null
         }
 
@@ -274,7 +275,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         }
     }
 
-    fun <R : Any> resolveInCodeScope(context: ResolutionContext, callback: (scope: Scope, selfType: Type) -> R?): R? {
+    fun <R : Any> resolveInCodeScope(
+        context: ResolutionContext,
+        callback: (scope: Scope, selfType: Type) -> R?
+    ): R? {
 
         if (!catchFailures) println("ResolveInCodeScope(${context.codeScope}, ${context.selfScope}, ${context.selfType})")
 
@@ -289,7 +293,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 val result = callback(selfCompanion, selfCompanion.typeWithArgs)
                 if (result != null) return result
             } else {
-                if(!catchFailures) println("${context.selfScope} has no companion")
+                if (!catchFailures) println("${context.selfScope} has no companion")
             }
         }
 
@@ -361,7 +365,9 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 // println("Checking for field '$name' in $maybeSelfScope")
                 val selfType = resolveTypeFromScoping(scope, context)
                 callback(scope, selfType)
-            } else println("Skipping scope '$scope'")
+            } else {
+                // println("Skipping scope '$scope'")
+            }
             scope = scope.parentIfSameFile
         }
     }

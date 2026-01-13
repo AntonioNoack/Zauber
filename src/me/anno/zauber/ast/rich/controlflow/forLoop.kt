@@ -1,28 +1,30 @@
 package me.anno.zauber.ast.rich.controlflow
 
+import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.*
 
-fun iterableToIterator(iterable: Expression): NamedCallExpression {
+fun ASTBuilderBase.iterableToIterator(iterable: Expression): NamedCallExpression {
     return NamedCallExpression(
-        iterable, "iterator",
-        emptyList(), emptyList(), iterable.scope, iterable.origin
+        iterable, "iterator", nameAsImport("iterator"),
+         iterable.scope, iterable.origin
     )
 }
 
-fun iteratorToNext(iteratorField: Field, body: Expression): Expression {
+fun ASTBuilderBase.iteratorToNext(iteratorField: Field, body: Expression): Expression {
     return NamedCallExpression(
-        FieldExpression(iteratorField, body.scope, body.origin), "next",
-        emptyList(), emptyList(), body.scope, body.origin
+        FieldExpression(iteratorField, body.scope, body.origin),
+        "next", nameAsImport("next"),
+        body.scope, body.origin
     )
 }
 
 /** just for deducting the type...
 todo is there a better solution, that doesn't complicate our type system? */
-fun iterableToNextExpr(iterable: Expression): Expression {
+fun ASTBuilderBase.iterableToNextExpr(iterable: Expression): Expression {
     val iterator = iterableToIterator(iterable)
     return NamedCallExpression(
-        iterator, "next", emptyList(), emptyList(),
+        iterator, "next", nameAsImport("next"),
         iterator.scope, iterator.origin
     )
 }
@@ -36,7 +38,7 @@ fun iterableToNextExpr(iterable: Expression): Expression {
  *    body()
  * }
  * */
-fun forLoop(
+fun ASTBuilderBase.forLoop(
     variableField: Field, iterable: Expression,
     body: Expression, label: String?
 ): Expression {
@@ -48,8 +50,9 @@ fun forLoop(
     val outerAssignment = DeclarationExpression(scope, iterator, iteratorField)
     val innerAssignment = DeclarationExpression(body.scope, getNextCall, variableField)
     val hasNextCall = NamedCallExpression(
-        FieldExpression(iteratorField, scope, origin), "hasNext",
-        emptyList(), emptyList(), scope, origin
+        FieldExpression(iteratorField, scope, origin),
+        "hasNext", nameAsImport("hasNext"),
+        scope, origin
     )
     val newBody = ExpressionList(listOf(innerAssignment, body), body.scope, body.origin)
     val loop = WhileLoop(hasNextCall, newBody, label)

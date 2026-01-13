@@ -98,7 +98,7 @@ class DotExpression(
                 } else baseType*/
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
-                    right.name, null, origin,
+                    right.name, right.nameAsImport, null, origin,
                 )
             }
             is UnresolvedFieldExpression -> {
@@ -112,7 +112,7 @@ class DotExpression(
                 } else baseType*/
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
-                    right.name, null, origin,
+                    right.name, right.nameAsImport, null, origin,
                 )
             }
             is FieldExpression -> {
@@ -143,8 +143,7 @@ class DotExpression(
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
                 val context = context.withSelfType(baseType)
                 return resolveCallable(
-                    context,
-                    base.name, constructor,
+                    context, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,
                 ) ?: MethodResolver.printScopeForMissingMethod(
                     context, this, base.name,
@@ -156,23 +155,13 @@ class DotExpression(
                 // todo for lambdas, baseType must be known for their type to be resolved
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
                 val context = context.withSelfType(baseType)
-                val resolvedMethod = resolveCallable(
-                    context, base.name, constructor,
+                return resolveCallable(
+                    context, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,
+                ) ?: MethodResolver.printScopeForMissingMethod(
+                    context, this, base.name,
+                    typeParameters, valueParameters
                 )
-                if (resolvedMethod != null) return resolvedMethod
-
-                val nameAsImport = base.nameAsImport
-                if (nameAsImport != null) {
-                    val importedMethod = MethodResolver.findMemberInScope(
-                        nameAsImport.parent, origin, nameAsImport.name,
-                        context.targetType, baseType,
-                        typeParameters, valueParameters,
-                    )
-                    if (importedMethod != null) return importedMethod
-                }
-
-                MethodResolver.printScopeForMissingMethod(context, this, base.name, typeParameters, valueParameters)
             }
             else -> throw NotImplementedError("Resolve type of call $base (${base.javaClass.simpleName})")
         }
@@ -183,7 +172,7 @@ class DotExpression(
         when {
             isFieldType() -> {
                 val field = resolveField(context, baseType)
-                    ?: throw IllegalStateException("Failed to resolve field $right on $baseType")
+                    ?: throw IllegalStateException("[DotExpr] Failed to resolve field $right on $baseType")
                 return field.getValueType(context)
             }
             isMethodType() -> {

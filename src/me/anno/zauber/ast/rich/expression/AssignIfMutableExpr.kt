@@ -6,14 +6,42 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMethod
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 /**
  * this.name [+=, *=, /=, ...] right
  * */
-class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: Expression) :
-    Expression(left.scope, right.origin) {
+class AssignIfMutableExpr(
+    val left: Expression, val symbol: String,
+    val plusImports: List<Import>,
+    val plusAssignImports: List<Import>,
+    val right: Expression,
+) : Expression(left.scope, right.origin) {
+
+    companion object {
+        fun plusName(symbol: String) = when (symbol) {
+            "+", "+=" -> "plus"
+            "-", "-=" -> "minus"
+            "*", "*=" -> "times"
+            "/", "/=" -> "div"
+            "%", "%=" -> "rem"
+            else -> throw Exception("Unknown symbol $symbol")
+        }
+
+        fun plusAssignName(symbol: String) = when (symbol) {
+            "+", "+=" -> "plusAssign"
+            "-", "-=" -> "minusAssign"
+            "*", "*=" -> "timesAssign"
+            "/", "/=" -> "divAssign"
+            "%", "%=" -> "remAssign"
+            else -> throw Exception("Unknown symbol $symbol")
+        }
+    }
+
+    private val plusName get() = plusName(symbol)
+    private val plusAssignName get() = plusAssignName(symbol)
 
     override fun toStringImpl(depth: Int): String {
         return "${left.toString(depth)} $symbol ${right.toString(depth)}"
@@ -23,7 +51,7 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         return when (expr) {
             is FieldExpression -> expr.field
             is UnresolvedFieldExpression -> {
-                val field = expr.resolveField(context)!!
+                val field = expr.resolveField(context)
                 field.resolved
             }
             else -> throw NotImplementedError("Is ${expr.javaClass.simpleName} a mutable left side?")
@@ -35,12 +63,16 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
                 right.needsBackingField(methodScope)
     }
 
-    private fun getMethodOrNull(context: ResolutionContext, name: String, rightType: Type): ResolvedMethod? {
+    private fun getMethodOrNull(
+        context: ResolutionContext,
+        name: String, nameAsImport: List<Import>,
+        rightType: Type
+    ): ResolvedMethod? {
         return MethodResolver.resolveMethod(
-            context, name, null,
+            context, name, nameAsImport, null,
             listOf(ValueParameterImpl(null, rightType, false)),
             origin,
-        )
+        ) as? ResolvedMethod
     }
 
     fun resolveMethod(context: ResolutionContext): AssignIfMutableResolveResult {
@@ -49,21 +81,21 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
         val leftType = TypeResolution.resolveType(context, left)
         val rightType = TypeResolution.resolveType(context, right)
         val leftContext = context.withSelfType(leftType)
-        val plusMethod = getMethodOrNull(leftContext, "plus", rightType)
-        val plusAssignMethod = getMethodOrNull(leftContext, "plusAssign", rightType)
+        val plusMethod = getMethodOrNull(leftContext, plusName, plusImports, rightType)
+        val plusAssignMethod = getMethodOrNull(leftContext, plusAssignName, plusAssignImports, rightType)
         check(plusMethod != null || plusAssignMethod != null) {
             "Either a plus or a plusAssign method must be declared on $leftType"
         }
 
         val isContentMutable = plusAssignMethod != null
         check(isFieldMutable != isContentMutable) {
-            "Either field or content must be mutable, plus? $plusMethod, plusAssign? $plusAssignMethod, fieldMutable? $isFieldMutable"
+            "Either field or content must be mutable, $plusName? $plusMethod, $plusAssignName? $plusAssignMethod, fieldMutable? $isFieldMutable"
         }
 
         return if (isContentMutable) {
             AssignIfMutableResolveResult(leftType, rightType, null, plusAssignMethod)
         } else {
-            check(plusMethod != null) { "Cannot resolve $leftType.plus($rightType)" }
+            check(plusMethod != null) { "Cannot resolve $leftType.$plusName($rightType)" }
             AssignIfMutableResolveResult(leftType, rightType, field, plusMethod)
         }
     }
@@ -78,5 +110,6 @@ class AssignIfMutableExpr(val left: Expression, val symbol: String, val right: E
     // we don't know better yet
     override fun splitsScope(): Boolean = true
 
-    override fun clone(scope: Scope): Expression = AssignIfMutableExpr(left.clone(scope), symbol, right.clone(scope))
+    override fun clone(scope: Scope): Expression =
+        AssignIfMutableExpr(left.clone(scope), symbol, plusImports, plusAssignImports, right.clone(scope))
 }

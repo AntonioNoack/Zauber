@@ -3,7 +3,6 @@ package me.anno.zauber.expansion
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.CallExpression
 import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.NamedCallExpression
 import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -61,21 +60,21 @@ object DefaultParameterExpansion {
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
-                    if (index < i) UnresolvedFieldExpression(parameter.name, null, scope, origin)
+                    if (index < i) UnresolvedFieldExpression(parameter.name, emptyList(), scope, origin)
                     else parameter.defaultValue!!
                 NamedParameter(parameter.name, value)
             }
 
             val newBody = if (self.selfType == null) {
                 CallExpression(
-                    UnresolvedFieldExpression(self.name!!, null, scope, origin),
+                    UnresolvedFieldExpression(self.name!!, emptyList(), scope, origin),
                     newTypeParameters, newValueParameters, origin
                 )
             } else {
                 NamedCallExpression(
                     SpecialValueExpression(SpecialValue.THIS, scope, origin),
-                    self.name!!, newTypeParameters,
-                    newValueParameters, scope, origin
+                    self.name!!, emptyList(),
+                    newTypeParameters, newValueParameters, scope, origin
                 )
             }
             val newMethod = Method(
@@ -122,7 +121,7 @@ object DefaultParameterExpansion {
 
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
-                    if (index < i) UnresolvedFieldExpression(parameter.name, null, scope, origin)
+                    if (index < i) UnresolvedFieldExpression(parameter.name, emptyList(), scope, origin)
                     else parameter.defaultValue!!
                 NamedParameter(parameter.name, value)
             }

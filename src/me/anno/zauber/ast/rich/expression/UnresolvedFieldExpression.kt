@@ -1,15 +1,15 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.ResolvedField
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class UnresolvedFieldExpression(
     val name: String,
-    val nameAsImport: Scope?,
+    val nameAsImport: List<Import>,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
@@ -20,27 +20,15 @@ class UnresolvedFieldExpression(
     // todo what if 'field' is shadowed?
     override fun needsBackingField(methodScope: Scope): Boolean = name == "field"
 
-    fun resolveField(context: ResolutionContext): ResolvedField? {
+    fun resolveField(context: ResolutionContext): ResolvedField {
         val context = context.withCodeScope(scope)
-        return resolveField(context, name, null, origin)
+        return resolveField(context, name, nameAsImport, null, origin)
+            ?: throw IllegalStateException("Failed to resolve field $name in $scope")
     }
 
     override fun splitsScope(): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
-        val context = context.withCodeScope(scope)
-        val field = resolveField(context, name, null, origin)
-        if (field != null) return field.getValueType(context)
-
-        val nameAsImport = nameAsImport
-        if (nameAsImport != null) {
-            return ImportedMember(nameAsImport, scope, origin)
-                .resolveType(context)
-        }
-
-        throw IllegalStateException(
-            "Missing field '${name}' in ${context.selfType}, ${context.codeScope}, " +
-                    resolveOrigin(origin)
-        )
+        return resolveField(context).getValueType(context)
     }
 }

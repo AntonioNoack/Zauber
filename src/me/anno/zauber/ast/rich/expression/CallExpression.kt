@@ -68,49 +68,20 @@ class CallExpression(
                 throw IllegalStateException("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
             is UnresolvedFieldExpression -> {
                 val name = base.name
+                val nameAsImport = base.nameAsImport
                 val context = context.withCodeScope(scope)
                 if (LOGGER.enableInfo) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
 
+                // todo surely, Constructors should consider imports, too, right?
+                //  or are they immediately covered by being detected as constructors?
                 val constructor = null1() // do we need this constructor-stuff? yes, we do, why ever
                     ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
 
-                val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
-                // println("byMethodCall('$name')=$byMethodCall")
+                val byMethodCall = resolveCallable(context, name, nameAsImport, constructor, typeParameters, valueParameters, origin)
                 if (byMethodCall != null) return byMethodCall
-
-                val nameAsImport = base.nameAsImport
-                if (nameAsImport != null) {
-                    val methodOwner = nameAsImport.parent
-                    if (methodOwner != null) {
-                        val methodSelfType = if (methodOwner.scopeType?.isObject() == true)
-                            methodOwner.typeWithArgs else context.selfType
-                        val importedMethod = MethodResolver.findMemberInScope(
-                            methodOwner, origin, nameAsImport.name, context.targetType, methodSelfType,
-                            typeParameters, valueParameters
-                        )
-                        if (importedMethod != null) return importedMethod
-
-                        val ownerCompanion = methodOwner.companionObject
-                        if (ownerCompanion != null) {
-                            val companionSelfType = ownerCompanion.typeWithArgs
-                            val importedCompanionMethod = MethodResolver.findMemberInScope(
-                                ownerCompanion, origin, nameAsImport.name, context.targetType, companionSelfType,
-                                typeParameters, valueParameters
-                            )
-                            if (importedCompanionMethod != null) return importedCompanionMethod
-                        }
-                    }
-
-                    val importedConstructor = ConstructorResolver
-                        .findMemberInScopeImpl(
-                            nameAsImport, nameAsImport.name, context.targetType, context.selfType,
-                            typeParameters, valueParameters
-                        )
-                    if (importedConstructor != null) return importedConstructor
-                }
 
                 MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
@@ -130,32 +101,10 @@ class CallExpression(
                 constructor ?: throw IllegalStateException("Missing constructor for $baseType")
                 return constructor
             }
-            is ImportedMember -> {
-                val name = base.nameAsImport.name
-                if (LOGGER.enableInfo) LOGGER.info("Find call[IM] '$name' with nameAsImport=${base.nameAsImport}")
-                // findConstructor(selfScope, false, name, typeParameters, valueParameters)
-                val c = ConstructorResolver
-                val constructor = null1()
-                    ?: c.findMemberInFile(
-                        base.nameAsImport, origin, name, returnType,
-                        null, typeParameters, valueParameters
-                    ) ?: findMemberInFile(
-                        base.nameAsImport.parent, origin, name, returnType,
-                        base.nameAsImport.parent.ifIsClassScope()?.typeWithoutArgs,
-                        typeParameters, valueParameters
-                    )
-                return resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
-                    ?: MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
-            }
             else -> throw IllegalStateException(
                 "Resolve field/method for ${base.javaClass} ($base) " +
                         "in ${resolveOrigin(origin)}"
             )
         }
-    }
-
-    fun Scope?.ifIsClassScope(): Scope? {
-        val scopeType = this?.scopeType ?: return null
-        return if (scopeType.isClassType()) this else null
     }
 }

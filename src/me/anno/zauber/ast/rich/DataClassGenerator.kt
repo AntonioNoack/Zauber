@@ -27,17 +27,13 @@ object DataClassGenerator {
         var expr: Expression? = null
 
         fun times(value: Expression) {
-            expr = NamedCallExpression(
-                expr!!, "times", emptyList(),
-                listOf(NamedParameter(null, value)), scope, origin
-            ).apply { resolvedType = type }
+            expr = NamedCallExpression(expr!!, "times", value, scope, origin)
+                .apply { resolvedType = type }
         }
 
         fun plus(value: Expression) {
-            expr = NamedCallExpression(
-                expr!!, "plus", emptyList(),
-                listOf(NamedParameter(null, value)), scope, origin
-            ).apply { resolvedType = type }
+            expr = NamedCallExpression(expr!!, "plus", value, scope, origin)
+                .apply { resolvedType = type }
         }
 
         fun shortcutAnd(getCondition: (Scope) -> Expression): Scope {
@@ -111,10 +107,7 @@ object DataClassGenerator {
             val builder = ExpressionBuilder(scope, origin, IntType)
             for (field in primaryFields) {
                 val fieldExpr = FieldExpression(field, scope, origin)
-                val hashExpr = NamedCallExpression(
-                    fieldExpr, "hashCode",
-                    emptyList(), emptyList(), scope, origin
-                )
+                val hashExpr = NamedCallExpression(fieldExpr, "hashCode", scope, origin)
                 if (builder.expr == null) {
                     builder.expr = hashExpr
                 } else {
@@ -141,10 +134,7 @@ object DataClassGenerator {
             builder.expr = StringExpression("${classScope.name}(", scope, origin)
             for ((i, field) in primaryFields.withIndex()) {
                 val fieldExpr = FieldExpression(field, scope, origin)
-                val hashExpr = NamedCallExpression(
-                    fieldExpr, "toString",
-                    emptyList(), emptyList(), scope, origin
-                )
+                val hashExpr = NamedCallExpression(fieldExpr, "toString", scope, origin)
                 val name = field.name
                 builder.plus(StringExpression(if (i > 0) ",$name=" else "$name=", scope, origin))
                 builder.plus(hashExpr)

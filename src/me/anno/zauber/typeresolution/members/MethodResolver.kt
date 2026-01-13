@@ -11,6 +11,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -99,16 +100,18 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun resolveCallable(
         context: ResolutionContext,
-        name: String,
+        name: String, nameAsImport: List<Import>,
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         origin: Int
     ): ResolvedMember<*>? {
-        val method = constructor ?: resolveMethod(context, name, typeParameters, valueParameters, origin)
+        val method = constructor ?: resolveMethod(
+            context, name, nameAsImport,
+            typeParameters, valueParameters, origin
+        )
         if (method != null) return method
-
-        return resolveField(context, name, typeParameters, origin)
+        return resolveField(context, name, nameAsImport, typeParameters, origin)
     }
 
     fun printScopeForMissingMethod(
@@ -128,17 +131,77 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun resolveMethod(
         context: ResolutionContext,
-        name: String,
+        name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         origin: Int
-    ): ResolvedMethod? {
+    ): ResolvedMember<*>? {
         return resolveInCodeScope(context) { scope, selfType ->
             findMemberInHierarchy(
                 scope, origin, name, context.targetType,
                 selfType, typeParameters, valueParameters
             )
+        } ?: resolveByImportImpl(
+            context, name, nameAsImport,
+            typeParameters, valueParameters, origin
+        )
+    }
+
+    fun resolveByImportImpl(
+        context: ResolutionContext,
+        name: String, nameAsImport: List<Import>,
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+        origin: Int
+    ): ResolvedMember<*>? {
+        for (import in nameAsImport) {
+            if (import.name != name) continue
+            val resolved = resolveByImport(
+                context, import.path,
+                typeParameters, valueParameters, origin
+            )
+            if (resolved != null) return resolved
         }
+        return null
+    }
+
+    fun resolveByImport(
+        context: ResolutionContext,
+        nameAsImport: Scope,
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+        origin: Int
+    ): ResolvedMember<*>? {
+
+        val methodOwner = nameAsImport.parent
+        if (methodOwner != null) {
+            val methodSelfType = if (methodOwner.scopeType?.isObject() == true)
+                methodOwner.typeWithArgs else context.selfType
+            val importedMethod = findMemberInScope(
+                methodOwner, origin, nameAsImport.name, context.targetType, methodSelfType,
+                typeParameters, valueParameters
+            )
+            if (importedMethod != null) return importedMethod
+
+            val ownerCompanion = methodOwner.companionObject
+            if (ownerCompanion != null) {
+                val companionSelfType = ownerCompanion.typeWithArgs
+                val importedCompanionMethod = findMemberInScope(
+                    ownerCompanion, origin, nameAsImport.name, context.targetType, companionSelfType,
+                    typeParameters, valueParameters
+                )
+                if (importedCompanionMethod != null) return importedCompanionMethod
+            }
+        }
+
+        val importedConstructor = ConstructorResolver
+            .findMemberInScopeImpl(
+                nameAsImport, nameAsImport.name, context.targetType, context.selfType,
+                typeParameters, valueParameters
+            )
+        if (importedConstructor != null) return importedConstructor
+
+        return null
     }
 
     fun null1(): ResolvedField? {

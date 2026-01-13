@@ -20,8 +20,7 @@ object BooleanUtils {
 
         resolvedType = BooleanType
         return NamedCallExpression(
-            this, "not", emptyList(),
-            emptyList(), scope, origin
+            this, "not",  scope, origin
         )
     }
 
@@ -29,7 +28,7 @@ object BooleanUtils {
         resolvedType = BooleanType
         other.resolvedType = BooleanType
         return NamedCallExpression(
-            this, "and", emptyList(),
+            this, "and", emptyList(), emptyList(),
             listOf(NamedParameter(null, other)),
             scope, origin
         ).apply {
