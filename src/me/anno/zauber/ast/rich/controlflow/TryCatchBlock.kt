@@ -34,6 +34,9 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
                 finallyExpression?.needsBackingField(methodScope) == true
     }
 
+    // already a split on its own, or is it?
+    override fun splitsScope(): Boolean = false
+
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
         Catch(it.param.clone(it.param.scope /* I don't think we should override this */), it.body.clone(scope))
     }, finallyExpression?.clone(scope))

@@ -17,4 +17,7 @@ class ContinueExpression(val label: String?, scope: Scope, origin: Int) : Expres
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type
     override fun needsBackingField(methodScope: Scope): Boolean = false
+
+    // execution ends here anyway
+    override fun splitsScope(): Boolean = false
 }

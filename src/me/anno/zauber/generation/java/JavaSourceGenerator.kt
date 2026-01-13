@@ -176,7 +176,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     fun writeBlock(run: () -> Unit) {
-        builder.append(" {")
+        builder.append("{")
 
         depth++
         nextLine()
@@ -272,6 +272,9 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendConstructors(classScope: Scope) {
+        builder.append("/* ${classScope.constructors.size} constructors */\n")
+        nextLine()
+
         for (constructor in classScope.constructors) {
             appendConstructor(classScope, constructor)
         }
@@ -280,7 +283,8 @@ object JavaSourceGenerator : Generator() {
     private fun isFinal(keywords: KeywordSet): Boolean {
         return keywords.hasFlag(Keywords.FINAL) || (
                 !keywords.hasFlag(Keywords.OPEN) &&
-                        !keywords.hasFlag(Keywords.OVERRIDE)
+                        !keywords.hasFlag(Keywords.OVERRIDE)&&
+                        !keywords.hasFlag(Keywords.ABSTRACT)
                 )
     }
 
@@ -341,7 +345,6 @@ object JavaSourceGenerator : Generator() {
         val superCall = constructor.superCall
 
         writeBlock {
-            // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
             if (superCall != null) {
                 appendSuperCall(context, superCall)
             } else {
@@ -359,10 +362,7 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendTypeParameterDeclaration(
-        valueParameters: List<Parameter>,
-        scope: Scope
-    ) {
+    private fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
         if (valueParameters.isEmpty()) return
         builder.append('<')
         for (param in valueParameters) {
@@ -405,7 +405,7 @@ object JavaSourceGenerator : Generator() {
             val simplified = ASTSimplifier.simplify(context, body)
             appendSimplifiedAST(method, simplified.startBlock)
         } catch (e: Throwable) {
-            e.printStackTrace()
+            // e.printStackTrace()
             builder.append(
                 "/* [${e.javaClass.simpleName}: ${
                     e.message.toString()

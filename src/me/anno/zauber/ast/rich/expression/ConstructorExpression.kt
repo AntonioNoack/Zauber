@@ -28,6 +28,8 @@ class ConstructorExpression(
         return resolveMethod(context).getTypeFromCall()
     }
 
+    override fun splitsScope(): Boolean = valueParameters.any { it.value.splitsScope() }
+
     override fun needsBackingField(methodScope: Scope): Boolean {
         return valueParameters.any { it.value.needsBackingField(methodScope) }
     }

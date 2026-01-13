@@ -30,6 +30,7 @@ class LambdaExpression(
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
     override fun needsBackingField(methodScope: Scope): Boolean = body.needsBackingField(methodScope)
+    override fun splitsScope(): Boolean = false // I don't think so
 
     override fun resolveType(context: ResolutionContext): Type {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")

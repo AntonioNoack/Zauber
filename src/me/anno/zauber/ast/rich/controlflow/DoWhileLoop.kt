@@ -23,4 +23,7 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
     override fun clone(scope: Scope) =
         DoWhileLoop(body = body.clone(body.scope), condition = condition.clone(scope), label)
 
+    // todo while-loop without break can enforce a condition, too
+    override fun splitsScope(): Boolean = false
+
 }

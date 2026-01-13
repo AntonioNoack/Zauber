@@ -602,17 +602,26 @@ class CppASTBuilder(
             // if expression contains assignment of any kind, or a check-call
             //  we must create a new sub-scope,
             //  because the types of our fields may have changed
-            if ((result.size > oldSize && exprSplitsScope(result.last()) && i < tokens.size) ||
+            if ((result.size > oldSize && result.last().splitsScope() && i < tokens.size) ||
                 currPackage.fields.size > oldNumFields
             ) {
+
                 val newFields = currPackage.fields.subList(oldNumFields, currPackage.fields.size)
                 val newScope = currPackage.generate("split", ScopeType.METHOD_BODY)
                 for (field in newFields.reversed()) {
                     field.moveToScope(newScope)
                 }
                 currPackage = newScope
+
+                // read remainder, and place it in the subscope
                 val remainder = readMethodBody()
-                if (remainder.list.isNotEmpty()) result.add(remainder)
+                // move oldSize until result into new subscope, but keep Expression.scope the same!
+                val remainderList = remainder.list as ArrayList<Expression>
+                for (i in oldSize until result.size) {
+                    remainderList.add(0, result[i])
+                }
+                result.subList(oldSize, result.size).clear()
+                result.add(remainder)
                 // else we can skip adding it, I think
             }
         }

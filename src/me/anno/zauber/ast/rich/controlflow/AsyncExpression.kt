@@ -18,4 +18,5 @@ class AsyncExpression(origin: Int, val value: Expression) : Expression(value.sco
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // todo maybe it has...
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun clone(scope: Scope) = AsyncExpression(origin, value.clone(scope))
+    override fun splitsScope(): Boolean = false
 }

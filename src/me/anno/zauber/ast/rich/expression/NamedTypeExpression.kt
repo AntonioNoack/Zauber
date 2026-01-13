@@ -13,4 +13,5 @@ class NamedTypeExpression(
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun resolveType(context: ResolutionContext): Type = type
+    override fun splitsScope(): Boolean = false
 }

@@ -19,4 +19,5 @@ class BreakExpression(val label: String?, scope: Scope, origin: Int) : Expressio
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // has no return type
     override fun needsBackingField(methodScope: Scope): Boolean = false
+    override fun splitsScope(): Boolean = false
 }

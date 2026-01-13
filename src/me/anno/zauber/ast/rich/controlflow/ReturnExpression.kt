@@ -18,4 +18,5 @@ class ReturnExpression(val value: Expression, val label: String?, scope: Scope, 
     override fun resolveType(context: ResolutionContext): Type = NothingType
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun clone(scope: Scope) = ReturnExpression(value.clone(scope), label, scope, origin)
+    override fun splitsScope(): Boolean = false
 }

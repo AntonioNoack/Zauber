@@ -7,6 +7,7 @@ import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
@@ -275,26 +276,28 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
     fun <R : Any> resolveInCodeScope(context: ResolutionContext, callback: (scope: Scope, selfType: Type) -> R?): R? {
 
-        println("ResolveInCodeScope(${context.codeScope}, ${context.selfScope}, ${context.selfType})")
+        if (!catchFailures) println("ResolveInCodeScope(${context.codeScope}, ${context.selfScope}, ${context.selfType})")
 
         if (context.selfScope != null && context.selfType != null) {
-            println("Checking[0] ${context.selfScope} with ${context.selfType}")
+            if (!catchFailures) println("Checking[0] ${context.selfScope} with ${context.selfType}")
             val result = callback(context.selfScope, context.selfType)
             if (result != null) return result
 
             val selfCompanion = context.selfScope.companionObject
             if (selfCompanion != null) {
-                println("Checking[1] $selfCompanion")
+                if (!catchFailures) println("Checking[1] $selfCompanion")
                 val result = callback(selfCompanion, selfCompanion.typeWithArgs)
                 if (result != null) return result
-            } else println("${context.selfScope} has no companion")
+            } else {
+                if(!catchFailures) println("${context.selfScope} has no companion")
+            }
         }
 
         val scopes = ArrayList<Scope>()
         val selfTypes = ArrayList<Type?>()
         listScopeTypeCandidates(context, scopes, selfTypes)
 
-        println("Scopes: $scopes, selfTypes: $selfTypes")
+        if (!catchFailures) println("Scopes: $scopes, selfTypes: $selfTypes")
 
         val selfType0 = selfTypes.firstOrNull() ?: UnitType
 
@@ -308,7 +311,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 val type = selfTypes[typeIndex]
                 if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue
                 val selfType = type ?: context.selfType ?: selfType0
-                println("Checking[i] $scope with $type -> $selfType0")
+                if (!catchFailures) println("Checking[i] $scope with $type -> $selfType0")
                 val result = callback(scope, selfType)
                 if (result != null) return result
                 lastType = type
@@ -317,7 +320,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             }
         }
 
-        println("Checking[z] $langScope with ${context.selfType ?: selfType0}")
+        if (!catchFailures) println("Checking[z] $langScope with ${context.selfType ?: selfType0}")
         val result = callback(langScope, context.selfType ?: selfType0)
         if (result != null) return result
 

@@ -37,6 +37,11 @@ class NamedCallExpression(
                 valueParameters.any { it.value.needsBackingField(methodScope) }
     }
 
+    override fun splitsScope(): Boolean {
+        return  base.splitsScope() ||
+                valueParameters.any { it.value.splitsScope() }
+    }
+
     override fun toStringImpl(depth: Int): String {
         val base = base.toString(depth)
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }

@@ -43,7 +43,7 @@ fun forLoop(
     val scope = iterable.scope
     val origin = iterable.origin
     val iterator = iterableToIterator(iterable)
-    val iteratorField = scope.generateImmutableField(iterator)
+    val iteratorField = scope.createImmutableField(iterator)
     val getNextCall = iteratorToNext(iteratorField, body)
     val outerAssignment = DeclarationExpression(scope, iterator, iteratorField)
     val innerAssignment = DeclarationExpression(body.scope, getNextCall, variableField)

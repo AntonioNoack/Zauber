@@ -11,6 +11,7 @@ class ArrayToVarargsStar(val value: Expression) : Expression(value.scope, value.
     override fun toStringImpl(depth: Int): String = "*${value.toStringImpl(depth)}"
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun resolveType(context: ResolutionContext): Type = value.resolveType(context)
+    override fun splitsScope(): Boolean = value.splitsScope()
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val tt = context.targetType
         val newTT = if (tt is ClassType && tt.clazz == ArrayType.clazz && tt.typeParameters != null) {

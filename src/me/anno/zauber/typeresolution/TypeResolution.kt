@@ -83,7 +83,7 @@ object TypeResolution {
                 numSuccesses++
             } catch (e: Throwable) {
                 if (!catchFailures) throw e
-                e.printStackTrace()
+                // e.printStackTrace()
                 numFailures++
                 // continue anyway for now
             }
@@ -102,7 +102,7 @@ object TypeResolution {
                     numSuccesses++
                 } catch (e: Throwable) {
                     if (!catchFailures) throw e
-                    e.printStackTrace()
+                    // e.printStackTrace()
                     numFailures++
                     // continue anyway for now
                 }

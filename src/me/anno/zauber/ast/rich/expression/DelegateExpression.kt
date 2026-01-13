@@ -14,6 +14,7 @@ class DelegateExpression(val value: Expression) : Expression(value.scope, value.
     override fun resolveType(context: ResolutionContext): Type = value.resolveType(context)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = value.hasLambdaOrUnknownGenericsType(context)
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
+    override fun splitsScope(): Boolean = false
 
     override fun clone(scope: Scope) = DelegateExpression(value.clone(scope))
 

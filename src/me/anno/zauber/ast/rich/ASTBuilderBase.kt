@@ -1,11 +1,6 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.*
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
@@ -70,7 +65,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     }
 
     fun consume(expected: String) {
-        check(tokens.equals(i, expected)) {
+        check(tokens.equals(i, expected) && !tokens.equals(i, TokenType.STRING)) {
             "Expected '$expected', but found ${tokens.err(i)}"
         }
         i++
@@ -84,14 +79,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     }
 
     fun consumeIf(string: String): Boolean {
-        return if (tokens.equals(i, string)) {
-            i++
-            true
-        } else false
-    }
-
-    fun consumeIf(type: TokenType): Boolean {
-        return if (tokens.equals(i, type)) {
+        return if (tokens.equals(i, string) && !tokens.equals(i, TokenType.STRING)) {
             i++
             true
         } else false
@@ -112,46 +100,5 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     fun popGenericParams() {
         genericParams.removeLast()
     }
-
-    fun exprSplitsScope(expr: Expression): Boolean {
-        return when (expr) {
-            is SpecialValueExpression,
-            is StringExpression,
-            is NumberExpression,
-            is FieldExpression,
-            is MemberNameExpression,
-            is UnresolvedFieldExpression,
-                // todo if-else-branch can enforce a condition: if only one branch returns
-            is IfElseBranch,
-                // todo while-loop without break can enforce a condition, too
-            is WhileLoop, is DoWhileLoop -> false
-            is IsInstanceOfExpr -> true // all these (as, as?, is, is?) can change type information...
-            is NamedCallExpression -> {
-                exprSplitsScope(expr.base) ||
-                        expr.valueParameters.any { exprSplitsScope(it.value) }
-            }
-            is DotExpression -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
-            is ReturnExpression,
-            is ThrowExpression -> false // should these split the scope??? nothing after can happen
-            is CallExpression -> {
-                exprSplitsScope(expr.base) ||
-                        expr.valueParameters.any { exprSplitsScope(it.value) } ||
-                        (expr.base is MemberNameExpression && expr.base.name == "check") // this check is a little too loose
-            }
-            is AssignmentExpression -> true // explicit yes
-            is AssignIfMutableExpr -> true // we don't know better yet
-            is ExpressionList -> expr.list.any { exprSplitsScope(it) }
-            is CompareOp -> exprSplitsScope(expr.value)
-            is ImportedMember -> false // I guess not...
-            is LambdaExpression -> false // I don't think so
-            is BreakExpression, is ContinueExpression -> false // execution ends here anyway
-            is CheckEqualsOp -> exprSplitsScope(expr.left) || exprSplitsScope(expr.right)
-            is DoubleColonPrefix -> false // some lambda -> no
-            is NamedTypeExpression -> false
-            is TryCatchBlock -> false // already a split on its own, or is it?
-            else -> throw NotImplementedError("Does '$expr' (${expr.javaClass.simpleName}) split the scope (assignment / Nothing-call / ")
-        }
-    }
-
 
 }

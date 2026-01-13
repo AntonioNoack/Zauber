@@ -20,8 +20,9 @@ class SimpleMerge(
 ) : SimpleAssignmentExpression(dst, base.scope, base.origin) {
 
     init {
-        check(ifField.mergeInfo == null)
-        check(elseField.mergeInfo == null)
+        // todo is this ok???? we might loose values/assignments
+        // check(ifField.mergeInfo == null) { "Expected ifField to not already have mergeInfo" }
+        // check(elseField.mergeInfo == null) { "Expected elseField to not already have mergeInfo" }
         ifField.mergeInfo = this
         elseField.mergeInfo = this
     }

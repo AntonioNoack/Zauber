@@ -47,6 +47,11 @@ class DotExpression(
                 right.needsBackingField(methodScope)
     }
 
+    override fun splitsScope(): Boolean {
+        return left.splitsScope() ||
+                right.splitsScope()
+    }
+
     override fun toStringImpl(depth: Int): String {
         val base = left.toString(depth)
         val typeParams = if (typeParameters.isNullOrEmpty()) null else
@@ -80,7 +85,7 @@ class DotExpression(
     }
 
     fun resolveField(context: ResolutionContext, baseType: Type): ResolvedField? {
-        println("resolveField(): LHS: $baseType, RHS: ${right.javaClass.simpleName}")
+        // println("resolveField(): LHS: $baseType, RHS: ${right.javaClass.simpleName}")
         when (right) {
             is MemberNameExpression -> {
                 // todo replace own generics, because we don't know them yet

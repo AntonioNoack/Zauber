@@ -27,4 +27,7 @@ class AssignmentExpression(var variableName: Expression, var newValue: Expressio
 
     override fun clone(scope: Scope): Expression =
         AssignmentExpression(variableName.clone(scope), newValue.clone(scope))
+
+    // explicit yes
+    override fun splitsScope(): Boolean = true
 }

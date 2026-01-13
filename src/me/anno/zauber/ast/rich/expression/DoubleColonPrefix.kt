@@ -21,6 +21,7 @@ class DoubleColonPrefix(val left: Scope, val methodName: String, scope: Scope, o
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
     override fun needsBackingField(methodScope: Scope): Boolean = false
+    override fun splitsScope(): Boolean = false // some lambda -> no
 
     override fun clone(scope: Scope) = DoubleColonPrefix(left, methodName, scope, origin)
 

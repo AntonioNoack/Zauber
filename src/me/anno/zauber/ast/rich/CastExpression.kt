@@ -30,7 +30,7 @@ object CastExpression {
         ifFalseExpr: (Scope) -> Expression,
     ): Expression {
         // we need to store the variable in a temporary field
-        val tmpField = scope.generateImmutableField(expr)
+        val tmpField = scope.createImmutableField(expr)
         val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
         val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
         val fieldExpr = FieldExpression(tmpField, scope, origin)

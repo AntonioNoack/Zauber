@@ -84,13 +84,14 @@ class Scope(val name: String, val parent: Scope? = null) {
      * for each if/else-chain, these shall be filled in
      * */
     var branchConditions: List<Expression> = emptyList()
-
     fun addCondition(condition: Expression) {
         if (condition in branchConditions) return
         branchConditions += condition
     }
 
     var primaryConstructorScope: Scope? = null
+        private set
+
     fun getOrCreatePrimConstructorScope(): Scope {
         return primaryConstructorScope ?: run {
             val scope = getOrPut("prim", ScopeType.CONSTRUCTOR)
@@ -100,10 +101,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun addField(field: Field) {
-        val other = fields.firstOrNull {
-            it.name == field.name &&
-                    (it.byParameter != null) == (field.byParameter != null)
-        }
+        val other = fields.firstOrNull { it.name == field.name }
         if (other != null) {
             throw IllegalStateException(
                 "Each field must only be declared once per scope [$pathStr], " +
@@ -388,7 +386,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             } else null
         }
 
-    fun generateImmutableField(initialValue: Expression): Field {
+    fun createImmutableField(initialValue: Expression): Field {
         val name = generateName("tmpField")
         return Field(
             this, null, false, null,

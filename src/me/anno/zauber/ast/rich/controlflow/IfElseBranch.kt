@@ -67,6 +67,9 @@ class IfElseBranch(
                 elseBranch?.needsBackingField(methodScope) == true
     }
 
+    // todo if-else-branch can enforce a condition: if only one branch returns
+    override fun splitsScope(): Boolean = false
+
     override fun toStringImpl(depth: Int): String {
         return if (elseBranch == null) {
             "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} }"

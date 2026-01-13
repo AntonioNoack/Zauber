@@ -29,6 +29,10 @@ class CheckEqualsOp(
         return left.needsBackingField(methodScope) || right.needsBackingField(methodScope)
     }
 
+    override fun splitsScope(): Boolean {
+        return left.splitsScope() || right.splitsScope()
+    }
+
     override fun clone(scope: Scope) =
         CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
 }

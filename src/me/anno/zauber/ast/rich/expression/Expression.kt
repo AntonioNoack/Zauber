@@ -51,6 +51,11 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * */
     abstract fun needsBackingField(methodScope: Scope): Boolean
 
+    /**
+     * whether this expression changes information about types
+     * */
+    abstract fun splitsScope(): Boolean
+
     companion object {
         var numExpressionsCreated = 0
             private set

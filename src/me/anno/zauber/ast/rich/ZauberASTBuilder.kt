@@ -9,7 +9,6 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.Keywords.hasFlag
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.MemberNameExpression.Companion.nameExpression
@@ -172,17 +171,17 @@ class ZauberASTBuilder(
 
         readSuperCalls(classScope)
 
-        val scope = classScope.getOrCreatePrimConstructorScope()
+        val primConstructorScope = classScope.getOrCreatePrimConstructorScope()
         val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
         val primaryConstructor = Constructor(
             constructorParams ?: emptyList(),
-            scope, if (primarySuperCall != null) {
+            primConstructorScope, if (primarySuperCall != null) {
                 InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, classScope, origin)
             } else null, null,
             if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
             constructorOrigin
         )
-        scope.selfAsConstructor = primaryConstructor
+        primConstructorScope.selfAsConstructor = primaryConstructor
 
         readClassBody(name, keywords, scopeType)
         popGenericParams()
@@ -340,9 +339,18 @@ class ZauberASTBuilder(
         val origin0 = origin(i)
         var endIndex = tokens.findToken(i, ";")
         if (endIndex < 0) endIndex = tokens.size
-        val classScope = currPackage
-        val companionScope = classScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+        val enumScope = currPackage
+        val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+        val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
         val primaryConstructorScope = companionScope.getOrCreatePrimConstructorScope()
+
+        if (needsPrimaryConstructor) {
+            primaryConstructorScope.selfAsConstructor = Constructor(
+                emptyList(), primaryConstructorScope,
+                null, null, Keywords.NONE, origin0
+            )
+        }
+
         push(endIndex) {
             var ordinal = 0
             while (i < tokens.size) {
@@ -365,13 +373,13 @@ class ZauberASTBuilder(
                     NamedParameter(null, StringExpression(name, companionScope, origin)),
                 )
                 val initialValue = ConstructorExpression(
-                    classScope, typeParameters,
+                    enumScope, typeParameters,
                     extraValueParameters + valueParameters,
-                    null, classScope, origin
+                    null, enumScope, origin
                 )
                 val valueType =
-                    if (classScope.typeParameters.isNotEmpty()) null // we need to resolve them
-                    else classScope.typeWithArgs
+                    if (enumScope.typeParameters.isNotEmpty()) null // we need to resolve them
+                    else enumScope.typeWithArgs
                 val field = Field(
                     companionScope, companionScope.typeWithoutArgs, false, null,
                     name, valueType, initialValue, keywords, origin
@@ -385,23 +393,11 @@ class ZauberASTBuilder(
             }
         }
 
-        createEnumProperties(companionScope, classScope, origin0)
+        createEnumProperties(companionScope, enumScope, origin0)
         return endIndex
     }
 
     private fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Int) {
-
-        // todo we also need to add then as constructor properties,
-        //  and add them into all constructors...
-        Field(
-            enumScope, enumScope.typeWithoutArgs, false, null,
-            "name", StringType, null, Keywords.SYNTHETIC, origin
-        )
-
-        Field(
-            enumScope, enumScope.typeWithoutArgs, false, null,
-            "ordinal", IntType, null, Keywords.SYNTHETIC, origin
-        )
 
         companionScope.hasTypeParameters = true
 
@@ -422,8 +418,8 @@ class ZauberASTBuilder(
         )
 
         val constructorScope = companionScope.getOrCreatePrimConstructorScope()
-        val fieldExpr = FieldExpression(entriesField, constructorScope, origin)
-        constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
+        val entriesFieldExpr = FieldExpression(entriesField, constructorScope, origin)
+        constructorScope.code.add(AssignmentExpression(entriesFieldExpr, initialValue))
 
         pushScope(companionScope) {
             pushScope(ScopeType.METHOD, "entries") { methodScope ->
@@ -858,7 +854,7 @@ class ZauberASTBuilder(
 
                     val initialValue = if (consumeIf("=")) readExpression() else null
 
-                    println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
+                    // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
                     val keywords = packKeywords()
                     val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
@@ -1114,7 +1110,7 @@ class ZauberASTBuilder(
 
         readSuperCalls(classScope)
 
-        println("Inline class has the following type-params: ${classScope.typeParameters}")
+        // println("Inline class has the following type-params: ${classScope.typeParameters}")
 
         readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(
@@ -1200,8 +1196,8 @@ class ZauberASTBuilder(
     private fun readWhenWithSubject(): Expression {
         val subject = pushCall {
             when {
-                consumeIf("val") -> readDeclaration(false, isLateinit = false)
-                consumeIf("var") -> readDeclaration(true, isLateinit = false)
+                consumeIf("val") -> readDeclaration(false, isLateinit = false, currPackage)
+                consumeIf("var") -> readDeclaration(true, isLateinit = false, currPackage)
                 else -> readExpression()
             }
         }
@@ -1216,7 +1212,7 @@ class ZauberASTBuilder(
                 }
                 val conditions = readSubjectConditions(nextArrow)
                 val body = readBodyOrExpression()
-                if (true) {
+                if (false) {
                     LOGGER.info("next case:")
                     LOGGER.info("  condition-scope: ${currPackage.pathStr}")
                     LOGGER.info("  body: $body")
@@ -1603,8 +1599,6 @@ class ZauberASTBuilder(
                         when {
                             tokens.equals(i, "<") -> if (listen >= 0) typeDepth++
                             tokens.equals(i, ">") -> if (listen >= 0) typeDepth--
-                            // tokens.equals(i, "var") || tokens.equals(i, "val") ||
-                            // tokens.equals(i, "fun") ||
                             tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
                                 listen = i
                                 listenType =
@@ -1765,7 +1759,7 @@ class ZauberASTBuilder(
                         }
                     }
                     else -> {
-                        println("Reading RHS, symbol: $symbol")
+                        // println("Reading RHS, symbol: $symbol")
                         val rhs = readRHS(op)
                         if (isInfix) {
                             val param = NamedParameter(null, rhs)
@@ -1924,22 +1918,38 @@ class ZauberASTBuilder(
         while (i < tokens.size) {
             val oldSize = result.size
             val oldNumFields = currPackage.fields.size
+
+            fun readDeclarationImpl(isMutable: Boolean, isLateinit: Boolean) {
+                val oldScope = currPackage
+                val subName = oldScope.generateName("split")
+                val newScope = oldScope.getOrPut(subName, ScopeType.METHOD_BODY)
+                // field shall be declared in newScope, but expr shall be in old scope...
+                val declaration = readDeclaration(isMutable, isLateinit, newScope)
+                pushScope(newScope) {
+                    val remainder = readMethodBody()
+                    (remainder.list as ArrayList<Expression>).add(0, declaration)
+                    result.add(remainder)
+                }
+            }
+
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
                     throw IllegalStateException("} in the middle at ${tokens.err(i)}")
                 consumeIf(";") -> {} // skip
                 consumeIf("@") -> annotations.add(readAnnotation())
-                consumeIf("val") -> result.add(readDeclaration(false))
-                consumeIf("var") -> result.add(readDeclaration(true))
-                consumeIf("fun") -> {
-                    // just read the method, it gets added to the scope
-                    readMethod()
-                }
                 consumeIf("lateinit") -> {
                     consume("var")
-                    result.add(readDeclaration(true, isLateinit = true))
+                    readDeclarationImpl(isMutable = true, isLateinit = true)
+                    break
+                }
+                consumeIf("val") || consumeIf("var") -> {
+                    // immediately split scope to avoid duplicate fields on a context
+                    val isMutable = tokens.equals(i - 1, "var")
+                    readDeclarationImpl(isMutable, false)
+                    break
                 }
 
+                consumeIf("fun") -> readMethod() // will just get added to the scope for later resolution
                 consumeIf("inner") -> throw IllegalStateException("Inner classes inside methods are not supported")
                 consumeIf("enum") -> throw IllegalStateException("Enum classes inside methods are not supported")
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
@@ -2027,7 +2037,7 @@ class ZauberASTBuilder(
     }
 
     private fun shouldSplitIntoSubScope(oldSize: Int, oldNumFields: Int, result: ArrayList<Expression>): Boolean {
-        return (result.size > oldSize && exprSplitsScope(result.last()) && i < tokens.size) ||
+        return (result.size > oldSize && result.last().splitsScope() && i < tokens.size) ||
                 currPackage.fields.size > oldNumFields
     }
 
@@ -2066,12 +2076,12 @@ class ZauberASTBuilder(
         return names
     }
 
-    private fun readDestructuring(isMutable: Boolean): Expression {
+    private fun readDestructuring(isMutable: Boolean, fieldScope: Scope): Expression {
         val names = readDestructuringFields()
         val value = if (consumeIf("=")) {
             readExpression()
         } else throw IllegalStateException("Expected value for destructuring at ${tokens.err(i)}")
-        return createDestructuringAssignment(names, value, isMutable)
+        return createDestructuringAssignment(names, value, isMutable, fieldScope)
     }
 
     private fun readTypeOrNull(selfType: Type?): Type? {
@@ -2081,10 +2091,13 @@ class ZauberASTBuilder(
         } else null
     }
 
-    private fun readDeclaration(isMutable: Boolean, isLateinit: Boolean = false): Expression {
+    private fun readDeclaration(
+        isMutable: Boolean, isLateinit: Boolean,
+        fieldScope: Scope
+    ): Expression {
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             check(!isLateinit) // is immediately assigned -> cannot be lateinit
-            return readDestructuring(isMutable)
+            return readDestructuring(isMutable, fieldScope)
         }
 
         check(tokens.equals(i, TokenType.NAME))
@@ -2103,10 +2116,10 @@ class ZauberASTBuilder(
 
         // define variable in the scope
         val field = Field(
-            currPackage, getSelfType(currPackage), isMutable, null,
+            fieldScope, getSelfType(fieldScope), isMutable, null,
             name, type, value, Keywords.NONE, origin
         )
 
-        return DeclarationExpression(currPackage, value, field)
+        return DeclarationExpression(fieldScope, value, field)
     }
 }

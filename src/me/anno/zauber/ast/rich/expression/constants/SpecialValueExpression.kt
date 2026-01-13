@@ -27,4 +27,5 @@ class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) 
     override fun clone(scope: Scope) = SpecialValueExpression(type, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // should not have any
     override fun needsBackingField(methodScope: Scope): Boolean = false
+    override fun splitsScope(): Boolean = false
 }

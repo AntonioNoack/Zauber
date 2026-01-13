@@ -15,6 +15,7 @@ class AnnotatedExpression(val annotation: Annotation, val value: Expression) : E
     override fun resolveType(context: ResolutionContext): Type = value.resolveType(context)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean =
         value.hasLambdaOrUnknownGenericsType(context)
+    override fun splitsScope(): Boolean = value.splitsScope()
 
     override fun clone(scope: Scope) = AnnotatedExpression(annotation, value.clone(scope))
 }

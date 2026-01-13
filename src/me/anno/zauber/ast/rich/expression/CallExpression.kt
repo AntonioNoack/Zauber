@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
-import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -51,6 +50,12 @@ class CallExpression(
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) }, origin
     )
 
+    override fun splitsScope(): Boolean {
+        return base.splitsScope() ||
+                valueParameters.any { it.value.splitsScope() } ||
+                (base is MemberNameExpression && (base.name == "check" || base.name == "require")) // this check is a little too loose
+    }
+
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
@@ -73,7 +78,7 @@ class CallExpression(
                     ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
 
                 val byMethodCall = resolveCallable(context, name, constructor, typeParameters, valueParameters, origin)
-                println("byMethodCall('$name')=$byMethodCall")
+                // println("byMethodCall('$name')=$byMethodCall")
                 if (byMethodCall != null) return byMethodCall
 
                 val nameAsImport = base.nameAsImport

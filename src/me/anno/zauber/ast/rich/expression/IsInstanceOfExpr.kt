@@ -21,4 +21,7 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
     override fun clone(scope: Scope): Expression {
         return IsInstanceOfExpr(value.clone(scope), type, scope, origin)
     }
+
+    // can change type information...
+    override fun splitsScope(): Boolean = true
 }

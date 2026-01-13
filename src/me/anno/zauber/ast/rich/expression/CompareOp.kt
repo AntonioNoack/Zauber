@@ -17,4 +17,5 @@ class CompareOp(val value: Expression, val type: CompareType) : Expression(value
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
 
     override fun clone(scope: Scope) = CompareOp(value.clone(scope), type)
+    override fun splitsScope(): Boolean = value.splitsScope()
 }

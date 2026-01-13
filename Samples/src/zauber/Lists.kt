@@ -77,6 +77,36 @@ fun <V> List<V>.joinToString(separator: String = ",", prefix: String = "[", post
     return result
 }
 
+fun <V> List<V>.joinToString(convertToString: (V) -> String): String {
+    return joinToString(", ", convertToString)
+}
+
+fun <V> List<V>.joinToString(separator: String, convertToString: (V) -> String): String {
+    return joinToString(separator, "[", "]", convertToString)
+}
+
+fun <V> List<V>.joinToString(
+    separator: String,
+    prefix: String,
+    postfix: String,
+    convertToString: (V) -> String
+): String {
+    var result = prefix
+    for (i in indices) {
+        if (i > 0) result += separator
+        result += convertToString(this[i])
+    }
+    result += postfix
+    return result
+}
+
+operator fun <V> List<V>.plus(other: List<V>): List<V> {
+    val result = ArrayList<V>(size + other.size)
+    result.addAll(this)
+    result.addAll(other)
+    return result
+}
+
 data class IndexedValue<V>(val index: Int, val value: V)
 
 // todo mutable iterable...

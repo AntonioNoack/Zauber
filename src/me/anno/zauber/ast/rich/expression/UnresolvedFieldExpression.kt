@@ -25,6 +25,8 @@ class UnresolvedFieldExpression(
         return resolveField(context, name, null, origin)
     }
 
+    override fun splitsScope(): Boolean = false
+
     override fun resolveType(context: ResolutionContext): Type {
         val context = context.withCodeScope(scope)
         val field = resolveField(context, name, null, origin)

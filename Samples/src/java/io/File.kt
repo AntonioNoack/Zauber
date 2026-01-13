@@ -5,4 +5,5 @@ class File(val absolutePath: String) {
 
     external fun readText(): String
     external fun readBytes(): ByteArray
+    external fun isDirectory(): Boolean
 }

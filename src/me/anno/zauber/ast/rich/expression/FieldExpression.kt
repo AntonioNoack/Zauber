@@ -35,4 +35,6 @@ class FieldExpression(
         ) ?: throw IllegalStateException("Generics could not be resolved for $field at ${resolveOrigin(origin)}")
         return resolved.getValueType(context)
     }
+
+    override fun splitsScope(): Boolean = false
 }

@@ -66,14 +66,14 @@ object ASTSimplifier {
                 val exprScope = expr.scope
                 for (field in exprScope.fields) {
                     if (needsFieldByParameter(field.byParameter) &&
-                        field.originalScope == field.codeScope && // not moved
+                        // field.originalScope == field.codeScope && // not moved
                         currBlock.instructions.none { it is SimpleDeclaration && it.name == field.name }
                     ) {
                         val type = field.resolveValueType(context)
                         currBlock.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
                     }
                 }
-                for (childScope in exprScope.children) {
+                /*for (childScope in exprScope.children) {
                     for (field in childScope.fields) {
                         if (needsFieldByParameter(field.byParameter) &&
                             field.codeScope != field.originalScope &&
@@ -83,7 +83,7 @@ object ASTSimplifier {
                             currBlock.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
                         }
                     }
-                }
+                }*/
                 for (expr in expr.list) {
                     result = simplifyImpl(context, expr, currBlock, graph, needsValue)
                         ?: return null
@@ -450,10 +450,12 @@ object ASTSimplifier {
                 expr.elseBranch, elseBlock, graph, true
             )
             currBlock.add(SimpleBranch(condition.use(), ifBlock, elseBlock, scope, origin))
-            return if (ifValue != null && elseValue != null) {
-                currBlock.add(SimpleMerge(dst, ifBlock, ifValue.use(), elseBlock, elseValue.use(), expr))
-                dst
-            } else ifValue ?: elseValue
+            return if (!needsValue) voidField else {
+                if (ifValue != null && elseValue != null) {
+                    currBlock.add(SimpleMerge(dst, ifBlock, ifValue.use(), elseBlock, elseValue.use(), expr))
+                    dst
+                } else (ifValue ?: elseValue)?.use()
+            }
         }
     }
 
