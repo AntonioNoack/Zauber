@@ -13,7 +13,7 @@ open class MethodLike(
     val valueParameters: List<Parameter>,
     var returnType: Type?,
     val scope: Scope,
-    val body: Expression?,
+    var body: Expression?,
     val keywords: KeywordSet,
     val origin: Int
 ) {

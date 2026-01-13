@@ -186,6 +186,14 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         }
     }
 
+    fun removeGenerics(selfType: Type?): Type? {
+        var selfType = selfType
+        while (selfType is GenericType) {
+            selfType = selfType.superBounds
+        }
+        return selfType
+    }
+
     /**
      * finds a method, returns the method and any inserted type parameters
      * todo check whether this works... the first call should be checked whether expectedSelfType & scope are the same
@@ -201,10 +209,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     ): Resolved? {
         if (scope == null) return null
 
-        var selfType = selfType
-        while (selfType is GenericType) {
-            selfType = selfType.superBounds
-        }
+        val selfType = removeGenerics(selfType)
         if (selfType !is ClassType) {
             // println("Skipping hierarchy search, because selfType !is ClassType: $selfType")
             return null
@@ -265,8 +270,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         var scopeJ = lowestMethodScope ?: scope
         while (true) {
-            val scopeType = scopeJ.scopeType
-            if (scopeType?.isClassType() == true) {
+            if (scopeJ.isClassType()) {
                 return scopeJ.path.size
             }
 
@@ -390,7 +394,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 return selfType
             }
         }
-        if (candidateScope.scopeType?.isClassType() == true ||
+        if (candidateScope.isClassType() ||
             candidateScope.scopeType == ScopeType.PACKAGE
         ) {
             // println("Found class: $candidateScope")

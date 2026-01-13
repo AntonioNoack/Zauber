@@ -16,7 +16,7 @@ class InnerSuperCall(
 ) {
     fun toExpr(): ConstructorExpression {
         val clazz = if (target == InnerSuperCallTarget.THIS) classScope else classScope.superCalls[0].type.clazz
-        check(clazz.scopeType?.isClassType() == true)
+        check(clazz.isClassType())
         return ConstructorExpression(
             clazz, emptyList(), valueParameters,
             target == InnerSuperCallTarget.THIS, classScope, origin

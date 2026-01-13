@@ -11,7 +11,6 @@ import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
@@ -29,6 +28,9 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         valueParameters: List<ValueParameter>
     ): ResolvedField? {
         scope ?: return null
+
+        // println("Searching for '$name' in $scope")
+
         val scopeSelfType = getSelfType(scope)
         for (field in scope.fields) {
             if (field.name != name) continue
@@ -44,13 +46,30 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             )
             if (match != null) return match
         }
-        for (child in scope.children) {
-            if (child.name != name ||
-                (child.scopeType != ScopeType.OBJECT &&
-                        child.scopeType != ScopeType.COMPANION_OBJECT)
-            ) continue
 
-            val field = child.fields.first { it.name == "__instance__" }
+        val companion = scope.companionObject
+        if (companion != null) {
+            if (scope.name == name) {
+                val field = companion.objectField!!
+                val valueType = getFieldReturnType(scopeSelfType, field, returnType)
+                val match = findMemberMatch(
+                    field, valueType,
+                    returnType, selfType,
+                    typeParameters, valueParameters,
+                    origin
+                )
+                if (match != null) return match
+            }
+            val field = findMemberInScope(
+                companion, origin, name, returnType, selfType,
+                typeParameters, valueParameters,
+            )
+            if (field != null) return field
+        }
+
+        for (child in scope.children) {
+            if (child.name != name) continue
+            val field = child.objectField ?: continue
             val valueType = getFieldReturnType(scopeSelfType, field, returnType)
             val match = findMemberMatch(
                 field, valueType,
@@ -99,7 +118,11 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     ): ResolvedField? {
         check(valueParameters.isEmpty())
 
-        var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfType)
+        val selfTypeI = selfType
+            ?: if (field.selfType is ClassType && field.selfType.clazz.isObject())
+                field.selfType else null
+
+        var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
         var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
         if (fieldSelfType is ClassType && fieldSelfType.clazz.scopeType?.isClassType() != true) {
             LOGGER.info("Field had invalid selfType: $fieldSelfType")
@@ -115,13 +138,13 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
         LOGGER.info("Resolving generics for field $field")
         val generics = findGenericsForMatch(
-            fieldSelfType, if (fieldSelfType == null) null else selfType,
+            fieldSelfType, if (fieldSelfType == null) null else selfTypeI,
             fieldReturnType, returnType,
             fieldSelfParams + field.typeParameters, actualTypeParams,
             emptyList(), valueParameters
         ) ?: return null
 
-        val selfType = selfType ?: fieldSelfType
+        val selfType = selfTypeI ?: fieldSelfType
         val context = ResolutionContext(field.codeScope, selfType, false, fieldReturnType)
         return ResolvedField(
             generics.subList(0, fieldSelfParams.size), field,
@@ -143,68 +166,38 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 candidateScope, origin, name, context.targetType,
                 selfType, typeParameters, emptyList()
             )
-        } ?: resolveFieldByImportImpl(context, name, nameAsImport, typeParameters, origin)
+        } ?: resolveFieldByImports(context, name, nameAsImport, typeParameters, origin)
     }
 
-    fun resolveFieldByImportImpl(
+    fun resolveFieldByImports(
         context: ResolutionContext,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
         origin: Int,
     ): ResolvedField? {
-        val returnType = context.targetType
-        val selfTypes = ArrayList<Type>()
+        if (nameAsImport.isEmpty()) return null
+
+        val selfTypes = ArrayList<Type?>()
         resolveInCodeScope(context) { _, selfType ->
             if (selfType !in selfTypes) selfTypes.add(selfType)
         }
+        if (null !in selfTypes) selfTypes.add(null)
 
+        println("Checking imports $nameAsImport, selfType: ${context.selfType}, selfTypes: $selfTypes")
+        val returnType = context.targetType
         for (import in nameAsImport) {
             if (import.name != name) continue
+            val importPath = import.path
+            val originalName = importPath.name
+            val isUnknownScope = importPath.scopeType == null
+            val scope = if (isUnknownScope) importPath.parent else importPath
 
-            val scope = import.path
-            val scopeSelfType = getSelfType(scope)
             for (selfType in selfTypes) {
-                val field = resolveFieldByImport(scope) ?: continue
-                val valueType = getFieldReturnType(scopeSelfType, field, returnType)
-                val match = findMemberMatch(
-                    field, valueType,
-                    returnType, selfType,
-                    typeParameters, emptyList(),
-                    origin
+                val field = findMemberInScope(
+                    scope, origin, originalName, returnType, selfType,
+                    typeParameters, emptyList()
                 )
-                if (match != null) return match
-            }
-        }
-        return null
-    }
-
-    fun resolveFieldByImport(nameAsImport: Scope): Field? {
-        when (nameAsImport.scopeType) {
-            ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {
-                nameAsImport.objectField!!
-            }
-            ScopeType.NORMAL_CLASS, ScopeType.INTERFACE, ScopeType.ENUM_CLASS -> {
-                val parentCompanion = nameAsImport.companionObject
-                if (parentCompanion != null) return parentCompanion.objectField!!
-
-                // throw IllegalStateException("Could not resolve type for $nameAsImport in normal class")
-            }
-            null -> {
-
-                // todo "Companion" could appear at all levels of the import :(
-                val fieldName = nameAsImport.name
-                val parent = nameAsImport.parent!!
-                val matchingField = parent.fields.firstOrNull { it.name == fieldName }
-                if (matchingField != null) return matchingField
-
-                val parentCompanion = parent.companionObject
-                val matchingField1 = parentCompanion?.fields?.firstOrNull { it.name == fieldName }
-                if (matchingField1 != null) return matchingField1
-
-                // throw IllegalStateException("Could not resolve field '$fieldName' in $parent")
-            }
-            else -> {
-                TODO("what is the type of imported ${nameAsImport.pathStr} -> ${nameAsImport.scopeType}?")
+                if (field != null) return field
             }
         }
         return null

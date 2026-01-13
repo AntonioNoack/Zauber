@@ -74,6 +74,7 @@ object TypeResolution {
             // todo parameters usually depend on the context
             return
         }
+
         val scopeSelfType = getSelfType(scope)
         val children = scope.children
         for (i in children.indices) {
@@ -112,18 +113,17 @@ object TypeResolution {
     }
 
     fun getSelfType(scope: Scope): Type? {
+        // println("Searching selfType for $scope")
         var scope = scope
         while (true) {
-            val scopeType = scope.scopeType
-            if (scopeType != null && scopeType.isClassType()) {
+            if (scope.isClassType()) {
                 return scope.typeWithArgs
             }
+
             // if inside method, we need to check method.selfType
-            if (scopeType == ScopeType.METHOD) {
-                val self = scope.selfAsMethod
-                val selfType = self?.selfType
-                if (selfType != null) return selfType
-            }
+            val selfType = scope.selfAsMethod?.selfType
+            if (selfType != null) return selfType
+
             scope = scope.parent ?: return null
         }
     }
@@ -173,10 +173,9 @@ object TypeResolution {
         var scope = scope
         while (true) {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
-            val scopeType = scope.scopeType
             when {
-                scopeType != null && scopeType.isClassType() -> return scope
-                scopeType == ScopeType.METHOD -> {
+                scope.isClassType() -> return scope
+                scope.scopeType == ScopeType.METHOD -> {
                     val func = scope.selfAsMethod!!
                     val self = func.selfType
                     if (self != null) {
@@ -223,7 +222,7 @@ object TypeResolution {
         var scope = scope ?: return null
         while (true) {
 
-            val selfMatch = scope.children.firstOrNull { it.name == name && it.scopeType?.isClassType() == true }
+            val selfMatch = scope.children.firstOrNull { it.name == name && it.isClassType() }
             if (selfMatch != null) {
                 val typeParams: List<Type>? =
                     if (selfMatch.hasTypeParameters && selfMatch.typeParameters.isEmpty()) emptyList() else null

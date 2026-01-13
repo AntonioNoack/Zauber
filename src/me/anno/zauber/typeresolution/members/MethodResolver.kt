@@ -52,10 +52,10 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun getMethodReturnType(scopeSelfType: Type?, method: Method): Type? {
         if (method.returnType == null) {
-            if (false) LOGGER.info("Resolving ${method.scope}.type by ${method.body}")
+            val selfType = method.selfType ?: scopeSelfType
+            LOGGER.info("Resolving ${method.scope}.type by ${method.body}, selfType: $selfType")
             val context = ResolutionContext(
-                method.scope,
-                method.selfType ?: scopeSelfType,
+                method.scope, selfType,
                 false, null
             )
             method.returnType = method.resolveReturnType(context)
@@ -106,12 +106,16 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         valueParameters: List<ValueParameter>,
         origin: Int
     ): ResolvedMember<*>? {
-        val method = constructor ?: resolveMethod(
-            context, name, nameAsImport,
-            typeParameters, valueParameters, origin
-        )
-        if (method != null) return method
-        return resolveField(context, name, nameAsImport, typeParameters, origin)
+        return constructor
+            ?: resolveMethod(
+                context, name, nameAsImport,
+                typeParameters, valueParameters, origin
+            )
+            // todo value-parameters should be considered for fun-interfaces/LambdaTypes
+            ?: resolveField(
+                context, name, nameAsImport,
+                typeParameters, origin
+            )
     }
 
     fun printScopeForMissingMethod(
@@ -141,13 +145,13 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 scope, origin, name, context.targetType,
                 selfType, typeParameters, valueParameters
             )
-        } ?: resolveByImportImpl(
+        } ?: resolveByImports(
             context, name, nameAsImport,
             typeParameters, valueParameters, origin
         )
     }
 
-    fun resolveByImportImpl(
+    fun resolveByImports(
         context: ResolutionContext,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?,
@@ -175,7 +179,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
         val methodOwner = nameAsImport.parent
         if (methodOwner != null) {
-            val methodSelfType = if (methodOwner.scopeType?.isObject() == true)
+            val methodSelfType = if (methodOwner.isObject())
                 methodOwner.typeWithArgs else context.selfType
             val importedMethod = findMemberInScope(
                 methodOwner, origin, nameAsImport.name, context.targetType, methodSelfType,

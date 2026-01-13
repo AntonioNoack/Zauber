@@ -12,7 +12,7 @@ import me.anno.zauber.types.Type
 
 class Field(
     var codeScope: Scope,
-    val selfType: Type?, // may be null inside methods, owner is stack, kind of
+    val selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
     val isMutable: Boolean,
     val byParameter: Any?, // Parameter | LambdaParameter | null
 

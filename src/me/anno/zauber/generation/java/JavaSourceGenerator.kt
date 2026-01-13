@@ -149,7 +149,7 @@ object JavaSourceGenerator : Generator() {
 
     fun generate(scope: Scope, dst: File, writer: DeltaWriter) {
         val scopeType = scope.scopeType
-        if (scopeType != null && scopeType.isClassType()) {
+        if (scope.isClassType()) {
             val file = File(dst, scope.path.joinToString("/") + ".java")
 
             appendPackage(scope.path.dropLast(1))
@@ -251,14 +251,14 @@ object JavaSourceGenerator : Generator() {
     private fun needsBackingField(field: Field): Boolean {
         val getter = field.getter
         val setter = field.setter
-        if (getter?.body == null || getter.body.needsBackingField(getter.scope)) return true
+        if (getter?.body == null || getter.body!!.needsBackingField(getter.scope)) return true
         if (setter?.body == null) return field.isMutable
-        return setter.body.needsBackingField(setter.scope)
+        return setter.body!!.needsBackingField(setter.scope)
     }
 
     private fun appendBackingField(classScope: Scope, field: Field) {
         builder.append("public ")
-        if (field.name == "__instance__") builder.append("static ")
+        if (field == classScope.objectField) builder.append("static ")
         if (!field.isMutable) builder.append("final ")
         appendType(field.valueType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(field.name).append(';')

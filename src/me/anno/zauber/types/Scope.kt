@@ -408,8 +408,16 @@ class Scope(val name: String, val parent: Scope? = null) {
         return hash
     }
 
+    fun isClassType(): Boolean {
+        return scopeType?.isClassType() == true
+    }
+
     fun isTypeAlias(): Boolean {
         return scopeType == ScopeType.TYPE_ALIAS
+    }
+
+    fun isObject(): Boolean {
+        return scopeType?.isObject() == true
     }
 
     companion object {

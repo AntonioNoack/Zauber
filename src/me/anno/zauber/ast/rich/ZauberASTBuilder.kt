@@ -77,7 +77,7 @@ class ZauberASTBuilder(
         val unitInstance by lazy {
             val scope = UnitType.clazz
             if (scope.objectField == null) scope.objectField = Field(
-                scope, null, false, null, "__instance__",
+                scope, null, false, null, scope.name,
                 scope.typeWithArgs, null, Keywords.NONE, -1
             )
             FieldExpression(scope.objectField!!, scope, -1)
@@ -258,7 +258,7 @@ class ZauberASTBuilder(
 
         scope.hasTypeParameters = true // no type-params are supported
         if (scope.objectField == null) scope.objectField = Field(
-            scope, null, false, null, "__instance__",
+            scope, null, false, null, scope.name,
             ClassType(scope, emptyList()),
             /* todo should we set initialValue? */ null, Keywords.NONE, origin
         )
@@ -587,8 +587,14 @@ class ZauberASTBuilder(
         var returnType = readTypeOrNull(selfType)
         val extraConditions = readWhereConditions()
 
+        val method = Method(
+            selfType, name, typeParameters, parameters, methodScope,
+            returnType, extraConditions, null, keywords, origin
+        )
+        methodScope.selfAsMethod = method
+
         // body (or just = expression)
-        val body = pushScope(methodScope) {
+        method.body = pushScope(methodScope) {
             if (tokens.equals(i, "=")) {
                 val origin = origin(i++) // skip =
                 ReturnExpression(readExpression(), null, methodScope, origin)
@@ -603,11 +609,6 @@ class ZauberASTBuilder(
 
         popGenericParams()
 
-        val method = Method(
-            selfType, name, typeParameters, parameters, methodScope,
-            returnType, extraConditions, body, keywords, origin
-        )
-        methodScope.selfAsMethod = method
         return method
     }
 
