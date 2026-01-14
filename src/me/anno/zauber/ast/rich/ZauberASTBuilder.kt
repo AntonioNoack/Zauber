@@ -429,7 +429,7 @@ class ZauberASTBuilder(
         pushScope(companionScope) {
             pushScope(ScopeType.METHOD, "entries") { methodScope ->
                 methodScope.selfAsMethod = Method(
-                    companionScope.typeWithoutArgs, "entries", emptyList(), emptyList(),
+                    companionScope.typeWithoutArgs, false, "entries", emptyList(), emptyList(),
                     methodScope, listType, emptyList(),
                     ReturnExpression(FieldExpression(entriesField, methodScope, origin), null, methodScope, origin),
                     Keywords.SYNTHETIC, origin
@@ -562,8 +562,8 @@ class ZauberASTBuilder(
         val typeParameters = readTypeParameterDeclarations(methodScope)
 
         check(tokens.equals(i, TokenType.NAME))
-        val selfType = readFieldOrMethodSelfType(typeParameters, methodScope)
-            ?: getSelfType(methodScope)
+        val selfType0 = readFieldOrMethodSelfType(typeParameters, methodScope)
+        val selfType = selfType0 ?: getSelfType(methodScope)
 
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
@@ -588,7 +588,7 @@ class ZauberASTBuilder(
         val extraConditions = readWhereConditions()
 
         val method = Method(
-            selfType, name, typeParameters, parameters, methodScope,
+            selfType, selfType0 != null, name, typeParameters, parameters, methodScope,
             returnType, extraConditions, null, keywords, origin
         )
         methodScope.selfAsMethod = method

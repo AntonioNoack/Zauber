@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -53,7 +54,7 @@ abstract class ResolvedMember<V>(
                     val newTypeArgs = typeArgs.map { partType ->
                         resolveGenerics(selfType, partType, genericNames, genericValues)
                     }
-                    if (typeArgs != newTypeArgs) {
+                    if (false && typeArgs != newTypeArgs) {
                         LOGGER.info("Mapped types: $typeArgs -> $newTypeArgs")
                     }
                     ClassType(type.clazz, newTypeArgs)
@@ -77,6 +78,19 @@ abstract class ResolvedMember<V>(
                 is ThisType -> selfType ?: run {
                     LOGGER.warn("ThisType missing... ${type.javaClass}")
                     type.type
+                }
+                is TypeOfField -> {
+                    val valueType = type.field.valueType
+                    if (valueType != null) resolveGenerics(selfType, valueType, genericNames, genericValues)
+                    else {
+                        type.field.resolveValueType(
+                            ResolutionContext(
+                                type.field.codeScope,
+                                type.field.selfType,
+                                false, null
+                            )
+                        )
+                    }
                 }
                 else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
             }

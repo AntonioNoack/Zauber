@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.types.Scope
@@ -8,7 +9,9 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 
 open class MethodLike(
+    // todo we should have a flag whether the selfType is explicit
     open val selfType: Type?,
+    val explicitSelfType: Boolean,
     val typeParameters: List<Parameter>,
     val valueParameters: List<Parameter>,
     var returnType: Type?,
@@ -28,6 +31,8 @@ open class MethodLike(
         (selfType?.contains(genericType) == true) ||
                 valueParameters.none { valueParam -> valueParam.type.contains(genericType) }
     }
+
+    fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
 
     var selfTypeIfNecessary: Type? = null
 

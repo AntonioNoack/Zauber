@@ -183,7 +183,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         }
         if (null !in selfTypes) selfTypes.add(null)
 
-        println("Checking imports $nameAsImport, selfType: ${context.selfType}, selfTypes: $selfTypes")
+        // println("Checking imports $nameAsImport, selfType: ${context.selfType}, selfTypes: $selfTypes")
         val returnType = context.targetType
         for (import in nameAsImport) {
             if (import.name != name) continue

@@ -267,6 +267,7 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendMethods(classScope: Scope) {
         for (method in classScope.methods) {
+            if (method.scope.parent != classScope) continue
             appendMethod(classScope, method)
         }
     }
@@ -280,7 +281,7 @@ object JavaSourceGenerator : Generator() {
     private fun isFinal(keywords: KeywordSet): Boolean {
         return keywords.hasFlag(Keywords.FINAL) || (
                 !keywords.hasFlag(Keywords.OPEN) &&
-                        !keywords.hasFlag(Keywords.OVERRIDE)&&
+                        !keywords.hasFlag(Keywords.OVERRIDE) &&
                         !keywords.hasFlag(Keywords.ABSTRACT)
                 )
     }

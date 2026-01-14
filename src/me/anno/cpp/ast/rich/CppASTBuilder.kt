@@ -195,7 +195,7 @@ class CppASTBuilder(
         }
         // todo find self type, for fields, too
         val method = Method(
-            null, name, emptyList(), arguments,
+            null, false, name, emptyList(), arguments,
             methodScope, returnType, emptyList(), body, keywords, origin
         )
         methodScope.selfAsMethod = method

@@ -137,9 +137,9 @@ object FieldGetterSetter {
 
         val methodName = "get${field.name.capitalize()}"
         val method = Method(
-            field.selfType, methodName, emptyList(), emptyList(),
+            field.selfType, false, methodName, emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
-            expr, packKeywords(), origin
+            expr, packKeywords() or field.keywords, origin
         )
         method.backingField = backingField
         getterScope.selfAsMethod = method
@@ -164,10 +164,10 @@ object FieldGetterSetter {
         val methodName = "set${field.name.capitalize()}"
         val parameter = Parameter(valueField.name, field.valueType ?: TypeOfField(field), setterScope, origin)
         val method = Method(
-            field.selfType, methodName, emptyList(),
+            field.selfType, false, methodName, emptyList(),
             listOf(parameter), setterScope,
             UnitType, emptyList(),
-            expr, packKeywords(), origin
+            expr, packKeywords() or field.keywords, origin
         )
         method.backingField = backingField
         setterScope.selfAsMethod = method

@@ -56,4 +56,17 @@ class Parameter(
     fun clone(scope: Scope): Parameter {
         return Parameter(isVar, isVal, isVararg, name, type, defaultValue?.clone(scope), scope, origin)
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Parameter &&
+                other.name == name &&
+                other.type == type
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + type.hashCode()
+        return result
+    }
+
 }

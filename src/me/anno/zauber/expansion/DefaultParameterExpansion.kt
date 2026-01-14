@@ -53,8 +53,7 @@ object DefaultParameterExpansion {
 
             val origin = self.origin
 
-            val scopeName = scopeParent.generateName("f:${self.name}")
-            val scope = scopeParent.getOrPut(scopeName, ScopeType.METHOD)
+            val scope = scopeParent.generate("f:${self.name}", ScopeType.METHOD)
             scope.typeParameters = self.typeParameters
 
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }
@@ -78,7 +77,7 @@ object DefaultParameterExpansion {
                 )
             }
             val newMethod = Method(
-                self.selfType, self.name,
+                self.selfType, self.explicitSelfType, self.name,
                 self.typeParameters, self.valueParameters.subList(0, i),
                 scope, self.returnType, self.extraConditions,
                 newBody,

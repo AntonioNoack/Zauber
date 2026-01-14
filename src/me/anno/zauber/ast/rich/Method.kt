@@ -10,6 +10,7 @@ import me.anno.zauber.types.Type
 
 class Method(
     selfType: Type?,
+    explicitSelfType: Boolean,
     var name: String?,
     typeParameters: List<Parameter>,
     valueParameters: List<Parameter>,
@@ -21,7 +22,7 @@ class Method(
     keywords: KeywordSet,
     origin: Int
 ) : MethodLike(
-    selfType, typeParameters, valueParameters, returnType,
+    selfType, explicitSelfType, typeParameters, valueParameters, returnType,
     scope, body, keywords, origin
 ) {
 
@@ -39,11 +40,11 @@ class Method(
 
     // todo list which method was overridden
     // todo due to multi-interface, there may be many of them
-    var overriddenMethods: List<Method>? = null
+    var overriddenMethods: List<Method> = emptyList()
 
     // todo calculate this, too, for checking which methods actually
     //  need virtual calls
-    var overriddenBy: List<Method>? = null
+    var overriddenBy: List<Method> = emptyList()
 
     fun resolveReturnType(context: ResolutionContext): Type {
         val returnType = returnType

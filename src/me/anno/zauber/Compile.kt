@@ -6,6 +6,7 @@ import me.anno.zauber.CompileSources.tokenizeSources
 import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClassesForTypeResolution
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
+import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution
@@ -55,6 +56,10 @@ object Compile {
 
         step("Parsing ASTs") {
             buildASTs()
+        }
+
+        step("Solve Overrides") {
+            resolveOverrides(root)
         }
 
         if (false) printPackages(root, 0)

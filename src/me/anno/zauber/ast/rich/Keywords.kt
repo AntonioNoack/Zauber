@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
+import kotlin.math.max
 
 object Keywords {
     const val NONE = 0
@@ -41,5 +42,39 @@ object Keywords {
 
     fun KeywordSet.hasFlag(flag: KeywordSet): Boolean {
         return (this and flag) == flag
+    }
+
+    fun KeywordSet.withFlag(flag: KeywordSet): KeywordSet {
+        return this or flag
+    }
+
+    fun KeywordSet.withoutFlag(flag: KeywordSet): KeywordSet {
+        return this and flag.inv()
+    }
+
+    fun toString(flags: KeywordSet): String {
+        val builder = StringBuilder()
+        if (flags.hasFlag(SYNTHETIC)) builder.append("synthetic ")
+        if (flags.hasFlag(PUBLIC)) builder.append("public ")
+        if (flags.hasFlag(PRIVATE)) builder.append("private ")
+        if (flags.hasFlag(PROTECTED)) builder.append("protected ")
+        if (flags.hasFlag(OVERRIDE)) builder.append("override ")
+        if (flags.hasFlag(FINAL)) builder.append("final ")
+        if (flags.hasFlag(ABSTRACT)) builder.append("abstract ")
+        if (flags.hasFlag(DATA_CLASS)) builder.append("data ")
+        if (flags.hasFlag(VALUE)) builder.append("value ")
+        if (flags.hasFlag(FUN_INTERFACE)) builder.append("fun-interface ")
+        if (flags.hasFlag(CONSTEXPR)) builder.append("const ")
+        if (flags.hasFlag(EXTERNAL)) builder.append("external ")
+        if (flags.hasFlag(OPERATOR)) builder.append("operator ")
+        if (flags.hasFlag(INLINE)) builder.append("inline ")
+        if (flags.hasFlag(INFIX)) builder.append("infix ")
+        if (flags.hasFlag(ANNOTATION)) builder.append("annotation")
+        if (flags.hasFlag(CROSS_INLINE)) builder.append("cross-inline ")
+        if (flags.hasFlag(SEALED)) builder.append("sealed ")
+        if (flags.hasFlag(CPP_STRUCT)) builder.append("struct ")
+
+        builder.setLength(max(builder.length - 1, 0))
+        return builder.toString()
     }
 }

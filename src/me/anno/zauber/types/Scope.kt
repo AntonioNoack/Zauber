@@ -420,6 +420,10 @@ class Scope(val name: String, val parent: Scope? = null) {
         return scopeType?.isObject() == true
     }
 
+    fun isInterface(): Boolean {
+        return scopeType == ScopeType.INTERFACE
+    }
+
     companion object {
         private val nextAnonymousName = AtomicInteger(0)
     }
