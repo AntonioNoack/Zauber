@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -72,8 +73,8 @@ abstract class CallExpressionBase(
                 ResolvedCallExpression(base, callable, params, scope, origin)
             }
             is ResolvedConstructor -> {
-                check(base is TypeExpression) {
-                    "In ResolvedConstructor, base should be a TypeExpression, but got ${base.javaClass.simpleName}"
+                check(base is TypeExpression || base is UnresolvedFieldExpression) {
+                    "In ResolvedConstructor, base should be a TypeExpression/UFE, but got ${base.javaClass.simpleName}"
                 }
                 val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
                     .map { it.resolve(context) }
