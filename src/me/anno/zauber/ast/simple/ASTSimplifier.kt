@@ -11,6 +11,8 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
@@ -131,6 +133,22 @@ object ASTSimplifier {
                 currBlock.add(SimpleCompare(dst, left.use(), right.use(), expr.type, expr.scope, expr.origin))
                 dst
             }
+
+            is ResolvedCallExpression -> {
+                val base = if (expr.base != null) {
+                    simplifyImpl(context, expr.base, currBlock, graph, true) ?: return null
+                } else null
+                val valueParameters = expr.valueParameters.map {
+                    simplifyImpl(context, expr, currBlock, graph, false) ?: return null
+                }
+                val method = expr.callable
+                simplifyCall(
+                    currBlock, base,
+                    valueParameters, method, null,
+                    expr.scope, expr.origin
+                )
+            }
+
             is NamedCallExpression -> {
                 val calleeType = expr.calculateBaseType(context)
 
@@ -182,15 +200,17 @@ object ASTSimplifier {
                 currBlock.add(SimpleSpecialValue(dst, expr))
                 dst
             }
-            is UnresolvedFieldExpression -> {
-                val field = expr.resolveField(context)
+
+            is ResolvedGetFieldExpression -> {
+                val field = expr.field.resolved
+                val valueType = expr.run { resolvedType ?: resolveType(context) }
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                val dst = currBlock.field(field.getValueType())
-                currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
+                val dst = currBlock.field(valueType)
+                currBlock.add(SimpleGetField(dst, self, field, expr.scope, expr.origin))
                 dst
             }
-            is FieldExpression -> simplifyFieldExpr(currBlock, context, expr)
+
             is MemberNameExpression -> {
                 val field = resolveField(context, expr.scope, expr.name, expr.nameAsImport, null, expr.origin)
                     ?: throw IllegalStateException("Missing field '${expr.name}'")
@@ -495,6 +515,48 @@ object ASTSimplifier {
                     method0, null,
                     scope, origin
                 )
+            }
+            else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
+        }
+    }
+
+    private fun simplifyCall(
+        currBlock: SimpleBlock,
+
+        selfExpr: SimpleField?,
+        valueParameters: List<SimpleField>,
+
+        method0: ResolvedMember<*>,
+        selfIfInsideConstructor: Boolean?,
+
+        scope: Scope,
+        origin: Int
+    ): SimpleField? {
+        for (param in valueParameters) param.use()
+        when (val method = method0.resolved) {
+            is Method -> {
+                selfExpr!!
+                // then execute it
+                val dst = currBlock.field(method0.getTypeFromCall())
+                currBlock.add(SimpleCall(dst, method, selfExpr.use(), valueParameters, scope, origin))
+                return dst
+            }
+            is Constructor -> {
+                // base is a type
+                // then execute it
+                if (selfIfInsideConstructor != null) {
+                    currBlock.add(
+                        SimpleSelfConstructor(
+                            selfIfInsideConstructor,
+                            method, valueParameters, scope, origin
+                        )
+                    )
+                    return voidField
+                } else {
+                    val dst = currBlock.field(method0.getTypeFromCall())
+                    currBlock.add(SimpleConstructor(dst, method, valueParameters, scope, origin))
+                    return dst
+                }
             }
             else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
         }

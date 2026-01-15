@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -32,4 +33,21 @@ class AssignmentExpression(val variableName: Expression, val newValue: Expressio
     // explicit yes
     override fun splitsScope(): Boolean = true
     override fun isResolved(): Boolean = false
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        val newValue = newValue.resolve(context)
+        when (val dstExpr = variableName) {
+            is FieldExpression -> {
+                // todo resolve owner
+                val field = dstExpr.resolveField(context)
+                return ResolvedSetFieldExpression(null, field, newValue, scope, origin)
+            }
+            is UnresolvedFieldExpression -> {
+                // todo resolve owner
+                val field = dstExpr.resolveField(context)
+                return ResolvedSetFieldExpression(null, field, newValue, scope, origin)
+            }
+            else -> throw NotImplementedError("Implement assignment to $variableName (${variableName.javaClass.simpleName})")
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
@@ -31,5 +32,10 @@ class UnresolvedFieldExpression(
 
     override fun resolveType(context: ResolutionContext): Type {
         return resolveField(context).getValueType()
+    }
+
+    override fun resolveImpl(context: ResolutionContext): ResolvedGetFieldExpression {
+        val field = resolveField(context)
+        return ResolvedGetFieldExpression(null, field, scope, origin)
     }
 }

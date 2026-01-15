@@ -7,6 +7,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -27,18 +28,21 @@ class FieldExpression(
         return field.originalScope == methodScope && field.name == "field"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    fun resolveField(context: ResolutionContext): ResolvedField {
         if (LOGGER.enableInfo) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
         val scopeSelfType = TypeResolution.getSelfType(scope)
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
-        val resolved = FieldResolver.findMemberMatch(
+        return FieldResolver.findMemberMatch(
             field, fieldReturnType, context.targetType,
             scopeSelfType, null, emptyList(), scope, origin
         ) ?: throw IllegalStateException(
             "Generics could not be resolved for $field at " +
                     TokenListIndex.resolveOrigin(origin)
         )
-        return resolved.getValueType()
+    }
+
+    override fun resolveType(context: ResolutionContext): Type {
+        return resolveField(context).getValueType()
     }
 
     override fun splitsScope(): Boolean = false

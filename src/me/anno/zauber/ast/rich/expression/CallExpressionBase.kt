@@ -4,9 +4,16 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.ResolvedConstructor
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
+import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
@@ -55,5 +62,26 @@ abstract class CallExpressionBase(
     }
 
     abstract fun resolveCallable(context: ResolutionContext): ResolvedMember<*>
-
+    
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        val base = base.resolve(context)
+        return when (val callable = resolveCallable(context)) {
+            is ResolvedMethod -> {
+                val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
+                ResolvedCallExpression(base, callable, params, scope, origin)
+            }
+            is ResolvedConstructor -> {
+                val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
+                ResolvedCallExpression(base, callable, params, scope, origin)
+            }
+            is ResolvedField -> {
+                val valueParameters1 = resolveValueParameters(context, valueParameters)
+                val calledMethod = callable.resolveCalledMethod(typeParameters, valueParameters1)
+                val params = reorderParameters(valueParameters, calledMethod.resolved.valueParameters, scope, origin)
+                val base1 = ResolvedGetFieldExpression(base, callable, scope, origin)
+                ResolvedCallExpression(base1, calledMethod, params, scope, origin)
+            }
+            else -> throw NotImplementedError()
+        }
+    }
 }
