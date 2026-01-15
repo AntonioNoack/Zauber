@@ -42,7 +42,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
-                origin
+                scope, origin
             )
             if (match != null) return match
         }
@@ -56,7 +56,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                     field, valueType,
                     returnType, selfType,
                     typeParameters, valueParameters,
-                    origin
+                    scope, origin
                 )
                 if (match != null) return match
             }
@@ -75,7 +75,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
-                origin
+                scope, origin
             )
             if (match != null) return match
         }
@@ -94,7 +94,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             while (expr is ReturnExpression) expr = expr.value
             LOGGER.info("Resolving valueType($field), initial/getter: $expr")
             val context = ResolutionContext(
-                field.codeScope,//.innerScope,
+                //.innerScope,
                 field.selfType ?: scopeSelfType,
                 false, null
             )
@@ -114,7 +114,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        origin: Int
+        codeScope: Scope, origin: Int
     ): ResolvedField? {
         check(valueParameters.isEmpty())
 
@@ -124,8 +124,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
         var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
         var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
-        if (fieldSelfType is ClassType && fieldSelfType.clazz.scopeType?.isClassType() != true) {
-            LOGGER.info("Field had invalid selfType: $fieldSelfType")
+        if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassType()) {
+            LOGGER.info("Field '$field' had invalid selfType: $fieldSelfType")
             fieldSelfType = null
             fieldSelfParams = emptyList()
         }
@@ -145,32 +145,36 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         ) ?: return null
 
         val selfType = selfTypeI ?: fieldSelfType
-        val context = ResolutionContext(field.codeScope, selfType, false, fieldReturnType)
+        val context = ResolutionContext(selfType, false, fieldReturnType)
         return ResolvedField(
             generics.subList(0, fieldSelfParams.size), field,
-            generics.subList(fieldSelfParams.size, generics.size), context
+            generics.subList(fieldSelfParams.size, generics.size), context, codeScope
         )
     }
 
     fun resolveField(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
         origin: Int,
     ): ResolvedField? {
         val selfType = context.selfType
-        LOGGER.info("TypeParams for field '$name': $typeParameters, scope: ${context.codeScope}, selfType: $selfType, targetType: ${context.targetType}")
+        LOGGER.info("TypeParams for field '$name': $typeParameters, scope: $codeScope, selfType: $selfType, targetType: ${context.targetType}")
 
-        return resolveInCodeScope(context) { candidateScope, selfType ->
-            findMemberInHierarchy(
+        return resolveInCodeScope(context, codeScope) { candidateScope, selfType ->
+            findMemberInScope(
                 candidateScope, origin, name, context.targetType,
                 selfType, typeParameters, emptyList()
             )
-        } ?: resolveFieldByImports(context, name, nameAsImport, typeParameters, origin)
+        } ?: resolveFieldByImports(
+            context, codeScope,
+            name, nameAsImport,
+            typeParameters, origin
+        )
     }
 
     fun resolveFieldByImports(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
         origin: Int,
@@ -178,7 +182,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         if (nameAsImport.isEmpty()) return null
 
         val selfTypes = ArrayList<Type?>()
-        resolveInCodeScope(context) { _, selfType ->
+        resolveInCodeScope(context, codeScope) { _, selfType ->
             if (selfType !in selfTypes) selfTypes.add(selfType)
         }
         if (null !in selfTypes) selfTypes.add(null)
@@ -206,7 +210,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     fun resolveField(
         context: ResolutionContext, field: Field,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
-        origin: Int
+        scope: Scope, origin: Int
     ): ResolvedField? {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$field': $typeParameters, selfType: $selfType")
@@ -216,7 +220,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             field, valueType,
             context.targetType, selfType,
             typeParameters, emptyList(),
-            origin
+            scope, origin
         )
     }
 

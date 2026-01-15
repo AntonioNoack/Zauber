@@ -6,7 +6,7 @@ import me.anno.zauber.utils.RecursiveLazy
 abstract class BoolMethodColoring<F>(val isRecursionColored: Boolean) {
     private val cache = HashMap<F, RecursiveLazy<Boolean>>()
 
-    fun isColored(func: F): Boolean {
+    operator fun get(func: F): Boolean {
         return cache.getOrPut(func) {
             RecursiveLazy { isColoredImpl(func) }
         }.value
@@ -18,7 +18,7 @@ abstract class BoolMethodColoring<F>(val isRecursionColored: Boolean) {
         if (func in dependencies) return isRecursionColored // easy early-out
         return dependencies.any { funcI ->
             try {
-                isColored(funcI)
+                get(funcI)
             } catch (_: RecursiveException) {
                 isRecursionColored
             }

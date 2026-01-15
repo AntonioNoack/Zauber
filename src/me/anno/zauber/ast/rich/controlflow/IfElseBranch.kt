@@ -42,8 +42,8 @@ class IfElseBranch(
             exprHasNoType(context)
         } else {
             // targetLambdaType stays the same
-            val ifType = TypeResolution.resolveType(context.withCodeScope(ifBranch.scope), ifBranch)
-            val elseType = TypeResolution.resolveType(context.withCodeScope(elseBranch.scope), elseBranch)
+            val ifType = TypeResolution.resolveType(context, ifBranch)
+            val elseType = TypeResolution.resolveType(context, elseBranch)
             unionTypes(ifType, elseType)
         }
     }
@@ -57,8 +57,8 @@ class IfElseBranch(
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         return elseBranch != null && // if else is undefined, this has no return type
-                (ifBranch.hasLambdaOrUnknownGenericsType(context.withCodeScope(ifBranch.scope)) ||
-                        elseBranch.hasLambdaOrUnknownGenericsType(context.withCodeScope(elseBranch.scope)))
+                (ifBranch.hasLambdaOrUnknownGenericsType(context) ||
+                        elseBranch.hasLambdaOrUnknownGenericsType(context))
     }
 
     override fun needsBackingField(methodScope: Scope): Boolean {
@@ -69,6 +69,10 @@ class IfElseBranch(
 
     // todo if-else-branch can enforce a condition: if only one branch returns
     override fun splitsScope(): Boolean = false
+
+    override fun isResolved(): Boolean = condition.isResolved() &&
+            ifBranch.isResolved() &&
+            (elseBranch == null || elseBranch.isResolved())
 
     override fun toStringImpl(depth: Int): String {
         return if (elseBranch == null) {

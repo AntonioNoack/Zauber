@@ -389,7 +389,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun createImmutableField(initialValue: Expression): Field {
         val name = generateName("tmpField")
         return Field(
-            this, null, false, null,
+            this, null,
+            false, isMutable = false, null,
             name, null, initialValue, Keywords.NONE, initialValue.origin
         )
     }
@@ -422,6 +423,31 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun isInterface(): Boolean {
         return scopeType == ScopeType.INTERFACE
+    }
+
+    fun clear() {
+        // todo it would be nice to clear everything, but to do that,
+        //  we need to store IntType etc on an instance level, or re-register them
+        // children.clear()
+        for (child in children) {
+            child.clear()
+        }
+        fields.clear()
+        // scopeType = null
+        // hasTypeParameters = false
+        // typeParameters = emptyList()
+        imports = emptyList()
+        objectField = null
+        superCalls.clear()
+        superCallNames.clear()
+        fileName = null
+        keywords = 0
+        code.clear()
+        selfAsMethod = null
+        selfAsConstructor = null
+        selfAsTypeAlias = null
+        // todo somehow clear typeWithArgs
+        // typeWithArgs
     }
 
     companion object {

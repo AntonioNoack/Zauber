@@ -9,7 +9,7 @@ import me.anno.zauber.utils.RecursiveLazy
 abstract class MethodColoring<Method, Color : Any> {
     private val cache = HashMap<Method, RecursiveLazy<Color>>()
 
-    fun isColored(method: Method): Color {
+    operator fun get(method: Method): Color {
         return cache.getOrPut(method) {
             RecursiveLazy { isColoredImpl(method) }
         }.value
@@ -21,7 +21,7 @@ abstract class MethodColoring<Method, Color : Any> {
         var isRecursive = false
         val colors = dependencies.mapNotNull { funcI ->
             try {
-                isColored(funcI)
+                get(funcI)
             } catch (_: RecursiveException) {
                 isRecursive = true
                 null

@@ -1,6 +1,7 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.ValueParameterImpl
@@ -43,6 +44,8 @@ class AssignIfMutableExpr(
     private val plusName get() = plusName(symbol)
     private val plusAssignName get() = plusAssignName(symbol)
 
+    override fun isResolved(): Boolean = false
+
     override fun toStringImpl(depth: Int): String {
         return "${left.toString(depth)} $symbol ${right.toString(depth)}"
     }
@@ -64,12 +67,12 @@ class AssignIfMutableExpr(
     }
 
     private fun getMethodOrNull(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         rightType: Type
     ): ResolvedMethod? {
         return MethodResolver.resolveMethod(
-            context, name, nameAsImport, null,
+            context, codeScope, name, nameAsImport, null,
             listOf(ValueParameterImpl(null, rightType, false)),
             origin,
         ) as? ResolvedMethod
@@ -81,8 +84,8 @@ class AssignIfMutableExpr(
         val leftType = TypeResolution.resolveType(context, left)
         val rightType = TypeResolution.resolveType(context, right)
         val leftContext = context.withSelfType(leftType)
-        val plusMethod = getMethodOrNull(leftContext, plusName, plusImports, rightType)
-        val plusAssignMethod = getMethodOrNull(leftContext, plusAssignName, plusAssignImports, rightType)
+        val plusMethod = getMethodOrNull(leftContext, scope, plusName, plusImports, rightType)
+        val plusAssignMethod = getMethodOrNull(leftContext, scope, plusAssignName, plusAssignImports, rightType)
         check(plusMethod != null || plusAssignMethod != null) {
             "Either a plus or a plusAssign method must be declared on $leftType"
         }

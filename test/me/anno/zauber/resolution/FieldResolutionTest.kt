@@ -473,4 +473,60 @@ class FieldResolutionTest {
         val actualType = splitScope.getField("tested").valueType!!
         assertEquals(FloatType, actualType)
     }
+
+    @Test
+    fun testFieldInPackageScope() {
+        val code = """
+        val target = 0
+        val tested = target
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope.getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testExtensionFieldInPackageScope() {
+        val code = """
+        val Int.target = 0
+        val tested = 0.target
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope.getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testExtensionFieldInMethodBody() {
+        val code = """
+        fun method(): Int {
+            val Int.next = 1
+            val tested = 0.next
+            return tested
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope
+            .firstChild(ScopeType.METHOD)
+            .firstChild(ScopeType.METHOD_BODY)
+            .firstChild(ScopeType.METHOD_BODY) // first scope split
+            .getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testFieldWithCallAfter(){
+        val code = """
+            val tested get() = sq(5)
+            fun sq(x: Int) = x*x
+            
+            package zauber
+            class Int {
+                external fun times(other: Int): Int
+            }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope.getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
 }

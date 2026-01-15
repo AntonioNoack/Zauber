@@ -23,5 +23,6 @@ class StringExpression(val value: String, scope: Scope, origin: Int) : Expressio
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = true
 
 }

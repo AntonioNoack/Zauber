@@ -15,6 +15,16 @@ abstract class Expression(val scope: Scope, val origin: Int) {
 
     abstract fun resolveType(context: ResolutionContext): Type
 
+    open fun resolve(context: ResolutionContext): Expression {
+        if (isResolved()) {
+            if (resolvedType == null) {
+                resolvedType = resolveType(context)
+            }
+            return this
+        }
+        throw NotImplementedError("Resolve ${javaClass.simpleName}, $this")
+    }
+
     fun exprHasNoType(context: ResolutionContext): Type {
         if (!context.allowTypeless) throw IllegalStateException(
             "Expected type, but found $this (${javaClass.simpleName}) in ${resolveOrigin(origin)}"
@@ -55,6 +65,11 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * whether this expression changes information about types
      * */
     abstract fun splitsScope(): Boolean
+
+    /**
+     * after type resolution, all expressions should be resolved
+     * */
+    abstract fun isResolved(): Boolean
 
     companion object {
         var numExpressionsCreated = 0

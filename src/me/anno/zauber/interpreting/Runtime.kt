@@ -8,11 +8,14 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ByteType
 import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.NullType
 
@@ -22,6 +25,12 @@ class Runtime {
     private val nullInstance = Instance(getClass(NullType), emptyArray())
 
     val callStack = ArrayList<Call>()
+    val externalMethods = HashMap<ExternalKey, ExternalMethod>()
+
+    fun register(scope: Scope, name: String, types: List<Type>, method: ExternalMethod) {
+        val key = ExternalKey(scope, name, types)
+        externalMethods[key] = method
+    }
 
     operator fun get(field: SimpleField): Instance {
         return callStack.last().fields[field]
@@ -75,11 +84,18 @@ class Runtime {
         valueParameters: List<SimpleField>
     ): Instance {
         val valueParameters = valueParameters.map { this[it] }
+        if (method.isExternal()) {
+            val key = ExternalKey(method.scope.parent!!, method.name!!, method.valueParameters.map { it.type })
+            val method = externalMethods[key]
+                ?: throw IllegalStateException("Missing external method $key")
+            return method.process(this, self, valueParameters)
+        }
 
-        val body = method.body ?: throw IllegalStateException("Missing body for method $method")
+        val body = method.body
+            ?: throw IllegalStateException("Missing body for method $method")
         var simpleBody = method.simpleBody
         if (simpleBody == null) {
-            val context = ResolutionContext(method.scope, method.selfType, true, method.returnType)
+            val context = ResolutionContext(method.selfType, true, method.returnType)
             simpleBody = ASTSimplifier.simplify(context, body).startBlock
             method.simpleBody = simpleBody
         }
@@ -98,29 +114,55 @@ class Runtime {
 
     fun createNumber(base: NumberExpression): Instance {
         val type = base.resolvedType ?: base.resolvedType0
+        var value = base.value
+        val basis = when {
+            value.startsWith("0x", true) -> {
+                value = value.substring(2)
+                16
+            }
+            value.startsWith("0b", true) -> {
+                value = value.substring(2)
+                2
+            }
+            else -> 10
+        }
         return when (type) {
-            IntType -> {
-                val instance = Instance(getClass(IntType), emptyArray())
-                instance.rawValue = base.value.toInt()
+            ByteType -> {
+                val instance = Instance(getClass(ByteType), emptyArray())
+                instance.rawValue = value.toByte(basis)
                 instance
             }
-            LongType -> {
-                val instance = Instance(getClass(IntType), emptyArray())
-                instance.rawValue = base.value.toInt()
+            ShortType -> {
+                val instance = Instance(getClass(ShortType), emptyArray())
+                instance.rawValue = value.toShort(basis)
                 instance
             }
+            IntType -> createInt(value.toInt(basis))
+            LongType -> createLong(value.toLong(basis))
             FloatType -> {
-                val instance = Instance(getClass(IntType), emptyArray())
-                instance.rawValue = base.value.toInt()
+                val instance = Instance(getClass(FloatType), emptyArray())
+                instance.rawValue = base.value.toFloat()
                 instance
             }
             DoubleType -> {
-                val instance = Instance(getClass(IntType), emptyArray())
-                instance.rawValue = base.value.toInt()
+                val instance = Instance(getClass(DoubleType), emptyArray())
+                instance.rawValue = base.value.toDouble()
                 instance
             }
             else -> throw NotImplementedError("Create instance of type $type")
         }
+    }
+
+    fun createInt(value: Int): Instance {
+        val instance = Instance(getClass(IntType), emptyArray())
+        instance.rawValue = value
+        return instance
+    }
+
+    fun createLong(value: Long): Instance {
+        val instance = Instance(getClass(LongType), emptyArray())
+        instance.rawValue = value
+        return instance
     }
 
     fun createString(value: String): Instance {
@@ -147,7 +189,8 @@ class Runtime {
     }
 
     fun returnFromCall(value: Instance) {
-        TODO()
+        val call = callStack.removeLast()
+        call.returnValue = value
     }
 
     fun castToBool(instance: Instance): Boolean {
@@ -158,7 +201,10 @@ class Runtime {
     }
 
     fun castToInt(value: Instance): Int {
-        TODO()
+        check(value.type == getClass(IntType)) {
+            "Casting $value to int failed, type mismatch"
+        }
+        return value.rawValue as Int
     }
 
     fun gotoOtherBlock(target: SimpleBlock) {

@@ -8,6 +8,15 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
+import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
 import me.anno.zauber.ast.simple.controlflow.SimpleLoop
@@ -147,7 +156,7 @@ object ASTSimplifier {
                 val constructor = null
                 val context = context.withSelfType(calleeType)
                 val method = resolveCallable(
-                    context,
+                    context, expr.scope,
                     expr.name, expr.nameAsImport, constructor,
                     expr.typeParameters, valueParameters, expr.origin,
                 ) ?: MethodResolver.printScopeForMissingMethod(
@@ -191,18 +200,17 @@ object ASTSimplifier {
             }
             is UnresolvedFieldExpression -> {
                 val field = expr.resolveField(context)
-                    ?: throw IllegalStateException("[UnResField] Failed to resolve field '${expr.name}' in scope ${expr.scope}")
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                val dst = currBlock.field(field.getValueType(context))
+                val dst = currBlock.field(field.getValueType())
                 currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
                 dst
             }
             is FieldExpression -> simplifyFieldExpr(currBlock, context, expr)
             is MemberNameExpression -> {
-                val field = resolveField(context, expr.name, expr.nameAsImport, null, expr.origin)
+                val field = resolveField(context, expr.scope, expr.name, expr.nameAsImport, null, expr.origin)
                     ?: throw IllegalStateException("Missing field '${expr.name}'")
-                val valueType = field.getValueType(context)
+                val valueType = field.getValueType()
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
                 val dst = currBlock.field(valueType)
@@ -240,7 +248,7 @@ object ASTSimplifier {
                         val field = expr.resolveField(context, baseType)
                             ?: TODO("Unresolved field for field type: (${expr.javaClass.simpleName}) $expr")
                         val self = simplifyImpl(context, left, currBlock, graph, true)
-                        val dst = currBlock.field(field.getValueType(context))
+                        val dst = currBlock.field(field.getValueType())
                         currBlock.add(SimpleGetField(dst, self?.use(), field.resolved, expr.scope, expr.origin))
                         dst
                     }
@@ -345,7 +353,7 @@ object ASTSimplifier {
         insideBlock.add(SimpleGoto(condition.use(), insideBlock, afterBlock, true, scope, origin))
 
         // add body to insideBlock
-        simplifyImpl(context.withCodeScope(expr.body.scope), expr.body, insideBlock, graph, needsValue)
+        simplifyImpl(context, expr.body, insideBlock, graph, needsValue)
 
         val loop = SimpleLoop(insideBlock, scope, origin)
         currBlock.add(beforeBlock) // as a label
@@ -381,15 +389,13 @@ object ASTSimplifier {
         }
 
         // add body to insideBlock
-        simplifyImpl(context.withCodeScope(expr.body.scope), expr.body, insideBlock, graph, needsValue)
+        simplifyImpl(context, expr.body, insideBlock, graph, needsValue)
 
         insideBlock.add(continueBlock) // as a label
 
         // add condition and jump to insideBlock
-        val condition = simplifyImpl(
-            context.withCodeScope(expr.condition.scope),
-            expr.condition.not(), continueBlock, graph, needsValue
-        ) ?: throw IllegalStateException("Condition should return a boolean, not Nothing")
+        val condition = simplifyImpl(context, expr.condition.not(), continueBlock, graph, needsValue)
+            ?: throw IllegalStateException("Condition should return a boolean, not Nothing")
         continueBlock.add(SimpleGoto(condition.use(), insideBlock, afterBlock, true, scope, origin))
 
         val loop = SimpleLoop(insideBlock, scope, origin)
@@ -417,7 +423,7 @@ object ASTSimplifier {
             val origin = expr.origin
             val ifBlock = graph.addBlock(scope, origin)
             val elseBlock = graph.addBlock(scope, origin)
-            simplifyImpl(context.withCodeScope(expr.ifBranch.scope), expr.ifBranch, ifBlock, graph, true)
+            simplifyImpl(context, expr.ifBranch, ifBlock, graph, true)
             currBlock.add(SimpleBranch(condition.use(), ifBlock, elseBlock, scope, origin))
             return voidField
         } else {
@@ -425,14 +431,8 @@ object ASTSimplifier {
             val origin = expr.origin
             val ifBlock = graph.addBlock(scope, origin)
             val elseBlock = graph.addBlock(scope, origin)
-            val ifValue = simplifyImpl(
-                context.withCodeScope(expr.ifBranch.scope),
-                expr.ifBranch, ifBlock, graph, true
-            )
-            val elseValue = simplifyImpl(
-                context.withCodeScope(expr.elseBranch.scope),
-                expr.elseBranch, elseBlock, graph, true
-            )
+            val ifValue = simplifyImpl(context, expr.ifBranch, ifBlock, graph, true)
+            val elseValue = simplifyImpl(context, expr.elseBranch, elseBlock, graph, true)
             currBlock.add(SimpleBranch(condition.use(), ifBlock, elseBlock, scope, origin))
             return if (!needsValue) voidField else {
                 if (ifValue != null && elseValue != null) {
@@ -462,13 +462,11 @@ object ASTSimplifier {
             is Method -> {
                 selfExpr!!
                 val base = simplifyImpl(context, selfExpr, currBlock, graph, true) ?: return null
-                val params = reorderParameters(
-                    valueParameters, method.valueParameters,
-                    scope, origin
-                ).map { parameter ->
-                    simplifyImpl(context, parameter, currBlock, graph, true)
-                        ?: return null
-                }
+                val params = reorderParameters(valueParameters, method.valueParameters, scope, origin)
+                    .map { parameter ->
+                        simplifyImpl(context, parameter, currBlock, graph, true)
+                            ?: return null
+                    }
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
                 for (param in params) param.use()

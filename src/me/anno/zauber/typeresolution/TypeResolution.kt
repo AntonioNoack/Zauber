@@ -3,7 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.Compile
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
+import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
@@ -97,7 +97,7 @@ object TypeResolution {
                 LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
                 try {
                     val selfType = field.selfType ?: scopeSelfType
-                    val context = ResolutionContext(field.codeScope, selfType, false, null)
+                    val context = ResolutionContext(selfType, false, null)
                     field.valueType = resolveType(context, initialValue)
                     LOGGER.info("Resolved $field to ${field.valueType}")
                     numSuccesses++

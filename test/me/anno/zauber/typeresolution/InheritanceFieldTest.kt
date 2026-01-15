@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.StandardTypes
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,7 +20,7 @@ class InheritanceFieldTest {
     fun testDirectField() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class A {
                     val size: Int
@@ -35,7 +36,7 @@ class InheritanceFieldTest {
     fun testDirectFieldWithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class A<V> {
                     val size: Int
@@ -51,7 +52,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX1() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A {
                     val size: Int
@@ -68,7 +69,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX1WithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A<V> {
                     val size: Int
@@ -85,7 +86,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX2() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A {
                     val size: Int
@@ -103,7 +104,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX2WithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A<I> {
                     val size: Int

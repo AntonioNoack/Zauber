@@ -14,6 +14,19 @@ abstract class Type {
         }
     }
 
+    fun isResolved(): Boolean {
+        return when (this) {
+            NullType -> true
+            is GenericType,
+            is LambdaType,
+            is SelfType,
+            is ThisType -> false
+            is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
+            is UnionType -> types.all { it.isResolved() }
+            else -> throw NotImplementedError("Is $this resolved?")
+        }
+    }
+
     abstract fun toStringImpl(depth: Int): String
     override fun toString(): String = toStringImpl(10)
     fun toString(depth: Int): String {

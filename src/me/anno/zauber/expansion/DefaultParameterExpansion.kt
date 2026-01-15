@@ -3,8 +3,8 @@ package me.anno.zauber.expansion
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.CallExpression
 import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.NamedCallExpression
-import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager

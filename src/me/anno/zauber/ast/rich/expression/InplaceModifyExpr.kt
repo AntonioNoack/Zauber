@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 
 enum class InplaceModifyType(val symbol: String, val methodName: String) {
     INCREMENT("++", "inc"),

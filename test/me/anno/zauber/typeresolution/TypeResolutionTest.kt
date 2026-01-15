@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
+import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.ScopeType
@@ -51,6 +52,7 @@ class TypeResolutionTest {
             ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
+            resolveOverrides(testScope)
             resolveTypesAndNames(testScope)
             val field = testScope.fields.first { it.name == "tested" }
             return field.valueType
@@ -79,7 +81,7 @@ class TypeResolutionTest {
                     }
                 } else {
                     val context = ResolutionContext(
-                        expr.scope, method.selfType,
+                        method.selfType,
                         true, null
                     )
                     val type = TypeResolution.resolveType(context, expr)

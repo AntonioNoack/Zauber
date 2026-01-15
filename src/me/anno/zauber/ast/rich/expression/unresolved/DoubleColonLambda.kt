@@ -1,5 +1,6 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -7,7 +8,7 @@ import me.anno.zauber.types.Type
 /**
  * ::callMeNow -> type is some lambda
  * */
-class DoubleColonPrefix(val left: Scope, val methodName: String, scope: Scope, origin: Int) :
+class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
@@ -22,7 +23,8 @@ class DoubleColonPrefix(val left: Scope, val methodName: String, scope: Scope, o
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false // some lambda -> no
+    override fun isResolved(): Boolean = false
 
-    override fun clone(scope: Scope) = DoubleColonPrefix(left, methodName, scope, origin)
+    override fun clone(scope: Scope) = DoubleColonLambda(left, methodName, scope, origin)
 
 }

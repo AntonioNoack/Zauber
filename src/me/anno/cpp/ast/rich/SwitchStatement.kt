@@ -8,6 +8,9 @@ import me.anno.zauber.ast.rich.controlflow.storeSubject
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -29,11 +32,13 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
     val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
 
         val noPrevBranch = Field(
-            scope, null, true, null,
+            scope, null,
+            false, isMutable = true, null,
             "__hadPrevBranch", BooleanType, trueExpr, Keywords.SYNTHETIC, origin
         )
         val prevBranchContinues = Field(
-            scope, null, true, null,
+            scope, null,
+            false, isMutable = true, null,
             "__prevBranchContinues", BooleanType, falseExpr, Keywords.SYNTHETIC, origin
         )
 

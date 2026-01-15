@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -24,17 +25,19 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
-class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: ParameterList, context: ResolutionContext) :
-    ResolvedMember<Field>(ownerTypes, callTypes, field, context) {
+class ResolvedField(
+    ownerTypes: ParameterList, field: Field, callTypes: ParameterList,
+    context: ResolutionContext, codeScope: Scope
+) : ResolvedMember<Field>(ownerTypes, callTypes, field, context, codeScope) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ResolvedField::class)
 
-        fun filterTypeByScopeConditions(field: Field, type: Type, context: ResolutionContext): Type {
+        fun filterTypeByScopeConditions(field: Field, type: Type, context: ResolutionContext, codeScope: Scope): Type {
             // todo filter type based on scope conditions
             // todo branches that return Nothing shall be ignored, and their condition applies even after
             var type = type
-            var scope = context.codeScope
+            var scope = codeScope
             while (true) {
                 val conditions = scope.branchConditions
                 for (i in conditions.indices) {
@@ -78,13 +81,13 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
             return when (expr) {
                 is MemberNameExpression -> {
                     if (expr.name == field.name) {
-                        val field2 = resolveField(context, expr.name, expr.nameAsImport, null, expr.origin)
+                        val field2 = resolveField(context, expr.scope, expr.name, expr.nameAsImport, null, expr.origin)
                         field2?.resolved == field
                     } else false
                 }
                 is UnresolvedFieldExpression -> {
                     if (expr.name == field.name) {
-                        val field2 = resolveField(context, expr.name, expr.nameAsImport, null, expr.origin)
+                        val field2 = resolveField(context, expr.scope, expr.name, expr.nameAsImport, null, expr.origin)
                         field2?.resolved == field
                     } else false
                 }
@@ -142,8 +145,8 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         check(field.typeParameters.size == callTypes.size)
     }
 
-    fun getValueType(context: ResolutionContext): Type {
-        LOGGER.info("Getting type of $resolved in scope ${context.codeScope.pathStr}")
+    fun getValueType(): Type {
+        LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}")
 
         val field = resolved
         val ownerNames = field.selfTypeTypeParams(context.selfType)
@@ -154,11 +157,11 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         val forCall = resolveGenerics(selfType, forType, field.typeParameters, callTypes)
 
         val context = context.withSelfType(field.selfType)
-        return filterTypeByScopeConditions(field, forCall, context)
+        return filterTypeByScopeConditions(field, forCall, context, codeScope)
     }
 
     override fun getTypeFromCall(): Type {
-        val baseType = getValueType(this.context /* todo is this correct??? */)
+        val baseType = getValueType()
         if (baseType is LambdaType) {
             return baseType.returnType // easy-peasy :3
         }
@@ -178,11 +181,8 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
         return "ResolvedField(field=$resolved)"
     }
 
-    fun resolveCalledMethod(
-        typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
-    ): ResolvedMethod {
-        val baseType = getValueType(this.context /* todo is this correct??? */)
+    fun resolveCalledMethod(typeParameters: List<Type>?, valueParameters: List<ValueParameter>): ResolvedMethod {
+        val baseType = getValueType()
         if (baseType is LambdaType) {
             // check for self-type: it's another argument...
             val numArguments = (if (baseType.selfType != null) 1 else 0) + baseType.parameters.size
@@ -199,7 +199,7 @@ class ResolvedField(ownerTypes: ParameterList, field: Field, callTypes: Paramete
             } else method.returnType // no resolution invoked (fast-path)
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
-                typeParameters, valueParameters, resolved.origin
+                typeParameters, valueParameters, codeScope, resolved.origin
             ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda")
         }
 

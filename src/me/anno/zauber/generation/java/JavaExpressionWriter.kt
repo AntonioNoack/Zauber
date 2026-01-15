@@ -7,6 +7,9 @@ import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 
 object JavaExpressionWriter {

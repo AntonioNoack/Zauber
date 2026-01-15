@@ -4,6 +4,9 @@ import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.FieldDeclaration
 import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.types.Scope
 
 fun ASTBuilderBase.createDestructuringAssignment(
@@ -26,7 +29,8 @@ fun ASTBuilderBase.createDestructuringAssignment(
             scope, origin
         )
         val newField = Field(
-            fieldScope, null, isMutable, null,
+            fieldScope, null,
+            false, isMutable = isMutable, null,
             name.name, name.type, newValue, Keywords.NONE, origin
         )
         val newFieldExpr = FieldExpression(newField, scope, origin)

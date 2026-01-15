@@ -1,9 +1,10 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.expression.CallExpressionBase
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Import
@@ -33,6 +34,8 @@ class NamedCallExpression(
         check(name != ".")
         check(name != "?.")
     }
+
+    override fun isResolved(): Boolean = false
 
     override fun clone(scope: Scope) = NamedCallExpression(
         base.clone(scope), name, nameAsImport, typeParameters,
@@ -70,11 +73,11 @@ class NamedCallExpression(
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val baseType = calculateBaseType(context)
-        val valueParameters = resolveValueParameters(context, valueParameters)
+        val valueParameters = TypeResolution.resolveValueParameters(context, valueParameters)
         val constructor = null
         val contextI = context.withSelfType(baseType)
         return MethodResolver.resolveCallable(
-            contextI, name, nameAsImport, constructor,
+            contextI, scope, name, nameAsImport, constructor,
             typeParameters, valueParameters, origin
         ) ?: MethodResolver.printScopeForMissingMethod(
             contextI, this, name,

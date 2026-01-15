@@ -23,7 +23,7 @@ import me.anno.zauber.types.Types.NothingType
  *   - and both return and throw are just special values that must call finish(),
  *   - dropping/GC-ing a Yieldable calls finish(), too
  * */
-class YieldExpression(origin: Int, val value: Expression) : Expression(value.scope, origin) {
+class YieldExpression(val value: Expression, scope: Scope, origin: Int) : Expression(scope, origin) {
     override fun toStringImpl(depth: Int): String {
         return "yield ${value.toString(depth)}"
     }
@@ -31,6 +31,7 @@ class YieldExpression(origin: Int, val value: Expression) : Expression(value.sco
     override fun resolveType(context: ResolutionContext): Type = NothingType
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // always Nothing
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
-    override fun clone(scope: Scope) = YieldExpression(origin, value.clone(scope))
+    override fun clone(scope: Scope) = YieldExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = value.isResolved()
 }

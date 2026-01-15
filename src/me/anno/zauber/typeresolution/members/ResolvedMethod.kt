@@ -5,11 +5,14 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
-class ResolvedMethod(ownerTypes: ParameterList, method: Method, callTypes: ParameterList, context: ResolutionContext) :
-    ResolvedMember<Method>(ownerTypes, callTypes, method, context) {
+class ResolvedMethod(
+    ownerTypes: ParameterList, method: Method, callTypes: ParameterList,
+    context: ResolutionContext, codeScope: Scope
+) : ResolvedMember<Method>(ownerTypes, callTypes, method, context, codeScope) {
 
     override fun getTypeFromCall(): Type {
         val method = resolved

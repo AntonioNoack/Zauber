@@ -2,6 +2,7 @@ package me.anno.zauber.types
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.types.Types.BooleanType
 
 object BooleanUtils {
@@ -20,7 +21,7 @@ object BooleanUtils {
 
         resolvedType = BooleanType
         return NamedCallExpression(
-            this, "not",  scope, origin
+            this, "not", scope, origin
         )
     }
 

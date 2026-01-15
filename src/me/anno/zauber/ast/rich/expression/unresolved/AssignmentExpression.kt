@@ -1,5 +1,6 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -11,7 +12,7 @@ import me.anno.zauber.types.Type
  * todo -> if it is a field, or a deep constant field,
  *  we somehow need to register this new field definition
  * */
-class AssignmentExpression(var variableName: Expression, var newValue: Expression) :
+class AssignmentExpression(val variableName: Expression, val newValue: Expression) :
     Expression(newValue.scope, newValue.origin) {
 
     override fun toStringImpl(depth: Int): String {
@@ -30,4 +31,5 @@ class AssignmentExpression(var variableName: Expression, var newValue: Expressio
 
     // explicit yes
     override fun splitsScope(): Boolean = true
+    override fun isResolved(): Boolean = variableName.isResolved() && newValue.isResolved()
 }

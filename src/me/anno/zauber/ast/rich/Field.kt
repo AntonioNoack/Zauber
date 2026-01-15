@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
@@ -9,10 +10,14 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 class Field(
     var codeScope: Scope,
+
     val selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
+    val explicitSelfType: Boolean,
+
     val isMutable: Boolean,
     val byParameter: Any?, // Parameter | LambdaParameter | null
 
@@ -25,6 +30,12 @@ class Field(
 
     companion object {
         private val LOGGER = LogManager.getLogger(Field::class)
+    }
+
+    init {
+        if (selfType is ClassType && !selfType.clazz.isClassType()) {
+            throw IllegalStateException("$this has invalid selfType")
+        }
     }
 
     var getter: Method? = null
@@ -41,6 +52,10 @@ class Field(
         codeScope.addField(this)
     }
 
+    // due to multi-interface, there may be many of them
+    var overriddenFields: List<Field> = emptyList()
+    var overriddenBy: List<Field> = emptyList()
+
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
         if (valueType != null) {
@@ -49,16 +64,14 @@ class Field(
 
         val initialValue = initialValue
         if (initialValue != null) {
-            val newContext = context.withCodeScope(initialValue.scope)
-            LOGGER.info("Resolving field ${selfType}.${name} using initialValue: $initialValue, codeScope: ${newContext.codeScope}, selfScope: ${newContext.selfScope}")
-            return TypeResolution.resolveType(newContext, initialValue)
+            LOGGER.info("Resolving field ${selfType}.${name} using initialValue: $initialValue, codeScope: ${initialValue.scope}, selfScope: ${context.selfScope}")
+            return TypeResolution.resolveType(context, initialValue)
         }
 
         var getterExpr = getterExpr
         if (getterExpr is ReturnExpression) getterExpr = getterExpr.value
         if (getterExpr != null) {
             val newContext = context
-                .withCodeScope(getterExpr.scope)
                 .withSelfType(selfType ?: context.selfType)
             return TypeResolution.resolveType(newContext, getterExpr)
         }
@@ -84,4 +97,6 @@ class Field(
         codeScope = newScope
         newScope.addField(this)
     }
+
+    fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
 }

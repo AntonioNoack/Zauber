@@ -5,6 +5,9 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.FieldDeclaration
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.types.Scope
 
 fun ASTBuilderBase.destructuringForLoop(
@@ -16,7 +19,7 @@ fun ASTBuilderBase.destructuringForLoop(
     val fullName = scope.generateName("destruct")
     val fullVariable = Field(
         scope, null,
-        false, null,
+        false, isMutable = false, null,
         fullName, null, null,
         Keywords.NONE, origin
     )
@@ -24,8 +27,8 @@ fun ASTBuilderBase.destructuringForLoop(
         // todo if _, don't create a field
         if (fieldDeclaration.name != "_") Field(
             scope, null,
-            false, null, fieldDeclaration.name,
-            fieldDeclaration.type, null,
+            false, isMutable = false, null,
+            fieldDeclaration.name, fieldDeclaration.type, null,
             Keywords.NONE, origin
         ) else null
     }

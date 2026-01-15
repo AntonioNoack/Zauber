@@ -1,4 +1,4 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.types.Type
 

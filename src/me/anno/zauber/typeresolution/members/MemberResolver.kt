@@ -10,14 +10,11 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
-import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.GenericType
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
@@ -38,7 +35,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             actualValueParameters: List<ValueParameter>
         ): ParameterList? { // found generic values for a match
 
-            if (expectedSelfType is ClassType && expectedSelfType.clazz.scopeType?.isClassType() != true) {
+            if (expectedSelfType is ClassType && !expectedSelfType.clazz.isClassType()) {
                 throw IllegalArgumentException("Expected type cannot be $expectedSelfType, because type is unknown")
             }
 
@@ -186,64 +183,6 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         }
     }
 
-    fun removeGenerics(selfType: Type?): Type? {
-        var selfType = selfType
-        while (selfType is GenericType) {
-            selfType = selfType.superBounds
-        }
-        return selfType
-    }
-
-    /**
-     * finds a method, returns the method and any inserted type parameters
-     * todo check whether this works... the first call should be checked whether expectedSelfType & scope are the same
-     * */
-    fun findMemberInHierarchy(
-        scope: Scope?, origin: Int, name: String,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
-        typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
-    ): Resolved? {
-        if (scope == null) return null
-
-        val selfType = removeGenerics(selfType)
-        if (selfType !is ClassType) {
-            // println("Skipping hierarchy search, because selfType !is ClassType: $selfType")
-            return null
-        }
-
-        val method = findMemberInScope(
-            scope, origin, name,
-            returnType, selfType,
-            typeParameters, valueParameters
-        )
-        if (method != null) return method
-
-        return scope.superCalls.firstNotNullOfOrNull { call ->
-            val superType = call.type
-            val genericNames = call.type.clazz.typeParameters
-            val genericValues = call.type.typeParameters
-            if (genericValues == null || genericNames.size == genericValues.size) {
-                val mappedSelfType = resolveGenerics(null, selfType, genericNames, genericValues) as ClassType
-                val mappedTypeParameters = typeParameters?.map { paramType ->
-                    resolveGenerics(selfType, paramType, genericNames, genericValues)
-                }
-                check(superType.clazz != selfType.clazz)
-                findMemberInHierarchy(
-                    superType.clazz, origin, name,
-                    returnType, mappedSelfType,
-                    mappedTypeParameters, valueParameters
-                )
-            } else {
-                println("Skipping findMemberInHierarchy for $call, because generics are mismatched: $genericNames")
-                null
-            }
-        }
-    }
-
     abstract fun findMemberInScope(
         scope: Scope?, origin: Int,
         name: String,
@@ -280,11 +219,11 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     }
 
     fun <R : Any> resolveInCodeScope(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         callback: (scope: Scope, selfType: Type) -> R?
     ): R? {
 
-        if (!catchFailures) println("ResolveInCodeScope(${context.codeScope}, ${context.selfScope}, ${context.selfType})")
+        if (!catchFailures) println("ResolveInCodeScope($codeScope, ${context.selfScope}, ${context.selfType})")
 
         if (context.selfScope != null && context.selfType != null) {
             if (!catchFailures) println("Checking[0] ${context.selfScope} with ${context.selfType}")
@@ -303,7 +242,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         val scopes = ArrayList<Scope>()
         val selfTypes = ArrayList<Type?>()
-        listScopeTypeCandidates(context, scopes, selfTypes)
+        listScopeTypeCandidates(context, codeScope, scopes, selfTypes)
 
         if (!catchFailures) println("Scopes: $scopes, selfTypes: $selfTypes")
 
@@ -336,14 +275,14 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     }
 
     private fun listScopeTypeCandidates(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         scopes: ArrayList<Scope>,
         selfTypes: ArrayList<Type?>,
     ) {
-        listScopeTypeCandidates(context) { scope, selfType ->
+        listScopeTypeCandidates(context, codeScope) { scope, selfType ->
             scopes.add(scope)
             val selfType = // replace useless package types with Unit s.t. we need to check fewer cases
-                if (selfType is ClassType && selfType.clazz.scopeType?.isClassType() != true)
+                if (selfType is ClassType && !selfType.clazz.isClassType())
                     null else selfType
             selfTypes.add(selfType)
 
@@ -358,10 +297,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     }
 
     private fun listScopeTypeCandidates(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         callback: (scope: Scope, selfType: Type) -> Unit
     ) {
-        var scope: Scope? = context.codeScope
+        var scope: Scope? = codeScope
         val outerClassDepth = getOuterClassDepth(scope)
         // println("Outer class depth: $outerClassDepth")
         while (scope != null) {

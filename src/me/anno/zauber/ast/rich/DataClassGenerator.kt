@@ -2,10 +2,16 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.controlflow.ShortcutOperator
 import me.anno.zauber.ast.rich.controlflow.shortcutExpressionI
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.types.Scope

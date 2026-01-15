@@ -1,9 +1,10 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class ArrayToVarargsStar(val value: Expression) : Expression(value.scope, value.origin) {
@@ -14,10 +15,10 @@ class ArrayToVarargsStar(val value: Expression) : Expression(value.scope, value.
     override fun splitsScope(): Boolean = value.splitsScope()
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val tt = context.targetType
-        val newTT = if (tt is ClassType && tt.clazz == ArrayType.clazz && tt.typeParameters != null) {
+        val newTT = if (tt is ClassType && tt.clazz == Types.ArrayType.clazz && tt.typeParameters != null) {
             tt.typeParameters[0]
         } else null
         return value.hasLambdaOrUnknownGenericsType(context.withTargetType(newTT))
     }
-
+    override fun isResolved(): Boolean = false
 }

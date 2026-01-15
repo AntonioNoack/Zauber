@@ -3,13 +3,19 @@ package me.anno.cpp.ast.rich
 import me.anno.cpp.tokenizer.CppTokenizer.Companion.cKeywords
 import me.anno.cpp.tokenizer.CppTokenizer.Companion.cppKeywords
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.CastExpression.createCastExpression
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
+import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
+import me.anno.zauber.ast.rich.expression.unresolved.GetMethodFromTypeExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -143,7 +149,7 @@ class CppASTBuilder(
         val initialValue = if (consumeIf("=")) readExpression() else null
 
         val field = Field(
-            currPackage, null, true, null,
+            currPackage, null, false, isMutable = true, null,
             name, type, initialValue, packKeywords(), origin
         )
 
@@ -237,7 +243,7 @@ class CppASTBuilder(
                         null, classScope, origin
                     )
                     entryScope.objectField = Field(
-                        classScope, classScope.typeWithoutArgs, false, null,
+                        classScope, classScope.typeWithoutArgs, false, isMutable = false, null,
                         valueName, classScope.typeWithoutArgs, initialValue, keywords, origin
                     )
 

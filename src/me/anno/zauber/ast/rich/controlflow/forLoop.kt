@@ -3,11 +3,13 @@ package me.anno.zauber.ast.rich.controlflow
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 
 fun ASTBuilderBase.iterableToIterator(iterable: Expression): NamedCallExpression {
     return NamedCallExpression(
         iterable, "iterator", nameAsImport("iterator"),
-         iterable.scope, iterable.origin
+        iterable.scope, iterable.origin
     )
 }
 
@@ -47,8 +49,8 @@ fun ASTBuilderBase.forLoop(
     val iterator = iterableToIterator(iterable)
     val iteratorField = scope.createImmutableField(iterator)
     val getNextCall = iteratorToNext(iteratorField, body)
-    val outerAssignment = DeclarationExpression(scope, iterator, iteratorField)
-    val innerAssignment = DeclarationExpression(body.scope, getNextCall, variableField)
+    val outerAssignment = createDeclarationExpression(scope, iterator, iteratorField)
+    val innerAssignment = createDeclarationExpression(body.scope, getNextCall, variableField)
     val hasNextCall = NamedCallExpression(
         FieldExpression(iteratorField, scope, origin),
         "hasNext", nameAsImport("hasNext"),

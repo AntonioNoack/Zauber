@@ -1,9 +1,9 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Scope
@@ -79,14 +79,16 @@ object FieldGetterSetter {
         scope: Scope, origin: Int,
     ): Field {
         return Field(
-            scope, field.selfType, false, /* todo we actually have a parameter */null,
+            scope, null,
+            false, isMutable = false, /* todo we actually have a parameter */null,
             fieldName, field.valueType, field.initialValue ?: field.getterExpr,
             Keywords.NONE, origin
         )
     }
 
     private fun createBackingField(field: Field, scope: Scope, origin: Int): Field = Field(
-        scope, field.selfType, field.isMutable, null,
+        scope, field.selfType,
+        field.explicitSelfType, isMutable = field.isMutable, null,
         "field", field.valueType, field.initialValue ?: field.getterExpr,
         Keywords.SYNTHETIC, origin
     )

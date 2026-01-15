@@ -65,6 +65,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
                 constructor, constructor.selfType,
                 returnType,
                 typeParameters, valueParameters,
+                /* todo is this ok?? */scope,
             )
             LOGGER.info("Match($constructor): $match")
             if (match != null) return match
@@ -118,6 +119,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        codeScope: Scope,
     ): ResolvedConstructor? {
 
         val typeParameters = typeParameters
@@ -130,11 +132,8 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             constructor.selfType.clazz.typeParameters, typeParameters,
             constructor.valueParameters, valueParameters
         ) ?: return null
-        val context = ResolutionContext(
-            constructor.selfType.clazz, constructor.selfType,
-            false, returnType
-        )
-        return ResolvedConstructor(generics, constructor, context)
+        val context = ResolutionContext(constructor.selfType, false, returnType)
+        return ResolvedConstructor(generics, constructor, context, codeScope)
     }
 
     fun List<Type>.toParameterList(generics: List<Parameter>): ParameterList {

@@ -26,7 +26,6 @@ abstract class CallExpressionBase(
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val contextI = context
-            .withCodeScope(scope)
             .withTargetType(null /* unknown */)
         if (base.hasLambdaOrUnknownGenericsType(contextI) ||
             valueParameters.any { valueParameter ->

@@ -1,8 +1,9 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.Scope
@@ -29,6 +30,7 @@ class ConstructorExpression(
     }
 
     override fun splitsScope(): Boolean = valueParameters.any { it.value.splitsScope() }
+    override fun isResolved(): Boolean = false // which one exactly, and which type params is unknown
 
     override fun needsBackingField(methodScope: Scope): Boolean {
         return valueParameters.any { it.value.needsBackingField(methodScope) }
@@ -40,7 +42,7 @@ class ConstructorExpression(
     )
 
     fun resolveMethod(context: ResolutionContext): ResolvedConstructor {
-        val valueParameters = resolveValueParameters(context, valueParameters)
+        val valueParameters = TypeResolution.resolveValueParameters(context, valueParameters)
         return ConstructorResolver.findMemberInScope(
             clazz, origin, clazz.name, context.targetType,
             null, typeParameters, valueParameters

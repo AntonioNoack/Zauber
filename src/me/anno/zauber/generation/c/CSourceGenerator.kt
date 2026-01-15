@@ -7,6 +7,11 @@ import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.generation.Generator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
@@ -225,7 +230,7 @@ object CSourceGenerator : Generator() {
                         builder.append(expr.symbol)
                         writeExpr(expr.right, true)
                     }
-                    is NamedTypeExpression -> {
+                    is TypeExpression -> {
                         builder.append(getName(expr.type))
                     }
                     is AssignmentExpression -> {

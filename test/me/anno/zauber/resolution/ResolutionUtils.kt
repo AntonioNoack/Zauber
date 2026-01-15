@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
+import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
@@ -13,6 +14,8 @@ import me.anno.zauber.types.ScopeType
 
 object ResolutionUtils {
     fun typeResolveScope(code: String): Scope {
+
+        root.clear()
 
         val testScopeName = "test${ctr++}"
 
@@ -51,6 +54,7 @@ object ResolutionUtils {
         }
 
         createDefaultParameterFunctions(root)
+        resolveOverrides(root)
 
         for (packageName in packageNames) {
             val scope = root.children.firstOrNull { it.name == packageName }

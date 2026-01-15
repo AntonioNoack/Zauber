@@ -20,12 +20,8 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
-        return tryBody.hasLambdaOrUnknownGenericsType(context.withCodeScope(tryBody.scope)) ||
-                catches.any {
-                    val handler = it.body
-                    val contextI = context.withCodeScope(handler.scope)
-                    handler.hasLambdaOrUnknownGenericsType(contextI)
-                }
+        return tryBody.hasLambdaOrUnknownGenericsType(context) ||
+                catches.any { it.body.hasLambdaOrUnknownGenericsType(context) }
     }
 
     override fun needsBackingField(methodScope: Scope): Boolean {
@@ -40,6 +36,10 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
         Catch(it.param.clone(it.param.scope /* I don't think we should override this */), it.body.clone(scope))
     }, finallyExpression?.clone(scope))
+
+    override fun isResolved(): Boolean = tryBody.isResolved() &&
+            catches.all { it.param.type.isResolved() && it.body.isResolved() } &&
+            (finallyExpression == null || finallyExpression.isResolved())
 
     override fun toStringImpl(depth: Int): String {
         return "try { $tryBody } ${

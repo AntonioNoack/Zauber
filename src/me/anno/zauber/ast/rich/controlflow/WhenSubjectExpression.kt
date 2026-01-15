@@ -5,6 +5,9 @@ import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -41,8 +44,9 @@ fun storeSubject(
     val subjectName = scope.generateName("subject")
     val value = if (subject is AssignmentExpression) subject.newValue else subject
     val field = Field(
-        scope, scope.typeWithoutArgs, false, null, subjectName,
-        null, value, Keywords.NONE, origin
+        scope, null,
+        false, isMutable = false, null,
+        subjectName, null, value, Keywords.NONE, origin
     )
     return FieldExpression(field, scope, origin)
 }
@@ -78,7 +82,8 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
                 // todo this more-specific field is only valid until fieldName is assigned, again, then we have to use unionType
                 // todo this is also only valid, if no other thread/function could write to the field
                 Field(
-                    caseScope, null, false, null,
+                    caseScope, null,
+                    false, isMutable = false, null,
                     fieldName, jointType, null, Keywords.NONE, origin
                 )
             }

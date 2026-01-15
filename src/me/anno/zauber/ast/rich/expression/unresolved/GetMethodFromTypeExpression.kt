@@ -1,5 +1,6 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -22,5 +23,6 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
     override fun splitsScope(): Boolean = false
 
     override fun clone(scope: Scope) = GetMethodFromTypeExpression(base, name, scope, origin)
+    override fun isResolved(): Boolean = false
 
 }

@@ -1,12 +1,7 @@
 package me.anno.zauber.expansion
 
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
-import me.anno.zauber.ast.rich.Keywords.withFlag
-import me.anno.zauber.ast.rich.Keywords.withoutFlag
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.forEachScope
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
@@ -37,11 +32,12 @@ object OverriddenMethods {
         for (superCall in scope.superCalls) {
             val superScope = superCall.type.clazz
             resolveOverridesImpl(superScope)
-            addAllOverrides(scope, superCall, superScope)
+            addAllMethodOverrides(scope, superCall, superScope)
+            addAllFieldOverrides(scope, superScope)
         }
     }
 
-    private fun addAllOverrides(scope: Scope, superCall: SuperCall, superScope: Scope) {
+    private fun addAllMethodOverrides(scope: Scope, superCall: SuperCall, superScope: Scope) {
         val selfMethods0 = scope.methods.filter { !it.explicitSelfType }
         val selfMethods = selfMethods0.groupBy { it.name }
         val foundMethods = HashSet<Method>()
@@ -94,6 +90,44 @@ object OverriddenMethods {
         for (method in selfMethods0) {
             if (method.keywords.hasFlag(Keywords.OVERRIDE) && method !in foundMethods) {
                 LOGGER.warn("No base-method found for $method in $scope")
+            }
+        }
+    }
+
+    private fun addAllFieldOverrides(scope: Scope, superScope: Scope) {
+        val selfFields0 = scope.fields.filter { !it.explicitSelfType }
+        val foundFields = HashSet<Field>()
+        // todo check that all methods with override-flag have found their partner
+        for (field in superScope.fields.filter { !it.explicitSelfType }) {
+            if (field.isPrivate()) continue
+
+            // find match
+            val selfField = selfFields0.firstOrNull { it.name == field.name }
+
+            val isOpen = field.keywords.hasFlag(Keywords.OPEN) ||
+                    field.keywords.hasFlag(Keywords.OVERRIDE) ||
+                    superScope.isInterface()
+            val isExplicitlyClosed = field.keywords.hasFlag(Keywords.FINAL)
+
+            if (selfField == null) {
+                // somehow create a new method linking to the old one
+                scope.addField(field)
+            } else {
+                foundFields.add(selfField)
+                if (false) check(selfField.keywords.hasFlag(Keywords.OVERRIDE)) {
+                    "Expected $scope.$selfField to have override flag for $superScope.$field"
+                }
+                if (false) check(isOpen && !isExplicitlyClosed) {
+                    "$scope.$selfField cannot both be open and closed, got ${Keywords.toString(selfField.keywords)}"
+                }
+
+                field.overriddenFields += selfField
+                selfField.overriddenBy += field
+            }
+        }
+        for (field in selfFields0) {
+            if (field.keywords.hasFlag(Keywords.OVERRIDE) && field !in foundFields) {
+                LOGGER.warn("No base-method found for $field in $scope")
             }
         }
     }

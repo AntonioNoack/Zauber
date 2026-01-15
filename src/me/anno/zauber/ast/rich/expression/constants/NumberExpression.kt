@@ -25,27 +25,38 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     }
 
     // based on the string content, decide what type this is
-    val resolvedType0 = when {
+    val resolvedType0 = typeBySuffix() ?: when {
         value.startsWith("'") -> CharType
         value.startsWith("0x", true) ||
-                value.startsWith("-0x", true) -> resolveIntType()
-        value.endsWith('h', true) -> HalfType
-        value.endsWith('f', true) -> FloatType
-        value.endsWith('d', true) -> DoubleType
+                value.startsWith("-0x", true) -> resolveHexIntType()
+        value.startsWith("0b", true) ||
+                value.startsWith("-0b", true) -> resolveBinIntType()
         // does Kotlin have numbers with binary exponent? -> no, but it might be useful...
         value.contains('.') || value.contains('e', true) -> DoubleType
         else -> resolveIntType()
     }
 
     private fun resolveIntType(): ClassType {
+        return if (value.length <= 9 && value.toIntOrNull() != null) IntType else LongType
+    }
+
+    private fun resolveHexIntType(): ClassType {
+        return if (value.length <= 8 + 2 && value.substring(2).toIntOrNull(16) != null) IntType else LongType
+    }
+
+    private fun resolveBinIntType(): ClassType {
+        return if (value.length <= 32 + 2 && value.substring(2).toIntOrNull(2) != null) IntType else LongType
+    }
+
+    private fun typeBySuffix(): ClassType? {
         return when {
             value.endsWith("ul", true) -> ULongType
             value.endsWith("u", true) -> UIntType
             value.endsWith("l", true) -> LongType
-            // value.length <= 3 && value.toByteOrNull() != null -> ByteType
-            // value.length <= 5 && value.toShortOrNull() != null -> ShortType
-            value.length <= 9 && value.toIntOrNull() != null -> IntType
-            else -> LongType
+            value.endsWith("h", true) -> HalfType
+            value.endsWith("f", true) -> FloatType
+            value.endsWith("d", true) -> DoubleType
+            else -> null
         }
     }
 
@@ -108,4 +119,5 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = true
 }

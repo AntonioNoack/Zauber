@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.rich.expression.ConstructorExpression
+import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
 import me.anno.zauber.types.Scope
 
 enum class InnerSuperCallTarget {

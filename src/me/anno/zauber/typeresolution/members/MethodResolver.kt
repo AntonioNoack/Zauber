@@ -43,7 +43,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val match = findMemberMatch(
                 method, methodReturnType, returnType,
                 selfType, typeParameters, valueParameters,
-                origin
+                /* todo is this fine??? */scope, origin
             )
             if (match != null) return match
         }
@@ -55,7 +55,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val selfType = method.selfType ?: scopeSelfType
             LOGGER.info("Resolving ${method.scope}.type by ${method.body}, selfType: $selfType")
             val context = ResolutionContext(
-                method.scope, selfType,
+                selfType,
                 false, null
             )
             method.returnType = method.resolveReturnType(context)
@@ -72,7 +72,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        origin: Int
+        codeScope: Scope, origin: Int
     ): ResolvedMethod? {
 
         val methodSelfParams = selfTypeToTypeParams(method.selfType, selfType)
@@ -91,15 +91,16 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         ) ?: return null
 
         val selfType = selfType ?: method.selfType
-        val context = ResolutionContext(method.scope, selfType, false, returnType)
+        val context = ResolutionContext(selfType, false, returnType)
         return ResolvedMethod(
             generics.subList(0, methodSelfParams.size), method,
-            generics.subList(methodSelfParams.size, generics.size), context
+            generics.subList(methodSelfParams.size, generics.size),
+            context, codeScope
         )
     }
 
     fun resolveCallable(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
@@ -108,12 +109,14 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): ResolvedMember<*>? {
         return constructor
             ?: resolveMethod(
-                context, name, nameAsImport,
+                context, codeScope,
+                name, nameAsImport,
                 typeParameters, valueParameters, origin
             )
             // todo value-parameters should be considered for fun-interfaces/LambdaTypes
             ?: resolveField(
-                context, name, nameAsImport,
+                context, codeScope,
+                name, nameAsImport,
                 typeParameters, origin
             )
     }
@@ -123,7 +126,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         typeParameters: List<Type>?, valueParameters: List<ValueParameter>
     ): Nothing {
         val selfScope = context.selfScope
-        val codeScope = context.codeScope
+        val codeScope = expr.scope
         LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
         LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
         LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
@@ -134,14 +137,14 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     }
 
     fun resolveMethod(
-        context: ResolutionContext,
+        context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         origin: Int
     ): ResolvedMember<*>? {
-        return resolveInCodeScope(context) { scope, selfType ->
-            findMemberInHierarchy(
+        return resolveInCodeScope(context, codeScope) { scope, selfType ->
+            findMemberInScope(
                 scope, origin, name, context.targetType,
                 selfType, typeParameters, valueParameters
             )

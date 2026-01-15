@@ -36,7 +36,8 @@ class Parameter(
 
         // automatically gets added to fieldScope
         val field = Field(
-            scope, selfType, isVar, this,
+            scope, selfType,
+            false, isMutable = isVar, this,
             name, type, defaultValue, keywords, origin
         )
         this.field = field

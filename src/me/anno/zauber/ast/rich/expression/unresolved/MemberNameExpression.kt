@@ -1,10 +1,13 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.TokenListIndex
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.findType
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -29,8 +32,8 @@ class MemberNameExpression(
             return if (isChild) {
                 MemberNameExpression(name, nameAsImport(name), scope, origin)
             } else {
-                val type = findType(scope, null, name)
-                if (type != null) return NamedTypeExpression(type, scope, origin)
+                val type = TypeResolution.findType(scope, null, name)
+                if (type != null) return TypeExpression(type, scope, origin)
 
                 // try to find the field:
                 //  check super scopes until a class appears,
@@ -48,15 +51,16 @@ class MemberNameExpression(
     override fun clone(scope: Scope) = MemberNameExpression(name, nameAsImport, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false // 'field' will not have a dot
+    override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
-        val field = resolveField(context, name, nameAsImport, null, origin)
-        if (field != null) return field.getValueType(context)
+        val field = FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
+        if (field != null) return field.getValueType()
 
         throw IllegalStateException(
-            "Missing field/type '${name}' in ${context.selfType}, ${context.codeScope}, " +
-                    resolveOrigin(origin)
+            "Missing field/type '${name}' in ${context.selfType}, $scope, " +
+                    TokenListIndex.resolveOrigin(origin)
         )
     }
 }

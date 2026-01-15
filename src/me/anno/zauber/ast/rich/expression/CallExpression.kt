@@ -2,6 +2,8 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -9,7 +11,6 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver
-import me.anno.zauber.typeresolution.members.MethodResolver.findMemberInFile
 import me.anno.zauber.typeresolution.members.MethodResolver.null1
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedMember
@@ -41,6 +42,8 @@ class CallExpression(
         } else "($base)<${typeParameters ?: "?"}>$valueParameters"
     }
 
+    override fun isResolved(): Boolean = false
+
     override fun needsBackingField(methodScope: Scope): Boolean {
         return valueParameters.any { it.value.needsBackingField(methodScope) }
     }
@@ -69,7 +72,6 @@ class CallExpression(
             is UnresolvedFieldExpression -> {
                 val name = base.name
                 val nameAsImport = base.nameAsImport
-                val context = context.withCodeScope(scope)
                 if (LOGGER.enableInfo) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
                 // findConstructor(selfScope, false, name, typeParameters, valueParameters)
                 val c = ConstructorResolver
@@ -80,12 +82,16 @@ class CallExpression(
                     ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
                     ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
 
-                val byMethodCall = resolveCallable(context, name, nameAsImport, constructor, typeParameters, valueParameters, origin)
+                val byMethodCall = resolveCallable(
+                    context, scope,
+                    name, nameAsImport,
+                    constructor, typeParameters, valueParameters, origin
+                )
                 if (byMethodCall != null) return byMethodCall
 
                 MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
             }
-            is NamedTypeExpression -> {
+            is TypeExpression -> {
 
                 val baseType = base.type
                 val baseScope = typeToScope(baseType)

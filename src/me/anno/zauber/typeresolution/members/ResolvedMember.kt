@@ -6,6 +6,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.LambdaParameter
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -14,7 +15,8 @@ abstract class ResolvedMember<V>(
     val ownerTypes: ParameterList,
     val callTypes: ParameterList,
     val resolved: V,
-    val context: ResolutionContext
+    val context: ResolutionContext,
+    val codeScope: Scope,
 ) {
 
     abstract fun getTypeFromCall(): Type
@@ -85,7 +87,6 @@ abstract class ResolvedMember<V>(
                     else {
                         type.field.resolveValueType(
                             ResolutionContext(
-                                type.field.codeScope,
                                 type.field.selfType,
                                 false, null
                             )

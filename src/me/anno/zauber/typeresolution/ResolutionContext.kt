@@ -1,14 +1,13 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
-import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class ResolutionContext(
-    val codeScope: Scope, // 3rd
-    val selfType: Type?, // 2nd
+    val selfType: Type?,
     /**
-     * Whether something without type, like while(true){}, is supported
+     * Whether something without type, like while(true){}, is supported;
+     * This is meant to prevent assignments and while-loops in call arguments: AssignmentExpr will throw if !allowTypeless
      * */
     val allowTypeless: Boolean,
     val targetType: Type?
@@ -19,7 +18,7 @@ class ResolutionContext(
     fun withTargetType(newTargetType: Type?): ResolutionContext {
         if (newTargetType == targetType) return this
         return ResolutionContext(
-            codeScope, selfType,
+            selfType,
             allowTypeless, newTargetType
         )
     }
@@ -27,21 +26,17 @@ class ResolutionContext(
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
         return ResolutionContext(
-            codeScope, newSelfType,
+            newSelfType,
             allowTypeless, targetType
         )
     }
 
-    fun withCodeScope(newCodeScope: Scope): ResolutionContext {
-        return ResolutionContext(newCodeScope, selfType, allowTypeless, targetType)
-    }
-
     override fun toString(): String {
-        return "ResolutionContext(code=$codeScope, selfType=$selfType, allowTypeless=$allowTypeless, targetType=$targetType)"
+        return "ResolutionContext(selfType=$selfType, allowTypeless=$allowTypeless, targetType=$targetType)"
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
         if (allowTypeless == newAllowTypeless) return this
-        return ResolutionContext(codeScope, selfType, newAllowTypeless, targetType)
+        return ResolutionContext(selfType, newAllowTypeless, targetType)
     }
 }

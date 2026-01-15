@@ -20,4 +20,5 @@ class ContinueExpression(val label: String?, scope: Scope, origin: Int) : Expres
 
     // execution ends here anyway
     override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = true
 }

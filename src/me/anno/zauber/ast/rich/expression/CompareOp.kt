@@ -18,4 +18,5 @@ class CompareOp(val value: Expression, val type: CompareType) : Expression(value
 
     override fun clone(scope: Scope) = CompareOp(value.clone(scope), type)
     override fun splitsScope(): Boolean = value.splitsScope()
+    override fun isResolved(): Boolean = value.isResolved()
 }

@@ -2,8 +2,6 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.CastExpression.createBranchExpression
-import me.anno.zauber.ast.rich.CastExpression.createCastExpression
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
@@ -11,13 +9,14 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
-import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr.Companion.plusAssignName
-import me.anno.zauber.ast.rich.expression.AssignIfMutableExpr.Companion.plusName
-import me.anno.zauber.ast.rich.expression.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
+import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -77,8 +76,9 @@ class ZauberASTBuilder(
         val unitInstance by lazy {
             val scope = UnitType.clazz
             if (scope.objectField == null) scope.objectField = Field(
-                scope, null, false, null, scope.name,
-                scope.typeWithArgs, null, Keywords.NONE, -1
+                scope, null,
+                false, isMutable = false, null,
+                scope.name, scope.typeWithArgs, null, Keywords.NONE, -1
             )
             FieldExpression(scope.objectField!!, scope, -1)
         }
@@ -93,7 +93,7 @@ class ZauberASTBuilder(
         } else {
             check(selfType == null)
             var scope = currPackage
-            while (scope.scopeType?.isClassType() != true) {
+            while (!scope.isClassType()) {
                 scope = scope.parent
                     ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
             }
@@ -158,7 +158,8 @@ class ZauberASTBuilder(
                 if (parameter.isVal || parameter.isVar) {
                     val parameterField = parameter.getOrCreateField(classScope.typeWithArgs, Keywords.NONE)
                     val classField = Field(
-                        classScope, classScope.typeWithArgs, parameter.isVar,
+                        classScope, classScope.typeWithArgs,
+                        false, isMutable = parameter.isVar,
                         parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, parameter.origin
                     )
                     scope.code.add(
@@ -258,7 +259,8 @@ class ZauberASTBuilder(
 
         scope.hasTypeParameters = true // no type-params are supported
         if (scope.objectField == null) scope.objectField = Field(
-            scope, null, false, null, scope.name,
+            scope, null,
+            false, isMutable = false, null, scope.name,
             ClassType(scope, emptyList()),
             /* todo should we set initialValue? */ null, Keywords.NONE, origin
         )
@@ -383,7 +385,8 @@ class ZauberASTBuilder(
                     if (enumScope.typeParameters.isNotEmpty()) null // we need to resolve them
                     else enumScope.typeWithArgs
                 val field = Field(
-                    companionScope, companionScope.typeWithoutArgs, false, null,
+                    companionScope, companionScope.typeWithoutArgs,
+                    false, isMutable = false, null,
                     name, valueType, initialValue, keywords, origin
                 )
                 entryScope.objectField = field
@@ -417,8 +420,9 @@ class ZauberASTBuilder(
         )
 
         val entriesField = Field(
-            companionScope, companionScope.typeWithoutArgs, false,
-            null, "__entries", listType,
+            companionScope, companionScope.typeWithoutArgs,
+            false, isMutable = false, null,
+            "__entries", listType,
             initialValue, Keywords.SYNTHETIC, origin
         )
 
@@ -443,10 +447,10 @@ class ZauberASTBuilder(
     private fun readFieldInClass(isMutable: Boolean) {
         val origin = origin(i - 1)
 
-        val classScope = currPackage // todo is this fine??
+        val classScope = currPackage
         val typeParameters = readTypeParameterDeclarations(classScope)
-        val selfType = readFieldOrMethodSelfType(typeParameters, classScope)
-            ?: getSelfType(classScope)
+        val selfType0 = readFieldOrMethodSelfType(typeParameters, classScope)
+        val selfType = selfType0 ?: getSelfType(classScope)
 
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
@@ -469,7 +473,8 @@ class ZauberASTBuilder(
         }
 
         val field = Field(
-            currPackage, selfType, isMutable, null,
+            currPackage, selfType,
+            selfType0 != null, isMutable = isMutable, null,
             name, valueType, initialValue, keywords, origin
         )
         field.typeParameters = typeParameters
@@ -557,7 +562,7 @@ class ZauberASTBuilder(
         val keywords = packKeywords()
 
         // parse optional <T, U>
-        val clazz = currPackage
+        val classScopeIfInClass = if (currPackage.isClassType()) currPackage else null
         val methodScope = skipTypeParametersToFindFunctionNameAndScope()
         val typeParameters = readTypeParameterDeclarations(methodScope)
 
@@ -578,13 +583,15 @@ class ZauberASTBuilder(
         lateinit var parameters: List<Parameter>
         pushScope(methodScope) {
             parameters = pushCall {
-                val selfType = ClassType(clazz, null)
+                val selfType = classScopeIfInClass?.typeWithoutArgs
                 readParameterDeclarations(selfType)
             }
         }
 
         // optional return type
-        var returnType = readTypeOrNull(selfType)
+        var returnType =
+            if (!tokens.equals(i, "=", ":")) UnitType // todo if there is a where, we first need to skip it
+            else readTypeOrNull(selfType)
         val extraConditions = readWhereConditions()
 
         val method = Method(
@@ -1020,7 +1027,7 @@ class ZauberASTBuilder(
                 check(tokens.equals(i, TokenType.NAME))
                 val name = tokens.toString(i++)
                 // :: means a function of the current class
-                DoubleColonPrefix(currPackage, name, currPackage, origin)
+                DoubleColonLambda(currPackage, name, currPackage, origin)
             }
 
             consumeIf("if") -> readIfBranch()
@@ -1037,9 +1044,18 @@ class ZauberASTBuilder(
             }
             consumeIf("try") -> readTryCatch()
             consumeIf("return") -> readReturn(label)
-            consumeIf("throw") -> ThrowExpression(origin(i - 1), readExpression())
-            consumeIf("yield") -> YieldExpression(origin(i - 1), readExpression())
-            consumeIf("async") -> AsyncExpression(origin(i - 1), readExpression())
+            consumeIf("throw") -> {
+                val origin = origin(i - 1)
+                ThrowExpression(readExpression(), currPackage, origin)
+            }
+            consumeIf("yield") -> {
+                val origin = origin(i - 1)
+                YieldExpression(readExpression(), currPackage, origin)
+            }
+            consumeIf("async") -> {
+                val origin = origin(i - 1)
+                AsyncExpression(readExpression(), currPackage, origin)
+            }
             consumeIf("break") -> BreakExpression(label, currPackage, origin(i - 1))
             consumeIf("continue") -> ContinueExpression(label, currPackage, origin(i - 1))
 
@@ -1200,7 +1216,7 @@ class ZauberASTBuilder(
             val body = readBodyOrExpression()
             val pseudoInitial = iterableToNextExpr(iterable)
             val variableField = Field(
-                body.scope, null, true, false,
+                body.scope, null, false, isMutable = true, false,
                 name, variableType, pseudoInitial, Keywords.NONE, origin
             )
             return forLoop(variableField, iterable, body, label)
@@ -1210,8 +1226,8 @@ class ZauberASTBuilder(
     private fun readWhenWithSubject(): Expression {
         val subject = pushCall {
             when {
-                consumeIf("val") -> readDeclaration(false, isLateinit = false, currPackage)
-                consumeIf("var") -> readDeclaration(true, isLateinit = false, currPackage)
+                consumeIf("val") -> readFieldInMethod(false, isLateinit = false, currPackage)
+                consumeIf("var") -> readFieldInMethod(true, isLateinit = false, currPackage)
                 else -> readExpression()
             }
         }
@@ -1898,7 +1914,8 @@ class ZauberASTBuilder(
                                     names.add(parameter)
                                     // to do we neither know type nor initial value :/, both come from the called function/set variable
                                     Field( // this is more of a parameter...
-                                        currPackage, null, false, parameter,
+                                        currPackage, null,
+                                        false, isMutable = false, parameter,
                                         name, null, null, Keywords.NONE, origin
                                     )
                                 } else throw IllegalStateException("Expected name")
@@ -1914,7 +1931,8 @@ class ZauberASTBuilder(
                         variables.add(parameter)
                         // to do we neither know type nor initial value :/, both come from the called function/set variable
                         Field( // this is more of a parameter...
-                            currPackage, null, true, parameter,
+                            currPackage, null,
+                            false, isMutable = true, parameter,
                             name, null, null, Keywords.NONE, origin
                         )
                     } else throw NotImplementedError()
@@ -1944,7 +1962,7 @@ class ZauberASTBuilder(
                 val subName = oldScope.generateName("split")
                 val newScope = oldScope.getOrPut(subName, ScopeType.METHOD_BODY)
                 // field shall be declared in newScope, but expr shall be in old scope...
-                val declaration = readDeclaration(isMutable, isLateinit, newScope)
+                val declaration = readFieldInMethod(isMutable, isLateinit, newScope)
                 pushScope(newScope) {
                     val remainder = readMethodBody()
                     (remainder.list as ArrayList<Expression>).add(0, declaration)
@@ -2041,7 +2059,7 @@ class ZauberASTBuilder(
 
             val parameter = Parameter("e", ThrowableType, errCatch, origin)
             val exceptionField = parameter.getOrCreateField(null, Keywords.NONE)
-            val throwImpl = ThrowExpression(origin, FieldExpression(exceptionField, errCatch, origin))
+            val throwImpl = ThrowExpression(FieldExpression(exceptionField, errCatch, origin), errCatch, origin)
 
             result.add(
                 TryCatchBlock(
@@ -2111,7 +2129,7 @@ class ZauberASTBuilder(
         } else null
     }
 
-    private fun readDeclaration(
+    private fun readFieldInMethod(
         isMutable: Boolean, isLateinit: Boolean,
         fieldScope: Scope
     ): Expression {
@@ -2120,26 +2138,42 @@ class ZauberASTBuilder(
             return readDestructuring(isMutable, fieldScope)
         }
 
-        check(tokens.equals(i, TokenType.NAME))
-        val origin = origin(i)
-        val name = tokens.toString(i++) // todo name could be path...
-
-        if (tokens.equals(i, ".")) {
-            i++
-            TODO("read val Vector3d.v get() = x+y")
+        val i0 = i
+        val origin = origin(i0)
+        var afterName = i
+        while (afterName < tokens.size) {
+            if (tokens.equals(afterName, ":", "=")) break
+            else afterName++
         }
+
+        val selfType = if (afterName > i + 1) {
+            check(tokens.equals(afterName - 2, ".")) {
+                "Expected dot to separate type and name for field at ${tokens.err(i0)}"
+            }
+            val type = tokens.push(afterName - 2) {
+                readType(null, true)
+            }
+            consume(".")
+            check(i == afterName - 1) { "Unused tokens at ${tokens.err(i)}" }
+            type
+        } else null
+
+        check(tokens.equals(i, TokenType.NAME))
+        val name = tokens.toString(i++)
 
         if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
 
         val type = readTypeOrNull(null)
-        val value = if (consumeIf("=")) readExpression() else null
+        val initialValue = if (consumeIf("=")) readExpression() else null
+        check(type != null || initialValue != null) { "Field at ${tokens.err(i0)} either needs a type or a value" }
 
         // define variable in the scope
         val field = Field(
-            fieldScope, getSelfType(fieldScope), isMutable, null,
-            name, type, value, Keywords.NONE, origin
+            fieldScope, selfType,
+            selfType != null, isMutable = isMutable, null,
+            name, type, initialValue, Keywords.NONE, origin
         )
 
-        return DeclarationExpression(fieldScope, value, field)
+        return createDeclarationExpression(fieldScope, initialValue, field)
     }
 }

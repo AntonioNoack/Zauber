@@ -1,7 +1,8 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
@@ -21,14 +22,14 @@ class UnresolvedFieldExpression(
     override fun needsBackingField(methodScope: Scope): Boolean = name == "field"
 
     fun resolveField(context: ResolutionContext): ResolvedField {
-        val context = context.withCodeScope(scope)
-        return resolveField(context, name, nameAsImport, null, origin)
+        return FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
             ?: throw IllegalStateException("Failed to resolve field $name in $scope")
     }
 
     override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = false
 
     override fun resolveType(context: ResolutionContext): Type {
-        return resolveField(context).getValueType(context)
+        return resolveField(context).getValueType()
     }
 }

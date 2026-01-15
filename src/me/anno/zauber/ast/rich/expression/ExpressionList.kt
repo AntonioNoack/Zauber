@@ -31,14 +31,17 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         // todo if there is a 'Nothing'-returning expression, return false
         val last = list.lastOrNull() ?: return false
-        val contextI = context.withCodeScope(scope)
-        return last.hasLambdaOrUnknownGenericsType(contextI)
+        return last.hasLambdaOrUnknownGenericsType(context)
     }
 
     override fun splitsScope(): Boolean = list.any { it.splitsScope() }
 
     override fun needsBackingField(methodScope: Scope): Boolean {
         return list.any { it.needsBackingField(methodScope) }
+    }
+
+    override fun isResolved(): Boolean {
+        return list.all { it.isResolved() }
     }
 
 }

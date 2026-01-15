@@ -2,10 +2,10 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.expression.ArrayToVarargsStar
+import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.CallExpression
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType

@@ -319,7 +319,7 @@ object JavaSourceGenerator : Generator() {
         appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
         val body = method.body
         if (body != null) {
-            val context = ResolutionContext(classScope, method.selfType, true, null)
+            val context = ResolutionContext(method.selfType, true, null)
             appendCode(context, method, body)
         } else {
             builder.append(";")
@@ -339,7 +339,7 @@ object JavaSourceGenerator : Generator() {
 
         val isPrimaryConstructor = constructor == classScope.primaryConstructorScope?.selfAsConstructor
 
-        val context = ResolutionContext(classScope, constructor.selfType, true, null)
+        val context = ResolutionContext(constructor.selfType, true, null)
         val superCall = constructor.superCall
 
         writeBlock {

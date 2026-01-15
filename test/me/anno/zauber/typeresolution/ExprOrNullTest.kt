@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.impl.NullType
@@ -13,7 +14,7 @@ class ExprOrNullTest {
     fun testExprOrNull() {
         assertEquals(
             unionTypes(FloatType, NullType),
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
                 
@@ -32,7 +33,7 @@ class ExprOrNullTest {
     fun testExprOrOther() {
         assertEquals(
             unionTypes(FloatType, DoubleType),
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
                 

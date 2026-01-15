@@ -9,6 +9,7 @@ import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class MethodResolutionTest {
 
@@ -425,6 +426,72 @@ class MethodResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testMultipleFunctionsInBodyAvailable() {
+        val code = """
+        fun method(): Int {
+            fun a() = b()
+            fun b() = 0
+            val tested = a()
+            return tested
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope.firstChild(ScopeType.METHOD)
+            .firstChild(ScopeType.METHOD_BODY)
+            .getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testMultipleFunctionsInBodyUnavailable() {
+        assertThrows<IllegalStateException> {
+            val code = """
+            fun method(): Int {
+                fun a() = b()
+                val tested = a()
+                fun b() = 0 // b may depend on tested, and is placed in a sub-scope, so unavailable
+                return tested
+            }
+            """.trimIndent()
+            typeResolveScope(code)
+        }
+    }
+
+    @Test
+    fun testMethodInPackageScope() {
+        val code = """
+        class A
+        fun target(p: A): Int
+        val tested = target(A())
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope.getField("tested").valueType!!
+        assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testBestMatchIsChosen() {
+        // todo implement matching logic...
+        //  what should we prefer???
+        //  a) earlier scopes (iteration order)
+        //  b) better self-type matches (iteration order)
+        val code = """
+        open class A
+        open class B: A()
+        class C: B()
+        
+        fun method(p: A) = 0L
+        fun method(p: C) = 0
+        fun method(p: B) = 0f
+            
+        val tested = method(C())
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val actualType = scope.getField("tested").valueType!!
         assertEquals(IntType, actualType)
     }
 

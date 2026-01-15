@@ -193,6 +193,14 @@ class TokenList(val source: CharSequence, val fileName: String) {
         throw IllegalStateException("Incorrect equals used")
     }
 
+    override fun hashCode(): Int {
+        var hash = 1
+        for (i in 0 until size) {
+            hash = hash * 31 + getType(i).hashCode()
+        }
+        return hash
+    }
+
     override fun toString(): String {
         return List(size) { i ->
             "${getType(i)}(${toString(i)})"

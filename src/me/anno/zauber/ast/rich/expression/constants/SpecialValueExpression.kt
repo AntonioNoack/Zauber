@@ -18,9 +18,9 @@ class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) 
             SpecialValue.TRUE, SpecialValue.FALSE -> BooleanType
             SpecialValue.THIS -> {
                 // todo 'this' might have a label, and then means the parent with that name
-                resolveThisType(typeToScope(context.selfType) ?: context.codeScope).typeWithoutArgs
+                resolveThisType(typeToScope(context.selfType) ?: scope).typeWithoutArgs
             }
-            else -> TODO("Resolve type for ConstantExpression in ${context.codeScope},${type}")
+            else -> TODO("Resolve type for ConstantExpression in ${scope},${type}")
         }
     }
 
@@ -28,4 +28,5 @@ class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // should not have any
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = true
 }

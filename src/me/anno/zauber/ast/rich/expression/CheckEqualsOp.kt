@@ -35,4 +35,6 @@ class CheckEqualsOp(
 
     override fun clone(scope: Scope) =
         CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
+
+    override fun isResolved(): Boolean = left.isResolved() && right.isResolved()
 }

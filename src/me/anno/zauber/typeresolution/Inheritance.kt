@@ -304,6 +304,7 @@ object Inheritance {
                     // these may be null, if so, just accept them
                     val expectedType = expectedGenerics.getOrNull(i) ?: continue
                     val actualType = actualGenerics.getOrNull(i) ?: continue
+
                     if (!isSubTypeOf(
                             expectedType, actualType,
                             expectedTypeParams, actualTypeParameters,

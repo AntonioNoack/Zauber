@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.StandardTypes
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,7 +20,7 @@ class InheritanceMethodTest {
     fun testDirectCall() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class A {
                     fun call(): Int
@@ -35,7 +36,7 @@ class InheritanceMethodTest {
     fun testDirectCallWithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 class A<V> {
                     fun call(): Int
@@ -51,7 +52,7 @@ class InheritanceMethodTest {
     fun testSuperCallX1() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A {
                     fun call(): Int
@@ -68,7 +69,7 @@ class InheritanceMethodTest {
     fun testSuperCallX1WithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A<V> {
                     fun call(): Int
@@ -85,7 +86,7 @@ class InheritanceMethodTest {
     fun testSuperCallX2() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A {
                     fun call(): Int
@@ -103,7 +104,7 @@ class InheritanceMethodTest {
     fun testSuperCallX2WithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A<I> {
                     fun call(): Int

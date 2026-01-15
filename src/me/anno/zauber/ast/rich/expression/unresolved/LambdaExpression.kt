@@ -1,7 +1,8 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -30,12 +31,12 @@ class LambdaExpression(
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
     override fun needsBackingField(methodScope: Scope): Boolean = body.needsBackingField(methodScope)
+    override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false // I don't think so
 
     override fun resolveType(context: ResolutionContext): Type {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")
         val bodyContext = context
-            .withCodeScope(bodyScope)
             .withTargetType(null)
         when (val targetLambdaType = context.targetType) {
             is LambdaType -> {
@@ -50,7 +51,8 @@ class LambdaExpression(
                             val autoParamName = "it"
                             LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
                             Field(
-                                bodyScope, null, false, param0,
+                                bodyScope, null,
+                                false, isMutable = false, param0,
                                 autoParamName, type, null,
                                 Keywords.NONE, origin
                             )
