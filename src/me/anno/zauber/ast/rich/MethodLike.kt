@@ -9,6 +9,7 @@ import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.expansion.IsMethodYielding
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 
@@ -25,6 +26,7 @@ open class MethodLike(
     val keywords: KeywordSet,
     val origin: Int
 ) {
+
     var simpleBody: SimpleBlock? = null
 
     val isRecursive: Boolean
@@ -36,7 +38,7 @@ open class MethodLike(
     val yieldedType: Type
         get() = IsMethodYielding[this]
 
-    val resolvedBodies = HashMap<ParameterList, Expression>()
+    val resolvedBodies = HashMap<Specialization, Expression>()
 
     /**
      * Whether the storage location (field/argument) is needed to resolve this's return type

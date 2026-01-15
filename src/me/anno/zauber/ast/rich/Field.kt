@@ -9,6 +9,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnresolvedType
@@ -59,6 +60,8 @@ class Field(
     // due to multi-interface, there may be many of them
     var overriddenFields: List<Field> = emptyList()
     var overriddenBy: List<Field> = emptyList()
+
+    val resolvedValueType = HashMap<Specialization, Type>()
 
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType

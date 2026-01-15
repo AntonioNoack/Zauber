@@ -45,6 +45,7 @@ object ASTSimplifier {
     //  and handle all possibilities after each call
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
+        val expr = expr.resolve(context)
         val graph = SimpleGraph(expr.scope, expr.origin)
         simplifyImpl(context, expr, graph.startBlock, graph, false)
         return graph
@@ -76,17 +77,6 @@ object ASTSimplifier {
                         currBlock.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
                     }
                 }
-                /*for (childScope in exprScope.children) {
-                    for (field in childScope.fields) {
-                        if (needsFieldByParameter(field.byParameter) &&
-                            field.codeScope != field.originalScope &&
-                            currBlock.instructions.none { it is SimpleDeclaration && it.name == field.name }
-                        ) {
-                            val type = field.resolveValueType(context)
-                            currBlock.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
-                        }
-                    }
-                }*/
                 for (expr in expr.list) {
                     result = simplifyImpl(context, expr, currBlock, graph, needsValue)
                         ?: return null

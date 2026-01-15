@@ -40,7 +40,5 @@ fun createBranchExpression(
             AssignmentExpression(fieldExpr, expr),
             IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
         ), scope, origin
-    )/*.apply {
-            LOGGER.info("Created branch: $this")
-        }*/
+    )
 }

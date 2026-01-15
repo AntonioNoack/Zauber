@@ -4,11 +4,7 @@ import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Import
-import me.anno.zauber.types.LambdaParameter
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
-import me.anno.zauber.types.Type
+import me.anno.zauber.types.*
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.NumberType
 import me.anno.zauber.types.Types.StringType
@@ -346,17 +342,20 @@ open class ZauberASTBuilderBase(
 
         if (path == null) {
             i--
-            println("Unresolved type '$name' in $currPackage/$selfType at ${tokens.err(i)}")
+            LOGGER.warn("Unresolved type '$name' in $currPackage/$selfType at ${tokens.err(i)}")
             return null
         }
 
         // todo support deeper unresolved types??
         while (tokens.equals(i, ".") && tokens.equals(i + 1, TokenType.NAME)) {
-            path = (path as ClassType).clazz.getOrPut(tokens.toString(i + 1), null).typeWithoutArgs
+            val name = tokens.toString(i + 1)
+            path = if (path is ClassType && !path.clazz.isTypeAlias()) {
+                path.clazz.getOrPut(name, null).typeWithoutArgs
+            } else {
+                UnresolvedSubType(path!!, name, currPackage, imports)
+            }
             i += 2 // skip period and name
         }
-
-        println("read path $path (${path?.javaClass?.simpleName})")
 
         return path
     }

@@ -126,7 +126,7 @@ object DefaultParameterExpansion {
 
             val superCall = InnerSuperCall(
                 InnerSuperCallTarget.THIS, newValueParameters,
-                classScope, self.origin // is this fine?
+                self.origin // is this fine?
             )
             val newConstructor = Constructor(
                 self.valueParameters.subList(0, i),

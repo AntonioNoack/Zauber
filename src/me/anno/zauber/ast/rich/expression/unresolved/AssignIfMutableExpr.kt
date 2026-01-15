@@ -44,8 +44,6 @@ class AssignIfMutableExpr(
     private val plusName get() = plusName(symbol)
     private val plusAssignName get() = plusAssignName(symbol)
 
-    override fun isResolved(): Boolean = false
-
     override fun toStringImpl(depth: Int): String {
         return "${left.toString(depth)} $symbol ${right.toString(depth)}"
     }
@@ -112,6 +110,8 @@ class AssignIfMutableExpr(
 
     // we don't know better yet
     override fun splitsScope(): Boolean = true
+
+    override fun isResolved(): Boolean = false
 
     override fun clone(scope: Scope): Expression =
         AssignIfMutableExpr(left.clone(scope), symbol, plusImports, plusAssignImports, right.clone(scope))

@@ -1,11 +1,11 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
-import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
@@ -79,38 +79,49 @@ object TypeResolution {
         val scopeSelfType = getSelfType(scope)
         val children = scope.children
         for (i in children.indices) {
-            try {
-                val method = children[i].selfAsMethod ?: continue
-                getMethodReturnType(scopeSelfType, method)
-                numSuccesses++
-            } catch (e: Throwable) {
-                if (!catchFailures) throw e
-                // e.printStackTrace()
-                numFailures++
-                // continue anyway for now
-            }
+            val method = children[i].selfAsMethod ?: continue
+            resolveMethod(scope, scopeSelfType, method)
         }
         for (field in scope.fields) {
-            var initialValue = field.initialValue ?: field.getterExpr
-            while (initialValue is ReturnExpression) initialValue = initialValue.value
-            if (field.valueType == null && initialValue != null) {
-                LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
-                LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
-                try {
-                    val selfType = field.selfType ?: scopeSelfType
-                    val context = ResolutionContext(selfType, false, null)
-                    field.valueType = resolveType(context, initialValue)
-                    LOGGER.info("Resolved $field to ${field.valueType}")
-                    numSuccesses++
-                } catch (e: Throwable) {
-                    if (!catchFailures) throw e
-                    // e.printStackTrace()
-                    numFailures++
-                    // continue anyway for now
-                }
-            }
+            resolveField(scope, scopeSelfType, field)
         }
         if (false) LOGGER.info("${scope.fileName}: ${scope.pathStr}, ${scope.fields.size}f, ${scope.methods.size}m, ${scope.code.size}c")
+    }
+
+    private fun resolveMethod(scope: Scope, scopeSelfType: Type?, method: Method) {
+        if (method.scope != scope) return // just inherited
+        try {
+            getMethodReturnType(scopeSelfType, method)
+            numSuccesses++
+        } catch (e: Throwable) {
+            if (!catchFailures) throw e
+            // e.printStackTrace()
+            numFailures++
+            // continue anyway for now
+        }
+    }
+
+    private fun resolveField(scope: Scope, scopeSelfType: Type?, field: Field) {
+        if (field.codeScope != scope) return // just inherited
+        if (field.valueType != null) return // done already
+        if (field.initialValue == null && field.getterExpr == null) return // cannot be solved
+
+        if (LOGGER.enableInfo) {
+            LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
+            LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
+        }
+        try {
+            val selfType = field.selfType ?: scopeSelfType
+            val context = ResolutionContext(selfType, false, null)
+            field.valueType = field.resolveValueType(context)
+            if (LOGGER.enableInfo) LOGGER.info("Resolved $field to ${field.valueType}")
+            numSuccesses++
+        } catch (e: Throwable) {
+            if (!catchFailures) throw e
+            // e.printStackTrace()
+            numFailures++
+            // continue anyway for now
+        }
     }
 
     fun getSelfType(scope: Scope): Type? {

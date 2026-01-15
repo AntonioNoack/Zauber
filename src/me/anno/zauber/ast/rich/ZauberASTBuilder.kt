@@ -138,7 +138,7 @@ class ZauberASTBuilder(
         val primaryConstructor = Constructor(
             constructorParams ?: emptyList(),
             primConstructorScope, if (primarySuperCall != null) {
-                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, classScope, origin)
+                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
             } else null, null,
             if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
             constructorOrigin
@@ -627,7 +627,7 @@ class ZauberASTBuilder(
                     )
                 ) + parameters
             }
-            InnerSuperCall(target, parameters, classScope, origin)
+            InnerSuperCall(target, parameters, origin)
         } else null
 
         // body (or just = expression)

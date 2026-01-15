@@ -10,7 +10,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CompareOp
-import me.anno.zauber.ast.rich.expression.unresolved.CompareType
+import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.GetMethodFromTypeExpression

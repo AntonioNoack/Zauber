@@ -31,5 +31,5 @@ class AssignmentExpression(val variableName: Expression, val newValue: Expressio
 
     // explicit yes
     override fun splitsScope(): Boolean = true
-    override fun isResolved(): Boolean = variableName.isResolved() && newValue.isResolved()
+    override fun isResolved(): Boolean = false
 }

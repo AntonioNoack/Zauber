@@ -15,6 +15,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.BooleanType
@@ -153,18 +154,18 @@ object JavaSourceGenerator : Generator() {
             val file = File(dst, scope.path.joinToString("/") + ".java")
 
             appendPackage(scope.path.dropLast(1))
-            generateInside(scope.name, scope)
+            generateInside(scope.name, scope, null)
 
             writer.write(file, finish())
         } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
-            if (scopeType == ScopeType.PACKAGE &&
-                (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())
-            ) {
+            if (scopeType == ScopeType.PACKAGE && (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())) {
+                // we need some package helper
+
                 val name = scope.name.capitalize() + "Kt"
                 val file = File(dst, scope.path.joinToString("/") + "/$name.java")
 
                 appendPackage(scope.path)
-                generateInside(name, scope)
+                generateInside(name, scope, null)
 
                 writer.write(file, finish())
             }
@@ -176,6 +177,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     fun writeBlock(run: () -> Unit) {
+        if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
         builder.append("{")
 
         depth++
@@ -191,11 +193,10 @@ object JavaSourceGenerator : Generator() {
         indent()
     }
 
-    fun generateInside(name: String, scope: Scope) {
+    fun generateInside(name: String, scope: Scope, specialization: Specialization?) {
 
         // todo imports ->
         //  collect them in a dry-run :)
-
 
         builder.append("public ")
         val type = when (scope.scopeType) {
@@ -213,6 +214,9 @@ object JavaSourceGenerator : Generator() {
         if (scope.keywords.hasFlag(Keywords.ABSTRACT)) builder.append("abstract ")
         builder.append(type).append(' ')
         builder.append(name)
+        if (specialization != null) {
+            builder.append('_').append(specialization.hash)
+        }
 
         appendTypeParams(scope)
         appendSuperTypes(scope)
@@ -230,7 +234,7 @@ object JavaSourceGenerator : Generator() {
                     if (childType.isClassType()) {
                         // some spacing
                         nextLine()
-                        generateInside(child.name, child)
+                        generateInside(child.name, child, null)
                     }
                 }
             }
@@ -268,7 +272,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendMethods(classScope: Scope) {
         for (method in classScope.methods) {
             if (method.scope.parent != classScope) continue
-            appendMethod(classScope, method)
+            appendMethod(classScope, method, null)
         }
     }
 
@@ -286,7 +290,10 @@ object JavaSourceGenerator : Generator() {
                 )
     }
 
-    private fun appendMethod(classScope: Scope, method: Method) {
+    private fun appendMethod(
+        classScope: Scope, method: Method,
+        specialization: Specialization?
+    ) {
 
         // some spacing
         nextLine()
@@ -314,6 +321,9 @@ object JavaSourceGenerator : Generator() {
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.returnType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
+        if (specialization != null) {
+            builder.append('_').append(specialization.hash)
+        }
         val selfTypeIfNecessary = if (!isBySelf) selfType else null
         method.selfTypeIfNecessary = selfTypeIfNecessary
         appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)

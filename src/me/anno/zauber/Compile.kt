@@ -30,6 +30,7 @@ object Compile {
 
     // should be the very first thing
     private var lastTime = System.nanoTime()
+    private val startTime = lastTime
 
     private val LOGGER = LogManager.getLogger(Compile::class)
 
@@ -81,14 +82,15 @@ object Compile {
 
     private fun printStats() {
         LOGGER.info("Num Expressions: ${Expression.numExpressionsCreated}")
-        // 658k expressions 😲 (1µs/element at the moment)
+        val endTime = System.nanoTime()
+        LOGGER.info("Took ${(endTime - startTime) / 1e6f} ms in total")
     }
 
     private fun <R> step(name: String, executeStep: () -> R): R {
         val result = executeStep()
-        val t6 = System.nanoTime()
-        LOGGER.info("Took ${((t6 - lastTime) / 1e6f).f3()} ms $name")
-        lastTime = t6
+        val currTime = System.nanoTime()
+        LOGGER.info("Took ${((currTime - lastTime) / 1e6f).f3()} ms $name")
+        lastTime = currTime
         return result
     }
 }

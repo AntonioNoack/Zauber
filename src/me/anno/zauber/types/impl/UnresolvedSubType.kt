@@ -4,12 +4,14 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
-class UnresolvedType(
-    val className: String, val typeParameters: List<Type>?,
-    val scope: Scope, val imports: List<Import>
+class UnresolvedSubType(
+    val base: Type,
+    val className: String,
+    val scope: Scope,
+    val imports: List<Import>
 ) : Type() {
 
     override fun toStringImpl(depth: Int): String {
-        return "$className?<$typeParameters>"
+        return "$base.$className?"
     }
 }
