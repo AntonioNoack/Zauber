@@ -34,6 +34,9 @@ import java.io.File
 
 // todo before generating JVM bytecode, create source code to be compiled with a normal Java compiler
 //  big difference: stack-based
+
+// todo Java forbids duplicate field names in whole methods, so we must rename them when we have duplicates
+
 object JavaSourceGenerator : Generator() {
 
     val protectedTypes = mapOf(

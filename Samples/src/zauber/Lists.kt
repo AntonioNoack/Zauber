@@ -67,6 +67,15 @@ inline fun <V, R> List<V>.map(transform: (V) -> R): List<R> {
     return List<R>(size) { transform(this[it]) }
 }
 
+inline fun <V, R: Any> List<V>.mapNotNull(transform: (V) -> R?): List<R> {
+    val result = ArrayList<R>(size)
+    for (i in indices) {
+        val element = transform(this[i])
+        if (element != null) result.add(element)
+    }
+    return result
+}
+
 fun <V> List<V>.joinToString(separator: String = ",", prefix: String = "[", postfix: String = "]"): String {
     var result = prefix
     for (i in indices) {

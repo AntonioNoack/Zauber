@@ -370,14 +370,14 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     @Deprecated("Please use the version with origin, if possible")
     fun generateName(prefix: String): String {
-        return "$$prefix#${nextAnonymousName.incrementAndGet()}"
+        return "$${prefix}_n${nextAnonymousName.incrementAndGet()}"
     }
 
     /**
      * for inner classes and methods, the origin should be that of the first class-defining keyword, e.g. 'object'
      * */
     fun generateName(prefix: String, uniqueOrigin: Int): String {
-        return "$$prefix@$uniqueOrigin"
+        return "$${prefix}_o$uniqueOrigin"
     }
 
     val parentIfSameFile: Scope?

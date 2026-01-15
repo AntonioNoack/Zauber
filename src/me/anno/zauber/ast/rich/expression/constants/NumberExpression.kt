@@ -37,15 +37,29 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     }
 
     private fun resolveIntType(): ClassType {
-        return if (value.length <= 9 && value.toIntOrNull() != null) IntType else LongType
+        val extraLength = value.count { it == '_' }
+        return if (value.length <= 9 + extraLength &&
+            value.replace("_", "")
+                .toIntOrNull() != null
+        ) IntType else LongType
     }
 
     private fun resolveHexIntType(): ClassType {
-        return if (value.length <= 8 + 2 && value.substring(2).toIntOrNull(16) != null) IntType else LongType
+        val extraLength = 2 + value.count { it == '_' }
+        return if (value.length <= 8 + extraLength &&
+            value.substring(2)
+                .replace("_", "")
+                .toIntOrNull(16) != null
+        ) IntType else LongType
     }
 
     private fun resolveBinIntType(): ClassType {
-        return if (value.length <= 32 + 2 && value.substring(2).toIntOrNull(2) != null) IntType else LongType
+        val extraLength = 2 + value.count { it == '_' }
+        return if (value.length <= 32 + extraLength &&
+            value.substring(2)
+                .replace("_", "")
+                .toIntOrNull(2) != null
+        ) IntType else LongType
     }
 
     private fun typeBySuffix(): ClassType? {
@@ -54,8 +68,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             value.endsWith("u", true) -> UIntType
             value.endsWith("l", true) -> LongType
             value.endsWith("h", true) -> HalfType
-            value.endsWith("f", true) -> FloatType
-            value.endsWith("d", true) -> DoubleType
+            !value.startsWith("0x", true) && value.endsWith("f", true) -> FloatType
+            !value.startsWith("0x", true) && value.endsWith("d", true) -> DoubleType
             else -> null
         }
     }
