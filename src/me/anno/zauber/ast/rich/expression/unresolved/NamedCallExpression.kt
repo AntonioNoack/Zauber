@@ -76,7 +76,7 @@ class NamedCallExpression(
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val baseType = calculateBaseType(context)
-        val valueParameters = TypeResolution.resolveValueParameters(context, valueParameters)
+        val valueParameters = resolveValueParameters(context, valueParameters)
         val constructor = null
         val contextI = context.withSelfType(baseType)
         return MethodResolver.resolveCallable(

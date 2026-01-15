@@ -62,22 +62,27 @@ abstract class CallExpressionBase(
     }
 
     abstract fun resolveCallable(context: ResolutionContext): ResolvedMember<*>
-    
+
     override fun resolveImpl(context: ResolutionContext): Expression {
-        val base = base.resolve(context)
         return when (val callable = resolveCallable(context)) {
             is ResolvedMethod -> {
+                val base = base.resolve(context)
                 val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
+                    .map { it.resolve(context) }
                 ResolvedCallExpression(base, callable, params, scope, origin)
             }
             is ResolvedConstructor -> {
+                check(base is TypeExpression)
                 val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
-                ResolvedCallExpression(base, callable, params, scope, origin)
+                    .map { it.resolve(context) }
+                ResolvedCallExpression(null, callable, params, scope, origin)
             }
             is ResolvedField -> {
+                val base = base.resolve(context)
                 val valueParameters1 = resolveValueParameters(context, valueParameters)
                 val calledMethod = callable.resolveCalledMethod(typeParameters, valueParameters1)
                 val params = reorderParameters(valueParameters, calledMethod.resolved.valueParameters, scope, origin)
+                    .map { it.resolve(context) }
                 val base1 = ResolvedGetFieldExpression(base, callable, scope, origin)
                 ResolvedCallExpression(base1, calledMethod, params, scope, origin)
             }

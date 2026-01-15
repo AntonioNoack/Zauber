@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -43,6 +44,11 @@ class FieldExpression(
 
     override fun resolveType(context: ResolutionContext): Type {
         return resolveField(context).getValueType()
+    }
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        val field = resolveField(context)
+        return ResolvedGetFieldExpression(null, field, scope, origin)
     }
 
     override fun splitsScope(): Boolean = false

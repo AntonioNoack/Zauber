@@ -134,7 +134,7 @@ fun lookupBinaryOp(symbol: String, origin: Int): String {
         "/" -> "div"
         "%" -> "rem"
         ".." -> "rangeTo"
-        "..<" -> "rangeUntil"
+        "..<" -> "until"
         "in" -> "contains"
         else -> {
             LOGGER.warn("Unknown binary op: $symbol at ${resolveOrigin(origin)}")

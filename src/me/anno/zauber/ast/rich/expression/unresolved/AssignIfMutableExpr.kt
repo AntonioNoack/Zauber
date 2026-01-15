@@ -1,11 +1,15 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
@@ -48,13 +52,11 @@ class AssignIfMutableExpr(
         return "${left.toString(depth)} $symbol ${right.toString(depth)}"
     }
 
-    private fun findField(expr: Expression, context: ResolutionContext): Field? {
+    private fun findField(expr: Expression, context: ResolutionContext): ResolvedField? {
         return when (expr) {
-            is FieldExpression -> expr.field
-            is UnresolvedFieldExpression -> {
-                val field = expr.resolveField(context)
-                field.resolved
-            }
+            is FieldExpression -> expr.resolveField(context)
+            is UnresolvedFieldExpression -> expr.resolveField(context)
+            is ResolvedGetFieldExpression -> expr.field
             else -> throw NotImplementedError("Is ${expr.javaClass.simpleName} a mutable left side?")
         }
     }
@@ -78,7 +80,7 @@ class AssignIfMutableExpr(
 
     fun resolveMethod(context: ResolutionContext): AssignIfMutableResolveResult {
         val field = findField(left, context)
-        val isFieldMutable = field?.isMutable == true
+        val isFieldMutable = field?.resolved?.isMutable == true
         val leftType = TypeResolution.resolveType(context, left)
         val rightType = TypeResolution.resolveType(context, right)
         val leftContext = context.withSelfType(leftType)
@@ -115,4 +117,16 @@ class AssignIfMutableExpr(
 
     override fun clone(scope: Scope): Expression =
         AssignIfMutableExpr(left.clone(scope), symbol, plusImports, plusAssignImports, right.clone(scope))
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        val (_, _, dstField, method) = resolveMethod(context)
+        val left = left.resolve(context)
+        val right = right.resolve(context)
+        val call = ResolvedCallExpression(left, method, listOf(right), scope, origin)
+        if (dstField != null) {
+            // todo we have to find the owner
+            val setter = ResolvedSetFieldExpression(null, dstField, call, scope, origin)
+            return ExpressionList(listOf(call, setter), scope, origin)
+        } else return call
+    }
 }

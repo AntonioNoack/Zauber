@@ -13,6 +13,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
@@ -23,9 +24,6 @@ import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
-import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
-import me.anno.zauber.typeresolution.members.MethodResolver
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.BooleanUtils.not
@@ -67,6 +65,7 @@ object ASTSimplifier {
         needsValue: Boolean
     ): SimpleField? {
         return when (expr) {
+
             is ExpressionList -> {
                 var result = voidField
                 val exprScope = expr.scope
@@ -85,11 +84,13 @@ object ASTSimplifier {
                 }
                 result
             }
+
             is ThrowExpression -> {
                 // todo we need to check all handlers...
                 //   and finally, we need to exit
                 voidField
             }
+
             is ReturnExpression -> {
                 // this is the standard way to exit,
                 //  but todo we also want yields for async functions and sequences
@@ -99,33 +100,6 @@ object ASTSimplifier {
                 voidField
             }
 
-            is AssignmentExpression -> {
-                // todo get all stuff on the left
-                when (val dstExpr = expr.variableName) {
-                    is FieldExpression -> {
-                        val newValue = simplifyImpl(context, expr.newValue, currBlock, graph, true)
-                            ?: return null
-                        val self: SimpleField? =
-                            null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                        // todo we should call the setter, if there is one
-                        currBlock.add(SimpleSetField(self, dstExpr.field, newValue.use(), expr.scope, expr.origin))
-                        voidField
-                    }
-                    is UnresolvedFieldExpression -> {
-                        val newValue = simplifyImpl(context, expr.newValue, currBlock, graph, true)
-                            ?: return null
-                        val self: SimpleField? =
-                            null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                        // todo we should call the setter, if there is one
-                        val field0 = dstExpr.resolveField(context.withAllowTypeless(false))
-                            ?: throw IllegalStateException("[UnResField2] Failed to resolve field from $dstExpr in $context")
-                        val field = field0.resolved
-                        currBlock.add(SimpleSetField(self, field, newValue.use(), expr.scope, expr.origin))
-                        voidField
-                    }
-                    else -> throw NotImplementedError("Implement assignment to ${expr.variableName} (${expr.variableName.javaClass.simpleName})")
-                }
-            }
             is CompareOp -> {
                 val left = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
                 val right = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
@@ -149,45 +123,6 @@ object ASTSimplifier {
                 )
             }
 
-            is NamedCallExpression -> {
-                val calleeType = expr.calculateBaseType(context)
-
-                // todo type-args may be needed for type resolution
-                val valueParameters = resolveValueParameters(context, expr.valueParameters)
-
-                val constructor = null
-                val context = context.withSelfType(calleeType)
-                val method = resolveCallable(
-                    context, expr.scope,
-                    expr.name, expr.nameAsImport, constructor,
-                    expr.typeParameters, valueParameters, expr.origin,
-                ) ?: MethodResolver.printScopeForMissingMethod(
-                    context, expr, expr.name,
-                    expr.typeParameters, valueParameters
-                )
-                simplifyCall(
-                    context, currBlock, graph, expr.base,
-                    expr.typeParameters, expr.valueParameters, method, null,
-                    expr.scope, expr.origin
-                )
-            }
-            is CallExpression -> {
-                val method = expr.resolveCallable(context)
-                simplifyCall(
-                    context, currBlock, graph, expr.base,
-                    expr.typeParameters, expr.valueParameters, method, null,
-                    expr.scope, expr.origin
-                )
-            }
-            is ConstructorExpression -> {
-                val method = expr.resolveMethod(context)
-                simplifyCall(
-                    context, currBlock, graph, null,
-                    expr.typeParameters, expr.valueParameters,
-                    method, expr.selfIfInsideConstructor,
-                    expr.scope, expr.origin
-                )
-            }
             is SpecialValueExpression -> {
                 val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
@@ -211,27 +146,28 @@ object ASTSimplifier {
                 dst
             }
 
-            is MemberNameExpression -> {
-                val field = resolveField(context, expr.scope, expr.name, expr.nameAsImport, null, expr.origin)
-                    ?: throw IllegalStateException("Missing field '${expr.name}'")
-                val valueType = field.getValueType()
+            is ResolvedSetFieldExpression -> {
+                val field = expr.field.resolved
+                val value = simplifyImpl(context, expr.value, currBlock, graph, true) ?: return null
                 val self: SimpleField? =
                     null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                val dst = currBlock.field(valueType)
-                currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
-                dst
+                currBlock.add(SimpleSetField(self, field, value.use(), expr.scope, expr.origin))
+                voidField
             }
+
             is NumberExpression -> {
                 val type = TypeResolution.resolveType(context, expr)
                 val dst = currBlock.field(type)
                 currBlock.add(SimpleNumber(dst, expr))
                 dst
             }
+
             is StringExpression -> {
                 val dst = currBlock.field(StringType, Ownership.COMPTIME)
                 currBlock.add(SimpleString(dst, expr))
                 dst
             }
+
             is IsInstanceOfExpr -> {
                 val src = simplifyImpl(context, expr.value, currBlock, graph, true)
                     ?: return null
@@ -239,37 +175,11 @@ object ASTSimplifier {
                 currBlock.add(SimpleInstanceOf(dst, src.use(), expr.type, expr.scope, expr.origin))
                 dst
             }
+
             is IfElseBranch -> simplifyBranch(context, expr, currBlock, graph, needsValue)
             is WhileLoop -> simplifyWhile(context, expr, currBlock, graph, needsValue)
             is DoWhileLoop -> simplifyDoWhile(context, expr, currBlock, graph, needsValue)
-            is DotExpression -> {
-                val left = expr.left
-                val baseType = expr.getBaseType(context)
 
-                val right = expr.right
-                when {
-                    expr.isFieldType() -> {
-                        val field = expr.resolveField(context, baseType)
-                            ?: TODO("Unresolved field for field type: (${expr.javaClass.simpleName}) $expr")
-                        val self = simplifyImpl(context, left, currBlock, graph, true)
-                        val dst = currBlock.field(field.getValueType())
-                        currBlock.add(SimpleGetField(dst, self?.use(), field.resolved, expr.scope, expr.origin))
-                        dst
-                    }
-                    expr.isMethodType() -> {
-                        right as CallExpression
-                        val method = expr.resolveCallable(context, baseType)
-                        simplifyCall(
-                            context, currBlock, graph, left,
-                            right.typeParameters, right.valueParameters, method, null,
-                            expr.scope, expr.origin
-                        )
-                    }
-                    else -> {
-                        TODO("Resolve DotExpression with type ${expr.right.javaClass.simpleName}")
-                    }
-                }
-            }
             is CheckEqualsOp -> {
                 val left = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
                 val right = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
@@ -282,30 +192,7 @@ object ASTSimplifier {
                 currBlock.add(call)
                 dst
             }
-            is AssignIfMutableExpr -> {
-                val leftValue = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
-                val rightValue = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
-                val (_, _, dstField, method) = expr.resolveMethod(context)
-                val callResult = currBlock.field(method.getTypeFromCall())
-                val call = SimpleCall(
-                    callResult,
-                    method.resolved,
-                    leftValue.use(),
-                    listOf(rightValue.use()),
-                    expr.scope,
-                    expr.origin
-                )
-                currBlock.add(call)
-                if (dstField != null) {
-                    // todo reassign field, if given
-                    val newValue = callResult
-                    val self: SimpleField? =
-                        null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                    // todo we should call the setter, if there is one
-                    currBlock.add(SimpleSetField(self, dstField, newValue.use(), expr.scope, expr.origin))
-                }
-                voidField
-            }
+
             is LambdaExpression -> {
                 // todo if target is an inline function,
                 //  inline it here
@@ -315,16 +202,6 @@ object ASTSimplifier {
             }
             else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
         }
-    }
-
-    fun simplifyFieldExpr(currBlock: SimpleBlock, context: ResolutionContext, expr: FieldExpression): SimpleField? {
-        val field = expr.field
-        val valueType = field.resolveValueType(context)
-        val self: SimpleField? =
-            null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-        val dst = currBlock.field(valueType)
-        currBlock.add(SimpleGetField(dst, self, field, expr.scope, expr.origin))
-        return dst
     }
 
     private fun simplifyWhile(

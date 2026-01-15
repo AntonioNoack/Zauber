@@ -1,8 +1,11 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.TokenListIndex
-import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
@@ -193,6 +196,30 @@ class DotExpression(
                     )
                 }"
             )
+        }
+    }
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        val base = left.resolve(context)
+        val baseType = getBaseType(context)
+        when {
+            isFieldType() -> {
+                val field = resolveField(context, baseType)
+                    ?: throw IllegalStateException("Unresolved field for field type: (${javaClass.simpleName}) $this")
+                return ResolvedGetFieldExpression(base, field, scope, origin)
+            }
+            isMethodType() -> {
+                right as CallExpression
+                val callable = resolveCallable(context, baseType)
+                if (callable.resolved !is MethodLike) {
+                    throw IllegalStateException("Implement dotExpression with methodType, but field: $this")
+                }
+                val params = reorderParameters(right.valueParameters, callable.resolved.valueParameters, scope, origin)
+                return ResolvedCallExpression(base, callable, params, scope, origin)
+            }
+            else -> {
+                TODO("Resolve DotExpression with type ${right.javaClass.simpleName}")
+            }
         }
     }
 }

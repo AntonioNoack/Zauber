@@ -2,8 +2,10 @@ package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.Scope
@@ -42,10 +44,17 @@ class ConstructorExpression(
     )
 
     fun resolveMethod(context: ResolutionContext): ResolvedConstructor {
-        val valueParameters = TypeResolution.resolveValueParameters(context, valueParameters)
+        val valueParameters = resolveValueParameters(context, valueParameters)
         return ConstructorResolver.findMemberInScope(
             clazz, origin, clazz.name, context.targetType,
             null, typeParameters, valueParameters
         ) ?: throw IllegalStateException("Missing constructor $clazz($valueParameters)")
+    }
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        val method = resolveMethod(context)
+        val params = reorderParameters(valueParameters, method.resolved.valueParameters, scope, origin)
+            .map { it.resolve(context) }
+        return ResolvedCallExpression(null, method, params, scope, origin)
     }
 }
