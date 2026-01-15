@@ -29,7 +29,7 @@ class JavaGenerationTest {
             val testClassName = "Test"
             val testClass = testScope.children.first { it.name == testClassName }
             val sourceCode = JavaSourceGenerator.run {
-                generateInside(testClassName, testClass)
+                generateInside(testClassName, testClass, null)
                 if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
                 finish()
             }
