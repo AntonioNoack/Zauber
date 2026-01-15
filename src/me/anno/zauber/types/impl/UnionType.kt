@@ -42,7 +42,9 @@ class UnionType(val types: List<Type>) : Type() {
     }
 
     init {
-        check(types.size >= 2)
+        check(types.size >= 2) {
+            "Union type should have at least two types"
+        }
     }
 
     override fun toStringImpl(depth: Int): String {

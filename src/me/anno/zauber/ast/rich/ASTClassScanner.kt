@@ -44,7 +44,6 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                 }
                 if (currType is ClassType && currType.clazz.isTypeAlias()) {
                     val scope = currType.clazz
-                    check(scope.isTypeAlias())
 
                     val genericNames = scope.typeParameters
                     if (genericNames.isEmpty() || currType.typeParameters == null) {
@@ -206,91 +205,90 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
     }
 
     private fun collectNamesOnDepth0(): Boolean {
-        when {
-            tokens.equals(i, "package") && listening.size == 1 -> {
-                val (path, ni) = tokens.readPath(i)
-                currPackage = path
-                i = ni
-                return true// without i++
-            }
-            tokens.equals(i, "import") && listening.size == 1 -> {
-                val (path, ni) = tokens.readImport(i)
-                imports.add(path)
-                i = ni
-                return true// without i++
-            }
 
-            consumeIf("typealias") -> {
-                readTypeAlias()
-                return true// without i++
-            }
-
-            // tokens.equals(i, "<") -> if (listen >= 0) genericsDepth++
-            // tokens.equals(i, ">") -> if (listen >= 0) genericsDepth--
-
-            tokens.equals(i, "var") || tokens.equals(i, "val") || tokens.equals(i, "fun") -> {
-                hadNamedScope = false
-                return false
-            }
-
-            tokens.equals(i, "class") && tokens.equals(i - 1, "enum") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
-                return true// without i++
-            }
-
-            tokens.equals(i, "class") && tokens.equals(i - 1, "inner") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
-                return true// without i++
-            }
-
-            tokens.equals(i, "class") && !tokens.equals(i - 1, "::") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
-                return true// without i++
-            }
-
-            tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
-                    && !tokens.equals(i + 1, ":") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME)) {
-                    "Expected name for object, but got ${tokens.err(i)}"
+        if (listening.size == 1) {
+            when {
+                consumeIf("package") -> {
+                    val (path, ni) = tokens.readPath(i)
+                    currPackage = path
+                    i = ni
+                    return true// without i++
                 }
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
-                return true// without i++
+                consumeIf("import") -> {
+                    val (path, ni) = tokens.readImport(i)
+                    imports.add(path)
+                    i = ni
+                    return true// without i++
+                }
             }
-            tokens.equals(i, "companion") && listening.last() -> {
-                i++ // skip companion
-                check(tokens.equals(i++, "object"))
-                val name = if (tokens.equals(i, TokenType.NAME)) {
-                    tokens.toString(i++)
-                } else "Companion"
-                foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
-                return true// without i++
-            }
-            tokens.equals(i, "interface") && tokens.equals(i - 1, "fun") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.FUN_INTERFACE, ScopeType.INTERFACE)
-                return true// without i++
-            }
-            tokens.equals(i, "interface") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.NONE, ScopeType.INTERFACE)
-                return true// without i++
-            }
-            tokens.equals(i, "typealias") && listening.last() -> {
-                check(tokens.equals(++i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
-                return true// without i++
-            }
-            else -> return false
         }
+
+        if (consumeIf("typealias")) {
+            readTypeAlias()
+            return true// without i++
+        }
+
+        if (tokens.equals(i, "var") || tokens.equals(i, "val") || tokens.equals(i, "fun")) {
+            hadNamedScope = false
+            return false
+        }
+
+        if (listening.last()) {
+            when {
+                tokens.equals(i, "class") && tokens.equals(i - 1, "enum") -> {
+                    check(tokens.equals(++i, TokenType.NAME))
+                    val name = tokens.toString(i++)
+                    foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
+                    return true// without i++
+                }
+
+                tokens.equals(i, "class") && tokens.equals(i - 1, "inner") -> {
+                    check(tokens.equals(++i, TokenType.NAME))
+                    val name = tokens.toString(i++)
+                    foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
+                    return true// without i++
+                }
+
+                tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
+                    check(tokens.equals(++i, TokenType.NAME))
+                    val name = tokens.toString(i++)
+                    foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
+                    return true// without i++
+                }
+
+                tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
+                        && !tokens.equals(i + 1, ":") -> {
+                    check(tokens.equals(++i, TokenType.NAME)) {
+                        "Expected name for object, but got ${tokens.err(i)}"
+                    }
+                    val name = tokens.toString(i++)
+                    foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
+                    return true// without i++
+                }
+                consumeIf("companion") -> {
+                    check(tokens.equals(i++, "object"))
+                    val name = if (tokens.equals(i, TokenType.NAME)) {
+                        tokens.toString(i++)
+                    } else "Companion"
+                    foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
+                    return true// without i++
+                }
+                consumeIf("interface") -> {
+                    check(tokens.equals(i, TokenType.NAME))
+                    val name = tokens.toString(i++)
+                    val keywords = if (tokens.equals(i - 2, "fun")) Keywords.FUN_INTERFACE else Keywords.NONE
+                    foundNamedScope(name, keywords, ScopeType.INTERFACE)
+                    return true// without i++
+                }
+                consumeIf("typealias") -> {
+                    check(tokens.equals(i, TokenType.NAME))
+                    val name = tokens.toString(i++)
+                    foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
+                    return true// without i++
+                }
+            }
+        }
+
+        return false
     }
 }

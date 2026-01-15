@@ -72,7 +72,9 @@ abstract class CallExpressionBase(
                 ResolvedCallExpression(base, callable, params, scope, origin)
             }
             is ResolvedConstructor -> {
-                check(base is TypeExpression)
+                check(base is TypeExpression) {
+                    "In ResolvedConstructor, base should be a TypeExpression, but got ${base.javaClass.simpleName}"
+                }
                 val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
                     .map { it.resolve(context) }
                 ResolvedCallExpression(null, callable, params, scope, origin)

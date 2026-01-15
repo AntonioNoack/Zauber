@@ -257,7 +257,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun readPath(i: Int): Pair<Scope, Int> {
-        var j = i + 1
+        var j = i
         check(equals(j, TokenType.NAME, TokenType.KEYWORD))
         var path = root.getOrPut(toString(j++), null)
         while (equals(j, ".") && equals(j + 1, TokenType.NAME, TokenType.KEYWORD)) {

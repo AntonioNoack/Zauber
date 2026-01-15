@@ -662,14 +662,14 @@ class ZauberASTBuilder(
         loop@ while (i < tokens.size) {
             if (LOGGER.enableDebug) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
-                tokens.equals(i, "package") -> {
+                consumeIf("package") -> {
                     val (path, nextI) = tokens.readPath(i)
                     currPackage = path
                     currPackage.mergeScopeTypes(ScopeType.PACKAGE)
                     i = nextI
                 }
 
-                tokens.equals(i, "import") -> {
+                consumeIf("import") -> {
                     val (import, nextI) = tokens.readImport(i)
                     i = nextI
                     applyImport(import)

@@ -5,7 +5,7 @@ interface Comparable<V> {
 
     companion object {
         fun <V : Comparable<V>> V.clamp(min: V, max: V): V {
-            check(max >= min)
+            check(max >= min) { "max should be greater or equal to min" }
             return if (this < min) min else if (this < max) this else max
         }
 

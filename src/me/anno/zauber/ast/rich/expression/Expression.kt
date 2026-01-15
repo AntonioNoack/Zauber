@@ -17,7 +17,9 @@ abstract class Expression(val scope: Scope, val origin: Int) {
 
     fun resolve(context: ResolutionContext): Expression {
         val resolved = resolveImpl(context)
-        check(resolved.isResolved())
+        check(resolved.isResolved()) {
+            "Failed to resolve $this, somehow it is still not resolved"
+        }
         if (resolved.resolvedType == null) {
             resolved.resolvedType = resolved.resolveType(context)
         }
@@ -27,7 +29,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     // @Deprecated("Only the Expression-class and nothing else should call this")
     open fun resolveImpl(context: ResolutionContext): Expression {
         if (isResolved()) return this
-        throw NotImplementedError("Resolve ${javaClass.simpleName}, $this")
+        throw NotImplementedError("TODO: Resolve ${javaClass.simpleName}, $this")
     }
 
     fun exprHasNoType(context: ResolutionContext): Type {

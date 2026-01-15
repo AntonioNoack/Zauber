@@ -22,7 +22,7 @@ class SimpleConstructor(
     }
 
     override fun eval(runtime: Runtime): Instance {
-        val newInstance = runtime.getClass(method.selfType!!).createInstance()
+        val newInstance = runtime.getClass(method.selfType).createInstance()
         runtime.executeCall(newInstance, method, valueParameters)
         check(newInstance.properties.all { it != null }) {
             "Some field in $newInstance was not initialized by constructor"
