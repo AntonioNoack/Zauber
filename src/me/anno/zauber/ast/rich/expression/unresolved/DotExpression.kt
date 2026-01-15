@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.TokenListIndex
-import me.anno.zauber.ast.rich.expression.CallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution

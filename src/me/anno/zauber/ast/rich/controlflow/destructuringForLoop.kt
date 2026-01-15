@@ -16,7 +16,7 @@ fun ASTBuilderBase.destructuringForLoop(
     body: Expression, label: String?
 ): Expression {
     val origin = iterable.origin
-    val fullName = scope.generateName("destruct")
+    val fullName = scope.generateName("destruct", origin)
     val fullVariable = Field(
         scope, null,
         false, isMutable = false, null,

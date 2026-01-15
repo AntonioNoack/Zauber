@@ -1,7 +1,7 @@
 package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.expression.CallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
@@ -89,7 +89,6 @@ object DefaultParameterExpansion {
         }
     }
 
-
     private fun createDefaultParameterConstructor(constructorScope: Scope) {
         val classScope = constructorScope.parent ?: return
         val self = constructorScope.selfAsConstructor ?: return
@@ -112,12 +111,12 @@ object DefaultParameterExpansion {
                 continue
             }
 
-            val origin = self.origin
 
-            val scopeName = classScope.generateName("constructor")
+            val scopeName = classScope.generateName("synthetic:constructor")
             val scope = classScope.getOrPut(scopeName, ScopeType.CONSTRUCTOR)
             scope.typeParameters = self.typeParameters
 
+            val origin = self.origin
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
                     if (index < i) UnresolvedFieldExpression(parameter.name, emptyList(), scope, origin)

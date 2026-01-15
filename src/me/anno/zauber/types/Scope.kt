@@ -104,12 +104,9 @@ class Scope(val name: String, val parent: Scope? = null) {
         val other = fields.firstOrNull { it.name == field.name }
         if (other != null) {
             throw IllegalStateException(
-                "Each field must only be declared once per scope [$pathStr], " +
-                        "${field.name} at ${TokenListIndex.resolveOrigin(field.origin)} vs ${
-                            TokenListIndex.resolveOrigin(
-                                other.origin
-                            )
-                        }"
+                "Each field must only be declared once per scope [$pathStr], ${field.name} " +
+                        "at ${TokenListIndex.resolveOrigin(field.origin)} " +
+                        "vs ${TokenListIndex.resolveOrigin(other.origin)}"
             )
         }
         fields.add(field)
@@ -283,16 +280,12 @@ class Scope(val name: String, val parent: Scope? = null) {
         return null
     }
 
-    fun resolveGenericType(name: String): Type? {
-        for (param in typeParameters) {
-            if (param.name == name) {
+    fun resolveGenericType(name: String): GenericType? {
+        for (parameter in typeParameters) {
+            if (parameter.name == name) {
                 return GenericType(this, name)
             }
         }
-        for (superCall in superCalls) {
-            val bySuper = superCall.type
-        }
-        // todo check this and any parent class for type parameters
         return null
     }
 
@@ -306,9 +299,9 @@ class Scope(val name: String, val parent: Scope? = null) {
 
         // println("Resolving $name in $this ($searchInside, $fileName, ${parent?.fileName})")
 
-        if (parent != null && parent.fileName == fileName &&
-            parent.name == name
-        ) return parent.typeWithoutArgs
+        if (parent != null && parent.fileName == fileName && parent.name == name) {
+            return parent.typeWithoutArgs
+        }
 
         if (searchInside) {
             val insideThisFile = resolveTypeInner(name)
@@ -366,13 +359,25 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun resolveType(name: String, astBuilder: ASTBuilderBase): Type {
+        return resolveType(name, astBuilder.imports)
+    }
+
+    fun resolveType(name: String, imports: List<Import>): Type {
         val name = if (name == "kotlin") "zauber" else name
-        return resolveTypeOrNull(name, astBuilder)
+        return resolveTypeOrNull(name, imports, true)
             ?: throw IllegalStateException("Unresolved type '$name' in $this, children: ${children.map { it.name }}")
     }
 
+    @Deprecated("Please use the version with origin, if possible")
     fun generateName(prefix: String): String {
-        return "$$prefix${nextAnonymousName.incrementAndGet()}"
+        return "$$prefix#${nextAnonymousName.incrementAndGet()}"
+    }
+
+    /**
+     * for inner classes and methods, the origin should be that of the first class-defining keyword, e.g. 'object'
+     * */
+    fun generateName(prefix: String, uniqueOrigin: Int): String {
+        return "$$prefix@$uniqueOrigin"
     }
 
     val parentIfSameFile: Scope?

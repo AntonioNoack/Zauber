@@ -175,7 +175,7 @@ object JavaSimplifiedASTWriter {
                 builder.append(';')
             }
             is SimpleCompare -> {
-                builder.append1(expr.base).append(' ')
+                builder.append1(expr.left).append(' ')
                 builder.append(expr.type.symbol).append(" 0")
             }
             is SimpleInstanceOf -> {

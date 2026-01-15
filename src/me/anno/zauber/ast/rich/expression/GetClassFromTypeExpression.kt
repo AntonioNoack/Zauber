@@ -22,5 +22,8 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Ex
     override fun isResolved(): Boolean = type.isResolved()
 
     override fun clone(scope: Scope) = GetClassFromTypeExpression(type, scope, origin)
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return GetClassFromTypeExpression(type.resolve(), scope, origin)
+    }
 
 }

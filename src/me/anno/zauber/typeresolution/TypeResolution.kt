@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile
+import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
@@ -213,6 +214,7 @@ object TypeResolution {
                 else null
             }
             is GenericType -> typeToScope(type.superBounds) // or should we choose null?
+            is UnresolvedType -> typeToScope(type.resolve())
             // is NullableType -> typeToScope(type.base)
             else -> throw NotImplementedError("typeToScope($type, ${type.javaClass.simpleName})")
         }

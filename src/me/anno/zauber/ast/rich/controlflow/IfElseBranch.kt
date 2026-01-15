@@ -74,6 +74,14 @@ class IfElseBranch(
             ifBranch.isResolved() &&
             (elseBranch == null || elseBranch.isResolved())
 
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return IfElseBranch(
+            condition.resolve(context),
+            ifBranch.resolve(context),
+            elseBranch?.resolve(context)
+        )
+    }
+
     override fun toStringImpl(depth: Int): String {
         return if (elseBranch == null) {
             "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} }"

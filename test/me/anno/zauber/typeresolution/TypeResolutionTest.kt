@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
+import me.anno.zauber.ast.rich.ASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Keywords
@@ -30,9 +30,6 @@ import me.anno.zauber.types.impl.UnionType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-
-// todo test all type-resolution scenarios
-// todo test the special "Self" type
 
 class TypeResolutionTest {
 

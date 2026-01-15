@@ -22,9 +22,7 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
     // todo while-loop without break can enforce a condition, too
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = condition.isResolved() && body.isResolved()
-
-    override fun resolve(context: ResolutionContext): Expression {
-        return WhileLoop(condition.resolve(context), body.resolve(context), label)
-    }
+    override fun resolveImpl(context: ResolutionContext) =
+        WhileLoop(condition.resolve(context), body.resolve(context), label)
 
 }

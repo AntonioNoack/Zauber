@@ -26,5 +26,7 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
     // todo while-loop without break can enforce a condition, too
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = condition.isResolved() && body.isResolved()
+    override fun resolveImpl(context: ResolutionContext) =
+        DoWhileLoop(body = body.resolve(context), condition = condition.resolve(context), label)
 
 }

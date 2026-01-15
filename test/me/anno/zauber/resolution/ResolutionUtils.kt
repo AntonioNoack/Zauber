@@ -1,7 +1,7 @@
 package me.anno.zauber.resolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClasses
+import me.anno.zauber.ast.rich.ASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions

@@ -31,7 +31,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     ) emptyParameterList() else typeParameters
 
     companion object {
-        private fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
+        fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
             check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
             check(clazz.typeParameters.size == typeParams.size) {
                 "Incorrect number of typeParams for $clazz, expected ${clazz.typeParameters.size}, got ${typeParams.size}"

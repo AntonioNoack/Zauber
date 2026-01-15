@@ -37,4 +37,7 @@ class CheckEqualsOp(
         CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
 
     override fun isResolved(): Boolean = left.isResolved() && right.isResolved()
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return CheckEqualsOp(left.resolve(context), right.resolve(context), byPointer, negated, scope, origin)
+    }
 }

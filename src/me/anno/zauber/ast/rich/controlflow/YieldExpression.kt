@@ -34,4 +34,6 @@ class YieldExpression(val value: Expression, scope: Scope, origin: Int) : Expres
     override fun clone(scope: Scope) = YieldExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = value.isResolved()
+    override fun resolveImpl(context: ResolutionContext): Expression =
+        YieldExpression(value.resolve(context), scope, origin)
 }

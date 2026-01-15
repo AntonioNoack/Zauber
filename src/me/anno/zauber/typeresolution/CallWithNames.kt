@@ -3,7 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
-import me.anno.zauber.ast.rich.expression.CallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.types.Scope

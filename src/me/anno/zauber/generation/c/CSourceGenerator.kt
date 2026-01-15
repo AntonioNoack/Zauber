@@ -8,6 +8,8 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CompareOp
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
@@ -221,9 +223,10 @@ object CSourceGenerator : Generator() {
                     }
                     is CompareOp -> {
                         builder.append('(')
-                        writeExpr(expr.value, true)
+                        writeExpr(expr.left, true)
                         builder.append(expr.type.symbol)
-                        builder.append("0)")
+                        writeExpr(expr.right, true)
+                        builder.append(')')
                     }
                     is CheckEqualsOp -> {
                         writeExpr(expr.left, true)

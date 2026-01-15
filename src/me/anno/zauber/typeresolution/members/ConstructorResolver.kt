@@ -71,13 +71,13 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             if (match != null) return match
         }
         if (scope.scopeType == ScopeType.TYPE_ALIAS) {
-            return getByTypeAlias(scope, name, returnType, selfType, typeParameters, valueParameters)
+            return getByTypeAlias(scope, returnType, selfType, typeParameters, valueParameters)
         }
         return null
     }
 
     private fun getByTypeAlias(
-        scope: Scope, name: String,
+        scope: Scope,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
@@ -85,6 +85,9 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
     ): ResolvedConstructor? {
+
+        // this can still happen during type-resolution,
+        //  because we don't know yet whether a method call is a constructor with 100% accuracy
 
         val newType = scope.selfAsTypeAlias!!
         val typeParameters0 = typeParameters

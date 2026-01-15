@@ -41,6 +41,12 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
             catches.all { it.param.type.isResolved() && it.body.isResolved() } &&
             (finallyExpression == null || finallyExpression.isResolved())
 
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return TryCatchBlock(tryBody.resolve(context), catches.map {
+            Catch(it.param, it.body.resolve(context))
+        }, finallyExpression?.resolve(context))
+    }
+
     override fun toStringImpl(depth: Int): String {
         return "try { $tryBody } ${
             catches.joinToString(" ") {

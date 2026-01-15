@@ -9,6 +9,8 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CompareOp
+import me.anno.zauber.ast.rich.expression.unresolved.CompareType
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.GetMethodFromTypeExpression
@@ -22,22 +24,16 @@ import me.anno.zauber.types.Type
 
 private val LOGGER = LogManager.getLogger("BinaryOp")
 
-private fun ASTBuilderBase.compareTo(left: Expression, right: Expression) =
-    NamedCallExpression(
-        left, "compareTo", nameAsImport("compareTo"), emptyList(),
-        listOf(NamedParameter(null, right)), right.scope, right.origin
-    )
-
 @Suppress("IntroduceWhenSubject") // this feature is experimental, why is it recommended???
 fun ASTBuilderBase.binaryOp(
     scope: Scope, left: Expression, symbol: String, right: Expression,
     origin: Int = left.origin
 ): Expression {
     return when (symbol) {
-        "<=" -> CompareOp(compareTo(left, right), CompareType.LESS_EQUALS)
-        "<" -> CompareOp(compareTo(left, right), CompareType.LESS)
-        ">=" -> CompareOp(compareTo(left, right), CompareType.GREATER_EQUALS)
-        ">" -> CompareOp(compareTo(left, right), CompareType.GREATER)
+        "<=" -> CompareOp(left, right, CompareType.LESS_EQUALS)
+        "<" -> CompareOp(left, right, CompareType.LESS)
+        ">=" -> CompareOp(left, right, CompareType.GREATER_EQUALS)
+        ">" -> CompareOp(left, right, CompareType.GREATER)
         "==" -> CheckEqualsOp(left, right, byPointer = false, negated = false, scope, origin)
         "!=" -> CheckEqualsOp(left, right, byPointer = false, negated = true, scope, origin)
         "===" -> CheckEqualsOp(left, right, byPointer = true, negated = false, scope, origin)

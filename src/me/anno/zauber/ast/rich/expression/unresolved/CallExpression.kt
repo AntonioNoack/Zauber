@@ -1,18 +1,15 @@
-package me.anno.zauber.ast.rich.expression
+package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.NamedParameter
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
-import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.TokenListIndex
+import me.anno.zauber.ast.rich.expression.CallExpressionBase
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
-import me.anno.zauber.typeresolution.TypeResolution.typeToScope
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver
-import me.anno.zauber.typeresolution.members.MethodResolver.null1
-import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -61,7 +58,7 @@ class CallExpression(
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val typeParameters = typeParameters
-        val valueParameters = resolveValueParameters(context, valueParameters)
+        val valueParameters = TypeResolution.resolveValueParameters(context, valueParameters)
         if (LOGGER.enableInfo) LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
         // base can be a constructor, field or a method
         // find the best matching candidate...
@@ -78,11 +75,11 @@ class CallExpression(
 
                 // todo surely, Constructors should consider imports, too, right?
                 //  or are they immediately covered by being detected as constructors?
-                val constructor = null1() // do we need this constructor-stuff? yes, we do, why ever
+                val constructor = MethodResolver.null1() // do we need this constructor-stuff? yes, we do, why ever
                     ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
-                    ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
+                    ?: c.findMemberInFile(TypeResolution.langScope, origin, name, returnType, null, typeParameters, valueParameters)
 
-                val byMethodCall = resolveCallable(
+                val byMethodCall = MethodResolver.resolveCallable(
                     context, scope,
                     name, nameAsImport,
                     constructor, typeParameters, valueParameters, origin
@@ -94,7 +91,7 @@ class CallExpression(
             is TypeExpression -> {
 
                 val baseType = base.type
-                val baseScope = typeToScope(baseType)
+                val baseScope = TypeResolution.typeToScope(baseType)
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
                 check(baseScope.hasTypeParameters)
 
@@ -109,7 +106,7 @@ class CallExpression(
             }
             else -> throw IllegalStateException(
                 "Resolve field/method for ${base.javaClass} ($base) " +
-                        "in ${resolveOrigin(origin)}"
+                        "in ${TokenListIndex.resolveOrigin(origin)}"
             )
         }
     }

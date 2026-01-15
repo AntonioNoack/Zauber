@@ -3,7 +3,7 @@ package me.anno.zauber
 import me.anno.zauber.CompileSources.buildASTs
 import me.anno.zauber.CompileSources.printPackages
 import me.anno.zauber.CompileSources.tokenizeSources
-import me.anno.zauber.ast.rich.ASTClassScanner.collectNamedClassesForTypeResolution
+import me.anno.zauber.ast.rich.ASTClassScanner.Companion.collectNamedClassesForTypeResolution
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides

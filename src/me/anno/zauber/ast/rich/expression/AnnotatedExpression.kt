@@ -20,4 +20,6 @@ class AnnotatedExpression(val annotation: Annotation, val value: Expression) : E
 
     override fun clone(scope: Scope) = AnnotatedExpression(annotation, value.clone(scope))
     override fun isResolved(): Boolean = annotation.path.isResolved() && value.isResolved()
+    override fun resolveImpl(context: ResolutionContext) =
+        AnnotatedExpression(annotation, value.resolve(context))
 }

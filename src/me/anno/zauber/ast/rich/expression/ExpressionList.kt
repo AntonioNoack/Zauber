@@ -44,4 +44,8 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
         return list.all { it.isResolved() }
     }
 
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return ExpressionList(list.map { it.resolve(context) }, scope, origin)
+    }
+
 }

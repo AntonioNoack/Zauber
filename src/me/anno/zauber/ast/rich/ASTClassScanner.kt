@@ -4,149 +4,188 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Import
+import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.UnresolvedType
 
-object ASTClassScanner {
+/**
+ * to make type-resolution immediately available/resolvable
+ * */
+class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, true) {
 
-    fun collectNamedClassesForTypeResolution(sources: List<TokenList>) {
-        for (i in sources.indices) {
-            val source = sources[i]
-            collectNamedClasses(source)
+    companion object {
+        fun collectNamedClassesForTypeResolution(allTokens: List<TokenList>) {
+            for (i in allTokens.indices) {
+                val tokens = allTokens[i]
+                collectNamedClasses(tokens)
+            }
+        }
+
+        fun collectNamedClasses(tokens: TokenList) {
+            ASTClassScanner(tokens).collectNamedClassesImpl()
+        }
+
+        // todo I don't really want to deal with them during type-resolution,
+        //  because they are more of an import and should be able to be resolved really quickly
+        //  -> index type aliases when collecting names already
+        //  -> resolve the types when reading types already
+        fun resolveTypeAliases(type: Type): Type {
+            var currType = type
+            while (true) {
+                if (currType is UnresolvedType) {
+                    currType = currType.resolve()
+                        ?: throw IllegalStateException("Failed to resolve type $currType")
+                    continue
+                }
+                if (currType is ClassType && currType.clazz.isTypeAlias()) {
+                    val scope = currType.clazz
+                    check(scope.isTypeAlias())
+
+                    val genericNames = scope.typeParameters
+                    if (genericNames.isEmpty() || currType.typeParameters == null) {
+                        currType = scope.selfAsTypeAlias!!
+                        continue
+                    }
+
+                    val genericValues = ParameterList(genericNames, currType.typeParameters)
+                    currType = resolveGenerics(null, currType, genericNames, genericValues)
+                    continue
+                }
+                // todo if typeAlias in any of the typeParameters, replace it, too
+                if (currType is ClassType && currType.typeParameters != null) {
+                    return ClassType(currType.clazz, currType.typeParameters.map { resolveTypeAliases(it) })
+                }
+                return currType
+            }
         }
     }
 
-    /**
-     * to make type-resolution immediately available/resolvable
-     * */
-    fun collectNamedClasses(tokens: TokenList) {
+    private val listening = ArrayList<Boolean>()
+        .apply { add(true) }
 
-        var depth = 0
-        var hadNamedScope = false
+    private var depth = 0
+    private var hadNamedScope = false
 
-        var currPackage = root
-        var nextPackage = root
+    private var nextPackage = root
 
-        val imports = ArrayList<Import>()
-        val listening = ArrayList<Boolean>()
-        listening.add(true)
-
-        var i = 0
-
-        fun handleBlockOpen() {
-            if (hadNamedScope) {
-                listening.add(true)
-                currPackage = nextPackage
-            } else {
-                depth++
-                listening.add(false)
-            }
-            hadNamedScope = false
+    private fun handleBlockOpen() {
+        if (hadNamedScope) {
+            listening.add(true)
+            currPackage = nextPackage
+        } else {
+            depth++
+            listening.add(false)
         }
+        hadNamedScope = false
+    }
 
-        fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType?,) {
-            nextPackage = currPackage.getOrPut(name, scopeType)
-            nextPackage.keywords = nextPackage.keywords or listenType
-            nextPackage.fileName = tokens.fileName
+    private fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType?) {
+        nextPackage = currPackage.getOrPut(name, scopeType)
+        nextPackage.keywords = nextPackage.keywords or listenType
+        nextPackage.fileName = tokens.fileName
 
-            // LOGGER.info("discovered $nextPackage")
+        // LOGGER.info("discovered $nextPackage")
 
-            var j = i
-            val genericParams = if (tokens.equals(j, "<")) {
-                val genericParams = ArrayList<Parameter>()
+        var j = i
+        val genericParams = if (tokens.equals(j, "<")) {
+            val genericParams = ArrayList<Parameter>()
 
-                j++
-                var depth = 1
-                while (depth > 0) {
-                    if (depth == 1 && tokens.equals(j, TokenType.NAME) &&
-                        ((j == i + 1) || (tokens.equals(j - 1, ",")))
-                    ) {
-                        val name = tokens.toString(j)
-                        val type = NullableAnyType
-                        genericParams.add(Parameter(name, type, nextPackage, j))
-                    }
-
-                    if (tokens.equals(j, "<")) depth++
-                    else if (tokens.equals(j, ">")) depth--
-                    else when (tokens.getType(j)) {
-                        TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
-                        TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
-                        else -> {}
-                    }
-                    j++
+            j++
+            var depth = 1
+            while (depth > 0) {
+                if (depth == 1 && tokens.equals(j, TokenType.NAME) &&
+                    ((j == i + 1) || (tokens.equals(j - 1, ",")))
+                ) {
+                    val name = tokens.toString(j)
+                    val type = NullableAnyType
+                    genericParams.add(Parameter(name, type, nextPackage, j))
                 }
 
-                genericParams
-            } else emptyList()
-
-            nextPackage.typeParameters = genericParams
-            nextPackage.hasTypeParameters = true
-            if (false) println("Defined type parameters for ${nextPackage.pathStr}")
-
-            if (tokens.equals(j, "private")) j++
-            if (tokens.equals(j, "protected")) j++
-            if (tokens.equals(j, "constructor")) j++
-            if (tokens.equals(j, TokenType.OPEN_CALL)) {
-                // skip constructor params
-                j = tokens.findBlockEnd(j, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
-            }
-            if (tokens.equals(j, ":")) {
-                j++
-                while (tokens.equals(j, TokenType.NAME)) {
-                    val name = tokens.toString(j++)
-                    // LOGGER.info("discovered $nextPackage extends $name")
-                    nextPackage.superCallNames.add(SuperCallName(name, imports))
-                    if (tokens.equals(j, "<")) {
-                        j = tokens.findBlockEnd(j, "<", ">") + 1
-                    }
-                    if (tokens.equals(j, TokenType.OPEN_CALL)) {
-                        j = tokens.findBlockEnd(j, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
-                    }
-                    if (tokens.equals(j, TokenType.COMMA)) j++
-                    else break
+                if (tokens.equals(j, "<")) depth++
+                else if (tokens.equals(j, ">")) depth--
+                else when (tokens.getType(j)) {
+                    TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+                    TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                    else -> {}
                 }
+                j++
             }
 
-            if (scopeType == ScopeType.ENUM_CLASS && tokens.equals(j, "{")) {
-                hadNamedScope = true
-                handleBlockOpen()
-                j++
+            genericParams
+        } else emptyList()
 
-                while (j < tokens.size && !(tokens.equals(j, ";") || tokens.equals(j, "}"))) {
-                    check(tokens.equals(j, TokenType.NAME)) {
-                        "Expected name in enum class $currPackage, got ${tokens.err(j)}"
-                    }
-                    val name = tokens.toString(j++)
+        nextPackage.typeParameters = genericParams
+        nextPackage.hasTypeParameters = true
+        if (false) println("Defined type parameters for ${nextPackage.pathStr}")
 
-                    val childScope = currPackage.getOrPut(name, ScopeType.ENUM_ENTRY_CLASS)
-                    childScope.hasTypeParameters = true
-                    if (false) println("Defined type parameters for ${nextPackage.pathStr}.$name")
-
-                    // skip value parameters
-                    if (tokens.equals(j, "(")) {
-                        j = tokens.findBlockEnd(j, "(", ")") + 1
-                    }
-
-                    // skip block body
-                    if (tokens.equals(j, "{")) {
-                        j = tokens.findBlockEnd(j, "{", "}") + 1
-                    }
-
-                    if (tokens.equals(j, ",")) j++
+        if (tokens.equals(j, "private")) j++
+        if (tokens.equals(j, "protected")) j++
+        if (tokens.equals(j, "constructor")) j++
+        if (tokens.equals(j, TokenType.OPEN_CALL)) {
+            // skip constructor params
+            j = tokens.findBlockEnd(j, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
+        }
+        if (tokens.equals(j, ":")) {
+            j++
+            while (tokens.equals(j, TokenType.NAME)) {
+                val name = tokens.toString(j++)
+                // LOGGER.info("discovered $nextPackage extends $name")
+                nextPackage.superCallNames.add(SuperCallName(name, imports))
+                if (tokens.equals(j, "<")) {
+                    j = tokens.findBlockEnd(j, "<", ">") + 1
                 }
-
-                currPackage.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-
-                i = j // skip stuff
-
-            } else {
-                hadNamedScope = true
-                i = j // skip stuff
+                if (tokens.equals(j, TokenType.OPEN_CALL)) {
+                    j = tokens.findBlockEnd(j, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
+                }
+                if (tokens.equals(j, TokenType.COMMA)) j++
+                else break
             }
         }
 
+        if (scopeType == ScopeType.ENUM_CLASS && tokens.equals(j, "{")) {
+            hadNamedScope = true
+            handleBlockOpen()
+            j++
+
+            while (j < tokens.size && !(tokens.equals(j, ";") || tokens.equals(j, "}"))) {
+                check(tokens.equals(j, TokenType.NAME)) {
+                    "Expected name in enum class $currPackage, got ${tokens.err(j)}"
+                }
+                val name = tokens.toString(j++)
+
+                val childScope = currPackage.getOrPut(name, ScopeType.ENUM_ENTRY_CLASS)
+                childScope.hasTypeParameters = true
+                if (false) println("Defined type parameters for ${nextPackage.pathStr}.$name")
+
+                // skip value parameters
+                if (tokens.equals(j, "(")) {
+                    j = tokens.findBlockEnd(j, "(", ")") + 1
+                }
+
+                // skip block body
+                if (tokens.equals(j, "{")) {
+                    j = tokens.findBlockEnd(j, "{", "}") + 1
+                }
+
+                if (tokens.equals(j, ",")) j++
+            }
+
+            currPackage.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+
+            i = j // skip stuff
+
+        } else {
+            hadNamedScope = true
+            i = j // skip stuff
+        }
+    }
+
+    private fun collectNamedClassesImpl() {
         while (i < tokens.size) {
             when (tokens.getType(i)) {
                 TokenType.OPEN_BLOCK -> handleBlockOpen()
@@ -157,92 +196,101 @@ object ASTClassScanner {
                         currPackage = currPackage.parent ?: root
                     } else depth--
                 }
-                else -> {
-
-                    if (depth == 0) {
-                        when {
-                            tokens.equals(i, "package") && listening.size == 1 -> {
-                                val (path, ni) = tokens.readPath(i)
-                                currPackage = path
-                                i = ni
-                                continue // without i++
-                            }
-                            tokens.equals(i, "import") && listening.size == 1 -> {
-                                val (path, ni) = tokens.readImport(i)
-                                imports.add(path)
-                                i = ni
-                                continue // without i++
-                            }
-
-                            // tokens.equals(i, "<") -> if (listen >= 0) genericsDepth++
-                            // tokens.equals(i, ">") -> if (listen >= 0) genericsDepth--
-
-                            tokens.equals(i, "var") || tokens.equals(i, "val") || tokens.equals(i, "fun") -> {
-                                hadNamedScope = false
-                            }
-
-                            tokens.equals(i, "class") && tokens.equals(i - 1, "enum") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
-                                continue // without i++
-                            }
-
-                            tokens.equals(i, "class") && tokens.equals(i - 1, "inner") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
-                                continue // without i++
-                            }
-
-                            tokens.equals(i, "class") && !tokens.equals(i - 1, "::") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
-                                continue // without i++
-                            }
-
-                            tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
-                                    && !tokens.equals(i + 1, ":") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME)) {
-                                    "Expected name for object, but got ${tokens.err(i)}"
-                                }
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
-                                continue // without i++
-                            }
-                            tokens.equals(i, "companion") && listening.last() -> {
-                                i++ // skip companion
-                                check(tokens.equals(i++, "object"))
-                                val name = if (tokens.equals(i, TokenType.NAME)) {
-                                    tokens.toString(i++)
-                                } else "Companion"
-                                foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
-                                continue // without i++
-                            }
-                            tokens.equals(i, "interface") && tokens.equals(i-1,"fun") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.FUN_INTERFACE, ScopeType.INTERFACE)
-                                continue // without i++
-                            }
-                            tokens.equals(i, "interface") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.NONE, ScopeType.INTERFACE)
-                                continue // without i++
-                            }
-                            tokens.equals(i, "typealias") && listening.last() -> {
-                                check(tokens.equals(++i, TokenType.NAME))
-                                val name = tokens.toString(i++)
-                                foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
-                                continue // without i++
-                            }
-                        }
-                    }
+                else -> if (depth == 0 && collectNamesOnDepth0()) {
+                    // skip i++
+                    continue
                 }
             }
             i++
+        }
+    }
+
+    private fun collectNamesOnDepth0(): Boolean {
+        when {
+            tokens.equals(i, "package") && listening.size == 1 -> {
+                val (path, ni) = tokens.readPath(i)
+                currPackage = path
+                i = ni
+                return true// without i++
+            }
+            tokens.equals(i, "import") && listening.size == 1 -> {
+                val (path, ni) = tokens.readImport(i)
+                imports.add(path)
+                i = ni
+                return true// without i++
+            }
+
+            consumeIf("typealias") -> {
+                readTypeAlias()
+                return true// without i++
+            }
+
+            // tokens.equals(i, "<") -> if (listen >= 0) genericsDepth++
+            // tokens.equals(i, ">") -> if (listen >= 0) genericsDepth--
+
+            tokens.equals(i, "var") || tokens.equals(i, "val") || tokens.equals(i, "fun") -> {
+                hadNamedScope = false
+                return false
+            }
+
+            tokens.equals(i, "class") && tokens.equals(i - 1, "enum") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME))
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
+                return true// without i++
+            }
+
+            tokens.equals(i, "class") && tokens.equals(i - 1, "inner") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME))
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
+                return true// without i++
+            }
+
+            tokens.equals(i, "class") && !tokens.equals(i - 1, "::") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME))
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
+                return true// without i++
+            }
+
+            tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
+                    && !tokens.equals(i + 1, ":") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME)) {
+                    "Expected name for object, but got ${tokens.err(i)}"
+                }
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
+                return true// without i++
+            }
+            tokens.equals(i, "companion") && listening.last() -> {
+                i++ // skip companion
+                check(tokens.equals(i++, "object"))
+                val name = if (tokens.equals(i, TokenType.NAME)) {
+                    tokens.toString(i++)
+                } else "Companion"
+                foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
+                return true// without i++
+            }
+            tokens.equals(i, "interface") && tokens.equals(i - 1, "fun") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME))
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.FUN_INTERFACE, ScopeType.INTERFACE)
+                return true// without i++
+            }
+            tokens.equals(i, "interface") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME))
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.NONE, ScopeType.INTERFACE)
+                return true// without i++
+            }
+            tokens.equals(i, "typealias") && listening.last() -> {
+                check(tokens.equals(++i, TokenType.NAME))
+                val name = tokens.toString(i++)
+                foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
+                return true// without i++
+            }
+            else -> return false
         }
     }
 }

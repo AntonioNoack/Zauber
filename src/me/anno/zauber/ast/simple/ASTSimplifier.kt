@@ -3,20 +3,15 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
-import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
-import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
-import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
-import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
-import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
-import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
 import me.anno.zauber.ast.simple.controlflow.SimpleLoop
@@ -26,7 +21,6 @@ import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
-import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.MethodResolver.resolveCallable
@@ -34,7 +28,6 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
@@ -142,9 +135,10 @@ object ASTSimplifier {
                 }
             }
             is CompareOp -> {
-                val base = simplifyImpl(context, expr.value, currBlock, graph, true) ?: return null
+                val left = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
+                val right = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
                 val dst = currBlock.field(BooleanType, booleanOwnership)
-                currBlock.add(SimpleCompare(dst, base.use(), expr.type, expr.scope, expr.origin))
+                currBlock.add(SimpleCompare(dst, left.use(), right.use(), expr.type, expr.scope, expr.origin))
                 dst
             }
             is NamedCallExpression -> {

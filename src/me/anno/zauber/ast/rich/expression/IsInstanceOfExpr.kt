@@ -25,4 +25,7 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
     // can change type information...
     override fun splitsScope(): Boolean = true
     override fun isResolved(): Boolean = value.isResolved() && type.isResolved()
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return IsInstanceOfExpr(value.resolve(context), type.resolve(), scope, origin)
+    }
 }

@@ -5,7 +5,9 @@ import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
@@ -18,17 +20,17 @@ import me.anno.zauber.types.Types.BooleanType
 
 fun CppASTBuilder.readSwitch(label: String?): Expression {
 
+    val origin = origin(i - 1) // in switch
     val switchValue0 = readExpressionCondition()
     val switchValue = storeSubject(currPackage, switchValue0)
 
     // `switch` already consumed
     val bodyInstr = ArrayList<Expression>()
-    val origin = origin(i)
 
     val trueExpr = SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
     val falseExpr = SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
 
-    val scopeName = currPackage.generateName("switch")
+    val scopeName = currPackage.generateName("switch", origin)
     val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
 
         val noPrevBranch = Field(
@@ -74,7 +76,7 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
                     val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...
                     val totalCondition = normalCase.or(prevBranchContinueExpr)
 
-                    val scopeName = scope.generateName("case")
+                    val scopeName = scope.generateName("case", origin)
                     lateinit var bodyScope1: Scope
                     val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
                         bodyScope1 = bodyScopeI
@@ -90,10 +92,11 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
                     bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
                 }
                 consumeIf("default") -> {
+                    val origin = origin(i - 1) // on default
                     // condition: noPrevBranch | prevBranchContinue
                     consume(":")
                     val totalCondition = noPrevBranchExpr.or(prevBranchContinueExpr)
-                    val scopeName = scope.generateName("default")
+                    val scopeName = scope.generateName("default", origin)
                     lateinit var bodyScope1: Scope
                     val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
                         bodyScope1 = bodyScopeI

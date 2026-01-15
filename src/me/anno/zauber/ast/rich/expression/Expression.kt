@@ -15,13 +15,18 @@ abstract class Expression(val scope: Scope, val origin: Int) {
 
     abstract fun resolveType(context: ResolutionContext): Type
 
-    open fun resolve(context: ResolutionContext): Expression {
-        if (isResolved()) {
-            if (resolvedType == null) {
-                resolvedType = resolveType(context)
-            }
-            return this
+    fun resolve(context: ResolutionContext): Expression {
+        val resolved = resolveImpl(context)
+        check(resolved.isResolved())
+        if (resolved.resolvedType == null) {
+            resolved.resolvedType = resolved.resolveType(context)
         }
+        return resolved
+    }
+
+    // @Deprecated("Only the Expression-class and nothing else should call this")
+    open fun resolveImpl(context: ResolutionContext): Expression {
+        if (isResolved()) return this
         throw NotImplementedError("Resolve ${javaClass.simpleName}, $this")
     }
 

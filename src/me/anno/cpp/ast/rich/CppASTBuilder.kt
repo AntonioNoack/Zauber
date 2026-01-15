@@ -9,13 +9,7 @@ import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
-import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
-import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
-import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
-import me.anno.zauber.ast.rich.expression.unresolved.GetMethodFromTypeExpression
-import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -332,17 +326,10 @@ class CppASTBuilder(
             expr = when (symbol) {
 
                 "&&", "||" -> {
-                    val left = expr
-                    val right = pushScope(
-                        currPackage.generateName("shortcut"),
-                        ScopeType.EXPRESSION
-                    ) {
-                        readRHS(op)
-                    }
-                    if (symbol == "&&")
-                        shortcutExpressionI(left, ShortcutOperator.AND, right, currPackage, origin)
-                    else
-                        shortcutExpressionI(left, ShortcutOperator.OR, right, currPackage, origin)
+                    val tmpName = currPackage.generateName("shortcut", origin)
+                    val right = pushScope(tmpName, ScopeType.EXPRESSION) { readRHS(op) }
+                    if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, currPackage, origin)
+                    else shortcutExpressionI(expr, ShortcutOperator.OR, right, currPackage, origin)
                 }
 
                 "?:" -> {

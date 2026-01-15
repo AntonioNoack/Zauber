@@ -11,6 +11,7 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeTo
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.UnresolvedType
 
 class Field(
     var codeScope: Scope,
@@ -33,8 +34,11 @@ class Field(
     }
 
     init {
+        if (selfType is UnresolvedType) {
+            throw IllegalStateException("$selfType must be resolved")
+        }
         if (selfType is ClassType && !selfType.clazz.isClassType()) {
-            throw IllegalStateException("$this has invalid selfType")
+            throw IllegalStateException("$this has invalid selfType: $selfType")
         }
     }
 

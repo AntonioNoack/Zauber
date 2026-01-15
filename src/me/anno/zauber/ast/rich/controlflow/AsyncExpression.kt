@@ -20,8 +20,6 @@ class AsyncExpression(val value: Expression, scope: Scope, origin: Int) : Expres
     override fun clone(scope: Scope) = AsyncExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = value.isResolved()
-
-    override fun resolve(context: ResolutionContext): Expression {
-        return AsyncExpression(value.resolve(context), scope, origin)
-    }
+    override fun resolveImpl(context: ResolutionContext) =
+        AsyncExpression(value.resolve(context), scope, origin)
 }

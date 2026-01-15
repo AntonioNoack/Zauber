@@ -19,9 +19,6 @@ class ThrowExpression(val value: Expression, scope: Scope, origin: Int) : Expres
     override fun clone(scope: Scope) = ThrowExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = value.isResolved()
-
-    override fun resolve(context: ResolutionContext): Expression {
-        return ThrowExpression(value.resolve(context), scope, origin)
-    }
-
+    override fun resolveImpl(context: ResolutionContext) =
+        ThrowExpression(value.resolve(context), scope, origin)
 }

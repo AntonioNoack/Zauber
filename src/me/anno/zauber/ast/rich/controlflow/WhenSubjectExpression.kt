@@ -41,7 +41,7 @@ fun storeSubject(
     subject: Expression,
 ): FieldExpression {
     val origin = subject.origin
-    val subjectName = scope.generateName("subject")
+    val subjectName = scope.generateName("subject", origin)
     val value = if (subject is AssignmentExpression) subject.newValue else subject
     val field = Field(
         scope, null,
