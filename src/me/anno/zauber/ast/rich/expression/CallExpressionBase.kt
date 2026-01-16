@@ -6,7 +6,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -64,21 +64,63 @@ abstract class CallExpressionBase(
 
     abstract fun resolveCallable(context: ResolutionContext): ResolvedMember<*>
 
+    private fun Expression.isLambdaLike(): Boolean {
+        return when (this) {
+            is LambdaExpression, is DoubleColonLambda,
+            is GetMethodFromTypeExpression, is GetMethodFromValueExpression -> true
+            else -> false
+        }
+    }
+
     override fun resolveImpl(context: ResolutionContext): Expression {
         return when (val callable = resolveCallable(context)) {
             is ResolvedMethod -> {
-                val base = base.resolve(context)
-                val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
-                    .map { it.resolve(context) }
-                ResolvedCallExpression(base, callable, params, scope, origin)
+                val method = callable.resolved
+                val isInlineMethod = method.isInline()
+                val params0 = reorderParameters(valueParameters, method.valueParameters, scope, origin)
+                // we can only inline, if some or our parameters are lambdas
+                //  or lambda-likes... (Type::add) should work, too
+                //  -> no, we can always inline :)
+                if (isInlineMethod) {
+                    // define all parameters, that are not lambda-likes
+                    // todo define 'this' field/parameter in all relevant scopes
+                    // todo handle 'this' like any other field, and allow labels on any field to denote the scope
+                    // todo create sub-scope for this, and define all parameters as fields of that sub-scope,
+                    //  because usually, they would be in the method scope, but here, we don't use that scope
+                    // todo we must recursively support this replacement, e.g. for inline methods with default parameters
+                    //  -> register these special lambdas in the context :)
+                    val body = ArrayList<Expression>()
+                    val inlineBody = method.body!!
+                    for (i in params0.indices) {
+                        val param = params0[i]
+                        if (!param.isLambdaLike()) {
+                            val dstField = method.valueParameters[i].field!!
+                            val dstFieldExpr = FieldExpression(dstField, scope, origin)
+                            body.add(AssignmentExpression(dstFieldExpr, param))
+                        }
+                    }
+                    // todo replace all calls to the lambda parameters
+                    body.add(inlineBody)
+                    // todo if lambdaType has a 'this'/when we have some sort of 'this',
+                    //  we need to define it as a variable/field...
+                    println("Inlined body:\n${body.joinToString("\n") { "  $it" }}")
+                    ExpressionList(body, scope, origin).resolve(context)
+                } else {
+                    // todo base must be defined, so resolve instance/this
+                    val base = if (base !is FieldExpression && base !is UnresolvedFieldExpression) {
+                        base.resolve(context)
+                    } else null
+                    val params1 = params0.map { it.resolve(context) }
+                    ResolvedCallExpression(base, callable, params1, scope, origin)
+                }
             }
             is ResolvedConstructor -> {
                 check(base is TypeExpression || base is UnresolvedFieldExpression) {
                     "In ResolvedConstructor, base should be a TypeExpression/UFE, but got ${base.javaClass.simpleName}"
                 }
-                val params = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
-                    .map { it.resolve(context) }
-                ResolvedCallExpression(null, callable, params, scope, origin)
+                val params0 = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
+                val params1 = params0.map { it.resolve(context) }
+                ResolvedCallExpression(null, callable, params1, scope, origin)
             }
             is ResolvedField -> {
                 val base = base.resolve(context)

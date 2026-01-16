@@ -1,11 +1,9 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.ASTClassScanner.Companion.collectNamedClasses
-import me.anno.zauber.ast.rich.ZauberASTBuilder
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Keywords
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
@@ -36,7 +34,7 @@ class TypeResolutionTest {
     companion object {
         var ctr = 0
 
-        fun testTypeResolution(code: String): Type {
+        fun testTypeResolutionGetField(code: String): Field {
             val testScopeName = "test${ctr++}"
             val tokens = ZauberTokenizer(
                 """
@@ -51,7 +49,11 @@ class TypeResolutionTest {
             val testScope = root.children.first { it.name == testScopeName }
             resolveOverrides(testScope)
             resolveTypesAndNames(testScope)
-            val field = testScope.fields.first { it.name == "tested" }
+            return testScope.fields.first { it.name == "tested" }
+        }
+
+        fun testTypeResolution(code: String): Type {
+            val field = testTypeResolutionGetField(code)
             return field.valueType
                 ?: throw IllegalStateException("Could not resolve type for $field")
         }
@@ -190,5 +192,35 @@ class TypeResolutionTest {
         """.trimIndent()
         )
         assertEquals(unionTypes(IntType, NullType), type)
+    }
+
+    @Test
+    fun testCompareOperators() {
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 < 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 <= 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 > 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 >= 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 == 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 != 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 === 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0 !== 1"))
+    }
+
+    @Test
+    fun testCompareOperatorsMixed() {
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f < 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f <= 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f > 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f >= 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f == 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f != 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f === 1"))
+        assertEquals(BooleanType, testTypeResolution("val tested = 0f !== 1"))
+    }
+
+    @Test
+    fun testValueType() {
+        val field = testTypeResolutionGetField("value val tested = \"\"")
+        check(field.keywords.hasFlag(Keywords.VALUE))
     }
 }

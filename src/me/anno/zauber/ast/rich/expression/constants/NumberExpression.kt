@@ -112,12 +112,15 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             var str = value
             if (str.endsWith("l", true)) str = str.substring(0, str.length - 1)
             if (str.endsWith("u", true)) str = str.substring(0, str.length - 1)
-            if (str.endsWith("h", true) || str.endsWith("f", true) || str.endsWith("d", true))
-                str = str.substring(0, str.length - 1)
 
             if (str.startsWith("0x")) {
                 str = str.substring(2).toInt(16).toString()
+            } else {
+                if (str.isNotEmpty() && str.last() in "hfdHFD") {
+                    str = str.substring(0, str.length - 1)
+                }
             }
+
             val samy = cast(str).toString()
             if (samy != str) {
                 LOGGER.warn("Losing information when casting $str to $samy")

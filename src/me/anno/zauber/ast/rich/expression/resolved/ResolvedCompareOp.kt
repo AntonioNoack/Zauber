@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich.expression.resolved
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.CompareType
-import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Scope
@@ -12,7 +11,7 @@ import me.anno.zauber.types.Types.BooleanType
 class ResolvedCompareOp(
     val left: Expression,
     val right: Expression,
-    val resolved: ResolvedMethod,
+    val callable: ResolvedMethod,
     val type: CompareType,
 ) : Expression(left.scope, left.origin) {
 
@@ -27,7 +26,7 @@ class ResolvedCompareOp(
     override fun needsBackingField(methodScope: Scope): Boolean = left.needsBackingField(methodScope) ||
             right.needsBackingField(methodScope)
 
-    override fun clone(scope: Scope) = ResolvedCompareOp(left.clone(scope), right.clone(scope), resolved, type)
+    override fun clone(scope: Scope) = ResolvedCompareOp(left.clone(scope), right.clone(scope), callable, type)
     override fun splitsScope(): Boolean = false // is resolved -> no reason to split
     override fun isResolved(): Boolean = true
 }

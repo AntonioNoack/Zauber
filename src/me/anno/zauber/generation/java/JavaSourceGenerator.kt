@@ -8,6 +8,8 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.generation.DeltaWriter
 import me.anno.zauber.generation.Generator
+import me.anno.zauber.generation.Specializations
+import me.anno.zauber.generation.Specializations.foundTypeSpecialization
 import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
 import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
 import me.anno.zauber.typeresolution.ParameterList
@@ -15,7 +17,6 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
-import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.BooleanType
@@ -30,12 +31,17 @@ import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
 // todo before generating JVM bytecode, create source code to be compiled with a normal Java compiler
-//  big difference: stack-based
-
-// todo Java forbids duplicate field names in whole methods, so we must rename them when we have duplicates
+//  big difference: stack-based,
+//  small differences:
+//   - Java only supports one interface of each kind [-> can be solved by specialization :3]
+//   - Generics are always boxed, and overrides must be boxed, too [-> we just must be careful with declarations and reflections]
+//   - Java forbids duplicate field names in cascading method scopes [-> we must renamed them]
+//   - fields into lambdas must be effectively final [-> must must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
 
 object JavaSourceGenerator : Generator() {
 
@@ -53,24 +59,41 @@ object JavaSourceGenerator : Generator() {
     )
 
     val nativeTypes = protectedTypes.filter { (_, it) -> it.boxed != it.native }
+    val nativeNumbers = nativeTypes - BooleanType
+
+    // todo we need to add these for every constructor and super call,
+    //  we need specialized methods for every generic method (incl. getters and setters)
 
     private val blacklistedPaths = listOf(listOf("java"))
+    private val specialization get() = specializations.last()
+    private val specializations = ArrayList<Specialization?>()
 
     override fun generateCode(dst: File, root: Scope) {
         val writer = DeltaWriter(dst)
         try {
-            writer.write(
-                File(dst, "org/jetbrains/annotations/Nullable.java"),
-                "package org.jetbrains.annotations;\n\n" +
-                        "import java.lang.annotation.*;\n\n" +
-                        "@Retention(RetentionPolicy.RUNTIME)\n" +
-                        "@Target(ElementType.TYPE)\n" +
-                        "public @interface Nullable {}\n"
-            )
+            defineNullableAnnotation(dst, writer)
             generate(root, dst, writer)
+            Specializations.generate(
+                { generate(it.scope, dst, writer, it.specialization) },
+                { extendScope(it, dst, writer) })
         } finally {
             writer.finish()
         }
+    }
+
+    private fun defineNullableAnnotation(dst: File, writer: DeltaWriter) {
+        writer.write(
+            File(dst, "org/jetbrains/annotations/Nullable.java"),
+            "package org.jetbrains.annotations;\n\n" +
+                    "import java.lang.annotation.*;\n\n" +
+                    "@Retention(RetentionPolicy.RUNTIME)\n" +
+                    "@Target(ElementType.TYPE)\n" +
+                    "public @interface Nullable {}\n"
+        )
+    }
+
+    fun extendScope(spec: MethodSpecialization, dst: File, writer: DeltaWriter) {
+        // todo extend the respective file by that method...
     }
 
     // todo add line to imports where needed
@@ -95,13 +118,16 @@ object JavaSourceGenerator : Generator() {
             }
             is SelfType if (type.scope == scope) -> builder.append(scope.name)
             is ThisType -> appendType(type.type, scope, needsBoxedType)
-            is GenericType if (type.scope == scope) -> builder.append(type.name)
             UnknownType -> builder.append('?')
             is LambdaType -> {
-                // todo define all these classes...
-                // todo add respective import...
-                builder.append("zauber.Function").append(type.parameters.size)
+                val selfType = type.selfType
+                builder.append("zauber.Function")
+                    .append(type.parameters.size + if (selfType != null) 1 else 0)
                     .append('<')
+                if (selfType != null) {
+                    appendType(selfType, scope, true)
+                    builder.append(", ")
+                }
                 for (param in type.parameters) {
                     appendType(param.type, scope, true)
                     builder.append(", ")
@@ -109,9 +135,13 @@ object JavaSourceGenerator : Generator() {
                 appendType(type.returnType, scope, true)
                 builder.append('>')
             }
-            is GenericType -> builder.append(type.name)
+            is GenericType -> {
+                val lookup = specialization?.get(type)
+                if (lookup != null) appendType(lookup, scope, needsBoxedType)
+                else builder.append(type.name)
+            }
             else -> {
-                builder.append("Object /* $type */")
+                builder.append("Object /* $type (${type.javaClass.simpleName}) */")
             }
         }
     }
@@ -131,17 +161,15 @@ object JavaSourceGenerator : Generator() {
             return
         }
 
-        builder.append(type.clazz.pathStr)
-
         val params = type.typeParameters
         if (!params.isNullOrEmpty()) {
-            builder.append('<')
-            for (i in params.indices) {
-                if (i > 0) builder.append(", ")
-                val param = params.getOrNull(i) ?: NullableAnyType
-                appendType(param, scope, true)
-            }
-            builder.append('>')
+            val spec = Specialization(type)
+            val className = createClassName(type.clazz, spec)
+            builder.append(type.clazz.parent!!.pathStr).append('.')
+                .append(className)
+            foundTypeSpecialization(type.clazz, spec)
+        } else {
+            builder.append(type.clazz.pathStr)
         }
     }
 
@@ -151,30 +179,51 @@ object JavaSourceGenerator : Generator() {
             .append(";\n\n")
     }
 
-    fun generate(scope: Scope, dst: File, writer: DeltaWriter) {
+    private fun createSpecializationSuffix(specialization: Specialization?): String {
+        if (specialization == null) return ""
+        // todo ensure the name is original, but keep it readable
+        return "_${specialization.createUniqueName()}"
+    }
+
+    private fun createFile(scope: Scope, name: String, dst: File): File {
+        return File(dst, scope.path.joinToString("/") + "/$name.java")
+    }
+
+    private fun createClassName(scope: Scope, specialization: Specialization?): String {
+        return scope.name + createSpecializationSuffix(specialization)
+    }
+
+    private fun createPackageName(scope: Scope, specialization: Specialization?): String {
+        return scope.name.capitalize() + "Kt" + createSpecializationSuffix(specialization)
+    }
+
+    fun generate(scope: Scope, dst: File, writer: DeltaWriter, specialization: Specialization? = null) {
         val scopeType = scope.scopeType
         if (scope.isClassType()) {
-            val file = File(dst, scope.path.joinToString("/") + ".java")
+            val name = createClassName(scope, specialization)
 
             appendPackage(scope.path.dropLast(1))
-            generateInside(scope.name, scope, null)
+            generateInside(name, scope, specialization)
 
-            writer.write(file, finish())
+            writer.write(createFile(scope.parent!!, name, dst), finish())
         } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
             if (scopeType == ScopeType.PACKAGE && (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())) {
                 // we need some package helper
-
-                val name = scope.name.capitalize() + "Kt"
-                val file = File(dst, scope.path.joinToString("/") + "/$name.java")
+                val name = createPackageName(scope, specialization)
 
                 appendPackage(scope.path)
-                generateInside(name, scope, null)
+                generateInside(name, scope, specialization)
 
-                writer.write(file, finish())
+                writer.write(createFile(scope, name, dst), finish())
             }
 
-            for (child in scope.children) {
-                generate(child, dst, writer)
+            // todo child specialization may be needed in some cases
+            //  objects, normal classes, enum classes? no
+            //  inner classes: yes
+            if (specialization == null) {
+                for (child in scope.children) {
+                    generate(child, dst, writer)
+                }
             }
         }
     }
@@ -186,20 +235,40 @@ object JavaSourceGenerator : Generator() {
         depth++
         nextLine()
 
-        run()
+        try {
+            run()
 
-        if (builder.endsWith("  ")) {
-            builder.setLength(builder.length - 2)
+            if (builder.endsWith("  ")) {
+                builder.setLength(builder.length - 2)
+            }
+
+            depth--
+            builder.append("}\n")
+            indent()
+            depth++
+
+        } finally {
+            depth--
         }
-        depth--
-        builder.append("}\n")
-        indent()
     }
 
     fun generateInside(name: String, scope: Scope, specialization: Specialization?) {
 
         // todo imports ->
         //  collect them in a dry-run :)
+
+        specializations.add(specialization)
+
+        if (specialization != null) {
+            builder.append("// Specialization: ")
+            val params = specialization.typeParameters
+            for (i in params.indices) {
+                if (!builder.endsWith(": ")) builder.append(", ")
+                builder.append(params.generics[i].name).append('=')
+                builder.append(params.getOrNull(i))
+            }
+            builder.append('\n')
+        }
 
         builder.append("public ")
         val type = when (scope.scopeType) {
@@ -215,29 +284,30 @@ object JavaSourceGenerator : Generator() {
             else -> scope.scopeType.toString()
         }
         if (scope.keywords.hasFlag(Keywords.ABSTRACT)) builder.append("abstract ")
-        builder.append(type).append(' ')
-        builder.append(name)
-        if (specialization != null) {
-            builder.append('_').append(specialization.hash)
-        }
+        builder.append(type).append(' ').append(name)
 
-        appendTypeParams(scope)
+        if (specialization == null) {
+            appendTypeParams(scope)
+        }
         appendSuperTypes(scope)
 
         writeBlock {
 
             appendFields(scope)
-            appendConstructors(scope)
+            appendConstructors(scope, name)
             appendMethods(scope)
 
+            specializations.removeLast()
+
             // inner classes
-            if (scope.scopeType != ScopeType.PACKAGE) {
+            if (specialization == null && scope.scopeType != ScopeType.PACKAGE) {
+                // todo we may need sub-specializations...
                 for (child in scope.children) {
                     val childType = child.scopeType ?: continue
                     if (childType.isClassType()) {
                         // some spacing
                         nextLine()
-                        generateInside(child.name, child, null)
+                        generateInside(child.name, child, specialization)
                     }
                 }
             }
@@ -279,9 +349,9 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendConstructors(classScope: Scope) {
+    private fun appendConstructors(classScope: Scope, name: String) {
         for (constructor in classScope.constructors) {
-            appendConstructor(classScope, constructor)
+            appendConstructor(classScope, constructor, name)
         }
     }
 
@@ -293,10 +363,7 @@ object JavaSourceGenerator : Generator() {
                 )
     }
 
-    private fun appendMethod(
-        classScope: Scope, method: Method,
-        specialization: Specialization?
-    ) {
+    private fun appendMethod(classScope: Scope, method: Method, specialization: Specialization?) {
 
         // some spacing
         nextLine()
@@ -324,9 +391,12 @@ object JavaSourceGenerator : Generator() {
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.returnType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
+
+        val specialization = specialization
         if (specialization != null) {
             builder.append('_').append(specialization.hash)
         }
+
         val selfTypeIfNecessary = if (!isBySelf) selfType else null
         method.selfTypeIfNecessary = selfTypeIfNecessary
         appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
@@ -340,12 +410,12 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendConstructor(classScope: Scope, constructor: Constructor) {
+    private fun appendConstructor(classScope: Scope, constructor: Constructor, name: String) {
 
         // some spacing
         nextLine()
 
-        builder.append("public ").append(classScope.name)
+        builder.append("public ").append(name)
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
         // todo append extra body-block for super-call
         val body = constructor.body
@@ -416,7 +486,7 @@ object JavaSourceGenerator : Generator() {
             val simplified = ASTSimplifier.simplify(context, body)
             appendSimplifiedAST(method, simplified.startBlock)
         } catch (e: Throwable) {
-            // e.printStackTrace()
+            e.printStackTrace()
             builder.append(
                 "/* [${e.javaClass.simpleName}: ${
                     e.message.toString()
@@ -451,14 +521,16 @@ object JavaSourceGenerator : Generator() {
     private fun appendSuperTypes(scope: Scope) {
         val superCall0 = scope.superCalls.firstOrNull { it.valueParameters != null }
         if (superCall0 != null && superCall0.type != AnyType) {
+            val type = superCall0.type
             builder.append(" extends ")
-            appendClassType(superCall0.type, scope, true)
+            appendClassType(type, scope, true)
         }
         var implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
         for (superCall in scope.superCalls) {
             if (superCall.valueParameters != null) continue
+            val type = superCall.type
             builder.append(implementsKeyword)
-            appendClassType(superCall.type, scope, true)
+            appendClassType(type, scope, true)
             implementsKeyword = ", "
         }
     }

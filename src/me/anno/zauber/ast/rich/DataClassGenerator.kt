@@ -62,7 +62,7 @@ object DataClassGenerator {
 
     fun ZauberASTBuilder.finishDataClass(classScope: Scope) {
 
-        check(currPackage === classScope)
+        check(currPackage === classScope) { "Expected currPackage to be classScope" }
         val origin = origin(i)
 
         val primaryFields = classScope.getOrCreatePrimConstructorScope()

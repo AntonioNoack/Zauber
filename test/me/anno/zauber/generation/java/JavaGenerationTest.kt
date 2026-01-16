@@ -6,6 +6,7 @@ import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameter
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
+import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -34,6 +35,16 @@ class JavaGenerationTest {
                 finish()
             }
             return sourceCode
+        }
+
+        fun testClassGenIsFine(code: String) {
+            val code = testClassGeneration(code)
+            check("Exception" !in code && "Error" !in code) { code }
+        }
+
+        fun testExprGenIsFine(code: String) {
+            val code = testClassGeneration("class Test {\n$code\n}")
+            check("Exception" !in code && "Error" !in code) { code }
         }
     }
 
@@ -235,5 +246,86 @@ class JavaGenerationTest {
         """.trimIndent()
         )
         check("Exception" !in code && "Error" !in code) { code }
+    }
+
+
+    @Test
+    fun testCompareOperators() {
+        testTypeResolution(
+            """
+                val tested = 0
+                package zauber
+                class Int {
+                    fun compareTo(other: Int): Int
+                }
+            """.trimIndent()
+        )
+        testExprGenIsFine("val tested = 0 < 1")
+        testExprGenIsFine("val tested = 0 <= 1")
+        testExprGenIsFine("val tested = 0 > 1")
+        testExprGenIsFine("val tested = 0 >= 1")
+        testExprGenIsFine("val tested = 0 == 1")
+        testExprGenIsFine("val tested = 0 != 1")
+        testExprGenIsFine("val tested = 0 === 1")
+        testExprGenIsFine("val tested = 0 !== 1")
+    }
+
+    @Test
+    fun testCompareOperatorsMixed() {
+        testTypeResolution(
+            """
+                val tested = 0
+                package zauber
+                class Float {
+                    fun compareTo(other: Int): Int
+                }
+            """.trimIndent()
+        )
+        testExprGenIsFine("val tested = 0f < 1")
+        testExprGenIsFine("val tested = 0f <= 1")
+        testExprGenIsFine("val tested = 0f > 1")
+        testExprGenIsFine("val tested = 0f >= 1")
+        testExprGenIsFine("val tested = 0f == 1")
+        testExprGenIsFine("val tested = 0f != 1")
+        testExprGenIsFine("val tested = 0f === 1")
+        testExprGenIsFine("val tested = 0f !== 1")
+    }
+
+    @Test
+    fun testMethodGeneration() {
+        testClassGenIsFine(
+            """
+            class Test(val value: Double) {
+                operator fun plus(other: Int): Double = plus(other.toLong())
+                external operator fun plus(other: Long): Double
+
+                external fun toInt(): Int
+                external fun toLong(): Long
+            }
+            
+            package zauber
+            class Long
+            class Int {
+                external fun toLong(): Long
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testInlineFunction() {
+        testClassGenIsFine(
+            """
+            class Test {
+                inline fun map(v: Int, x: (Int) -> Int) {
+                    return x(v)
+                }
+                
+                fun calculate(): Int {
+                    return map(7, { it * it })
+                }
+            }
+        """.trimIndent()
+        )
     }
 }

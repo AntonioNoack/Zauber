@@ -7,6 +7,9 @@ class IntRange(val from: Int, val endExcl: Int, val step: Int) : Iterable<Int> {
     fun reversed(): Iterable<Int> = TODO("IntRange.reversed")
 
     infix fun step(step: Int): IntRange = IntRange(from, endExcl, step)
+
+    val first get() = from
+    val last get() = endExcl - 1
 }
 
 class IntRangeIterator(var index: Int, val endExcl: Int, val step: Int = 1) : Iterator<Int> {

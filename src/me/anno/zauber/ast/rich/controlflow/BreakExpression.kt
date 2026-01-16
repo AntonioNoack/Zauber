@@ -5,10 +5,10 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
-class BreakExpression(val label: String?, scope: Scope, origin: Int) : Expression(scope, origin) {
+class BreakExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
-        return if (label != null) "break@$label" else "break"
+        return "break@$label"
     }
 
     override fun resolveType(context: ResolutionContext): Type {

@@ -11,6 +11,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CompareOp
 import me.anno.zauber.ast.rich.expression.CompareType
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.GetMethodFromTypeExpression
@@ -40,14 +41,16 @@ fun ASTBuilderBase.binaryOp(
         "!==" -> CheckEqualsOp(left, right, byPointer = true, negated = true, scope, origin)
         "&&", "||" -> throw IllegalStateException("&& and || should be handled separately")
         "::" -> {
+
             fun getBase(): Scope = when {
                 // left is VariableExpression -> scope.resolveType(left.name, this) as Scope
-                left is SpecialValueExpression && left.type == SpecialValue.THIS -> scope
+                left is ThisExpression -> left.label
                 else -> throw NotImplementedError("GetBase($left::$right at ${tokens.err(i)})")
             }
 
             val leftIsType = left is MemberNameExpression && left.name[0].isUpperCase() ||
-                    left is SpecialValueExpression && left.type == SpecialValue.THIS
+                    left is ThisExpression
+
             when {
                 leftIsType && right is MemberNameExpression -> {
                     GetMethodFromTypeExpression(getBase(), right.name, right.scope, right.origin)

@@ -15,7 +15,7 @@ class SimpleSpecialValue(dst: SimpleField, val base: SpecialValueExpression) :
 
     override fun eval(runtime: Runtime): Instance {
         return when (base.type) {
-            SpecialValue.SUPER, SpecialValue.THIS -> runtime.getThis()
+            SpecialValue.SUPER -> runtime.getThis()
             SpecialValue.NULL -> runtime.getNull()
             SpecialValue.TRUE -> runtime.getBool(true)
             SpecialValue.FALSE -> runtime.getBool(false)

@@ -1,6 +1,6 @@
 package zauber
 
-import zauber.impl.SimpleListIterator
+import zauber.impl.SimpleMutableListIterator
 import kotlin.math.max
 
 class ArrayList<V>(capacity: Int = 16) : MutableList<V> {
@@ -40,5 +40,5 @@ class ArrayList<V>(capacity: Int = 16) : MutableList<V> {
         return true
     }
 
-    override fun listIterator(startIndex: Int): Iterator<V> = SimpleListIterator(this, startIndex)
+    override fun listIterator(startIndex: Int) = SimpleMutableListIterator(this, startIndex)
 }

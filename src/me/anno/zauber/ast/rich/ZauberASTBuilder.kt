@@ -14,6 +14,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
@@ -414,9 +415,9 @@ class ZauberASTBuilder(
 
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
-
         val keywords = packKeywords()
-        val valueType = readTypeOrNull(selfType)
+
+        val type = readTypeOrNull(selfType)
 
         val constructorScope = classScope.getOrCreatePrimConstructorScope()
         val initialValue = pushScope(constructorScope) {
@@ -435,15 +436,16 @@ class ZauberASTBuilder(
         val field = Field(
             currPackage, selfType,
             selfType0 != null, isMutable = isMutable, null,
-            name, valueType, initialValue, keywords, origin
+            name, type, initialValue, keywords, origin
         )
+
         field.typeParameters = typeParameters
         if (initialValue != null) {
             val fieldExpr = FieldExpression(field, classScope, origin)
             constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
         }
 
-        if (LOGGER.enableDebug) LOGGER.debug("read field $name: $valueType = $initialValue")
+        if (LOGGER.enableDebug) LOGGER.debug("read field $name: $type = $initialValue")
 
         finishLastField()
         lastField = field
@@ -675,8 +677,6 @@ class ZauberASTBuilder(
                     applyImport(import)
                 }
 
-                consumeIf("value") -> keywords = keywords or Keywords.VALUE
-
                 consumeIf("inner") -> {
                     consume("class")
                     readClass(ScopeType.INNER_CLASS)
@@ -717,7 +717,8 @@ class ZauberASTBuilder(
 
                 consumeIf("@") -> annotations.add(readAnnotation())
 
-                tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) -> collectKeywords()
+                tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) ->
+                    collectKeywords()
 
                 consumeIf(";") -> {}// just skip it
 
@@ -842,7 +843,7 @@ class ZauberASTBuilder(
         return pushCall { readExpression() }
     }
 
-    fun readBodyOrExpression(): Expression {
+    fun readBodyOrExpression(label: String?): Expression {
         return if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
             // if just names and -> follow, read a single expression instead
             // if a destructuring and -> follow, read a single expression instead
@@ -860,7 +861,7 @@ class ZauberASTBuilder(
                     }
                     tokens.equals(j, "->") -> {
                         if (depth == 0) {
-                            return readExprInNewScope()
+                            return readExprInNewScope(label)
                         }
                     }
                     else -> break@arrowSearch
@@ -869,17 +870,19 @@ class ZauberASTBuilder(
             }
 
             pushBlock(ScopeType.EXPRESSION, null) {
+                it.breakLabel = label
                 readMethodBody()
             }
         } else {
-            readExprInNewScope()
+            readExprInNewScope(label)
         }
     }
 
-    private fun readExprInNewScope(): Expression {
+    private fun readExprInNewScope(label: String?): Expression {
         val origin = origin(i)
         val scopeName = currPackage.generateName("expr", origin)
         return pushScope(scopeName, ScopeType.EXPRESSION) {
+            it.breakLabel = label
             readExpression()
         }
     }
@@ -898,8 +901,8 @@ class ZauberASTBuilder(
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin(i - 1))
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i - 1))
-            consumeIf("this") -> SpecialValueExpression(SpecialValue.THIS, currPackage, origin(i - 1))
             consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i - 1))
+            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin(i - 1))
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i), currPackage, origin(i++))
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i), currPackage, origin(i++))
             consumeIf("!") -> {
@@ -937,8 +940,8 @@ class ZauberASTBuilder(
             consumeIf("for") -> readForLoop(label)
             consumeIf("when") -> {
                 when {
-                    tokens.equals(i, TokenType.OPEN_CALL) -> readWhenWithSubject()
-                    tokens.equals(i, TokenType.OPEN_BLOCK) -> readWhenWithConditions()
+                    tokens.equals(i, TokenType.OPEN_CALL) -> readWhenWithSubject(label)
+                    tokens.equals(i, TokenType.OPEN_BLOCK) -> readWhenWithConditions(label)
                     else -> throw IllegalStateException("Unexpected token after when at ${tokens.err(i)}")
                 }
             }
@@ -956,8 +959,8 @@ class ZauberASTBuilder(
                 val origin = origin(i - 1)
                 AsyncExpression(readExpression(), currPackage, origin)
             }
-            consumeIf("break") -> BreakExpression(label, currPackage, origin(i - 1))
-            consumeIf("continue") -> ContinueExpression(label, currPackage, origin(i - 1))
+            consumeIf("break") -> BreakExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
+            consumeIf("continue") -> ContinueExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
 
             tokens.equals(i, "object") &&
                     (tokens.equals(i + 1, ":") || tokens.equals(i + 1, TokenType.OPEN_BLOCK)) -> {
@@ -1064,22 +1067,22 @@ class ZauberASTBuilder(
 
     private fun readIfBranch(): IfElseBranch {
         val condition = readExpressionCondition()
-        val ifTrue = readBodyOrExpression()
+        val ifTrue = readBodyOrExpression(null)
         val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
             i++
-            readBodyOrExpression()
+            readBodyOrExpression(null)
         } else null
         return IfElseBranch(condition, ifTrue, ifFalse)
     }
 
     private fun readWhileLoop(label: String?): WhileLoop {
         val condition = readExpressionCondition()
-        val body = readBodyOrExpression()
+        val body = readBodyOrExpression(label ?: "")
         return WhileLoop(condition, body, label)
     }
 
     private fun readDoWhileLoop(label: String?): DoWhileLoop {
-        val body = readBodyOrExpression()
+        val body = readBodyOrExpression(label ?: "")
         check(tokens.equals(i++, "while"))
         val condition = readExpressionCondition()
         return DoWhileLoop(body = body, condition = condition, label)
@@ -1098,7 +1101,7 @@ class ZauberASTBuilder(
                 iterable = readExpression()
                 check(i == tokens.size)
             }
-            val body = readBodyOrExpression()
+            val body = readBodyOrExpression(label ?: "")
             return destructuringForLoop(currPackage, names, iterable, body, label)
         } else {
             lateinit var name: String
@@ -1113,7 +1116,7 @@ class ZauberASTBuilder(
                 iterable = readExpression()
                 check(i == tokens.size)
             }
-            val body = readBodyOrExpression()
+            val body = readBodyOrExpression(label ?: "")
             val pseudoInitial = iterableToNextExpr(iterable)
             val variableField = Field(
                 body.scope, null, false, isMutable = true, false,
@@ -1123,7 +1126,7 @@ class ZauberASTBuilder(
         }
     }
 
-    private fun readWhenWithSubject(): Expression {
+    private fun readWhenWithSubject(label: String?): Expression {
         val subject = pushCall {
             when {
                 consumeIf("val") -> readFieldInMethod(false, isLateinit = false, currPackage)
@@ -1141,7 +1144,7 @@ class ZauberASTBuilder(
                     "Expected nextArrow for whenCases starting at ${tokens.err(i)}, but only found $nextArrow"
                 }
                 val conditions = readSubjectConditions(nextArrow)
-                val body = readBodyOrExpression()
+                val body = readBodyOrExpression(label)
                 if (false) {
                     LOGGER.info("next case:")
                     LOGGER.info("  condition-scope: ${currPackage.pathStr}")
@@ -1238,7 +1241,7 @@ class ZauberASTBuilder(
         return -1
     }
 
-    private fun readWhenWithConditions(): Expression {
+    private fun readWhenWithConditions(label: String?): Expression {
         val origin = origin(i)
         val cases = ArrayList<WhenCase>()
         pushBlock(ScopeType.WHEN_CASES, null) {
@@ -1256,7 +1259,7 @@ class ZauberASTBuilder(
                     else readExpression()
                 }
 
-                val body = readBodyOrExpression()
+                val body = readBodyOrExpression(label)
                 cases.add(WhenCase(condition, body))
             }
         }
@@ -1279,7 +1282,7 @@ class ZauberASTBuilder(
     }
 
     private fun readTryCatch(): TryCatchBlock {
-        val tryBody = readBodyOrExpression()
+        val tryBody = readBodyOrExpression(null)
         val catches = ArrayList<Catch>()
         while (consumeIf("catch")) {
             val origin = origin(i - 1)
@@ -1288,11 +1291,11 @@ class ZauberASTBuilder(
             pushScope(catchName, ScopeType.METHOD_BODY) {
                 val params = pushCall { readParameterDeclarations(null) }
                 check(params.size == 1)
-                val handler = readBodyOrExpression()
+                val handler = readBodyOrExpression(null)
                 catches.add(Catch(params[0], handler))
             }
         }
-        val finally = if (consumeIf("finally")) readBodyOrExpression() else null
+        val finally = if (consumeIf("finally")) readBodyOrExpression(null) else null
         return TryCatchBlock(tryBody, catches, finally)
     }
 
@@ -1861,6 +1864,7 @@ class ZauberASTBuilder(
 
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
+        val keywords = packKeywords()
 
         if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
 
@@ -1872,7 +1876,7 @@ class ZauberASTBuilder(
         val field = Field(
             fieldScope, selfType,
             selfType != null, isMutable = isMutable, null,
-            name, type, initialValue, Keywords.NONE, origin
+            name, type, initialValue, keywords, origin
         )
 
         return createDeclarationExpression(fieldScope, initialValue, field)

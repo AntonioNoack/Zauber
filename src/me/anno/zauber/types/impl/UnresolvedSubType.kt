@@ -10,7 +10,6 @@ class UnresolvedSubType(
     val scope: Scope,
     val imports: List<Import>
 ) : Type() {
-
     override fun toStringImpl(depth: Int): String {
         return "$base.$className?"
     }

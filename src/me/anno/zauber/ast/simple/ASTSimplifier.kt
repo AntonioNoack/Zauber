@@ -12,9 +12,11 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCompareOp
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
 import me.anno.zauber.ast.simple.controlflow.SimpleLoop
@@ -100,11 +102,15 @@ object ASTSimplifier {
                 voidField
             }
 
-            is CompareOp -> {
+            is ResolvedCompareOp -> {
                 val left = simplifyImpl(context, expr.left, currBlock, graph, true) ?: return null
-                val right = simplifyImpl(context, expr.right, currBlock, graph, true) ?: return null
+                val right = simplifyImpl(context, expr.right, currBlock, graph, false) ?: return null
                 val dst = currBlock.field(BooleanType, booleanOwnership)
-                currBlock.add(SimpleCompare(dst, left.use(), right.use(), expr.type, expr.scope, expr.origin))
+                val instr = SimpleCompare(
+                    dst, left.use(), right.use(), expr.type,
+                    expr.callable, expr.scope, expr.origin
+                )
+                currBlock.add(instr)
                 dst
             }
 
@@ -112,8 +118,8 @@ object ASTSimplifier {
                 val base = if (expr.base != null) {
                     simplifyImpl(context, expr.base, currBlock, graph, true) ?: return null
                 } else null
-                val valueParameters = expr.valueParameters.map {
-                    simplifyImpl(context, expr, currBlock, graph, false) ?: return null
+                val valueParameters = expr.valueParameters.map { param ->
+                    simplifyImpl(context, param, currBlock, graph, false) ?: return null
                 }
                 val method = expr.callable
                 simplifyCall(
@@ -127,14 +133,19 @@ object ASTSimplifier {
                 val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
                     SpecialValue.TRUE, SpecialValue.FALSE -> BooleanType
-                    SpecialValue.THIS -> context.selfType
-                        ?: throw IllegalStateException("Missing selfType for $this in ${resolveOrigin(expr.origin)}")
                     SpecialValue.SUPER -> throw IllegalStateException("Cannot store super in a field")
                 }
                 val dst = currBlock.field(type)
                 currBlock.add(SimpleSpecialValue(dst, expr))
                 dst
             }
+
+            /*is ThisExpression -> {
+                val type = context.selfType
+                val dst = currBlock.field(type)
+                currBlock.add(SimpleSpecialValue(dst, expr))
+                dst
+            }*/
 
             is ResolvedGetFieldExpression -> {
                 val field = expr.field.resolved
@@ -412,10 +423,9 @@ object ASTSimplifier {
         for (param in valueParameters) param.use()
         when (val method = method0.resolved) {
             is Method -> {
-                selfExpr!!
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
-                currBlock.add(SimpleCall(dst, method, selfExpr.use(), valueParameters, scope, origin))
+                currBlock.add(SimpleCall(dst, method, selfExpr?.use(), valueParameters, scope, origin))
                 return dst
             }
             is Constructor -> {

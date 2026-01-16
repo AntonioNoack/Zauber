@@ -9,7 +9,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnresolvedType
@@ -100,7 +100,7 @@ class Field(
 
     val originalScope: Scope = codeScope
     fun moveToScope(newScope: Scope) {
-        check(codeScope.fields.remove(this))
+        check(codeScope.fields.remove(this)) { "Failed to remove field from scope" }
         codeScope = newScope
         newScope.addField(this)
     }

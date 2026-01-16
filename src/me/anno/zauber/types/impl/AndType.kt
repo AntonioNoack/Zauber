@@ -30,7 +30,9 @@ class AndType(val types: List<Type>) : Type() {
     }
 
     init {
-        check(types.size >= 2)
+        check(types.size >= 2) {
+            "AndType should have at least two types inside"
+        }
     }
 
     override fun toStringImpl(depth: Int): String {

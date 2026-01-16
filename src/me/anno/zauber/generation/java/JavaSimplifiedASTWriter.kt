@@ -13,6 +13,7 @@ import me.anno.zauber.ast.simple.controlflow.SimpleLoop
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
+import me.anno.zauber.generation.java.JavaSourceGenerator.nativeNumbers
 import me.anno.zauber.generation.java.JavaSourceGenerator.nativeTypes
 import me.anno.zauber.generation.java.JavaSourceGenerator.writeBlock
 import me.anno.zauber.types.Scope
@@ -217,25 +218,42 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.TRUE -> builder.append("true")
                     SpecialValue.FALSE -> builder.append("false")
                     SpecialValue.NULL -> builder.append("null")
-                    SpecialValue.THIS -> {
-                        builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
-                    }
                     SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
                 }
             }
+            // SpecialValue.THIS -> {
+            //   builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
+            // }
             is SimpleCall -> {
+                // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
                     0 -> {
-                        if (expr.self.type == BooleanType && methodName == "not") {
+                        val castSymbol = when (methodName) {
+                            "toInt" -> "(int) "
+                            "toLong" -> "(long) "
+                            "toFloat" -> "(float) "
+                            "toDouble" -> "(double) "
+                            "toByte" -> "(byte) "
+                            "toShort" -> "(short) "
+                            "toChar" -> "(char) "
+                            else -> null
+                        }
+                        if (expr.self != null && castSymbol != null && expr.self.type in nativeNumbers) {
+                            builder.append(castSymbol).append1(expr.self)
+                            true
+                        } else if (expr.self != null &&
+                            expr.self.type == BooleanType &&
+                            methodName == "not"
+                        ) {
                             builder.append('!').append1(expr.self)
                             true
                         } else false
                     }
                     1 -> {
                         // todo compareTo is a problem for the numbers:
-                        //  we must call their static function
-                        val supportsType = when (expr.self.type) {
+                        //  we must call their static compare() function
+                        val supportsType = when (expr.self?.type) {
                             StringType, in nativeTypes -> true
                             else -> false
                         }
@@ -245,9 +263,10 @@ object JavaSimplifiedASTWriter {
                             "times" -> " * "
                             "div" -> " / "
                             "rem" -> " % "
+                            "compareTo" -> "compare"
                             else -> null
                         }
-                        if (supportsType && symbol != null) {
+                        if (expr.self != null && supportsType && symbol != null) {
                             builder.append1(expr.self).append(symbol)
                             builder.append1(expr.valueParameters[0])
                             true
@@ -256,18 +275,20 @@ object JavaSimplifiedASTWriter {
                     else -> false
                 }
                 if (!done) {
-                    val needsCastForFirstValue = nativeTypes[expr.self.type]
+                    val needsCastForFirstValue = nativeTypes[expr.self?.type]
                     if (needsCastForFirstValue != null) {
                         builder.append(needsCastForFirstValue.boxed).append('.')
                         builder.append(expr.methodName).append('(')
-                        builder.append1(expr.self)
+                        if (expr.self != null) builder.append1(expr.self)
+                        else builder.append("/* todo: resolve self */")
                         if (expr.valueParameters.isNotEmpty()) {
                             builder.append(", ")
                             appendValueParams(expr.valueParameters, false)
                         }
                         builder.append(')')
                     } else {
-                        builder.append1(expr.self).append('.')
+                        if (expr.self != null) builder.append1(expr.self).append('.')
+                        else builder.append("/* todo: resolve self */")
                         builder.append(expr.methodName)
                         appendValueParams(expr.valueParameters)
                     }

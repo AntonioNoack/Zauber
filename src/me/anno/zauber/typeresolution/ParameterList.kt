@@ -15,8 +15,15 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
 
     constructor(generics: List<Parameter>, types: List<Type?>) : this(generics) {
         check(generics.size == types.size)
-        for (i in types.indices) {
-            set(i, types[i], InsertMode.READ_ONLY)
+        if (types is ParameterList) {
+            for (i in types.indices) {
+                val type = types.getOrNull(i) ?: continue
+                set(i, type, InsertMode.READ_ONLY)
+            }
+        } else {
+            for (i in types.indices) {
+                set(i, types[i], InsertMode.READ_ONLY)
+            }
         }
     }
 

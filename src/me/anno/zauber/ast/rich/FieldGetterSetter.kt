@@ -1,8 +1,8 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenType
@@ -45,14 +45,17 @@ object FieldGetterSetter {
 
     fun ZauberASTBuilder.readSetter() {
         val field = lastField!!
-        if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            check(tokens.equals(++i, TokenType.NAME))
+        if (consumeIf(TokenType.OPEN_CALL)) {
+            check(
+                tokens.equals(i, TokenType.NAME) ||
+                        tokens.equals(i, TokenType.KEYWORD)
+            ) { "Expected argument name for setter" }
 
             val setterFieldName = tokens.toString(i++)
-            check(setterFieldName != "field")
+            check(setterFieldName != "field") { "Argument for setter must not be called 'field'" }
 
             if (LOGGER.enableDebug) LOGGER.debug("found set ${field.name}, $setterFieldName")
-            check(tokens.equals(i++, TokenType.CLOSE_CALL))
+            consume(TokenType.CLOSE_CALL)
 
             pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->
                 val origin = origin(i)

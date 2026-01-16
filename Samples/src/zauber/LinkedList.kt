@@ -103,10 +103,6 @@ class LinkedList<V>(capacity: Int = 16) : MutableList<V> {
         TODO("Not yet implemented")
     }
 
-    override fun removeAll(elements: Collection<V>): Boolean {
-        TODO("Not yet implemented")
-    }
-
     override fun removeAt(index: Int): V {
         TODO("Not yet implemented")
     }
@@ -116,10 +112,6 @@ class LinkedList<V>(capacity: Int = 16) : MutableList<V> {
     }
 
     override fun removeLast(): V {
-        TODO("Not yet implemented")
-    }
-
-    override fun retainAll(elements: Collection<V>): Boolean {
         TODO("Not yet implemented")
     }
 

@@ -13,7 +13,7 @@ class SimpleCall(
     // for complex types, e.g. Float|String, we may need multiple methods, or some sort of instance-type->method mapping
     val methodName: String,
     val methods: Map<ClassType, Method>,
-    val self: SimpleField,
+    val self: SimpleField?,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
 ) : SimpleAssignmentExpression(dst, scope, origin) {
@@ -21,7 +21,7 @@ class SimpleCall(
     constructor(
         dst: SimpleField,
         method: Method,
-        base: SimpleField,
+        base: SimpleField?,
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Int
     ) : this(dst, method.name!!, FullMap(method), base, valueParameters, scope, origin)
@@ -38,6 +38,7 @@ class SimpleCall(
     }
 
     override fun eval(runtime: Runtime): Instance {
+        if (self == null) TODO("Resolve self/this/object")
         val self = runtime[self]
         val method = methods[self.type.type as ClassType]
             ?: throw IllegalArgumentException("Could not resolve method for $self")

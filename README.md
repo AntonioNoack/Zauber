@@ -90,6 +90,14 @@ and with flat expressions.
 `(1+2)*3` is split into two assignments:
 `tmp1 = 1+2` and `tmp2 = tmp1 * 3`.
 
+## Budget
+
+I'm planning to spend about 1-2 years (of my life) on this.
+
+Comparisons:
+- own game engine: ~5-10 years budget
+- own video editor: ~2 years budget
+
 ## Type Definitions
 
 I want to be able to declare rich types like TypeScript,

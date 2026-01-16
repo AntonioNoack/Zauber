@@ -7,9 +7,8 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.expansion.IsMethodYielding
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 

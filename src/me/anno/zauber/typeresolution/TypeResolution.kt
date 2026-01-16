@@ -181,7 +181,7 @@ object TypeResolution {
         }
     }
 
-    fun resolveThisType(scope: Scope): Scope {
+    fun resolveThisScope(scope: Scope): Scope {
         var scope = scope
         while (true) {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
@@ -193,7 +193,29 @@ object TypeResolution {
                     if (self != null) {
                         val selfScope = typeToScope(self)!!
                         LOGGER.info("Method-SelfType[${scope.pathStr}]: $self -> $selfScope")
-                        return resolveThisType(selfScope)
+                        return resolveThisScope(selfScope)
+                    }
+                }
+                else -> {}
+            }
+            scope = scope.parent!!
+        }
+    }
+
+    fun resolveThisType(context: ResolutionContext, scope: Scope): Type {
+        // todo we must also insert any known generics...
+        var scope = scope
+        while (true) {
+            LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
+            when {
+                scope.isClassType() -> return scope.typeWithoutArgs
+                scope.scopeType == ScopeType.METHOD -> {
+                    val func = scope.selfAsMethod!!
+                    val self = func.selfType
+                    if (self != null) {
+                        val selfScope = typeToScope(self)!!
+                        LOGGER.info("Method-SelfType[${scope.pathStr}]: $self -> $selfScope")
+                        return resolveThisScope(selfScope).typeWithoutArgs
                     }
                 }
                 else -> {}

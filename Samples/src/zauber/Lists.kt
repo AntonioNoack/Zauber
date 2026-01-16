@@ -67,7 +67,7 @@ inline fun <V, R> List<V>.map(transform: (V) -> R): List<R> {
     return List<R>(size) { transform(this[it]) }
 }
 
-inline fun <V, R: Any> List<V>.mapNotNull(transform: (V) -> R?): List<R> {
+inline fun <V, R : Any> List<V>.mapNotNull(transform: (V) -> R?): List<R> {
     val result = ArrayList<R>(size)
     for (i in indices) {
         val element = transform(this[i])
@@ -124,13 +124,19 @@ interface MutableList<V> : List<V> {
 
     fun add(element: V): Boolean
     fun add(index: Int, element: V): Boolean
-    fun addAll(elements: Collection<V>): Boolean
     fun remove(element: V): Boolean
-    fun removeAll(elements: Collection<V>): Boolean
     fun removeAt(index: Int): V
 
     fun removeFirst(): V
     fun removeLast(): V
+
+    fun addAll(elements: Collection<V>): Boolean {
+        var changed = false
+        for (element in elements) {
+            if (add(element)) changed = true
+        }
+        return changed
+    }
 
     fun removeFirstOrNull(): V? {
         return if (isEmpty()) null else removeFirst()
@@ -140,7 +146,33 @@ interface MutableList<V> : List<V> {
         return if (isEmpty()) null else removeLast()
     }
 
-    fun retainAll(elements: Collection<V>): Boolean
+    fun removeAll(elements: Collection<V>): Boolean {
+        val iterator = listIterator(0)
+        var changed = false
+        while (iterator.hasNext()) {
+            val v = iterator.next()
+            if (v in elements) {
+                iterator.remove()
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    fun retainAll(elements: Collection<V>): Boolean {
+        val iterator = listIterator(0)
+        var changed = false
+        while (iterator.hasNext()) {
+            val v = iterator.next()
+            if (v !in elements) {
+                iterator.remove()
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    override fun listIterator(startIndex: Int): MutableListIterator<V>
 }
 
 fun repeat(count: Int, runnable: () -> Unit) {

@@ -3,6 +3,7 @@ package me.anno.zauber.types
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
@@ -45,6 +46,9 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     var selfAsConstructor: Constructor? = null
     var selfAsMethod: Method? = null
+
+    // todo register this where appropriate
+    var breakLabel: String? = null
 
     var typeParameters: List<Parameter> = emptyList()
         set(value) {
@@ -414,21 +418,11 @@ class Scope(val name: String, val parent: Scope? = null) {
         return hash
     }
 
-    fun isClassType(): Boolean {
-        return scopeType?.isClassType() == true
-    }
-
-    fun isTypeAlias(): Boolean {
-        return scopeType == ScopeType.TYPE_ALIAS
-    }
-
-    fun isObject(): Boolean {
-        return scopeType?.isObject() == true
-    }
-
-    fun isInterface(): Boolean {
-        return scopeType == ScopeType.INTERFACE
-    }
+    fun isClassType(): Boolean = scopeType?.isClassType() == true
+    fun isTypeAlias(): Boolean = scopeType == ScopeType.TYPE_ALIAS
+    fun isObject(): Boolean = scopeType?.isObject() == true
+    fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
+    fun isValueType(): Boolean = keywords.hasFlag(Keywords.VALUE)
 
     fun clear() {
         // todo it would be nice to clear everything, but to do that,

@@ -85,6 +85,13 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         } else false
     }
 
+    fun consumeIf(type: TokenType): Boolean {
+        return if (tokens.equals(i, type)) {
+            i++
+            true
+        } else false
+    }
+
     val imports = ArrayList<Import>()
 
     val genericParams = ArrayList<HashMap<String, GenericType>>()
@@ -107,4 +114,38 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
     val shouldBeResolvable = emptyList<Import>()
 
+    fun resolveBreakLabel(label: String?): Scope {
+        var scope = currPackage
+        val label = label ?: ""
+        while (true) {
+            if (scope.breakLabel == label) return scope
+            scope = scope.parentIfSameFile
+                ?: throw IllegalStateException("Could not resolve break-label@$label in $currPackage")
+        }
+    }
+
+    fun resolveThisLabel(label: String?): Scope {
+        var scope = currPackage
+        while (true) {
+            // check if this is an instance
+            if (scope.isClassType() && (scope.name == label || label == null)) {
+                return scope
+            }
+
+            val method = scope.selfAsMethod
+            if (method != null) {
+                if (method.name == label || label == null) {
+                    return scope
+                }
+            }
+
+            val constructor = scope.selfAsConstructor
+            if (constructor != null && (label == null || label == "constructor")) {
+                return scope
+            }
+
+            scope = scope.parentIfSameFile
+                ?: throw IllegalStateException("Could not resolve this-label@$label in $currPackage")
+        }
+    }
 }

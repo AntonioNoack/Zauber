@@ -4,13 +4,15 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Keywords
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -32,9 +34,16 @@ class SubjectWhenCase(val conditions: List<SubjectCondition>?, val conditionScop
 }
 
 fun lambdaTypeToClassType(lambdaType: LambdaType): ClassType {
-    val base = root.getOrPut("Function${lambdaType.parameters.size}", ScopeType.INTERFACE)
-    return ClassType(base, lambdaType.parameters.map { it.type })
+    val n = lambdaType.parameters.size + if (lambdaType.selfType != null) 1 else 0
+    val base = root.getOrPut(lambdaTypeNames[n], ScopeType.INTERFACE)
+    val typeParams = ArrayList<Type>(n)
+    if (lambdaType.selfType != null) typeParams.add(lambdaType.selfType)
+    typeParams.addAll(lambdaType.parameters.map { it.type })
+    typeParams.add(lambdaType.returnType)
+    return ClassType(base, typeParams)
 }
+
+private val lambdaTypeNames = List(10) { n -> "Function$n" }
 
 fun storeSubject(
     scope: Scope,

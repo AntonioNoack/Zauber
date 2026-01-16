@@ -1,12 +1,11 @@
 package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.forEachScope
 import me.anno.zauber.types.Scope
@@ -71,7 +70,7 @@ object DefaultParameterExpansion {
                 )
             } else {
                 NamedCallExpression(
-                    SpecialValueExpression(SpecialValue.THIS, scope, origin),
+                    ThisExpression(scopeParent, scope, origin),
                     self.name!!, emptyList(),
                     newTypeParameters, newValueParameters, scope, origin
                 )

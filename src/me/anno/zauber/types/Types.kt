@@ -24,7 +24,9 @@ object Types {
     fun getScope(i: String, numGenerics: Int): Scope {
         val scope = getScope0(i)
         if (scope.hasTypeParameters) {
-            check(scope.typeParameters.size == numGenerics)
+            check(scope.typeParameters.size == numGenerics){
+                "Expected Types.getScope to have correct number of generics, ${scope.typeParameters.size} vs $numGenerics"
+            }
             return scope
         } else {
             scope.typeParameters =

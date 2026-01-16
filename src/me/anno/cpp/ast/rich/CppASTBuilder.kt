@@ -429,8 +429,14 @@ class CppASTBuilder(
             consumeIf("do") -> readDoWhile(label)
             consumeIf("while") -> readWhile(label)
             consumeIf("switch") -> readSwitch(label)
-            consumeIf("continue") -> ContinueExpression(readLabel(), currPackage, origin)
-            consumeIf("break") -> BreakExpression(readLabel(), currPackage, origin)
+            consumeIf("continue") -> {
+                val label = resolveBreakLabel(readLabel())
+                ContinueExpression(label, currPackage, origin)
+            }
+            consumeIf("break") -> {
+                val label = resolveBreakLabel(readLabel())
+                BreakExpression(label, currPackage, origin)
+            }
 
             // todo try to resolve field immediately
             tokens.equals(i, TokenType.NAME) -> {

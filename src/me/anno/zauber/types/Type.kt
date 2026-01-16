@@ -19,7 +19,7 @@ abstract class Type {
 
     fun isResolved(): Boolean {
         return when (this) {
-            NullType -> true
+            NullType, UnknownType -> true
             is GenericType,
             is LambdaType,
             is UnresolvedType,
@@ -34,23 +34,27 @@ abstract class Type {
     fun resolve(): Type {
         if (isResolved()) return this
         return when (this) {
-            is GenericType,
+            is GenericType -> this // todo is this ok???
             is LambdaType,
             is SelfType,
-            is ThisType -> throw IllegalStateException()
-            is ClassType -> throw NotImplementedError("Resolve $this")
+            is ThisType -> throw IllegalStateException("Cannot resolve $this without scope data")
+            is ClassType -> {
+                val parameters = typeParameters?.map { it.resolve() }
+                ClassType(clazz, parameters)
+            }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
             is UnionType -> unionTypes(types.map { it.resolve() })
             is UnresolvedType -> {
                 resolveTypeByName(null, className, scope, imports)
                     ?: throw IllegalStateException("Could not resolve $this")
             }
-            else -> throw NotImplementedError("Resolve $this")
+            else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
         }
     }
 
     abstract fun toStringImpl(depth: Int): String
     override fun toString(): String = toStringImpl(10)
+
     fun toString(depth: Int): String {
         return if (depth >= 0) toStringImpl(depth - 1) else "${javaClass.simpleName}..."
     }

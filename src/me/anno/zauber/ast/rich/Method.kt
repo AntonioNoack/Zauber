@@ -1,12 +1,12 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 
 class Method(
@@ -35,6 +35,8 @@ class Method(
     // due to multi-interface, there may be many of them
     var overriddenMethods: List<Method> = emptyList()
     var overriddenBy: List<Method> = emptyList()
+
+    fun isInline(): Boolean = keywords.hasFlag(Keywords.INLINE) && overriddenBy.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {
         val returnType = returnType
