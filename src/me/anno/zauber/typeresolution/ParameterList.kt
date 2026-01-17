@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
@@ -9,6 +10,15 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     companion object {
         private val empty = ParameterList(emptyList())
         fun emptyParameterList(): ParameterList = empty
+
+        fun ParameterList?.resolveGenerics(selfType: Type?, type: Type): Type {
+            if (this == null) return type
+            return resolveGenerics(selfType, type, generics, this)
+        }
+        fun ParameterList?.resolveGenericsOrNull(selfType: Type?, type: Type?): Type? {
+            if (this == null || type == null) return type
+            return resolveGenerics(selfType, type, generics, this)
+        }
     }
 
     override val size: Int get() = generics.size

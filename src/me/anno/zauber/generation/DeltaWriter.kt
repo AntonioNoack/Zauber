@@ -32,7 +32,12 @@ class DeltaWriter(val root: File) {
         }
     }
 
-    fun write(file: File, content: String) {
+    operator fun get(file: File): String {
+        return newContent[file]
+            ?: throw IllegalStateException("Missing $file")
+    }
+
+    operator fun set(file: File, content: String) {
         newContent[file] = content
 
         // mark all parents as changed

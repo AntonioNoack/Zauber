@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -20,8 +21,8 @@ class ResolvedMethod(
         val ownerNames = selfTypeToTypeParams(method.selfType, context.selfType)
         val selfType = if (method.selfType != null) context.selfType else null
         val inGeneral = method.resolveReturnType(context)
-        val forSelf = resolveGenerics(selfType, inGeneral, ownerNames, ownerTypes)
-        val forCall = resolveGenerics(selfType, forSelf, method.typeParameters, callTypes)
+        val forSelf = ownerTypes.resolveGenerics(selfType,inGeneral)
+        val forCall = callTypes.resolveGenerics(selfType, forSelf)
         LOGGER.info("ReturnType for call: $inGeneral -${ownerNames}|$ownerTypes> $forSelf -${method.typeParameters}|$callTypes> $forCall")
         return forCall
     }
@@ -34,6 +35,7 @@ class ResolvedMethod(
         private val LOGGER = LogManager.getLogger(ResolvedMethod::class)
 
         fun selfTypeToTypeParams(expectedSelfType: Type?, givenSelfType: Type?): List<Parameter> {
+            if (expectedSelfType == null) return emptyList()
             if (expectedSelfType !is ClassType) {
                 if (givenSelfType is ClassType) {
                     return givenSelfType.clazz.typeParameters

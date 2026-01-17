@@ -18,7 +18,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     fun resolve(context: ResolutionContext): Expression {
         val resolved = resolveImpl(context)
         check(resolved.isResolved()) {
-            "Failed to resolve $this, somehow it is still not resolved"
+            "Failed to resolve (${javaClass.simpleName}) $this, somehow it is still not resolved"
         }
         if (resolved.resolvedType == null) {
             resolved.resolvedType = resolved.resolveType(context)

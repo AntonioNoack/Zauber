@@ -10,12 +10,13 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
 class ResolvedCallExpression(
-    val base: Expression?,
+    base: Expression?,
     val callable: ResolvedMember<*>,
     val valueParameters: List<Expression>,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
+    val base: Expression? = base ?: callable.getBaseIfMissing(scope, origin)
     val context get() = callable.context
 
     override fun clone(scope: Scope) = ResolvedCallExpression(

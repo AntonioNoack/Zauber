@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types.UnitType
 
 /**
  * todo any method can yield:
@@ -28,8 +28,8 @@ class YieldExpression(val value: Expression, scope: Scope, origin: Int) : Expres
         return "yield ${value.toString(depth)}"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = NothingType
-    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // always Nothing
+    override fun resolveType(context: ResolutionContext): Type = UnitType
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // always Unit
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun clone(scope: Scope) = YieldExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = false

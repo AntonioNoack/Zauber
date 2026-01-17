@@ -1,6 +1,7 @@
 package me.anno.zauber.types
 
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
+import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
@@ -20,7 +21,7 @@ abstract class Type {
     fun isResolved(): Boolean {
         return when (this) {
             NullType, UnknownType -> true
-            is GenericType,
+            is GenericType -> !specialization.contains(this)
             is LambdaType,
             is UnresolvedType,
             is SelfType,
@@ -33,11 +34,17 @@ abstract class Type {
 
     fun resolve(): Type {
         if (isResolved()) return this
+        val resolved = resolveImpl()
+        if (resolved == this) throw IllegalStateException("Failed to resolve $this (${javaClass.simpleName})")
+        return resolved.resolve()
+    }
+
+    fun resolveImpl(): Type {
         return when (this) {
-            is GenericType -> this // todo is this ok???
             is LambdaType,
             is SelfType,
             is ThisType -> throw IllegalStateException("Cannot resolve $this without scope data")
+            is GenericType -> specialization[this]!!
             is ClassType -> {
                 val parameters = typeParameters?.map { it.resolve() }
                 ClassType(clazz, parameters)

@@ -35,8 +35,9 @@ class StringBuilder(capacity: Int = 16) : CharSequence, MutableList<Char> {
         private set
 
     private fun ensureExtraSize(extra: Int) {
-        if (content <= size + extra) return
-        val newSize = max(size + extra, content.size * 2, 16)
+        val prevCapacity = content.size
+        if (prevCapacity <= size + extra) return
+        val newSize = max(size + extra, prevCapacity * 2, 16)
         content = content.copyOf(newSize)
     }
 

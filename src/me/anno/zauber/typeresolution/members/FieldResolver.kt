@@ -3,10 +3,12 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
+import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeCallPart
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
@@ -114,39 +116,61 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         codeScope: Scope, origin: Int
     ): ResolvedField? {
         check(valueParameters.isEmpty())
+        if (field.selfType == null) {
 
-        val selfTypeI = selfType
-            ?: if (field.selfType is ClassType && field.selfType.clazz.isObject())
-                field.selfType else null
+            val actualTypeParams = mergeCallPart(
+                field.typeParameters, typeParameters,
+                origin
+            )
 
-        var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
-        var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
-        if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassType()) {
-            LOGGER.info("Field '$field' had invalid selfType: $fieldSelfType")
-            fieldSelfType = null
-            fieldSelfParams = emptyList()
+            LOGGER.info("Resolving generics for field $field")
+            val generics = findGenericsForMatch(
+                null, null,
+                fieldReturnType, returnType,
+                field.typeParameters, actualTypeParams,
+                emptyList(), valueParameters
+            ) ?: return null
+
+            val context = ResolutionContext(null, false, fieldReturnType, emptyMap())
+            return ResolvedField(
+                emptyParameterList(), field,
+                generics, context, codeScope
+            )
+        } else {
+
+            val selfTypeI = selfType
+                ?: if (field.selfType is ClassType && field.selfType.clazz.isObject())
+                    field.selfType else null
+
+            var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
+            var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
+            if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassType()) {
+                LOGGER.info("Field '$field' had invalid selfType: $fieldSelfType")
+                fieldSelfType = null
+                fieldSelfParams = emptyList()
+            }
+
+            val actualTypeParams = mergeTypeParameters(
+                fieldSelfParams, fieldSelfType,
+                field.typeParameters, typeParameters,
+                origin
+            )
+
+            LOGGER.info("Resolving generics for field $field")
+            val generics = findGenericsForMatch(
+                fieldSelfType, selfTypeI,
+                fieldReturnType, returnType,
+                fieldSelfParams + field.typeParameters, actualTypeParams,
+                emptyList(), valueParameters
+            ) ?: return null
+
+            val selfType = selfTypeI ?: fieldSelfType
+            val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
+            return ResolvedField(
+                generics.subList(0, fieldSelfParams.size), field,
+                generics.subList(fieldSelfParams.size, generics.size), context, codeScope
+            )
         }
-
-        val actualTypeParams = mergeTypeParameters(
-            fieldSelfParams, fieldSelfType,
-            field.typeParameters, typeParameters,
-            origin
-        )
-
-        LOGGER.info("Resolving generics for field $field")
-        val generics = findGenericsForMatch(
-            fieldSelfType, if (fieldSelfType == null) null else selfTypeI,
-            fieldReturnType, returnType,
-            fieldSelfParams + field.typeParameters, actualTypeParams,
-            emptyList(), valueParameters
-        ) ?: return null
-
-        val selfType = selfTypeI ?: fieldSelfType
-        val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
-        return ResolvedField(
-            generics.subList(0, fieldSelfParams.size), field,
-            generics.subList(fieldSelfParams.size, generics.size), context, codeScope
-        )
     }
 
     fun resolveField(

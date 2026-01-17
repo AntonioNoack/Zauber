@@ -11,6 +11,7 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
@@ -149,12 +150,11 @@ class ResolvedField(
         LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}")
 
         val field = resolved
-        val ownerNames = field.selfTypeTypeParams(context.selfType)
         val selfType = field.selfType
 
         val valueType = field.resolveValueType(context)
-        val forType = resolveGenerics(selfType, valueType, ownerNames, ownerTypes)
-        val forCall = resolveGenerics(selfType, forType, field.typeParameters, callTypes)
+        val forType = ownerTypes.resolveGenerics(selfType, valueType)
+        val forCall = callTypes.resolveGenerics(selfType, forType)
 
         val context = context.withSelfType(field.selfType)
         return filterTypeByScopeConditions(field, forCall, context, codeScope)

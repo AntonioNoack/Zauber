@@ -3,7 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
@@ -25,12 +25,7 @@ object Inheritance {
         actualTypeParameters: ParameterList,
         insertMode: InsertMode
     ): Boolean {
-        val expectedType = resolveGenerics(
-            selfTypeIfNeeded, expected.type,
-            expectedTypeParams.filterIndexed { index, _ -> actualTypeParameters.getOrNull(index) != null },
-            actualTypeParameters.filterNotNull()
-        )
-
+        val expectedType = actualTypeParameters.resolveGenerics(selfTypeIfNeeded, expected.type)
         if (insertMode == InsertMode.READ_ONLY &&
             actualTypeParameters.types.any { it == null }
         ) {

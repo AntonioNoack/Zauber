@@ -19,6 +19,9 @@ class Specialization(typeParameters: ParameterList) {
     val typeParameters = typeParameters.readonly()
     val hash = typeParameters.hashCode() and 0x7fff_ffff
 
+    fun isEmpty(): Boolean = typeParameters.isEmpty()
+    fun isNotEmpty(): Boolean = typeParameters.isNotEmpty()
+
     override fun equals(other: Any?): Boolean {
         return other is Specialization &&
                 typeParameters == other.typeParameters
@@ -30,6 +33,19 @@ class Specialization(typeParameters: ParameterList) {
         val resolved = typeParameters.getOrNull(index)
             ?: typeParameters.generics[index].type
         return if (type != resolved) resolved else null
+    }
+
+    fun indexOf(type: Type): Int {
+        if (type !is GenericType) return -1
+        val index = typeParameters.generics.indexOfFirst { it.name == type.name && it.scope == type.scope }
+        if (index < 0) return -1
+        val resolved = typeParameters.getOrNull(index)
+            ?: typeParameters.generics[index].type
+        return if (type != resolved) index else -1
+    }
+
+    operator fun contains(type: Type): Boolean {
+        return indexOf(type) >= 0
     }
 
     override fun hashCode(): Int = hash
@@ -55,7 +71,9 @@ class Specialization(typeParameters: ParameterList) {
             }.replace(".", "")
                 .replace(":", "")
                 .replace('(', 'X')
-                .replace(')', 'X')
+                .replace(')', 'x')
+                .replace('[', 'X')
+                .replace(']', 'x')
                 .replace(", ", "_")
                 .replace(",", "_")
                 .replace("?", "$")
@@ -76,8 +94,26 @@ class Specialization(typeParameters: ParameterList) {
         throw IllegalStateException("Too many duplicates of $genName0")
     }
 
+    override fun toString(): String {
+        return List(typeParameters.generics.size) { index ->
+            IndexedValue(index, typeParameters.generics[index].scope)
+        }
+            .groupBy { it.value }.entries
+            .joinToString(", ", "{", "}") { (key, value) ->
+                val indices = value.map { it.index }
+                "${key.pathStr}: ${
+                    indices.map { index ->
+                        val name = typeParameters.generics[index].name
+                        val type = typeParameters.getOrNull(index)
+                        "$name=$type"
+                    }
+                }"
+            }
+    }
+
     companion object {
         private val uniqueNames = HashMap<Specialization, String>()
         private val knownNames = HashSet<String>()
+        val noSpecialization = Specialization(ParameterList.emptyParameterList())
     }
 }

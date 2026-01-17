@@ -77,8 +77,8 @@ class DotExpression(
 
     fun isFieldType(): Boolean {
         return when (right) {
-            is FieldExpression,
             is MemberNameExpression,
+            is FieldExpression,
             is UnresolvedFieldExpression -> true
             else -> false
         }

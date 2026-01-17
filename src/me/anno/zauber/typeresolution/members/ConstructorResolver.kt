@@ -5,10 +5,10 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -93,18 +93,10 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         val typeParameters0 = typeParameters
             ?.toParameterList(scope.typeParameters)
 
-        val newType2 = if (typeParameters0 != null) resolveGenerics(
-            selfType, newType,
-            scope.typeParameters,
-            typeParameters0
-        ) else newType
+        val newType2 = typeParameters0.resolveGenerics(selfType, newType)
 
         val typeParameters2 = typeParameters?.map { typeParam ->
-            resolveGenerics(
-                selfType, typeParam,
-                scope.typeParameters,
-                typeParameters0!!
-            )
+            typeParameters0.resolveGenerics(selfType, typeParam)
         }
 
         val scope = typeToScope(newType2)!!

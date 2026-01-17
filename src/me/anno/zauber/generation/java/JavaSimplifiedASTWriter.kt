@@ -227,9 +227,11 @@ object JavaSimplifiedASTWriter {
                 }
             }
             is SimpleThis -> {
+                val scope = expr.base.label
                 // todo different 'this's may be given new, different names,
                 //  but where and when do we decide that?
                 builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
+                    .append("/* ").append(scope.pathStr).append(" */")
             }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
@@ -258,8 +260,6 @@ object JavaSimplifiedASTWriter {
                         } else false
                     }
                     1 -> {
-                        // todo compareTo is a problem for the numbers:
-                        //  we must call their static compare() function
                         val supportsType = when (expr.self?.type) {
                             StringType, in nativeTypes -> true
                             else -> false
@@ -270,6 +270,8 @@ object JavaSimplifiedASTWriter {
                             "times" -> " * "
                             "div" -> " / "
                             "rem" -> " % "
+                            // compareTo is a problem for numbers:
+                            //  we must call their static compare() function
                             "compareTo" -> "compare"
                             else -> null
                         }

@@ -4,11 +4,13 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeCallPart
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
@@ -71,29 +73,48 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         valueParameters: List<ValueParameter>,
         codeScope: Scope, origin: Int
     ): ResolvedMethod? {
+        return if (method.selfType == null) {
 
-        val methodSelfParams = selfTypeToTypeParams(method.selfType, selfType)
-        val actualTypeParams = mergeTypeParameters(
-            methodSelfParams, selfType,
-            method.typeParameters, typeParameters,
-            origin
-        )
+            val actualTypeParams = mergeCallPart(method.typeParameters, typeParameters, origin)
 
-        LOGGER.info("Resolving generics for $method")
-        val generics = findGenericsForMatch(
-            method.selfType, if (method.selfType == null) null else selfType,
-            methodReturnType, returnType,
-            methodSelfParams + method.typeParameters, actualTypeParams,
-            method.valueParameters, valueParameters
-        ) ?: return null
+            LOGGER.info("Resolving generics for $method")
+            val generics = findGenericsForMatch(
+                null, null,
+                methodReturnType, returnType,
+                method.typeParameters, actualTypeParams,
+                method.valueParameters, valueParameters
+            ) ?: return null
 
-        val selfType = selfType ?: method.selfType
-        val context = ResolutionContext(selfType, false, returnType, emptyMap())
-        return ResolvedMethod(
-            generics.subList(0, methodSelfParams.size), method,
-            generics.subList(methodSelfParams.size, generics.size),
-            context, codeScope
-        )
+            val context = ResolutionContext(null, false, returnType, emptyMap())
+            ResolvedMethod(
+                emptyParameterList(), method, generics,
+                context, codeScope
+            )
+        } else {
+
+            val methodSelfParams = selfTypeToTypeParams(method.selfType, selfType)
+            val actualTypeParams = mergeTypeParameters(
+                methodSelfParams, selfType,
+                method.typeParameters, typeParameters,
+                origin
+            )
+
+            LOGGER.info("Resolving generics for $method")
+            val generics = findGenericsForMatch(
+                method.selfType, selfType,
+                methodReturnType, returnType,
+                methodSelfParams + method.typeParameters, actualTypeParams,
+                method.valueParameters, valueParameters
+            ) ?: return null
+
+            val selfType = selfType ?: method.selfType
+            val context = ResolutionContext(selfType, false, returnType, emptyMap())
+            ResolvedMethod(
+                generics.subList(0, methodSelfParams.size), method,
+                generics.subList(methodSelfParams.size, generics.size),
+                context, codeScope
+            )
+        }
     }
 
     fun resolveCallable(

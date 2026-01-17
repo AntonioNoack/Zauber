@@ -5,7 +5,7 @@ import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
@@ -52,7 +52,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                     }
 
                     val genericValues = ParameterList(genericNames, currType.typeParameters)
-                    currType = resolveGenerics(null, currType, genericNames, genericValues)
+                    currType = genericValues.resolveGenerics(null, currType)
                     continue
                 }
                 // todo if typeAlias in any of the typeParameters, replace it, too

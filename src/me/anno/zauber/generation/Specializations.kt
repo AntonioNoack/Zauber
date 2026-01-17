@@ -1,12 +1,16 @@
 package me.anno.zauber.generation
 
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.TypeSpecialization
 
 object Specializations {
+
+    val specialization get() = specializations.last()
+    val specializations = ArrayList<Specialization>()
 
     val todoTypeSpecializations = HashSet<TypeSpecialization>()
     val todoMethodSpecializations = HashSet<MethodSpecialization>()
@@ -15,6 +19,8 @@ object Specializations {
     val doneMethodSpecializations = HashSet<MethodSpecialization>()
 
     fun foundTypeSpecialization(type: Scope, specialization: Specialization) {
+        // todo if inside the current scope, we must extend the specialization,
+        //  aka concat them
         val spec = TypeSpecialization(type, specialization)
         if (doneTypeSpecializations.add(spec)) {
             todoTypeSpecializations.add(spec)

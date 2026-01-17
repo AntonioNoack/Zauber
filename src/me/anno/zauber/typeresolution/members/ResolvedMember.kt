@@ -2,8 +2,13 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TypeOfField
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
+import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenericsOrNull
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Scope
@@ -19,7 +24,22 @@ abstract class ResolvedMember<V>(
     val codeScope: Scope,
 ) {
 
+    val ownerType get() = context.selfType
+
     abstract fun getTypeFromCall(): Type
+
+    fun getBaseIfMissing(scope: Scope, origin: Int): Expression? {
+        val type = ownerType?.resolve() ?: return null
+        if (type is ClassType) {
+            check(type.clazz.isClassType()) // just in case
+            return ThisExpression(type.clazz, scope, origin)
+        }
+        val specialization = specialization
+        if (specialization != null && type in specialization) {
+            throw IllegalStateException("Type $type is in specialization, but not resolved?? $specialization")
+        }
+        TODO("GetBaseIfMissing on $type (${type.javaClass.simpleName}), spec: $specialization")
+    }
 
     companion object {
 
@@ -31,31 +51,22 @@ abstract class ResolvedMember<V>(
             genericValues: ParameterList?
         ): Type {
             if (genericValues == null) return type
-
-            check(genericNames.size == genericValues.size) {
-                "Expected same number of generic names and generic values, got $genericNames vs $genericValues ($type)"
-            }
-            if (genericNames.size != genericValues.size) {
-                LOGGER.warn("Expected same number of generic names and generic values, got ${genericNames.size} vs ${genericValues.size} ($type)")
-                return type
-            }
             return when (type) {
                 is GenericType -> {
+                    check(genericNames.size == genericValues.size) {
+                        "Expected same number of generic names and generic values, got $genericNames vs $genericValues ($type)"
+                    }
                     val idx = genericNames.indexOfFirst { it.name == type.name && it.scope == type.scope }
                     genericValues.getOrNull(idx) ?: type
                 }
                 is UnionType -> {
-                    val types = type.types.map { partType ->
-                        resolveGenerics(selfType, partType, genericNames, genericValues)
-                    }
+                    val types = type.types.map { genericValues.resolveGenerics(selfType, it) }
                     unionTypes(types)
                 }
                 is ClassType -> {
                     val typeArgs = type.typeParameters
                     if (typeArgs.isNullOrEmpty()) return type
-                    val newTypeArgs = typeArgs.map { partType ->
-                        resolveGenerics(selfType, partType, genericNames, genericValues)
-                    }
+                    val newTypeArgs = typeArgs.map { genericValues.resolveGenerics(selfType, it) }
                     if (false && typeArgs != newTypeArgs) {
                         LOGGER.info("Mapped types: $typeArgs -> $newTypeArgs")
                     }
@@ -63,12 +74,10 @@ abstract class ResolvedMember<V>(
                 }
                 NullType, UnknownType -> type
                 is LambdaType -> {
-                    val newSelfType = if (type.selfType != null) {
-                        resolveGenerics(selfType, type.selfType, genericNames, genericValues)
-                    } else null
-                    val newReturnType = resolveGenerics(selfType, type.returnType, genericNames, genericValues)
+                    val newSelfType = genericValues.resolveGenericsOrNull(selfType, type.selfType)
+                    val newReturnType = genericValues.resolveGenerics(selfType, type.returnType)
                     val newParameters = type.parameters.map {
-                        val newType = resolveGenerics(selfType, it.type, genericNames, genericValues)
+                        val newType = genericValues.resolveGenerics(selfType, it.type)
                         LambdaParameter(it.name, newType)
                     }
                     LambdaType(newSelfType, newParameters, newReturnType)
