@@ -358,6 +358,9 @@ object JavaSimplifiedASTWriter {
             }
         } else if (field.codeScope == method.scope.parent) {
             builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this").append('.')
+        } else if (field.codeScope.parent?.isObject() == true) {
+            appendType(field.codeScope.parent!!.typeWithoutArgs, exprScope, true)
+            builder.append(".__instance__.")
         }
     }
 

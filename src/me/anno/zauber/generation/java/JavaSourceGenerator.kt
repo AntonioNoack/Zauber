@@ -252,7 +252,7 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    fun generateInside(name: String, scope: Scope, specialization: Specialization) {
+    fun generateInside(className: String, scope: Scope, specialization: Specialization) {
 
         // todo imports ->
         //  collect them in a dry-run :)
@@ -271,7 +271,12 @@ object JavaSourceGenerator : Generator() {
         }
 
         builder.append("public ")
-        val type = when (scope.scopeType) {
+        if (scope.scopeType != ScopeType.INNER_CLASS &&
+            scope.parent?.scopeType != ScopeType.PACKAGE
+        ) {
+            builder.append("static ")
+        }
+        val javaType = when (scope.scopeType) {
             ScopeType.ENUM_CLASS -> "final class"
             ScopeType.NORMAL_CLASS -> {
                 val isFinal = isFinal(scope.keywords)
@@ -284,7 +289,7 @@ object JavaSourceGenerator : Generator() {
             else -> scope.scopeType.toString()
         }
         if (scope.keywords.hasFlag(Keywords.ABSTRACT)) builder.append("abstract ")
-        builder.append(type).append(' ').append(name)
+        builder.append(javaType).append(' ').append(className)
 
         if (specialization.isEmpty()) {
             appendTypeParams(scope)
@@ -293,8 +298,16 @@ object JavaSourceGenerator : Generator() {
 
         writeBlock {
 
+            if (scope.isObject()) {
+                builder.append("public static final ")
+                builder.append(className).append(" __instance__ = new ")
+                builder.append(className).append("();")
+                nextLine()
+                nextLine()
+            }
+
             appendFields(scope)
-            appendConstructors(scope, name)
+            appendConstructors(scope, className)
             appendMethods(scope)
 
             specializations.removeLast()
@@ -415,7 +428,8 @@ object JavaSourceGenerator : Generator() {
         // some spacing
         nextLine()
 
-        builder.append("public ").append(name)
+        val visibility = if (classScope.isObject()) "private " else "public "
+        builder.append(visibility).append(name)
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
         // todo append extra body-block for super-call
         val body = constructor.body
