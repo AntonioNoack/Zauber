@@ -869,8 +869,9 @@ class ZauberASTBuilder(
                 j++
             }
 
-            pushBlock(ScopeType.METHOD_BODY, null) {
-                it.breakLabel = label
+            val scopeName = currPackage.generateName("body", origin(i))
+            pushBlock(ScopeType.METHOD_BODY, scopeName) { scope ->
+                scope.breakLabel = label
                 readMethodBody()
             }
         } else {
@@ -881,8 +882,8 @@ class ZauberASTBuilder(
     private fun readExprInNewScope(label: String?): Expression {
         val origin = origin(i)
         val scopeName = currPackage.generateName("expr", origin)
-        return pushScope(scopeName, ScopeType.METHOD_BODY) {
-            it.breakLabel = label
+        return pushScope(scopeName, ScopeType.METHOD_BODY) { scope ->
+            scope.breakLabel = label
             readExpression()
         }
     }
@@ -1072,6 +1073,7 @@ class ZauberASTBuilder(
             i++
             readBodyOrExpression(null)
         } else null
+        println("Scopes: ${condition.scope}, ${ifTrue.scope}, ${ifFalse?.scope}")
         return IfElseBranch(condition, ifTrue, ifFalse)
     }
 

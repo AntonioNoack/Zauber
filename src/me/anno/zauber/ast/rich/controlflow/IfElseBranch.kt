@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.controlflow
 
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -16,19 +17,22 @@ class IfElseBranch(
 
     init {
         check(ifBranch.scope != elseBranch?.scope) {
-            "IfBranch and ElseBranch must have different scopes. ${ifBranch.scope}"
+            "IfBranch and ElseBranch must have different scopes. ${ifBranch.scope}, " +
+                    "at ${resolveOrigin(condition.origin)}"
         }
         check(
             ifBranch.scope != condition.scope ||
                     ifBranch is SpecialValueExpression
         ) {
-            "If and condition somehow have the same scope: ${condition.scope.pathStr}"
+            "If and condition somehow have the same scope: ${condition.scope.pathStr}, " +
+                    "at ${resolveOrigin(condition.origin)}"
         }
         check(
             elseBranch?.scope != condition.scope ||
                     elseBranch is SpecialValueExpression
         ) {
-            "Else and condition somehow have the same scope: ${condition.scope.pathStr}"
+            "Else and condition somehow have the same scope: ${condition.scope.pathStr}, " +
+                    "at ${resolveOrigin(condition.origin)}"
         }
 
         if (addToScope) {

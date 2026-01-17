@@ -35,22 +35,22 @@ class MemberNameExpression(
                 if (type != null) return TypeExpression(type, scope, origin)
 
                 // try and simply find parameters, if possible
-                var scope = scope
+                var scopeI = scope
                 while (true) {
-                    val fieldMatch = scope.fields.firstOrNull { it.name == name }
+                    val fieldMatch = scopeI.fields.firstOrNull { it.name == name }
                     if (fieldMatch != null) return FieldExpression(fieldMatch, scope, origin)
 
-                    if (scope.scopeType?.isInsideExpression() != true) {
+                    if (scopeI.scopeType?.isInsideExpression() != true) {
                         // the surrounding scope is fine, too,
                         //  but then we should stop,
                         //  because inheritance may mislead us
-                        scope = scope.parentIfSameFile ?: break
-                        val fieldMatch = scope.fields.firstOrNull { it.name == name }
+                        scopeI = scopeI.parentIfSameFile ?: break
+                        val fieldMatch = scopeI.fields.firstOrNull { it.name == name }
                         if (fieldMatch != null) return FieldExpression(fieldMatch, scope, origin)
 
                         break
                     }
-                    scope = scope.parentIfSameFile ?: break
+                    scopeI = scopeI.parentIfSameFile ?: break
                 }
 
                 // try to find the field:

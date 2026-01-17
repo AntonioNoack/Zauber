@@ -26,7 +26,7 @@ class ResolutionContext(
     val targetType: Type?,
     /**
      * This value is only set if we're currently resolving expressions for inlining calls.
-     * Otherwise, just leave it empty.
+     * Otherwise, just leave it empty; todo instead of key=name, use key=field/parameter??
      * */
     val knownLambdas: Map<String, Expression>,
 ) {

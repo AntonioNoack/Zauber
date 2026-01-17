@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 
@@ -40,6 +41,13 @@ private abstract class GetterSetter(val beforeChange: Expression) {
 private fun splitGetterSetter(base: Expression): GetterSetter {
     when (base) {
         is UnresolvedFieldExpression -> {
+            return object : GetterSetter(base) {
+                override fun createSetter(newValue: Expression): Expression {
+                    return AssignmentExpression(base, newValue)
+                }
+            }
+        }
+        is FieldExpression -> {
             return object : GetterSetter(base) {
                 override fun createSetter(newValue: Expression): Expression {
                     return AssignmentExpression(base, newValue)
