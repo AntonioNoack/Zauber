@@ -25,6 +25,7 @@ import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
@@ -78,10 +79,11 @@ object JavaSimplifiedASTWriter {
 
     fun appendSimplifiedAST(method: MethodLike, expr: SimpleExpression, loop: SimpleLoop? = null) {
         if (expr is SimpleMerge) return
-        if (expr is SimpleAssignmentExpression) {
-            if (expr.dst.numReads == 0) builder.append("/* ")
+        if (expr is SimpleAssignmentExpression && expr.dst.type != NothingType) {
+            val notNeeded = expr.dst.numReads == 0
+            if (notNeeded) builder.append("/* ")
             appendAssign(expr)
-            if (expr.dst.numReads == 0) builder.append("*/ ")
+            if (notNeeded) builder.append("*/ ")
         }
         when (expr) {
             is SimpleBlock -> {
@@ -98,6 +100,9 @@ object JavaSimplifiedASTWriter {
                 for (i in instructions.indices) {
                     val instr = instructions[i]
                     appendSimplifiedAST(method, instr, loop)
+                    if (instr is SimpleAssignmentExpression &&
+                        instr.dst.type == NothingType
+                    ) break
                 }
             }
             is SimpleBranch -> {
@@ -318,6 +323,10 @@ object JavaSimplifiedASTWriter {
         }
         if (expr is SimpleAssignmentExpression) builder.append(';')
         if (expr !is SimpleBlock && expr !is SimpleBranch) JavaSourceGenerator.nextLine()
+        if (expr is SimpleAssignmentExpression && expr.dst.type == NothingType) {
+            builder.append("throw new AssertionError(\"Unreachable\");")
+            JavaSourceGenerator.nextLine()
+        }
     }
 
     fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
