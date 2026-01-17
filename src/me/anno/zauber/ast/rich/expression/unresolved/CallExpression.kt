@@ -8,8 +8,11 @@ import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.ConstructorResolver
+import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -65,7 +68,7 @@ class CallExpression(
         return when (base) {
             is MemberNameExpression ->
                 throw IllegalStateException("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
-            is UnresolvedFieldExpression -> base.resolveField(context)
+            is UnresolvedFieldExpression -> resolveCallableByName(base, context, valueParameters)
             is FieldExpression -> base.resolveField(context)
             is TypeExpression -> {
 
@@ -87,5 +90,32 @@ class CallExpression(
                         "in ${TokenListIndex.resolveOrigin(origin)}"
             )
         }
+    }
+
+    private fun resolveCallableByName(
+        base: UnresolvedFieldExpression, context: ResolutionContext,
+        valueParameters: List<ValueParameter>
+    ): ResolvedMember<*> {
+        val name = base.name
+        val nameAsImport = base.nameAsImport
+        if (LOGGER.enableInfo) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+        // findConstructor(selfScope, false, name, typeParameters, valueParameters)
+        val c = ConstructorResolver
+
+        // todo surely, Constructors should consider imports, too, right?
+        //  or are they immediately covered by being detected as constructors?
+        val returnType = context.targetType
+        val constructor = MethodResolver.null1() // do we need this constructor-stuff? yes, we do, why ever
+            ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
+            ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
+
+        val byMethodCall = MethodResolver.resolveCallable(
+            context, scope,
+            name, nameAsImport,
+            constructor, typeParameters, valueParameters, origin
+        )
+        if (byMethodCall != null) return byMethodCall
+
+        MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
     }
 }
