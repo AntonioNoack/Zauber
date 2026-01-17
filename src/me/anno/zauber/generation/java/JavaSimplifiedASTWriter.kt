@@ -7,12 +7,7 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.controlflow.SimpleBranch
-import me.anno.zauber.ast.simple.controlflow.SimpleGoto
-import me.anno.zauber.ast.simple.controlflow.SimpleLoop
-import me.anno.zauber.ast.simple.controlflow.SimpleReturn
-import me.anno.zauber.ast.simple.controlflow.SimpleThrow
-import me.anno.zauber.ast.simple.controlflow.SimpleYield
+import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.generation.java.JavaSourceGenerator.nativeNumbers
@@ -203,17 +198,31 @@ object JavaSimplifiedASTWriter {
 
                 val leftNative = nativeTypes[expr.left.type]
                 val rightNative = nativeTypes[expr.right.type]
-                if (leftNative != null && rightNative != null) {
-                    builder.append1(expr.left).append(" == ")
-                        .append1(expr.right)
-                } else if (leftCanBeNull || rightCanBeNull) {
-                    builder.append1(expr.left).append(" == null ? ")
-                        .append1(expr.right).append(" == null : ")
-                        .append1(expr.left).append(".equals(")
-                        .append1(expr.right).append(")")
-                } else {
-                    builder.append1(expr.left).append(".equals(")
-                        .append1(expr.right).append(")")
+                when {
+                    leftNative != null && rightNative != null -> {
+                        builder.append1(expr.left).append(" == ")
+                            .append1(expr.right)
+                    }
+                    leftCanBeNull && rightCanBeNull -> {
+                        builder.append1(expr.left).append(" == null ? ")
+                            .append1(expr.right).append(" == null : ")
+                            .append1(expr.left).append(".equals(")
+                            .append1(expr.right).append(")")
+                    }
+                    leftCanBeNull -> {
+                        builder.append1(expr.left).append(" != null && ")
+                            .append1(expr.left).append(".equals(")
+                            .append1(expr.right).append(")")
+                    }
+                    rightCanBeNull -> {
+                        builder.append1(expr.right).append(" != null && ")
+                            .append1(expr.left).append(".equals(")
+                            .append1(expr.right).append(")")
+                    }
+                    else -> {
+                        builder.append1(expr.left).append(".equals(")
+                            .append1(expr.right).append(")")
+                    }
                 }
             }
             is SimpleCheckIdentical -> {

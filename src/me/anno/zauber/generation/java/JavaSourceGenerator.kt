@@ -117,7 +117,7 @@ object JavaSourceGenerator : Generator() {
             is ClassType -> appendClassType(type, scope, needsBoxedType)
             is UnionType if type.types.size == 2 && NullType in type.types -> {
                 // builder.append("@org.jetbrains.annotations.Nullable ")
-                appendType(type.types.first { it != NullType }, scope, needsBoxedType)
+                appendType(type.types.first { it != NullType }, scope, true /* native types cannot be null */)
                 builder.append("/* or null */")
             }
             is SelfType if (type.scope == scope) -> builder.append(scope.name)
