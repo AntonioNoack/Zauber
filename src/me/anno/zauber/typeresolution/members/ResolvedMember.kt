@@ -35,7 +35,7 @@ abstract class ResolvedMember<V>(
             return ThisExpression(type.clazz, scope, origin)
         }
         val specialization = specialization
-        if (specialization != null && type in specialization) {
+        if (type in specialization) {
             throw IllegalStateException("Type $type is in specialization, but not resolved?? $specialization")
         }
         TODO("GetBaseIfMissing on $type (${type.javaClass.simpleName}), spec: $specialization")

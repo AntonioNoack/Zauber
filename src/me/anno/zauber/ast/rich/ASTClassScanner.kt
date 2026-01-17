@@ -39,7 +39,6 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             while (true) {
                 if (currType is UnresolvedType) {
                     currType = currType.resolve()
-                        ?: throw IllegalStateException("Failed to resolve type $currType")
                     continue
                 }
                 if (currType is ClassType && currType.clazz.isTypeAlias()) {

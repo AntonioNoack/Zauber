@@ -21,10 +21,10 @@ class SimpleCall(
     constructor(
         dst: SimpleField,
         method: Method,
-        base: SimpleField?,
+        self: SimpleField?,
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Int
-    ) : this(dst, method.name!!, FullMap(method), base, valueParameters, scope, origin)
+    ) : this(dst, method.name!!, FullMap(method), self, valueParameters, scope, origin)
 
     init {
         for (method in methods.values) {

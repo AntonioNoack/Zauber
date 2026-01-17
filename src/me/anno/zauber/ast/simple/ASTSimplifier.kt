@@ -366,8 +366,7 @@ object ASTSimplifier {
     ): SimpleField? {
         when (val method = method0.resolved) {
             is Method -> {
-                selfExpr!!
-                val base = simplifyImpl(context, selfExpr, currBlock, graph, true) ?: return null
+                val self = simplifyImpl(context, selfExpr!!, currBlock, graph, true) ?: return null
                 val params = reorderParameters(valueParameters, method.valueParameters, scope, origin)
                     .map { parameter ->
                         simplifyImpl(context, parameter, currBlock, graph, true)
@@ -376,20 +375,19 @@ object ASTSimplifier {
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
                 for (param in params) param.use()
-                currBlock.add(SimpleCall(dst, method, base.use(), params, scope, origin))
+                currBlock.add(SimpleCall(dst, method, self.use(), params, scope, origin))
                 return dst
             }
             is Constructor -> {
                 // base is a type
-                val params =
-                    reorderParameters(
-                        valueParameters,
-                        method.valueParameters,
-                        scope, origin
-                    ).map { parameter ->
-                        simplifyImpl(context, parameter, currBlock, graph, true)
-                            ?: return null
-                    }
+                val params = reorderParameters(
+                    valueParameters,
+                    method.valueParameters,
+                    scope, origin
+                ).map { parameter ->
+                    simplifyImpl(context, parameter, currBlock, graph, true)
+                        ?: return null
+                }
                 // then execute it
                 for (param in params) param.use()
                 if (selfIfInsideConstructor != null) {
@@ -433,7 +431,7 @@ object ASTSimplifier {
 
         scope: Scope,
         origin: Int
-    ): SimpleField? {
+    ): SimpleField {
         for (param in valueParameters) param.use()
         when (val method = method0.resolved) {
             is Method -> {
