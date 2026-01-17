@@ -257,8 +257,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             for (typeIndex in 0..scopeIndex) {
                 val type = selfTypes[typeIndex]
                 if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue
-                val selfType = type ?: context.selfType ?: selfType0
-                if (!catchFailures) println("Checking[i] $scope with $type -> $selfType0")
+                val selfType = context.selfType ?: type ?: selfType0
+                if (!catchFailures) println("Checking[i] $scope with $type -> $selfType")
                 val result = callback(scope, selfType)
                 if (result != null) return result
                 lastType = type

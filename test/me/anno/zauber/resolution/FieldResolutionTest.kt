@@ -9,6 +9,7 @@ import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class FieldResolutionTest {
 
@@ -19,6 +20,21 @@ class FieldResolutionTest {
             val x : Int = 0
             class Inner {
                 val tested = x
+            }
+        }
+        """.trimIndent()
+        val scope = typeResolveScope(code)
+        val tested0 = scope["Target"]["Inner"].getField("tested").valueType!!
+        assertEquals(IntType, tested0)
+    }
+
+    @Test
+    fun testSimpleDirect() {
+        val code = """
+        object Target {
+            val x : Int = 0
+            class Inner {
+                val tested = Target.x
             }
         }
         """.trimIndent()
@@ -232,6 +248,25 @@ class FieldResolutionTest {
         val scope = typeResolveScope(code)
         val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
         assertEquals(IntType, actualType)
+    }
+
+    @Test
+    fun testTargetTypeMismatch() {
+        assertThrows<IllegalStateException> {
+            val scope = typeResolveScope(
+                """
+                object Outer {
+                    val x = 0
+                    
+                    class Inner {
+                        val tested = 0.x
+                    }
+                }
+                """.trimIndent()
+            )
+            val actualType = scope["Outer"]["Inner"].getField("tested").valueType!!
+            assertEquals(IntType, actualType)
+        }
     }
 
     @Test
@@ -515,7 +550,7 @@ class FieldResolutionTest {
     }
 
     @Test
-    fun testFieldWithCallAfter(){
+    fun testFieldWithCallAfter() {
         val code = """
             val tested get() = sq(5)
             fun sq(x: Int) = x*x

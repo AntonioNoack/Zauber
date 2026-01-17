@@ -111,8 +111,11 @@ object TypeResolution {
             LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
         }
         try {
-            val selfType = field.selfType ?: scopeSelfType
-            val context = ResolutionContext(selfType, false, null, emptyMap())
+            val selfType = if (field.explicitSelfType) field.selfType else null
+            val higherSelves = if (scopeSelfType != null) {
+                mapOf(field.codeScope to scopeSelfType)
+            } else emptyMap()
+            val context = ResolutionContext(selfType, higherSelves, false, null, emptyMap())
             field.valueType = field.resolveValueType(context)
             if (LOGGER.enableInfo) LOGGER.info("Resolved $field to ${field.valueType}")
             numSuccesses++
