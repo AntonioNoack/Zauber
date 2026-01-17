@@ -3,6 +3,7 @@ package zauber
 class IntRange(val from: Int, val endExcl: Int, val step: Int) : Iterable<Int> {
     constructor(from: Int, endExcl: Int) : this(from, endExcl, 1)
 
+    operator fun contains(value: Int): Boolean = value >= from && value < endExcl
     override fun iterator(): Iterator<Int> = IntRangeIterator(from, endExcl)
     fun reversed(): Iterable<Int> = TODO("IntRange.reversed")
 

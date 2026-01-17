@@ -16,25 +16,6 @@ val operators = mapOf(
 
     "?:" to Operator("?:", 2, Assoc.LEFT),
 
-    // infix
-    "shl" to Operator("shl", 3, Assoc.LEFT),
-    "shr" to Operator("shr", 3, Assoc.LEFT),
-    "ushr" to Operator("ushr", 3, Assoc.LEFT),
-    "and" to Operator("and", 3, Assoc.LEFT),
-    "or" to Operator("or", 3, Assoc.LEFT),
-    "xor" to Operator("xor", 3, Assoc.LEFT),
-    "in" to Operator("in", 3, Assoc.LEFT),
-    "is" to Operator("is", 3, Assoc.LEFT),
-    "as" to Operator("as", 3, Assoc.LEFT),
-    "as?" to Operator("as?", 3, Assoc.LEFT),
-    "!in" to Operator("!in", 3, Assoc.LEFT),
-    "!is" to Operator("!is", 3, Assoc.LEFT),
-    "to" to Operator("to", 3, Assoc.LEFT),
-    "step" to Operator("step", 3, Assoc.LEFT),
-    "until" to Operator("until", 3, Assoc.LEFT),
-    "downTo" to Operator("downTo", 3, Assoc.LEFT),
-    ".." to Operator("..", 3, Assoc.LEFT),
-
     // logical
     "||" to Operator("||", 6, Assoc.LEFT),
     "&&" to Operator("&&", 7, Assoc.LEFT),
@@ -44,14 +25,39 @@ val operators = mapOf(
     "!==" to Operator("!==", 8, Assoc.LEFT),
     "==" to Operator("==", 8, Assoc.LEFT),
     "!=" to Operator("!=", 8, Assoc.LEFT),
+
     "<" to Operator("<", 9, Assoc.LEFT),
     ">" to Operator(">", 9, Assoc.LEFT),
     "<=" to Operator("<=", 9, Assoc.LEFT),
     ">=" to Operator(">=", 9, Assoc.LEFT),
 
+    // these look like infix, but are special
+    "in" to Operator("in", 10, Assoc.LEFT),
+    "!in" to Operator("!in", 10, Assoc.LEFT),
+    "is" to Operator("is", 10, Assoc.LEFT),
+    "!is" to Operator("!is", 10, Assoc.LEFT),
+
+    // infix
+    "shl" to Operator("shl", 11, Assoc.LEFT),
+    "shr" to Operator("shr", 11, Assoc.LEFT),
+    "ushr" to Operator("ushr", 11, Assoc.LEFT),
+    "and" to Operator("and", 11, Assoc.LEFT),
+    "or" to Operator("or", 11, Assoc.LEFT),
+    "xor" to Operator("xor", 11, Assoc.LEFT),
+    "to" to Operator("to", 11, Assoc.LEFT),
+    "step" to Operator("step", 11, Assoc.LEFT),
+    "until" to Operator("until", 11, Assoc.LEFT),
+    "downTo" to Operator("downTo", 11, Assoc.LEFT),
+    ".." to Operator("..", 11, Assoc.LEFT),
+
+    // these look like infix, but are special
+    "as" to Operator("as", 12, Assoc.LEFT),
+    "as?" to Operator("as?", 12, Assoc.LEFT),
+
     // maths
-    "+" to Operator("+", 10, Assoc.LEFT),
-    "-" to Operator("-", 10, Assoc.LEFT),
+    "+" to Operator("+", 15, Assoc.LEFT),
+    "-" to Operator("-", 15, Assoc.LEFT),
+
     "*" to Operator("*", 20, Assoc.LEFT),
     "/" to Operator("/", 20, Assoc.LEFT),
     "%" to Operator("%", 20, Assoc.LEFT),

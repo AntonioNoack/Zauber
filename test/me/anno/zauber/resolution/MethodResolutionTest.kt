@@ -257,6 +257,25 @@ class MethodResolutionTest {
     }
 
     @Test
+    fun testTargetTypeMismatch() {
+        assertThrows<IllegalStateException> {
+            val scope = typeResolveScope(
+                """
+                object Outer {
+                    fun x() = 0
+                    
+                    class Inner {
+                        val tested = 0.x()
+                    }
+                }
+                """.trimIndent()
+            )
+            val actualType = scope["Outer"]["Inner"].getField("tested").valueType!!
+            assertEquals(IntType, actualType)
+        }
+    }
+
+    @Test
     fun testEnumInsideSelf() {
         val code = """
         class Inner {

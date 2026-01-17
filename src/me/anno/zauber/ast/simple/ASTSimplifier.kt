@@ -11,10 +11,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
-import me.anno.zauber.ast.rich.expression.resolved.ResolvedCompareOp
-import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
-import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.simple.controlflow.SimpleBranch
@@ -140,12 +137,12 @@ object ASTSimplifier {
                 dst
             }
 
-            /*is ThisExpression -> {
-                val type = context.selfType
+            is ThisExpression -> {
+                val type = TypeResolution.resolveType(context, expr)
                 val dst = currBlock.field(type)
-                currBlock.add(SimpleSpecialValue(dst, expr))
+                currBlock.add(SimpleThis(dst, expr))
                 dst
-            }*/
+            }
 
             is ResolvedGetFieldExpression -> {
                 val field = expr.field.resolved
@@ -211,7 +208,13 @@ object ASTSimplifier {
 
                 TODO("Simplify lambda ${expr.javaClass.simpleName}: $expr")
             }
-            else -> TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
+            else -> {
+                if (!expr.isResolved()) {
+                    val expr = expr.resolve(context)
+                    return simplifyImpl(context, expr, currBlock, graph, needsValue)
+                }
+                TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
+            }
         }
     }
 

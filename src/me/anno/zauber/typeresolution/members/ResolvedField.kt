@@ -192,7 +192,7 @@ class ResolvedField(
             val method = lambdaClassScope.methods.firstOrNull { it.name == "call" }
                 ?: throw IllegalStateException("Class $className is missing .call() method")
 
-            val scopeSelfType: Type? = null // todo this could be any 'this' available to us
+            val scopeSelfType = lambdaClassScope.typeWithoutArgs
             val returnType = context.targetType
             val methodReturnType = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)

@@ -221,9 +221,11 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
                 }
             }
-            // SpecialValue.THIS -> {
-            //   builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
-            // }
+            is SimpleThis -> {
+                // todo different 'this's may be given new, different names,
+                //  but where and when do we decide that?
+                builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
+            }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName

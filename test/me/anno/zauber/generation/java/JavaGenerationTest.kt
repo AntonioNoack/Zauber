@@ -328,4 +328,34 @@ class JavaGenerationTest {
         """.trimIndent()
         )
     }
+
+    @Test
+    fun testGenerateLambda() {
+        testClassGenIsFine(
+            """
+            interface Iterator<V> {
+                fun next(): V
+                fun hasNext(): Boolean
+            }
+            interface Test<V> {
+                operator fun iterator(): Iterator<V>
+
+                fun all(predicate: (V) -> Boolean): Boolean {
+                    for (element in this) {
+                        if (!predicate(element)) return false
+                    }
+                    return true
+                }
+            }
+            
+            package zauber
+            class Boolean {
+                external fun not(): Boolean
+            }
+            fun interface Function1<V,R> {
+                fun call(p0: V): R
+            }
+        """.trimIndent()
+        )
+    }
 }
