@@ -213,15 +213,22 @@ class ZauberASTBuilder(
         val keywords = packKeywords()
         // println("Read object '$name' with keywords: $keywords in scope $currPackage")
 
-        val scope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        readSuperCalls(scope)
+        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
+        readSuperCalls(classScope)
+
+        val primaryConstructor = classScope.getOrCreatePrimConstructorScope()
+        primaryConstructor.selfAsConstructor = Constructor(
+            emptyList(), primaryConstructor,
+            null, null, keywords, origin
+        )
+
         readClassBody(name, keywords, scopeType)
 
-        scope.hasTypeParameters = true // no type-params are supported
-        if (scope.objectField == null) scope.objectField = Field(
-            scope, null,
-            false, isMutable = false, null, scope.name,
-            ClassType(scope, emptyList()),
+        classScope.hasTypeParameters = true // no type-params are supported
+        if (classScope.objectField == null) classScope.objectField = Field(
+            classScope, null,
+            false, isMutable = false, null, classScope.name,
+            ClassType(classScope, emptyList()),
             /* todo should we set initialValue? */ null, Keywords.NONE, origin
         )
 
