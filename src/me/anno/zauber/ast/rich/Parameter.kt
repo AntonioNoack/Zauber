@@ -70,4 +70,13 @@ class Parameter(
         return result
     }
 
+    fun withType(newType: Type): Parameter {
+        if (newType == this.type) return this
+        return Parameter(
+            isVar, isVal, isVararg,
+            name, newType,
+            defaultValue, scope, origin
+        )
+    }
+
 }

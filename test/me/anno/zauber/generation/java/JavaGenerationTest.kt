@@ -7,6 +7,7 @@ import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -30,21 +31,23 @@ class JavaGenerationTest {
             val testClassName = "Test"
             val testClass = testScope.children.first { it.name == testClassName }
             val sourceCode = JavaSourceGenerator.run {
-                generateInside(testClassName, testClass, null)
+                generateInside(testClassName, testClass, noSpecialization)
                 if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
                 finish()
             }
             return sourceCode
         }
 
-        fun testClassGenIsFine(code: String) {
+        fun testClassGenIsFine(code: String): String {
             val code = testClassGeneration(code)
             check("Exception" !in code && "Error" !in code) { code }
+            return code
         }
 
-        fun testExprGenIsFine(code: String) {
+        fun testExprGenIsFine(code: String): String {
             val code = testClassGeneration("class Test {\n$code\n}")
             check("Exception" !in code && "Error" !in code) { code }
+            return code
         }
     }
 
@@ -355,6 +358,83 @@ class JavaGenerationTest {
             fun interface Function1<V,R> {
                 fun call(p0: V): R
             }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testInlineWithoutLambdas() {
+        testClassGenIsFine(
+            """
+            class Test {
+                inline fun add(a: Int, b: Int): Int = a + b
+                fun calculate(c: Int, d: Int, e: Int): Int {
+                    return add(c,add(d,e))
+                }
+            }
+            
+            package zauber
+            class Int {
+                external fun plus(other: Int): Int
+            }
+        """.trimIndent()
+        )
+    }
+
+    @Test
+    fun testInlineWithLambda() {
+        val code = testClassGenIsFine(
+            """
+            class Test {
+                inline fun x6(runnable: () -> Unit) {
+                    runnable()
+                    runnable()
+                    runnable()
+                    runnable()
+                    runnable()
+                    runnable()
+                }
+                fun calculate(a: Int): Int {
+                    x6 {
+                        println(a)
+                    }
+                }
+            }
+            
+            package zauber
+            external fun println(a: Int)
+            fun interface Function0<R> {
+                fun call(): R
+            }
+        """.trimIndent()
+        )
+        val countPrintlns = code.split("println(").size
+        check(countPrintlns >= 6) {
+            "Too few printlns? $code"
+        }
+    }
+
+    @Test
+    fun testInlineWithLambdaWithSelf() {
+        testClassGenIsFine(
+            """
+            class Test {
+                inline fun Int.x4(runnable: Int.() -> Unit) {
+                    runnable()
+                    runnable()
+                    runnable()
+                    runnable()
+                }
+                fun calculate(a: Int): Int {
+                    a.x4 {
+                        println(this)
+                    }
+                }
+            }
+            
+            package zauber
+            external fun println(a: Int)
+            class Int
         """.trimIndent()
         )
     }

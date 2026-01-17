@@ -50,13 +50,13 @@ class LambdaExpression(
                             val type = param0.type
                             val autoParamName = "it"
                             LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
-                            Field(
+                            val field = Field(
                                 bodyScope, null,
                                 false, isMutable = false, param0,
                                 autoParamName, type, null,
                                 Keywords.NONE, origin
                             )
-                            listOf(LambdaVariable(type, autoParamName))
+                            listOf(LambdaVariable(type, field))
                         }
                         else -> {
                             // instead of throwing, we should probably just return some impossible type or error type...

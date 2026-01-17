@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Scope
@@ -28,12 +29,12 @@ class ResolutionContext(
      * This value is only set if we're currently resolving expressions for inlining calls.
      * Otherwise, just leave it empty; todo instead of key=name, use key=field/parameter??
      * */
-    val knownLambdas: Map<String, Expression>,
+    val knownLambdas: Map<Field, Expression>,
 ) {
 
     constructor(
         selfType: Type?, allowTypeless: Boolean, targetType: Type?,
-        knownLambdas: Map<String, Expression> = emptyMap()
+        knownLambdas: Map<Field, Expression> = emptyMap()
     ) : this(selfType, emptyMap(), allowTypeless, targetType, knownLambdas)
 
     val selfScope = typeToScope(selfType)
@@ -53,7 +54,7 @@ class ResolutionContext(
         return ResolutionContext(selfType, higherSelves, newAllowTypeless, targetType, knownLambdas)
     }
 
-    fun withKnownLambdas(newKnownLambdas: Map<String, Expression>): ResolutionContext {
+    fun withKnownLambdas(newKnownLambdas: Map<Field, Expression>): ResolutionContext {
         if (knownLambdas == newKnownLambdas) return this
         return ResolutionContext(selfType, higherSelves, allowTypeless, targetType, newKnownLambdas)
     }

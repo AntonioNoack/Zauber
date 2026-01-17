@@ -1623,38 +1623,28 @@ class ZauberASTBuilder(
             tokens.push(arrow) {
                 while (i < tokens.size) {
                     if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                        val origin0 = origin(i)
                         val names = ArrayList<LambdaVariable>()
                         pushCall {
                             while (i < tokens.size) {
-                                if (tokens.equals(i, TokenType.NAME)) {
-                                    val origin = origin(i)
-                                    val name = tokens.toString(i++)
-                                    val type = readTypeOrNull(selfType)
-                                    val parameter = LambdaVariable(type, name)
-                                    names.add(parameter)
-                                    // to do we neither know type nor initial value :/, both come from the called function/set variable
-                                    Field( // this is more of a parameter...
-                                        currPackage, null,
-                                        false, isMutable = false, parameter,
-                                        name, null, null, Keywords.NONE, origin
-                                    )
-                                } else throw IllegalStateException("Expected name")
+                                check(tokens.equals(i, TokenType.NAME)) {
+                                    "Expected lambda-variable name at ${tokens.err(i)}"
+                                }
+                                names.add(readLambdaVariable(selfType))
                                 readComma()
                             }
                         }
-                        variables.add(LambdaDestructuring(names))
-                    } else if (tokens.equals(i, TokenType.NAME)) {
-                        val origin = origin(i)
-                        val name = tokens.toString(i++)
-                        val type = readTypeOrNull(selfType)
-                        val parameter = LambdaVariable(type, name)
-                        variables.add(parameter)
-                        // to do we neither know type nor initial value :/, both come from the called function/set variable
-                        Field( // this is more of a parameter...
+                        val name = "__ld${variables.size}"
+                        val field = Field( // this is more of a parameter...
                             currPackage, null,
-                            false, isMutable = true, parameter,
-                            name, null, null, Keywords.NONE, origin
+                            false, isMutable = false, null,
+                            name, null, null, Keywords.SYNTHETIC, origin0
                         )
+                        val variable = LambdaDestructuring(names, field)
+                        field.byParameter = variable
+                        variables.add(variable)
+                    } else if (tokens.equals(i, TokenType.NAME)) {
+                        variables.add(readLambdaVariable(selfType))
                     } else throw NotImplementedError()
                     readComma()
                 }
@@ -1665,6 +1655,21 @@ class ZauberASTBuilder(
         val body = readMethodBody()
         check(currPackage.scopeType == ScopeType.LAMBDA)
         return LambdaExpression(variables, currPackage, body)
+    }
+
+    private fun readLambdaVariable(selfType: Type?): LambdaVariable {
+        val origin = origin(i)
+        val name = tokens.toString(i++)
+        val type = readTypeOrNull(selfType)
+        // to do we neither know type nor initial value :/, both come from the called function/set variable
+        val field = Field( // this is more of a parameter...
+            currPackage, null,
+            false, isMutable = false, null,
+            name, null, null, Keywords.NONE, origin
+        )
+        val variable = LambdaVariable(type, field)
+        field.byParameter = variable
+        return variable
     }
 
     fun readMethodBody(): ExpressionList {

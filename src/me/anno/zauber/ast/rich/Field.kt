@@ -21,7 +21,7 @@ class Field(
     val explicitSelfType: Boolean,
 
     val isMutable: Boolean,
-    val byParameter: Any?, // Parameter | LambdaParameter | null
+    var byParameter: Any?, // Parameter | LambdaParameter | null
 
     val name: String,
     var valueType: Type?,

@@ -11,6 +11,8 @@ import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
 import me.anno.zauber.ast.simple.controlflow.SimpleLoop
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.generation.java.JavaSourceGenerator.nativeNumbers
@@ -318,6 +320,9 @@ object JavaSimplifiedASTWriter {
             }
             is SimpleReturn -> {
                 builder.append("return ").append1(expr.field).append(';')
+            }
+            is SimpleThrow -> {
+                builder.append("throw ").append1(expr.field).append(';')
             }
             else -> {
                 builder.append("/* ${expr.javaClass.simpleName}: $expr */")

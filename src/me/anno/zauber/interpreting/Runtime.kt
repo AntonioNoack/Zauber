@@ -216,4 +216,8 @@ class Runtime {
         TODO()
     }
 
+    fun yieldFromCall(value: Instance) {
+        TODO("somehow process a yield")
+    }
+
 }

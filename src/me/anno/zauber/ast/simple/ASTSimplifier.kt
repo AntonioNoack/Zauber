@@ -18,6 +18,8 @@ import me.anno.zauber.ast.simple.controlflow.SimpleBranch
 import me.anno.zauber.ast.simple.controlflow.SimpleGoto
 import me.anno.zauber.ast.simple.controlflow.SimpleLoop
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -84,9 +86,18 @@ object ASTSimplifier {
                 result
             }
 
+            is YieldExpression -> {
+                // todo we need to split the flow...
+                val field = simplifyImpl(context, expr.value, currBlock, graph, true)
+                if (field != null) currBlock.add(SimpleYield(field.use(), expr.scope, expr.origin))
+                voidField
+            }
+
             is ThrowExpression -> {
                 // todo we need to check all handlers...
                 //   and finally, we need to exit
+                val field = simplifyImpl(context, expr.value, currBlock, graph, true)
+                if (field != null) currBlock.add(SimpleThrow(field.use(), expr.scope, expr.origin))
                 voidField
             }
 
