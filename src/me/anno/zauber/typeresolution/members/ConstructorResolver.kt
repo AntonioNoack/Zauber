@@ -135,7 +135,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             constructor.selfType.clazz.typeParameters, typeParameters,
             constructor.valueParameters, valueParameters
         ) ?: return null
-        val context = ResolutionContext(constructor.selfType, false, returnType)
+        val context = ResolutionContext(constructor.selfType, false, returnType, emptyMap())
         return ResolvedConstructor(generics, constructor, context, codeScope)
     }
 

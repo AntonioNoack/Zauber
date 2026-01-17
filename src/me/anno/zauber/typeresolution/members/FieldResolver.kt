@@ -93,11 +93,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             var expr = (field.initialValue ?: field.getterExpr)!!
             while (expr is ReturnExpression) expr = expr.value
             LOGGER.info("Resolving valueType($field), initial/getter: $expr")
-            val context = ResolutionContext(
-                //.innerScope,
-                field.selfType ?: scopeSelfType,
-                false, null
-            )
+            val contextSelfType = field.selfType ?: scopeSelfType
+            val context = ResolutionContext(contextSelfType, false, null, emptyMap())
             field.valueType = resolveType(context, expr)
         }
         return field.valueType
@@ -145,7 +142,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         ) ?: return null
 
         val selfType = selfTypeI ?: fieldSelfType
-        val context = ResolutionContext(selfType, false, fieldReturnType)
+        val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
         return ResolvedField(
             generics.subList(0, fieldSelfParams.size), field,
             generics.subList(fieldSelfParams.size, generics.size), context, codeScope
@@ -210,7 +207,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     fun resolveField(
         context: ResolutionContext, field: Field,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
-        scope: Scope, origin: Int
+        scope: Scope, origin: Int,
     ): ResolvedField? {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$field': $typeParameters, selfType: $selfType")

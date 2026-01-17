@@ -15,8 +15,11 @@ import me.anno.zauber.types.impl.LambdaType
 import org.junit.jupiter.api.Test
 
 class TestInlineLambdaParameterIsImmediatelyFound {
+    /**
+     * This is not strictly necessary, but it simplifies implementing inline functions a lot.
+     * */
     @Test
-    fun testExprOrNull() {
+    fun testLambdaCallIsImmediatelyResolvedToParameter() {
         val testScopeName = "test${ctr++}"
         val tokens = ZauberTokenizer(
             """

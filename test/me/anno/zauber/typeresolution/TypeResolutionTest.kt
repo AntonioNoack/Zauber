@@ -79,10 +79,7 @@ class TypeResolutionTest {
                         scan(exprI)
                     }
                 } else {
-                    val context = ResolutionContext(
-                        method.selfType,
-                        true, null
-                    )
+                    val context = ResolutionContext(method.selfType, true, null, emptyMap())
                     val type = TypeResolution.resolveType(context, expr)
                     types.add(type)
                 }

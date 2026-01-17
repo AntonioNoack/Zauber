@@ -95,7 +95,7 @@ class Runtime {
             ?: throw IllegalStateException("Missing body for method $method")
         var simpleBody = method.simpleBody
         if (simpleBody == null) {
-            val context = ResolutionContext(method.selfType, true, method.returnType)
+            val context = ResolutionContext(method.selfType, true, method.returnType, emptyMap())
             simpleBody = ASTSimplifier.simplify(context, body).startBlock
             method.simpleBody = simpleBody
         }

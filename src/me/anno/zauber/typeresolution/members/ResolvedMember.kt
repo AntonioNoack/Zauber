@@ -83,14 +83,11 @@ abstract class ResolvedMember<V>(
                 }
                 is TypeOfField -> {
                     val valueType = type.field.valueType
-                    if (valueType != null) resolveGenerics(selfType, valueType, genericNames, genericValues)
-                    else {
-                        type.field.resolveValueType(
-                            ResolutionContext(
-                                type.field.selfType,
-                                false, null
-                            )
-                        )
+                    if (valueType != null) {
+                        resolveGenerics(selfType, valueType, genericNames, genericValues)
+                    } else {
+                        val context = ResolutionContext(type.field.selfType, false, null, emptyMap())
+                        type.field.resolveValueType(context)
                     }
                 }
                 else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")

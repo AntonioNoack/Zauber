@@ -112,7 +112,7 @@ object TypeResolution {
         }
         try {
             val selfType = field.selfType ?: scopeSelfType
-            val context = ResolutionContext(selfType, false, null)
+            val context = ResolutionContext(selfType, false, null, emptyMap())
             field.valueType = field.resolveValueType(context)
             if (LOGGER.enableInfo) LOGGER.info("Resolved $field to ${field.valueType}")
             numSuccesses++
