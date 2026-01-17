@@ -65,8 +65,4 @@ enum class ScopeType {
             else -> false
         }
     }
-
-    companion object {
-        val EXPRESSION = METHOD_BODY
-    }
 }

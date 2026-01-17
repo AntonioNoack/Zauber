@@ -32,7 +32,7 @@ object FieldGetterSetter {
                     ReturnExpression(readExpression(), null, getterScope, origin)
                 }
                 tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                    pushBlock(ScopeType.EXPRESSION, null) {
+                    pushBlock(ScopeType.METHOD_BODY, null) {
                         readMethodBody()
                     }
                 }
@@ -66,7 +66,7 @@ object FieldGetterSetter {
                         ReturnExpression(readExpression(), null, setterScope, origin)
                     }
                     tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                        pushBlock(ScopeType.EXPRESSION, null) {
+                        pushBlock(ScopeType.METHOD_BODY, null) {
                             readMethodBody()
                         }
                     }

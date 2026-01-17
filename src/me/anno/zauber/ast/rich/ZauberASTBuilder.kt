@@ -869,7 +869,7 @@ class ZauberASTBuilder(
                 j++
             }
 
-            pushBlock(ScopeType.EXPRESSION, null) {
+            pushBlock(ScopeType.METHOD_BODY, null) {
                 it.breakLabel = label
                 readMethodBody()
             }
@@ -881,7 +881,7 @@ class ZauberASTBuilder(
     private fun readExprInNewScope(label: String?): Expression {
         val origin = origin(i)
         val scopeName = currPackage.generateName("expr", origin)
-        return pushScope(scopeName, ScopeType.EXPRESSION) {
+        return pushScope(scopeName, ScopeType.METHOD_BODY) {
             it.breakLabel = label
             readExpression()
         }
@@ -1476,7 +1476,7 @@ class ZauberASTBuilder(
                     "." -> handleDotOperator(expr)
                     "&&", "||" -> {
                         val name = currPackage.generateName("shortcut", origin)
-                        val right = pushScope(name, ScopeType.EXPRESSION) { readRHS(op) }
+                        val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
                         if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, origin)
                         else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
                     }

@@ -46,8 +46,8 @@ object DataClassGenerator {
             val expr = expr!!
             expr.resolvedType = BooleanType
 
-            val trueScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.EXPRESSION)
-            val falseScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.EXPRESSION)
+            val trueScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.METHOD_BODY)
+            val falseScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.METHOD_BODY)
 
             val condition = getCondition(trueScope)
             condition.resolvedType = BooleanType

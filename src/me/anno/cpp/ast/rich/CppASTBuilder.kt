@@ -327,7 +327,7 @@ class CppASTBuilder(
 
                 "&&", "||" -> {
                     val tmpName = currPackage.generateName("shortcut", origin)
-                    val right = pushScope(tmpName, ScopeType.EXPRESSION) { readRHS(op) }
+                    val right = pushScope(tmpName, ScopeType.METHOD_BODY) { readRHS(op) }
                     if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, currPackage, origin)
                     else shortcutExpressionI(expr, ShortcutOperator.OR, right, currPackage, origin)
                 }
@@ -559,7 +559,7 @@ class CppASTBuilder(
 
     fun readBodyOrExpression(): Expression {
         return if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            pushBlock(ScopeType.EXPRESSION, null) {
+            pushBlock(ScopeType.METHOD_BODY, null) {
                 readMethodBody()
             }
         } else {
@@ -568,7 +568,9 @@ class CppASTBuilder(
     }
 
     private fun readExprInNewScope(): Expression {
-        return pushScope(currPackage.generateName("expr"), ScopeType.EXPRESSION) {
+        val origin = origin(i)
+        val tmpName = currPackage.generateName("expr", origin)
+        return pushScope(tmpName, ScopeType.METHOD_BODY) {
             readExpression()
         }
     }
