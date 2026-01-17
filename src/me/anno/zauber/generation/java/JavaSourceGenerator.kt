@@ -142,7 +142,7 @@ object JavaSourceGenerator : Generator() {
             is GenericType -> {
                 val lookup = specialization[type]
                 if (lookup != null) appendType(lookup, scope, needsBoxedType)
-                else builder.append(type.name)
+                else builder.append("/* ").append(type.scope.pathStr).append(" */ ").append(type.name)
             }
             else -> {
                 builder.append("Object /* $type (${type.javaClass.simpleName}) */")
@@ -363,7 +363,7 @@ object JavaSourceGenerator : Generator() {
                 )
     }
 
-    private fun appendMethod(classScope: Scope, method: Method, specialization: Specialization) {
+    private fun appendMethod(classScope: Scope, method: Method, specForName: Specialization) {
 
         // some spacing
         nextLine()
@@ -392,7 +392,7 @@ object JavaSourceGenerator : Generator() {
         appendType(method.returnType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
 
-        val specialization = specialization
+        val specialization = specForName
         if (specialization.isNotEmpty()) {
             builder.append('_').append(specialization.hash)
         }

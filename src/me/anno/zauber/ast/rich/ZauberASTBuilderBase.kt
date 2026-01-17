@@ -50,6 +50,7 @@ open class ZauberASTBuilderBase(
         check(tokens.equals(i++, "="))
         val trueType = readType(null, true)
         pseudoScope.selfAsTypeAlias = trueType
+        popGenericParams()
     }
 
     fun readTypeOrNull(selfType: Type?): Type? {

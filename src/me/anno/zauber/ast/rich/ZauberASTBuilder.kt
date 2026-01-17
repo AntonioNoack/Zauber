@@ -449,6 +449,7 @@ class ZauberASTBuilder(
 
         finishLastField()
         lastField = field
+        popGenericParams()
     }
 
     private fun skipTypeParametersToFindFunctionNameAndScope(origin: Int): Scope {
@@ -577,7 +578,6 @@ class ZauberASTBuilder(
         }
 
         popGenericParams()
-
         return method
     }
 
