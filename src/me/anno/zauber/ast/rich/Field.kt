@@ -43,6 +43,12 @@ class Field(
         }
     }
 
+    fun isBackingField(methodScope: Scope): Boolean {
+        return name == "field" &&
+                keywords.hasFlag(Keywords.SYNTHETIC) &&
+                codeScope == methodScope
+    }
+
     var getter: Method? = null
     var setter: Method? = null
 

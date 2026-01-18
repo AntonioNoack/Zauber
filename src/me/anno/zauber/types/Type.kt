@@ -1,7 +1,9 @@
 package me.anno.zauber.types
 
+import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
 import me.anno.zauber.generation.Specializations.specialization
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
@@ -22,11 +24,15 @@ abstract class Type {
         return when (this) {
             NullType, UnknownType -> true
             is GenericType -> !specialization.contains(this)
+            is TypeOfField,
             is LambdaType,
             is UnresolvedType,
             is SelfType,
             is ThisType -> false
-            is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.isResolved() } ?: true)
+            is ClassType -> !clazz.isTypeAlias() &&
+                    (typeParameters == null || typeParameters.indices.all {
+                        typeParameters.getOrNull(it)?.isResolved() != false
+                    })
             is UnionType -> types.all { it.isResolved() }
             else -> throw NotImplementedError("Is $this (${javaClass.simpleName}) resolved?")
         }
@@ -48,6 +54,10 @@ abstract class Type {
             is ClassType -> {
                 val parameters = typeParameters?.map { it.resolve() }
                 ClassType(clazz, parameters)
+            }
+            is TypeOfField -> {
+                val context = ResolutionContext(null, false, null, emptyMap())
+                field.resolveValueType(context)
             }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
             is UnionType -> unionTypes(types.map { it.resolve() })

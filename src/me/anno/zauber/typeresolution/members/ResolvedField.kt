@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
@@ -93,6 +94,7 @@ class ResolvedField(
                     } else false
                 }
                 is FieldExpression -> expr.field == field
+                is ResolvedFieldExpression -> expr.field.resolved == field
                 is NamedCallExpression,
                 is CallExpression,
                 is SpecialValueExpression -> false

@@ -252,7 +252,7 @@ object CSourceGenerator : Generator() {
                     }
                     else -> {
                         LOGGER.warn("Implement writing ${expr.javaClass.simpleName}")
-                        builder.append("/* $expr */")
+                        comment { builder.append(expr) }
                     }
                 }
                 if (needsBrackets) builder.append(')')

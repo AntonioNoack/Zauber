@@ -20,8 +20,7 @@ abstract class ResolvedFieldExpression(
 
     override fun needsBackingField(methodScope: Scope): Boolean {
         return (owner != null && owner.needsBackingField(methodScope)) ||
-                // todo is this correct?
-                (field.resolved.name == "field" && field.resolved.codeScope == methodScope)
+                field.resolved.isBackingField(methodScope)
     }
 
     override fun splitsScope(): Boolean = owner?.splitsScope() ?: false

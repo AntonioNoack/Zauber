@@ -38,8 +38,6 @@ class NamedCallExpression(
         check(name != "?.")
     }
 
-    override fun isResolved(): Boolean = false
-
     override fun clone(scope: Scope) = NamedCallExpression(
         base.clone(scope), name, nameAsImport, typeParameters,
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) },

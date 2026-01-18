@@ -38,9 +38,11 @@ object TypeResolution {
     var numSuccesses = 0
     var numFailures = 0
 
+    // todo only resolve them where necessary ->
+    //  do not call this method in the future...
     fun resolveTypesAndNames(root: Scope) {
         resetStats()
-        forEachScope(root, ::resolveTypesAndNamesImpl)
+        root.forEachScope(::resolveTypesAndNamesImpl)
         if (LOGGER.enableInfo) printStats()
     }
 
@@ -52,14 +54,6 @@ object TypeResolution {
     private fun printStats() {
         val successRate = (numSuccesses * 100f) / max(numSuccesses + numFailures, 1)
         LOGGER.info("Resolved fields and methods, $numSuccesses successes (${successRate.f1()}%)")
-    }
-
-    fun forEachScope(scope: Scope, callback: (Scope) -> Unit) {
-        callback(scope)
-        val children = scope.children
-        for (i in children.indices) {
-            forEachScope(children[i], callback)
-        }
     }
 
     private fun isInsideLambda(scope: Scope): Boolean {

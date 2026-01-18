@@ -26,8 +26,9 @@ class DotExpression(
 ) : Expression(scope, origin) {
 
     init {
-        if (right is DotExpression)
-            throw IllegalStateException(".-stack must be within base, not in parameter: $this")
+        if (right is DotExpression) {
+            throw IllegalArgumentException("List of dot-expressions must be left-to-right, $this is right to left")
+        }
     }
 
     override fun clone(scope: Scope) = DotExpression(
@@ -133,13 +134,9 @@ class DotExpression(
                     right.field, null, scope, origin,
                 )
             }
-            is CallExpression -> return null /* not a field */
-            else -> TODO(
-                "dot-operator with $right (${right.javaClass.simpleName}) in ${
-                    TokenListIndex.resolveOrigin(
-                        origin
-                    )
-                }"
+            else -> throw NotImplementedError(
+                "dot-operator with $right (${right.javaClass.simpleName}) in " +
+                        TokenListIndex.resolveOrigin(origin)
             )
         }
     }
@@ -178,25 +175,7 @@ class DotExpression(
     }
 
     override fun resolveType(context: ResolutionContext): Type {
-        val baseType = getBaseType(context)
-        when {
-            isFieldType() -> {
-                val field = resolveField(context, baseType)
-                    ?: throw IllegalStateException("[DotExpr] Failed to resolve field $right on $baseType")
-                return field.getValueType()
-            }
-            isMethodType() -> {
-                val callable = resolveCallable(context, baseType)
-                return callable.getTypeFromCall()
-            }
-            else -> TODO(
-                "dot-operator with $right (${right.javaClass.simpleName}) in ${
-                    TokenListIndex.resolveOrigin(
-                        origin
-                    )
-                }"
-            )
-        }
+        return resolve(context).resolveType(context)
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {
@@ -205,21 +184,19 @@ class DotExpression(
         when {
             isFieldType() -> {
                 val field = resolveField(context, baseType)
-                    ?: throw IllegalStateException("Unresolved field for field type: (${javaClass.simpleName}) $this")
+                    ?: throw IllegalStateException("Unresolved field for field type: (${right.javaClass.simpleName}) $baseType dot $right")
                 return ResolvedGetFieldExpression(base, field, scope, origin)
             }
             isMethodType() -> {
                 right as CallExpression
                 val callable = resolveCallable(context, baseType)
                 if (callable.resolved !is MethodLike) {
-                    throw IllegalStateException("Implement dotExpression with methodType, but field: $this")
+                    throw IllegalStateException("Implement DotExpression with methodType, but field: $this")
                 }
                 val params = reorderParameters(right.valueParameters, callable.resolved.valueParameters, scope, origin)
                 return ResolvedCallExpression(base, callable, params, scope, origin)
             }
-            else -> {
-                TODO("Resolve DotExpression with type ${right.javaClass.simpleName}")
-            }
+            else -> throw NotImplementedError("Resolve DotExpression with type ${right.javaClass.simpleName}")
         }
     }
 }

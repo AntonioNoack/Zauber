@@ -12,6 +12,10 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
+/**
+ * Represents a field in scope.
+ * The scope is important for finding out potential casts.
+ * */
 class FieldExpression(
     val field: Field,
     scope: Scope, origin: Int
@@ -25,9 +29,7 @@ class FieldExpression(
     override fun clone(scope: Scope) = FieldExpression(field, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun isResolved(): Boolean = false // base is missing
-    override fun needsBackingField(methodScope: Scope): Boolean {
-        return field.originalScope == methodScope && field.name == "field"
-    }
+    override fun needsBackingField(methodScope: Scope): Boolean = field.isBackingField(methodScope)
 
     fun resolveField(context: ResolutionContext): ResolvedField {
         if (LOGGER.enableInfo) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")

@@ -17,9 +17,11 @@ abstract class Expression(val scope: Scope, val origin: Int) {
 
     fun resolve(context: ResolutionContext): Expression {
         val resolved = resolveImpl(context)
+        println("Resolved $this to $resolved")
         check(resolved.isResolved()) {
             "Failed to resolve (${javaClass.simpleName}) $this, somehow it is still not resolved"
         }
+        // it's fully resolved, so we can infer the type once and for all
         if (resolved.resolvedType == null) {
             resolved.resolvedType = resolved.resolveType(context)
         }

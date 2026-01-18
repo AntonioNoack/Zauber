@@ -449,6 +449,13 @@ class Scope(val name: String, val parent: Scope? = null) {
         // typeWithArgs
     }
 
+    fun forEachScope(callback: (Scope) -> Unit) {
+        callback(this)
+        for (i in children.indices) {
+            children[i].forEachScope(callback)
+        }
+    }
+
     companion object {
         private val nextAnonymousName = AtomicInteger(0)
     }

@@ -3,7 +3,8 @@ package me.anno.zauber.generation.java
 import me.anno.zauber.ast.rich.InnerSuperCall
 import me.anno.zauber.ast.rich.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -15,9 +16,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 
 object JavaExpressionWriter {
 
-    private val builder = JavaSourceGenerator.builder
-
-    fun appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
+    fun JavaSourceGenerator.appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
         // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
         //  a) create helper functions
         //  b) implement our own constructor
@@ -30,7 +29,7 @@ object JavaExpressionWriter {
         JavaSourceGenerator.nextLine()
     }
 
-    fun appendExpression(context: ResolutionContext, expr: Expression) {
+    fun JavaSourceGenerator.appendExpression(context: ResolutionContext, expr: Expression) {
         when (expr) {
             is DotExpression -> {
                 appendExpression(context, expr.left)
@@ -91,8 +90,10 @@ object JavaExpressionWriter {
                 }
                 builder.append(')')
             }
-            else -> builder.append(expr).append("/* ")
-                .append(expr.javaClass.simpleName).append(" */")
+            else -> {
+                builder.append(expr).append(' ')
+                comment { builder.append(expr.javaClass.simpleName) }
+            }
         }
     }
 

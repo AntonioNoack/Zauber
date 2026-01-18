@@ -32,6 +32,8 @@ abstract class CallExpressionBase(
         private val LOGGER = LogManager.getLogger(CallExpressionBase::class)
     }
 
+    override fun isResolved(): Boolean = false
+
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val contextI = context
             .withTargetType(null /* unknown */)
@@ -179,9 +181,13 @@ abstract class CallExpressionBase(
                     resolveInlineMethod(context, callable, params0)
                 } else {
                     // todo base must be defined, so resolve instance/this
-                    val base = if (base !is FieldExpression && base !is UnresolvedFieldExpression) {
+                    val base = if (
+                        (base !is FieldExpression && base !is UnresolvedFieldExpression) ||
+                        this is NamedCallExpression
+                    ) {
                         base.resolve(context)
-                    } else null
+                    } else null // else base was consumed to be the method
+                    println("base for call: $method, base: $base, this.base: ${this.base}")
                     val params1 = params0.map { it.resolve(context) }
                     ResolvedCallExpression(base, callable, params1, scope, origin)
                 }

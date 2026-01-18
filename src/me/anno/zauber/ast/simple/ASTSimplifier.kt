@@ -158,19 +158,23 @@ object ASTSimplifier {
             is ResolvedGetFieldExpression -> {
                 val field = expr.field.resolved
                 val valueType = expr.run { resolvedType ?: resolveType(context) }
-                val self: SimpleField? =
-                    null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
+                val self: SimpleField? = if (expr.owner != null) {
+                    simplifyImpl(context, expr.owner, currBlock, graph, true)
+                        ?: return null
+                } else null
                 val dst = currBlock.field(valueType)
-                currBlock.add(SimpleGetField(dst, self, field, expr.scope, expr.origin))
+                currBlock.add(SimpleGetField(dst, self?.use(), field, expr.scope, expr.origin))
                 dst
             }
 
             is ResolvedSetFieldExpression -> {
                 val field = expr.field.resolved
+                val self: SimpleField? = if (expr.owner != null) {
+                    simplifyImpl(context, expr.owner, currBlock, graph, true)
+                        ?: return null
+                } else null
                 val value = simplifyImpl(context, expr.value, currBlock, graph, true) ?: return null
-                val self: SimpleField? =
-                    null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                currBlock.add(SimpleSetField(self, field, value.use(), expr.scope, expr.origin))
+                currBlock.add(SimpleSetField(self?.use(), field, value.use(), expr.scope, expr.origin))
                 voidField
             }
 

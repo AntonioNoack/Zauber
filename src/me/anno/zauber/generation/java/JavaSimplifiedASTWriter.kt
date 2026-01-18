@@ -10,9 +10,6 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
-import me.anno.zauber.generation.java.JavaSourceGenerator.nativeNumbers
-import me.anno.zauber.generation.java.JavaSourceGenerator.nativeTypes
-import me.anno.zauber.generation.java.JavaSourceGenerator.writeBlock
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
@@ -74,13 +71,15 @@ object JavaSimplifiedASTWriter {
         if (withOpen) builder.append(')')
     }
 
-    fun appendSimplifiedAST(method: MethodLike, expr: SimpleExpression, loop: SimpleLoop? = null) {
+    fun JavaSourceGenerator.appendSimplifiedAST(
+        method: MethodLike, expr: SimpleExpression,
+        loop: SimpleLoop? = null
+    ) {
         if (expr is SimpleMerge) return
         if (expr is SimpleAssignmentExpression && expr.dst.type != NothingType) {
             val notNeeded = expr.dst.numReads == 0
-            if (notNeeded) builder.append("/* ")
-            appendAssign(expr)
-            if (notNeeded) builder.append("*/ ")
+            if (notNeeded) comment { appendAssign(expr) }
+            else appendAssign(expr)
         }
         when (expr) {
             is SimpleBlock -> {
@@ -91,7 +90,7 @@ object JavaSimplifiedASTWriter {
                         appendAssign(instr)
                         builder.setLength(builder.length - 3) // remove " = "
                         builder.append(';')
-                        JavaSourceGenerator.nextLine()
+                        nextLine()
                     }
                 }
                 for (i in instructions.indices) {
@@ -107,6 +106,7 @@ object JavaSimplifiedASTWriter {
                 writeBlock {
                     appendSimplifiedAST(method, expr.ifTrue, loop)
                 }
+                trimWhitespaceAtEnd()
                 builder.append(" else ")
                 writeBlock {
                     appendSimplifiedAST(method, expr.ifFalse, loop)
@@ -242,7 +242,7 @@ object JavaSimplifiedASTWriter {
                 // todo different 'this's may be given new, different names,
                 //  but where and when do we decide that?
                 builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
-                    .append("/* ").append(scope.pathStr).append(" */")
+                comment { builder.append(scope.pathStr) }
             }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
@@ -300,7 +300,7 @@ object JavaSimplifiedASTWriter {
                         builder.append(needsCastForFirstValue.boxed).append('.')
                         builder.append(expr.methodName).append('(')
                         if (expr.self != null) builder.append1(expr.self)
-                        else builder.append("/* todo: resolve self */")
+                        else comment { builder.append("todo: resolve self") }
                         if (expr.valueParameters.isNotEmpty()) {
                             builder.append(", ")
                             appendValueParams(expr.valueParameters, false)
@@ -308,7 +308,7 @@ object JavaSimplifiedASTWriter {
                         builder.append(')')
                     } else {
                         if (expr.self != null) builder.append1(expr.self).append('.')
-                        else builder.append("/* todo: resolve self */")
+                        else comment { builder.append("todo: resolve self") }
                         builder.append(expr.methodName)
                         appendValueParams(expr.valueParameters)
                     }
@@ -334,14 +334,17 @@ object JavaSimplifiedASTWriter {
                 builder.append("throw ").append1(expr.field).append(';')
             }
             else -> {
-                builder.append("/* ${expr.javaClass.simpleName}: $expr */")
+                comment {
+                    builder.append(expr.javaClass.simpleName).append(": ")
+                        .append(expr)
+                }
             }
         }
         if (expr is SimpleAssignmentExpression) builder.append(';')
-        if (expr !is SimpleBlock && expr !is SimpleBranch) JavaSourceGenerator.nextLine()
+        if (expr !is SimpleBlock && expr !is SimpleBranch) nextLine()
         if (expr is SimpleAssignmentExpression && expr.dst.type == NothingType) {
             builder.append("throw new AssertionError(\"Unreachable\");")
-            JavaSourceGenerator.nextLine()
+            nextLine()
         }
     }
 

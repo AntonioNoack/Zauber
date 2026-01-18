@@ -82,14 +82,16 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun defineNullableAnnotation(dst: File, writer: DeltaWriter) {
-        writer.set(
-            File(dst, "org/jetbrains/annotations/Nullable.java"),
-            "package org.jetbrains.annotations;\n\n" +
-                    "import java.lang.annotation.*;\n\n" +
-                    "@Retention(RetentionPolicy.RUNTIME)\n" +
-                    "@Target(ElementType.TYPE)\n" +
-                    "public @interface Nullable {}\n"
-        )
+        writer[File(dst, "org/jetbrains/annotations/Nullable.java")] =
+            """
+                package org.jetbrains.annotations;
+                
+                import java.lang.annotation.*;
+                
+                @Retention(RetentionPolicy.RUNTIME)
+                @Target(ElementType.TYPE)
+                public @interface Nullable {}
+            """.trimIndent()
     }
 
     fun extendScope(spec: MethodSpecialization, dst: File, writer: DeltaWriter) {
@@ -112,13 +114,22 @@ object JavaSourceGenerator : Generator() {
         }
 
         when (type) {
-            NullType -> builder.append("Object /* null */")
-            NothingType -> builder.append("Object /* Nothing */")
+            NullType -> {
+                builder.append("Object ")
+                comment { builder.append("null") }
+            }
+            NothingType -> {
+                builder.append("Object ")
+                comment { builder.append("Nothing") }
+            }
             is ClassType -> appendClassType(type, scope, needsBoxedType)
             is UnionType if type.types.size == 2 && NullType in type.types -> {
                 // builder.append("@org.jetbrains.annotations.Nullable ")
-                appendType(type.types.first { it != NullType }, scope, true /* native types cannot be null */)
-                builder.append("/* or null */")
+                appendType(
+                    type.types.first { it != NullType }, scope,
+                    true /* native types cannot be null */
+                )
+                comment { builder.append("or null") }
             }
             is SelfType if (type.scope == scope) -> builder.append(scope.name)
             is ThisType -> appendType(type.type, scope, needsBoxedType)
@@ -142,10 +153,23 @@ object JavaSourceGenerator : Generator() {
             is GenericType -> {
                 val lookup = specialization[type]
                 if (lookup != null) appendType(lookup, scope, needsBoxedType)
-                else builder.append("/* ").append(type.scope.pathStr).append(" */ ").append(type.name)
+                else {
+                    comment { builder.append(type.scope.pathStr) }
+                    builder.append(type.name)
+                }
+            }
+            is TypeOfField -> {
+                val valueType = type.resolve()
+                appendType(valueType, scope, needsBoxedType)
             }
             else -> {
-                builder.append("Object /* $type (${type.javaClass.simpleName}) */")
+                builder.append("Object ")
+                comment {
+                    builder.append(type)
+                        .append(" (")
+                        .append(type.javaClass.simpleName)
+                        .append(')')
+                }
             }
         }
     }
@@ -205,7 +229,7 @@ object JavaSourceGenerator : Generator() {
             appendPackage(scope.path.dropLast(1))
             generateInside(name, scope, specialization)
 
-            writer.set(createFile(scope.parent!!, name, dst), finish())
+            writer[createFile(scope.parent!!, name, dst)] = finish()
         } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
             if (scopeType == ScopeType.PACKAGE && (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())) {
                 // we need some package helper
@@ -214,7 +238,7 @@ object JavaSourceGenerator : Generator() {
                 appendPackage(scope.path)
                 generateInside(name, scope, specialization)
 
-                writer.set(createFile(scope, name, dst), finish())
+                writer[createFile(scope, name, dst)] = finish()
             }
 
             // todo child specialization may be needed in some cases
@@ -405,9 +429,8 @@ object JavaSourceGenerator : Generator() {
         appendType(method.returnType ?: NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
 
-        val specialization = specForName
-        if (specialization.isNotEmpty()) {
-            builder.append('_').append(specialization.hash)
+        if (specForName.isNotEmpty()) {
+            builder.append('_').append(specForName.hash)
         }
 
         val selfTypeIfNecessary = if (!isBySelf) selfType else null
@@ -501,17 +524,13 @@ object JavaSourceGenerator : Generator() {
             appendSimplifiedAST(method, simplified.startBlock)
         } catch (e: Throwable) {
             e.printStackTrace()
-            builder.append(
-                "/* [${e.javaClass.simpleName}: ${
-                    e.message.toString()
+            comment {
+                builder.append(
+                    "[${e.javaClass.simpleName}: ${e.message}] $body"
                         .replace("/*", "[")
                         .replace("*/", "]")
-                }] ${
-                    body.toString()
-                        .replace("/*", "[")
-                        .replace("*/", "]")
-                } */"
-            )
+                )
+            }
             nextLine()
         }
     }

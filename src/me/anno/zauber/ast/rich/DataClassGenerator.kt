@@ -140,10 +140,10 @@ object DataClassGenerator {
             builder.expr = StringExpression("${classScope.name}(", scope, origin)
             for ((i, field) in primaryFields.withIndex()) {
                 val fieldExpr = FieldExpression(field, scope, origin)
-                val hashExpr = NamedCallExpression(fieldExpr, "toString", scope, origin)
+                val stringExpr = NamedCallExpression(fieldExpr, "toString", scope, origin)
                 val name = field.name
                 builder.plus(StringExpression(if (i > 0) ",$name=" else "$name=", scope, origin))
-                builder.plus(hashExpr)
+                builder.plus(stringExpr)
             }
             builder.plus(StringExpression(")", scope, origin))
             body = ReturnExpression(builder.expr!!, null, scope, origin)
@@ -164,15 +164,16 @@ object DataClassGenerator {
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
             parameter = Parameter("other", NullableAnyType, scope, origin)
             val otherField = parameter.getOrCreateField(null, Keywords.NONE)
-            val otherInstanceExpr = FieldExpression(otherField, scope, origin)
 
             val builder = ExpressionBuilder(scope, origin, BooleanType)
-            builder.expr = IsInstanceOfExpr(otherInstanceExpr, classScope.typeWithArgs, scope, origin)
+            val otherInstanceExpr0 = FieldExpression(otherField, scope, origin)
+            builder.expr = IsInstanceOfExpr(otherInstanceExpr0, classScope.typeWithArgs, scope, origin)
 
             for (field in primaryFields) {
                 builder.shortcutAnd { subScope ->
                     val fieldExpr = FieldExpression(field, subScope, origin)
-                    val otherFieldExpr = DotExpression(otherInstanceExpr, emptyList(), fieldExpr, subScope, origin)
+                    val otherInstanceI = FieldExpression(otherField, subScope, origin) // must be here for implicit cast
+                    val otherFieldExpr = DotExpression(otherInstanceI, emptyList(), fieldExpr, subScope, origin)
                     CheckEqualsOp(
                         fieldExpr, otherFieldExpr,
                         byPointer = false, negated = false,

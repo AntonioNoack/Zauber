@@ -7,7 +7,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.TypeResolution.forEachScope
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.impl.GenericType
@@ -17,7 +16,7 @@ object DefaultParameterExpansion {
     private val LOGGER = LogManager.getLogger(DefaultParameterExpansion::class)
 
     fun createDefaultParameterFunctions(scope: Scope) {
-        forEachScope(scope) { scopeI ->
+        scope.forEachScope { scopeI ->
             when (scopeI.scopeType) {
                 ScopeType.METHOD ->
                     createDefaultParameterMethod(scopeI)

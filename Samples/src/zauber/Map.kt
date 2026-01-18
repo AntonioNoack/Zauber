@@ -23,6 +23,16 @@ interface MutableMap<K, V> : Map<K, V> {
     fun put(key: K, value: V) = set(key, value)
 
     override fun iterator(): MutableIterator<Map.Entry<K, V>>
+
+    inline fun getOrPut(key: K, defaultValue: () -> V): V {
+        if (key !in this) {
+            val value = defaultValue()
+            put(key, value)
+            return value
+        } else {
+            return this[key] as V
+        }
+    }
 }
 
 private class TrivialMap<K, V>(vararg val entries: Pair<K, V>) : Map<K, V> {

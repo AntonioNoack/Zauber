@@ -4,7 +4,6 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
-import me.anno.zauber.typeresolution.TypeResolution.forEachScope
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 
@@ -21,7 +20,7 @@ object OverriddenMethods {
 
     fun resolveOverrides(root: Scope) {
         processedScopes.clear()
-        forEachScope(root, ::resolveOverridesImpl)
+        root.forEachScope(::resolveOverridesImpl)
     }
 
     private fun resolveOverridesImpl(scope: Scope) {
@@ -47,7 +46,8 @@ object OverriddenMethods {
 
             // todo find match
             val methodValueParameters = method.valueParameters.map {
-                val newType = superCall.type.typeParameters.resolveGenerics(method.selfType ?: scope.typeWithArgs, it.type)
+                val newType =
+                    superCall.type.typeParameters.resolveGenerics(method.selfType ?: scope.typeWithArgs, it.type)
                 Parameter(it.name, newType, it.scope, it.origin)
             }
 

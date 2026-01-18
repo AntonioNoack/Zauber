@@ -69,11 +69,7 @@ object Compile {
             createDefaultParameterFunctions(root)
         }
 
-        step("Resolving Types") {
-            TypeResolution.resolveTypesAndNames(root)
-        }
-
-        step("Creating Java-Code") {
+        step("Resolution & Creating Java-Code") {
             JavaSourceGenerator.generateCode(File("./out/java"), root)
         }
 

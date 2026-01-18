@@ -1,5 +1,6 @@
 package me.anno.zauber.generation
 
+import me.anno.zauber.generation.java.JavaSimplifiedASTWriter
 import me.anno.zauber.types.Scope
 import java.io.File
 
@@ -14,6 +15,23 @@ abstract class Generator(val blockSuffix: String = "}\n") {
     var depth = 0
     fun indent() {
         repeat(depth) { builder.append("  ") }
+    }
+
+    var commentDepth = 0
+    fun comment(body: () -> Unit) {
+        commentDepth++
+        builder.append(if (commentDepth == 1) "/* " else "(")
+        body()
+        builder.append(if (commentDepth == 1) " */" else ")")
+        commentDepth--
+    }
+
+    fun trimWhitespaceAtEnd() {
+        var lastIndex = builder.lastIndex
+        while (lastIndex >= 0 && builder[lastIndex].isWhitespace()) {
+            lastIndex--
+        }
+        builder.setLength(lastIndex + 1)
     }
 
     fun openBlock() {

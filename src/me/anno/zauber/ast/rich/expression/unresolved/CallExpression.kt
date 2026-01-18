@@ -42,8 +42,6 @@ class CallExpression(
         } else "($base)<${typeParameters ?: "?"}>$valueParameters"
     }
 
-    override fun isResolved(): Boolean = false
-
     override fun needsBackingField(methodScope: Scope): Boolean {
         return valueParameters.any { it.value.needsBackingField(methodScope) }
     }
