@@ -1,28 +1,36 @@
 package zauber
 
-class LongRange(val from: Long, val endExcl: Long, val step: Long) : Iterable<Long> {
-    constructor(from: Long, endExcl: Long) : this(from, endExcl, 1L)
-
-    operator fun contains(value: Long): Boolean = value >= from && value < endExcl
-    override fun iterator(): Iterator<Long> = LongRangeIterator(from, endExcl)
-    fun reversed(): Iterable<Int> = TODO("IntRange.reversed")
-
-    infix fun step(step: Long): LongRange = LongRange(from, endExcl, step)
+class LongRange(from: Long, endInclusive: Long) : LongProgression(from, endInclusive, 1L) {
+    operator fun contains(value: Long): Boolean = value >= from && value <= endInclusive
+    infix fun step(step: Long): LongRange = LongProgression(from, endInclusive, step)
 }
 
-class LongRangeIterator(var index: Long, val endExcl: Long, val step: Long = 1L) : Iterator<Long> {
-    override fun hasNext(): Boolean = index < endExcl
+class LongProgression(val from: Long, val endInclusive: Long, val step: Long) : Iterable<Long> {
+
+    override fun iterator(): Iterator<Long> = LongRangeIterator(from, endInclusive, step)
+    fun reversed() = LongProgression(from, endInclusive, -step)
+
+    val first get() = from
+    val last get() = endInclusive
+}
+
+class LongRangeIterator(var index: Long, val endInclusive: Long, val step: Long) : Iterator<Long> {
+    override fun hasNext(): Boolean = if (step > 0L) index <= endInclusive else index >= endInclusive
     override fun next(): Long {
         val value = index
-        index += step
+        index = value + step
         return value
     }
 }
 
-infix fun Long.until(endExcl: Long): LongRange {
-    return LongRange(this, endExcl, 1L)
+infix fun Long.until(endExclusive: Long): LongRange {
+    return LongRange(this, endExclusive - 1, 1)
 }
 
-operator fun Long.rangeTo(endIncl: Long): LongRange {
-    return LongRange(this, endIncl + 1, 1L)
+operator fun Long.rangeTo(endInclusive: Long): LongRange {
+    return LongRange(this, endInclusive, 1)
+}
+
+infix fun Long.downTo(endInclusive: Long): LongProgression {
+    return LongProgression(this, endInclusive, -1)
 }
