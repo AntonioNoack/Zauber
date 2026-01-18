@@ -316,7 +316,7 @@ object JavaSimplifiedASTWriter {
             }
             is SimpleConstructor -> {
                 builder.append("new ")
-                appendType(expr.method.selfType, expr.scope, true)
+                appendType(expr.dst.type, expr.scope, true)
                 appendValueParams(expr.valueParameters)
             }
             is SimpleSelfConstructor -> {

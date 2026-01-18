@@ -3,11 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
-import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -15,14 +11,10 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
-import me.anno.zauber.ast.simple.controlflow.SimpleBranch
-import me.anno.zauber.ast.simple.controlflow.SimpleGoto
-import me.anno.zauber.ast.simple.controlflow.SimpleLoop
-import me.anno.zauber.ast.simple.controlflow.SimpleReturn
-import me.anno.zauber.ast.simple.controlflow.SimpleThrow
-import me.anno.zauber.ast.simple.controlflow.SimpleYield
+import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
@@ -372,11 +364,10 @@ object ASTSimplifier {
         when (val method = method0.resolved) {
             is Method -> {
                 val self = simplifyImpl(context, selfExpr!!, currBlock, graph, true) ?: return null
-                val params = reorderParameters(valueParameters, method.valueParameters, scope, origin)
-                    .map { parameter ->
-                        simplifyImpl(context, parameter, currBlock, graph, true)
-                            ?: return null
-                    }
+                val params = reorderParameters(
+                    context, currBlock, graph,
+                    valueParameters, method0, scope, origin, method
+                ) ?: return null
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
                 for (param in params) param.use()
@@ -386,13 +377,9 @@ object ASTSimplifier {
             is Constructor -> {
                 // base is a type
                 val params = reorderParameters(
-                    valueParameters,
-                    method.valueParameters,
-                    scope, origin
-                ).map { parameter ->
-                    simplifyImpl(context, parameter, currBlock, graph, true)
-                        ?: return null
-                }
+                    context, currBlock, graph,
+                    valueParameters, method0, scope, origin, method
+                ) ?: return null
                 // then execute it
                 for (param in params) param.use()
                 if (selfIfInsideConstructor != null) {
@@ -422,6 +409,33 @@ object ASTSimplifier {
                 )
             }
             else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
+        }
+    }
+
+    private fun reorderParameters(
+        context: ResolutionContext,
+        currBlock: SimpleBlock,
+        graph: SimpleGraph,
+
+        valueParameters: List<NamedParameter>,
+        method0: ResolvedMember<*>,
+
+        scope: Scope,
+        origin: Int,
+
+        method: MethodLike
+    ): List<SimpleField>? {
+        return reorderParameters(
+            valueParameters,
+            method.valueParameters,
+            scope, origin
+        ).mapIndexed { index, parameter ->
+            var targetType = method.valueParameters[index].type
+            targetType = method0.ownerTypes.resolveGenerics(null, targetType)
+            targetType = method0.callTypes.resolveGenerics(null, targetType)
+            targetType = targetType.resolve().specialize()
+            simplifyImpl(context.withTargetType(targetType), parameter, currBlock, graph, true)
+                ?: return null
         }
     }
 
