@@ -13,6 +13,24 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 object CallWithNames {
 
+    private fun hasTooFewParameters(
+        anyIsVararg: Boolean,
+        expectedParameters: Int,
+        actualParameters: Int
+    ): Boolean {
+        if (anyIsVararg) {
+            // empty entry is valid, too
+            if (expectedParameters > actualParameters + 1) {
+                return true
+            }
+        } else {
+            if (expectedParameters > actualParameters) {
+                return true
+            }
+        }
+        return false
+    }
+
     /**
      * Change the order of value parameters if needed.
      * execution order must remain unchanged!
@@ -22,16 +40,7 @@ object CallWithNames {
         actualParameters: List<ValueParameter>
     ): List<ValueParameter>? {
         val anyIsVararg = expectedParameters.any { it.isVararg }
-        if (anyIsVararg) {
-            // empty entry is valid, too
-            if (expectedParameters.size > actualParameters.size + 1) {
-                return null
-            }
-        } else {
-            if (expectedParameters.size > actualParameters.size) {
-                return null
-            }
-        }
+        if (hasTooFewParameters(anyIsVararg, expectedParameters.size, actualParameters.size)) return null
 
         return if (actualParameters.any { it.name != null || it.hasVarargStar } ||
             actualParameters.size != expectedParameters.size ||
@@ -103,16 +112,7 @@ object CallWithNames {
         scope: Scope, origin: Int,
     ): List<Expression>? {
         val anyIsVararg = expectedParameters.any { it.isVararg }
-        if (anyIsVararg) {
-            // empty entry is valid, too
-            if (expectedParameters.size > actualParameters.size + 1) {
-                return null
-            }
-        } else {
-            if (expectedParameters.size > actualParameters.size) {
-                return null
-            }
-        }
+        if (hasTooFewParameters(anyIsVararg, expectedParameters.size, actualParameters.size)) return null
 
         return if (actualParameters.any { it.name != null || it.value is ArrayToVarargsStar } ||
             actualParameters.size != expectedParameters.size ||

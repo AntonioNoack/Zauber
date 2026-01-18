@@ -14,6 +14,8 @@ object CompileSources {
 
     private val LOGGER = LogManager.getLogger(CompileSources::class)
 
+    var numLines = 0L
+
     fun addSource(file: File) {
         addSource(file, file.absolutePath.length + 1, root)
     }
@@ -32,6 +34,7 @@ object CompileSources {
             val source = ZauberTokenizer(text, fileName).tokenize()
             sources.add(source)
             packageScope.sources.add(source)
+            numLines += text.count { it == '\n' } + 1L
         }
     }
 

@@ -6,9 +6,7 @@ import me.anno.zauber.types.Types.NothingType
 class UnionType(val types: List<Type>) : Type() {
 
     companion object {
-        /**
-         * OR
-         * */
+
         fun unionTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
             if (typeA == NothingType) return typeB
@@ -16,9 +14,6 @@ class UnionType(val types: List<Type>) : Type() {
             return UnionType((getTypes(typeA) + getTypes(typeB)).distinct())
         }
 
-        /**
-         * OR
-         * */
         fun unionTypes(types: List<Type>, typeB: Type): Type {
             if (types.isEmpty()) return typeB
             val uniqueTypes = (types + typeB).distinct()
@@ -26,9 +21,6 @@ class UnionType(val types: List<Type>) : Type() {
             return UnionType(uniqueTypes)
         }
 
-        /**
-         * OR
-         * */
         fun unionTypes(types: List<Type>): Type {
             if (types.isEmpty()) return NothingType
             val uniqueTypes = types.distinct()

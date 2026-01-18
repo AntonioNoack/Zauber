@@ -77,6 +77,7 @@ object Compile {
     }
 
     private fun printStats() {
+        LOGGER.info("Num Lines: ${CompileSources.numLines}")
         LOGGER.info("Num Expressions: ${Expression.numExpressionsCreated}")
         val endTime = System.nanoTime()
         LOGGER.info("Took ${(endTime - startTime) / 1e6f} ms in total")

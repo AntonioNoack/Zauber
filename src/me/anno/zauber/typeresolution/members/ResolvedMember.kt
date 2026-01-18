@@ -14,6 +14,7 @@ import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 abstract class ResolvedMember<V>(
@@ -62,6 +63,10 @@ abstract class ResolvedMember<V>(
                 is UnionType -> {
                     val types = type.types.map { genericValues.resolveGenerics(selfType, it) }
                     unionTypes(types)
+                }
+                is AndType -> {
+                    val types = type.types.map { genericValues.resolveGenerics(selfType, it) }
+                    andTypes(types)
                 }
                 is ClassType -> {
                     val typeArgs = type.typeParameters

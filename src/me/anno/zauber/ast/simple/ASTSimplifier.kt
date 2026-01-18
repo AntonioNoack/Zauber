@@ -7,6 +7,7 @@ import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
+import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -158,7 +159,7 @@ object ASTSimplifier {
             is ResolvedGetFieldExpression -> {
                 val field = expr.field.resolved
                 val valueType = expr.run { resolvedType ?: resolveType(context) }
-                val self: SimpleField? = if (expr.owner != null) {
+                val self: SimpleField? = if (expr.owner != null && expr.owner !is TypeExpression) {
                     simplifyImpl(context, expr.owner, currBlock, graph, true)
                         ?: return null
                 } else null
@@ -169,7 +170,7 @@ object ASTSimplifier {
 
             is ResolvedSetFieldExpression -> {
                 val field = expr.field.resolved
-                val self: SimpleField? = if (expr.owner != null) {
+                val self: SimpleField? = if (expr.owner != null && expr.owner !is TypeExpression) {
                     simplifyImpl(context, expr.owner, currBlock, graph, true)
                         ?: return null
                 } else null

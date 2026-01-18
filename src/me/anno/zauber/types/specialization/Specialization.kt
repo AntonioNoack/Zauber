@@ -56,7 +56,6 @@ class Specialization(typeParameters: ParameterList) {
 
         val genName0 = typeParameters.indices.joinToString("_") {
             when (val type = typeParameters.getOrNull(it)) {
-                is ClassType -> type.clazz.name
                 is GenericType -> {
                     val selfAsMethod = type.scope.selfAsMethod
                     if (selfAsMethod != null) {
@@ -67,9 +66,14 @@ class Specialization(typeParameters: ParameterList) {
                 }
                 NullType -> "null"
                 null, UnknownType -> "?"
+                // todo prefer a short name, so don't use full paths...
                 else -> type.toString()
-            }.replace(".", "")
+            }
+                .replace("(ro)", "")
+                .replace(".", "")
                 .replace(":", "")
+                .replace('<', 'X')
+                .replace('>', 'x')
                 .replace('(', 'X')
                 .replace(')', 'x')
                 .replace('[', 'X')

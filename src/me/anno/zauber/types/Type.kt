@@ -4,7 +4,9 @@ import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
 import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 abstract class Type {
@@ -34,6 +36,7 @@ abstract class Type {
                         typeParameters.getOrNull(it)?.isResolved() != false
                     })
             is UnionType -> types.all { it.isResolved() }
+            is ComptimeValue -> true // is it though?
             else -> throw NotImplementedError("Is $this (${javaClass.simpleName}) resolved?")
         }
     }
@@ -66,6 +69,31 @@ abstract class Type {
                     ?: throw IllegalStateException("Could not resolve $this")
             }
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
+        }
+    }
+
+    fun isFullySpecialized(): Boolean {
+        return when (this) {
+            NullType, NothingType,
+            is UnknownType -> true
+            is GenericType -> false
+            is ClassType -> typeParameters == null || typeParameters.all { it.isFullySpecialized() }
+            is UnionType -> types.all { it.isFullySpecialized() }
+            is AndType -> types.all { it.isFullySpecialized() }
+            is NotType -> type.isFullySpecialized()
+            else -> throw IllegalStateException("Is ${javaClass.simpleName} fully specialized?")
+        }
+    }
+
+    fun specialize(): Type {
+        if (isFullySpecialized()) return this
+        return when (this) {
+            is ClassType -> ClassType(clazz, typeParameters!!.map { it.specialize() })
+            is UnionType -> unionTypes(types.map { it.specialize() })
+            is AndType -> andTypes(types.map { it.specialize() })
+            is GenericType -> specialization[this] ?: this
+            is NotType -> type.specialize().not()
+            else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
         }
     }
 

@@ -64,6 +64,6 @@ class DeltaWriter(val root: File) {
                 numChanged++
             }
         }
-        LOGGER.info("Changed $numChanged and deleted $numDeleted files")
+        LOGGER.info("Changed $numChanged and deleted $numDeleted files for ${newContent.size} files in total")
     }
 }

@@ -40,7 +40,7 @@ object Specializations {
     ) {
         // todo what is a reasonable limit?
         //  do we need a configurable limit?
-        val limit = 5
+        val limit = 10
         for (i in 0 until limit) {
             println("Specializations ${i + 1}/$limit: ${todoTypeSpecializations.size} + ${todoMethodSpecializations.size}")
             if (todoTypeSpecializations.isNotEmpty()) {

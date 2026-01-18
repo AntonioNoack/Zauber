@@ -1,14 +1,13 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class AndType(val types: List<Type>) : Type() {
 
     companion object {
-        /**
-         * OR
-         * */
+
         fun andTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
             if (typeA is UnionType && typeB is NotType &&
@@ -22,6 +21,13 @@ class AndType(val types: List<Type>) : Type() {
             val joint = (getTypes(typeA) + getTypes(typeB)).distinct()
             if (joint.size == 1) return joint.first()
             return AndType(joint)
+        }
+
+        fun andTypes(types: List<Type>): Type {
+            if (types.isEmpty()) return NothingType
+            val uniqueTypes = types.distinct()
+            if (uniqueTypes.size == 1) return uniqueTypes[0]
+            return AndType(uniqueTypes)
         }
 
         fun getTypes(type: Type): List<Type> {

@@ -113,6 +113,18 @@ object JavaSourceGenerator : Generator() {
             return
         }
 
+        var type = type
+        while (true) {
+            try {
+                val resolved = type.resolve().specialize()
+                if (resolved == type) break
+                type = resolved
+            } catch (e: Exception) {
+                e.printStackTrace()
+                break
+            }
+        }
+
         when (type) {
             NullType -> {
                 builder.append("Object ")
@@ -174,14 +186,14 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendClassType(type: ClassType, scope: Scope, isGeneric: Boolean) {
+    fun appendClassType(type: ClassType, scope: Scope, needsBoxedType: Boolean) {
 
         if (type.clazz.scopeType == ScopeType.TYPE_ALIAS) {
             val newType0 = type.clazz.selfAsTypeAlias!!
             val newType = type.typeParameters.resolveGenerics(
                 null, /* used for 'This'/'Self' */ newType0
             )
-            appendType(newType, scope, isGeneric)
+            appendType(newType, scope, needsBoxedType)
             return
         }
 
@@ -552,19 +564,27 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendSuperTypes(scope: Scope) {
-        val superCall0 = scope.superCalls.firstOrNull { it.valueParameters != null }
-        if (superCall0 != null && superCall0.type != AnyType) {
-            val type = superCall0.type
-            builder.append(" extends ")
-            appendClassType(type, scope, true)
-        }
-        var implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
-        for (superCall in scope.superCalls) {
-            if (superCall.valueParameters != null) continue
-            val type = superCall.type
-            builder.append(implementsKeyword)
-            appendClassType(type, scope, true)
-            implementsKeyword = ", "
+        try {
+            val superCall0 = scope.superCalls.firstOrNull()
+            if (superCall0 != null &&
+                superCall0.valueParameters != null &&
+                superCall0.type != AnyType
+            ) {
+                val type = superCall0.type
+                builder.append(" extends ")
+                appendType(type, scope, true)
+            }
+
+            var implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
+            for (superCall in scope.superCalls) {
+                if (superCall.valueParameters != null) continue
+                val type = superCall.type
+                builder.append(implementsKeyword)
+                appendType(type, scope, true)
+                implementsKeyword = ", "
+            }
+        } catch (e: Exception) {
+            comment { builder.append(e) }
         }
     }
 }

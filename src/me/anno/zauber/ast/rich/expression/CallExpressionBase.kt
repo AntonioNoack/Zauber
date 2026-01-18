@@ -187,7 +187,7 @@ abstract class CallExpressionBase(
                     ) {
                         base.resolve(context)
                     } else null // else base was consumed to be the method
-                    println("base for call: $method, base: $base, this.base: ${this.base}")
+                    // println("base for call: $method, base: $base, this.base: ${this.base}")
                     val params1 = params0.map { it.resolve(context) }
                     ResolvedCallExpression(base, callable, params1, scope, origin)
                 }
