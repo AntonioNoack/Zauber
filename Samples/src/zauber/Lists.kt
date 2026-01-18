@@ -1,5 +1,7 @@
 package zauber
 
+import kotlin.ranges.downTo
+
 fun <V> emptyList(): List<V> = Array(0)
 
 interface List<V> : Collection<V> {
@@ -7,14 +9,29 @@ interface List<V> : Collection<V> {
     operator fun get(index: Int): V
 
     fun getOrNull(index: Int): V? {
-        return if (index in 0 until size) this[index] else null
+        return if (index in indices) this[index] else null
     }
 
     override fun iterator(): Iterator<V> = listIterator(0)
     fun listIterator(startIndex: Int = 0): ListIterator<V>
 
-    fun indexOf(element: V): Int
-    fun lastIndexOf(element: V): Int
+    fun indexOf(element: V): Int {
+        for (i in indices) {
+            if (this[i] == element) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    fun lastIndexOf(element: V): Int {
+        for (i in lastIndex downTo 0) {
+            if (this[i] == element) {
+                return i
+            }
+        }
+        return -1
+    }
 
     override fun contains(element: V): Boolean = indexOf(element) >= 0
     override fun firstOrNull(): V? = getOrNull(0)
