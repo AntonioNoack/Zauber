@@ -16,7 +16,9 @@ import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.ShortType
+import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 
 class Runtime {
@@ -26,6 +28,7 @@ class Runtime {
 
     val callStack = ArrayList<Call>()
     val externalMethods = HashMap<ExternalKey, ExternalMethod>()
+    val printed = ArrayList<String>()
 
     fun register(scope: Scope, name: String, types: List<Type>, method: ExternalMethod) {
         val key = ExternalKey(scope, name, types)
@@ -80,7 +83,7 @@ class Runtime {
     }
 
     fun executeCall(
-        self: Instance, method: Method,
+        self: Instance?, method: Method,
         valueParameters: List<SimpleField>
     ): Instance {
         val valueParameters = valueParameters.map { this[it] }
@@ -166,15 +169,21 @@ class Runtime {
     }
 
     fun createString(value: String): Instance {
-        TODO()
+        val instance = Instance(getClass(StringType), emptyArray())
+        instance.rawValue = value
+        return instance
     }
 
     fun getThis(): Instance {
-        return callStack.last().self
+        return callStack.last().self!!
     }
 
     fun getUnit(): Instance {
-        return this[getNull(), UnitType.clazz.objectField!!]
+        return getObjectInstance(UnitType)
+    }
+
+    fun getObjectInstance(type: ClassType): Instance {
+        return getClass(type).getOrCreateObjectInstance(this)
     }
 
     fun executeBlock(body: SimpleBlock) {
@@ -205,6 +214,13 @@ class Runtime {
             "Casting $value to int failed, type mismatch"
         }
         return value.rawValue as Int
+    }
+
+    fun castToString(value: Instance): String {
+        check(value.type == getClass(StringType)) {
+            "Casting $value to String failed, type mismatch"
+        }
+        return value.rawValue as String
     }
 
     fun gotoOtherBlock(target: SimpleBlock) {

@@ -37,14 +37,15 @@ import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import java.io.File
 
-// todo before generating JVM bytecode, create source code to be compiled with a normal Java compiler
-//  big difference: stack-based,
-//  small differences:
-//   - Java only supports one interface of each kind [-> can be solved by specialization :3]
-//   - Generics are always boxed, and overrides must be boxed, too [-> we just must be careful with declarations and reflections]
-//   - Java forbids duplicate field names in cascading method scopes [-> we must renamed them]
-//   - fields into lambdas must be effectively final [-> must must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
-
+/**
+ * before generating JVM bytecode, create source code to be compiled with a normal Java compiler
+ *  big difference: stack-based,
+ *  small differences:
+ *   - Java only supports one interface of each kind [-> can be solved by specialization :3]
+ *   - Generics are always boxed, and overrides must be boxed, too [-> we just must be careful with declarations and reflections]
+ *   - Java forbids duplicate field names in cascading method scopes [-> we must renamed them]
+ *   - fields into lambdas must be effectively final [-> must must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
+ * */
 object JavaSourceGenerator : Generator() {
 
     val protectedTypes = mapOf(

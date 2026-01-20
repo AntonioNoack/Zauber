@@ -17,6 +17,7 @@ class TestRuntime {
 
             val runtime = Runtime()
             Stdlib.registerIntMethods(runtime)
+            Stdlib.registerPrintln(runtime)
             val value = runtime.executeCall(runtime.getNull(), getter, emptyList())
             return runtime to value
         }
@@ -90,6 +91,23 @@ class TestRuntime {
         """.trimIndent()
         val (runtime, value) = testExecute(code)
         assertEquals(21, runtime.castToInt(value))
+    }
+
+    @Test
+    fun testPrintln() {
+        ensureUnitIsKnown()
+        val code = """
+            val tested: Int get() {
+                println("Hello World!")
+                return 0
+            }
+            package zauber
+            class String
+            external fun println(str: String)
+        """.trimIndent()
+        val (runtime, value) = testExecute(code)
+        assertEquals(listOf("Hello World!"), runtime.printed)
+        assertEquals(0, runtime.castToInt(value))
     }
 
     // todo test defer and errdefer and destructors

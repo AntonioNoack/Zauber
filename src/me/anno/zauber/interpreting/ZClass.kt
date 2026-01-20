@@ -8,6 +8,20 @@ class ZClass(val type: Type) {
         ?.filter { it.selfType == type }
         ?: emptyList()
 
+    private var objectInstance: Instance? = null
+
+    fun getOrCreateObjectInstance(runtime: Runtime): Instance {
+        var objectInstance = objectInstance
+        if (objectInstance != null) return objectInstance
+        objectInstance = createInstance()
+        this.objectInstance = objectInstance
+        val primaryConstructor = (type as? ClassType)?.clazz?.primaryConstructorScope?.selfAsConstructor
+        if (primaryConstructor != null) {
+            runtime.executeCall(objectInstance, primaryConstructor, emptyList())
+        }
+        return objectInstance
+    }
+
     fun createInstance(): Instance {
         return Instance(this, arrayOfNulls(properties.size))
     }

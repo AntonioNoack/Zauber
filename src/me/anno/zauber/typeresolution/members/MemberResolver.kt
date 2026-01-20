@@ -107,7 +107,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             // LOGGER.info("matchesReturnType($expectedReturnType vs $actualReturnType)")
             if (expectedReturnType != null && actualReturnType != null) {
                 LOGGER.info("Start checking return-type")
-                val matchesReturnType = isSubTypeOf(
+                /*val matchesReturnType =*/ isSubTypeOf(
                     expectedReturnType,
                     actualReturnType,
                     expectedTypeParameters,
@@ -116,10 +116,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 )
                 LOGGER.info("Done checking return-type")
 
-                if (!matchesReturnType) {
+                /*if (!matchesReturnType) {
                     LOGGER.info("  returnType-mismatch: $actualReturnType !is $expectedReturnType")
                     return null
-                }
+                }*/
             } else {
                 LOGGER.info(
                     "Skipped return-type matching: " +

@@ -2,9 +2,9 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.ArrayType
@@ -90,7 +90,8 @@ object CallWithNames {
 
             if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
-                check(ev.isVararg) { "Expected vararg in last place" }
+                if (!ev.isVararg) return null
+                // check(ev.isVararg) { "Expected vararg in last place" }
                 val arrayOfUnknown = ClassType(ArrayType.clazz, null)
                 result[index] = ValueParameterImpl(null, arrayOfUnknown, true)
             }
@@ -163,7 +164,8 @@ object CallWithNames {
                 val ev = expectedParameters[index]
                 val arrayType = ev.type as ClassType
                 val instanceType = arrayType.typeParameters!![0]
-                check(ev.isVararg) { "Expected vararg in last place" }
+                if (!ev.isVararg) return null
+                // check(ev.isVararg) { "Expected vararg in last place" }
                 // println("Using instanceType $instanceType for empty varargs")
                 result[index] = CallExpression(
                     UnresolvedFieldExpression("arrayOf", emptyList(), scope, origin),
