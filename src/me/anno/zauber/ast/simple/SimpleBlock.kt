@@ -9,18 +9,17 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
     SimpleExpression(scope, origin) {
 
     val blockId = graph.blocks.size
+    val instructions = ArrayList<SimpleExpression>()
 
     fun add(expr: SimpleExpression) {
         instructions.add(expr)
     }
 
-    fun field(
-        type: Type, ownership: Ownership =
-            if (type.isValueType()) Ownership.VALUE
-            else Ownership.SHARED
-    ): SimpleField = SimpleField(type, ownership, graph.numFields++)
+    fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
+        SimpleField(type, ownership, graph.numFields++, null)
 
-    val instructions = ArrayList<SimpleExpression>()
+    fun field(type: Type, scopeIfThis: Scope?): SimpleField =
+        SimpleField(type, getOwnership(type), graph.numFields++, scopeIfThis)
 
     override fun toString(): String {
         return instructions.joinToString("\n")
@@ -28,6 +27,13 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
 
     override fun execute(runtime: Runtime) {
         runtime.executeBlock(this)
+    }
+
+    companion object {
+        fun getOwnership(type: Type): Ownership {
+            return if (type.isValueType()) Ownership.VALUE
+            else Ownership.SHARED
+        }
     }
 
 }

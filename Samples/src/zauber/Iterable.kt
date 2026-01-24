@@ -3,46 +3,46 @@ package zauber
 interface Iterable<V> {
     operator fun iterator(): Iterator<V>
 
-    fun all(predicate: (V) -> Boolean): Boolean {
+    inline fun all(predicate: (V) -> Boolean): Boolean {
         for (element in this) {
             if (!predicate(element)) return false
         }
         return true
     }
 
-    fun none(predicate: (V) -> Boolean): Boolean {
+    inline fun none(predicate: (V) -> Boolean): Boolean {
         for (element in this) {
             if (predicate(element)) return false
         }
         return true
     }
 
-    fun any(predicate: (V) -> Boolean): Boolean {
+    inline fun any(predicate: (V) -> Boolean): Boolean {
         for (element in this) {
             if (predicate(element)) return true
         }
         return false
     }
 
-    fun firstOrNull(): V? {
+    inline fun firstOrNull(): V? {
         for (element in this) {
             return element
         }
         return null
     }
 
-    fun firstOrNull(predicate: (V) -> Boolean): V? {
+    inline fun firstOrNull(predicate: (V) -> Boolean): V? {
         for (element in this) {
             if (predicate(element)) return element
         }
         return null
     }
 
-    fun first(): V {
+    inline fun first(): V {
         return iterator().next()
     }
 
-    fun lastOrNull(): V? {
+    inline fun lastOrNull(): V? {
         var value: V? = null
         for (element in this) {
             value = element
@@ -50,7 +50,7 @@ interface Iterable<V> {
         return value
     }
 
-    fun lastOrNull(predicate: (V) -> Boolean): V? {
+    inline fun lastOrNull(predicate: (V) -> Boolean): V? {
         var value: V? = null
         for (element in this) {
             if (predicate(element)) value = element
@@ -58,7 +58,7 @@ interface Iterable<V> {
         return value
     }
 
-    fun last(): V {
+    inline fun last(): V {
         lateinit var value: V
         for (element in this) {
             value = element

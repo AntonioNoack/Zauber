@@ -18,20 +18,67 @@ class AndType(val types: List<Type>) : Type() {
                 else andTypes(filteredA, typeB)
             }
 
-            val joint = (getTypes(typeA) + getTypes(typeB)).distinct()
+            val joint = reduceAndTypes(getTypes(typeA) + getTypes(typeB))
             if (joint.size == 1) return joint.first()
             return AndType(joint)
         }
 
         fun andTypes(types: List<Type>): Type {
             if (types.isEmpty()) return NothingType
-            val uniqueTypes = types.distinct()
+            val uniqueTypes = reduceAndTypes(types)
             if (uniqueTypes.size == 1) return uniqueTypes[0]
             return AndType(uniqueTypes)
         }
 
         fun getTypes(type: Type): List<Type> {
             return if (type is AndType) type.types else listOf(type)
+        }
+
+        private fun reduceAndTypes(types: List<Type>): List<Type> {
+            val types = types.distinct()
+            val notTypes = types.filterIsInstance<NotType>()
+            val yesTypes = types.filter { it !is NotType }
+            for (i in 1 until yesTypes.size) {
+                for (j in 0 until i) {
+                    if (!canInstanceBeBoth(yesTypes[i], yesTypes[j])) {
+                        // or return empty list?
+                        return listOf(NothingType)
+                    }
+                }
+            }
+
+            if (notTypes.isEmpty()) {
+                return types
+            }
+
+            val notTypesOr = notTypes.flatMap {
+                UnionType.getTypes(it.type)
+            }.distinct().filter { notType ->
+                yesTypes.any { yesType -> canInstanceBeBoth(yesType, notType) }
+            }
+
+            if (notTypesOr.isEmpty()) {
+                return yesTypes
+            }
+
+            return yesTypes + NotType(unionTypes(notTypesOr))
+
+        }
+
+        private fun canInstanceBeBoth(t1: Type, t2: Type): Boolean {
+            if (t1 == NothingType || t2 == NothingType) return false
+            if (t1 == t2) return true
+            if (t1 is UnionType) return t1.types.any { t1i -> canInstanceBeBoth(t1i, t2) }
+            if (t2 is UnionType) return t2.types.any { t2i -> canInstanceBeBoth(t1, t2i) }
+            if (t1 is NullType && t2 is ClassType) return false
+            if (t2 is NullType && t1 is ClassType) return false
+            if (t1 is ClassType && t2 is ClassType) {
+                // todo check hierarchy...
+                //  if nothing is common, return NothingType
+            }
+            // todo complete this... is complicated...
+            //  and ideally, all these should be resolved/specialized...
+            return true // idk
         }
     }
 

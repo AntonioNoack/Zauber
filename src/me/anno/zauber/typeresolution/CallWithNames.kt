@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
@@ -120,7 +121,7 @@ object CallWithNames {
             anyIsVararg
         ) {
 
-            val result = arrayOfNulls<Expression>(actualParameters.size)
+            val result = arrayOfNulls<Expression>(expectedParameters.size)
 
             // first assign all names slots
             for (valueParam in actualParameters) {
@@ -148,7 +149,10 @@ object CallWithNames {
                 if (isNormal) {
                     result[index++] = valueParam.value
                 } else {
-                    check(index == result.lastIndex) { "vararg must be in last place, $index vs ${result.lastIndex}" }
+                    check(index == result.lastIndex) {
+                        "vararg must be in last place, $index vs ${result.lastIndex}, " +
+                                "$scope, ${resolveOrigin(origin)}"
+                    }
                     // collect all varargs
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }

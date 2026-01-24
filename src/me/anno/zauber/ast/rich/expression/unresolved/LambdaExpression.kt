@@ -50,7 +50,7 @@ class LambdaExpression(
                             val type = param0.type
                             val autoParamName = "it"
                             LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
-                            val field = Field(
+                            val field = bodyScope.fields.firstOrNull { it.name == autoParamName } ?: Field(
                                 bodyScope, null,
                                 false, isMutable = false, param0,
                                 autoParamName, type, null,

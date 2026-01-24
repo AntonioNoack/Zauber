@@ -23,7 +23,6 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
@@ -32,7 +31,7 @@ import me.anno.zauber.types.specialization.Specialization
 
 object ASTSimplifier {
 
-    val voidField = SimpleField(UnitType, Ownership.COMPTIME, -1)
+    val UnitInstance = SimpleField(UnitType, Ownership.COMPTIME, -1, UnitType.clazz)
     val booleanOwnership = Ownership.COMPTIME
 
     // todo inline functions
@@ -63,7 +62,7 @@ object ASTSimplifier {
         return when (expr) {
 
             is ExpressionList -> {
-                var result = voidField
+                var result = UnitInstance
                 val exprScope = expr.scope
                 for (field in exprScope.fields) {
                     if (needsFieldByParameter(field.byParameter) &&
@@ -85,7 +84,7 @@ object ASTSimplifier {
                 // todo we need to split the flow...
                 val field = simplifyImpl(context, expr.value, currBlock, graph, true)
                 if (field != null) currBlock.add(SimpleYield(field.use(), expr.scope, expr.origin))
-                voidField
+                UnitInstance
             }
 
             is ThrowExpression -> {
@@ -93,7 +92,7 @@ object ASTSimplifier {
                 //   and finally, we need to exit
                 val field = simplifyImpl(context, expr.value, currBlock, graph, true)
                 if (field != null) currBlock.add(SimpleThrow(field.use(), expr.scope, expr.origin))
-                voidField
+                UnitInstance
             }
 
             is ReturnExpression -> {
@@ -102,7 +101,7 @@ object ASTSimplifier {
                 val field = simplifyImpl(context, expr.value, currBlock, graph, true)
                 if (field != null) currBlock.add(SimpleReturn(field.use(), expr.scope, expr.origin))
                 // todo else write unreachable?
-                voidField
+                UnitInstance
             }
 
             is ResolvedCompareOp -> {
@@ -144,8 +143,8 @@ object ASTSimplifier {
 
             is ThisExpression -> {
                 val type = TypeResolution.resolveType(context, expr)
-                val dst = currBlock.field(type)
-                currBlock.add(SimpleThis(dst, expr))
+                val dst = currBlock.field(type, expr.label)
+                // currBlock.add(SimpleThis(dst, expr)) // <- self-explaining
                 dst
             }
 
@@ -169,7 +168,7 @@ object ASTSimplifier {
                 } else null
                 val value = simplifyImpl(context, expr.value, currBlock, graph, true) ?: return null
                 currBlock.add(SimpleSetField(self?.use(), field, value.use(), expr.scope, expr.origin))
-                voidField
+                UnitInstance
             }
 
             is NumberExpression -> {
@@ -211,8 +210,8 @@ object ASTSimplifier {
             }
 
             is LambdaExpression -> {
-                // todo if target is an inline function,
-                //  inline it here
+                // if target is an inline function, inline it here
+                //  -> no, that should have been done previously
                 // todo if not, create an instance accordingly
 
                 TODO("Simplify lambda ${expr.javaClass.simpleName}: $expr")
@@ -266,7 +265,7 @@ object ASTSimplifier {
 
         // todo we need to somehow split any further instructions
         //  to be placed into afterBlock, not currBlock
-        return voidField // no return value is supported
+        return UnitInstance // no return value is supported
     }
 
     private fun simplifyDoWhile(
@@ -308,7 +307,7 @@ object ASTSimplifier {
 
         // todo we need to somehow split any further instructions
         //  to be placed into afterBlock, not currBlock
-        return voidField // no return value is supported
+        return UnitInstance // no return value is supported
     }
 
     private fun simplifyBranch(
@@ -329,7 +328,7 @@ object ASTSimplifier {
             val elseBlock = graph.addBlock(scope, origin)
             simplifyImpl(context, expr.ifBranch, ifBlock, graph, true)
             currBlock.add(SimpleBranch(condition.use(), ifBlock, elseBlock, scope, origin))
-            return voidField
+            return UnitInstance
         } else {
             val scope = expr.scope
             val origin = expr.origin
@@ -338,7 +337,7 @@ object ASTSimplifier {
             val ifValue = simplifyImpl(context, expr.ifBranch, ifBlock, graph, true)
             val elseValue = simplifyImpl(context, expr.elseBranch, elseBlock, graph, true)
             currBlock.add(SimpleBranch(condition.use(), ifBlock, elseBlock, scope, origin))
-            return if (!needsValue) voidField else {
+            return if (!needsValue) UnitInstance else {
                 if (ifValue != null && elseValue != null) {
                     currBlock.add(SimpleMerge(dst, ifBlock, ifValue.use(), elseBlock, elseValue.use(), expr))
                     dst
@@ -399,7 +398,7 @@ object ASTSimplifier {
                             method, params, scope, origin
                         )
                     )
-                    return voidField
+                    return UnitInstance
                 } else {
                     val dst = currBlock.field(method0.getTypeFromCall())
                     currBlock.add(SimpleConstructor(dst, method, params, scope, origin))
@@ -412,10 +411,16 @@ object ASTSimplifier {
                     typeParameters, resolveValueParameters(context, valueParameters)
                 )
                 return simplifyCall(
-                    context, currBlock, graph, fieldExpr,
-                    ParameterList.emptyParameterList() /* the type is in the class, not the invocation */, valueParameters,
-                    method0, null,
-                    scope, origin
+                    context,
+                    currBlock,
+                    graph,
+                    fieldExpr,
+                    ParameterList.emptyParameterList() /* the type is in the class, not the invocation */,
+                    valueParameters,
+                    method0,
+                    null,
+                    scope,
+                    origin
                 )
             }
             else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
@@ -481,7 +486,7 @@ object ASTSimplifier {
                             method, valueParameters, scope, origin
                         )
                     )
-                    return voidField
+                    return UnitInstance
                 } else {
                     val dst = currBlock.field(method0.getTypeFromCall())
                     currBlock.add(SimpleConstructor(dst, method, valueParameters, scope, origin))

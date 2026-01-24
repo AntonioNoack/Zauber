@@ -9,7 +9,7 @@ interface Collection<V> : Iterable<V> {
 
     operator fun contains(element: V): Boolean
 
-    fun containsAll(elements: Collection<V>): Boolean {
+    inline fun containsAll(elements: Collection<V>): Boolean {
         return elements.all { contains(it) }
     }
 }

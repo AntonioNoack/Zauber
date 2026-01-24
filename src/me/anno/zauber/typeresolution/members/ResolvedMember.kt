@@ -37,8 +37,8 @@ abstract class ResolvedMember<V>(
             var rs = getScopeOfResolved()
             while (true) {
                 val scopeType = rs.scopeType
-                if(scopeType != null && (scopeType.isClassType() || scopeType == ScopeType.PACKAGE)) {
-                    return ThisExpression(rs,codeScope,origin)
+                if (scopeType != null && (scopeType.isClassType() || scopeType == ScopeType.PACKAGE)) {
+                    return ThisExpression(rs, codeScope, origin)
                 }
                 rs = rs.parent
                     ?: throw IllegalStateException("Resolved must be in class or package, but found nothing ${getScopeOfResolved()}")
@@ -120,6 +120,7 @@ abstract class ResolvedMember<V>(
                         type.field.resolveValueType(context)
                     }
                 }
+                is NotType -> resolveGenerics(selfType, type.type, genericNames, genericValues).not()
                 else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
             }
         }

@@ -9,8 +9,8 @@ import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.generation.Specializations.foundTypeSpecialization
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
+import me.anno.zauber.generation.java.JavaSourceGenerator.comment
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -24,6 +24,7 @@ import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.impl.AndType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
@@ -38,8 +39,9 @@ object JavaSimplifiedASTWriter {
             NullType -> true
             is ClassType -> false
             is UnionType -> type.types.any { canBeNull(it) }
+            is AndType -> type.types.all { canBeNull(it) }
             is GenericType -> canBeNull(type.superBounds)
-            else -> throw NotImplementedError()
+            else -> throw NotImplementedError("Can a $type be null?")
         }
     }
 
@@ -47,11 +49,28 @@ object JavaSimplifiedASTWriter {
         val dst = expression.dst
         if (dst.mergeInfo != null) {
             builder.append1(dst).append(" = ")
-            return
+        } else {
+            builder.append("final ")
+            appendType(dst.type, expression.scope, false)
+            builder.append(' ').append1(dst).append(" = ")
         }
-        builder.append("final ")
-        appendType(dst.type, expression.scope, false)
-        builder.append(' ').append1(dst).append(" = ")
+    }
+
+    fun noThis(field: SimpleField): Boolean {
+        var field = field
+        while (true) {
+            field = field.mergeInfo?.dst ?: break
+        }
+        val thisScope = field.scopeIfIsThis
+        if (thisScope != null) {
+            val scopeType = thisScope.scopeType
+            if (scopeType == ScopeType.METHOD || scopeType == ScopeType.CONSTRUCTOR ||
+                (scopeType != null && scopeType.isInsideExpression())
+            ) {
+                return true
+            }
+        }
+        return false
     }
 
     fun StringBuilder.append1(field: SimpleField): StringBuilder {
@@ -59,7 +78,28 @@ object JavaSimplifiedASTWriter {
         while (true) {
             field = field.mergeInfo?.dst ?: break
         }
-        append("tmp").append(field.id)
+        val thisScope = field.scopeIfIsThis
+        if (thisScope != null) {
+            val scopeType = thisScope.scopeType
+            if (scopeType == ScopeType.METHOD || scopeType == ScopeType.CONSTRUCTOR ||
+                (scopeType != null && scopeType.isInsideExpression())
+            ) {
+                // parameter level -> no prefix needed
+                comment { append(thisScope.pathStr) }
+            } else {
+                val isUnique = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isObject()
+                if (isUnique) {
+                    // todo get object/package name with specialization...
+                    appendType(field.type, thisScope /* not ideal */, true)
+                } else {
+                    // todo find 'this' of correct level in scope
+                    append("this")
+                    comment { append(thisScope.pathStr) }
+                }
+            }
+        } else {
+            append("tmp").append(field.id)
+        }
         return this
     }
 
@@ -261,19 +301,16 @@ object JavaSimplifiedASTWriter {
                             "toChar" -> "(char) "
                             else -> null
                         }
-                        if (expr.self != null && castSymbol != null && expr.self.type in nativeNumbers) {
+                        if (castSymbol != null && expr.self.type in nativeNumbers) {
                             builder.append(castSymbol).append1(expr.self)
                             true
-                        } else if (expr.self != null &&
-                            expr.self.type == BooleanType &&
-                            methodName == "not"
-                        ) {
+                        } else if (expr.self.type == BooleanType && methodName == "not") {
                             builder.append('!').append1(expr.self)
                             true
                         } else false
                     }
                     1 -> {
-                        val supportsType = when (expr.self?.type) {
+                        val supportsType = when (expr.self.type) {
                             StringType, in nativeTypes -> true
                             else -> false
                         }
@@ -288,7 +325,7 @@ object JavaSimplifiedASTWriter {
                             "compareTo" -> "compare"
                             else -> null
                         }
-                        if (expr.self != null && supportsType && symbol != null) {
+                        if (supportsType && symbol != null) {
                             builder.append1(expr.self).append(symbol)
                             builder.append1(expr.valueParameters[0])
                             true
@@ -297,34 +334,18 @@ object JavaSimplifiedASTWriter {
                     else -> false
                 }
                 if (!done) {
-                    val needsCastForFirstValue = nativeTypes[expr.self?.type]
+                    val needsCastForFirstValue = nativeTypes[expr.self.type]
                     if (needsCastForFirstValue != null) {
                         builder.append(needsCastForFirstValue.boxed).append('.')
                         builder.append(expr.methodName).append('(')
-                        if (expr.self != null) builder.append1(expr.self)
-                        else {
-                            check(expr.sample.scope.scopeType == ScopeType.PACKAGE)
-
-                            // get package name...
-                            // we need to properly define the specialization we need,
-                            //  and we must request it...
-
-                            val specialization = expr.specialization
-                            foundTypeSpecialization(expr.sample.scope, specialization)
-                            val packageName = JavaSourceGenerator.createPackageName(expr.sample.scope, specialization)
-                            // append package path
-                            val path = expr.scope.parent
-                            if (path != null) builder.append(path.pathStr).append('.')
-                            builder.append(packageName).append('.')
-                        }
+                        builder.append1(expr.self)
                         if (expr.valueParameters.isNotEmpty()) {
                             builder.append(", ")
                             appendValueParams(expr.valueParameters, false)
                         }
                         builder.append(')')
                     } else {
-                        if (expr.self != null) builder.append1(expr.self).append('.')
-                        else comment { builder.append("todo: resolve self") }
+                        builder.append1(expr.self).append('.')
                         builder.append(expr.methodName)
                         appendValueParams(expr.valueParameters)
                     }
@@ -366,12 +387,15 @@ object JavaSimplifiedASTWriter {
 
     fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
         if (self != null) {
-            val needsCast = self.type != field.selfType
+            val needsCast = self.type != field.selfType && self.scopeIfIsThis == null
             if (needsCast && field.selfType != null) {
                 builder.append("((")
                 appendType(field.selfType, exprScope, true)
                 builder.append(')')
                 builder.append1(self).append(").")
+            } else if (noThis(self)) {
+                // just comment the type
+                builder.append1(self)
             } else {
                 builder.append1(self).append('.')
             }

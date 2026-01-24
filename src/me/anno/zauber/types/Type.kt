@@ -2,7 +2,6 @@ package me.anno.zauber.types
 
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
-import me.anno.zauber.generation.Specializations
 import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Types.NothingType
@@ -29,15 +28,19 @@ abstract class Type {
             NullType, UnknownType -> true
             is GenericType -> !specialization.contains(this)
             is TypeOfField,
-            is LambdaType,
             is UnresolvedType,
             is SelfType,
             is ThisType -> false
+            is LambdaType -> selfType?.isResolved() != false &&
+                    parameters.all { it.type.isResolved() } &&
+                    returnType.isResolved()
             is ClassType -> !clazz.isTypeAlias() &&
                     (typeParameters == null || typeParameters.indices.all {
                         typeParameters.getOrNull(it)?.isResolved() != false
                     })
             is UnionType -> types.all { it.isResolved() }
+            is AndType -> types.any { it.isResolved() }
+            is NotType -> type.isResolved()
             is ComptimeValue -> true // is it though?
             else -> throw NotImplementedError("Is $this (${javaClass.simpleName}) resolved?")
         }
@@ -52,9 +55,13 @@ abstract class Type {
 
     fun resolveImpl(): Type {
         return when (this) {
-            is LambdaType,
             is SelfType,
             is ThisType -> throw IllegalStateException("Cannot resolve $this without scope data")
+            is LambdaType -> {
+                LambdaType(selfType?.resolve(), parameters.map {
+                    LambdaParameter(it.name, it.type.resolve())
+                }, returnType.resolve())
+            }
             is GenericType -> specialization[this]!!
             is ClassType -> {
                 val parameters = typeParameters?.map { it.resolve() }
@@ -66,6 +73,8 @@ abstract class Type {
             }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
             is UnionType -> unionTypes(types.map { it.resolve() })
+            is AndType -> andTypes(types.map { it.resolve() })
+            is NotType -> type.resolve().not()
             is UnresolvedType -> {
                 resolveTypeByName(null, className, scope, imports)
                     ?: throw IllegalStateException("Could not resolve $this")
@@ -83,6 +92,9 @@ abstract class Type {
             is UnionType -> types.all { it.isFullySpecialized() }
             is AndType -> types.all { it.isFullySpecialized() }
             is NotType -> type.isFullySpecialized()
+            is LambdaType -> (selfType?.isFullySpecialized() ?: true) &&
+                    parameters.all { it.type.isFullySpecialized() } &&
+                    returnType.isFullySpecialized()
             else -> throw IllegalStateException("Is ${javaClass.simpleName} fully specialized?")
         }
     }
@@ -95,6 +107,11 @@ abstract class Type {
             is AndType -> andTypes(types.map { it.specialize(spec) })
             is GenericType -> spec[this] ?: this
             is NotType -> type.specialize(spec).not()
+            is LambdaType -> {
+                LambdaType(selfType?.specialize(spec), parameters.map {
+                    LambdaParameter(it.name, it.type.specialize(spec))
+                }, returnType.specialize(spec))
+            }
             else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
         }
     }

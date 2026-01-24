@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -45,6 +46,11 @@ class AssignmentExpression(val variableName: Expression, val newValue: Expressio
             is UnresolvedFieldExpression -> {
                 val field = dstExpr.resolveField(context)
                 val owner = field.resolveOwnerWithoutLeftSide(origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
+            }
+            is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldExpression -> {
+                val field = dstExpr.right.resolveField(context)
+                val owner = dstExpr.left
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             else -> throw NotImplementedError("Implement assignment to $variableName (${variableName.javaClass.simpleName})")

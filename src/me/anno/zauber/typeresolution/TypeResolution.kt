@@ -205,7 +205,10 @@ object TypeResolution {
         while (true) {
             LOGGER.info("Checking ${scopeI.pathStr}/${scopeI.scopeType} for 'this'")
             when {
-                scopeI.isClassType() -> return scopeI.typeWithoutArgs
+                scopeI.isClassType() ||
+                        scopeI.scopeType == ScopeType.PACKAGE -> {
+                    return scopeI.typeWithoutArgs
+                }
                 scopeI.scopeType == ScopeType.METHOD -> {
                     val func = scopeI.selfAsMethod!!
                     val self = func.selfType
