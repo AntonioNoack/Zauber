@@ -10,7 +10,7 @@ class ResolvedSetFieldExpression(
     /**
      * if not present, use 'this' or objectField
      * */
-    owner: Expression?,
+    owner: Expression,
     field: ResolvedField,
     val value: Expression,
     scope: Scope, origin: Int
@@ -18,7 +18,7 @@ class ResolvedSetFieldExpression(
 
     override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun clone(scope: Scope): Expression =
-        ResolvedSetFieldExpression(owner?.clone(scope), field, value.clone(scope), scope, origin)
+        ResolvedSetFieldExpression(owner.clone(scope), field, value.clone(scope), scope, origin)
 
     override fun toStringImpl(depth: Int): String {
         return "$owner.$field=$value"

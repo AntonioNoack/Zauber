@@ -13,6 +13,8 @@ class ResolvedConstructor(
     context: ResolutionContext, codeScope: Scope
 ) : ResolvedMember<Constructor>(ownerTypes, emptyParameterList(), constructor, context, codeScope) {
 
+    override fun getScopeOfResolved(): Scope = resolved.scope
+
     override fun getTypeFromCall(): Type {
         return ClassType(resolved.selfType.clazz, ownerTypes)
     }

@@ -167,7 +167,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             val selfType = selfTypeI ?: fieldSelfType
             val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
             return ResolvedField(
-                generics.subList(0, fieldSelfParams.size), field,
+                generics.subList(0, fieldSelfParams.size),  field,
                 generics.subList(fieldSelfParams.size, generics.size), context, codeScope
             )
         }

@@ -14,6 +14,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -27,6 +28,7 @@ import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.specialization.Specialization
 
 object ASTSimplifier {
 
@@ -116,15 +118,14 @@ object ASTSimplifier {
             }
 
             is ResolvedCallExpression -> {
-                val base = if (expr.base != null) {
-                    simplifyImpl(context, expr.base, currBlock, graph, true) ?: return null
-                } else null
+                val base = simplifyImpl(context, expr.base, currBlock, graph, true) ?: return null
                 val valueParameters = expr.valueParameters.map { param ->
                     simplifyImpl(context, param, currBlock, graph, false) ?: return null
                 }
                 val method = expr.callable
                 simplifyCall(
                     currBlock, base,
+                    expr.callable.ownerTypes + expr.callable.callTypes,
                     valueParameters, method, null,
                     expr.scope, expr.origin
                 )
@@ -151,7 +152,7 @@ object ASTSimplifier {
             is ResolvedGetFieldExpression -> {
                 val field = expr.field.resolved
                 val valueType = expr.run { resolvedType ?: resolveType(context) }
-                val self: SimpleField? = if (expr.owner != null && expr.owner !is TypeExpression) {
+                val self: SimpleField? = if (expr.owner !is TypeExpression) {
                     simplifyImpl(context, expr.owner, currBlock, graph, true)
                         ?: return null
                 } else null
@@ -162,7 +163,7 @@ object ASTSimplifier {
 
             is ResolvedSetFieldExpression -> {
                 val field = expr.field.resolved
-                val self: SimpleField? = if (expr.owner != null && expr.owner !is TypeExpression) {
+                val self: SimpleField? = if (expr.owner !is TypeExpression) {
                     simplifyImpl(context, expr.owner, currBlock, graph, true)
                         ?: return null
                 } else null
@@ -346,13 +347,21 @@ object ASTSimplifier {
         }
     }
 
+    fun collectSpecialization(method: Method, typeParameters: ParameterList): Specialization {
+        // todo implement this...
+        //  we must collect the following:
+        //  method-type-parameters,
+        //  outer class type-parameters
+        return Specialization(typeParameters)
+    }
+
     private fun simplifyCall(
         context: ResolutionContext,
         currBlock: SimpleBlock,
         graph: SimpleGraph,
 
-        selfExpr: Expression?,
-        typeParameters: List<Type>?,
+        selfExpr: Expression,
+        typeParameters: ParameterList,
         valueParameters: List<NamedParameter>,
 
         method0: ResolvedMember<*>,
@@ -363,15 +372,16 @@ object ASTSimplifier {
     ): SimpleField? {
         when (val method = method0.resolved) {
             is Method -> {
-                val self = simplifyImpl(context, selfExpr!!, currBlock, graph, true) ?: return null
-                val params = reorderParameters(
+                val self = simplifyImpl(context, selfExpr, currBlock, graph, true) ?: return null
+                val valueParametersI = reorderParameters(
                     context, currBlock, graph,
                     valueParameters, method0, scope, origin, method
                 ) ?: return null
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
-                for (param in params) param.use()
-                currBlock.add(SimpleCall(dst, method, self.use(), params, scope, origin))
+                for (param in valueParametersI) param.use()
+                val specialization = collectSpecialization(method, typeParameters)
+                currBlock.add(SimpleCall(dst, method, self.use(), specialization, valueParametersI, scope, origin))
                 return dst
             }
             is Constructor -> {
@@ -403,7 +413,7 @@ object ASTSimplifier {
                 )
                 return simplifyCall(
                     context, currBlock, graph, fieldExpr,
-                    emptyList() /* the type is in the class, not the invocation */, valueParameters,
+                    ParameterList.emptyParameterList() /* the type is in the class, not the invocation */, valueParameters,
                     method0, null,
                     scope, origin
                 )
@@ -442,7 +452,8 @@ object ASTSimplifier {
     private fun simplifyCall(
         currBlock: SimpleBlock,
 
-        selfExpr: SimpleField?,
+        selfExpr: SimpleField,
+        typeParameters: ParameterList,
         valueParameters: List<SimpleField>,
 
         method0: ResolvedMember<*>,
@@ -456,7 +467,8 @@ object ASTSimplifier {
             is Method -> {
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
-                currBlock.add(SimpleCall(dst, method, selfExpr?.use(), valueParameters, scope, origin))
+                val specialization = collectSpecialization(method, typeParameters)
+                currBlock.add(SimpleCall(dst, method, selfExpr.use(), specialization, valueParameters, scope, origin))
                 return dst
             }
             is Constructor -> {

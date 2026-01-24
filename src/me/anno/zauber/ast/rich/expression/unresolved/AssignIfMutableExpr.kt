@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import com.sun.xml.internal.bind.v2.TODO
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
@@ -124,8 +125,8 @@ class AssignIfMutableExpr(
         val right = right.resolve(context)
         val call = ResolvedCallExpression(left, method, listOf(right), scope, origin)
         if (dstField != null) {
-            // todo we have to find the owner
-            val setter = ResolvedSetFieldExpression(null, dstField, call, scope, origin)
+            val owner: Expression = TODO("Resolve owner for $this")
+            val setter = ResolvedSetFieldExpression(owner, dstField, call, scope, origin)
             return ExpressionList(listOf(call, setter), scope, origin)
         } else return call
     }

@@ -8,13 +8,16 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.Specialization
 
 class SimpleCall(
     dst: SimpleField,
     // for complex types, e.g. Float|String, we may need multiple methods, or some sort of instance-type->method mapping
     val methodName: String,
     val methods: Map<ClassType, Method>,
-    val self: SimpleField?,
+    val sample: Method,
+    val self: SimpleField,
+    val specialization: Specialization,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
 ) : SimpleAssignmentExpression(dst, scope, origin) {
@@ -22,10 +25,14 @@ class SimpleCall(
     constructor(
         dst: SimpleField,
         method: Method,
-        self: SimpleField?,
+        self: SimpleField,
+        specialization: Specialization,
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Int
-    ) : this(dst, method.name!!, FullMap(method), self, valueParameters, scope, origin)
+    ) : this(
+        dst, method.name!!, FullMap(method), method, self,
+        specialization, valueParameters, scope, origin
+    )
 
     init {
         for (method in methods.values) {
@@ -39,8 +46,9 @@ class SimpleCall(
     }
 
     override fun eval(runtime: Runtime): Instance {
-        val self = if (self != null) runtime[self] else null
-        val method = (if (self != null) methods[self.type.type as ClassType] else methods[UnitType])
+        // todo self could be a class instance...
+        val self = runtime[self]
+        val method = methods[self.type.type as ClassType]
             ?: throw IllegalArgumentException("Could not resolve method for $self")
         return runtime.executeCall(self, method, valueParameters)
     }

@@ -1,5 +1,6 @@
 package me.anno.zauber.types.specialization
 
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -33,6 +34,19 @@ class Specialization(typeParameters: ParameterList) {
         val resolved = typeParameters.getOrNull(index)
             ?: typeParameters.generics[index].type
         return if (type != resolved) resolved else null
+    }
+
+    operator fun get(type: Parameter): Type? {
+        return get(GenericType(type.scope, type.name))
+    }
+
+    operator fun plus(other: Specialization): Specialization {
+        // todo also resolve all recursive types,
+        //  so if A is defined in B, use B and vice-versa
+        // todo if something is defined twice, remove the duplicate and resolve conflicts...
+        val typeParametersI = typeParameters.map { it.specialize(other) }
+        val otherTypeParametersI = other.typeParameters.map { it.specialize(this) }
+        return Specialization(typeParametersI + otherTypeParametersI)
     }
 
     fun indexOf(type: Type): Int {

@@ -2,12 +2,14 @@ package me.anno.zauber.types
 
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
+import me.anno.zauber.generation.Specializations
 import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.specialization.Specialization
 
 abstract class Type {
 
@@ -85,14 +87,14 @@ abstract class Type {
         }
     }
 
-    fun specialize(): Type {
+    fun specialize(spec: Specialization = specialization): Type {
         if (isFullySpecialized()) return this
         return when (this) {
-            is ClassType -> ClassType(clazz, typeParameters!!.map { it.specialize() })
-            is UnionType -> unionTypes(types.map { it.specialize() })
-            is AndType -> andTypes(types.map { it.specialize() })
-            is GenericType -> specialization[this] ?: this
-            is NotType -> type.specialize().not()
+            is ClassType -> ClassType(clazz, typeParameters!!.map { it.specialize(spec) })
+            is UnionType -> unionTypes(types.map { it.specialize(spec) })
+            is AndType -> andTypes(types.map { it.specialize(spec) })
+            is GenericType -> spec[this] ?: this
+            is NotType -> type.specialize(spec).not()
             else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
         }
     }

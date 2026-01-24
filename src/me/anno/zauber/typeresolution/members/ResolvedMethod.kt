@@ -15,6 +15,8 @@ class ResolvedMethod(
     context: ResolutionContext, codeScope: Scope
 ) : ResolvedMember<Method>(ownerTypes, callTypes, method, context, codeScope) {
 
+    override fun getScopeOfResolved(): Scope = resolved.scope
+
     override fun getTypeFromCall(): Type {
         val method = resolved
         LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")

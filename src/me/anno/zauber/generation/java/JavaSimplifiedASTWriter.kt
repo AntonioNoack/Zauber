@@ -9,8 +9,10 @@ import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.generation.Specializations.foundTypeSpecialization
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.ByteType
@@ -300,7 +302,21 @@ object JavaSimplifiedASTWriter {
                         builder.append(needsCastForFirstValue.boxed).append('.')
                         builder.append(expr.methodName).append('(')
                         if (expr.self != null) builder.append1(expr.self)
-                        else comment { builder.append("todo: resolve self") }
+                        else {
+                            check(expr.sample.scope.scopeType == ScopeType.PACKAGE)
+
+                            // get package name...
+                            // we need to properly define the specialization we need,
+                            //  and we must request it...
+
+                            val specialization = expr.specialization
+                            foundTypeSpecialization(expr.sample.scope, specialization)
+                            val packageName = JavaSourceGenerator.createPackageName(expr.sample.scope, specialization)
+                            // append package path
+                            val path = expr.scope.parent
+                            if (path != null) builder.append(path.pathStr).append('.')
+                            builder.append(packageName).append('.')
+                        }
                         if (expr.valueParameters.isNotEmpty()) {
                             builder.append(", ")
                             appendValueParams(expr.valueParameters, false)
@@ -351,9 +367,9 @@ object JavaSimplifiedASTWriter {
     fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
         if (self != null) {
             val needsCast = self.type != field.selfType
-            if (needsCast) {
+            if (needsCast && field.selfType != null) {
                 builder.append("((")
-                appendType(field.selfType!!, exprScope, true)
+                appendType(field.selfType, exprScope, true)
                 builder.append(')')
                 builder.append1(self).append(").")
             } else {

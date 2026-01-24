@@ -38,14 +38,14 @@ class AssignmentExpression(val variableName: Expression, val newValue: Expressio
         val newValue = newValue.resolve(context)
         when (val dstExpr = variableName) {
             is FieldExpression -> {
-                // todo resolve owner
                 val field = dstExpr.resolveField(context)
-                return ResolvedSetFieldExpression(null, field, newValue, scope, origin)
+                val owner = field.resolveOwnerWithoutLeftSide(origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is UnresolvedFieldExpression -> {
-                // todo resolve owner
                 val field = dstExpr.resolveField(context)
-                return ResolvedSetFieldExpression(null, field, newValue, scope, origin)
+                val owner = field.resolveOwnerWithoutLeftSide(origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             else -> throw NotImplementedError("Implement assignment to $variableName (${variableName.javaClass.simpleName})")
         }

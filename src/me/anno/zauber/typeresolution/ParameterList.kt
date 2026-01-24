@@ -15,6 +15,7 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
             if (this == null) return type
             return resolveGenerics(selfType, type, generics, this)
         }
+
         fun ParameterList?.resolveGenericsOrNull(selfType: Type?, type: Type?): Type? {
             if (this == null || type == null) return type
             return resolveGenerics(selfType, type, generics, this)
@@ -24,7 +25,9 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     override val size: Int get() = generics.size
 
     constructor(generics: List<Parameter>, types: List<Type?>) : this(generics) {
-        check(generics.size == types.size)
+        check(generics.size == types.size) {
+            "Expected generics and types to have the same size, ${generics.size} != ${types.size}"
+        }
         if (types is ParameterList) {
             for (i in types.indices) {
                 val type = types.getOrNull(i) ?: continue

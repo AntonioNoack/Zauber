@@ -50,7 +50,8 @@ class FieldExpression(
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         val field = resolveField(context)
-        return ResolvedGetFieldExpression(null, field, scope, origin)
+        val owner = field.resolveOwnerWithoutLeftSide(origin)
+        return ResolvedGetFieldExpression(owner, field, scope, origin)
     }
 
     override fun splitsScope(): Boolean = false

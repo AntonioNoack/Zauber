@@ -36,6 +36,7 @@ class UnresolvedFieldExpression(
 
     override fun resolveImpl(context: ResolutionContext): ResolvedGetFieldExpression {
         val field = resolveField(context)
-        return ResolvedGetFieldExpression(null, field, scope, origin)
+        val owner = field.resolveOwnerWithoutLeftSide(origin)
+        return ResolvedGetFieldExpression(owner, field, scope, origin)
     }
 }

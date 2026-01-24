@@ -12,6 +12,7 @@ import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenericsOrNu
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
@@ -28,17 +29,32 @@ abstract class ResolvedMember<V>(
     val ownerType get() = context.selfType
 
     abstract fun getTypeFromCall(): Type
+    abstract fun getScopeOfResolved(): Scope
 
-    fun getBaseIfMissing(scope: Scope, origin: Int): Expression? {
-        val type = ownerType?.resolve() ?: return null
+    fun getBaseIfMissing(scope: Scope, origin: Int): Expression {
+        val type = ownerType?.resolve()
+        if (type == null) {
+            var rs = getScopeOfResolved()
+            while (true) {
+                val scopeType = rs.scopeType
+                if(scopeType != null && (scopeType.isClassType() || scopeType == ScopeType.PACKAGE)) {
+                    return ThisExpression(rs,codeScope,origin)
+                }
+                rs = rs.parent
+                    ?: throw IllegalStateException("Resolved must be in class or package, but found nothing ${getScopeOfResolved()}")
+            }
+        }
+
         if (type is ClassType) {
             check(type.clazz.isClassType()) // just in case
             return ThisExpression(type.clazz, scope, origin)
         }
+
         val specialization = specialization
         if (type in specialization) {
             throw IllegalStateException("Type $type is in specialization, but not resolved?? $specialization")
         }
+
         TODO("GetBaseIfMissing on $type (${type.javaClass.simpleName}), spec: $specialization")
     }
 

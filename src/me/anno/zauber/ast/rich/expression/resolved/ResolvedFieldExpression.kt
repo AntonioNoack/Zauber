@@ -9,7 +9,7 @@ abstract class ResolvedFieldExpression(
     /**
      * if not present, use 'this' or objectField
      * */
-    val owner: Expression?,
+    val owner: Expression,
     val field: ResolvedField,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
@@ -19,11 +19,11 @@ abstract class ResolvedFieldExpression(
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
 
     override fun needsBackingField(methodScope: Scope): Boolean {
-        return (owner != null && owner.needsBackingField(methodScope)) ||
+        return owner.needsBackingField(methodScope) ||
                 field.resolved.isBackingField(methodScope)
     }
 
-    override fun splitsScope(): Boolean = owner?.splitsScope() ?: false
-    override fun isResolved(): Boolean = owner == null || owner.isResolved()
+    override fun splitsScope(): Boolean = owner.splitsScope()
+    override fun isResolved(): Boolean = owner.isResolved()
 
 }

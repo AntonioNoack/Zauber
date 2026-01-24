@@ -20,10 +20,13 @@ abstract class Generator(val blockSuffix: String = "}\n") {
     var commentDepth = 0
     fun comment(body: () -> Unit) {
         commentDepth++
-        builder.append(if (commentDepth == 1) "/* " else "(")
-        body()
-        builder.append(if (commentDepth == 1) " */" else ")")
-        commentDepth--
+        try {
+            builder.append(if (commentDepth == 1) "/* " else "(")
+            body()
+            builder.append(if (commentDepth == 1) " */" else ")")
+        } finally {
+            commentDepth--
+        }
     }
 
     fun trimWhitespaceAtEnd() {

@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
@@ -28,7 +29,8 @@ import me.anno.zauber.types.impl.LambdaType
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
 class ResolvedField(
-    ownerTypes: ParameterList, field: Field, callTypes: ParameterList,
+    ownerTypes: ParameterList,
+    field: Field, callTypes: ParameterList,
     context: ResolutionContext, codeScope: Scope
 ) : ResolvedMember<Field>(ownerTypes, callTypes, field, context, codeScope) {
 
@@ -148,6 +150,8 @@ class ResolvedField(
         check(field.typeParameters.size == callTypes.size)
     }
 
+    override fun getScopeOfResolved(): Scope = resolved.codeScope
+
     fun getValueType(): Type {
         LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}")
 
@@ -206,5 +210,11 @@ class ResolvedField(
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
+    }
+
+    val ownerScope get() = resolved.codeScope
+
+    fun resolveOwnerWithoutLeftSide(origin: Int): Expression {
+        return ThisExpression(ownerScope, codeScope, origin)
     }
 }

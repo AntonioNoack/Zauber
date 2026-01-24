@@ -43,10 +43,13 @@ import java.io.File
  *  small differences:
  *   - Java only supports one interface of each kind [-> can be solved by specialization :3]
  *   - Generics are always boxed, and overrides must be boxed, too [-> we just must be careful with declarations and reflections]
- *   - Java forbids duplicate field names in cascading method scopes [-> we must renamed them]
- *   - fields into lambdas must be effectively final [-> must must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
+ *   - Java forbids duplicate field names in cascading method scopes [-> we must rename them]
+ *   - fields into lambdas must be effectively final [-> must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
  * */
 object JavaSourceGenerator : Generator() {
+
+    @Suppress("MayBeConstant")
+    val enforceSpecialization = true
 
     val protectedTypes = mapOf(
         StringType to BoxedType("java.lang.String", "java.lang.String"),
@@ -167,6 +170,12 @@ object JavaSourceGenerator : Generator() {
                 val lookup = specialization[type]
                 if (lookup != null) appendType(lookup, scope, needsBoxedType)
                 else {
+                    if (enforceSpecialization) {
+                        throw IllegalStateException(
+                            "All generics must be resolved, " +
+                                    "$type is unknown in $specialization, $scope"
+                        )
+                    }
                     comment { builder.append(type.scope.pathStr) }
                     builder.append(type.name)
                 }
@@ -216,21 +225,21 @@ object JavaSourceGenerator : Generator() {
             .append(";\n\n")
     }
 
-    private fun createSpecializationSuffix(specialization: Specialization): String {
+    fun createSpecializationSuffix(specialization: Specialization): String {
         if (specialization.isEmpty()) return ""
         // todo ensure the name is original, but keep it readable
         return "_${specialization.createUniqueName()}"
     }
 
-    private fun createFile(scope: Scope, name: String, dst: File): File {
+    fun createFile(scope: Scope, name: String, dst: File): File {
         return File(dst, scope.path.joinToString("/") + "/$name.java")
     }
 
-    private fun createClassName(scope: Scope, specialization: Specialization): String {
+    fun createClassName(scope: Scope, specialization: Specialization): String {
         return scope.name + createSpecializationSuffix(specialization)
     }
 
-    private fun createPackageName(scope: Scope, specialization: Specialization): String {
+    fun createPackageName(scope: Scope, specialization: Specialization): String {
         return scope.name.capitalize() + "Kt" + createSpecializationSuffix(specialization)
     }
 
@@ -290,6 +299,12 @@ object JavaSourceGenerator : Generator() {
     }
 
     fun generateInside(className: String, scope: Scope, specialization: Specialization) {
+
+        if (enforceSpecialization) {
+            for (type in scope.typeParameters) {
+                if (specialization[type] == null) return
+            }
+        }
 
         // todo imports ->
         //  collect them in a dry-run :)
@@ -394,8 +409,20 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendMethods(classScope: Scope) {
         for (method in classScope.methods) {
-            if (method.scope.parent != classScope) continue
-            appendMethod(classScope, method, noSpecialization)
+            if (method.scope.parent != classScope) {
+                // an inherited method -> skip, because it's already defined in the parent
+                continue
+            }
+            if (method.typeParameters.isNotEmpty() && enforceSpecialization) {
+                // we don't know the required specializations yet
+                continue
+            }
+            try {
+                appendMethod(classScope, method, noSpecialization)
+            } catch (e: Exception) {
+                builder.append("// $e")
+                nextLine()
+            }
         }
     }
 
