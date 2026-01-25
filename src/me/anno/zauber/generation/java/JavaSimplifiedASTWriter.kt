@@ -1,5 +1,6 @@
 package me.anno.zauber.generation.java
 
+import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -24,11 +25,7 @@ import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.impl.AndType
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.impl.*
 
 object JavaSimplifiedASTWriter {
 
@@ -280,74 +277,78 @@ object JavaSimplifiedASTWriter {
                 }
             }
             is SimpleCall -> {
-                // Number.toX() needs to be converted to a cast
-                val methodName = expr.methodName
-                val done = when (expr.valueParameters.size) {
-                    0 -> {
-                        val castSymbol = when (methodName) {
-                            "toInt" -> "(int) "
-                            "toLong" -> "(long) "
-                            "toFloat" -> "(float) "
-                            "toDouble" -> "(double) "
-                            "toByte" -> "(byte) "
-                            "toShort" -> "(short) "
-                            "toChar" -> "(char) "
-                            else -> null
+                if (expr.sample is Constructor) {
+                    builder.append("new ")
+                    appendType(expr.dst.type, expr.scope, true)
+                    appendValueParams(expr.valueParameters)
+                } else {
+                    // Number.toX() needs to be converted to a cast
+                    val methodName = expr.methodName
+                    val done = when (expr.valueParameters.size) {
+                        0 -> {
+                            val castSymbol = when (methodName) {
+                                "toInt" -> "(int) "
+                                "toLong" -> "(long) "
+                                "toFloat" -> "(float) "
+                                "toDouble" -> "(double) "
+                                "toByte" -> "(byte) "
+                                "toShort" -> "(short) "
+                                "toChar" -> "(char) "
+                                else -> null
+                            }
+                            if (castSymbol != null && expr.self.type in nativeNumbers) {
+                                builder.append(castSymbol).append1(expr.self)
+                                true
+                            } else if (expr.self.type == BooleanType && methodName == "not") {
+                                builder.append('!').append1(expr.self)
+                                true
+                            } else false
                         }
-                        if (castSymbol != null && expr.self.type in nativeNumbers) {
-                            builder.append(castSymbol).append1(expr.self)
-                            true
-                        } else if (expr.self.type == BooleanType && methodName == "not") {
-                            builder.append('!').append1(expr.self)
-                            true
-                        } else false
+                        1 -> {
+                            val supportsType = when (expr.self.type) {
+                                StringType, in nativeTypes -> true
+                                else -> false
+                            }
+                            val symbol = when (methodName) {
+                                "plus" -> " + "
+                                "minus" -> " - "
+                                "times" -> " * "
+                                "div" -> " / "
+                                "rem" -> " % "
+                                // compareTo is a problem for numbers:
+                                //  we must call their static compare() function
+                                "compareTo" -> "compare"
+                                else -> null
+                            }
+                            if (supportsType && symbol != null) {
+                                builder.append1(expr.self).append(symbol)
+                                builder.append1(expr.valueParameters[0])
+                                true
+                            } else false
+                        }
+                        else -> false
                     }
-                    1 -> {
-                        val supportsType = when (expr.self.type) {
-                            StringType, in nativeTypes -> true
-                            else -> false
+                    if (!done) {
+                        val needsCastForFirstValue = nativeTypes[expr.self.type]
+                        if (needsCastForFirstValue != null) {
+                            builder.append(needsCastForFirstValue.boxed).append('.')
+                            builder.append(expr.methodName).append('(')
+                            builder.append1(expr.self)
+                            if (expr.valueParameters.isNotEmpty()) {
+                                builder.append(", ")
+                                appendValueParams(expr.valueParameters, false)
+                            }
+                            builder.append(')')
+                        } else {
+                            builder.append1(expr.self).append('.')
+                            builder.append(expr.methodName)
+                            appendValueParams(expr.valueParameters)
                         }
-                        val symbol = when (methodName) {
-                            "plus" -> " + "
-                            "minus" -> " - "
-                            "times" -> " * "
-                            "div" -> " / "
-                            "rem" -> " % "
-                            // compareTo is a problem for numbers:
-                            //  we must call their static compare() function
-                            "compareTo" -> "compare"
-                            else -> null
-                        }
-                        if (supportsType && symbol != null) {
-                            builder.append1(expr.self).append(symbol)
-                            builder.append1(expr.valueParameters[0])
-                            true
-                        } else false
-                    }
-                    else -> false
-                }
-                if (!done) {
-                    val needsCastForFirstValue = nativeTypes[expr.self.type]
-                    if (needsCastForFirstValue != null) {
-                        builder.append(needsCastForFirstValue.boxed).append('.')
-                        builder.append(expr.methodName).append('(')
-                        builder.append1(expr.self)
-                        if (expr.valueParameters.isNotEmpty()) {
-                            builder.append(", ")
-                            appendValueParams(expr.valueParameters, false)
-                        }
-                        builder.append(')')
-                    } else {
-                        builder.append1(expr.self).append('.')
-                        builder.append(expr.methodName)
-                        appendValueParams(expr.valueParameters)
                     }
                 }
             }
-            is SimpleConstructor -> {
-                builder.append("new ")
-                appendType(expr.dst.type, expr.scope, true)
-                appendValueParams(expr.valueParameters)
+            is SimpleCreateInstance -> {
+                // handled in SimpleCall, because only there do we have the value parameters
             }
             is SimpleSelfConstructor -> {
                 when (expr.isThis) {

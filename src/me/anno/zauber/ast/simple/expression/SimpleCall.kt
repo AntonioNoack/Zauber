@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
@@ -16,8 +17,8 @@ class SimpleCall(
     val methodName: String,
     // todo key should also contain specialization, or should it?
     //  method then could be the specialized one...
-    val methods: Map<Type, Method>,
-    val sample: Method,
+    val methods: Map<Type, MethodLike>,
+    val sample: MethodLike,
     val self: SimpleField,
     val specialization: Specialization,
     val valueParameters: List<SimpleField>,
@@ -26,13 +27,13 @@ class SimpleCall(
 
     constructor(
         dst: SimpleField,
-        method: Method,
+        method: MethodLike,
         self: SimpleField,
         specialization: Specialization,
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Int
     ) : this(
-        dst, method.name!!, FullMap(method), method, self,
+        dst, (method as? Method)?.name ?: "?", FullMap(method), method, self,
         specialization, valueParameters, scope, origin
     )
 
@@ -44,7 +45,7 @@ class SimpleCall(
 
     override fun toString(): String {
         val method = methods.values.first()
-        return "$dst = $self[${method.selfType}].${method.name}${valueParameters.joinToString(", ", "(", ")")}"
+        return "$dst = $self[${method.selfType}].${methodName}${valueParameters.joinToString(", ", "(", ")")}"
     }
 
     override fun eval(runtime: Runtime): BlockReturn {

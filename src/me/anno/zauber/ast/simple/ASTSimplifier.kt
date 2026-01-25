@@ -3,7 +3,10 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -364,7 +367,7 @@ object ASTSimplifier {
         scope: Scope,
         origin: Int
     ): SimpleField? {
-        when (val method = method0.resolved) {
+        return when (val method = method0.resolved) {
             is Method -> {
                 val self = simplifyImpl(context, selfExpr, currBlock, graph, true) ?: return null
                 val valueParametersI = reorderParameters(
@@ -376,7 +379,7 @@ object ASTSimplifier {
                 for (param in valueParametersI) param.use()
                 val specialization = collectSpecialization(method, typeParameters)
                 currBlock.add(SimpleCall(dst, method, self.use(), specialization, valueParametersI, scope, origin))
-                return dst
+                dst
             }
             is Constructor -> {
                 // base is a type
@@ -384,38 +387,20 @@ object ASTSimplifier {
                     context, currBlock, graph,
                     valueParameters, method0, scope, origin, method
                 ) ?: return null
-                // then execute it
-                for (param in params) param.use()
-                if (selfIfInsideConstructor != null) {
-                    currBlock.add(
-                        SimpleSelfConstructor(
-                            selfIfInsideConstructor,
-                            method, params, scope, origin
-                        )
-                    )
-                    return UnitInstance
-                } else {
-                    val dst = currBlock.field(method0.getTypeFromCall())
-                    currBlock.add(SimpleConstructor(dst, method, params, scope, origin))
-                    return dst
-                }
+                createConstructorInvocation(
+                    currBlock, method, params, method0,
+                    selfIfInsideConstructor, scope, origin
+                )
             }
             is Field -> {
                 val fieldExpr = FieldExpression(method, scope, origin)
                 val method0 = (method0 as ResolvedField).resolveCalledMethod(
                     typeParameters, resolveValueParameters(context, valueParameters)
                 )
-                return simplifyCall(
-                    context,
-                    currBlock,
-                    graph,
-                    fieldExpr,
+                simplifyCall(
+                    context, currBlock, graph, fieldExpr,
                     ParameterList.emptyParameterList() /* the type is in the class, not the invocation */,
-                    valueParameters,
-                    method0,
-                    null,
-                    scope,
-                    origin
+                    valueParameters, method0, null, scope, origin
                 )
             }
             else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
@@ -463,32 +448,54 @@ object ASTSimplifier {
         origin: Int
     ): SimpleField {
         for (param in valueParameters) param.use()
-        when (val method = method0.resolved) {
+        return when (val method = method0.resolved) {
             is Method -> {
                 // then execute it
                 val dst = currBlock.field(method0.getTypeFromCall())
                 val specialization = collectSpecialization(method, typeParameters)
                 currBlock.add(SimpleCall(dst, method, selfExpr.use(), specialization, valueParameters, scope, origin))
-                return dst
+                dst
             }
-            is Constructor -> {
-                // base is a type
-                // then execute it
-                if (selfIfInsideConstructor != null) {
-                    currBlock.add(
-                        SimpleSelfConstructor(
-                            selfIfInsideConstructor,
-                            method, valueParameters, scope, origin
-                        )
-                    )
-                    return UnitInstance
-                } else {
-                    val dst = currBlock.field(method0.getTypeFromCall())
-                    currBlock.add(SimpleConstructor(dst, method, valueParameters, scope, origin))
-                    return dst
-                }
-            }
+            is Constructor -> createConstructorInvocation(
+                currBlock, method, valueParameters,
+                method0, selfIfInsideConstructor, scope, origin
+            )
             else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
+        }
+    }
+
+    private fun createConstructorInvocation(
+        currBlock: SimpleBlock,
+
+        method: Constructor,
+        valueParameters: List<SimpleField>,
+
+        method0: ResolvedMember<*>,
+        selfIfInsideConstructor: Boolean?,
+
+        scope: Scope,
+        origin: Int
+    ): SimpleField {
+        return if (selfIfInsideConstructor != null) {
+            currBlock.add(
+                SimpleSelfConstructor(
+                    selfIfInsideConstructor,
+                    method, valueParameters, scope, origin
+                )
+            )
+            UnitInstance
+        } else {
+            val dst = currBlock.field(method0.getTypeFromCall())
+            currBlock.add(SimpleCreateInstance(dst, method.selfType, scope, origin))
+            val unusedTmp = currBlock.field(UnitType)
+            currBlock.add(
+                SimpleCall( // todo use correct specialization; depends on outer class, if present, too
+                    unusedTmp, "::new",
+                    FullMap(method), method, dst.use(),
+                    Specialization.noSpecialization, valueParameters, scope, origin
+                )
+            )
+            dst
         }
     }
 

@@ -54,9 +54,9 @@ class Runtime {
             return getObjectInstance(selfScope.typeWithoutArgs)
         }
 
-        println("Using field in call $field")
-        return callStack.last().fields[field]
-            ?: throw IllegalStateException("Missing field $field")
+        val currCall = callStack.last()
+        return currCall.fields[field]
+            ?: throw IllegalStateException("Missing field $field, fields: ${currCall.fields}")
     }
 
     operator fun get(instance: Instance, field: Field): Instance {
@@ -151,6 +151,8 @@ class Runtime {
             thisStack.clear()
             thisStack.addAll(oldThisStack)
         }
+
+        check(callStack.removeLast() === call)
 
         println("Return value: ${call.returnValue}")
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
