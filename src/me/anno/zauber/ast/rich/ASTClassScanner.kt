@@ -91,7 +91,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
 
         var j = i
         val genericParams = if (tokens.equals(j, "<")) {
-            val genericParams = ArrayList<Parameter>()
+            val typeParameters = ArrayList<Parameter>()
 
             j++
             var depth = 1
@@ -101,7 +101,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                 ) {
                     val name = tokens.toString(j)
                     val type = NullableAnyType
-                    genericParams.add(Parameter(name, type, nextPackage, j))
+                    typeParameters.add(Parameter(typeParameters.size, name, type, nextPackage, j))
                 }
 
                 if (tokens.equals(j, "<")) depth++
@@ -114,7 +114,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                 j++
             }
 
-            genericParams
+            typeParameters
         } else emptyList()
 
         nextPackage.typeParameters = genericParams

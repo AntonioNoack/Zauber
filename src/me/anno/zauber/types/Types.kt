@@ -31,7 +31,7 @@ object Types {
         } else {
             scope.typeParameters =
                 if (numGenerics == 0) emptyList()
-                else List(numGenerics) { Parameter(('A' + it).toString(), NullableAnyType, scope, -1) }
+                else List(numGenerics) { Parameter(it, ('A' + it).toString(), NullableAnyType, scope, -1) }
             scope.hasTypeParameters = true
             return scope
         }

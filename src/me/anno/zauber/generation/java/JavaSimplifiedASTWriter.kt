@@ -365,6 +365,7 @@ object JavaSimplifiedASTWriter {
                 builder.append(';')
             }
             is SimpleReturn -> {
+                // todo cast if necessary
                 builder.append("return ").append1(expr.field).append(';')
             }
             is SimpleThrow -> {

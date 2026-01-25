@@ -168,16 +168,16 @@ class ZauberASTBuilder(
             }
             if (scopeType == ScopeType.ENUM_CLASS) {
                 parameters = listOf(
-                    Parameter("ordinal", IntType, constructorScope, constructorOrigin),
-                    Parameter("name", StringType, constructorScope, constructorOrigin)
-                ) + parameters
+                    Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
+                    Parameter(1, "name", StringType, constructorScope, constructorOrigin)
+                ) + parameters.map { it.shift(2) }
             }
             parameters
         } else if (scopeType == ScopeType.ENUM_CLASS) {
             val constructorScope = classScope.getOrCreatePrimConstructorScope()
             val parameters = listOf(
-                Parameter("ordinal", IntType, constructorScope, constructorOrigin),
-                Parameter("name", StringType, constructorScope, constructorOrigin)
+                Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
+                Parameter(1, "name", StringType, constructorScope, constructorOrigin)
             )
             parameters
         } else null
@@ -613,9 +613,9 @@ class ZauberASTBuilder(
             parameters = pushCall { readParameterDeclarations(selfType) }
             if (isEnumClass) {
                 parameters = listOf(
-                    Parameter("ordinal", IntType, constructorScope, origin),
-                    Parameter("name", StringType, constructorScope, origin)
-                ) + parameters
+                    Parameter(0, "ordinal", IntType, constructorScope, origin),
+                    Parameter(1, "name", StringType, constructorScope, origin)
+                ) + parameters.map { it.shift(2) }
             }
             constructorScope
         }
@@ -801,7 +801,7 @@ class ZauberASTBuilder(
     }
 
     fun readParameterDeclarations(selfType: Type?): List<Parameter> {
-        val result = ArrayList<Parameter>()
+        val parameters = ArrayList<Parameter>()
         loop@ while (i < tokens.size) {
 
             while (consumeIf("@")) {
@@ -841,16 +841,19 @@ class ZauberASTBuilder(
                     // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
                     val keywords = packKeywords()
-                    val parameter = Parameter(isVar, isVal, isVararg, name, type, initialValue, currPackage, origin)
+                    val parameter = Parameter(
+                        parameters.size, isVar, isVal, isVararg, name, type,
+                        initialValue, currPackage, origin
+                    )
                     parameter.getOrCreateField(selfType, keywords)
-                    result.add(parameter)
+                    parameters.add(parameter)
 
                     readComma()
                 }
                 else -> throw NotImplementedError("Unknown token in params at ${tokens.err(i)}")
             }
         }
-        return result
+        return parameters
     }
 
     fun readExpressionCondition(): Expression {
@@ -1789,7 +1792,7 @@ class ZauberASTBuilder(
             val forTryBody = ArrayList(result)
             result.clear()
 
-            val parameter = Parameter("e", ThrowableType, errCatch, origin)
+            val parameter = Parameter(0, "e", ThrowableType, errCatch, origin)
             val exceptionField = parameter.getOrCreateField(null, Keywords.NONE)
             val throwImpl = ThrowExpression(FieldExpression(exceptionField, errCatch, origin), errCatch, origin)
 

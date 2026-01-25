@@ -167,7 +167,7 @@ object FieldGetterSetter {
         } else return
 
         val methodName = "set${field.name.capitalize()}"
-        val parameter = Parameter(valueField.name, field.valueType ?: TypeOfField(field), setterScope, origin)
+        val parameter = Parameter(0, valueField.name, field.valueType ?: TypeOfField(field), setterScope, origin)
         val method = Method(
             field.selfType, false, methodName, emptyList(),
             listOf(parameter), setterScope,

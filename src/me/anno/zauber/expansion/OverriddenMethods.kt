@@ -45,10 +45,10 @@ object OverriddenMethods {
             if (method.isPrivate()) continue
 
             // todo find match
-            val methodValueParameters = method.valueParameters.map {
-                val newType =
-                    superCall.type.typeParameters.resolveGenerics(method.selfType ?: scope.typeWithArgs, it.type)
-                Parameter(it.name, newType, it.scope, it.origin)
+            val methodValueParameters = method.valueParameters.mapIndexed { index, it ->
+                val selfType = method.selfType ?: scope.typeWithArgs
+                val newType = superCall.type.typeParameters.resolveGenerics(selfType, it.type)
+                Parameter(index, it.name, newType, it.scope, it.origin)
             }
 
             val selfMethods = (selfMethods[method.name] ?: emptyList())

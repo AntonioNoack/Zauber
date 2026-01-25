@@ -151,12 +151,12 @@ class CppASTBuilder(
         return field
     }
 
-    private fun readArguments(): List<Parameter> {
+    private fun readParameters(): List<Parameter> {
         // special case for a list without arguments
         if (i + 1 == tokens.size && consumeIf("void")) {
             return emptyList()
         }
-        val arguments = ArrayList<Parameter>()
+        val parameters = ArrayList<Parameter>()
         while (i < tokens.size) {
             var end = i
             var depth = 0
@@ -170,10 +170,10 @@ class CppASTBuilder(
             }
             val origin = origin(i)
             val field = readField(end, false)
-            arguments.add(Parameter(field.name, field.valueType!!, currPackage, origin))
+            parameters.add(Parameter(parameters.size, field.name, field.valueType!!, currPackage, origin))
             readComma()
         }
-        return arguments
+        return parameters
     }
 
     fun readMethod(typeNameEnd: Int): Method {
@@ -183,7 +183,7 @@ class CppASTBuilder(
         val methodScope = currPackage.getOrPut(genName, ScopeType.METHOD)
         val keywords = packKeywords()
         val arguments = pushScope(methodScope) {
-            pushCall { readArguments() }
+            pushCall { readParameters() }
         }
         val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
             pushBlock(methodScope) {

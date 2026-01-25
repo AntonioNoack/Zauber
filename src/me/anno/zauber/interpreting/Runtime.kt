@@ -3,6 +3,7 @@ package me.anno.zauber.interpreting
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
@@ -20,6 +21,7 @@ import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
+import java.security.cert.CRL
 
 class Runtime {
 
@@ -27,6 +29,7 @@ class Runtime {
     private val nullInstance = Instance(getClass(NullType), emptyArray())
 
     val callStack = ArrayList<Call>()
+    val thisStack = ArrayList<This>()
     val externalMethods = HashMap<ExternalKey, ExternalMethod>()
     val printed = ArrayList<String>()
 
@@ -36,6 +39,19 @@ class Runtime {
     }
 
     operator fun get(field: SimpleField): Instance {
+        val selfScope = field.scopeIfIsThis
+        if (selfScope != null) {
+            // should we check only within the current call? I think so...
+            for (i in thisStack.lastIndex downTo 0) {
+                val self = thisStack[i]
+                if (self.scope == selfScope) {
+                    return self.instance
+                }
+            }
+            // might be an object...
+            return getObjectInstance(selfScope.typeWithoutArgs)
+        }
+
         return callStack.last().fields[field]
             ?: throw IllegalStateException("Missing field $field")
     }
@@ -43,7 +59,13 @@ class Runtime {
     operator fun get(instance: Instance, field: Field): Instance {
         val clazz = instance.type
         val fieldIndex = clazz.properties.indexOf(field)
-        check(fieldIndex != -1) { "Instance $instance does not have field $field" }
+        if (fieldIndex == -1) {
+            val parameter = field.byParameter
+            if (parameter is Parameter) {
+                return callStack.last().valueParameters[parameter.index]
+            }
+        }
+        check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.codeScope})" }
         return instance.properties[fieldIndex]!!
     }
 
@@ -83,7 +105,7 @@ class Runtime {
     }
 
     fun executeCall(
-        self: Instance?, method: Method,
+        self: Instance, method: Method,
         valueParameters: List<SimpleField>
     ): Instance {
         val valueParameters = valueParameters.map { this[it] }
@@ -102,16 +124,23 @@ class Runtime {
             simpleBody = ASTSimplifier.simplify(context, body).startBlock
             method.simpleBody = simpleBody
         }
-        val call = Call(self)
-        val params = method.valueParameters
-        for (i in params.indices) {
-            val param = params[i]
-            call.fields[param.simpleField!!] = valueParameters[i]
-        }
+
+        val call = Call(method, self, valueParameters)
         callStack.add(call)
-        //try {
-        executeBlock(simpleBody)
-        //}catch (e: Exception) {}
+
+        val oldThisStack = ArrayList(thisStack)
+        thisStack.clear()
+
+        val thisScope = if (method.explicitSelfType) method.scope else method.scope.parent!!
+        thisStack.add(This(self, thisScope))
+
+        try {
+            executeBlock(simpleBody)
+        } finally {
+            thisStack.clear()
+            thisStack.addAll(oldThisStack)
+        }
+
         return call.returnValue ?: getUnit()
     }
 
@@ -175,7 +204,7 @@ class Runtime {
     }
 
     fun getThis(): Instance {
-        return callStack.last().self!!
+        return callStack.last().self
     }
 
     fun getUnit(): Instance {
@@ -187,13 +216,16 @@ class Runtime {
     }
 
     fun executeBlock(body: SimpleBlock) {
-        // todo push scope
         // todo push fields
+        val tss = thisStack.size
         val instructions = body.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
             println("Executing $instr")
             instr.execute(this)
+        }
+        while (thisStack.size > tss) {
+            thisStack.removeLast()
         }
     }
 

@@ -19,8 +19,11 @@ class AndType(val types: List<Type>) : Type() {
             }
 
             val joint = reduceAndTypes(getTypes(typeA) + getTypes(typeB))
-            if (joint.size == 1) return joint.first()
-            return AndType(joint)
+            return when (joint.size) {
+                0 -> NothingType
+                1 -> joint.first()
+                else -> AndType(joint)
+            }
         }
 
         fun andTypes(types: List<Type>): Type {
@@ -62,7 +65,6 @@ class AndType(val types: List<Type>) : Type() {
             }
 
             return yesTypes + NotType(unionTypes(notTypesOr))
-
         }
 
         private fun canInstanceBeBoth(t1: Type, t2: Type): Boolean {

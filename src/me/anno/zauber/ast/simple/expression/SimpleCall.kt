@@ -6,7 +6,6 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.Specialization
 
@@ -48,8 +47,7 @@ class SimpleCall(
     override fun eval(runtime: Runtime): Instance {
         // todo self could be a class instance...
         val self = runtime[self]
-        val method = methods[self.type.type as ClassType]
-            ?: throw IllegalArgumentException("Could not resolve method for $self")
+        val method = methods[self.type.type as? ClassType] ?: sample
         return runtime.executeCall(self, method, valueParameters)
     }
 

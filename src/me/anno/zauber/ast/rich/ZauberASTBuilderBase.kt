@@ -63,7 +63,7 @@ open class ZauberASTBuilderBase(
     fun readTypeParameterDeclarations(classScope: Scope): List<Parameter> {
         pushGenericParams()
         if (!tokens.equals(i, "<")) return emptyList()
-        val params = ArrayList<Parameter>()
+        val parameters = ArrayList<Parameter>()
         tokens.push(i++, "<", ">") {
             while (i < tokens.size) {
                 // todo store & use these?
@@ -80,14 +80,14 @@ open class ZauberASTBuilderBase(
                 val type = readTypeOrNull(classScope.typeWithoutArgs) ?: NullableAnyType
                 // if you print type here, typeParameters may not be available yet, and cause an NPE
 
-                params.add(Parameter(name, type, classScope, origin))
+                parameters.add(Parameter(parameters.size, name, type, classScope, origin))
                 readComma()
             }
         }
         consume(">")
-        classScope.typeParameters = params
+        classScope.typeParameters = parameters
         classScope.hasTypeParameters = true
-        return params
+        return parameters
     }
 
     fun readType(selfType: Type?, allowSubTypes: Boolean): Type? {

@@ -149,8 +149,8 @@ class GenericTest {
         val mapClass = standardClasses["Map"]!!
         if (mapClass.typeParameters.size != 2) {
             mapClass.typeParameters = listOf(
-                Parameter("K", NullableAnyType, mapClass, -1),
-                Parameter("V", NullableAnyType, mapClass, -1),
+                Parameter(0, "K", NullableAnyType, mapClass, -1),
+                Parameter(1, "V", NullableAnyType, mapClass, -1),
             )
         }
     }

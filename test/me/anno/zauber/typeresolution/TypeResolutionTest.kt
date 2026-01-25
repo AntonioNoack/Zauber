@@ -104,7 +104,7 @@ class TypeResolutionTest {
             if (constructors.none { it.valueParameters.size == 1 }) {
                 val scope = arrayListType.getOrPut(arrayListType.generateName("constructor"), ScopeType.CONSTRUCTOR)
                 scope.selfAsConstructor = Constructor(
-                    listOf(Parameter("size", IntType, arrayListType, -1)),
+                    listOf(Parameter(0, "size", IntType, arrayListType, -1)),
                     scope, null, null,
                     Keywords.NONE, -1
                 )
@@ -148,7 +148,7 @@ class TypeResolutionTest {
         if (constructors.none { it.valueParameters.size == 1 }) {
             val scope = intArrayType.getOrCreatePrimConstructorScope()
             scope.selfAsConstructor = Constructor(
-                listOf(Parameter("size", IntType, intArrayType, -1)),
+                listOf(Parameter(0, "size", IntType, intArrayType, -1)),
                 scope, null, null,
                 Keywords.NONE, -1
             )

@@ -151,7 +151,7 @@ class IsSubTypeOfTest {
 
         // first check without bounds
         val anyOrNullGeneric = GenericType(scope, "V")
-        val anyOrNullParameter = Parameter("V", NullableAnyType, scope, -1)
+        val anyOrNullParameter = Parameter(0, "V", NullableAnyType, scope, -1)
         scope.typeParameters = listOf(anyOrNullParameter)
 
         // parameter is available, writable -> true
@@ -192,7 +192,7 @@ class IsSubTypeOfTest {
 
         // now check generics with bounds
         val floatGeneric = GenericType(scope, "F")
-        val floatParameter = Parameter("F", FloatType, scope, -1)
+        val floatParameter = Parameter(0, "F", FloatType, scope, -1)
         scope.typeParameters = listOf(floatParameter)
 
         // even the strong mode must respect type bounds

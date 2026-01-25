@@ -212,7 +212,8 @@ object ASTSimplifier {
             is LambdaExpression -> {
                 // if target is an inline function, inline it here
                 //  -> no, that should have been done previously
-                // todo if not, create an instance accordingly
+                // todo create an instance accordingly,
+                //  constructor call + synthetic class
 
                 TODO("Simplify lambda ${expr.javaClass.simpleName}: $expr")
             }

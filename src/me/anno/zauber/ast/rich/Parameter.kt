@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
@@ -12,6 +11,7 @@ import me.anno.zauber.types.impl.ClassType
  * type or value parameter
  * */
 class Parameter(
+    val index: Int,
     val isVar: Boolean,
     val isVal: Boolean,
     val isVararg: Boolean,
@@ -45,17 +45,12 @@ class Parameter(
     }
 
     var field: Field? = null
-    var simpleField: SimpleField? = null
 
-    constructor(name: String, type: Type, scope: Scope, origin: Int) :
-            this(false, true, false, name, type, null, scope, origin)
+    constructor(index: Int, name: String, type: Type, scope: Scope, origin: Int) :
+            this(index, false, true, false, name, type, null, scope, origin)
 
     override fun toString(): String {
         return "${if (isVar) "var " else ""}${if (isVal) "val " else ""}${scope.pathStr}.$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
-    }
-
-    fun clone(scope: Scope): Parameter {
-        return Parameter(isVar, isVal, isVararg, name, type, defaultValue?.clone(scope), scope, origin)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -73,8 +68,22 @@ class Parameter(
     fun withType(newType: Type): Parameter {
         if (newType == this.type) return this
         return Parameter(
-            isVar, isVal, isVararg,
+            index, isVar, isVal, isVararg,
             name, newType,
+            defaultValue, scope, origin
+        )
+    }
+
+    fun clone(scope: Scope): Parameter {
+        return Parameter(
+            index, isVar, isVal, isVararg, name, type,
+            defaultValue?.clone(scope), scope, origin
+        )
+    }
+
+    fun shift(i: Int): Parameter {
+        return Parameter(
+            index + i, isVar, isVal, isVararg, name, type,
             defaultValue, scope, origin
         )
     }

@@ -162,7 +162,7 @@ object DataClassGenerator {
         lateinit var body: Expression
         lateinit var parameter: Parameter
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
-            parameter = Parameter("other", NullableAnyType, scope, origin)
+            parameter = Parameter(0, "other", NullableAnyType, scope, origin)
             val otherField = parameter.getOrCreateField(null, Keywords.NONE)
 
             val builder = ExpressionBuilder(scope, origin, BooleanType)
