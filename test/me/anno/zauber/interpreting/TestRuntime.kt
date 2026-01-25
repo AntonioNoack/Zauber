@@ -132,6 +132,21 @@ class TestRuntime {
     }
 
     @Test
+    fun testListOf() {
+        ensureUnitIsKnown()
+        val (runtimeT, valueT) = testExecute("""
+            val tested get() = listOf(1, 2, 3)
+            
+            package zauber
+            interface List<V>
+            class ArrayWrapper<V>(val vs: Array<V>): List<V>
+            fun <V> listOf(vararg vs: V): List<V> = ArrayWrapper(vs)
+            fun <V> arrayOf(vararg vs: V): Array<V> = vs // idk, recursive definition, kind of...
+        """.trimIndent())
+        // todo check contents of array...
+    }
+
+    @Test
     fun testCreateClassInstance() {
         ensureUnitIsKnown()
         val code = """

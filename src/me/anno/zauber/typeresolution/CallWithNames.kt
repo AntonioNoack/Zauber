@@ -156,9 +156,10 @@ object CallWithNames {
                     // collect all varargs
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }
+                    val instanceType = ev.type
                     result[index++] = CallExpression(
                         UnresolvedFieldExpression("arrayOf", emptyList(), scope, origin),
-                        emptyList(), values, origin
+                        listOf(instanceType), values, origin
                     )
                     break
                 }

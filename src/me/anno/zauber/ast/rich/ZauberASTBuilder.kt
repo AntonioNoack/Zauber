@@ -232,7 +232,7 @@ class ZauberASTBuilder(
         val primaryConstructor = classScope.getOrCreatePrimConstructorScope()
         primaryConstructor.selfAsConstructor = Constructor(
             emptyList(), primaryConstructor,
-            null, null, keywords, origin
+            null, ExpressionList(ArrayList(), primaryConstructor, origin), keywords, origin
         )
 
         readClassBody(name, keywords, scopeType)
@@ -465,6 +465,9 @@ class ZauberASTBuilder(
             val fieldExpr = FieldExpression(field, classScope, origin)
             check(constructorScope.selfAsConstructor != null) {
                 "$classScope needs primary constructor"
+            }
+            check(constructorScope.selfAsConstructor?.body != null) {
+                "$classScope needs primary constructor with body"
             }
             constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
         }
@@ -1100,7 +1103,7 @@ class ZauberASTBuilder(
             i++
             readBodyOrExpression(null)
         } else null
-        println("Scopes: ${condition.scope}, ${ifTrue.scope}, ${ifFalse?.scope}")
+        // println("Scopes: ${condition.scope}, ${ifTrue.scope}, ${ifFalse?.scope}")
         return IfElseBranch(condition, ifTrue, ifFalse)
     }
 
