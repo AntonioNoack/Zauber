@@ -159,6 +159,62 @@ class TestRuntime {
         assertEquals(5, runtime.castToInt(a))
     }
 
+    @Test
+    fun testTryCatchNormal() {
+        ensureUnitIsKnown()
+        val code = """
+            class Exception: Throwable()
+            class RuntimeException : Exception()
+            class NullPointerException : RuntimeException()
+            
+            val tested get() = try {
+                1
+            } catch(e: NullPointerException) {
+                2
+            }
+        """.trimIndent()
+        val (runtime, value) = testExecute(code)
+        assertEquals(1, runtime.castToInt(value))
+    }
+
+    @Test
+    fun testTryCatchMismatch() {
+        ensureUnitIsKnown()
+        val code = """
+            class Exception: Throwable()
+            class RuntimeException : Exception()
+            class NullPointerException : RuntimeException()
+            class IllegalArgumentException : RuntimeException()
+            
+            val tested get() = try {
+                throw IllegalArgumentException()
+            } catch(e: NullPointerException) {
+                2
+            }
+        """.trimIndent()
+        val (runtime, value) = testExecute(code)
+        // todo check that it fails...
+    }
+
+    @Test
+    fun testTryCatchCatching() {
+        ensureUnitIsKnown()
+        val code = """
+            val tested get() = try {
+                throw NullPointerException()
+            } catch(e: NullPointerException) {
+                2   
+            }
+            
+            package zauber
+            class Exception: Throwable()
+            class RuntimeException : Exception()
+            class NullPointerException : RuntimeException()
+        """.trimIndent()
+        val (runtime, value) = testExecute(code)
+        assertEquals(2, runtime.castToInt(value))
+    }
+
     // todo this is a late-game test :3
     @Test
     fun testSequenceUsingYield() {

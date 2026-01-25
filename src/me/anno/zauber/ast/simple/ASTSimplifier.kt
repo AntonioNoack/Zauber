@@ -14,7 +14,9 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
-import me.anno.zauber.ast.simple.controlflow.*
+import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
@@ -27,6 +29,7 @@ import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.Specialization
@@ -88,20 +91,12 @@ object ASTSimplifier {
             }
 
             is YieldExpression -> {
-                // todo we need to split the flow...
                 val field = simplifyImpl(context, expr.value, block0, graph, true) ?: return null
                 val block1 = field.second
-                block1.add(SimpleYield(field.first.use(), expr.scope, expr.origin))
-                return UnitInstance to block1
-            }
-
-            is ThrowExpression -> {
-                // todo we need to check all handlers...
-                //   and finally, we need to exit
-                val field = simplifyImpl(context, expr.value, block0, graph, true) ?: return null
-                val block1 = field.second
-                block1.add(SimpleThrow(field.first.use(), expr.scope, expr.origin))
-                return null // nothing exists after
+                val continueBlock = graph.addBlock(expr.scope, expr.origin)
+                block1.add(SimpleYield(field.first.use(), continueBlock, expr.scope, expr.origin))
+                continueBlock.isEntryPoint = true
+                return UnitInstance to continueBlock
             }
 
             is ReturnExpression -> {
@@ -111,6 +106,82 @@ object ASTSimplifier {
                 val block1 = field.second
                 block1.add(SimpleReturn(field.first.use(), expr.scope, expr.origin))
                 return null // nothing exists after
+            }
+
+            is ThrowExpression -> {
+                // todo we need to check all handlers (go up the scope tree)...
+                //   and finally, we need to exit
+                val field = simplifyImpl(context, expr.value, block0, graph, true) ?: return null
+                val block1 = field.second
+                block1.add(SimpleThrow(field.first.use(), expr.scope, expr.origin))
+                return null // nothing exists after
+            }
+
+            is TryCatchBlock -> {
+                val scope = expr.tryBody.scope
+                var handlerBlock = graph.addBlock(expr.scope, expr.origin)
+                val throwableField = handlerBlock.field(ThrowableType)
+
+
+                val finallyCondition = if (expr.finally != null) {
+                    val field = graph.startBlock.field(BooleanType, booleanOwnership)
+                    val trueField = block0.field(BooleanType, booleanOwnership)
+                    block0.add(SimpleSpecialValue(trueField, SpecialValue.TRUE, expr.scope, expr.origin))
+                    // todo what is self here???
+                    // todo we must initialize the field to false at the very start...
+                    block0.add(SimpleSetField(UnitInstance, expr.finally.flag, trueField, expr.scope, expr.origin))
+                    field
+                } else null
+
+                val prevHandler = graph.catchHandlers.put(scope, SimpleCatchHandler(throwableField, handlerBlock))
+                check(prevHandler == null)
+
+                val body = simplifyImpl(context, expr.tryBody, block0, graph, needsValue)
+                // todo the values of all catches must be joined if possible...
+
+                // todo it would be good to calculate which stuff exactly can be thrown,
+                //  and to therefore simplify this lots and lots
+
+                var hasCaughtAll = false
+                for (catch in expr.catches) {
+                    // catches must be built into a long else-if-else-if chain
+                    val type = catch.param.type
+                    val catchesAll = type == ThrowableType
+
+                    if (catchesAll) {
+                        hasCaughtAll = true
+                        val catchBody1 = simplifyImpl(context, catch.body, handlerBlock, graph, needsValue)
+                        break
+                    } else {
+                        val condition = handlerBlock.field(BooleanType, booleanOwnership)
+                        handlerBlock.add(SimpleInstanceOf(condition, throwableField, type, expr.scope, expr.origin))
+                        handlerBlock.branchCondition = condition
+
+                        val catchBlock0 = graph.addBlock(expr.scope, expr.origin)
+                        val continueBlock = graph.addBlock(expr.scope, expr.origin)
+                        handlerBlock.ifBranch = catchBlock0
+                        handlerBlock.elseBranch = continueBlock
+
+                        val catchBody1 = simplifyImpl(context, catch.body, catchBlock0, graph, needsValue)
+                        handlerBlock = continueBlock
+                    }
+                }
+
+                if (!hasCaughtAll) {
+                    // todo the last handlerBlock case must be 'throw'
+                    // todo except if one case handled all cases
+
+                }
+
+                if (finallyCondition != null) {
+                    val finallyHandler = graph.addBlock(expr.scope, expr.origin)
+                    simplifyImpl(context, expr.finally!!.body, finallyHandler, graph, false)
+                    graph.finallyBlocks.add(SimpleFinallyBlock(finallyCondition, finallyHandler))
+                }
+
+                // todo simplify body
+                // todo simplify handlers
+                return body
             }
 
             is ResolvedCompareOp -> {
@@ -151,7 +222,7 @@ object ASTSimplifier {
                     SpecialValue.SUPER -> throw IllegalStateException("Cannot store super in a field")
                 }
                 val dst = block0.field(type)
-                block0.add(SimpleSpecialValue(dst, expr))
+                block0.add(SimpleSpecialValue(dst, expr.type, expr.scope, expr.origin))
                 return dst to block0
             }
 

@@ -30,6 +30,7 @@ import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.StringType
@@ -1327,7 +1328,16 @@ class ZauberASTBuilder(
                 catches.add(Catch(params[0], handler))
             }
         }
-        val finally = if (consumeIf("finally")) readBodyOrExpression(null) else null
+        val finally = if (consumeIf("finally")) {
+            val origin = origin(i - 1)
+            val body = readBodyOrExpression(null)
+            val flagName = body.scope.generateName("finallyFlag", origin)
+            val flag = Field(
+                body.scope, null, false, true,
+                null, flagName, BooleanType, null, Keywords.SYNTHETIC, origin
+            )
+            Finally(body, flag)
+        } else null
         return TryCatchBlock(tryBody, catches, finally)
     }
 
@@ -1778,11 +1788,16 @@ class ZauberASTBuilder(
         if (remainder.list.isNotEmpty()) {
             val forTryBody = ArrayList(result)
             result.clear()
+            val flagName = scope.generateName("deferFlag", origin)
+            val flag = Field(
+                scope, null, false, true, null, flagName,
+                BooleanType, null, Keywords.SYNTHETIC, origin
+            )
             result.add(
                 TryCatchBlock(
                     ExpressionList(forTryBody, scope, origin),
                     emptyList(),
-                    action
+                    Finally(action, flag)
                 )
             )
         } else {

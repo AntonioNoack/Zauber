@@ -286,7 +286,7 @@ object JavaSimplifiedASTWriter {
                     .append1(expr.right)
             }
             is SimpleSpecialValue -> {
-                when (expr.base.type) {
+                when (expr.type) {
                     SpecialValue.TRUE -> builder.append("true")
                     SpecialValue.FALSE -> builder.append("false")
                     SpecialValue.NULL -> builder.append("null")

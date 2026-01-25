@@ -7,8 +7,10 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
-class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val finallyExpression: Expression?) :
-    Expression(tryBody.scope, tryBody.origin) {
+class TryCatchBlock(
+    val tryBody: Expression, val catches: List<Catch>,
+    val finally: Finally?
+) : Expression(tryBody.scope, tryBody.origin) {
 
     override fun resolveType(context: ResolutionContext): Type {
         val bodyType = TypeResolution.resolveType(context, tryBody)
@@ -27,7 +29,7 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
     override fun needsBackingField(methodScope: Scope): Boolean {
         return tryBody.needsBackingField(methodScope) ||
                 catches.any { it.body.needsBackingField(methodScope) } ||
-                finallyExpression?.needsBackingField(methodScope) == true
+                finally?.body?.needsBackingField(methodScope) == true
     }
 
     // already a split on its own, or is it?
@@ -35,16 +37,16 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
 
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
         Catch(it.param.clone(it.param.scope /* I don't think we should override this */), it.body.clone(scope))
-    }, finallyExpression?.clone(scope))
+    }, finally?.clone(scope))
 
     override fun isResolved(): Boolean = tryBody.isResolved() &&
             catches.all { it.param.type.isResolved() && it.body.isResolved() } &&
-            (finallyExpression == null || finallyExpression.isResolved())
+            (finally == null || finally.body.isResolved())
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         return TryCatchBlock(tryBody.resolve(context), catches.map {
             Catch(it.param, it.body.resolve(context))
-        }, finallyExpression?.resolve(context))
+        }, finally?.resolve(context))
     }
 
     override fun toStringImpl(depth: Int): String {
@@ -52,7 +54,7 @@ class TryCatchBlock(val tryBody: Expression, val catches: List<Catch>, val final
             catches.joinToString(" ") {
                 "catch(${it.param} { ${it.body}})"
             }
-        } finally { $finallyExpression }"
+        } finally { ${finally?.body} }"
     }
 
 }

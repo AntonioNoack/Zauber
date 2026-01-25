@@ -11,6 +11,9 @@ class SimpleGraph(scope: Scope, origin: Int) {
     val continueLabels = HashMap<String?, SimpleBlock>()
     val breakLabels = HashMap<String?, SimpleBlock>()
 
+    val catchHandlers = HashMap<Scope, SimpleCatchHandler>()
+    val finallyBlocks = ArrayList<SimpleFinallyBlock>()
+
     init {
         startBlock.isEntryPoint = true
         blocks.add(startBlock)
