@@ -30,7 +30,7 @@ abstract class MethodColoring<Method, Color : Any> {
         return mergeColors(selfColor, colors, isRecursive)
     }
 
-    abstract fun getDependencies(func: Method): List<Method>
-    abstract fun getSelfColor(func: Method): Color
+    abstract fun getDependencies(method: Method): List<Method>
+    abstract fun getSelfColor(method: Method): Color
     abstract fun mergeColors(self: Color, colors: List<Color>, isRecursive: Boolean): Color
 }

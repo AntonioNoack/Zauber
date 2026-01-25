@@ -8,7 +8,8 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.controlflow.*
+import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.generation.java.JavaSourceGenerator.comment
@@ -110,9 +111,44 @@ object JavaSimplifiedASTWriter {
         if (withOpen) builder.append(')')
     }
 
+    // todo we have converted SimpleBlock into a complex graph,
+    //  before we can use it, we must convert it back
+    fun JavaSourceGenerator.appendSimplifiedAST(
+        method: MethodLike, expr: SimpleBlock,
+        // loop: SimpleLoop? = null
+    ) {
+        val instructions = expr.instructions
+        for (i in instructions.indices) {
+            val instr = instructions[i]
+            if (instr is SimpleMerge) {
+                appendAssign(instr)
+                builder.setLength(builder.length - 3) // remove " = "
+                builder.append(';')
+                nextLine()
+            }
+        }
+        for (i in instructions.indices) {
+            val instr = instructions[i]
+            appendSimplifiedAST(method, instr /*loop*/)
+            if (instr is SimpleAssignmentExpression &&
+                instr.dst.type == NothingType
+            ) break
+        }
+        if (expr.branchCondition == null) {
+            val next = expr.nextBranch
+            if (next != null) {
+                appendSimplifiedAST(method, next)
+            }
+        } else {
+            // todo this may or may not be simply be possible...
+            // todo this may be a loop, branch, or similar...
+            TODO("Jump to either branch")
+        }
+    }
+
     fun JavaSourceGenerator.appendSimplifiedAST(
         method: MethodLike, expr: SimpleExpression,
-        loop: SimpleLoop? = null
+        // loop: SimpleLoop? = null
     ) {
         if (expr is SimpleMerge) return
         if (expr is SimpleAssignmentExpression && expr.dst.type != NothingType) {
@@ -121,26 +157,7 @@ object JavaSimplifiedASTWriter {
             else appendAssign(expr)
         }
         when (expr) {
-            is SimpleBlock -> {
-                val instructions = expr.instructions
-                for (i in instructions.indices) {
-                    val instr = instructions[i]
-                    if (instr is SimpleMerge) {
-                        appendAssign(instr)
-                        builder.setLength(builder.length - 3) // remove " = "
-                        builder.append(';')
-                        nextLine()
-                    }
-                }
-                for (i in instructions.indices) {
-                    val instr = instructions[i]
-                    appendSimplifiedAST(method, instr, loop)
-                    if (instr is SimpleAssignmentExpression &&
-                        instr.dst.type == NothingType
-                    ) break
-                }
-            }
-            is SimpleBranch -> {
+            /*is SimpleBranch -> {
                 builder.append("if (").append1(expr.condition).append(')')
                 writeBlock {
                     appendSimplifiedAST(method, expr.ifTrue, loop)
@@ -167,7 +184,7 @@ object JavaSimplifiedASTWriter {
                     builder.append(" b").append(expr.bodyBlock.blockId)
                 }
                 builder.append(';')
-            }
+            }*/
             is SimpleDeclaration -> {
                 appendType(expr.type, expr.scope, false)
                 builder.append(' ').append(expr.name)
@@ -373,7 +390,7 @@ object JavaSimplifiedASTWriter {
             }
         }
         if (expr is SimpleAssignmentExpression) builder.append(';')
-        if (expr !is SimpleBlock && expr !is SimpleBranch) nextLine()
+        /*if (expr !is SimpleBlock && expr !is SimpleBranch)*/ nextLine()
         if (expr is SimpleAssignmentExpression && expr.dst.type == NothingType) {
             builder.append("throw new AssertionError(\"Unreachable\");")
             nextLine()

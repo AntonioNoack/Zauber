@@ -8,12 +8,12 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 object IsMethodYielding : MethodColoring<MethodLike, Type>() {
 
-    override fun getDependencies(func: MethodLike): List<MethodLike> {
+    override fun getDependencies(method: MethodLike): List<MethodLike> {
         // todo check for any throw/yield instructions
         TODO("Not yet implemented")
     }
 
-    override fun getSelfColor(func: MethodLike): Type {
+    override fun getSelfColor(method: MethodLike): Type {
         // todo iterate over the body
         TODO("Not yet implemented")
     }

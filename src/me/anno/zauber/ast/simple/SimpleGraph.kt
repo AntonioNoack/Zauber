@@ -12,6 +12,7 @@ class SimpleGraph(scope: Scope, origin: Int) {
     val breakLabels = HashMap<String?, SimpleBlock>()
 
     init {
+        startBlock.isEntryPoint = true
         blocks.add(startBlock)
     }
 

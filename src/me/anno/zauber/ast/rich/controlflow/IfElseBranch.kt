@@ -93,5 +93,4 @@ class IfElseBranch(
             "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} } else { ${elseBranch.toString(depth)} }"
         }
     }
-
 }

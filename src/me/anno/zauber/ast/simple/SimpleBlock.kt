@@ -6,8 +6,20 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
-class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
-    SimpleExpression(scope, origin) {
+class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) {
+
+    var isEntryPoint = false
+
+    var branchCondition: SimpleField? = null
+    var ifBranch: SimpleBlock? = null
+    var elseBranch: SimpleBlock? = null
+    val entryBlocks = ArrayList<SimpleBlock>()
+
+    var nextBranch: SimpleBlock?
+        get() = ifBranch
+        set(value) {
+            ifBranch = value
+        }
 
     val blockId = graph.blocks.size
     val instructions = ArrayList<SimpleExpression>()
@@ -26,8 +38,13 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
         return instructions.joinToString("\n")
     }
 
-    override fun execute(runtime: Runtime): BlockReturn? {
+    fun execute(runtime: Runtime): BlockReturn? {
         return runtime.executeBlock(this)
+    }
+
+    fun isEmpty(): Boolean {
+        return branchCondition == null && ifBranch == null && elseBranch == null &&
+                instructions.isEmpty()
     }
 
     companion object {
@@ -36,5 +53,4 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
             else Ownership.SHARED
         }
     }
-
 }

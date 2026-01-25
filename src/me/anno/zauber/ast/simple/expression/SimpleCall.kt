@@ -4,11 +4,14 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.expansion.IsMethodThrowing
+import me.anno.zauber.expansion.IsMethodYielding
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
 
 class SimpleCall(
@@ -41,6 +44,19 @@ class SimpleCall(
         for (method in methods.values) {
             check(method.valueParameters.size == valueParameters.size)
         }
+    }
+
+    // todo these depend on whether all types are instantiable,
+    //   and also on available specializations...
+
+    val thrownType: Type by lazy {
+        val types = methods.values.map { method -> IsMethodThrowing[method] }
+        unionTypes(types)
+    }
+
+    val yieldedType: Type by lazy {
+        val types = methods.values.map { method -> IsMethodYielding[method] }
+        unionTypes(types)
     }
 
     override fun toString(): String {
