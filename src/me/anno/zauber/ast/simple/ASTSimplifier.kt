@@ -38,7 +38,6 @@ object ASTSimplifier {
     val booleanOwnership = Ownership.COMPTIME
 
     // todo inline functions
-    // todo calculate labels for break/continue
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
@@ -95,7 +94,7 @@ object ASTSimplifier {
                 //   and finally, we need to exit
                 val field = simplifyImpl(context, expr.value, currBlock, graph, true)
                 if (field != null) currBlock.add(SimpleThrow(field.use(), expr.scope, expr.origin))
-                UnitInstance
+                null // nothing exists after
             }
 
             is ReturnExpression -> {
@@ -103,8 +102,7 @@ object ASTSimplifier {
                 //  but todo we also want yields for async functions and sequences
                 val field = simplifyImpl(context, expr.value, currBlock, graph, true)
                 if (field != null) currBlock.add(SimpleReturn(field.use(), expr.scope, expr.origin))
-                // todo else write unreachable?
-                UnitInstance
+                null // nothing exists after
             }
 
             is ResolvedCompareOp -> {
