@@ -5,6 +5,7 @@ import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.impl.ClassType
@@ -25,7 +26,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     val children = ArrayList<Scope>()
     val sources = ArrayList<TokenList>()
 
-    val code = ArrayList<Expression>()
+    val code: ArrayList<Expression>
+        get() = (selfAsConstructor!!.body as ExpressionList).list as ArrayList<Expression>
 
     val constructors: List<Constructor>
         get() = children.mapNotNull { it.selfAsConstructor }
@@ -441,7 +443,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         superCallNames.clear()
         fileName = null
         keywords = 0
-        code.clear()
         selfAsMethod = null
         selfAsConstructor = null
         selfAsTypeAlias = null

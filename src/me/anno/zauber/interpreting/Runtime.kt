@@ -1,8 +1,8 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.ASTSimplifier
@@ -11,6 +11,7 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.ByteType
 import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
@@ -21,7 +22,6 @@ import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
-import java.security.cert.CRL
 
 class Runtime {
 
@@ -45,13 +45,16 @@ class Runtime {
             for (i in thisStack.lastIndex downTo 0) {
                 val self = thisStack[i]
                 if (self.scope == selfScope) {
+                    println("Found this@$selfScope: ${self.instance}")
                     return self.instance
                 }
             }
             // might be an object...
+            println("Returning object instance for $selfScope")
             return getObjectInstance(selfScope.typeWithoutArgs)
         }
 
+        println("Using field in call $field")
         return callStack.last().fields[field]
             ?: throw IllegalStateException("Missing field $field")
     }
@@ -59,14 +62,20 @@ class Runtime {
     operator fun get(instance: Instance, field: Field): Instance {
         val clazz = instance.type
         val fieldIndex = clazz.properties.indexOf(field)
+        println("Getting $instance.$field, $fieldIndex")
         if (fieldIndex == -1) {
             val parameter = field.byParameter
             if (parameter is Parameter) {
-                return callStack.last().valueParameters[parameter.index]
+                val vp = callStack.last().valueParameters
+                check(parameter.index in vp.indices) {
+                    "Expected parameter #${parameter.index} but got only ${vp.size} total"
+                }
+                return vp[parameter.index]
             }
         }
         check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.codeScope})" }
-        return instance.properties[fieldIndex]!!
+        return instance.properties[fieldIndex]
+            ?: throw IllegalStateException("$instance.$field[$fieldIndex] accessed before initialization")
     }
 
     operator fun set(field: SimpleField, value: Instance) {
@@ -79,14 +88,20 @@ class Runtime {
     operator fun set(instance: Instance, field: Field, value: Instance) {
         val clazz = instance.type
         val fieldIndex = clazz.properties.indexOf(field)
-        check(fieldIndex != -1) { "Instance $clazz does not have field $field" }
+        check(fieldIndex != -1) { "Instance $clazz does not have field $field, available: ${clazz.properties}" }
         instance.properties[fieldIndex] = value
     }
 
     fun isNull(va: Instance) = va == getNull()
 
     fun getBool(bool: Boolean): Instance {
-        TODO()
+        val boolCompanion = BooleanType.clazz.companionObject
+            ?: throw IllegalStateException("Missing definition for enum class Boolean")
+        val boolInstance = getObjectInstance(boolCompanion.typeWithoutArgs)
+        val fields = boolInstance.type.properties
+        val name = if (bool) "TRUE" else "FALSE"
+        val field = fields.first { it.name == name }
+        return this[boolInstance, field]
     }
 
     fun getNull(): Instance = nullInstance
@@ -98,26 +113,22 @@ class Runtime {
     }
 
     fun executeCall(
-        self: Instance, method: Constructor,
+        self: Instance, method: MethodLike,
         valueParameters: List<SimpleField>
-    ): Instance {
-        TODO()
-    }
-
-    fun executeCall(
-        self: Instance, method: Method,
-        valueParameters: List<SimpleField>
-    ): Instance {
+    ): ReturnFromMethod {
         val valueParameters = valueParameters.map { this[it] }
         if (method.isExternal()) {
-            val key = ExternalKey(method.scope.parent!!, method.name!!, method.valueParameters.map { it.type })
+            val name = (method as Method).name!!
+            val key = ExternalKey(method.scope.parent!!, name, method.valueParameters.map { it.type })
             val method = externalMethods[key]
                 ?: throw IllegalStateException("Missing external method $key")
-            return method.process(this, self, valueParameters)
+            val value = method.process(this, self, valueParameters)
+            return ReturnFromMethod(ReturnType.RETURN, value)
         }
 
         val body = method.body
             ?: throw IllegalStateException("Missing body for method $method")
+
         var simpleBody = method.simpleBody
         if (simpleBody == null) {
             val context = ResolutionContext(method.selfType, true, method.returnType, emptyMap())
@@ -125,7 +136,7 @@ class Runtime {
             method.simpleBody = simpleBody
         }
 
-        val call = Call(method, self, valueParameters)
+        val call = Call(self, valueParameters)
         callStack.add(call)
 
         val oldThisStack = ArrayList(thisStack)
@@ -134,14 +145,15 @@ class Runtime {
         val thisScope = if (method.explicitSelfType) method.scope else method.scope.parent!!
         thisStack.add(This(self, thisScope))
 
-        try {
+        val result = try {
             executeBlock(simpleBody)
         } finally {
             thisStack.clear()
             thisStack.addAll(oldThisStack)
         }
 
-        return call.returnValue ?: getUnit()
+        println("Return value: ${call.returnValue}")
+        return result ?: ReturnFromMethod(ReturnType.RETURN, getUnit())
     }
 
     fun createNumber(base: NumberExpression): Instance {
@@ -215,23 +227,24 @@ class Runtime {
         return getClass(type).getOrCreateObjectInstance(this)
     }
 
-    fun executeBlock(body: SimpleBlock) {
+    fun executeBlock(body: SimpleBlock): ReturnFromMethod? {
         // todo push fields
         val tss = thisStack.size
         val instructions = body.instructions
-        for (i in instructions.indices) {
-            val instr = instructions[i]
-            println("Executing $instr")
-            instr.execute(this)
+        try {
+            for (i in instructions.indices) {
+                val instr = instructions[i]
+                println("Executing $instr")
+                // todo we must execute all (err)defer-things
+                val result = instr.execute(this)
+                if (result != null) return result
+            }
+        } finally {
+            while (thisStack.size > tss) {
+                thisStack.removeLast()
+            }
         }
-        while (thisStack.size > tss) {
-            thisStack.removeLast()
-        }
-    }
-
-    fun returnFromCall(value: Instance) {
-        val call = callStack.removeLast()
-        call.returnValue = value
+        return null
     }
 
     fun castToBool(instance: Instance): Boolean {
@@ -258,14 +271,4 @@ class Runtime {
     fun gotoOtherBlock(target: SimpleBlock) {
         TODO("Not yet implemented")
     }
-
-    fun getObjectInstance(selfType: Type?): Instance {
-        if (selfType == null) return getUnit()
-        TODO()
-    }
-
-    fun yieldFromCall(value: Instance) {
-        TODO("somehow process a yield")
-    }
-
 }

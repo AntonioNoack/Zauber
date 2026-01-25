@@ -1,12 +1,23 @@
 package me.anno.zauber.interpreting
 
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
 class ZClass(val type: Type) {
-    val properties = (type as? ClassType)?.clazz?.fields
-        ?.filter { it.selfType == type }
-        ?: emptyList()
+
+    companion object {
+        fun getProperties(type: Type): List<Field> {
+            if (type !is ClassType) return emptyList()
+            val scopeType = type.clazz.scopeType
+            val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
+            if (!isValidInstance) return emptyList()
+            return type.clazz.fields.filter { !it.explicitSelfType || it.selfType == type }
+        }
+    }
+
+    val properties = getProperties(type)
 
     private var objectInstance: Instance? = null
 
@@ -15,8 +26,16 @@ class ZClass(val type: Type) {
         if (objectInstance != null) return objectInstance
         objectInstance = createInstance()
         this.objectInstance = objectInstance
-        val primaryConstructor = (type as? ClassType)?.clazz?.primaryConstructorScope?.selfAsConstructor
+        val scope = (type as? ClassType)?.clazz
+        val primaryConstructor = scope?.primaryConstructorScope?.selfAsConstructor
         if (primaryConstructor != null) {
+            when (scope.scopeType) {
+                null, ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {} // ok
+                else -> throw IllegalStateException("Cannot create object instance for $scope")
+            }
+            check(primaryConstructor.valueParameters.isEmpty()) {
+                "Object/package must not have valueParameters, found some in $scope"
+            }
             runtime.executeCall(objectInstance, primaryConstructor, emptyList())
         }
         return objectInstance

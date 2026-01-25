@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple.controlflow
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.interpreting.ReturnFromMethod
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
@@ -18,7 +19,7 @@ class SimpleGoto(
         return "if(${condition ?: "true"}) goto ${target.hashCode()}"
     }
 
-    override fun execute(runtime: Runtime) {
+    override fun execute(runtime: Runtime): ReturnFromMethod? {
         if (condition == null) {
             runtime.gotoOtherBlock(target)
         } else {
@@ -27,5 +28,6 @@ class SimpleGoto(
                 runtime.gotoOtherBlock(target)
             }
         }
+        return null
     }
 }

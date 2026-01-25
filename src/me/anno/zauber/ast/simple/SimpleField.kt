@@ -20,6 +20,7 @@ class SimpleField(
     }
 
     override fun toString(): String {
-        return "%$id[$type]"
+        return if(scopeIfIsThis == null) "%$id[$type]"
+        else "this@$scopeIfIsThis[$type]"
     }
 }

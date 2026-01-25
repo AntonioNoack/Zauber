@@ -8,7 +8,7 @@ import me.anno.zauber.types.Scope
 
 class SimpleGetField(
     dst: SimpleField,
-    val self: SimpleField?, // todo if null, we need some pseudo instance...
+    val self: SimpleField,
     val field: Field,
     scope: Scope, origin: Int
 ) : SimpleAssignmentExpression(dst, scope, origin) {
@@ -18,7 +18,8 @@ class SimpleGetField(
     }
 
     override fun eval(runtime: Runtime): Instance {
-        val self = if(self != null) runtime[self] else runtime.getObjectInstance(field.selfType)
+        val self = runtime[self]
+        println("Self for $field: $self")
         return runtime[self, field]
     }
 

@@ -112,7 +112,9 @@ class ZauberASTBuilder(
 
         val constructorOrigin = origin(i)
         val constructorParams = readPrimaryConstructorParameters(classScope)
-        createAssignmentInstructionsForPrimaryConstructor(classScope, constructorParams)
+        val constructorBody = createAssignmentInstructionsForPrimaryConstructor(
+            classScope, constructorParams, constructorOrigin
+        )
 
         readSuperCalls(classScope)
 
@@ -122,7 +124,7 @@ class ZauberASTBuilder(
             constructorParams ?: emptyList(),
             primConstructorScope, if (primarySuperCall != null) {
                 InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
-            } else null, null,
+            } else null, constructorBody,
             if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
             constructorOrigin
         )
@@ -134,27 +136,31 @@ class ZauberASTBuilder(
 
     private fun createAssignmentInstructionsForPrimaryConstructor(
         classScope: Scope, constructorParams: List<Parameter>?,
-    ) {
-        constructorParams ?: return
+        constructorOrigin: Int
+    ): ExpressionList {
+        val result = ArrayList<Expression>()
         val scope = classScope.getOrCreatePrimConstructorScope()
-        for (parameter in constructorParams) {
-            if (!(parameter.isVal || parameter.isVar)) continue
+        if (constructorParams != null) {
+            for (parameter in constructorParams) {
+                if (!(parameter.isVal || parameter.isVar)) continue
 
-            val origin = parameter.origin
-            val parameterField = parameter.getOrCreateField(classScope.typeWithArgs, Keywords.NONE)
-            val classField = Field(
-                classScope, classScope.typeWithArgs,
-                false, isMutable = parameter.isVar,
-                parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
-            )
-            val dstExpr = DotExpression(
-                ThisExpression(classScope, scope, origin), null,
-                FieldExpression(classField, scope, origin),
-                scope, origin
-            )
-            val srcExpr = FieldExpression(parameterField, scope, origin)
-            scope.code.add(AssignmentExpression(dstExpr, srcExpr))
+                val origin = parameter.origin
+                val parameterField = parameter.getOrCreateField(null, Keywords.NONE)
+                val classField = Field(
+                    classScope, classScope.typeWithArgs,
+                    false, isMutable = parameter.isVar,
+                    parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
+                )
+                val dstExpr = DotExpression(
+                    ThisExpression(classScope, scope, origin), null,
+                    FieldExpression(classField, scope, origin),
+                    scope, origin
+                )
+                val srcExpr = FieldExpression(parameterField, scope, origin)
+                result.add(AssignmentExpression(dstExpr, srcExpr))
+            }
         }
+        return ExpressionList(result, scope, constructorOrigin)
     }
 
     private fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
@@ -325,7 +331,8 @@ class ZauberASTBuilder(
         if (needsPrimaryConstructor) {
             primaryConstructorScope.selfAsConstructor = Constructor(
                 emptyList(), primaryConstructorScope,
-                null, null, Keywords.NONE, origin0
+                null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
+                Keywords.NONE, origin0
             )
         }
 

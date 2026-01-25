@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.zauber.interpreting.ReturnFromMethod
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.This
 import me.anno.zauber.types.Scope
@@ -11,8 +12,9 @@ class SimpleDeclareThis(val thisScope: Scope, val field: SimpleField, scope: Sco
         return "this@$thisScope := $field;"
     }
 
-    override fun execute(runtime: Runtime) {
+    override fun execute(runtime: Runtime): ReturnFromMethod? {
         val instance = runtime[field]
         runtime.thisStack.add(This(instance, thisScope))
+        return null
     }
 }

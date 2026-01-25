@@ -4,16 +4,19 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.specialization.Specialization
 
 class SimpleCall(
     dst: SimpleField,
     // for complex types, e.g. Float|String, we may need multiple methods, or some sort of instance-type->method mapping
     val methodName: String,
-    val methods: Map<ClassType, Method>,
+    // todo key should also contain specialization, or should it?
+    //  method then could be the specialized one...
+    val methods: Map<Type, Method>,
     val sample: Method,
     val self: SimpleField,
     val specialization: Specialization,
@@ -45,10 +48,11 @@ class SimpleCall(
     }
 
     override fun eval(runtime: Runtime): Instance {
-        // todo self could be a class instance...
         val self = runtime[self]
-        val method = methods[self.type.type as? ClassType] ?: sample
-        return runtime.executeCall(self, method, valueParameters)
+        val method = methods[self.type.type] ?: sample
+        val rfm = runtime.executeCall(self, method, valueParameters)
+        check(rfm.type == ReturnType.RETURN)
+        return rfm.instance
     }
 
 }
