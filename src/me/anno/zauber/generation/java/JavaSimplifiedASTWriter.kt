@@ -347,7 +347,7 @@ object JavaSimplifiedASTWriter {
                     }
                 }
             }
-            is SimpleCreateInstance -> {
+            is SimpleAllocateInstance -> {
                 // handled in SimpleCall, because only there do we have the value parameters
             }
             is SimpleSelfConstructor -> {

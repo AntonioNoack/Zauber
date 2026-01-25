@@ -7,7 +7,7 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.impl.ClassType
 
-class SimpleCreateInstance(
+class SimpleAllocateInstance(
     dst: SimpleField,
     val selfType: ClassType,
     scope: Scope, origin: Int

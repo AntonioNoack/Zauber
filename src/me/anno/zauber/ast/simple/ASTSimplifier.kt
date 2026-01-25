@@ -486,7 +486,7 @@ object ASTSimplifier {
             UnitInstance
         } else {
             val dst = currBlock.field(method0.getTypeFromCall())
-            currBlock.add(SimpleCreateInstance(dst, method.selfType, scope, origin))
+            currBlock.add(SimpleAllocateInstance(dst, method.selfType, scope, origin))
             val unusedTmp = currBlock.field(UnitType)
             currBlock.add(
                 SimpleCall( // todo use correct specialization; depends on outer class, if present, too
