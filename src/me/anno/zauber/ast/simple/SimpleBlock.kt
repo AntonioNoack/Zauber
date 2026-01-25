@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.generation.c.CSourceGenerator.isValueType
-import me.anno.zauber.interpreting.ReturnFromMethod
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -26,7 +26,7 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) :
         return instructions.joinToString("\n")
     }
 
-    override fun execute(runtime: Runtime): ReturnFromMethod? {
+    override fun execute(runtime: Runtime): BlockReturn? {
         return runtime.executeBlock(this)
     }
 

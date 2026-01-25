@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple.controlflow
 
 import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.ReturnFromMethod
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
@@ -12,8 +12,8 @@ class SimpleReturn(val field: SimpleField, scope: Scope, origin: Int) : SimpleEx
         return "return $field"
     }
 
-    override fun execute(runtime: Runtime): ReturnFromMethod {
+    override fun execute(runtime: Runtime): BlockReturn {
         val value = runtime[field]
-        return ReturnFromMethod(ReturnType.RETURN, value)
+        return BlockReturn(ReturnType.RETURN, value)
     }
 }

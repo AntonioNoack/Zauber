@@ -279,13 +279,6 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
                 }
             }
-            is SimpleThis -> {
-                val scope = expr.base.label
-                // todo different 'this's may be given new, different names,
-                //  but where and when do we decide that?
-                builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this")
-                comment { builder.append(scope.pathStr) }
-            }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName

@@ -1,7 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
@@ -15,8 +16,9 @@ class SimpleCheckIdentical(
         return "$dst = $left ${if (negated) "!==" else "==="} $right"
     }
 
-    override fun eval(runtime: Runtime): Instance {
-        return runtime.getBool(runtime[left] == runtime[right])
+    override fun eval(runtime: Runtime): BlockReturn {
+        val instance = runtime.getBool(runtime[left] == runtime[right])
+        return BlockReturn(ReturnType.VALUE, instance)
     }
 
 }

@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
@@ -47,12 +47,13 @@ class SimpleCall(
         return "$dst = $self[${method.selfType}].${method.name}${valueParameters.joinToString(", ", "(", ")")}"
     }
 
-    override fun eval(runtime: Runtime): Instance {
+    override fun eval(runtime: Runtime): BlockReturn {
         val self = runtime[self]
         val method = methods[self.type.type] ?: sample
         val rfm = runtime.executeCall(self, method, valueParameters)
-        check(rfm.type == ReturnType.RETURN)
-        return rfm.instance
+        return if (rfm.type == ReturnType.RETURN) {
+            BlockReturn(ReturnType.VALUE, rfm.instance)
+        } else rfm
     }
 
 }

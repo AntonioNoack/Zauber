@@ -102,6 +102,11 @@ class Scope(val name: String, val parent: Scope? = null) {
         return primaryConstructorScope ?: run {
             val scope = getOrPut("prim", ScopeType.CONSTRUCTOR)
             primaryConstructorScope = scope
+            scope.selfAsConstructor = Constructor(
+                emptyList(), scope,
+                null, ExpressionList(ArrayList(), scope, -1),
+                Keywords.SYNTHETIC, -1
+            )
             scope
         }
     }

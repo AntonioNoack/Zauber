@@ -463,6 +463,9 @@ class ZauberASTBuilder(
         field.typeParameters = typeParameters
         if (initialValue != null) {
             val fieldExpr = FieldExpression(field, classScope, origin)
+            check(constructorScope.selfAsConstructor != null) {
+                "$classScope needs primary constructor"
+            }
             constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
         }
 
@@ -1752,7 +1755,7 @@ class ZauberASTBuilder(
             }
         }
         val code = ExpressionList(result, methodScope, origin)
-        methodScope.code.add(code)
+        // methodScope.code.add(code)
         currPackage = methodScope // restore scope
         return code
     }

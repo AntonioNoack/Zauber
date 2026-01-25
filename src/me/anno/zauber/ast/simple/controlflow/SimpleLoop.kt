@@ -2,8 +2,7 @@ package me.anno.zauber.ast.simple.controlflow
 
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleExpression
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.ReturnFromMethod
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
@@ -17,7 +16,7 @@ class SimpleLoop(val body: SimpleBlock, scope: Scope, origin: Int) :
         return "while(true) { $body }"
     }
 
-    override fun execute(runtime: Runtime): ReturnFromMethod? {
+    override fun execute(runtime: Runtime): BlockReturn? {
         return runtime.executeBlock(body)
     }
 }

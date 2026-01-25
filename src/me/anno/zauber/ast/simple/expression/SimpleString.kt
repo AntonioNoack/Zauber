@@ -2,7 +2,8 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 
 class SimpleString(dst: SimpleField, val base: StringExpression) :
@@ -12,7 +13,8 @@ class SimpleString(dst: SimpleField, val base: StringExpression) :
         return "$dst = $base"
     }
 
-    override fun eval(runtime: Runtime): Instance {
-        return runtime.createString(base.value)
+    override fun eval(runtime: Runtime): BlockReturn {
+        val value = runtime.createString(base.value)
+        return BlockReturn(ReturnType.VALUE, value)
     }
 }

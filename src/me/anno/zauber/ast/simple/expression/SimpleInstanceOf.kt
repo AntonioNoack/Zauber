@@ -1,7 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -16,10 +17,11 @@ class SimpleInstanceOf(
         return "$dst = $value is $type"
     }
 
-    override fun eval(runtime: Runtime): Instance {
+    override fun eval(runtime: Runtime): BlockReturn {
         val instance = runtime[value]
         val givenType = instance.type
         val expectedType = runtime.getClass(type)
-        return runtime.getBool(givenType.isSubTypeOf(expectedType))
+        val value = runtime.getBool(givenType.isSubTypeOf(expectedType))
+        return BlockReturn(ReturnType.VALUE, value)
     }
 }

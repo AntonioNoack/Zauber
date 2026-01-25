@@ -115,7 +115,7 @@ class Runtime {
     fun executeCall(
         self: Instance, method: MethodLike,
         valueParameters: List<SimpleField>
-    ): ReturnFromMethod {
+    ): BlockReturn {
         val valueParameters = valueParameters.map { this[it] }
         if (method.isExternal()) {
             val name = (method as Method).name!!
@@ -123,7 +123,7 @@ class Runtime {
             val method = externalMethods[key]
                 ?: throw IllegalStateException("Missing external method $key")
             val value = method.process(this, self, valueParameters)
-            return ReturnFromMethod(ReturnType.RETURN, value)
+            return BlockReturn(ReturnType.RETURN, value)
         }
 
         val body = method.body
@@ -153,7 +153,7 @@ class Runtime {
         }
 
         println("Return value: ${call.returnValue}")
-        return result ?: ReturnFromMethod(ReturnType.RETURN, getUnit())
+        return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 
     fun createNumber(base: NumberExpression): Instance {
@@ -227,17 +227,20 @@ class Runtime {
         return getClass(type).getOrCreateObjectInstance(this)
     }
 
-    fun executeBlock(body: SimpleBlock): ReturnFromMethod? {
+    fun executeBlock(body: SimpleBlock): BlockReturn? {
         // todo push fields
         val tss = thisStack.size
         val instructions = body.instructions
         try {
+            var lastValue: BlockReturn? = null
             for (i in instructions.indices) {
                 val instr = instructions[i]
                 println("Executing $instr")
                 // todo we must execute all (err)defer-things
-                val result = instr.execute(this)
-                if (result != null) return result
+                lastValue = instr.execute(this)
+                if (lastValue != null && lastValue.type != ReturnType.VALUE) {
+                    return lastValue
+                }
             }
         } finally {
             while (thisStack.size > tss) {

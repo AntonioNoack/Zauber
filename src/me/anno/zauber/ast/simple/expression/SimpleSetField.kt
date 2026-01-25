@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.simple.SimpleExpression
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.ReturnFromMethod
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
@@ -17,7 +17,7 @@ class SimpleSetField(
         return "$self?[${field.selfType}].${field.name} = $src"
     }
 
-    override fun execute(runtime: Runtime): ReturnFromMethod? {
+    override fun execute(runtime: Runtime): BlockReturn? {
         val selfInstance = runtime[self]
         val value = runtime[src]
         runtime[selfInstance, field] = value

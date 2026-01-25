@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
 
 /**
@@ -31,7 +31,7 @@ class SimpleMerge(
         return "$dst = Merge($ifField, $elseField)"
     }
 
-    override fun eval(runtime: Runtime): Instance {
+    override fun eval(runtime: Runtime): BlockReturn {
         TODO("How can we find out which branch we're coming from???")
     }
 }

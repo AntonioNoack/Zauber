@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.interpreting.ReturnFromMethod
+import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
@@ -15,5 +15,5 @@ import me.anno.zauber.types.Scope
  * todo this is effectively LLVM IR, just that names can be used multiple times
  * */
 abstract class SimpleExpression(val scope: Scope, val origin: Int) {
-    abstract fun execute(runtime: Runtime): ReturnFromMethod?
+    abstract fun execute(runtime: Runtime): BlockReturn?
 }
