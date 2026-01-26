@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
@@ -9,6 +10,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnresolvedType
@@ -89,7 +91,29 @@ class Field(
             return TypeResolution.resolveType(newContext, getterExpr)
         }
 
-        throw IllegalStateException("Field $this has neither type, nor initial/getter")
+        if (name == "field") {
+            // todo check if inside getter/setter, if so, get the real field
+            val scope = getGetterOrSetterScope()
+            if (scope != null) {
+                val sam = scope.selfAsMethod!!
+                val owner = scope.parent!!
+                val matchingField = owner.fields.first { it.setter == sam || it.getter == sam }
+                return TypeOfField(matchingField)
+            }
+        }
+
+        throw IllegalStateException("Field $this (${resolveOrigin(origin)}) has neither type, nor initial/getter, cannot resolve type")
+    }
+
+    fun getGetterOrSetterScope(): Scope? {
+        var scope = codeScope
+        while (true) {
+            when (scope.scopeType) {
+                ScopeType.FIELD_GETTER,
+                ScopeType.FIELD_SETTER -> return scope
+                else -> scope = scope.parentIfSameFile ?: return null
+            }
+        }
     }
 
     override fun toString(): String {

@@ -21,7 +21,7 @@ object Inheritance {
         selfTypeIfNeeded: Type?,
         expected: Parameter,
         actual: ValueParameter,
-        expectedTypeParams: List<Parameter>,
+        expectedTypeParameters: List<Parameter>,
         actualTypeParameters: ParameterList,
         insertMode: InsertMode
     ): Boolean {
@@ -35,10 +35,12 @@ object Inheritance {
         if (expected.type != expectedType) {
             LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
         }
+
+        val actualType = actual.getType(expectedType)
+        LOGGER.info("ActualType[$actual,$expectedType] -> $actualType")
         return isSubTypeOf(
-            expectedType,
-            actual.getType(expectedType),
-            expectedTypeParams, actualTypeParameters,
+            expectedType, actualType,
+            expectedTypeParameters, actualTypeParameters,
             insertMode
         )
     }

@@ -78,12 +78,16 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     return null
                 }
 
+            LOGGER.info("Sorted value parameters: $sortedValueParameters")
+
             check(sortedValueParameters.size == expectedValueParameters.size) {
                 "Incorrectly sorted value parameters, expected ${expectedValueParameters.size} but got ${sortedValueParameters.size}"
             }
 
-            val resolvedTypes = actualTypeParameters?.readonly()
+            val actualTypeParametersI = actualTypeParameters?.readonly()
                 ?: ParameterList(expectedTypeParameters)
+
+            LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters")
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
             if (expectedSelfType != null && actualSelfType != expectedSelfType) {
@@ -91,7 +95,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 val matchesSelfType = isSubTypeOf(
                     expectedSelfType, actualSelfType!!,
                     expectedTypeParameters,
-                    resolvedTypes,
+                    actualTypeParametersI,
                     InsertMode.STRONG
                 )
                 LOGGER.info("Done checking self-type")
@@ -111,7 +115,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     expectedReturnType,
                     actualReturnType,
                     expectedTypeParameters,
-                    resolvedTypes,
+                    actualTypeParametersI,
                     InsertMode.WEAK,
                 )
                 LOGGER.info("Done checking return-type")
@@ -134,10 +138,11 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     val expectedValueParameter = expectedValueParameters[i]
                     val actualValueParameter = sortedValueParameters[i]
                     LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
+                    LOGGER.info("                       [$i]: $expectedTypeParameters vs $actualTypeParametersI")
                     if (!isSubTypeOf(
                             actualSelfType,
                             expectedValueParameter, actualValueParameter,
-                            expectedTypeParameters, resolvedTypes,
+                            expectedTypeParameters, actualTypeParametersI,
                             InsertMode.STRONG
                         )
                     ) {
@@ -152,8 +157,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 LOGGER.info("End checking arguments")
             }
 
-            LOGGER.info("Found match: $resolvedTypes")
-            return resolvedTypes.readonly()
+            LOGGER.info("Found match: $actualTypeParametersI")
+            return actualTypeParametersI.readonly()
         }
     }
 

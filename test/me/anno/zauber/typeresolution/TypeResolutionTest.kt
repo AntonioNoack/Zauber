@@ -41,7 +41,7 @@ class TypeResolutionTest {
             package $testScopeName
             
             $code
-        """.trimIndent(), "?"
+        """.trimIndent(), "Test.zbr"
             ).tokenize()
             collectNamedClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
@@ -65,7 +65,7 @@ class TypeResolutionTest {
             package $testScopeName
             
             $code
-        """.trimIndent(), "?"
+        """.trimIndent(), "Test.zbr"
             ).tokenize()
             ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)

@@ -28,7 +28,7 @@ class TestInlineLambdaParameterIsImmediatelyFound {
             inline fun tested(runnable: (Int) -> Unit) {
                 runnable(15)
             }
-        """.trimIndent(), "?"
+        """.trimIndent(), "Test.zbr"
         ).tokenize()
         collectNamedClasses(tokens)
         ZauberASTBuilder(tokens, root).readFileLevel()

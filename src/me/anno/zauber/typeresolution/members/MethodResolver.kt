@@ -16,6 +16,7 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeTo
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
@@ -42,6 +43,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val methodReturnType = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)
             } else method.returnType // no resolution invoked (fast-path)
+            LOGGER.info("MethodReturnType: $methodReturnType")
             val match = findMemberMatch(
                 method, methodReturnType, returnType,
                 selfType, typeParameters, valueParameters,
@@ -70,19 +72,23 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>,
+        actualValueParameters: List<ValueParameter>,
         codeScope: Scope, origin: Int
     ): ResolvedMethod? {
         return if (method.selfType == null) {
 
-            val actualTypeParams = mergeCallPart(method.typeParameters, typeParameters, origin)
+            if(!typeParameters.isNullOrEmpty() && typeParameters[0].run { this is ClassType && this.clazz.name == "Array" })
+                throw IllegalStateException("Testing: didn't expect Array as type parameter")
+
+            val actualTypeParameters = mergeCallPart(method.typeParameters, typeParameters, origin)
+            LOGGER.info("Merged ${method.typeParameters} with $typeParameters into $actualTypeParameters")
 
             LOGGER.info("Resolving generics for $method")
             val generics = findGenericsForMatch(
                 null, null,
                 methodReturnType, returnType,
-                method.typeParameters, actualTypeParams,
-                method.valueParameters, valueParameters
+                method.typeParameters, actualTypeParameters,
+                method.valueParameters, actualValueParameters
             ) ?: return null
 
             val context = ResolutionContext(null, false, returnType, emptyMap())
@@ -104,7 +110,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 method.selfType, selfType,
                 methodReturnType, returnType,
                 methodSelfParams + method.typeParameters, actualTypeParams,
-                method.valueParameters, valueParameters
+                method.valueParameters, actualValueParameters
             ) ?: return null
 
             val selfType = selfType ?: method.selfType

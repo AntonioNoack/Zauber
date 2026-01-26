@@ -4,9 +4,9 @@ import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
-import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType
@@ -154,28 +154,18 @@ object CallWithNames {
                                 "$scope, ${resolveOrigin(origin)}"
                     }
                     // collect all varargs
-                    val values = actualParameters.subList(j, actualParameters.size)
-                        .filter { it.name == null }
-                    val instanceType = ev.type
-                    result[index++] = CallExpression(
-                        UnresolvedFieldExpression("arrayOf", emptyList(), scope, origin),
-                        listOf(instanceType), values, origin
-                    )
+                    val values = actualParameters.subList(j, actualParameters.size).filter { it.name == null }
+                    result[index++] = createArrayOfExpr(ev, values, scope, origin)
                     break
                 }
             }
 
             if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
-                val arrayType = ev.type as ClassType
-                val instanceType = arrayType.typeParameters!![0]
                 if (!ev.isVararg) return null
                 // check(ev.isVararg) { "Expected vararg in last place" }
                 // println("Using instanceType $instanceType for empty varargs")
-                result[index] = CallExpression(
-                    UnresolvedFieldExpression("arrayOf", emptyList(), scope, origin),
-                    listOf(instanceType), emptyList(), origin
-                )
+                result[index] = createArrayOfExpr(ev, emptyList(), scope, origin)
             }
 
             check(result.none { it == null })
@@ -183,6 +173,45 @@ object CallWithNames {
             @Suppress("UNCHECKED_CAST")
             result.toList() as List<Expression>
         } else actualParameters.map { it.value }
+    }
+
+    private fun createArrayOfExpr(
+        ev: Parameter, values: List<NamedParameter>,
+        scope: Scope, origin: Int,
+    ): Expression {
+
+        val arrayType = ev.type
+        check(arrayType is ClassType && arrayType.clazz.name == "Array")
+        val instanceType = ev.type.typeParameters?.first()
+        val typeParameters = if (instanceType != null) listOf(instanceType) else null
+
+        // this shall be the implementation of ArrayOf():
+        //  create an Array-instance,
+        //  fill all members
+        //  'return' it
+        val createArrayInstructions = ArrayList<Expression>(values.size + 2)
+        val sizeExpr = NumberExpression("${values.size}", scope, origin)
+        val arrayInitExpr = ConstructorExpression(
+            ArrayType.clazz, typeParameters,
+            listOf(NamedParameter(null, sizeExpr)), null, scope, origin
+        )
+        val tmpField = scope.createImmutableField(arrayInitExpr)
+        val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
+        createArrayInstructions.add(AssignmentExpression(tmpFieldExpr, arrayInitExpr))
+        for (i in values.indices) {
+            val index = NumberExpression("$i", scope, origin)
+            createArrayInstructions.add(
+                NamedCallExpression(
+                    tmpFieldExpr, "set", emptyList(), emptyList(),
+                    listOf(
+                        NamedParameter(null, index),
+                        NamedParameter(null, values[i].value)
+                    ), scope, origin
+                )
+            )
+        }
+        createArrayInstructions.add(tmpFieldExpr) // 'return' value
+        return ExpressionList(createArrayInstructions, scope, origin)
     }
 
 }

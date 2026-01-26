@@ -34,7 +34,7 @@ object ResolutionUtils {
             }
 
         val tokens = sources.map { content ->
-            ZauberTokenizer(content, "?").tokenize()
+            ZauberTokenizer(content, "Test.zbr").tokenize()
         }
 
         for (index in tokens.indices) {

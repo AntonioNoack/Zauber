@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.FullMap
@@ -7,10 +8,13 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.expansion.IsMethodYielding
 import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
 
@@ -67,10 +71,19 @@ class SimpleCall(
     override fun eval(runtime: Runtime): BlockReturn {
         val self = runtime[self]
         val method = methods[self.type.type] ?: sample
-        val rfm = runtime.executeCall(self, method, valueParameters)
-        return if (rfm.type == ReturnType.RETURN) {
-            BlockReturn(ReturnType.VALUE, rfm.instance)
-        } else rfm
+
+        if (self.type.type.run { this is ClassType && this.clazz.pathStr == "zauber.Array" } &&
+            method is Constructor && valueParameters.size == 1 &&
+            method.valueParameters[0].type == IntType) {
+
+            val size = runtime.castToInt(runtime[valueParameters[0]])
+            self.rawValue = arrayOfNulls<Instance>(size)
+        }
+
+        val result = runtime.executeCall(self, method, valueParameters)
+        return if (result.type == ReturnType.RETURN) {
+            BlockReturn(ReturnType.VALUE, result.instance)
+        } else result
     }
 
 }

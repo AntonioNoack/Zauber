@@ -36,7 +36,7 @@ class CppParsingTest {
                 """
             package zauber
             object Unit
-        """.trimIndent(), "?"
+        """.trimIndent(), "Test.cpp"
             ).tokenize()
             ZauberASTBuilder(tokens, root).readFileLevel()
         }

@@ -16,6 +16,7 @@ import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 /**
  * Calls base<typeParams>(valueParams), without anything on the left
@@ -61,6 +62,7 @@ class CallExpression(
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
         if (LOGGER.enableInfo) LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
+
         // base can be a constructor, field or a method
         // find the best matching candidate...
         return when (base) {
@@ -107,6 +109,7 @@ class CallExpression(
             ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
             ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
 
+        LOGGER.info("TypeParameters for call: $typeParameters")
         val byMethodCall = MethodResolver.resolveCallable(
             context, scope,
             name, nameAsImport,

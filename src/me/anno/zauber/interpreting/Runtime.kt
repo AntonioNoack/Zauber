@@ -88,7 +88,9 @@ class Runtime {
     operator fun set(instance: Instance, field: Field, value: Instance) {
         val clazz = instance.type
         val fieldIndex = clazz.properties.indexOf(field)
-        check(fieldIndex != -1) { "Instance $clazz does not have field $field, available: ${clazz.properties}" }
+        check(fieldIndex != -1) { "Instance $clazz does not have field $field, " +
+                "available: ${clazz.properties}, " +
+                "fields: ${(clazz.type as ClassType).clazz.fields}" }
         instance.properties[fieldIndex] = value
     }
 

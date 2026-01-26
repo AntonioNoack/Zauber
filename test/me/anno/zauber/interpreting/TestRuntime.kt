@@ -2,11 +2,13 @@ package me.anno.zauber.interpreting
 
 import me.anno.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertInstanceOf
 
 class TestRuntime {
     companion object {
@@ -132,17 +134,44 @@ class TestRuntime {
     }
 
     @Test
+    fun testArrayOf() {
+        ensureUnitIsKnown()
+        val (rt, valueT) = testExecute(
+            """
+            val tested get() = arrayOf(1, 2, 3)
+            
+            package zauber
+            class Array<V>(override val size: Int) {
+                external fun set(index: Int, value: V)
+            }
+            fun <V> arrayOf(vararg vs: V): Array<V> = vs
+        """.trimIndent()
+        )
+        check(valueT.type == rt.getClass(ClassType(ArrayType.clazz, listOf(IntType))))
+        val contents = valueT.rawValue
+        assertInstanceOf<Array<*>>(contents)
+        assertEquals(3, contents.size)
+        assertEquals(1, rt.castToInt(contents[0] as Instance))
+        assertEquals(2, rt.castToInt(contents[1] as Instance))
+        assertEquals(3, rt.castToInt(contents[2] as Instance))
+    }
+
+    @Test
     fun testListOf() {
         ensureUnitIsKnown()
-        val (runtimeT, valueT) = testExecute("""
+        val (rt, value) = testExecute(
+            """
             val tested get() = listOf(1, 2, 3)
             
             package zauber
-            interface List<V>
-            class ArrayWrapper<V>(val vs: Array<V>): List<V>
-            fun <V> listOf(vararg vs: V): List<V> = ArrayWrapper(vs)
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs // idk, recursive definition, kind of...
-        """.trimIndent())
+            interface List<V> {
+                val size: Int
+            }
+            class Array<V>(override val size: Int): List<V>
+            fun <V> listOf(vararg vs: V): List<V> = vs
+            fun <V> arrayOf(vararg vs: V): Array<V> = vs
+        """.trimIndent()
+        )
         // todo check contents of array...
     }
 

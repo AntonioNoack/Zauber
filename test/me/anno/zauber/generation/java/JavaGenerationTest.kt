@@ -24,7 +24,7 @@ class JavaGenerationTest {
             package $testScopeName
             
             $code
-        """.trimIndent(), "?"
+        """.trimIndent(), "Test.zbr"
             ).tokenize()
             ZauberASTBuilder(tokens, root).readFileLevel()
             resolveOverrides(root)

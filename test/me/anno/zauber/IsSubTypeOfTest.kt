@@ -36,7 +36,7 @@ class IsSubTypeOfTest {
             package $testScopeName
             
             $this
-        """.trimIndent(), "?"
+        """.trimIndent(), "Test.zbr"
             ).tokenize()
             ZauberASTBuilder(tokens, root).readFileLevel()
             return root.children.first { it.name == testScopeName }
