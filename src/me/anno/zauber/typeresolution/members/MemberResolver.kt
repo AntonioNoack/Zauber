@@ -90,10 +90,12 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters")
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
-            if (expectedSelfType != null && actualSelfType != expectedSelfType) {
+            if (expectedSelfType != null && actualSelfType != null &&
+                actualSelfType != expectedSelfType
+            ) {
                 LOGGER.info("Start checking self-type")
                 val matchesSelfType = isSubTypeOf(
-                    expectedSelfType, actualSelfType!!,
+                    expectedSelfType, actualSelfType,
                     expectedTypeParameters,
                     actualTypeParametersI,
                     InsertMode.STRONG

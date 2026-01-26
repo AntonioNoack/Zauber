@@ -117,7 +117,6 @@ class TestRuntime {
 
     @Test
     fun testBoolean() {
-        // todo why can listOf not be resolved???
         ensureUnitIsKnown()
         val stdlib = """
             package zauber
@@ -180,7 +179,9 @@ class TestRuntime {
             interface List<V> {
                 val size: Int
             }
-            class Array<V>(override val size: Int): List<V>
+            class Array<V>(override val size: Int): List<V> {
+                external operator fun set(index: Int, value: V)
+            }
             fun <V> listOf(vararg vs: V): List<V> = vs
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()

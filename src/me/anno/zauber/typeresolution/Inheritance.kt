@@ -101,7 +101,8 @@ object Inheritance {
         ) return false
 
         val success = actualTypeParameters.union(typeParamIdx, actualType, insertMode)
-        LOGGER.info("Found Type[$success for $actualType @$insertMode]: [$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}")
+        LOGGER.info("Found Type[$success for $actualType @$insertMode vs ${actualTypeParameters.insertModes[typeParamIdx]}]: " +
+                "[$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}")
         return success
     }
 

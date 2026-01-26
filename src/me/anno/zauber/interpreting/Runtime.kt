@@ -44,7 +44,7 @@ class Runtime {
             for (i in thisStack.lastIndex downTo 0) {
                 val self = thisStack[i]
                 if (self.scope == selfScope) {
-                    println("Found this@$selfScope: ${self.instance}")
+                    // println("Found this@$selfScope: ${self.instance}")
                     return self.instance
                 }
             }
@@ -70,7 +70,7 @@ class Runtime {
     operator fun get(instance: Instance, field: Field): Instance {
         val clazz = instance.type
         val fieldIndex = clazz.properties.indexOf(field)
-        println("Getting $instance.$field, $fieldIndex")
+        // println("Getting $instance.$field, $fieldIndex")
         /*if (fieldIndex == -1) {
             val parameter = field.byParameter
             if (parameter is Parameter) {

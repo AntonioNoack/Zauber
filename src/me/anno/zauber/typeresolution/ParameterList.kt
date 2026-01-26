@@ -49,8 +49,6 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
      * */
     val insertModes = Array(size) { InsertMode.WEAK }
 
-    fun containsNull(): Boolean = null in types
-
     fun union(index: Int, newType: Type, newInsertMode: InsertMode): Boolean {
         val oldInsertMode = insertModes[index]
         return if (oldInsertMode == newInsertMode) {
@@ -61,7 +59,11 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
             types[index] = newType
             insertModes[index] = newInsertMode
             true
-        } else false// else ignored
+        } else {
+            // else ignored;
+            // if they are the same by chance, they are still compatible
+            types[index] == newType
+        }
     }
 
     fun set(index: Int, newType: Type?, insertMode: InsertMode) {

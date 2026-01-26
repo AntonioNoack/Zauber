@@ -327,16 +327,13 @@ class ZauberASTBuilder(
         if (endIndex < 0) endIndex = tokens.size
         val enumScope = currPackage
         val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-        val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
+        // val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
         val primaryConstructorScope = companionScope.getOrCreatePrimConstructorScope()
-
-        if (needsPrimaryConstructor) {
-            primaryConstructorScope.selfAsConstructor = Constructor(
-                emptyList(), primaryConstructorScope,
-                null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
-                Keywords.NONE, origin0
-            )
-        }
+        primaryConstructorScope.selfAsConstructor = Constructor(
+            emptyList(), primaryConstructorScope,
+            null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
+            Keywords.NONE, origin0
+        )
 
         push(endIndex) {
             var ordinal = 0
