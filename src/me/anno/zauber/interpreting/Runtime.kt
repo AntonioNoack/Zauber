@@ -176,8 +176,6 @@ class Runtime {
         }
 
         check(callStack.removeLast() === call)
-
-        println("Return value: ${call.returnValue}")
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 
