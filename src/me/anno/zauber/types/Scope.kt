@@ -426,6 +426,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun isClassType(): Boolean = scopeType?.isClassType() == true
+    fun isMethodType(): Boolean = scopeType?.isMethodType() == true
     fun isTypeAlias(): Boolean = scopeType == ScopeType.TYPE_ALIAS
     fun isObject(): Boolean = scopeType?.isObject() == true
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE

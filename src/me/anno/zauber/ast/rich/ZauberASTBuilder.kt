@@ -1052,9 +1052,8 @@ class ZauberASTBuilder(
         var scope: Scope? = currPackage
         while (scope != null) {
             val scopeType = scope.scopeType
-            if (scope.hasTypeParameters &&
-                (scopeType == ScopeType.METHOD ||
-                        (scopeType != null && scopeType.isClassType()))
+            if (scope.hasTypeParameters && scopeType != null &&
+                (scopeType.isMethodType() || scopeType.isClassType())
             ) {
                 return scope.typeParameters
             }

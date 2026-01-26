@@ -11,7 +11,7 @@ class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(s
 
     override fun toStringImpl(depth: Int): String = "this@$label"
     override fun resolveType(context: ResolutionContext): Type {
-        return resolveThisType(context, label)
+        return resolveThisType(label)
     }
 
     override fun clone(scope: Scope) = ThisExpression(label, scope, origin)

@@ -62,9 +62,7 @@ object JavaSimplifiedASTWriter {
         val thisScope = field.scopeIfIsThis
         if (thisScope != null) {
             val scopeType = thisScope.scopeType
-            if (scopeType == ScopeType.METHOD || scopeType == ScopeType.CONSTRUCTOR ||
-                (scopeType != null && scopeType.isInsideExpression())
-            ) {
+            if (scopeType != null && (scopeType.isMethodType() || scopeType.isInsideExpression())) {
                 return true
             }
         }

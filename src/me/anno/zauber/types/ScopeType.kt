@@ -66,9 +66,10 @@ enum class ScopeType {
         }
     }
 
-    fun isMethodLike(): Boolean {
+    fun isMethodType(): Boolean {
         return when (this) {
-            METHOD, CONSTRUCTOR -> true
+            METHOD, CONSTRUCTOR,
+            FIELD_GETTER, FIELD_SETTER -> true
             else -> false
         }
     }

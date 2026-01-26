@@ -5,6 +5,8 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
+// todo if it is val, we should just use simpleField
+//  else, this is fine, becomes a mutable field, kind of
 class SimpleDeclaration(val type: Type, val name: String, scope: Scope, origin: Int) :
     SimpleExpression(scope, origin) {
 
@@ -13,7 +15,7 @@ class SimpleDeclaration(val type: Type, val name: String, scope: Scope, origin: 
     }
 
     override fun execute(runtime: Runtime): BlockReturn? {
-        // todo define field in runtime as null/0?
+        // shall we do anything?
         return null
     }
 }

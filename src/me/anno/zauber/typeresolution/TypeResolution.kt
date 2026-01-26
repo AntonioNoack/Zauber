@@ -184,7 +184,7 @@ object TypeResolution {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
             when {
                 scope.isClassType() -> return scope
-                scope.scopeType == ScopeType.METHOD -> {
+                scope.isMethodType() -> {
                     val func = scope.selfAsMethod!!
                     val self = func.selfType
                     if (self != null) {
@@ -199,7 +199,7 @@ object TypeResolution {
         }
     }
 
-    fun resolveThisType(context: ResolutionContext, scope: Scope): Type {
+    fun resolveThisType(scope: Scope): Type {
         // todo we must also insert any known generics...
         var scopeI = scope
         while (true) {
@@ -209,9 +209,9 @@ object TypeResolution {
                         scopeI.scopeType == ScopeType.PACKAGE -> {
                     return scopeI.typeWithoutArgs
                 }
-                scopeI.scopeType == ScopeType.METHOD -> {
-                    val func = scopeI.selfAsMethod!!
-                    val self = func.selfType
+                scopeI.isMethodType() -> {
+                    val func = scopeI.selfAsMethod
+                    val self = func?.selfType
                     if (self != null) {
                         val selfScope = typeToScope(self)!!
                         LOGGER.info("Method-SelfType[${scopeI.pathStr}]: $self -> $selfScope")

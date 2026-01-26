@@ -69,7 +69,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
     override fun toStringImpl(depth: Int): String {
         val className =
-            if (clazz.name == "Companion") clazz.pathStr
+            if (clazz.scopeType == ScopeType.COMPANION_OBJECT || !clazz.isClassType()) clazz.pathStr
             else clazz.name
         var asString = className
         if (typeParameters == null) {

@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -10,22 +11,33 @@ class ZClass(val type: Type) {
     companion object {
         fun getProperties(type: Type): List<Field> {
             if (type !is ClassType) return emptyList()
-            val scopeType = type.clazz.scopeType
-            val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
-            if (!isValidInstance) return emptyList()
-            return type.clazz.fields.filter { !it.explicitSelfType || it.selfType == type }
+            // val scopeType = type.clazz.scopeType
+            // val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
+            // if (!isValidInstance) return emptyList()
+            return type.clazz.fields.filter {
+                !it.explicitSelfType || it.selfType == type
+            }
         }
     }
 
     val properties = getProperties(type)
 
+    init {
+        println("Created class $type with properties $properties")
+    }
+
     private var objectInstance: Instance? = null
 
+    // todo bug: this is currently used inside methods,
+    //  so if a recursive function called itself,
+    //  we would have only one instance
     fun getOrCreateObjectInstance(runtime: Runtime): Instance {
         var objectInstance = objectInstance
         if (objectInstance != null) return objectInstance
+
         objectInstance = createInstance()
         this.objectInstance = objectInstance
+
         val scope = (type as? ClassType)?.clazz
         val primaryConstructor = scope?.primaryConstructorScope?.selfAsConstructor
         if (primaryConstructor != null) {
