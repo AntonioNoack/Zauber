@@ -1,12 +1,10 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.generation.c.CSourceGenerator.isValueType
-import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
-class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) {
+class SimpleBlock(val graph: SimpleGraph) {
 
     var isEntryPoint = false
 
@@ -36,10 +34,6 @@ class SimpleBlock(val graph: SimpleGraph, scope: Scope, origin: Int) {
 
     override fun toString(): String {
         return instructions.joinToString("\n")
-    }
-
-    fun execute(runtime: Runtime): BlockReturn? {
-        return runtime.executeBlock(this)
     }
 
     fun isEmpty(): Boolean {

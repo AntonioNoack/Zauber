@@ -252,26 +252,39 @@ class Runtime {
     }
 
     fun executeBlock(body: SimpleBlock): BlockReturn? {
-        // todo push fields
-        val tss = thisStack.size
-        val instructions = body.instructions
-        try {
-            var lastValue: BlockReturn? = null
-            for (i in instructions.indices) {
-                val instr = instructions[i]
-                println("Executing $instr")
-                // todo we must execute all (err)defer-things
-                lastValue = instr.execute(this)
-                if (lastValue != null && lastValue.type != ReturnType.VALUE) {
-                    return lastValue
+        var block = body
+        while (true) {
+
+            val tss = thisStack.size
+            val instructions = block.instructions
+
+            try {
+                var lastValue: BlockReturn? = null
+                for (i in instructions.indices) {
+                    val instr = instructions[i]
+                    println("Executing $instr")
+                    // todo we must execute all (err)defer-things
+                    lastValue = instr.execute(this)
+                    if (lastValue != null && lastValue.type != ReturnType.VALUE) {
+                        return lastValue
+                    }
+                }
+            } finally {
+                while (thisStack.size > tss) {
+                    thisStack.removeLast()
                 }
             }
-        } finally {
-            while (thisStack.size > tss) {
-                thisStack.removeLast()
-            }
+
+            // find the next block to execute
+            val condition = body.branchCondition
+            block = if (condition != null) {
+                val conditionI = this[condition]
+                val conditionJ = castToBool(conditionI)
+                if (conditionJ) body.ifBranch else body.elseBranch
+            } else {
+                body.nextBranch
+            } ?: return null
         }
-        return null
     }
 
     fun castToBool(instance: Instance): Boolean {
@@ -293,9 +306,5 @@ class Runtime {
             "Casting $value to String failed, type mismatch"
         }
         return value.rawValue as String
-    }
-
-    fun gotoOtherBlock(target: SimpleBlock) {
-        TODO("Not yet implemented")
     }
 }

@@ -2,11 +2,11 @@ package me.anno.zauber.ast.simple
 
 import me.anno.zauber.types.Scope
 
-class SimpleGraph(scope: Scope, origin: Int) {
+class SimpleGraph {
 
     var numFields = 0
     val blocks = ArrayList<SimpleBlock>()
-    val startBlock = SimpleBlock(this, scope, origin)
+    val startBlock = SimpleBlock(this)
 
     val continueLabels = HashMap<String?, SimpleBlock>()
     val breakLabels = HashMap<String?, SimpleBlock>()
@@ -19,8 +19,8 @@ class SimpleGraph(scope: Scope, origin: Int) {
         blocks.add(startBlock)
     }
 
-    fun addBlock(scope: Scope, origin: Int): SimpleBlock {
-        val block = SimpleBlock(this, scope, origin)
+    fun addBlock(): SimpleBlock {
+        val block = SimpleBlock(this)
         blocks.add(block)
         return block
     }

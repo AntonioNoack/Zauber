@@ -45,7 +45,7 @@ object ASTSimplifier {
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
         val expr = expr.resolve(context)
-        val graph = SimpleGraph(expr.scope, expr.origin)
+        val graph = SimpleGraph()
         simplifyImpl(context, expr, graph.startBlock, graph, false)
         return graph
     }
@@ -93,7 +93,7 @@ object ASTSimplifier {
             is YieldExpression -> {
                 val field = simplifyImpl(context, expr.value, block0, graph, true) ?: return null
                 val block1 = field.second
-                val continueBlock = graph.addBlock(expr.scope, expr.origin)
+                val continueBlock = graph.addBlock()
                 block1.add(SimpleYield(field.first.use(), continueBlock, expr.scope, expr.origin))
                 continueBlock.isEntryPoint = true
                 return UnitInstance to continueBlock
@@ -119,7 +119,7 @@ object ASTSimplifier {
 
             is TryCatchBlock -> {
                 val scope = expr.tryBody.scope
-                var handlerBlock = graph.addBlock(expr.scope, expr.origin)
+                var handlerBlock = graph.addBlock()
                 val throwableField = handlerBlock.field(ThrowableType)
 
 
@@ -157,8 +157,8 @@ object ASTSimplifier {
                         handlerBlock.add(SimpleInstanceOf(condition, throwableField, type, expr.scope, expr.origin))
                         handlerBlock.branchCondition = condition
 
-                        val catchBlock0 = graph.addBlock(expr.scope, expr.origin)
-                        val continueBlock = graph.addBlock(expr.scope, expr.origin)
+                        val catchBlock0 = graph.addBlock()
+                        val continueBlock = graph.addBlock()
                         handlerBlock.ifBranch = catchBlock0
                         handlerBlock.elseBranch = continueBlock
 
@@ -174,7 +174,7 @@ object ASTSimplifier {
                 }
 
                 if (finallyCondition != null) {
-                    val finallyHandler = graph.addBlock(expr.scope, expr.origin)
+                    val finallyHandler = graph.addBlock()
                     simplifyImpl(context, expr.finally!!.body, finallyHandler, graph, false)
                     graph.finallyBlocks.add(SimpleFinallyBlock(finallyCondition, finallyHandler))
                 }
@@ -322,9 +322,9 @@ object ASTSimplifier {
         val origin = expr.origin
 
         val label = expr.label
-        val afterBlock = graph.addBlock(scope, origin)
-        val insideBlock0 = graph.addBlock(scope, origin)
-        val beforeBlock0 = if (block0.isEmpty()) block0 else graph.addBlock(scope, origin)
+        val afterBlock = graph.addBlock()
+        val insideBlock0 = graph.addBlock()
+        val beforeBlock0 = if (block0.isEmpty()) block0 else graph.addBlock()
         if (block0 !== insideBlock0) block0.nextBranch = beforeBlock0
 
         graph.breakLabels[null] = afterBlock
@@ -363,9 +363,9 @@ object ASTSimplifier {
         val origin = expr.origin
 
         val label = expr.label
-        val afterBlock = graph.addBlock(scope, origin)
-        val insideBlock0 = if (block0.isEmpty()) block0 else graph.addBlock(scope, origin)
-        val decideBlock = graph.addBlock(scope, origin)
+        val afterBlock = graph.addBlock()
+        val insideBlock0 = if (block0.isEmpty()) block0 else graph.addBlock()
+        val decideBlock = graph.addBlock()
         if (block0 !== insideBlock0) block0.nextBranch = insideBlock0
 
         graph.breakLabels[null] = afterBlock
@@ -401,8 +401,8 @@ object ASTSimplifier {
 
         val scope = expr.scope
         val origin = expr.origin
-        val ifBlock = graph.addBlock(scope, origin)
-        val elseBlock = graph.addBlock(scope, origin)
+        val ifBlock = graph.addBlock()
+        val elseBlock = graph.addBlock()
 
         block1.branchCondition = condition
         block1.ifBranch = ifBlock
@@ -427,7 +427,7 @@ object ASTSimplifier {
                 return ifValue ?: elseValue!!
             }
 
-            val mergedBlock = graph.addBlock(scope, origin)
+            val mergedBlock = graph.addBlock()
             val mergedValue = if (needsValue) {
                 val dst = mergedBlock.field(TypeResolution.resolveType(context, expr))
                 val merge = SimpleMerge(

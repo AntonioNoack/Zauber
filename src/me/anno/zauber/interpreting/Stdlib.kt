@@ -30,9 +30,14 @@ object Stdlib {
             val content = self.rawValue as Array<*>
             content[index] as Instance
         }
-        runtime.register(ArrayType.clazz, "set", listOf(IntType, GenericType(ArrayType.clazz, "V"))) { rt, self, params ->
+        runtime.register(
+            ArrayType.clazz,
+            "set",
+            listOf(IntType, GenericType(ArrayType.clazz, "V"))
+        ) { rt, self, params ->
             val index = rt.castToInt(params[0])
             val value = params[1]
+
             @Suppress("UNCHECKED_CAST")
             val content = self.rawValue as Array<Instance>
             content[index] = value
@@ -46,10 +51,25 @@ object Stdlib {
             val b = rt.castToInt(b)
             rt.createInt(a + b)
         }
+        rt.registerBinaryMethod(IntType, "minus") { a, b ->
+            val a = rt.castToInt(a)
+            val b = rt.castToInt(b)
+            rt.createInt(a - b)
+        }
         rt.registerBinaryMethod(IntType, "times") { a, b ->
             val a = rt.castToInt(a)
             val b = rt.castToInt(b)
             rt.createInt(a * b)
+        }
+        rt.registerBinaryMethod(IntType, "div") { a, b ->
+            val a = rt.castToInt(a)
+            val b = rt.castToInt(b)
+            rt.createInt(a / b)
+        }
+        rt.registerBinaryMethod(IntType, "compareTo") { a, b ->
+            val a = rt.castToInt(a)
+            val b = rt.castToInt(b)
+            rt.createInt(a.compareTo(b))
         }
     }
 }

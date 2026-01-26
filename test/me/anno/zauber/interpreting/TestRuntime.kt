@@ -165,6 +165,78 @@ class TestRuntime {
         assertEquals(3, rt.castToInt(contents[2] as Instance))
     }
 
+    @Test
+    fun testFactorialAsRecursiveFunction() {
+        // todo infinite loop problem
+        val code = """
+            fun fac(i: Int): Int {
+                if (i <= 1) return 1
+                return i * fac(i-1)
+            }
+            val tested get() = fac(5)
+            
+            package zauber
+            class Int {
+                external fun compareTo(other: Int): Int
+                external fun times(other: Int): Int
+                external fun minus(other: Int): Int
+            }
+            
+            enum class Boolean {
+                TRUE, FALSE
+            }
+            
+            object Unit
+            
+            interface List<V>
+            class Array<V>(val size: Int): List<V> {
+                external operator fun set(index: Int, value: V)
+            }
+            fun <V> arrayOf(vararg vs: V): Array<V> = vs
+        """.trimIndent()
+        val (runtime, value) = testExecute(code)
+        assertEquals(5 * 4 * 3 * 2, runtime.castToInt(value))
+    }
+
+    @Test
+    fun testFactorialAsWhileLoop() {
+        // todo infinite loop problem
+        val code = """
+            fun fac(i: Int): Int {
+                var f = 1
+                var i = i
+                while (i > 1) {
+                    f *= i
+                    i--
+                }
+                return f
+            }
+            val tested get() = fac(5)
+            
+            package zauber
+            class Int {
+                external fun compareTo(other: Int): Int
+                external fun times(other: Int): Int
+                external fun minus(other: Int): Int
+                fun dec() = this - 1
+            }
+            
+            enum class Boolean {
+                TRUE, FALSE
+            }
+            
+            object Unit
+            
+            interface List<V>
+            class Array<V>(val size: Int): List<V> {
+                external operator fun set(index: Int, value: V)
+            }
+            fun <V> arrayOf(vararg vs: V): Array<V> = vs
+        """.trimIndent()
+        val (runtime, value) = testExecute(code)
+        assertEquals(5 * 4 * 3 * 2, runtime.castToInt(value))
+    }
+
     // todo "const" could be a "deep" value, aka fully immutable
     //  if definitely should be available as some sort of qualifier to protect parameters from mutation
 
