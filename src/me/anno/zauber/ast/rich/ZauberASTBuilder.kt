@@ -22,6 +22,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Import
@@ -389,39 +390,22 @@ class ZauberASTBuilder(
         companionScope.hasTypeParameters = true
 
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
-        val initialValue = CallExpression(
-            UnresolvedFieldExpression(
-                "listOf", shouldBeResolvable,
-                companionScope, origin
-            ),
-            listOf(listType), enumScope.enumEntries.map {
-                val field = it.objectField!!
-                val expr = FieldExpression(field, companionScope, origin)
-                NamedParameter(null, expr)
-            }, origin
-        )
+        val entryValues = enumScope.enumEntries.map { entryScope ->
+            val field = entryScope.objectField!!
+            FieldExpression(field, companionScope, origin)
+        }
+        val initialValue = createArrayOfExpr(enumScope.typeWithoutArgs, entryValues, companionScope, origin)
 
         val entriesField = Field(
             companionScope, companionScope.typeWithoutArgs,
             false, isMutable = false, null,
-            "__entries", listType,
+            "entries", listType,
             initialValue, Keywords.SYNTHETIC, origin
         )
 
         val constructorScope = companionScope.getOrCreatePrimConstructorScope()
         val entriesFieldExpr = FieldExpression(entriesField, constructorScope, origin)
         constructorScope.code.add(AssignmentExpression(entriesFieldExpr, initialValue))
-
-        pushScope(companionScope) {
-            pushScope(ScopeType.METHOD, "entries") { methodScope ->
-                methodScope.selfAsMethod = Method(
-                    companionScope.typeWithoutArgs, false, "entries", emptyList(), emptyList(),
-                    methodScope, listType, emptyList(),
-                    ReturnExpression(FieldExpression(entriesField, methodScope, origin), null, methodScope, origin),
-                    Keywords.SYNTHETIC, origin
-                )
-            }
-        }
     }
 
     var lastField: Field? = null

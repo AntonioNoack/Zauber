@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -175,14 +176,21 @@ object CallWithNames {
         } else actualParameters.map { it.value }
     }
 
-    private fun createArrayOfExpr(
+    fun createArrayOfExpr(
         ev: Parameter, values: List<NamedParameter>,
         scope: Scope, origin: Int,
     ): Expression {
-
         val arrayType = ev.type
         check(arrayType is ClassType && arrayType.clazz.name == "Array")
         val instanceType = ev.type.typeParameters?.first()
+        return createArrayOfExpr(instanceType, values.map { it.value }, scope, origin)
+    }
+
+    fun createArrayOfExpr(
+        instanceType: Type?, values: List<Expression>,
+        scope: Scope, origin: Int,
+    ): Expression {
+
         val typeParameters = if (instanceType != null) listOf(instanceType) else null
 
         // this shall be the implementation of ArrayOf():
@@ -205,7 +213,7 @@ object CallWithNames {
                     tmpFieldExpr, "set", emptyList(), emptyList(),
                     listOf(
                         NamedParameter(null, index),
-                        NamedParameter(null, values[i].value)
+                        NamedParameter(null, values[i])
                     ), scope, origin
                 )
             )

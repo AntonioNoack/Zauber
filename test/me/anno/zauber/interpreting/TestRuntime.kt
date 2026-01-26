@@ -32,7 +32,7 @@ class TestRuntime {
     fun testStringField() {
         ensureUnitIsKnown()
         val code = """
-            val tested = "Some String"
+            val tested get() = "Some String"
         """.trimIndent()
         val (rt, value) = testExecute(code)
         assertEquals(StringType, value.type.type)
@@ -117,16 +117,20 @@ class TestRuntime {
 
     @Test
     fun testBoolean() {
+        // todo why can listOf not be resolved???
         ensureUnitIsKnown()
         val stdlib = """
             package zauber
             enum class Boolean {
                 TRUE, FALSE
             }
+            
             interface List<V>
-            class ArrayWrapper<V>(val vs: Array<V>): List<V>
-            fun <V> listOf(vararg vs: V): List<V> = ArrayWrapper(vs)
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs // idk, recursive definition, kind of...
+            class Array<V>(val size: Int): List<V> {
+                external operator fun set(index: Int, value: V)
+            }
+            fun <V> listOf(vararg vs: V): List<V> = vs
+            fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val (runtimeT, valueT) = testExecute("val tested get() = true\n$stdlib")
         assertEquals(true, runtimeT.castToBool(valueT))
@@ -149,7 +153,11 @@ class TestRuntime {
         """.trimIndent()
         )
         val expectedType = rt.getClass(ClassType(ArrayType.clazz, listOf(IntType)))
-        if (false) assertEquals(expectedType, valueT.type) // todo generics should match...
+        if (false) {
+            // todo generics should match...
+            //  somehow, we just get an array without any specific generics
+            assertEquals(expectedType, valueT.type)
+        }
         val contents = valueT.rawValue
         assertInstanceOf<Array<*>>(contents)
         assertEquals(3, contents.size)
@@ -157,6 +165,9 @@ class TestRuntime {
         assertEquals(2, rt.castToInt(contents[1] as Instance))
         assertEquals(3, rt.castToInt(contents[2] as Instance))
     }
+
+    // todo "const" could be a "deep" value, aka fully immutable
+    //  if definitely should be available as some sort of qualifier to protect parameters from mutation
 
     @Test
     fun testListOf() {

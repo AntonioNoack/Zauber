@@ -249,7 +249,9 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                 }
 
                 tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
-                    check(tokens.equals(++i, TokenType.NAME))
+                    check(tokens.equals(++i, TokenType.NAME)) {
+                        "Expected name after class, got ${tokens.err(i)}"
+                    }
                     val name = tokens.toString(i++)
                     foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
                     return true// without i++
