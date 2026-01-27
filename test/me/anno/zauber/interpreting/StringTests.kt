@@ -10,8 +10,8 @@ class StringTests {
 
     val smallStdlib = """
         class Array<V>(val size: Int) {
-            external operator fun get(index: Int): Int
-            external operator fun set(index: Int, v: V): Int
+            external operator fun get(index: Int): V
+            external operator fun set(index: Int, value: V): Int
             
             operator fun plus(other: Array<V>): Array<V> {
                 val result = copyOf(size + other.size)
@@ -28,7 +28,7 @@ class StringTests {
             }
             
             fun copyOf(newSize: Int): Array<V> {
-                val clone = Array(newSize)
+                val clone = Array<V>(newSize)
                 copyInto(clone, 0, 0, min(newSize, size))
                 return clone
             }
