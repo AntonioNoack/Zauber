@@ -194,7 +194,7 @@ object CSourceGenerator : Generator() {
                         // todo append default values
                         // todo write them in the correct order (without naming)
                         // todo place return type argument
-                        writeExpr(expr.base, true)
+                        writeExpr(expr.self, true)
                         builder.append('.').append(expr.name).append('(')
                         for ((i, param) in expr.valueParameters.withIndex()) {
                             if (i > 0) builder.append(", ")
@@ -206,7 +206,7 @@ object CSourceGenerator : Generator() {
                         // todo append default values
                         // todo write them in the correct order (without naming)
                         // todo place return type argument
-                        writeExpr(expr.base, true)
+                        writeExpr(expr.self, true)
                         builder.append('(')
                         for ((i, param) in expr.valueParameters.withIndex()) {
                             if (i > 0) builder.append(", ")
@@ -237,9 +237,9 @@ object CSourceGenerator : Generator() {
                         builder.append(getName(expr.type))
                     }
                     is AssignmentExpression -> {
-                        writeExpr(expr.variableName, true)
+                        writeExpr(expr.dst, true)
                         builder.append("=")
-                        writeExpr(expr.newValue, true)
+                        writeExpr(expr.src, true)
                     }
                     is FieldExpression -> {
                         builder.append(expr.field.name)

@@ -33,21 +33,26 @@ import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 object ASTSimplifier {
 
     val UnitInstance = SimpleField(UnitType, Ownership.COMPTIME, -1, UnitType.clazz)
     val booleanOwnership = Ownership.COMPTIME
 
+    val cache = HashMap<Pair<ResolutionContext, Expression>, SimpleGraph>()
+
     // todo inline functions
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
-        val expr = expr.resolve(context)
-        val graph = SimpleGraph()
-        simplifyImpl(context, expr, graph.startBlock, graph, false)
-        return graph
+        return cache.getOrPut(context to expr) {
+            val expr = expr.resolve(context)
+            val graph = SimpleGraph()
+            simplifyImpl(context, expr, graph.startBlock, graph, false)
+            graph
+        }
     }
 
     fun needsFieldByParameter(parameter: Any?): Boolean {
@@ -185,21 +190,27 @@ object ASTSimplifier {
             }
 
             is ResolvedCompareOp -> {
-                val left = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
-                val block1 = left.second
-                val right = simplifyImpl(context, expr.right, block1, graph, false) ?: return null
-                val block2 = right.second
+                val (left, block1) = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
+                val (right, block2) = simplifyImpl(context, expr.right, block1, graph, false) ?: return null
+                val tmp = block2.field(BooleanType, booleanOwnership)
+                val call = SimpleCall(
+                    tmp, "compareTo", emptyMap(), expr.callable.resolved, left.use(),
+                    noSpecialization, listOf(right.use()),
+                    expr.scope, expr.origin
+                )
+                block2.add(call)
                 val dst = block2.field(BooleanType, booleanOwnership)
                 val instr = SimpleCompare(
-                    dst, left.first.use(), right.first.use(), expr.type,
-                    expr.callable, expr.scope, expr.origin
+                    dst, left.use(), right.use(), expr.type,
+                    tmp.use(), expr.scope, expr.origin
                 )
                 block2.add(instr)
                 return dst to block2
             }
 
             is ResolvedCallExpression -> {
-                val (base, block1) = simplifyImpl(context, expr.base, block0, graph, true) ?: return null
+                val (base, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
+                // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
                 var blockI = block1
                 val valueParameters = expr.valueParameters.map { param ->
                     val (value, blockJ) = simplifyImpl(context, param, blockI, graph, false) ?: return null
@@ -236,7 +247,7 @@ object ASTSimplifier {
             is ResolvedGetFieldExpression -> {
                 val field = expr.field.resolved
                 val valueType = expr.run { resolvedType ?: resolveType(context) }
-                val (self, block1) = simplifyImpl(context, expr.owner, block0, graph, true) ?: return null
+                val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
                 val dst = block1.field(valueType)
                 block1.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
                 return dst to block1
@@ -244,7 +255,7 @@ object ASTSimplifier {
 
             is ResolvedSetFieldExpression -> {
                 val field = expr.field.resolved
-                val (self, block1) = simplifyImpl(context, expr.owner, block0, graph, true) ?: return null
+                val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
                 val (value, block2) = simplifyImpl(context, expr.value, block1, graph, true) ?: return null
                 block2.add(SimpleSetField(self.use(), field, value.use(), expr.scope, expr.origin))
                 return UnitInstance to block2
@@ -318,14 +329,10 @@ object ASTSimplifier {
         graph: SimpleGraph,
     ): Pair<SimpleField, SimpleBlock>? {
 
-        val scope = expr.scope
-        val origin = expr.origin
-
         val label = expr.label
-        val afterBlock = graph.addBlock()
+        val beforeBlock0 = block0.nextOrSelfIfEmpty(graph)
         val insideBlock0 = graph.addBlock()
-        val beforeBlock0 = if (block0.isEmpty()) block0 else graph.addBlock()
-        if (block0 !== insideBlock0) block0.nextBranch = beforeBlock0
+        val afterBlock = graph.addBlock()
 
         graph.breakLabels[null] = afterBlock
         graph.continueLabels[null] = beforeBlock0
@@ -334,7 +341,6 @@ object ASTSimplifier {
             graph.breakLabels[label] = afterBlock
             graph.continueLabels[label] = beforeBlock0
         }
-
 
         // add condition and jump to insideBlock
         val (condition, beforeBlock1) = simplifyImpl(context, expr.condition, beforeBlock0, graph, true) ?: return null
@@ -359,14 +365,10 @@ object ASTSimplifier {
         graph: SimpleGraph,
     ): Pair<SimpleField, SimpleBlock>? {
 
-        val scope = expr.scope
-        val origin = expr.origin
-
         val label = expr.label
         val afterBlock = graph.addBlock()
-        val insideBlock0 = if (block0.isEmpty()) block0 else graph.addBlock()
+        val insideBlock0 = block0.nextOrSelfIfEmpty(graph)
         val decideBlock = graph.addBlock()
-        if (block0 !== insideBlock0) block0.nextBranch = insideBlock0
 
         graph.breakLabels[null] = afterBlock
         graph.continueLabels[null] = decideBlock
@@ -399,8 +401,6 @@ object ASTSimplifier {
         val (condition, block1) = simplifyImpl(context, expr.condition, block0, graph, true)
             ?: return null
 
-        val scope = expr.scope
-        val origin = expr.origin
         val ifBlock = graph.addBlock()
         val elseBlock = graph.addBlock()
 
@@ -598,7 +598,7 @@ object ASTSimplifier {
                 SimpleCall( // todo use correct specialization; depends on outer class, if present, too
                     unusedTmp, "::new",
                     FullMap(method), method, dst.use(),
-                    Specialization.noSpecialization, valueParameters, scope, origin
+                    noSpecialization, valueParameters, scope, origin
                 )
             )
             dst

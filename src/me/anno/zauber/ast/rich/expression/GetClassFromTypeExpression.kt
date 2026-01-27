@@ -26,4 +26,6 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Ex
         return GetClassFromTypeExpression(type.resolve(), scope, origin)
     }
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
+
 }

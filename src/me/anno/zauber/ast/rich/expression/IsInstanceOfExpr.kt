@@ -28,4 +28,8 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
     override fun resolveImpl(context: ResolutionContext): Expression {
         return IsInstanceOfExpr(value.resolve(context), type.resolve(), scope, origin)
     }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

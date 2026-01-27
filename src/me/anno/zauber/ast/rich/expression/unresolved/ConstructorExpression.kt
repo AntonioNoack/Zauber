@@ -57,4 +57,8 @@ class ConstructorExpression(
             .map { it.resolve(context) }
         return ResolvedCallExpression(null, method, params, scope, origin)
     }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        for (param in valueParameters) callback(param.value)
+    }
 }

@@ -11,6 +11,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.IntType
@@ -64,14 +65,22 @@ class SimpleCall(
     }
 
     override fun toString(): String {
-        val method = methods.values.first()
-        return "$dst = $self[${method.selfType}].${methodName}${valueParameters.joinToString(", ", "(", ")")}"
+        return "$dst = $self[${sample.selfType}].${methodName}${valueParameters.joinToString(", ", "(", ")")}"
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
         val self = runtime[self]
         val method = methods[self.type.type] ?: sample
 
+        initializeArrayIfNeeded(self, method, runtime)
+
+        val result = runtime.executeCall(self, method, valueParameters)
+        return if (result.type == ReturnType.RETURN) {
+            BlockReturn(ReturnType.VALUE, result.instance)
+        } else result
+    }
+
+    fun initializeArrayIfNeeded(self: Instance, method: MethodLike, runtime: Runtime) {
         if (self.type.type.run { this is ClassType && this.clazz.pathStr == "zauber.Array" } &&
             method is Constructor && valueParameters.size == 1 &&
             method.valueParameters[0].type == IntType) {
@@ -79,11 +88,6 @@ class SimpleCall(
             val size = runtime.castToInt(runtime[valueParameters[0]])
             self.rawValue = arrayOfNulls<Instance>(size)
         }
-
-        val result = runtime.executeCall(self, method, valueParameters)
-        return if (result.type == ReturnType.RETURN) {
-            BlockReturn(ReturnType.VALUE, result.instance)
-        } else result
     }
 
 }

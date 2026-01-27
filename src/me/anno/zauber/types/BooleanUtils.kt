@@ -10,9 +10,9 @@ object BooleanUtils {
         // undo a not
         if (this is NamedCallExpression &&
             name == "not" &&
-            base.resolvedType == BooleanType
+            self.resolvedType == BooleanType
         ) {
-            return base
+            return self
         }
 
         if (this is CheckEqualsOp) {

@@ -5,6 +5,7 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.RuntimeCreate.createString
 
 class SimpleString(dst: SimpleField, val base: StringExpression) :
     SimpleAssignmentExpression(dst, base.scope, base.origin) {

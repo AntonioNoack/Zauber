@@ -35,4 +35,7 @@ class YieldExpression(value: Expression, scope: Scope, origin: Int) :
     override fun splitsScope(): Boolean = true // yes, this even stops execution
     override fun resolveImpl(context: ResolutionContext): Expression =
         YieldExpression(value.resolve(context), scope, origin)
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

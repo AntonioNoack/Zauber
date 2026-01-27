@@ -3,13 +3,11 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
-import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
-import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
-import me.anno.zauber.typeresolution.members.*
+import me.anno.zauber.typeresolution.members.MethodResolver
+import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -39,23 +37,23 @@ class NamedCallExpression(
     }
 
     override fun clone(scope: Scope) = NamedCallExpression(
-        base.clone(scope), name, nameAsImport, typeParameters,
+        self.clone(scope), name, nameAsImport, typeParameters,
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) },
         scope, origin
     )
 
     override fun needsBackingField(methodScope: Scope): Boolean {
-        return base.needsBackingField(methodScope) ||
+        return self.needsBackingField(methodScope) ||
                 valueParameters.any { it.value.needsBackingField(methodScope) }
     }
 
     override fun splitsScope(): Boolean {
-        return base.splitsScope() ||
+        return self.splitsScope() ||
                 valueParameters.any { it.value.splitsScope() }
     }
 
     override fun toStringImpl(depth: Int): String {
-        val base = base.toString(depth)
+        val base = self.toString(depth)
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         return if (typeParameters != null && typeParameters.isEmpty()) {
             "($base).$name$valueParameters"
@@ -68,7 +66,7 @@ class NamedCallExpression(
         return TypeResolution.resolveType(
             /* base type seems not deductible -> todo we could help it, if all candidates have the same base type */
             context.withTargetType(null),
-            base,
+            self,
         )
     }
 
@@ -84,5 +82,10 @@ class NamedCallExpression(
             contextI, this, name,
             typeParameters, valueParameters,
         )
+    }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(self)
+        for (param in valueParameters) callback(param.value)
     }
 }

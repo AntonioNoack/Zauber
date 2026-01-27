@@ -25,4 +25,9 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
     override fun resolveImpl(context: ResolutionContext) =
         WhileLoop(condition.resolve(context), body.resolve(context), label)
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(condition)
+        callback(body)
+    }
+
 }

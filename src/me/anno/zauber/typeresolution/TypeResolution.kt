@@ -43,7 +43,7 @@ object TypeResolution {
     fun resolveTypesAndNames(root: Scope) {
         resetStats()
         root.forEachScope(::resolveTypesAndNamesImpl)
-        if (LOGGER.enableInfo) printStats()
+        if (LOGGER.isInfoEnabled) printStats()
     }
 
     private fun resetStats() {
@@ -100,7 +100,7 @@ object TypeResolution {
         if (field.valueType != null) return // done already
         if (field.initialValue == null && field.getterExpr == null) return // cannot be solved
 
-        if (LOGGER.enableInfo) {
+        if (LOGGER.isInfoEnabled) {
             LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
             LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
         }
@@ -111,7 +111,7 @@ object TypeResolution {
             } else emptyMap()
             val context = ResolutionContext(selfType, higherSelves, false, null, emptyMap())
             field.valueType = field.resolveValueType(context)
-            if (LOGGER.enableInfo) LOGGER.info("Resolved $field to ${field.valueType}")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Resolved $field to ${field.valueType}")
             numSuccesses++
         } catch (e: Throwable) {
             if (!catchFailures) throw e

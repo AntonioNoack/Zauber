@@ -38,4 +38,9 @@ class CompareOp(
         val method = (proxy.resolve(context) as ResolvedCallExpression).callable as ResolvedMethod
         return ResolvedCompareOp(left, right, method, type)
     }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(left)
+        callback(right)
+    }
 }

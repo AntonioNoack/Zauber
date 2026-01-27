@@ -142,6 +142,14 @@ class ZauberTokenizer(val src: String, fileName: String) {
         }
     }
 
+    private fun readBinaryExponent() {
+        if (i < n && src[i] in "pP") {
+            i++
+            if (src[i] in "+-") i++
+            readInteger()
+        }
+    }
+
     private fun readCommaDigits() {
         if (i + 1 < n && src[i] == '.' && src[i + 1] in '0'..'9') {
             i += 2
@@ -161,6 +169,11 @@ class ZauberTokenizer(val src: String, fileName: String) {
             first == '0' && i < n && src[i] in "xX" -> {
                 i++ // skip 0x
                 while (i < n && (src[i] in '0'..'9' || src[i] in "abcdefABCDEF_")) i++
+                if (i + 1 < n && src[i] == '.' && src[i + 1] in '0'..'9') {
+                    i++
+                    while (i < n && (src[i] in '0'..'9' || src[i] in "abcdefABCDEF_")) i++
+                }
+                readBinaryExponent()
             }
             first == '0' && i < n && src[i] in "bB" -> {
                 i++ // skip 0b

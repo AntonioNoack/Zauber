@@ -143,7 +143,7 @@ class DotExpression(
 
     fun resolveCallable(context: ResolutionContext, baseType: Type): ResolvedMember<*> {
         right as CallExpression
-        when (val base = right.base) {
+        when (val base = right.self) {
             is MemberNameExpression -> {
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
@@ -198,5 +198,10 @@ class DotExpression(
             }
             else -> throw NotImplementedError("Resolve DotExpression with type ${right.javaClass.simpleName}")
         }
+    }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(left)
+        callback(right)
     }
 }

@@ -22,4 +22,7 @@ class AnnotatedExpression(val annotation: Annotation, val value: Expression) : E
     override fun isResolved(): Boolean = annotation.path.isResolved() && value.isResolved()
     override fun resolveImpl(context: ResolutionContext) =
         AnnotatedExpression(annotation, value.resolve(context))
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

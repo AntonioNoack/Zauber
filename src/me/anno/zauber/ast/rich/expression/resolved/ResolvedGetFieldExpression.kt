@@ -17,9 +17,13 @@ class ResolvedGetFieldExpression(
 
     override fun resolveType(context: ResolutionContext): Type = field.getValueType()
     override fun clone(scope: Scope): Expression =
-        ResolvedGetFieldExpression(owner.clone(scope), field, scope, origin)
+        ResolvedGetFieldExpression(self.clone(scope), field, scope, origin)
 
     override fun toStringImpl(depth: Int): String {
-        return "$owner.$field"
+        return "$self.$field"
+    }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(self)
     }
 }

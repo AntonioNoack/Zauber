@@ -82,14 +82,5 @@ class MemberNameExpression(
         )
     }
 
-    /*
-    * for resolve:
-    *  val field = resolveField(context, expr.scope, expr.name, expr.nameAsImport, null, expr.origin)
-                    ?: throw IllegalStateException("Missing field '${expr.name}'")
-                val valueType = field.getValueType()
-                val self: SimpleField? =
-                    null // todo if field.selfType == null, nothing, else find the respective "this" from the scope
-                val dst = currBlock.field(valueType)
-                currBlock.add(SimpleGetField(dst, self, field.resolved, expr.scope, expr.origin))
-    * */
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

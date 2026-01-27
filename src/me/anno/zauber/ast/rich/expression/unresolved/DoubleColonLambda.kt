@@ -27,4 +27,6 @@ class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, o
 
     override fun clone(scope: Scope) = DoubleColonLambda(left, methodName, scope, origin)
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
+
 }

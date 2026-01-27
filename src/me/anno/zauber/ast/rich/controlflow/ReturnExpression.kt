@@ -19,4 +19,8 @@ class ReturnExpression(value: Expression, label: String?, scope: Scope, origin: 
     override fun splitsScope(): Boolean = false
     override fun resolveImpl(context: ResolutionContext) =
         ReturnExpression(value.resolve(context), label, scope, origin)
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

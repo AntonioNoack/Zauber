@@ -127,9 +127,14 @@ class AssignIfMutableExpr(
             check(left is ResolvedGetFieldExpression) {
                 "Resolve owner for $this, ${left.javaClass.simpleName}"
             }
-            val owner = left.owner// ?: dstField.resolveOwnerWithoutLeftSide(origin)
+            val owner = left.self// ?: dstField.resolveOwnerWithoutLeftSide(origin)
             val setter = ResolvedSetFieldExpression(owner, dstField, call, scope, origin)
             return ExpressionList(listOf(call, setter), scope, origin)
         } else return call
+    }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(left)
+        callback(right)
     }
 }

@@ -23,4 +23,5 @@ class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) 
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

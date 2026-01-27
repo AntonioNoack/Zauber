@@ -21,4 +21,5 @@ class BreakExpression(val label: Scope, scope: Scope, origin: Int) : Expression(
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

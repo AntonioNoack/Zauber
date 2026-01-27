@@ -57,4 +57,12 @@ class TryCatchBlock(
         } finally { ${finally?.body} }"
     }
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(tryBody)
+        for (catch in catches) {
+            callback(catch.body)
+        }
+        if (finally != null) callback(finally.body)
+    }
+
 }

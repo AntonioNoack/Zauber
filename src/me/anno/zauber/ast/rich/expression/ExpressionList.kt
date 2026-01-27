@@ -48,4 +48,7 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
         return ExpressionList(list.map { it.resolve(context) }, scope, origin)
     }
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        for (entry in list) callback(entry)
+    }
 }

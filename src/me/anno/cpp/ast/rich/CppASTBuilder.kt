@@ -464,15 +464,15 @@ class CppASTBuilder(
 
     private fun readReturn(label: String?): ReturnExpression {
         val origin = origin(i) // skip return
-        if (LOGGER.enableDebug) LOGGER.debug("reading return")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading return")
         val expr = if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
             !tokens.equals(i, ",", ";")
         ) {
             val value = readExpression()
-            if (LOGGER.enableDebug) LOGGER.debug("  with value $value")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("  with value $value")
             ReturnExpression(value, label, currPackage, origin)
         } else {
-            if (LOGGER.enableDebug) LOGGER.debug("  without value")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("  without value")
             ReturnExpression(unitInstance, label, currPackage, origin)
         }
         consume(";")
@@ -530,7 +530,7 @@ class CppASTBuilder(
             val value = readExpression()
             val param = NamedParameter(name, value)
             params.add(param)
-            if (LOGGER.enableDebug) LOGGER.debug("read param: $param")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
             readComma()
         }
         return params
@@ -579,7 +579,7 @@ class CppASTBuilder(
         val originalScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
-        if (LOGGER.enableDebug) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
         if (debug) tokens.printTokensInBlocks(i)
         while (i < tokens.size) {
             val oldSize = result.size
@@ -590,7 +590,7 @@ class CppASTBuilder(
                 else -> {
                     // todo read declaration or return or throw or try-catch
                     result.add(readExpression())
-                    if (LOGGER.enableDebug) LOGGER.debug("block += ${result.last()}")
+                    if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")
                 }
             }
 

@@ -21,4 +21,6 @@ class ContinueExpression(val label: Scope?, scope: Scope, origin: Int) : Express
     // execution ends here anyway
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

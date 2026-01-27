@@ -24,5 +24,6 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
 
     override fun clone(scope: Scope) = GetMethodFromTypeExpression(base, name, scope, origin)
     override fun isResolved(): Boolean = false
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 
 }

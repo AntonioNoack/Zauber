@@ -21,4 +21,7 @@ class ArrayToVarargsStar(val value: Expression) : Expression(value.scope, value.
         return value.hasLambdaOrUnknownGenericsType(context.withTargetType(newTT))
     }
     override fun isResolved(): Boolean = false
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

@@ -133,7 +133,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
             }
 
             val method = scope.selfAsMethod
-            if (method != null) {
+            if (method != null && method.explicitSelfType) {
                 if (method.name == label || label == null) {
                     return scope
                 }

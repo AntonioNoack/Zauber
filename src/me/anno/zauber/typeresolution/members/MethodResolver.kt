@@ -37,13 +37,13 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         for (i in children.indices) {
             val method = children[i].selfAsMethod ?: continue
             if (method.name != name) continue
-            if (method.typeParameters.isNotEmpty()) {
+            if (LOGGER.isInfoEnabled && method.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $method on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val methodReturnType = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)
             } else method.returnType // no resolution invoked (fast-path)
-            LOGGER.info("MethodReturnType: $methodReturnType")
+            if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType")
             val match = findMemberMatch(
                 method, methodReturnType, returnType,
                 selfType, typeParameters, valueParameters,
@@ -57,7 +57,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     fun getMethodReturnType(scopeSelfType: Type?, method: Method): Type? {
         if (method.returnType == null) {
             val selfType = method.selfType ?: scopeSelfType
-            LOGGER.info("Resolving ${method.scope}.type by ${method.body}, selfType: $selfType")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Resolving ${method.scope}.type by ${method.body}, selfType: $selfType")
             val context = ResolutionContext(selfType, false, null, emptyMap())
             method.returnType = method.resolveReturnType(context)
         }
@@ -77,13 +77,13 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): ResolvedMethod? {
         return if (method.selfType == null) {
 
-            if(!typeParameters.isNullOrEmpty() && typeParameters[0].run { this is ClassType && this.clazz.name == "Array" })
+            if (!typeParameters.isNullOrEmpty() && typeParameters[0].run { this is ClassType && this.clazz.name == "Array" })
                 throw IllegalStateException("Testing: didn't expect Array as type parameter")
 
             val actualTypeParameters = mergeCallPart(method.typeParameters, typeParameters, origin)
-            LOGGER.info("Merged ${method.typeParameters} with $typeParameters into $actualTypeParameters")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Merged ${method.typeParameters} with $typeParameters into $actualTypeParameters")
 
-            LOGGER.info("Resolving generics for $method")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Resolving generics for $method")
             val generics = findGenericsForMatch(
                 null, null,
                 methodReturnType, returnType,
@@ -105,7 +105,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 origin
             )
 
-            LOGGER.info("Resolving generics for $method")
+            if (LOGGER.isInfoEnabled)  LOGGER.info("Resolving generics for $method")
             val generics = findGenericsForMatch(
                 method.selfType, selfType,
                 methodReturnType, returnType,

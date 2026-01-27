@@ -57,7 +57,7 @@ fun ASTBuilderBase.binaryOp(
                 is NamedCallExpression -> {
                     // todo ideally, this would be handled by association-order...
                     // reorder stack from left to right
-                    val leftAndMiddle = DotExpression(left, typeParameters, right.base, left.scope, left.origin)
+                    val leftAndMiddle = DotExpression(left, typeParameters, right.self, left.scope, left.origin)
                     NamedCallExpression(
                         leftAndMiddle, right.name, right.nameAsImport,
                         right.typeParameters, right.valueParameters,

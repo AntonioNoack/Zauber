@@ -81,7 +81,7 @@ object JavaExpressionWriter {
             }
             is CallExpression -> {
                 // todo properly resolve what we call on and use it...
-                appendExpression(context, expr.base)
+                appendExpression(context, expr.self)
                 builder.append('(')
                 // todo resolve call order...
                 for ((index, param) in expr.valueParameters.withIndex()) {

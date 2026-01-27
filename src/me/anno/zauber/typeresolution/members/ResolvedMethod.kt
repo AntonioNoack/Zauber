@@ -17,16 +17,20 @@ class ResolvedMethod(
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 
-    override fun getTypeFromCall(): Type {
+    private val typeFromCallImpl = lazy {
         val method = resolved
         LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
         val ownerNames = selfTypeToTypeParams(method.selfType, context.selfType)
         val selfType = if (method.selfType != null) context.selfType else null
         val inGeneral = method.resolveReturnType(context)
-        val forSelf = ownerTypes.resolveGenerics(selfType,inGeneral)
+        val forSelf = ownerTypes.resolveGenerics(selfType, inGeneral)
         val forCall = callTypes.resolveGenerics(selfType, forSelf)
         LOGGER.info("ReturnType for call: $inGeneral -${ownerNames}|$ownerTypes> $forSelf -${method.typeParameters}|$callTypes> $forCall")
-        return forCall
+        forCall
+    }
+
+    override fun getTypeFromCall(): Type {
+        return typeFromCallImpl.value
     }
 
     override fun toString(): String {

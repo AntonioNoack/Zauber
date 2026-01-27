@@ -9,8 +9,25 @@ class SimpleBlock(val graph: SimpleGraph) {
     var isEntryPoint = false
 
     var branchCondition: SimpleField? = null
+        set(value) {
+            check(field == null)
+            field = value
+        }
+
     var ifBranch: SimpleBlock? = null
+        set(value) {
+            check(field == null)
+            field = value
+            value!!.entryBlocks.add(this)
+        }
+
     var elseBranch: SimpleBlock? = null
+        set(value) {
+            check(field == null)
+            field = value
+            value!!.entryBlocks.add(this)
+        }
+
     val entryBlocks = ArrayList<SimpleBlock>()
 
     var nextBranch: SimpleBlock?
@@ -39,6 +56,13 @@ class SimpleBlock(val graph: SimpleGraph) {
     fun isEmpty(): Boolean {
         return branchCondition == null && ifBranch == null && elseBranch == null &&
                 instructions.isEmpty()
+    }
+
+    fun nextOrSelfIfEmpty(graph: SimpleGraph): SimpleBlock {
+        if (isEmpty()) return this
+        val next = graph.addBlock()
+        nextBranch = next
+        return next
     }
 
     companion object {

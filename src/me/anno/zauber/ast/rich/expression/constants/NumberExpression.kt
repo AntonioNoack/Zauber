@@ -16,12 +16,67 @@ import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.UIntType
 import me.anno.zauber.types.Types.ULongType
 import me.anno.zauber.types.impl.ClassType
+import kotlin.math.pow
 
 // todo the "true" type of this also could be "ComptimeValue", because it is :)
 class NumberExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(NumberExpression::class)
+
+        fun parseHexFloat(value: String): Double {
+            var result = 0.0
+            var i = 0
+            while (i < value.length) {
+                result = result * 10.0 + when (val c = value[i++]) {
+                    in '0'..'9' -> c - '0'
+                    in 'A'..'F' -> c - 'A' + 10
+                    in 'a'..'f' -> c - 'a' + 10
+                    else -> {
+                        i--
+                        break
+                    }
+                }
+            }
+            if (i < value.length && value[i] == '.') {
+                i++
+                val factor = 1.0 / 16.0
+                var exponent = 1.0
+                while (i < value.length) {
+                    exponent *= factor
+                    result += exponent * when (val c = value[i++]) {
+                        in '0'..'9' -> c - '0'
+                        in 'A'..'F' -> c - 'A' + 10
+                        in 'a'..'f' -> c - 'a' + 10
+                        else -> {
+                            i--
+                            break
+                        }
+                    }
+                }
+            }
+            if (i + 1 < value.length && value[i] in "pP") {
+                i++
+                val isNegative = value[i] == '-'
+                if (isNegative || value[i] == '+') i++
+                var exponent = 0
+                while (i < value.length) {
+                    exponent = exponent * 10 + when (val c = value[i++]) {
+                        in '0'..'9' -> c - '0'
+                        else -> {
+                            i--
+                            break
+                        }
+                    }
+                }
+                if (isNegative) exponent = -exponent
+                result *= 2.0.pow(exponent)
+            }
+            if (i < value.length && value[i] in "fFdD") i++
+            check(i == value.length)
+            return result
+        }
+
     }
 
     // based on the string content, decide what type this is
@@ -63,13 +118,16 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     }
 
     private fun typeBySuffix(): ClassType? {
+        val maybeIsFloat = !value.startsWith("0x", true) || value.contains("p", true)
         return when {
             value.endsWith("ul", true) -> ULongType
             value.endsWith("u", true) -> UIntType
             value.endsWith("l", true) -> LongType
             value.endsWith("h", true) -> HalfType
-            !value.startsWith("0x", true) && value.endsWith("f", true) -> FloatType
-            !value.startsWith("0x", true) && value.endsWith("d", true) -> DoubleType
+            maybeIsFloat && value.endsWith("f", true) -> FloatType
+            maybeIsFloat && value.endsWith("d", true) -> DoubleType
+            value.startsWith("0x", true) &&
+                    ('.' in value || value.contains("pP", true)) -> DoubleType
             else -> null
         }
     }
@@ -137,4 +195,5 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

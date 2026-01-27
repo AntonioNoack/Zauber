@@ -14,4 +14,5 @@ class TypeExpression(val type: Type, scope: Scope, origin: Int) :
     override fun resolveType(context: ResolutionContext): Type = type
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = type.isResolved()
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

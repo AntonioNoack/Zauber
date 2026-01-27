@@ -97,4 +97,8 @@ class LambdaExpression(
             else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
         }
     }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(body)
+    }
 }

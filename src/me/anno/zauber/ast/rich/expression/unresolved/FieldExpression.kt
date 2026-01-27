@@ -32,7 +32,7 @@ class FieldExpression(
     override fun needsBackingField(methodScope: Scope): Boolean = field.isBackingField(methodScope)
 
     fun resolveField(context: ResolutionContext): ResolvedField {
-        if (LOGGER.enableInfo) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
+        if (LOGGER.isInfoEnabled) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
         val scopeSelfType = TypeResolution.getSelfType(scope)
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
         return FieldResolver.findMemberMatch(
@@ -55,4 +55,5 @@ class FieldExpression(
     }
 
     override fun splitsScope(): Boolean = false
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

@@ -22,4 +22,8 @@ class AsyncExpression(val value: Expression, scope: Scope, origin: Int) : Expres
     override fun isResolved(): Boolean = value.isResolved()
     override fun resolveImpl(context: ResolutionContext) =
         AsyncExpression(value.resolve(context), scope, origin)
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

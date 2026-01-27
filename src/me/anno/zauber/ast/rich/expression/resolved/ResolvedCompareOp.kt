@@ -29,4 +29,8 @@ class ResolvedCompareOp(
     override fun clone(scope: Scope) = ResolvedCompareOp(left.clone(scope), right.clone(scope), callable, type)
     override fun splitsScope(): Boolean = false // is resolved -> no reason to split
     override fun isResolved(): Boolean = true
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(left)
+        callback(right)
+    }
 }

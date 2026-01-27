@@ -454,7 +454,7 @@ class ZauberASTBuilder(
             constructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
         }
 
-        if (LOGGER.enableDebug) LOGGER.debug("read field $name: $type = $initialValue")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("read field $name: $type = $initialValue")
 
         finishLastField()
         lastField = field
@@ -545,7 +545,7 @@ class ZauberASTBuilder(
         check(tokens.equals(i, TokenType.NAME))
         val name = tokens.toString(i++)
 
-        if (LOGGER.enableDebug) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
 
         // parse parameters (...)
         check(tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -594,7 +594,7 @@ class ZauberASTBuilder(
         val origin = origin(i - 1) // on 'constructor'
         val keywords = packKeywords()
 
-        if (LOGGER.enableDebug) LOGGER.debug("constructor(...")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("constructor(...")
 
         // parse parameters (...)
         check(tokens.equals(i, TokenType.OPEN_CALL))
@@ -671,7 +671,7 @@ class ZauberASTBuilder(
 
     fun readFileLevel() {
         loop@ while (i < tokens.size) {
-            if (LOGGER.enableDebug) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
                 consumeIf("package") -> {
                     val (path, nextI) = tokens.readPath(i)
@@ -789,7 +789,7 @@ class ZauberASTBuilder(
             val value = readExpression()
             val param = NamedParameter(name, value)
             params.add(param)
-            if (LOGGER.enableDebug) LOGGER.debug("read param: $param")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
             readComma()
         }
         return params
@@ -991,7 +991,7 @@ class ZauberASTBuilder(
                     // constructor or function call with type args
                     val start = i
                     val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-                    if (LOGGER.enableDebug) LOGGER.debug(
+                    if (LOGGER.isDebugEnabled) LOGGER.debug(
                         "tokens for params: ${
                             (start..end).map { idx ->
                                 "${tokens.getType(idx)}(${tokens.toString(idx)})"
@@ -1173,11 +1173,11 @@ class ZauberASTBuilder(
 
     private fun readSubjectConditions(nextArrow: Int): List<SubjectCondition>? {
         val conditions = ArrayList<SubjectCondition>()
-        if (LOGGER.enableDebug) LOGGER.debug("reading conditions, ${tokens.toString(i, nextArrow)}")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading conditions, ${tokens.toString(i, nextArrow)}")
         var hadElse = false
         push(nextArrow) {
             while (i < tokens.size) {
-                if (LOGGER.enableDebug) LOGGER.debug("  reading condition $nextArrow,$i,${tokens.err(i)}")
+                if (LOGGER.isDebugEnabled) LOGGER.debug("  reading condition $nextArrow,$i,${tokens.err(i)}")
                 when {
                     consumeIf("else") -> {
                         hadElse = true
@@ -1205,7 +1205,7 @@ class ZauberASTBuilder(
                         conditions.add(SubjectCondition(value, null, SubjectConditionType.EQUALS, extra))
                     }
                 }
-                if (LOGGER.enableDebug) LOGGER.debug("  read condition '${conditions.last()}'")
+                if (LOGGER.isDebugEnabled) LOGGER.debug("  read condition '${conditions.last()}'")
                 readComma()
             }
         }
@@ -1234,12 +1234,12 @@ class ZauberASTBuilder(
                     val originalI = i
                     i = j + 1 // after is/!is/as/as?
                     val type = readType(null, false)
-                    if (LOGGER.enableDebug) LOGGER.debug("skipping over type '$type'")
+                    if (LOGGER.isDebugEnabled) LOGGER.debug("skipping over type '$type'")
                     j = i - 1 // continue after the type; -1, because will be incremented immediately after
                     i = originalI
                 }
                 depth == 0 && tokens.equals(j, "->") -> {
-                    if (LOGGER.enableDebug) LOGGER.debug("found arrow at ${tokens.err(j)}")
+                    if (LOGGER.isDebugEnabled) LOGGER.debug("found arrow at ${tokens.err(j)}")
                     return j
                 }
                 tokens.equals(j, TokenType.OPEN_BLOCK) ||
@@ -1281,15 +1281,15 @@ class ZauberASTBuilder(
 
     private fun readReturn(label: String?): ReturnExpression {
         val origin = origin(i - 1)
-        if (LOGGER.enableDebug) LOGGER.debug("reading return")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading return")
         if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
             !tokens.equals(i, ",", ";")
         ) {
             val value = readExpression()
-            if (LOGGER.enableDebug) LOGGER.debug("  with value $value")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("  with value $value")
             return ReturnExpression(value, label, currPackage, origin)
         } else {
-            if (LOGGER.enableDebug) LOGGER.debug("  without value")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("  without value")
             return ReturnExpression(unitInstance, label, currPackage, origin)
         }
     }
@@ -1382,7 +1382,7 @@ class ZauberASTBuilder(
                                     fileLevelKeywords.none { keyword -> tokens.equals(i, keyword) } -> {
                                 currPackage
                                     .getOrPut(tokens.toString(i), tokens.fileName, listenType)
-                                if (LOGGER.enableDebug) LOGGER.debug("found ${tokens.toString(i)} in $currPackage")
+                                if (LOGGER.isDebugEnabled) LOGGER.debug("found ${tokens.toString(i)} in $currPackage")
                                 listen = -1
                                 listenType = null
                             }
@@ -1411,7 +1411,7 @@ class ZauberASTBuilder(
 
     fun readExpression(minPrecedence: Int = 0): Expression {
         var expr = readPrefix()
-        if (LOGGER.enableDebug) LOGGER.debug("prefix: $expr")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
@@ -1441,7 +1441,7 @@ class ZauberASTBuilder(
                 }
             }
 
-            if (LOGGER.enableDebug) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
 
             val op = operators[symbol]
             if (op == null) {
@@ -1547,9 +1547,9 @@ class ZauberASTBuilder(
     private fun handleDotOperator(lhs: Expression): Expression {
         val op = dotOperator
         val rhs = readRHS(op)
-        if (rhs is CallExpression && rhs.base is MemberNameExpression) {
+        if (rhs is CallExpression && rhs.self is MemberNameExpression) {
             return NamedCallExpression(
-                lhs, rhs.base.name, rhs.base.nameAsImport,
+                lhs, rhs.self.name, rhs.self.nameAsImport,
                 rhs.typeParameters, rhs.valueParameters,
                 rhs.scope, rhs.origin
             )
@@ -1689,7 +1689,7 @@ class ZauberASTBuilder(
         val methodScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
-        if (LOGGER.enableDebug) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
         if (debug) tokens.printTokensInBlocks(i)
         while (i < tokens.size) {
             val oldSize = result.size
@@ -1735,7 +1735,7 @@ class ZauberASTBuilder(
 
                 else -> {
                     result.add(readExpression())
-                    if (LOGGER.enableDebug) LOGGER.debug("block += ${result.last()}")
+                    if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")
                 }
             }
 
@@ -1898,7 +1898,7 @@ class ZauberASTBuilder(
         val name = tokens.toString(i++)
         val keywords = packKeywords()
 
-        if (LOGGER.enableDebug) LOGGER.debug("reading var/val $name")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading var/val $name")
 
         val type = readTypeOrNull(null)
         val initialValue = if (consumeIf("=")) readExpression() else null

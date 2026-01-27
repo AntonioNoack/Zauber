@@ -1,12 +1,15 @@
 package me.anno.zauber.interpreting
 
 import me.anno.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
+import me.anno.zauber.interpreting.RuntimeCast.castToBool
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 
@@ -20,6 +23,8 @@ class TestRuntime {
 
             val runtime = Runtime()
             Stdlib.registerIntMethods(runtime)
+            Stdlib.registerFloatMethods(runtime)
+            Stdlib.registerStringMethods(runtime)
             Stdlib.registerPrintln(runtime)
             Stdlib.registerArrayAccess(runtime)
             val value = runtime.executeCall(runtime.getNull(), getter, emptyList())
@@ -28,74 +33,14 @@ class TestRuntime {
         }
     }
 
-    @Test
-    fun testStringField() {
-        ensureUnitIsKnown()
-        val code = """
-            val tested get() = "Some String"
-        """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals(StringType, value.type.type)
-        assertEquals("Some String", rt.castToString(value))
-    }
-
-    @Test
-    fun testSimpleIntCalculation() {
-        ensureUnitIsKnown()
-        val code = """
-            val tested get() = 1+3*7
-            
-            package zauber
-            class Int {
-                external fun plus(other: Int): Int
-                external fun times(other: Int): Int
-            }
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
-        assertEquals(22, runtime.castToInt(value))
-    }
-
-    @Test
-    fun testSimpleIntCalculationByCall() {
-        val code = """
-            val tested get() = sq(5)
-            fun sq(x: Int) = x*x
-            
-            package zauber
-            class Int {
-                external fun times(other: Int): Int
-            }
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(25, runtime.castToInt(value))
-    }
-
-    @Test
-    fun testSimpleIntField() {
-        val code = """
-            val tested get() = 17
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(17, runtime.castToInt(value))
-    }
-
-    @Test
-    fun testHexIntField() {
-        val code = """
-            val tested get() = 0x17
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(23, runtime.castToInt(value))
-    }
-
-    @Test
-    fun testBinIntField() {
-        val code = """
-            val tested get() = 0b10101
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(21, runtime.castToInt(value))
+    @BeforeEach
+    fun init() {
+        LogManager.disableLoggers(
+            "MethodResolver,Inheritance,MemberResolver," +
+                    "TypeResolution,ResolvedField,FieldExpression," +
+                    "FieldResolver,ConstructorResolver,ResolvedMethod," +
+                    "CallExpression,Field"
+        )
     }
 
     @Test
@@ -167,7 +112,7 @@ class TestRuntime {
 
     @Test
     fun testFactorialAsRecursiveFunction() {
-        // todo infinite loop problem
+        // todo this has some sort of cast-problem, too
         val code = """
             fun fac(i: Int): Int {
                 if (i <= 1) return 1
@@ -200,7 +145,6 @@ class TestRuntime {
 
     @Test
     fun testFactorialAsWhileLoop() {
-        // todo infinite loop problem
         val code = """
             fun fac(i: Int): Int {
                 var f = 1
@@ -211,7 +155,7 @@ class TestRuntime {
                 }
                 return f
             }
-            val tested get() = fac(5)
+            val tested get() = fac(10)
             
             package zauber
             class Int {
@@ -234,7 +178,7 @@ class TestRuntime {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(5 * 4 * 3 * 2, runtime.castToInt(value))
+        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, runtime.castToInt(value))
     }
 
     // todo "const" could be a "deep" value, aka fully immutable

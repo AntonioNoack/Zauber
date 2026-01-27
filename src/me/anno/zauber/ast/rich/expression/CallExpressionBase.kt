@@ -22,7 +22,7 @@ import me.anno.zauber.types.impl.LambdaType
  * Calls base[.name]<typeParams>(valueParams)
  * */
 abstract class CallExpressionBase(
-    val base: Expression,
+    val self: Expression,
     val typeParameters: List<Type>?,
     val valueParameters: List<NamedParameter>,
     scope: Scope, origin: Int
@@ -37,7 +37,7 @@ abstract class CallExpressionBase(
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val contextI = context
             .withTargetType(null /* unknown */)
-        if (base.hasLambdaOrUnknownGenericsType(contextI) ||
+        if (self.hasLambdaOrUnknownGenericsType(contextI) ||
             valueParameters.any { valueParameter ->
                 valueParameter.value.hasLambdaOrUnknownGenericsType(contextI)
             }
@@ -182,10 +182,10 @@ abstract class CallExpressionBase(
                 } else {
                     // todo base must be defined, so resolve instance/this
                     val base = if (
-                        (base !is FieldExpression && base !is UnresolvedFieldExpression) ||
+                        (self !is FieldExpression && self !is UnresolvedFieldExpression) ||
                         this is NamedCallExpression
                     ) {
-                        base.resolve(context)
+                        self.resolve(context)
                     } else null // else base was consumed to be the method
                     // println("base for call: $method, base: $base, this.base: ${this.base}")
                     val params1 = params0.map { it.resolve(context) }
@@ -193,8 +193,8 @@ abstract class CallExpressionBase(
                 }
             }
             is ResolvedConstructor -> {
-                check(base is TypeExpression || base is UnresolvedFieldExpression) {
-                    "In ResolvedConstructor, base should be a TypeExpression/UFE, but got ${base.javaClass.simpleName}"
+                check(self is TypeExpression || self is UnresolvedFieldExpression) {
+                    "In ResolvedConstructor, base should be a TypeExpression/UFE, but got ${self.javaClass.simpleName}"
                 }
                 val params0 = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
                 val params1 = params0.map { it.resolve(context) }
@@ -206,7 +206,7 @@ abstract class CallExpressionBase(
                     return resolveInlineInvocation(context, callable, inlineBody)
                 }
 
-                val base = base.resolve(context)
+                val base = self.resolve(context)
                 val valueParameters1 = resolveValueParameters(context, valueParameters)
                 val calledMethod = callable.resolveCalledMethod(typeParameters, valueParameters1)
                 val params = reorderParameters(valueParameters, calledMethod.resolved.valueParameters, scope, origin)

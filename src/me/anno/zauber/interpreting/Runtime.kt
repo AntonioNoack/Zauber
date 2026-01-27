@@ -3,26 +3,24 @@ package me.anno.zauber.interpreting
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.interpreting.RuntimeCast.castToBool
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 
 class Runtime {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(Runtime::class)
+    }
 
     private val classes = HashMap<Type, ZClass>()
     private val nullInstance = Instance(getClass(NullType), emptyArray())
@@ -82,6 +80,8 @@ class Runtime {
             }
         }*/
         check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.codeScope})" }
+        if (fieldIndex >= instance.properties.size)
+            throw IllegalStateException("Outdated instance? $instance")
         return instance.properties[fieldIndex]
             ?: throw IllegalStateException("$instance.$field[$fieldIndex] accessed before initialization")
     }
@@ -143,7 +143,7 @@ class Runtime {
 
         var simpleBody = method.simpleBody
         if (simpleBody == null) {
-            val context = ResolutionContext(method.selfType, true, method.returnType, emptyMap())
+            val context = ResolutionContext(self.type.type, true, method.returnType, emptyMap())
             simpleBody = ASTSimplifier.simplify(context, body).startBlock
             method.simpleBody = simpleBody
         }
@@ -179,65 +179,6 @@ class Runtime {
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 
-    fun createNumber(base: NumberExpression): Instance {
-        val type = base.resolvedType ?: base.resolvedType0
-        var value = base.value
-        val basis = when {
-            value.startsWith("0x", true) -> {
-                value = value.substring(2)
-                16
-            }
-            value.startsWith("0b", true) -> {
-                value = value.substring(2)
-                2
-            }
-            else -> 10
-        }
-        return when (type) {
-            ByteType -> {
-                val instance = Instance(getClass(ByteType), emptyArray())
-                instance.rawValue = value.toByte(basis)
-                instance
-            }
-            ShortType -> {
-                val instance = Instance(getClass(ShortType), emptyArray())
-                instance.rawValue = value.toShort(basis)
-                instance
-            }
-            IntType -> createInt(value.toInt(basis))
-            LongType -> createLong(value.toLong(basis))
-            FloatType -> {
-                val instance = Instance(getClass(FloatType), emptyArray())
-                instance.rawValue = base.value.toFloat()
-                instance
-            }
-            DoubleType -> {
-                val instance = Instance(getClass(DoubleType), emptyArray())
-                instance.rawValue = base.value.toDouble()
-                instance
-            }
-            else -> throw NotImplementedError("Create instance of type $type")
-        }
-    }
-
-    fun createInt(value: Int): Instance {
-        val instance = Instance(getClass(IntType), emptyArray())
-        instance.rawValue = value
-        return instance
-    }
-
-    fun createLong(value: Long): Instance {
-        val instance = Instance(getClass(LongType), emptyArray())
-        instance.rawValue = value
-        return instance
-    }
-
-    fun createString(value: String): Instance {
-        val instance = Instance(getClass(StringType), emptyArray())
-        instance.rawValue = value
-        return instance
-    }
-
     fun getThis(): Instance {
         return callStack.last().self
     }
@@ -251,18 +192,23 @@ class Runtime {
         return getClass(type).getOrCreateObjectInstance(this)
     }
 
-    fun executeBlock(body: SimpleBlock): BlockReturn? {
-        var block = body
+    fun executeBlock(block0: SimpleBlock): BlockReturn? {
+        var block = block0
         while (true) {
 
             val tss = thisStack.size
             val instructions = block.instructions
 
+            if (LOGGER.isDebugEnabled) for (i in instructions.indices) {
+                val instr = instructions[i]
+                LOGGER.debug("Block[$i] $instr")
+            }
+
             try {
-                var lastValue: BlockReturn? = null
+                var lastValue: BlockReturn?
                 for (i in instructions.indices) {
                     val instr = instructions[i]
-                    println("Executing $instr")
+                    if (LOGGER.isDebugEnabled) LOGGER.debug("Executing $instr")
                     // todo we must execute all (err)defer-things
                     lastValue = instr.execute(this)
                     if (lastValue != null && lastValue.type != ReturnType.VALUE) {
@@ -276,35 +222,15 @@ class Runtime {
             }
 
             // find the next block to execute
-            val condition = body.branchCondition
+            val condition = block.branchCondition
             block = if (condition != null) {
                 val conditionI = this[condition]
                 val conditionJ = castToBool(conditionI)
-                if (conditionJ) body.ifBranch else body.elseBranch
+                if (conditionJ) block.ifBranch else block.elseBranch
             } else {
-                body.nextBranch
+                block.nextBranch
             } ?: return null
         }
     }
 
-    fun castToBool(instance: Instance): Boolean {
-        val isTrue = instance == getBool(true)
-        val isFalse = instance == getBool(false)
-        check(isTrue || isFalse) { "Expected value to be either true or false, got $instance" }
-        return isTrue
-    }
-
-    fun castToInt(value: Instance): Int {
-        check(value.type == getClass(IntType)) {
-            "Casting $value to int failed, type mismatch"
-        }
-        return value.rawValue as Int
-    }
-
-    fun castToString(value: Instance): String {
-        check(value.type == getClass(StringType)) {
-            "Casting $value to String failed, type mismatch"
-        }
-        return value.rawValue as String
-    }
 }

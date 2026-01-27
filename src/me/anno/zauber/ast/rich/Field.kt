@@ -45,6 +45,14 @@ class Field(
         }
     }
 
+    fun needsBackingField(): Boolean {
+        val getterBody = getter?.body ?: return true
+        if (getterBody.needsBackingField(getterBody.scope)) return true
+
+        val setterBody = setter?.body ?: return false
+        return setterBody.needsBackingField(setterBody.scope)
+    }
+
     fun isBackingField(methodScope: Scope): Boolean {
         return name == "field" &&
                 keywords.hasFlag(Keywords.SYNTHETIC) &&

@@ -86,6 +86,12 @@ class IfElseBranch(
         )
     }
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(condition)
+        callback(ifBranch)
+        if (elseBranch != null) callback(elseBranch)
+    }
+
     override fun toStringImpl(depth: Int): String {
         return if (elseBranch == null) {
             "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} }"

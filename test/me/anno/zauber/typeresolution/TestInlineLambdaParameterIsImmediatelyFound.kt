@@ -36,8 +36,8 @@ class TestInlineLambdaParameterIsImmediatelyFound {
         val method = testScope.firstChild(ScopeType.METHOD)
         val body = method.selfAsMethod!!.body as ExpressionList
         val expr = body.list[0] as CallExpression
-        println("${expr.base}, ${expr.base.javaClass.simpleName}")
-        val field = (expr.base as FieldExpression).field
+        println("${expr.self}, ${expr.self.javaClass.simpleName}")
+        val field = (expr.self as FieldExpression).field
         check(field.name == "runnable")
         check(field.byParameter is Parameter)
         check(field.valueType is LambdaType)

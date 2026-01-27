@@ -204,7 +204,7 @@ open class ZauberASTBuilderBase(
 
     fun readTypeParameters(selfType: Type?): List<Type>? {
         if (i < tokens.size) {
-            if (LOGGER.enableDebug) LOGGER.debug("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
         }
         // having type arguments means they no longer need to be resolved
         // todo any method call without them must resolve which ones and how many there are, e.g. mapOf, listOf, ...
@@ -267,7 +267,7 @@ open class ZauberASTBuilderBase(
         var i = i + 1
         while (depth > 0) {
             if (i >= tokens.size) return false // reached end without closing the block
-            if (LOGGER.enableDebug) LOGGER.debug("  check ${tokens.err(i)} for type-args-compatibility")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("  check ${tokens.err(i)} for type-args-compatibility")
             // todo support annotations here?
             when {
                 tokens.equals(i, TokenType.COMMA) -> {} // ok

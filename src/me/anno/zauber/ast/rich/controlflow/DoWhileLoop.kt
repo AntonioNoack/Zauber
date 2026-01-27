@@ -29,4 +29,8 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
     override fun resolveImpl(context: ResolutionContext) =
         DoWhileLoop(body = body.resolve(context), condition = condition.resolve(context), label)
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(body)
+        callback(condition)
+    }
 }

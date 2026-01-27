@@ -39,4 +39,6 @@ class UnresolvedFieldExpression(
         val owner = field.resolveOwnerWithoutLeftSide(origin)
         return ResolvedGetFieldExpression(owner, field, scope, origin)
     }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

@@ -6,7 +6,7 @@ import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 
-class ResolutionContext(
+data class ResolutionContext(
     /**
      * this should only be set if we look for a field/method on a specific base type;
      * if this is specified, we MUST match it

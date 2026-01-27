@@ -33,11 +33,11 @@ object Inheritance {
         }
 
         if (expected.type != expectedType) {
-            LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
         }
 
         val actualType = actual.getType(expectedType)
-        LOGGER.info("ActualType[$actual,$expectedType] -> $actualType")
+        if (LOGGER.isInfoEnabled) LOGGER.info("ActualType[$actual,$expectedType] -> $actualType")
         return isSubTypeOf(
             expectedType, actualType,
             expectedTypeParameters, actualTypeParameters,
@@ -52,9 +52,11 @@ object Inheritance {
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
     ): Boolean {
-        LOGGER.info("Checking $actualType instanceOf $expectedType")
-        LOGGER.info("  with generics $expectedTypeParams vs $actualTypeParameters")
-        LOGGER.info("  and insertMode $insertMode")
+        if (LOGGER.isInfoEnabled) {
+            LOGGER.info("Checking $actualType instanceOf $expectedType")
+            LOGGER.info("  with generics $expectedTypeParams vs $actualTypeParameters")
+            LOGGER.info("  and insertMode $insertMode")
+        }
         val result = isSubTypeOfImpl(
             expectedType,
             actualType,
@@ -62,7 +64,9 @@ object Inheritance {
             actualTypeParameters,
             insertMode,
         )
-        LOGGER.info("  got $result for $actualType instanceOf $expectedType")
+        if (LOGGER.isInfoEnabled) {
+            LOGGER.info("  got $result for $actualType instanceOf $expectedType")
+        }
         return result
     }
 
@@ -101,8 +105,10 @@ object Inheritance {
         ) return false
 
         val success = actualTypeParameters.union(typeParamIdx, actualType, insertMode)
-        LOGGER.info("Found Type[$success for $actualType @$insertMode vs ${actualTypeParameters.insertModes[typeParamIdx]}]: " +
-                "[$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}")
+        LOGGER.info(
+            "Found Type[$success for $actualType @$insertMode vs ${actualTypeParameters.insertModes[typeParamIdx]}]: " +
+                    "[$typeParamIdx,${expectedType.scope.pathStr}.${expectedType.name}] = ${actualTypeParameters[typeParamIdx]}"
+        )
         return success
     }
 

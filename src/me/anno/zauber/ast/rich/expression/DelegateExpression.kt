@@ -24,4 +24,7 @@ class DelegateExpression(val value: Expression) : Expression(value.scope, value.
 
     override fun clone(scope: Scope) = DelegateExpression(value.clone(scope))
 
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(value)
+    }
 }

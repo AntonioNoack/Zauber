@@ -13,6 +13,7 @@ abstract class SimpleAssignmentExpression(val dst: SimpleField, scope: Scope, or
     override fun execute(runtime: Runtime): BlockReturn? {
         val value = eval(runtime)
         return if (value.type == ReturnType.VALUE) {
+            // println("$dst is now ${value.instance}")
             runtime[dst] = value.instance
             null
         } else value

@@ -44,12 +44,6 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         }
     }
 
-    /*init {
-        check(typeParameters == null || !typeParameters.containsNull()) {
-            "At least one unknown type parameter: $typeParameters"
-        }
-    }*/
-
     override fun equals(other: Any?): Boolean {
         return other is ClassType &&
                 clazz == other.clazz &&

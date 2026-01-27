@@ -51,7 +51,7 @@ fun storeSubject(
 ): FieldExpression {
     val origin = subject.origin
     val subjectName = scope.generateName("subject", origin)
-    val value = if (subject is AssignmentExpression) subject.newValue else subject
+    val value = if (subject is AssignmentExpression) subject.src else subject
     val field = Field(
         scope, null,
         false, isMutable = false, null,
@@ -77,7 +77,7 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
         //  then join them together, and insert a field with more specific type...
         if (case.conditions != null && case.conditions.all { it.subjectConditionType == SubjectConditionType.INSTANCEOF }) {
             val fieldName = when (subject) {
-                is AssignmentExpression -> when (val name = subject.variableName) {
+                is AssignmentExpression -> when (val name = subject.dst) {
                     is MemberNameExpression -> name.name
                     is FieldExpression -> name.field.name /* todo in this case, we can reuse the field, I think */
                     else -> throw NotImplementedException()

@@ -15,16 +15,13 @@ class ZClass(val type: Type) {
             // val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
             // if (!isValidInstance) return emptyList()
             return type.clazz.fields.filter {
-                !it.explicitSelfType || it.selfType == type
+                (!it.explicitSelfType || it.selfType == type) &&
+                        it.needsBackingField()
             }
         }
     }
 
     val properties = getProperties(type)
-
-    init {
-        println("Created class $type with properties $properties")
-    }
 
     private var objectInstance: Instance? = null
 

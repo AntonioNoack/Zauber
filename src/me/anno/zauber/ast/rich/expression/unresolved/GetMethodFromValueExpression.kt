@@ -8,11 +8,11 @@ import me.anno.zauber.types.Type
 /**
  * Generates a lambda from the base, effectively being a::b -> { a.b(allParamsNeeded) }
  * */
-class GetMethodFromValueExpression(val base: Expression, val name: String, origin: Int) :
-    Expression(base.scope, origin) {
+class GetMethodFromValueExpression(val self: Expression, val name: String, origin: Int) :
+    Expression(self.scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
-        return "${base.toString(depth)}::$name"
+        return "${self.toString(depth)}::$name"
     }
 
     override fun resolveType(context: ResolutionContext): Type {
@@ -25,10 +25,13 @@ class GetMethodFromValueExpression(val base: Expression, val name: String, origi
         return true // base.hasLambdaOrUnknownGenericsType()
     }
 
-    override fun needsBackingField(methodScope: Scope): Boolean = base.needsBackingField(methodScope)
+    override fun needsBackingField(methodScope: Scope): Boolean = self.needsBackingField(methodScope)
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = false
 
-    override fun clone(scope: Scope) = GetMethodFromValueExpression(base.clone(scope), name, origin)
+    override fun clone(scope: Scope) = GetMethodFromValueExpression(self.clone(scope), name, origin)
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(self)
+    }
 
 }

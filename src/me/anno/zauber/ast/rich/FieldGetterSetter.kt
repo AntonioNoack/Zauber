@@ -54,7 +54,7 @@ object FieldGetterSetter {
             val setterFieldName = tokens.toString(i++)
             check(setterFieldName != "field") { "Argument for setter must not be called 'field'" }
 
-            if (LOGGER.enableDebug) LOGGER.debug("found set ${field.name}, $setterFieldName")
+            if (LOGGER.isDebugEnabled) LOGGER.debug("found set ${field.name}, $setterFieldName")
             consume(TokenType.CLOSE_CALL)
 
             pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->

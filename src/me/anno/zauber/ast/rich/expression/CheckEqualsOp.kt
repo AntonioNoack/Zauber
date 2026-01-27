@@ -40,4 +40,9 @@ class CheckEqualsOp(
     override fun resolveImpl(context: ResolutionContext): Expression {
         return CheckEqualsOp(left.resolve(context), right.resolve(context), byPointer, negated, scope, origin)
     }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(left)
+        callback(right)
+    }
 }

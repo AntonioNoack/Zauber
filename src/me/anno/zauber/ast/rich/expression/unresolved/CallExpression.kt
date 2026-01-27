@@ -16,7 +16,6 @@ import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
 
 /**
  * Calls base<typeParams>(valueParams), without anything on the left
@@ -37,7 +36,7 @@ class CallExpression(
 
     override fun toStringImpl(depth: Int): String {
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
-        val base = base.toString(depth)
+        val base = self.toString(depth)
         return if (typeParameters != null && typeParameters.isEmpty()) {
             "($base)$valueParameters"
         } else "($base)<${typeParameters ?: "?"}>$valueParameters"
@@ -48,31 +47,31 @@ class CallExpression(
     }
 
     override fun clone(scope: Scope) = CallExpression(
-        base.clone(scope), typeParameters,
+        self.clone(scope), typeParameters,
         valueParameters.map { NamedParameter(it.name, it.value.clone(scope)) }, origin
     )
 
     override fun splitsScope(): Boolean {
-        return base.splitsScope() ||
+        return self.splitsScope() ||
                 valueParameters.any { it.value.splitsScope() } ||
-                (base is MemberNameExpression && (base.name == "check" || base.name == "require")) // this check is a little too loose
+                (self is MemberNameExpression && (self.name == "check" || self.name == "require")) // this check is a little too loose
     }
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val typeParameters = typeParameters
         val valueParameters = resolveValueParameters(context, valueParameters)
-        if (LOGGER.enableInfo) LOGGER.info("Resolving call: ${base}<${typeParameters ?: "?"}>($valueParameters)")
+        if (LOGGER.isInfoEnabled) LOGGER.info("Resolving call: ${self}<${typeParameters ?: "?"}>($valueParameters)")
 
         // base can be a constructor, field or a method
         // find the best matching candidate...
-        return when (base) {
+        return when (self) {
             is MemberNameExpression ->
                 throw IllegalStateException("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
-            is UnresolvedFieldExpression -> resolveCallableByName(base, context, valueParameters)
-            is FieldExpression -> base.resolveField(context)
+            is UnresolvedFieldExpression -> resolveCallableByName(self, context, valueParameters)
+            is FieldExpression -> self.resolveField(context)
             is TypeExpression -> {
 
-                val baseType = base.type
+                val baseType = self.type
                 val baseScope = TypeResolution.typeToScope(baseType)
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
                 check(baseScope.hasTypeParameters)
@@ -86,7 +85,7 @@ class CallExpression(
                 constructor ?: throw IllegalStateException("Missing constructor for $baseType")
             }
             else -> throw IllegalStateException(
-                "Resolve field/method in Callable for ${base.javaClass} ($base) " +
+                "Resolve field/method in Callable for ${self.javaClass} ($self) " +
                         "in ${TokenListIndex.resolveOrigin(origin)}"
             )
         }
@@ -98,7 +97,7 @@ class CallExpression(
     ): ResolvedMember<*> {
         val name = base.name
         val nameAsImport = base.nameAsImport
-        if (LOGGER.enableInfo) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
+        if (LOGGER.isInfoEnabled) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
         // findConstructor(selfScope, false, name, typeParameters, valueParameters)
         val c = ConstructorResolver
 
@@ -118,5 +117,10 @@ class CallExpression(
         if (byMethodCall != null) return byMethodCall
 
         MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)
+    }
+
+    override fun forEachExpression(callback: (Expression) -> Unit) {
+        callback(self)
+        for (param in valueParameters) callback(param.value)
     }
 }

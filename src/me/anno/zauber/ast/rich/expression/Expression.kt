@@ -81,6 +81,14 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * */
     abstract fun isResolved(): Boolean
 
+    abstract fun forEachExpression(callback: (Expression) -> Unit)
+    fun forEachExpressionRecursively(callback: (Expression) -> Unit) {
+        forEachExpression { expr ->
+            expr.forEachExpressionRecursively(callback)
+            callback(expr)
+        }
+    }
+
     companion object {
         var numExpressionsCreated = 0
             private set

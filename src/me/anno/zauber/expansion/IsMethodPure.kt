@@ -2,12 +2,11 @@ package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.MethodLike
 
-object IsMethodPure : BoolMethodColoring<MethodLike>(true) {
-    override fun getDependencies(func: MethodLike): List<MethodLike> {
-        TODO("Not yet implemented")
-    }
-
-    override fun isColoredBySelf(func: MethodLike): Boolean {
+/**
+ * a pure function is one that neither yields, throws, non-stack-allocates, nor has any other side effects
+ * */
+object IsMethodPure : BoolMethodColoring(true) {
+    override fun isColoredBySelf(method: MethodLike): Boolean {
         TODO("Not yet implemented")
     }
 }
