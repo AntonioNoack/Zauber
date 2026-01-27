@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types.StringType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -11,7 +12,7 @@ class StringTests {
     val smallStdlib = """
         class Array<V>(val size: Int) {
             external operator fun get(index: Int): V
-            external operator fun set(index: Int, value: V): Int
+            external operator fun set(index: Int, value: V)
             
             operator fun plus(other: Array<V>): Array<V> {
                 val result = copyOf(size + other.size)
@@ -125,6 +126,8 @@ class StringTests {
 
     @Test
     fun testStringConcatInLanguage() {
+        LogManager.getLogger("Runtime").isDebugEnabled = true
+        LogManager.getLogger("AssignmentExpression").isDebugEnabled = true
         val code = """
             val tested get() = "Some " + "String"
             

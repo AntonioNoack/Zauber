@@ -28,6 +28,7 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
@@ -192,7 +193,7 @@ object ASTSimplifier {
             is ResolvedCompareOp -> {
                 val (left, block1) = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
                 val (right, block2) = simplifyImpl(context, expr.right, block1, graph, false) ?: return null
-                val tmp = block2.field(BooleanType, booleanOwnership)
+                val tmp = block2.field(IntType)
                 val call = SimpleCall(
                     tmp, "compareTo", emptyMap(), expr.callable.resolved, left.use(),
                     noSpecialization, listOf(right.use()),

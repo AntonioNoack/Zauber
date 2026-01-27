@@ -6,6 +6,7 @@ import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.RuntimeCreate.createFloat
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.interpreting.RuntimeCreate.createString
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.FloatType
@@ -15,6 +16,8 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 
 object Stdlib {
+
+    private val LOGGER = LogManager.getLogger(Stdlib::class)
 
     fun Runtime.registerBinaryMethod(type: ClassType, name: String, calc: (Instance, Instance) -> Instance) {
         register(type.clazz, name, listOf(type)) { _, self, params ->
@@ -53,18 +56,18 @@ object Stdlib {
     }
 
     fun registerIntMethods(rt: Runtime) {
-        rt.registerBinaryIntMethod(IntType, "plus", Int::plus)
-        rt.registerBinaryIntMethod(IntType, "minus", Int::minus)
-        rt.registerBinaryIntMethod(IntType, "times", Int::times)
-        rt.registerBinaryIntMethod(IntType, "div", Int::div)
-        rt.registerBinaryIntMethod(IntType, "compareTo", Int::compareTo)
+        rt.registerBinaryIntMethod("plus", Int::plus)
+        rt.registerBinaryIntMethod("minus", Int::minus)
+        rt.registerBinaryIntMethod("times", Int::times)
+        rt.registerBinaryIntMethod("div", Int::div)
+        rt.registerBinaryIntMethod("compareTo", Int::compareTo)
     }
 
     fun registerFloatMethods(rt: Runtime) {
-        rt.registerBinaryFloatMethod(FloatType, "plus", Float::plus)
-        rt.registerBinaryFloatMethod(FloatType, "minus", Float::minus)
-        rt.registerBinaryFloatMethod(FloatType, "times", Float::times)
-        rt.registerBinaryFloatMethod(FloatType, "div", Float::div)
+        rt.registerBinaryFloatMethod("plus", Float::plus)
+        rt.registerBinaryFloatMethod("minus", Float::minus)
+        rt.registerBinaryFloatMethod("times", Float::times)
+        rt.registerBinaryFloatMethod("div", Float::div)
         rt.registerBinaryMethod(FloatType, "compareTo") { a, b ->
             val a = rt.castToFloat(a)
             val b = rt.castToFloat(b)
@@ -80,15 +83,17 @@ object Stdlib {
         }
     }
 
-    fun Runtime.registerBinaryIntMethod(type: ClassType, name: String, calc: (Int, Int) -> Int) {
-        registerBinaryMethod(type, name) { a, b ->
+    fun Runtime.registerBinaryIntMethod(name: String, calc: (Int, Int) -> Int) {
+        registerBinaryMethod(IntType, name) { a, b ->
+            LOGGER.info("Executing Int.$name ($a, $b)")
             val result = calc(castToInt(a), castToInt(b))
             createInt(result)
         }
     }
 
-    fun Runtime.registerBinaryFloatMethod(type: ClassType, name: String, calc: (Float, Float) -> Float) {
-        registerBinaryMethod(type, name) { a, b ->
+    fun Runtime.registerBinaryFloatMethod(name: String, calc: (Float, Float) -> Float) {
+        registerBinaryMethod(FloatType, name) { a, b ->
+            LOGGER.info("Executing Float.$name ($a, $b)")
             val result = calc(castToFloat(a), castToFloat(b))
             createFloat(result)
         }

@@ -8,6 +8,9 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
+import me.anno.zauber.typeresolution.InsertMode
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -89,6 +92,16 @@ class Runtime {
     operator fun set(field: SimpleField, value: Instance) {
         // todo only if that field really belongs into this scope:
         //  it might belong to one of the scopes before us
+        val valueHasValidType = isSubTypeOf(
+            field.type,
+            value.type.type,
+            emptyList(),
+            ParameterList.emptyParameterList(),
+            InsertMode.READ_ONLY
+        )
+        check(valueHasValidType) {
+            "Assignment of $value into $field impossible, type-mismatch"
+        }
         // get(field) // sanity check for existence
         callStack.last().simpleFields[field] = value
     }
