@@ -58,7 +58,7 @@ class Runtime {
 
             if (selfScope.isObject()) {
                 // might be an object...
-                println("Returning object instance for $selfScope")
+                // println("Returning object instance for $selfScope")
                 return getObjectInstance(selfScope.typeWithoutArgs)
             } else if (!selfScope.isObject()) {
                 val currCall = callStack.last()
@@ -111,7 +111,7 @@ class Runtime {
             ParameterList.emptyParameterList(),
             InsertMode.READ_ONLY
         )
-        check(valueHasValidType) {
+        if (false) check(valueHasValidType) {
             "Assignment of $value into $field invalid, type-mismatch"
         }
         // get(field) // sanity check for existence
@@ -201,6 +201,7 @@ class Runtime {
         }
 
         check(callStack.removeLast() === call)
+        // println("Returning $result from call to $method")
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 

@@ -23,15 +23,32 @@ private fun ASTBuilderBase.createPrePostfixExpression(
     base0: Expression, type: InplaceModifyType, origin: Int,
     returnBeforeChange: Boolean
 ): Expression {
+    val scope = base0.scope
     val getterSetter = splitGetterSetter(base0)
     val instr = ArrayList<Expression>()
-    val afterChange = NamedCallExpression(
-        getterSetter.beforeChange, type.methodName,
-        nameAsImport(type.methodName), base0.scope, origin
-    )
-    instr.add(getterSetter.createSetter(afterChange))
-    instr.add(if (returnBeforeChange) getterSetter.beforeChange else afterChange)
-    return ExpressionList(instr, base0.scope, origin)
+    if (returnBeforeChange) {
+        val tmpBefore = scope.createImmutableField(getterSetter.beforeChange)
+        val tmpBeforeExpr = FieldExpression(tmpBefore, scope, origin)
+        instr.add(AssignmentExpression(tmpBeforeExpr, getterSetter.beforeChange))
+
+        val afterChange = NamedCallExpression(
+            tmpBeforeExpr, type.methodName,
+            nameAsImport(type.methodName), scope, origin
+        )
+        instr.add(getterSetter.createSetter(afterChange))
+        instr.add(tmpBeforeExpr)
+    } else {
+        val afterChange = NamedCallExpression(
+            getterSetter.beforeChange, type.methodName,
+            nameAsImport(type.methodName), scope, origin
+        )
+        val tmpAfter = scope.createImmutableField(afterChange)
+        val tmpAfterExpr = FieldExpression(tmpAfter, scope, origin)
+        instr.add(AssignmentExpression(tmpAfterExpr, afterChange))
+        instr.add(getterSetter.createSetter(tmpAfterExpr))
+        instr.add(tmpAfterExpr)
+    }
+    return ExpressionList(instr, scope, origin)
 }
 
 private abstract class GetterSetter(val beforeChange: Expression) {

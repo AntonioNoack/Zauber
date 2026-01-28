@@ -57,8 +57,6 @@ object Stdlib {
                 is DoubleArray -> rt.createDouble(content[index])
                 null -> throw IllegalStateException("Missing array content")
                 else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
-            }.apply {
-                println("Array.get($index) returned $this")
             }
         }
         runtime.register(

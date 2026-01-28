@@ -43,7 +43,7 @@ class StringTests {
             external operator fun plus(other: Int): Int
             external operator fun minus(other: Int): Int
             external operator fun compareTo(other: Int): Int
-            operator fun until(other: Int): IntRange = IntRange(this, other+1)
+            operator fun until(other: Int): IntRange = IntRange(this, other)
             fun inc() = this+1
             fun dec() = this-1
         }
@@ -80,16 +80,6 @@ class StringTests {
         
             constructor(str: String, startIndex: Int, endIndex: Int):
                 this(str.content.copyOfRange(startIndex, endIndex))
-                
-            fun trim(): String {
-                var startIndex = 0
-                while (startIndex < size && this[startIndex] in whitespace) startIndex++
-                if (startIndex == size) return this
-                
-                var endIndex = size
-                while (endIndex > startIndex && this[endIndex] in whitespace) endIndex--
-                return String(this, startIndex, endIndex)
-            }
             
             operator fun get(index: Int): Char {
                 return content[index].toChar()
@@ -128,8 +118,9 @@ class StringTests {
 
     @Test
     fun testStringConcatUsingArrays() {
-        LogManager.getLogger("Runtime").isDebugEnabled = true
-        LogManager.getLogger("AssignmentExpression").isDebugEnabled = true
+        LogManager.disableLoggers("Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
+                "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
+                "Stdlib,ASTSimplifier,ResolvedMethod")
         val code = """
             val tested get() = "Some " + "String"
             

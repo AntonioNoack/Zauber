@@ -60,9 +60,19 @@ object RuntimeCast {
         return value.rawValue as Double
     }
 
-    @Suppress("UnusedReceiverParameter")
     fun Runtime.castToString(value: Instance): String {
         checkType(value, StringType)
+        if (value.rawValue == null) {
+            // a byte array
+            val content = value.properties[0]!!
+            val string = when (val bytes = content.rawValue) {
+                is ByteArray -> bytes
+                is Array<*> -> ByteArray(bytes.size) { castToByte(bytes[it] as Instance) }
+                else -> throw NotImplementedError()
+            }.decodeToString()
+            value.rawValue = string
+            return string
+        }
         return value.rawValue as String
     }
 }
