@@ -3,7 +3,7 @@ package me.anno.zauber.ast.rich
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.expansion.IsMethodYielding
@@ -26,7 +26,7 @@ open class MethodLike(
     val origin: Int
 ) {
 
-    var simpleBody: SimpleBlock? = null
+    var simpleBody: SimpleNode? = null
 
     val isRecursive: Boolean
         get() = IsMethodRecursive[this]

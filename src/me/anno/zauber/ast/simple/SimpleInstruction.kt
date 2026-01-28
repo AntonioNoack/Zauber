@@ -14,6 +14,6 @@ import me.anno.zauber.types.Scope
  *
  * todo this is effectively LLVM IR, just that names can be used multiple times
  * */
-abstract class SimpleExpression(val scope: Scope, val origin: Int) {
+abstract class SimpleInstruction(val scope: Scope, val origin: Int) {
     abstract fun execute(runtime: Runtime): BlockReturn?
 }

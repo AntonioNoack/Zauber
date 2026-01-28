@@ -8,7 +8,7 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 
 class SimpleString(dst: SimpleField, val base: StringExpression) :
-    SimpleAssignmentExpression(dst, base.scope, base.origin) {
+    SimpleAssignment(dst, base.scope, base.origin) {
 
     override fun toString(): String {
         return "$dst = $base"

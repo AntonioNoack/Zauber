@@ -10,7 +10,7 @@ class SimpleCheckEquals(
     dst: SimpleField, val left: SimpleField, val right: SimpleField,
     val negated: Boolean,
     scope: Scope, origin: Int
-) : SimpleAssignmentExpression(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
         return "$dst = $left ${if (negated) "!=" else "=="} $right"

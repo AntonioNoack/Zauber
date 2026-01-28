@@ -18,6 +18,7 @@ import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -38,6 +39,8 @@ import me.anno.zauber.types.specialization.Specialization.Companion.noSpecializa
 
 object ASTSimplifier {
 
+    private val LOGGER = LogManager.getLogger(ASTSimplifier::class)
+
     val UnitInstance = SimpleField(UnitType, Ownership.COMPTIME, -1, UnitType.clazz)
     val booleanOwnership = Ownership.COMPTIME
 
@@ -50,8 +53,10 @@ object ASTSimplifier {
     fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
         return cache.getOrPut(context to expr) {
             val expr = expr.resolve(context)
+            LOGGER.info("Simplifying $expr")
             val graph = SimpleGraph()
             simplifyImpl(context, expr, graph.startBlock, graph, false)
+            LOGGER.info("Simplified to $graph")
             graph
         }
     }
@@ -65,10 +70,10 @@ object ASTSimplifier {
     private fun simplifyImpl(
         context: ResolutionContext,
         expr: Expression,
-        block0: SimpleBlock,
+        block0: SimpleNode,
         graph: SimpleGraph,
         needsValue: Boolean
-    ): Pair<SimpleField, SimpleBlock>? {
+    ): Pair<SimpleField, SimpleNode>? {
         when (expr) {
 
             is ExpressionList -> {
@@ -99,7 +104,7 @@ object ASTSimplifier {
             is YieldExpression -> {
                 val field = simplifyImpl(context, expr.value, block0, graph, true) ?: return null
                 val block1 = field.second
-                val continueBlock = graph.addBlock()
+                val continueBlock = graph.addNode()
                 block1.add(SimpleYield(field.first.use(), continueBlock, expr.scope, expr.origin))
                 continueBlock.isEntryPoint = true
                 return UnitInstance to continueBlock
@@ -125,7 +130,7 @@ object ASTSimplifier {
 
             is TryCatchBlock -> {
                 val scope = expr.tryBody.scope
-                var handlerBlock = graph.addBlock()
+                var handlerBlock = graph.addNode()
                 val throwableField = handlerBlock.field(ThrowableType)
 
 
@@ -161,10 +166,10 @@ object ASTSimplifier {
                     } else {
                         val condition = handlerBlock.field(BooleanType, booleanOwnership)
                         handlerBlock.add(SimpleInstanceOf(condition, throwableField, type, expr.scope, expr.origin))
-                        handlerBlock.branchCondition = condition
+                        handlerBlock.branchCondition = condition.use()
 
-                        val catchBlock0 = graph.addBlock()
-                        val continueBlock = graph.addBlock()
+                        val catchBlock0 = graph.addNode()
+                        val continueBlock = graph.addNode()
                         handlerBlock.ifBranch = catchBlock0
                         handlerBlock.elseBranch = continueBlock
 
@@ -180,7 +185,7 @@ object ASTSimplifier {
                 }
 
                 if (finallyCondition != null) {
-                    val finallyHandler = graph.addBlock()
+                    val finallyHandler = graph.addNode()
                     simplifyImpl(context, expr.finally!!.body, finallyHandler, graph, false)
                     graph.finallyBlocks.add(SimpleFinallyBlock(finallyCondition, finallyHandler))
                 }
@@ -326,14 +331,14 @@ object ASTSimplifier {
     private fun simplifyWhile(
         context: ResolutionContext,
         expr: WhileLoop,
-        block0: SimpleBlock,
+        block0: SimpleNode,
         graph: SimpleGraph,
-    ): Pair<SimpleField, SimpleBlock>? {
+    ): Pair<SimpleField, SimpleNode>? {
 
         val label = expr.label
         val beforeBlock0 = block0.nextOrSelfIfEmpty(graph)
-        val insideBlock0 = graph.addBlock()
-        val afterBlock = graph.addBlock()
+        val insideBlock0 = graph.addNode()
+        val afterBlock = graph.addNode()
 
         graph.breakLabels[null] = afterBlock
         graph.continueLabels[null] = beforeBlock0
@@ -345,7 +350,7 @@ object ASTSimplifier {
 
         // add condition and jump to insideBlock
         val (condition, beforeBlock1) = simplifyImpl(context, expr.condition, beforeBlock0, graph, true) ?: return null
-        beforeBlock1.branchCondition = condition
+        beforeBlock1.branchCondition = condition.use()
         beforeBlock1.ifBranch = insideBlock0
         beforeBlock1.elseBranch = afterBlock
 
@@ -362,14 +367,14 @@ object ASTSimplifier {
     private fun simplifyDoWhile(
         context: ResolutionContext,
         expr: DoWhileLoop,
-        block0: SimpleBlock,
+        block0: SimpleNode,
         graph: SimpleGraph,
-    ): Pair<SimpleField, SimpleBlock>? {
+    ): Pair<SimpleField, SimpleNode>? {
 
         val label = expr.label
-        val afterBlock = graph.addBlock()
+        val afterBlock = graph.addNode()
         val insideBlock0 = block0.nextOrSelfIfEmpty(graph)
-        val decideBlock = graph.addBlock()
+        val decideBlock = graph.addNode()
 
         graph.breakLabels[null] = afterBlock
         graph.continueLabels[null] = decideBlock
@@ -384,7 +389,7 @@ object ASTSimplifier {
 
         // add condition and jump to insideBlock
         val (condition, decideBlock1) = simplifyImpl(context, expr.condition, decideBlock, graph, true) ?: return null
-        decideBlock1.branchCondition = condition
+        decideBlock1.branchCondition = condition.use()
         decideBlock1.ifBranch = insideBlock0
         decideBlock1.elseBranch = afterBlock
 
@@ -394,18 +399,18 @@ object ASTSimplifier {
     private fun simplifyBranch(
         context: ResolutionContext,
         expr: IfElseBranch,
-        block0: SimpleBlock,
+        block0: SimpleNode,
         graph: SimpleGraph,
         needsValue: Boolean,
-    ): Pair<SimpleField, SimpleBlock>? {
+    ): Pair<SimpleField, SimpleNode>? {
 
         val (condition, block1) = simplifyImpl(context, expr.condition, block0, graph, true)
             ?: return null
 
-        val ifBlock = graph.addBlock()
-        val elseBlock = graph.addBlock()
+        val ifBlock = graph.addNode()
+        val elseBlock = graph.addNode()
 
-        block1.branchCondition = condition
+        block1.branchCondition = condition.use()
         block1.ifBranch = ifBlock
         block1.elseBranch = elseBlock
 
@@ -428,7 +433,7 @@ object ASTSimplifier {
                 return ifValue ?: elseValue!!
             }
 
-            val mergedBlock = graph.addBlock()
+            val mergedBlock = graph.addNode()
             val mergedValue = if (needsValue) {
                 val dst = mergedBlock.field(TypeResolution.resolveType(context, expr))
                 val merge = SimpleMerge(
@@ -439,8 +444,9 @@ object ASTSimplifier {
                 dst
             } else UnitInstance
 
-            mergedBlock.entryBlocks.add(ifValue.second)
-            mergedBlock.entryBlocks.add(elseValue.second)
+            ifValue.second.nextBranch = mergedBlock
+            elseValue.second.nextBranch = mergedBlock
+
             return mergedValue to mergedBlock
         }
     }
@@ -455,7 +461,7 @@ object ASTSimplifier {
 
     private fun simplifyCall(
         context: ResolutionContext,
-        block0: SimpleBlock,
+        block0: SimpleNode,
         graph: SimpleGraph,
 
         selfExpr: Expression,
@@ -467,7 +473,7 @@ object ASTSimplifier {
 
         scope: Scope,
         origin: Int
-    ): Pair<SimpleField, SimpleBlock>? {
+    ): Pair<SimpleField, SimpleNode>? {
         return when (val method = method0.resolved) {
             is Method -> {
                 val self = simplifyImpl(context, selfExpr, block0, graph, true) ?: return null
@@ -510,7 +516,7 @@ object ASTSimplifier {
 
     private fun reorderParameters(
         context: ResolutionContext,
-        block0: SimpleBlock,
+        block0: SimpleNode,
         graph: SimpleGraph,
 
         valueParameters: List<NamedParameter>,
@@ -520,7 +526,7 @@ object ASTSimplifier {
         origin: Int,
 
         method: MethodLike
-    ): Pair<List<SimpleField>, SimpleBlock>? {
+    ): Pair<List<SimpleField>, SimpleNode>? {
         val params = reorderParameters(
             valueParameters,
             method.valueParameters,
@@ -542,7 +548,7 @@ object ASTSimplifier {
     }
 
     private fun simplifyCall(
-        currBlock: SimpleBlock,
+        currBlock: SimpleNode,
 
         selfExpr: SimpleField,
         typeParameters: ParameterList,
@@ -553,7 +559,7 @@ object ASTSimplifier {
 
         scope: Scope,
         origin: Int
-    ): Pair<SimpleField, SimpleBlock>? {
+    ): Pair<SimpleField, SimpleNode>? {
         for (param in valueParameters) param.use()
         return when (val method = method0.resolved) {
             is Method -> {
@@ -572,7 +578,7 @@ object ASTSimplifier {
     }
 
     private fun createConstructorInvocation(
-        currBlock: SimpleBlock,
+        currBlock: SimpleNode,
 
         method: Constructor,
         valueParameters: List<SimpleField>,

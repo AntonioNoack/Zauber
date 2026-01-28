@@ -1,10 +1,12 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ByteType
 import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
 
 object RuntimeCast {
@@ -20,6 +22,18 @@ object RuntimeCast {
         val isFalse = instance == getBool(false)
         check(isTrue || isFalse) { "Expected value to be either true or false, got $instance" }
         return isTrue
+    }
+
+    @Suppress("UnusedReceiverParameter")
+    fun Runtime.castToByte(value: Instance): Byte {
+        checkType(value, ByteType)
+        return value.rawValue as Byte
+    }
+
+    @Suppress("UnusedReceiverParameter")
+    fun Runtime.castToShort(value: Instance): Short {
+        checkType(value, ShortType)
+        return value.rawValue as Short
     }
 
     @Suppress("UnusedReceiverParameter")

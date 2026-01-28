@@ -4,9 +4,9 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.SimpleDeclaration
-import me.anno.zauber.ast.simple.SimpleExpression
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
@@ -43,7 +43,7 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    fun appendAssign(expression: SimpleAssignmentExpression) {
+    fun appendAssign(expression: SimpleAssignment) {
         val dst = expression.dst
         if (dst.mergeInfo != null) {
             builder.append1(dst).append(" = ")
@@ -112,7 +112,7 @@ object JavaSimplifiedASTWriter {
     // todo we have converted SimpleBlock into a complex graph,
     //  before we can use it, we must convert it back
     fun JavaSourceGenerator.appendSimplifiedAST(
-        method: MethodLike, expr: SimpleBlock,
+        method: MethodLike, expr: SimpleNode,
         // loop: SimpleLoop? = null
     ) {
         val instructions = expr.instructions
@@ -128,7 +128,7 @@ object JavaSimplifiedASTWriter {
         for (i in instructions.indices) {
             val instr = instructions[i]
             appendSimplifiedAST(method, instr /*loop*/)
-            if (instr is SimpleAssignmentExpression &&
+            if (instr is SimpleAssignment &&
                 instr.dst.type == NothingType
             ) break
         }
@@ -145,11 +145,11 @@ object JavaSimplifiedASTWriter {
     }
 
     fun JavaSourceGenerator.appendSimplifiedAST(
-        method: MethodLike, expr: SimpleExpression,
+        method: MethodLike, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
         if (expr is SimpleMerge) return
-        if (expr is SimpleAssignmentExpression && expr.dst.type != NothingType) {
+        if (expr is SimpleAssignment && expr.dst.type != NothingType) {
             val notNeeded = expr.dst.numReads == 0
             if (notNeeded) comment { appendAssign(expr) }
             else appendAssign(expr)
@@ -387,9 +387,9 @@ object JavaSimplifiedASTWriter {
                 }
             }
         }
-        if (expr is SimpleAssignmentExpression) builder.append(';')
+        if (expr is SimpleAssignment) builder.append(';')
         /*if (expr !is SimpleBlock && expr !is SimpleBranch)*/ nextLine()
-        if (expr is SimpleAssignmentExpression && expr.dst.type == NothingType) {
+        if (expr is SimpleAssignment && expr.dst.type == NothingType) {
             builder.append("throw new AssertionError(\"Unreachable\");")
             nextLine()
         }

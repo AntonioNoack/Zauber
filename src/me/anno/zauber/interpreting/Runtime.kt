@@ -4,8 +4,8 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
-import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -39,6 +39,12 @@ class Runtime {
     }
 
     operator fun get(field: SimpleField): Instance {
+        // todo a field may be used for both use-cases...
+        var field = field
+        while (true) {
+            field = field.mergeInfo?.dst ?: break
+        }
+
         val selfScope = field.scopeIfIsThis
         if (selfScope != null) {
             // should we check only within the current call? I think so...
@@ -90,6 +96,12 @@ class Runtime {
     }
 
     operator fun set(field: SimpleField, value: Instance) {
+        // todo a field may be used for both use-cases...
+        var field = field
+        while (true) {
+            field = field.mergeInfo?.dst ?: break
+        }
+
         // todo only if that field really belongs into this scope:
         //  it might belong to one of the scopes before us
         val valueHasValidType = isSubTypeOf(
@@ -100,7 +112,7 @@ class Runtime {
             InsertMode.READ_ONLY
         )
         check(valueHasValidType) {
-            "Assignment of $value into $field impossible, type-mismatch"
+            "Assignment of $value into $field invalid, type-mismatch"
         }
         // get(field) // sanity check for existence
         callStack.last().simpleFields[field] = value
@@ -205,7 +217,7 @@ class Runtime {
         return getClass(type).getOrCreateObjectInstance(this)
     }
 
-    fun executeBlock(block0: SimpleBlock): BlockReturn? {
+    fun executeBlock(block0: SimpleNode): BlockReturn? {
         var block = block0
         while (true) {
 

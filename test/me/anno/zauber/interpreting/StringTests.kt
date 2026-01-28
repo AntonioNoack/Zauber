@@ -44,6 +44,8 @@ class StringTests {
             external operator fun minus(other: Int): Int
             external operator fun compareTo(other: Int): Int
             operator fun until(other: Int): IntRange = IntRange(this, other+1)
+            fun inc() = this+1
+            fun dec() = this-1
         }
         
         fun min(a: Int, b: Int): Int = if (a < b) a else b
@@ -125,7 +127,7 @@ class StringTests {
     }
 
     @Test
-    fun testStringConcatInLanguage() {
+    fun testStringConcatUsingArrays() {
         LogManager.getLogger("Runtime").isDebugEnabled = true
         LogManager.getLogger("AssignmentExpression").isDebugEnabled = true
         val code = """

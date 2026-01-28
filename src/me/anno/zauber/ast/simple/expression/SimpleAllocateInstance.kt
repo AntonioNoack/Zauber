@@ -11,7 +11,7 @@ class SimpleAllocateInstance(
     dst: SimpleField,
     val selfType: ClassType,
     scope: Scope, origin: Int
-) : SimpleAssignmentExpression(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
         return "$dst = new $selfType"

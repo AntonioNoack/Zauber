@@ -1,13 +1,13 @@
 package me.anno.zauber.ast.simple.controlflow
 
-import me.anno.zauber.ast.simple.SimpleExpression
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
-abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Int) : SimpleExpression(scope, origin) {
+abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Int) : SimpleInstruction(scope, origin) {
 
     abstract val returnType : ReturnType
 

@@ -12,7 +12,7 @@ class SimpleGetField(
     val self: SimpleField,
     val field: Field,
     scope: Scope, origin: Int
-) : SimpleAssignmentExpression(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
         return "$dst = $self?[${field.selfType}].${field.name}"

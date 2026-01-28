@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.simple.SimpleExpression
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
@@ -12,7 +12,7 @@ class SimpleSetField(
     val field: Field,
     val src: SimpleField,
     scope: Scope, origin: Int
-) : SimpleExpression(scope, origin) {
+) : SimpleInstruction(scope, origin) {
     override fun toString(): String {
         return "$self?[${field.selfType}].${field.name} = $src"
     }

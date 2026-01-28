@@ -5,24 +5,29 @@ import me.anno.zauber.types.Scope
 class SimpleGraph {
 
     var numFields = 0
-    val blocks = ArrayList<SimpleBlock>()
-    val startBlock = SimpleBlock(this)
+    val nodes = ArrayList<SimpleNode>()
+    val startBlock = SimpleNode(this)
 
-    val continueLabels = HashMap<String?, SimpleBlock>()
-    val breakLabels = HashMap<String?, SimpleBlock>()
+    val continueLabels = HashMap<String?, SimpleNode>()
+    val breakLabels = HashMap<String?, SimpleNode>()
 
     val catchHandlers = HashMap<Scope, SimpleCatchHandler>()
     val finallyBlocks = ArrayList<SimpleFinallyBlock>()
 
     init {
         startBlock.isEntryPoint = true
-        blocks.add(startBlock)
+        nodes.add(startBlock)
     }
 
-    fun addBlock(): SimpleBlock {
-        val block = SimpleBlock(this)
-        blocks.add(block)
-        return block
+    fun addNode(): SimpleNode {
+        val node = SimpleNode(this)
+        nodes.add(node)
+        return node
+    }
+
+    override fun toString(): String {
+        return "Graph[${nodes.size} nodes, $numFields fields]\n" +
+                nodes.joinToString("\n") { it.toString() }
     }
 
 }

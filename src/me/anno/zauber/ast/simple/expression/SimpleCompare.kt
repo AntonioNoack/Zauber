@@ -13,7 +13,7 @@ class SimpleCompare(
     val left: SimpleField, val right: SimpleField, val type: CompareType,
     val tmp: SimpleField,
     scope: Scope, origin: Int
-) : SimpleAssignmentExpression(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
         return "$dst = $left ${type.symbol} $right"

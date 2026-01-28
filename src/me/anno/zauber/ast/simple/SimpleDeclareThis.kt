@@ -6,7 +6,7 @@ import me.anno.zauber.interpreting.This
 import me.anno.zauber.types.Scope
 
 class SimpleDeclareThis(val thisScope: Scope, val field: SimpleField, scope: Scope, origin: Int) :
-    SimpleExpression(scope, origin) {
+    SimpleInstruction(scope, origin) {
 
     override fun toString(): String {
         return "this@$thisScope := $field;"

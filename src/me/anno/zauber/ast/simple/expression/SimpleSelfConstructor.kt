@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.simple.SimpleExpression
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
@@ -12,7 +12,7 @@ class SimpleSelfConstructor(
     val method: Constructor,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleExpression(scope, origin) {
+) : SimpleInstruction(scope, origin) {
 
     init {
         check(method.valueParameters.size == valueParameters.size)

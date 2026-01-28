@@ -12,7 +12,7 @@ class SimpleInstanceOf(
     val value: SimpleField,
     val type: Type,
     scope: Scope, origin: Int
-) : SimpleAssignmentExpression(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin) {
     override fun toString(): String {
         return "$dst = $value is $type"
     }

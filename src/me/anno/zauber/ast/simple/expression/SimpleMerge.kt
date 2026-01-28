@@ -1,9 +1,10 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 
 /**
@@ -12,12 +13,12 @@ import me.anno.zauber.interpreting.Runtime
  * */
 class SimpleMerge(
     dst: SimpleField,
-    val ifBlock: SimpleBlock,
+    val ifBlock: SimpleNode,
     val ifField: SimpleField,
-    val elseBlock: SimpleBlock,
+    val elseBlock: SimpleNode,
     val elseField: SimpleField,
     val base: Expression
-) : SimpleAssignmentExpression(dst, base.scope, base.origin) {
+) : SimpleAssignment(dst, base.scope, base.origin) {
 
     init {
         // todo is this ok???? we might loose values/assignments
@@ -32,6 +33,6 @@ class SimpleMerge(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
-        TODO("How can we find out which branch we're coming from???")
+        return BlockReturn(ReturnType.VALUE, runtime[dst])
     }
 }

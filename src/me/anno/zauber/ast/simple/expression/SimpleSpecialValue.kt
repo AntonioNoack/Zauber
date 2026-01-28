@@ -8,7 +8,7 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.types.Scope
 
 class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope, origin: Int) :
-    SimpleAssignmentExpression(dst, scope, origin) {
+    SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
         return "$dst = $type"

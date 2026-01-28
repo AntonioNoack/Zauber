@@ -47,6 +47,18 @@ object RuntimeCreate {
         }
     }
 
+    fun Runtime.createByte(value: Byte): Instance {
+        val instance = getClass(ByteType).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
+    fun Runtime.createShort(value: Short): Instance {
+        val instance = getClass(ShortType).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
     fun Runtime.createInt(value: Int): Instance {
         val instance = getClass(IntType).createInstance()
         instance.rawValue = value

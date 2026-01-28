@@ -14,7 +14,13 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.ByteType
+import me.anno.zauber.types.Types.DoubleType
+import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
@@ -31,7 +37,7 @@ class SimpleCall(
     val specialization: Specialization,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleAssignmentExpression(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin) {
 
     constructor(
         dst: SimpleField,
@@ -81,12 +87,22 @@ class SimpleCall(
     }
 
     fun initializeArrayIfNeeded(self: Instance, method: MethodLike, runtime: Runtime) {
-        if (self.type.type.run { this is ClassType && this.clazz.pathStr == "zauber.Array" } &&
+        val selfType = self.type.type
+        if (selfType is ClassType && selfType.clazz.pathStr == "zauber.Array" &&
             method is Constructor && valueParameters.size == 1 &&
-            method.valueParameters[0].type == IntType) {
-
+            method.valueParameters[0].type == IntType
+        ) {
             val size = runtime.castToInt(runtime[valueParameters[0]])
-            self.rawValue = arrayOfNulls<Instance>(size)
+            self.rawValue = when (selfType.typeParameters?.get(0)) {
+                BooleanType -> BooleanArray(size)
+                ByteType -> ByteArray(size)
+                ShortType -> ShortArray(size)
+                IntType -> IntArray(size)
+                LongType -> LongArray(size)
+                FloatType -> FloatArray(size)
+                DoubleType -> DoubleArray(size)
+                else -> arrayOfNulls<Instance>(size)
+            }
         }
     }
 
