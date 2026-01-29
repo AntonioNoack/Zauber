@@ -10,31 +10,69 @@ class SimpleNode(val graph: SimpleGraph) {
 
     var branchCondition: SimpleField? = null
         set(value) {
-            check(field == null)
+            check(field == null || value == null)
             field = value
         }
 
     var ifBranch: SimpleNode? = null
         set(value) {
-            check(field == null)
+            unlinkTo(field)
             field = value
-            value!!.entryBlocks.add(this)
+            linkTo(value)
         }
 
     var elseBranch: SimpleNode? = null
         set(value) {
-            check(field == null)
+            unlinkTo(field)
             field = value
-            value!!.entryBlocks.add(this)
+            linkTo(value)
         }
 
-    val entryBlocks = ArrayList<SimpleNode>()
+    val isBranch get() = branchCondition != null && ifBranch != elseBranch
+
+    private fun linkTo(value: SimpleNode?) {
+        value ?: return
+        value.inputNodes.add(this)
+        outputNodes.add(value)
+    }
+
+    private fun unlinkTo(value: SimpleNode?) {
+        value ?: return
+        value.inputNodes.remove(this)
+        outputNodes.remove(value)
+    }
+
+    val inputNodes = ArrayList<SimpleNode>(4)
+    val outputNodes = ArrayList<SimpleNode>(2)
 
     var nextBranch: SimpleNode?
         get() = ifBranch
         set(value) {
             ifBranch = value
         }
+
+
+    fun clear() {
+        check(!isEntryPoint)
+        removeLinks()
+        instructions.clear()
+    }
+
+    fun removeLinks() {
+        ifBranch = null
+        elseBranch = null
+        branchCondition = null
+        inputNodes.clear()
+        outputNodes.clear()
+    }
+
+    fun isOnlyInput(input: SimpleNode): Boolean {
+        return !isEntryPoint && inputNodes.all { it == input }
+    }
+
+    fun isOnlyOutput(output: SimpleNode?): Boolean {
+        return (output == ifBranch || ifBranch == null) && (output == elseBranch || elseBranch == null)
+    }
 
     val blockId = graph.nodes.size
     val instructions = ArrayList<SimpleInstruction>()

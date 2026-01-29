@@ -1,13 +1,23 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.SuperCall
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
@@ -50,9 +60,8 @@ class LambdaExpression(
                             val type = param0.type
                             val autoParamName = "it"
                             LOGGER.info("Inserting $autoParamName into lambda automatically, type: $type")
-                            val field = bodyScope.fields.firstOrNull { it.name == autoParamName } ?: Field(
-                                bodyScope, null,
-                                false, isMutable = false, param0,
+                            val field = bodyScope.fields.firstOrNull { it.name == autoParamName } ?: bodyScope.addField(
+                                null, false, isMutable = false, param0,
                                 autoParamName, type, null,
                                 Keywords.NONE, origin
                             )
@@ -81,6 +90,10 @@ class LambdaExpression(
                 }
                 return LambdaType(newScopeType, newParameters, newReturnType)
             }
+            is ClassType -> {
+                // is this ok??? OMG, looks like it is fine
+                return targetLambdaType
+            }
             null -> {
                 // else 'it' is not defined
                 if (variables == null) variables = emptyList()
@@ -90,12 +103,84 @@ class LambdaExpression(
                     LambdaParameter(it.name, it.type!!)
                 }, returnType)
             }
-            is ClassType -> {
-                // is this ok??? OMG, looks like it is fine
-                return targetLambdaType
-            }
             else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
         }
+    }
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+
+        // todo get or create a custom anonymous class,
+        //  - define field for outer scope variable
+        //  - super type for invocation
+        //  - define constructor
+        //  - create instance
+        // done
+        //  - decide/generate name
+
+        // todo generics are inherited from outer method & class...
+        val scopeName = scope.generateName("lambda", origin)
+        val classScope = scope.getOrPut(scopeName, ScopeType.INLINE_CLASS)
+        val classConstructor = classScope.getOrCreatePrimConstructorScope()
+
+        val superTypeI: ClassType = when (val superType = resolveType(context)) {
+            is ClassType -> superType
+            is LambdaType -> {
+                val n = superType.parameters.size
+                ClassType(
+                    langScope.getOrPut("Function$n", ScopeType.INTERFACE),
+                    superType.parameters.map { it.type } + superType.returnType)
+            }
+            else -> throw NotImplementedError("Convert $superType to class type")
+        }
+        classScope.superCalls.clear()
+        classScope.superCalls.add(SuperCall(superTypeI, null, null))
+
+        var selfMethodScope = scope
+        while (true) {
+            if (selfMethodScope.scopeType?.isMethodType() == true) break
+
+            selfMethodScope = selfMethodScope.parentIfSameFile
+                ?: throw IllegalStateException("Missing method scope for $this in ${resolveOrigin(origin)}")
+        }
+
+        val selfMethodType = selfMethodScope.typeWithArgs
+
+        // todo if selfType != null, we need a second self-parameter
+        val methodParameter = Parameter(0, "self", selfMethodType, classConstructor, origin)
+        val methodField = classScope.addField(
+            null, false, false, methodParameter, "self", selfMethodType,
+            null, Keywords.SYNTHETIC, 0,
+        )
+
+        val constructorBody = ArrayList<Expression>()
+        constructorBody.add(
+            AssignmentExpression(
+                DotExpression(
+                    ThisExpression(classScope, scope, origin), emptyList(),
+                    FieldExpression(methodField, scope, origin), scope, origin
+                ),
+                FieldExpression(methodParameter.getOrCreateField(null, Keywords.SYNTHETIC), scope, origin)
+            )
+        )
+        classConstructor.selfAsConstructor = Constructor(
+            listOf(methodParameter),
+            classConstructor, null,
+            ExpressionList(constructorBody, scope, origin), Keywords.SYNTHETIC, origin
+        )
+
+        val selfMethod = ThisExpression(selfMethodScope, scope, origin)
+        /*return ConstructorExpression(
+            classScope, emptyList(),
+            listOf(NamedParameter(null, selfMethod)),
+            null, scope, origin
+        ).resolve(context)*/
+
+        val method = ResolvedConstructor(
+            ParameterList.emptyParameterList(),
+            classConstructor.selfAsConstructor!!, context, scope
+        )
+        val params = listOf(selfMethod).map { it.resolve(context) }
+        return ResolvedCallExpression(null, method, params, scope, origin)
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

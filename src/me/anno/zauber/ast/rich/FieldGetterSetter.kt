@@ -81,17 +81,15 @@ object FieldGetterSetter {
         field: Field, fieldName: String,
         scope: Scope, origin: Int,
     ): Field {
-        return Field(
-            scope, null,
-            false, isMutable = false, /* todo we actually have a parameter */null,
+        return scope.addField(
+             null, false, isMutable = false, /* todo we actually have a parameter */null,
             fieldName, field.valueType, field.initialValue ?: field.getterExpr,
             Keywords.NONE, origin
         )
     }
 
-    private fun createBackingField(field: Field, scope: Scope, origin: Int): Field = Field(
-        scope, field.selfType,
-        field.explicitSelfType, isMutable = field.isMutable, null,
+    private fun createBackingField(field: Field, scope: Scope, origin: Int): Field = scope.addField(
+        field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
         "field", field.valueType, field.initialValue ?: field.getterExpr,
         Keywords.SYNTHETIC, origin
     )

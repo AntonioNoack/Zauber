@@ -2,6 +2,7 @@ package me.anno.zauber.types.impl
 
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class AndType(val types: List<Type>) : Type() {
@@ -40,7 +41,7 @@ class AndType(val types: List<Type>) : Type() {
         private fun reduceAndTypes(types: List<Type>): List<Type> {
             val types = types.distinct()
             val notTypes = types.filterIsInstance<NotType>()
-            val yesTypes = types.filter { it !is NotType }
+            val yesTypes = types.filter { it !is NotType && it != NullableAnyType }
             for (i in 1 until yesTypes.size) {
                 for (j in 0 until i) {
                     if (!canInstanceBeBoth(yesTypes[i], yesTypes[j])) {
@@ -50,7 +51,7 @@ class AndType(val types: List<Type>) : Type() {
                 }
             }
 
-            if (notTypes.isEmpty()) {
+            if (yesTypes == types) {
                 return types
             }
 

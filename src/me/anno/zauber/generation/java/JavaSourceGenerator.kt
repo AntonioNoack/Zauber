@@ -1,6 +1,7 @@
 package me.anno.zauber.generation.java
 
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
@@ -554,24 +555,22 @@ object JavaSourceGenerator : Generator() {
 
     private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
         writeBlock {
-            appendCodeWithoutBlock(context, method, body)
-        }
-    }
-
-    private fun appendCodeWithoutBlock(context: ResolutionContext, method: MethodLike, body: Expression) {
-        try {
-            val simplified = ASTSimplifier.simplify(context, body)
-            appendSimplifiedAST(method, simplified.startBlock)
-        } catch (e: Throwable) {
-            e.printStackTrace()
-            comment {
-                builder.append(
-                    "[${e.javaClass.simpleName}: ${e.message}] $body"
-                        .replace("/*", "[")
-                        .replace("*/", "]")
-                )
+            try {
+                val simplified = ASTSimplifier.simplify(context, body)
+                CodeReconstruction.createCodeFromGraph(simplified)
+                // todo simplify all entry points as methods...
+                appendSimplifiedAST(method, simplified.startBlock)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                comment {
+                    builder.append(
+                        "[${e.javaClass.simpleName}: ${e.message}] $body"
+                            .replace("/*", "[")
+                            .replace("*/", "]")
+                    )
+                }
+                nextLine()
             }
-            nextLine()
         }
     }
 

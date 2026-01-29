@@ -277,6 +277,8 @@ class TestRuntime {
     // todo this is a late-game test :3
     @Test
     fun testSequenceUsingYield() {
+        // todo why can yielded not be resolved???
+        //  it should be found in collect-names pass
         ensureUnitIsKnown()
         val code = """
             fun <V> collectYielded(runnable: () -> Unit): List<V> {
@@ -300,14 +302,22 @@ class TestRuntime {
             
             package zauber
             // a little clusterfuck
-            sealed interface Yieldable<R, T : Throwable, Y> {}
-            value class Yielded<R, T : Throwable, Y>(
+            sealed interface Yieldable<R, T: Throwable, Y> {}
+            value class Yielded<R, T: Throwable, Y>(
                 val yieldedValue: Y,
                 val continueRunning: () -> Yielded<R, T, Y>
             ) : Yieldable<R, T, Y> {}
-            value class Thrown<R, T : Throwable, Y>(val value: T) : Yieldable<R, T, Y> {}
-            value class Returned<R, T, Y>(val value: R) : Yieldable<R, T, Y> {}
-            // todo define ArrayList
+            value class Thrown<R, T: Throwable, Y>(val value: T) : Yieldable<R, T, Y> {}
+            value class Returned<R, T: Throwable, Y>(val value: R) : Yieldable<R, T, Y> {}
+            class ArrayList<V>
+            interface Function0<R> {
+                fun call(): R
+            }
+            class Any {
+                open fun hashCode() = 0
+                open fun toString() = ""
+                open fun equals(other: Any?): Boolean = other === this
+            }
         """.trimIndent()
         val (runtime, value) = testExecute(code)
     }

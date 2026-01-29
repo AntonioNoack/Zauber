@@ -203,6 +203,7 @@ object CallWithNames {
             ArrayType.clazz, typeParameters,
             listOf(NamedParameter(null, sizeExpr)), null, scope, origin
         )
+
         val tmpField = scope.createImmutableField(arrayInitExpr)
         val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
         createArrayInstructions.add(AssignmentExpression(tmpFieldExpr, arrayInitExpr))

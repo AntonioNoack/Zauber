@@ -28,9 +28,8 @@ fun ASTBuilderBase.createDestructuringAssignment(
             name1, nameAsImport(name1),
             scope, origin
         )
-        val newField = Field(
-            fieldScope, null,
-            false, isMutable = isMutable, null,
+        val newField = fieldScope.addField(
+            null, false, isMutable = isMutable, null,
             name.name, name.type, newValue, Keywords.NONE, origin
         )
         val newFieldExpr = FieldExpression(newField, scope, origin)

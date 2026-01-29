@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import java.util.concurrent.atomic.AtomicInteger
@@ -109,6 +110,30 @@ class Scope(val name: String, val parent: Scope? = null) {
             )
             scope
         }
+    }
+
+    fun addField(
+        selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
+        explicitSelfType: Boolean,
+
+        isMutable: Boolean,
+        byParameter: Any?, // Parameter | LambdaParameter | null
+
+        name: String,
+        valueType: Type?,
+        initialValue: Expression?,
+        keywords: KeywordSet,
+        origin: Int
+    ): Field {
+        val sameField = fields.firstOrNull { it.name == name && it.origin == origin }
+        if (sameField != null) return sameField
+        val instance = Field(
+            this, selfType, explicitSelfType, isMutable, byParameter,
+            name, valueType, initialValue, keywords, origin
+        )
+        check(instance !in fields)
+        fields.add(instance)
+        return instance
     }
 
     fun addField(field: Field) {
@@ -310,8 +335,9 @@ class Scope(val name: String, val parent: Scope? = null) {
 
         // println("Resolving $name in $this ($searchInside, $fileName, ${parent?.fileName})")
 
-        if (parent != null && parent.fileName == fileName && parent.name == name) {
-            return parent.typeWithoutArgs
+        val parentI = parentIfSameFile
+        if (parentI != null && parentI.name == name) {
+            return parentI.typeWithoutArgs
         }
 
         if (searchInside) {
@@ -350,8 +376,8 @@ class Scope(val name: String, val parent: Scope? = null) {
             }
         }
 
-        // we must also check root for any valid paths...
-        for (child in root.children) {
+        // we must also check langScope for any valid paths...
+        for (child in langScope.children) {
             if (child.name == name) {
                 return child.typeWithoutArgs
             }
@@ -404,9 +430,8 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun createImmutableField(initialValue: Expression): Field {
         val name = generateName("tmpField")
-        return Field(
-            this, null,
-            false, isMutable = false, null,
+        return addField(
+            null, false, isMutable = false, null,
             name, null, initialValue, Keywords.NONE, initialValue.origin
         )
     }

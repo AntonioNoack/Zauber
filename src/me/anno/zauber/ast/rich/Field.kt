@@ -14,7 +14,6 @@ import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.UnresolvedType
-import me.anno.zauber.types.specialization.Specialization
 
 class Field(
     var codeScope: Scope,
@@ -69,15 +68,9 @@ class Field(
 
     var typeParameters: List<Parameter> = emptyList()
 
-    init {
-        codeScope.addField(this)
-    }
-
     // due to multi-interface, there may be many of them
     var overriddenFields: List<Field> = emptyList()
     var overriddenBy: List<Field> = emptyList()
-
-    val resolvedValueType = HashMap<Specialization, Type>()
 
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
@@ -136,7 +129,6 @@ class Field(
         }
     }
 
-    val originalScope: Scope = codeScope
     fun moveToScope(newScope: Scope) {
         check(codeScope.fields.remove(this)) { "Failed to remove field from scope" }
         codeScope = newScope

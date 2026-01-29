@@ -123,8 +123,8 @@ class Runtime {
         val fieldIndex = clazz.properties.indexOf(field)
         check(fieldIndex != -1) {
             "Instance $clazz does not have field $field, " +
-                    "available: ${clazz.properties}, " +
-                    "fields: ${(clazz.type as ClassType).clazz.fields}"
+                    "available: ${clazz.properties.map { it.name }}, " +
+                    "fields: ${(clazz.type as ClassType).clazz.fields.map { it.name }}"
         }
         instance.properties[fieldIndex] = value
     }

@@ -84,8 +84,9 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
 
     private fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType?) {
         nextPackage = currPackage.getOrPut(name, scopeType)
-        nextPackage.keywords = nextPackage.keywords or listenType
-        nextPackage.fileName = tokens.fileName
+        val classScope = nextPackage
+        classScope.keywords = classScope.keywords or listenType
+        classScope.fileName = tokens.fileName
 
         // LOGGER.info("discovered $nextPackage")
 
@@ -101,7 +102,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                 ) {
                     val name = tokens.toString(j)
                     val type = NullableAnyType
-                    typeParameters.add(Parameter(typeParameters.size, name, type, nextPackage, j))
+                    typeParameters.add(Parameter(typeParameters.size, name, type, classScope, j))
                 }
 
                 if (tokens.equals(j, "<")) depth++
@@ -117,9 +118,9 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             typeParameters
         } else emptyList()
 
-        nextPackage.typeParameters = genericParams
-        nextPackage.hasTypeParameters = true
-        if (false) println("Defined type parameters for ${nextPackage.pathStr}")
+        classScope.typeParameters = genericParams
+        classScope.hasTypeParameters = true
+        if (false) println("Defined type parameters for ${classScope.pathStr}")
 
         if (tokens.equals(j, "private")) j++
         if (tokens.equals(j, "protected")) j++
@@ -133,7 +134,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             while (tokens.equals(j, TokenType.NAME)) {
                 val name = tokens.toString(j++)
                 // LOGGER.info("discovered $nextPackage extends $name")
-                nextPackage.superCallNames.add(SuperCallName(name, imports))
+                classScope.superCallNames.add(SuperCallName(name, imports))
                 if (tokens.equals(j, "<")) {
                     j = tokens.findBlockEnd(j, "<", ">") + 1
                 }
@@ -158,7 +159,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
 
                 val childScope = currPackage.getOrPut(name, ScopeType.ENUM_ENTRY_CLASS)
                 childScope.hasTypeParameters = true
-                if (false) println("Defined type parameters for ${nextPackage.pathStr}.$name")
+                if (false) println("Defined type parameters for ${classScope.pathStr}.$name")
 
                 // skip value parameters
                 if (tokens.equals(j, "(")) {
@@ -181,6 +182,8 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             hadNamedScope = true
             i = j // skip stuff
         }
+
+        println("Found class '$name', tp: $genericParams, scope: $classScope, scopeType: ${classScope.scopeType}")
     }
 
     private fun collectNamedClassesImpl() {
@@ -266,6 +269,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                     foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
                     return true// without i++
                 }
+
                 consumeIf("companion") -> {
                     check(tokens.equals(i++, "object"))
                     val name = if (tokens.equals(i, TokenType.NAME)) {
@@ -274,6 +278,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                     foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
                     return true// without i++
                 }
+
                 consumeIf("interface") -> {
                     check(tokens.equals(i, TokenType.NAME))
                     val name = tokens.toString(i++)
@@ -281,6 +286,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                     foundNamedScope(name, keywords, ScopeType.INTERFACE)
                     return true// without i++
                 }
+
                 consumeIf("typealias") -> {
                     check(tokens.equals(i, TokenType.NAME))
                     val name = tokens.toString(i++)

@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -52,9 +51,8 @@ fun storeSubject(
     val origin = subject.origin
     val subjectName = scope.generateName("subject", origin)
     val value = if (subject is AssignmentExpression) subject.src else subject
-    val field = Field(
-        scope, null,
-        false, isMutable = false, null,
+    val field = scope.addField(
+        null, false, isMutable = false, null,
         subjectName, null, value, Keywords.NONE, origin
     )
     return FieldExpression(field, scope, origin)
@@ -90,9 +88,8 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
                 val jointType = unionTypes(case.conditions.map { it.type!! })
                 // todo this more-specific field is only valid until fieldName is assigned, again, then we have to use unionType
                 // todo this is also only valid, if no other thread/function could write to the field
-                Field(
-                    caseScope, null,
-                    false, isMutable = false, null,
+                caseScope.addField(
+                    null, false, isMutable = false, null,
                     fieldName, jointType, null, Keywords.NONE, origin
                 )
             }

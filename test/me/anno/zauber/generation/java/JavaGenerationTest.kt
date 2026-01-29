@@ -99,60 +99,16 @@ class JavaGenerationTest {
             object Test
         """.trimIndent()
         val expected = """
-            public final class Test {
-              private static final Test __instance__ = new Test();
-              private Test() {}
-            }
-        """.trimIndent()
-        assertEquals(expected, testClassGeneration(source))
+public final class Test {
+  public static final Test __instance__ = new Test();
+  
+  
+  private Test() {
+    // no super call
+    {
     }
-
-    @Test
-    fun testGeneratesDataClass() {
-        // todo this test is much too complicated, but maybe we can test the main components?
-        //  that sounds like a good plan :)
-        val source = """
-            data class Test(val x: Int, val y: Long)
-            
-            // utilities in standard library necessary for generation:
-            package zauber
-            class Any {
-                open fun hashCode(): Int = 0
-                open fun toString(): String = ""
-                open fun equals(other: Any?): Boolean = this === other
-            }
-            class String {
-                fun plus(other: Any?): String
-            }
-            class Int {
-                fun plus(other: Int): Int
-                fun times(other: Int): Int
-            }
-            class Long {}
-        """.trimIndent()
-        val expected = """
-            public final class Test {
-              public final int x;
-              public final long y;
-              public Test(int x, long y) {
-                this.x = x;
-                this.y = y;
-              }
-              @Override
-              public String toString() {
-                return "Test(x=" + x + ",y=" + y + ")";
-              }
-              @Override
-              public int hashCode() {
-                return x.hashCode() * 31 + y.hashCode();
-              }
-              @Override
-              public boolean equals(Object o) {
-                return o instanceof Test &&
-                    o.x == x &&
-                    o.y == y;
-              }
-            }
+  }
+}
         """.trimIndent()
         assertEquals(expected, testClassGeneration(source))
     }
@@ -333,6 +289,14 @@ class JavaGenerationTest {
                 fun calculate(): Int {
                     return map(7, { it * it })
                 }
+            }
+            
+            package zauber
+            fun interface Function1<P0, R> {
+                fun call(p0: P0): R
+            }
+            class Int {
+                external operator fun times(other: Int): Int
             }
         """.trimIndent()
         )

@@ -130,11 +130,24 @@ abstract class CallExpressionBase(
                 val selfType = parameterType.selfType
                 if (selfType != null) {
                     // todo define 'this' at inlined place with 'base'
-
                 }
+
                 for (i in parameterType.parameters.indices) {
                     val param = valueParameters[i].value
-                    val variable = inlineBody.variables!![i]
+                    val variables = inlineBody.variables
+                        ?: run {
+                            check(parameterType.parameters.size == 1) {
+                                "Can only generate helper parameter if there is exactly one"
+                            }
+                            val field = subscope.addField(
+                                null, false, false, null,
+                                "it", parameterType.parameters[i].type, null,
+                                Keywords.NONE, origin
+                            )
+                            listOf(LambdaVariable(null, field))
+                        }
+
+                    val variable = variables[i]
                     val dstField = variable.field
                     if (dstField.name == "_") continue // assignment can be skipped
 

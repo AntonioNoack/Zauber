@@ -1,6 +1,5 @@
 package me.anno.cpp.ast.rich
 
-import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
@@ -33,14 +32,12 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
     val scopeName = currPackage.generateName("switch", origin)
     val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
 
-        val noPrevBranch = Field(
-            scope, null,
-            false, isMutable = true, null,
+        val noPrevBranch = scope.addField(
+            null, false, isMutable = true, null,
             "__hadPrevBranch", BooleanType, trueExpr, Keywords.SYNTHETIC, origin
         )
-        val prevBranchContinues = Field(
-            scope, null,
-            false, isMutable = true, null,
+        val prevBranchContinues = scope.addField(
+            null, false, isMutable = true, null,
             "__prevBranchContinues", BooleanType, falseExpr, Keywords.SYNTHETIC, origin
         )
 

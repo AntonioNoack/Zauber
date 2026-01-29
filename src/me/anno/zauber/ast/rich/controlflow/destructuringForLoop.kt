@@ -17,17 +17,15 @@ fun ASTBuilderBase.destructuringForLoop(
 ): Expression {
     val origin = iterable.origin
     val fullName = scope.generateName("destruct", origin)
-    val fullVariable = Field(
-        scope, null,
-        false, isMutable = false, null,
+    val fullVariable = scope.addField(
+        null, false, isMutable = false, null,
         fullName, null, null,
         Keywords.NONE, origin
     )
     val fields = variableNames.map { fieldDeclaration ->
         // todo if _, don't create a field
-        if (fieldDeclaration.name != "_") Field(
-            scope, null,
-            false, isMutable = false, null,
+        if (fieldDeclaration.name != "_") scope.addField(
+            null, false, isMutable = false, null,
             fieldDeclaration.name, fieldDeclaration.type, null,
             Keywords.NONE, origin
         ) else null

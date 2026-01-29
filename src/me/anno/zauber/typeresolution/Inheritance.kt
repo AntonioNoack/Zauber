@@ -52,6 +52,9 @@ object Inheritance {
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
     ): Boolean {
+        if (actualType == expectedType) {
+            return true
+        }
         if (LOGGER.isInfoEnabled) {
             LOGGER.info("Checking $actualType instanceOf $expectedType")
             LOGGER.info("  with generics $expectedTypeParams vs $actualTypeParameters")

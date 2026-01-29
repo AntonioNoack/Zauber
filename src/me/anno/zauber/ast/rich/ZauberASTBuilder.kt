@@ -79,9 +79,8 @@ class ZauberASTBuilder(
 
         val unitInstance by lazy {
             val scope = UnitType.clazz
-            if (scope.objectField == null) scope.objectField = Field(
-                scope, null,
-                false, isMutable = false, null,
+            if (scope.objectField == null) scope.objectField = scope.addField(
+                null, false, isMutable = false, null,
                 scope.name, scope.typeWithArgs, null, Keywords.NONE, -1
             )
             FieldExpression(scope.objectField!!, scope, -1)
@@ -148,9 +147,8 @@ class ZauberASTBuilder(
 
                 val origin = parameter.origin
                 val parameterField = parameter.getOrCreateField(null, Keywords.NONE)
-                val classField = Field(
-                    classScope, classScope.typeWithArgs,
-                    false, isMutable = parameter.isVar,
+                val classField = classScope.addField(
+                    classScope.typeWithArgs, false, isMutable = parameter.isVar,
                     parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
                 )
                 val dstExpr = DotExpression(
@@ -240,9 +238,8 @@ class ZauberASTBuilder(
         readClassBody(name, keywords, scopeType)
 
         classScope.hasTypeParameters = true // no type-params are supported
-        if (classScope.objectField == null) classScope.objectField = Field(
-            classScope, null,
-            false, isMutable = false, null, classScope.name,
+        if (classScope.objectField == null) classScope.objectField = classScope.addField(
+            null, false, isMutable = false, null, classScope.name,
             ClassType(classScope, emptyList()),
             /* todo should we set initialValue? */ null, Keywords.NONE, origin
         )
@@ -364,8 +361,8 @@ class ZauberASTBuilder(
                 val valueType =
                     if (enumScope.typeParameters.isNotEmpty()) null // we need to resolve them
                     else enumScope.typeWithArgs
-                val field = Field(
-                    companionScope, companionScope.typeWithoutArgs,
+                val field = companionScope.addField(
+                    companionScope.typeWithoutArgs,
                     false, isMutable = false, null,
                     name, valueType, initialValue, keywords, origin
                 )
@@ -386,21 +383,21 @@ class ZauberASTBuilder(
 
         companionScope.hasTypeParameters = true
 
+        val constructorScope = companionScope.getOrCreatePrimConstructorScope()
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
         val entryValues = enumScope.enumEntries.map { entryScope ->
             val field = entryScope.objectField!!
-            FieldExpression(field, companionScope, origin)
+            FieldExpression(field, constructorScope, origin)
         }
-        val initialValue = createArrayOfExpr(enumScope.typeWithoutArgs, entryValues, companionScope, origin)
+        val initialValue = createArrayOfExpr(enumScope.typeWithoutArgs, entryValues, constructorScope, origin)
 
-        val entriesField = Field(
-            companionScope, companionScope.typeWithoutArgs,
+        val entriesField = constructorScope.addField(
+            companionScope.typeWithoutArgs,
             false, isMutable = false, null,
             "entries", listType,
             initialValue, Keywords.SYNTHETIC, origin
         )
 
-        val constructorScope = companionScope.getOrCreatePrimConstructorScope()
         val entriesFieldExpr = FieldExpression(entriesField, constructorScope, origin)
         constructorScope.code.add(AssignmentExpression(entriesFieldExpr, initialValue))
     }
@@ -436,9 +433,8 @@ class ZauberASTBuilder(
             } else null
         }
 
-        val field = Field(
-            currPackage, selfType,
-            selfType0 != null, isMutable = isMutable, null,
+        val field = currPackage.addField(
+            selfType, selfType0 != null, isMutable = isMutable, null,
             name, type, initialValue, keywords, origin
         )
 
@@ -1131,8 +1127,8 @@ class ZauberASTBuilder(
             }
             val body = readBodyOrExpression(label ?: "")
             val pseudoInitial = iterableToNextExpr(iterable)
-            val variableField = Field(
-                body.scope, null, false, isMutable = true, false,
+            val variableField = body.scope.addField(
+                null, false, isMutable = true, false,
                 name, variableType, pseudoInitial, Keywords.NONE, origin
             )
             return forLoop(variableField, iterable, body, label)
@@ -1312,8 +1308,8 @@ class ZauberASTBuilder(
             val origin = origin(i - 1)
             val body = readBodyOrExpression(null)
             val flagName = body.scope.generateName("finallyFlag", origin)
-            val flag = Field(
-                body.scope, null, false, true,
+            val flag = body.scope.addField(
+                null, false, true,
                 null, flagName, BooleanType, null, Keywords.SYNTHETIC, origin
             )
             Finally(body, flag)
@@ -1648,9 +1644,8 @@ class ZauberASTBuilder(
                             }
                         }
                         val name = "__ld${variables.size}"
-                        val field = Field( // this is more of a parameter...
-                            currPackage, null,
-                            false, isMutable = false, null,
+                        val field = currPackage.addField( // this is more of a parameter...
+                            null, false, isMutable = false, null,
                             name, null, null, Keywords.SYNTHETIC, origin0
                         )
                         val variable = LambdaDestructuring(names, field)
@@ -1675,9 +1670,8 @@ class ZauberASTBuilder(
         val name = tokens.toString(i++)
         val type = readTypeOrNull(selfType)
         // to do we neither know type nor initial value :/, both come from the called function/set variable
-        val field = Field( // this is more of a parameter...
-            currPackage, null,
-            false, isMutable = false, null,
+        val field = currPackage.addField( // this is more of a parameter...
+            null, false, isMutable = false, null,
             name, null, null, Keywords.NONE, origin
         )
         val variable = LambdaVariable(type, field)
@@ -1769,8 +1763,8 @@ class ZauberASTBuilder(
             val forTryBody = ArrayList(result)
             result.clear()
             val flagName = scope.generateName("deferFlag", origin)
-            val flag = Field(
-                scope, null, false, true, null, flagName,
+            val flag = scope.addField(
+                null, false, true, null, flagName,
                 BooleanType, null, Keywords.SYNTHETIC, origin
             )
             result.add(
@@ -1905,9 +1899,8 @@ class ZauberASTBuilder(
         check(type != null || initialValue != null) { "Field at ${tokens.err(i0)} either needs a type or a value" }
 
         // define variable in the scope
-        val field = Field(
-            fieldScope, selfType,
-            selfType != null, isMutable = isMutable, null,
+        val field = fieldScope.addField(
+            selfType, selfType != null, isMutable = isMutable, null,
             name, type, initialValue, keywords, origin
         )
 

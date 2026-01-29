@@ -31,13 +31,9 @@ class Parameter(
     }
 
     fun getOrCreateField(selfType: Type?, keywords: KeywordSet): Field {
-        val field0 = field
-        if (field0 != null) return field0
-
         // automatically gets added to fieldScope
-        val field = Field(
-            scope, selfType,
-            false, isMutable = isVar, this,
+        val field = field ?: scope.addField(
+            selfType, false, isMutable = isVar, this,
             name, type, defaultValue, keywords, origin
         )
         this.field = field
@@ -63,15 +59,6 @@ class Parameter(
         var result = name.hashCode()
         result = 31 * result + type.hashCode()
         return result
-    }
-
-    fun withType(newType: Type): Parameter {
-        if (newType == this.type) return this
-        return Parameter(
-            index, isVar, isVal, isVararg,
-            name, newType,
-            defaultValue, scope, origin
-        )
     }
 
     fun clone(scope: Scope): Parameter {

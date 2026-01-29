@@ -142,8 +142,8 @@ class CppASTBuilder(
         val (type, name) = readTypeAndName(typeNameEnd)
         val initialValue = if (consumeIf("=")) readExpression() else null
 
-        val field = Field(
-            currPackage, null, false, isMutable = true, null,
+        val field = currPackage.addField(
+            null, false, isMutable = true, null,
             name, type, initialValue, packKeywords(), origin
         )
 
@@ -236,8 +236,8 @@ class CppASTBuilder(
                         extraValueParameters,
                         null, classScope, origin
                     )
-                    entryScope.objectField = Field(
-                        classScope, classScope.typeWithoutArgs, false, isMutable = false, null,
+                    entryScope.objectField = classScope.addField(
+                        classScope.typeWithoutArgs, false, isMutable = false, null,
                         valueName, classScope.typeWithoutArgs, initialValue, keywords, origin
                     )
 

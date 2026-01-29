@@ -1,5 +1,7 @@
 package me.anno.zauber.generation.java
 
+import me.anno.zauber.ast.reverse.SimpleBranch
+import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
@@ -155,25 +157,25 @@ object JavaSimplifiedASTWriter {
             else appendAssign(expr)
         }
         when (expr) {
-            /*is SimpleBranch -> {
+            is SimpleBranch -> {
                 builder.append("if (").append1(expr.condition).append(')')
                 writeBlock {
-                    appendSimplifiedAST(method, expr.ifTrue, loop)
+                    appendSimplifiedAST(method, expr.ifTrue)
                 }
                 trimWhitespaceAtEnd()
                 builder.append(" else ")
                 writeBlock {
-                    appendSimplifiedAST(method, expr.ifFalse, loop)
+                    appendSimplifiedAST(method, expr.ifFalse)
                 }
             }
             is SimpleLoop -> {
                 builder.append("b").append(expr.body.blockId)
                 builder.append(": while (true)")
                 writeBlock {
-                    appendSimplifiedAST(method, expr.body, expr)
+                    appendSimplifiedAST(method, expr.body)
                 }
             }
-            is SimpleGoto -> {
+            /*is SimpleGoto -> {
                 if (expr.condition != null) {
                     builder.append("if (").append1(expr.condition).append(") ")
                 }
@@ -388,7 +390,7 @@ object JavaSimplifiedASTWriter {
             }
         }
         if (expr is SimpleAssignment) builder.append(';')
-        /*if (expr !is SimpleBlock && expr !is SimpleBranch)*/ nextLine()
+        if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
         if (expr is SimpleAssignment && expr.dst.type == NothingType) {
             builder.append("throw new AssertionError(\"Unreachable\");")
             nextLine()
