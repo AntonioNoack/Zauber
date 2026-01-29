@@ -16,6 +16,12 @@ import org.junit.jupiter.api.assertInstanceOf
 class TestRuntime {
     companion object {
         fun testExecute(code: String): Pair<Runtime, Instance> {
+            val (runtime, value) = testExecuteCatch(code)
+            check(value.type == ReturnType.RETURN)
+            return runtime to value.instance
+        }
+
+        fun testExecuteCatch(code: String): Pair<Runtime, BlockReturn> {
             val scope = typeResolveScope(code)
             val field = scope.fields.first { it.name == "tested" }
             val getter = field.getter
@@ -28,8 +34,7 @@ class TestRuntime {
             Stdlib.registerPrintln(runtime)
             Stdlib.registerArrayAccess(runtime)
             val value = runtime.executeCall(runtime.getNull(), getter, emptyList())
-            check(value.type == ReturnType.RETURN)
-            return runtime to value.instance
+            return runtime to value
         }
     }
 
@@ -251,8 +256,10 @@ class TestRuntime {
                 2
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        // todo check that it fails...
+        val (_, value) = testExecuteCatch(code)
+        check(value.type == ReturnType.THROW)
+        val type = value.instance.type.type as ClassType
+        check(type.clazz.name == "IllegalArgumentException")
     }
 
     @Test
