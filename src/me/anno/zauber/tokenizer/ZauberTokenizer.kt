@@ -1,6 +1,7 @@
 package me.anno.zauber.tokenizer
 
-class ZauberTokenizer(val src: String, fileName: String) {
+class ZauberTokenizer(src: String, fileName: String) :
+    Tokenizer(src, fileName) {
 
     companion object {
         private val KEYWORDS = listOf(
@@ -21,29 +22,7 @@ class ZauberTokenizer(val src: String, fileName: String) {
         ).toSet()
     }
 
-    var i = 0
-    var n = src.length
-    val tokens = TokenList(src, fileName)
-
-    fun skipSingleLineComment() {
-        check(src.startsWith("//", i))
-        i += 2
-        while (i < n && src[i] != '\n') i++
-    }
-
-    fun skipBlockComment() {
-        check(src.startsWith("/*", i))
-        i += 2
-        var depth = 1
-        while (depth > 0 && i + 1 < n) {
-            if (src[i] == '*' && src[i + 1] == '/') depth--
-            else if (src[i] == '/' && src[i + 1] == '*') depth++
-            i++
-        }
-        i++ // skip last symbol
-    }
-
-    fun tokenize(): TokenList {
+    override fun tokenize(): TokenList {
         while (i < n) {
             val c = src[i]
             when {
@@ -51,7 +30,7 @@ class ZauberTokenizer(val src: String, fileName: String) {
                 c.isWhitespace() -> i++ // skip spaces
 
                 // comments
-                c == '/' && i + 1 < n && src[i + 1] == '/' -> skipSingleLineComment()
+                c == '/' && i + 1 < n && src[i + 1] == '/' -> skipLineComment()
                 c == '/' && i + 1 < n && src[i + 1] == '*' -> skipBlockComment()
 
                 // identifiers
@@ -277,7 +256,7 @@ class ZauberTokenizer(val src: String, fileName: String) {
             when (src[i]) {
                 in "([{" -> depth++
                 in ")]}" -> depth--
-                '/' if (i + 1 < src.length && src[i + 1] == '/') -> skipSingleLineComment()
+                '/' if (i + 1 < src.length && src[i + 1] == '/') -> skipLineComment()
                 '/' if (i + 1 < src.length && src[i + 1] == '*') -> skipBlockComment()
                 '"' -> {
                     // skip string

@@ -15,7 +15,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 private val LOGGER = LogManager.getLogger("WhenSubjectExpression")
 
@@ -78,7 +77,7 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
                 is AssignmentExpression -> when (val name = subject.dst) {
                     is MemberNameExpression -> name.name
                     is FieldExpression -> name.field.name /* todo in this case, we can reuse the field, I think */
-                    else -> throw NotImplementedException()
+                    else -> throw NotImplementedError()
                 }
                 is MemberNameExpression -> subject.name
                 else -> null

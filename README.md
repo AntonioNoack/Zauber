@@ -13,6 +13,7 @@ I've also written a small tutorial in this project to get you started:
 [Learn Zauber today](tutorial/01_Introduction.md).
 
 The compiler is not working yet, so...
+Theoretically, the interpreter can run the first things now...
 
 ## Motivation
 

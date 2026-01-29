@@ -1,0 +1,34 @@
+{
+  "name": "zauber",
+  "displayName": "Zauber Support",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:zauber"
+  ],
+  "main": "./ZauberLanguageServer.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "zauber",
+        "extensions": [
+          ".zbr",
+          ".kt"
+        ],
+        "aliases": [
+          "Zauber"
+        ]
+      }
+    ]
+  },
+  "description": "Zauber Language Server",
+  "author": "Antonio Noack",
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

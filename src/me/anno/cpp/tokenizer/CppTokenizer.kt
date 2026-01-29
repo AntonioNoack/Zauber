@@ -2,12 +2,13 @@ package me.anno.cpp.tokenizer
 
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.tokenizer.Tokenizer
 
 class CppTokenizer(
-    val src: String,
+    src: String,
     fileName: String,
     val isCNotCxx: Boolean
-) {
+) : Tokenizer(src, fileName) {
 
     companion object {
 
@@ -38,11 +39,7 @@ class CppTokenizer(
         )
     }
 
-    var i = 0
-    val n = src.length
-    val tokens = TokenList(src, fileName)
-
-    fun tokenize(): TokenList {
+    override fun tokenize(): TokenList {
         while (i < n) {
             val c = src[i]
             when {
@@ -79,19 +76,6 @@ class CppTokenizer(
 
         convertKeywords()
         return tokens
-    }
-
-    private fun skipLineComment() {
-        i += 2
-        while (i < n && src[i] != '\n') i++
-    }
-
-    private fun skipBlockComment() {
-        val start = i
-        i += 2
-        while (i + 1 < n && !(src[i] == '*' && src[i + 1] == '/')) i++
-        i += 2
-        tokens.add(TokenType.BLOCK_COMMENT, start, i)
     }
 
     private fun readIdentifier() {
