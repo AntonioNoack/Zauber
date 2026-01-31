@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
@@ -15,6 +16,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.*
+import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.ByteType
 import me.anno.zauber.types.Types.CharType
@@ -140,7 +142,7 @@ abstract class ZauberASTBuilderBase(
             } else null
             val value = readExpression()
             val param = NamedParameter(name, value)
-            println("param[${parameters.size}]: $name=$value")
+            // println("param[${parameters.size}]: $name=$value")
             parameters.add(param)
             if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
             readComma()
@@ -287,6 +289,18 @@ abstract class ZauberASTBuilderBase(
 
         if (consumeIf("?")) {
             base = typeOrNull(base)
+        }
+
+        if (this is JavaASTBuilder || this is JavaASTClassScanner) {
+            while (consumeIf(TokenType.OPEN_ARRAY)) {
+                if (consumeIf(TokenType.CLOSE_ARRAY)) {
+                    base = ClassType(ArrayType.clazz, listOf(base))
+                } else {
+                    i-- // go one back for pushArray
+                    val size = pushArray { readExpression() }
+                    base = ArrayType(base, size)
+                }
+            }
         }
 
         if (negate) base = base.not()

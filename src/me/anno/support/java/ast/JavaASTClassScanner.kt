@@ -189,12 +189,15 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
                     val (path, ni) = tokens.readPath(i)
                     currPackage = path
                     i = ni
+                    consume(";")
                     return true// without i++
                 }
                 consumeIf("import") -> {
+                    consumeIf("static")
                     val (path, ni) = tokens.readImport(i)
                     imports.add(path)
                     i = ni
+                    consume(";")
                     return true// without i++
                 }
             }

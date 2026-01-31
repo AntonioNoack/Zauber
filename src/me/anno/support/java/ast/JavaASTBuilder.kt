@@ -2,6 +2,7 @@ package me.anno.support.java.ast
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
@@ -299,6 +300,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 }
 
                 consumeIf("import") -> {
+                    consumeIf("static")
                     val (import, nextI) = tokens.readImport(i)
                     // todo if there is an 'as', that is a type/variable, not a namespace
                     for (k in i until nextI) {
@@ -627,21 +629,33 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
                 val origin = origin(i)
                 val type = readTypeNotNull(null, true)
-                if (consumeIf(TokenType.OPEN_ARRAY)) {
-                    // todo this could be a multi-dimensional array...
-                    TODO("create array of some sort")
+                // todo does Java support extra extends, implements?
+                val isArrayType = (type is ClassType && type.clazz.pathStr == "zauber.Array") || type is ArrayType
+                val values = if (!isArrayType && tokens.equals(i, TokenType.OPEN_CALL)) {
+                    readValueParameters()
                 } else {
-                    // todo does Java support extra extends, implements?
-                    val values = readValueParameters()
-                    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                        TODO("read inline class")
+                    // Arrays don't need extra parameters
+                    emptyList()
+                }
+                if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                    if (isArrayType) {
+                        TODO("read array contents")
                     } else {
-                        type as ClassType
-                        ConstructorExpression(
+                        TODO("read inline class")
+                    }
+                } else {
+                    when (type) {
+                        is ClassType -> ConstructorExpression(
                             type.clazz, type.typeParameters,
                             values, null,
                             currPackage, origin
                         )
+                        is ArrayType -> ConstructorExpression(
+                            ArrayType.clazz, listOf(type.baseType),
+                            listOf(NamedParameter(null, type.size)), null,
+                            currPackage, origin
+                        )
+                        else -> throw IllegalStateException("Cannot construct $type")
                     }
                 }
             }
@@ -778,7 +792,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     override fun readExpression(minPrecedence: Int): Expression {
-        println("reading expr at ${tokens.err(i)}")
+        // println("reading expr at ${tokens.err(i)}")
         return tokens.push(findExpressionEnd()) {
             readExpressionImpl(minPrecedence)
         }
@@ -1010,7 +1024,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         val code = ExpressionList(result, methodScope, origin)
         // methodScope.code.add(code)
         currPackage = methodScope // restore scope
-        println("finished reading body, $i vs ${tokens.size}, ${tokens.err(i)}")
+        // println("finished reading body, $i vs ${tokens.size}, ${tokens.err(i)}")
         return code
     }
 

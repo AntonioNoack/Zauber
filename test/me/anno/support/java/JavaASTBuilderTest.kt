@@ -22,6 +22,11 @@ class JavaASTBuilderTest {
         val t1 = System.nanoTime()
         println("Tokenized ${sources.size} files in ${(t1 - t0) / 1e6f} ms")
 
+        sources.add(JavaTokenizer("""
+            package zauber;
+            class StackTraceElement
+        """.trimIndent(), "helper.java").tokenize())
+
         for (source in sources) {
             collectNamedJavaClasses(source)
         }
