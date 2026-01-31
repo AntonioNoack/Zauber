@@ -687,6 +687,11 @@ class ZauberASTBuilder(
             when {
                 consumeIf("package") -> {
                     val (path, nextI) = tokens.readPath(i)
+                    for (k in i until nextI) {
+                        if (tokens.equals(k, TokenType.NAME)) {
+                            setLSType(k, VSCodeType.NAMESPACE, 0)
+                        }
+                    }
                     currPackage = path
                     currPackage.mergeScopeTypes(ScopeType.PACKAGE)
                     i = nextI
@@ -694,6 +699,12 @@ class ZauberASTBuilder(
 
                 consumeIf("import") -> {
                     val (import, nextI) = tokens.readImport(i)
+                    // todo if there is an 'as', that is a type/variable, not a namespace
+                    for (k in i until nextI) {
+                        if (tokens.equals(k, TokenType.NAME)) {
+                            setLSType(k, VSCodeType.NAMESPACE, 0)
+                        }
+                    }
                     i = nextI
                     applyImport(import)
                 }
