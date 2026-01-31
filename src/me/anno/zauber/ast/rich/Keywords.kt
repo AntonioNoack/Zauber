@@ -38,6 +38,12 @@ object Keywords {
      * */
     const val CONSTEXPR = 256 * 1024
 
+    /**
+     * guaranteed to be initialized when accessed, but not before;
+     * cannot be applied to nullable types in Kotlin, I'm not sure about Zauber
+     * */
+    const val LATEINIT = 512 * 1024
+
     const val CPP_STRUCT = 1024 * 1024
 
     fun KeywordSet.hasFlag(flag: KeywordSet): Boolean {

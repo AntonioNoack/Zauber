@@ -1,67 +1,27 @@
-package me.anno.zauber.ast.rich
+package me.anno.support.java.ast
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NullableAnyType
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnresolvedType
 
 /**
  * to make type-resolution immediately available/resolvable
  * */
-class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, true) {
+class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, true) {
 
     companion object {
-        fun collectNamedClassesForTypeResolution(allTokens: List<TokenList>) {
-            for (i in allTokens.indices) {
-                val tokens = allTokens[i]
-                collectNamedClasses(tokens)
-            }
-        }
-
-        fun collectNamedClasses(tokens: TokenList) {
-            ASTClassScanner(tokens).collectNamedClassesImpl()
-        }
-
-        // todo I don't really want to deal with them during type-resolution,
-        //  because they are more of an import and should be able to be resolved really quickly
-        //  -> index type aliases when collecting names already
-        //  -> resolve the types when reading types already
-        fun resolveTypeAliases(type: Type): Type {
-            var currType = type
-            while (true) {
-                if (currType is UnresolvedType) {
-                    currType = currType.resolve()
-                    continue
-                }
-                if (currType is ClassType && currType.clazz.isTypeAlias()) {
-                    val scope = currType.clazz
-
-                    val genericNames = scope.typeParameters
-                    if (genericNames.isEmpty() || currType.typeParameters == null) {
-                        currType = scope.selfAsTypeAlias!!
-                        continue
-                    }
-
-                    val genericValues = ParameterList(genericNames, currType.typeParameters)
-                    currType = genericValues.resolveGenerics(null, currType)
-                    continue
-                }
-                // todo if typeAlias in any of the typeParameters, replace it, too
-                if (currType is ClassType && currType.typeParameters != null) {
-                    return ClassType(currType.clazz, currType.typeParameters.map { resolveTypeAliases(it) })
-                }
-                return currType
-            }
+        fun collectNamedJavaClasses(tokens: TokenList) {
+            JavaASTClassScanner(tokens).collectNamedClassesImpl()
         }
     }
 
@@ -154,6 +114,18 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             j++
 
             while (j < tokens.size && !(tokens.equals(j, ";") || tokens.equals(j, "}"))) {
+
+                // skip annotations
+                // todo for Zauber, too
+                while (tokens.equals(j, "@")) {
+                    j++ // skip @
+                    check(tokens.equals(j++, TokenType.NAME))
+                    // todo we might have sub-types and generics...
+                    if (tokens.equals(j, "(")) {
+                        j = tokens.findBlockEnd(j, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
+                    }
+                }
+
                 check(tokens.equals(j, TokenType.NAME)) {
                     "Expected name in enum class $currPackage, got ${tokens.err(j)}"
                 }
@@ -228,33 +200,18 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             }
         }
 
-        if (consumeIf("typealias")) {
-            readTypeAlias()
-            return true// without i++
-        }
-
-        if (tokens.equals(i, "var") || tokens.equals(i, "val") || tokens.equals(i, "fun")) {
-            hadNamedScope = false
-            return false
-        }
-
         if (listening.last()) {
             when {
-                tokens.equals(i, "class") && tokens.equals(i - 1, "enum") -> {
-                    check(tokens.equals(++i, TokenType.NAME))
+                tokens.equals(i, "enum") -> {
+                    check(tokens.equals(++i, TokenType.NAME)) {
+                        "Expected name after enum, got ${tokens.err(i)}"
+                    }
                     val name = tokens.toString(i++)
                     foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
                     return true// without i++
                 }
 
-                tokens.equals(i, "class") && tokens.equals(i - 1, "inner") -> {
-                    check(tokens.equals(++i, TokenType.NAME))
-                    val name = tokens.toString(i++)
-                    foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
-                    return true// without i++
-                }
-
-                tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
+                tokens.equals(i, "class") && !tokens.equals(i - 1, ".") -> {
                     check(tokens.equals(++i, TokenType.NAME)) {
                         "Expected name after class, got ${tokens.err(i)}"
                     }
@@ -263,37 +220,13 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                     return true// without i++
                 }
 
-                tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
-                        && !tokens.equals(i + 1, ":") -> {
-                    check(tokens.equals(++i, TokenType.NAME)) {
-                        "Expected name for object, but got ${tokens.err(i)}"
-                    }
-                    val name = tokens.toString(i++)
-                    foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
-                    return true// without i++
-                }
-
-                consumeIf("companion") -> {
-                    check(tokens.equals(i++, "object"))
-                    val name = if (tokens.equals(i, TokenType.NAME)) {
-                        tokens.toString(i++)
-                    } else "Companion"
-                    foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
-                    return true// without i++
-                }
-
                 consumeIf("interface") -> {
-                    check(tokens.equals(i, TokenType.NAME))
+                    check(tokens.equals(i, TokenType.NAME)) {
+                        "Expected name after interface, got ${tokens.err(i)}"
+                    }
                     val name = tokens.toString(i++)
                     val keywords = if (tokens.equals(i - 2, "fun")) Keywords.FUN_INTERFACE else Keywords.NONE
                     foundNamedScope(name, keywords, ScopeType.INTERFACE)
-                    return true// without i++
-                }
-
-                consumeIf("typealias") -> {
-                    check(tokens.equals(i, TokenType.NAME))
-                    val name = tokens.toString(i++)
-                    foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
                     return true// without i++
                 }
             }

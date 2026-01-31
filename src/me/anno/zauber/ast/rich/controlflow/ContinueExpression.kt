@@ -6,10 +6,10 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 
-class ContinueExpression(val label: Scope?, scope: Scope, origin: Int) : Expression(scope, origin) {
+class ContinueExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
-        return if (label != null) "continue@$label" else "continue"
+        return "continue@$label"
     }
 
     override fun resolveType(context: ResolutionContext): Type = NothingType

@@ -48,13 +48,13 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         return TokenListIndex.getIndex(tokens, i)
     }
 
-    fun <R> pushCall(readImpl: () -> R): R {
+    inline fun <R> pushCall(readImpl: () -> R): R {
         val result = tokens.push(i++, TokenType.OPEN_CALL, TokenType.CLOSE_CALL, readImpl)
         consume(TokenType.CLOSE_CALL)
         return result
     }
 
-    fun <R> pushArray(readImpl: () -> R): R {
+    inline fun <R> pushArray(readImpl: () -> R): R {
         val result = tokens.push(i++, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY, readImpl)
         consume("]")
         return result

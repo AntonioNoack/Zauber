@@ -29,6 +29,10 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
         return IsInstanceOfExpr(value.resolve(context), type.resolve(), scope, origin)
     }
 
+    fun withValue(newValue: Expression): IsInstanceOfExpr {
+        return IsInstanceOfExpr(newValue, type, scope, origin)
+    }
+
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(value)
     }

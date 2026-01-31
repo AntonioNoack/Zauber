@@ -156,6 +156,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
             (source[i0 - 1] != '>' || source[i0] == '=') && // >?, >>, >>., but allow >=
             !(source[i0 - 1] == '<' && source[i0] == '*') && // <*>
             !(source[i0 - 1] == '*' && source[i0] == '>') && // <*>
+            !(source[i0 - 1] == '<' && source[i0] == '?') && // <?
             !(source[i0 - 1] == '!' && source[i0] in ":.") && // !!::, !!.
             !(source[i0 - 1] == '.' && source[i0] in "+-") && // ..+3.0, ..-3.0
             !(source[i0 - 1] in "&|" && source[i0] == '!') && // &!, |!
@@ -200,6 +201,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     fun equals(i: Int, str: String, str2: String, str3: String): Boolean {
         return equals(i, str) || equals(i, str2) || equals(i, str3)
+    }
+
+    fun equals(i: Int, vararg strings: String): Boolean {
+        return strings.any { str -> equals(i, str) }
     }
 
     @Suppress("POTENTIALLY_NON_REPORTED_ANNOTATION")

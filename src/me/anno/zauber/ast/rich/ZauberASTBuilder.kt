@@ -4,7 +4,6 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
@@ -12,6 +11,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -367,7 +367,7 @@ class ZauberASTBuilder(
 
                 val typeParameters = readTypeParameters(null)
                 val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    pushCall { readParameterExpressions() }
+                    readValueParameters()
                 } else emptyList()
 
                 val keywords = packKeywords()
@@ -644,7 +644,7 @@ class ZauberASTBuilder(
                 InnerSuperCallTarget.SUPER else InnerSuperCallTarget.THIS
             // val typeParams = readTypeParams(null) // <- not supported
             var parameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                pushCall { readParameterExpressions() }
+                readValueParameters()
             } else emptyList()
             if (isEnumClass) {
                 parameters = listOf(
@@ -780,7 +780,7 @@ class ZauberASTBuilder(
         val path = readTypePath(null)
             ?: throw IllegalStateException("Expected type for annotation at ${tokens.err(i)}")
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            pushCall { readParameterExpressions() }
+            readValueParameters()
         } else emptyList()
         return Annotation(path, params)
     }
@@ -803,6 +803,7 @@ class ZauberASTBuilder(
                 consumeIf("sealed") -> Keywords.SEALED
                 consumeIf("const") -> Keywords.CONSTEXPR
                 consumeIf("final") -> Keywords.FINAL
+                consumeIf("lateinit") -> Keywords.LATEINIT
                 else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
             }
             setLSType(i - 1, VSCodeType.KEYWORD, 0)
@@ -810,21 +811,6 @@ class ZauberASTBuilder(
         }
 
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
-    }
-
-    fun readParameterExpressions(): ArrayList<NamedParameter> {
-        val params = ArrayList<NamedParameter>()
-        while (i < tokens.size) {
-            val name = if (tokens.equals(i, TokenType.NAME) &&
-                tokens.equals(i + 1, "=")
-            ) tokens.toString(i).apply { i += 2 } else null
-            val value = readExpression()
-            val param = NamedParameter(name, value)
-            params.add(param)
-            if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
-            readComma()
-        }
-        return params
     }
 
     override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
@@ -1005,12 +991,13 @@ class ZauberASTBuilder(
                 readInlineClass()
             }
 
-            tokens.equals(i, TokenType.NAME) -> {
+            tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
                 val origin = origin(i)
                 val vsCodeType =
                     if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
                         VSCodeType.METHOD
                     } else VSCodeType.VARIABLE
+
                 val namePath = consumeName(vsCodeType, 0)
                 val typeArgs = readTypeParameters(null)
                 if (
@@ -1027,7 +1014,7 @@ class ZauberASTBuilder(
                             }
                         }"
                     )
-                    val args = pushCall { readParameterExpressions() }
+                    val args = readValueParameters()
                     val base = nameExpression(namePath, origin, currPackage)
                     CallExpression(base, typeArgs, args, origin + 1)
                 } else if (
@@ -1099,7 +1086,7 @@ class ZauberASTBuilder(
             ?: throw IllegalStateException("SuperType must be a ClassType, at ${tokens.err(i0)}")
 
         val valueParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            pushCall { readParameterExpressions() }
+            readValueParameters()
         } else null
 
         val delegate = if (consumeIf("by")) readExpression() else null
@@ -1298,85 +1285,6 @@ class ZauberASTBuilder(
         }
     }
 
-    fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
-        val name = scopeName ?: currPackage.generateName(scopeType.name, origin(i))
-        return pushScope(name, scopeType) { childScope ->
-            val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
-            scanBlockForNewTypes(i, blockEnd)
-            val result = tokens.push(blockEnd) { readImpl(childScope) }
-            consume(TokenType.CLOSE_BLOCK)
-            result
-        }
-    }
-
-    fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
-        return pushScope(scope) {
-            val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
-            scanBlockForNewTypes(i, blockEnd)
-            val result = tokens.push(blockEnd) { readImpl(scope) }
-            consume(TokenType.CLOSE_BLOCK)
-            result
-        }
-    }
-
-    /**
-     * to make type-resolution immediately available/resolvable
-     * */
-    private fun scanBlockForNewTypes(i0: Int, i1: Int) {
-        var depth = 0
-        var listen = -1
-        var listenType: ScopeType? = null
-        var typeDepth = 0
-        for (i in i0 until i1) {
-            when (tokens.getType(i)) {
-                TokenType.OPEN_BLOCK -> {
-                    depth++
-                    listen = -1
-                }
-                TokenType.OPEN_CALL, TokenType.OPEN_ARRAY -> depth++
-                TokenType.CLOSE_CALL, TokenType.CLOSE_BLOCK, TokenType.CLOSE_ARRAY -> depth--
-                else -> {
-                    if (depth == 0) {
-                        when {
-                            tokens.equals(i, "<") -> if (listen >= 0) typeDepth++
-                            tokens.equals(i, ">") -> if (listen >= 0) typeDepth--
-                            tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
-                                listen = i
-                                listenType =
-                                    if (tokens.equals(i - 1, "inner")) ScopeType.INNER_CLASS
-                                    else if (tokens.equals(i - 1, "enum")) ScopeType.ENUM_CLASS
-                                    else ScopeType.NORMAL_CLASS
-                            }
-                            tokens.equals(i, "object") && !tokens.equals(i + 1, ":") -> {
-                                listen = i
-                                listenType = ScopeType.OBJECT
-                            }
-                            tokens.equals(i, "interface") -> {
-                                listen = i
-                                listenType = ScopeType.INTERFACE
-                            }
-                            typeDepth == 0 && tokens.equals(i, TokenType.NAME) && listen >= 0 &&
-                                    fileLevelKeywords.none { keyword -> tokens.equals(i, keyword) } -> {
-                                currPackage
-                                    .getOrPut(tokens.toString(i), tokens.fileName, listenType)
-                                if (LOGGER.isDebugEnabled) LOGGER.debug("found ${tokens.toString(i)} in $currPackage")
-                                listen = -1
-                                listenType = null
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        check(listen == -1) { "Listening for class/object/interface at ${tokens.err(listen)}" }
-    }
-
-    private fun <R> push(endTokenIdx: Int, readImpl: () -> R): R {
-        val result = tokens.push(endTokenIdx, readImpl)
-        i = endTokenIdx + 1 // skip }
-        return result
-    }
-
     private fun nullExpr(scope: Scope, origin: Int): SpecialValueExpression {
         return SpecialValueExpression(SpecialValue.NULL, scope, origin)
     }
@@ -1518,28 +1426,12 @@ class ZauberASTBuilder(
         return expr
     }
 
-    private fun readRHS(op: Operator): Expression =
-        readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
-
-    private fun handleDotOperator(lhs: Expression): Expression {
-        val op = dotOperator
-        val rhs = readRHS(op)
-        if (rhs is CallExpression && rhs.self is MemberNameExpression) {
-            return NamedCallExpression(
-                lhs, rhs.self.name, rhs.self.nameAsImport,
-                rhs.typeParameters, rhs.valueParameters,
-                rhs.scope, rhs.origin
-            )
-        }
-        return binaryOp(currPackage, lhs, op.symbol, rhs)
-    }
-
     private fun tryReadPostfix(expr: Expression): Expression? {
         return when {
             i >= tokens.size || !tokens.isSameLine(i - 1, i) -> null
             tokens.equals(i, TokenType.OPEN_CALL) -> {
                 val origin = origin(i)
-                val params = pushCall { readParameterExpressions() }
+                val params = readValueParameters()
                 if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                     pushBlock(ScopeType.LAMBDA, null) { params += NamedParameter(null, readLambda(null)) }
                 }
@@ -1547,7 +1439,7 @@ class ZauberASTBuilder(
             }
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 val origin = origin(i)
-                val params = pushArray { readParameterExpressions() }
+                val params = pushArray { readValueParametersImpl() }
                 if (consumeIf("=")) {
                     val value = NamedParameter(null, readExpression())
                     NamedCallExpression(
@@ -1664,7 +1556,7 @@ class ZauberASTBuilder(
         val methodScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
-        if (LOGGER.isDebugEnabled) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading method body[$i], ${tokens.err(i)}")
         if (debug) tokens.printTokensInBlocks(i)
         while (i < tokens.size) {
             val oldSize = result.size

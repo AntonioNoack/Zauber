@@ -2,7 +2,7 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.collectNamedClasses
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList

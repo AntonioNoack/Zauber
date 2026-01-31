@@ -2,7 +2,6 @@ package me.anno.support.java.ast
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
-import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
@@ -10,6 +9,8 @@ import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
+import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
+import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -25,46 +26,34 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
-import me.anno.zauber.types.BooleanUtils.not
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.ListType
-import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.SelfType
 import kotlin.math.max
 import kotlin.math.min
 
-// todo lots and lots are shared between Kotlin and Java or C, maybe we can reuse many methods
-class JavaASTBuilder(
-    tokens: TokenList, root: Scope,
-    val language: ZauberLanguage = ZauberLanguage.ZAUBER
-) : ZauberASTBuilderBase(tokens, root, false) {
+class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(tokens, root, false) {
 
     companion object {
-
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)
 
-        var debug = false
-
-        val unitInstance by lazy {
-            val scope = UnitType.clazz
-            if (scope.objectField == null) scope.objectField = scope.addField(
-                null, false, isMutable = false, null,
-                scope.name, scope.typeWithArgs, null, Keywords.NONE, -1
-            )
-            FieldExpression(scope.objectField!!, scope, -1)
-        }
+        val operators = me.anno.zauber.ast.rich.operators + mapOf(
+            "instanceof" to Operator("instanceof", 35 /* extra strong? */, Assoc.LEFT),
+            "?" to Operator("?", 2 /* like ?: */, Assoc.LEFT),
+        )
     }
 
     val lsTypes = IntArray(tokens.size).apply { fill(-1) }
     val lsModifiers = IntArray(tokens.size)
+
+    // todo use this to put things into companion object instead of the class itself
+    var isStatic = false
 
     fun setLSType(i: Int, type: VSCodeType, modifiers: Int) {
         lsTypes[i] = type.ordinal
@@ -105,17 +94,14 @@ class JavaASTBuilder(
         consumeIf("constructor")
 
         val constructorOrigin = origin(i)
-        val constructorParams = readPrimaryConstructorParameters(classScope)
-        val constructorBody = createAssignmentInstructionsForPrimaryConstructor(
-            classScope, constructorParams, constructorOrigin
-        )
+        val constructorBody = ExpressionList(ArrayList(), classScope, origin)
 
         readSuperCalls(classScope)
 
         val primConstructorScope = classScope.getOrCreatePrimConstructorScope()
         val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
         val primaryConstructor = Constructor(
-            constructorParams ?: emptyList(),
+            emptyList(),
             primConstructorScope, if (primarySuperCall != null) {
                 InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
             } else null, constructorBody,
@@ -126,60 +112,6 @@ class JavaASTBuilder(
 
         readClassBody(name, keywords, scopeType)
         popGenericParams()
-    }
-
-    private fun createAssignmentInstructionsForPrimaryConstructor(
-        classScope: Scope, constructorParams: List<Parameter>?,
-        constructorOrigin: Int
-    ): ExpressionList {
-        val result = ArrayList<Expression>()
-        val scope = classScope.getOrCreatePrimConstructorScope()
-        if (constructorParams != null) {
-            for (parameter in constructorParams) {
-                if (!(parameter.isVal || parameter.isVar)) continue
-
-                val origin = parameter.origin
-                val parameterField = parameter.getOrCreateField(null, Keywords.NONE)
-                val classField = classScope.addField(
-                    classScope.typeWithArgs, false, isMutable = parameter.isVar,
-                    parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
-                )
-                val dstExpr = DotExpression(
-                    ThisExpression(classScope, scope, origin), null,
-                    FieldExpression(classField, scope, origin),
-                    scope, origin
-                )
-                val srcExpr = FieldExpression(parameterField, scope, origin)
-                result.add(AssignmentExpression(dstExpr, srcExpr))
-            }
-        }
-        return ExpressionList(result, scope, constructorOrigin)
-    }
-
-    private fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
-        val scopeType = classScope.scopeType
-        val constructorOrigin = origin(i)
-        return if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
-            var parameters = pushScope(constructorScope) {
-                val selfType = ClassType(classScope, null)
-                pushCall { readParameterDeclarations(selfType) }
-            }
-            if (scopeType == ScopeType.ENUM_CLASS) {
-                parameters = listOf(
-                    Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
-                    Parameter(1, "name", StringType, constructorScope, constructorOrigin)
-                ) + parameters.map { it.shift(2) }
-            }
-            parameters
-        } else if (scopeType == ScopeType.ENUM_CLASS) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
-            val parameters = listOf(
-                Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
-                Parameter(1, "name", StringType, constructorScope, constructorOrigin)
-            )
-            parameters
-        } else null
     }
 
     private fun readInterface() {
@@ -270,7 +202,7 @@ class JavaASTBuilder(
 
                 val typeParameters = readTypeParameters(null)
                 val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    pushCall { readParameterExpressions() }
+                    readValueParameters()
                 } else emptyList()
 
                 val keywords = packKeywords()
@@ -340,6 +272,16 @@ class JavaASTBuilder(
         }
     }
 
+    private fun getStaticScope(): Scope {
+        check(currPackage.isClassType()) {
+            "Base class for static scope was not a class $currPackage"
+        }
+        val co = currPackage.companionObject
+        if (co != null) return co
+
+        return pushScope("Companion", ScopeType.COMPANION_OBJECT) { scope -> scope }
+    }
+
     fun readFileLevel() {
         loop@ while (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
@@ -375,6 +317,29 @@ class JavaASTBuilder(
 
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
 
+                consumeIf("interface") -> readInterface()
+
+                tokens.equals(i, "static") && tokens.equals(i + 1, TokenType.OPEN_BLOCK) -> {
+                    i++ // skip 'static'
+                    val staticScope = getStaticScope()
+                    pushScope(staticScope) {
+                        pushBlock(staticScope.getOrCreatePrimConstructorScope()) {
+                            readMethodBody()
+                        }
+                    }
+                }
+
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> {
+                    // init block
+                    pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
+                        readMethodBody()
+                    }
+                }
+
+                consumeIf("@") -> annotations.add(readAnnotation())
+
+                tokens.equals(i, TokenType.KEYWORD) -> collectKeywords()
+
                 // todo methods / fields need some read-ahead
                 /*consumeIf("fun") -> {
                     if (consumeIf("interface")) {
@@ -388,34 +353,82 @@ class JavaASTBuilder(
                 consumeIf("val") -> readFieldInClass(false)*/
                 // todo it is a constructor, if the method name = class name
 
-                consumeIf("interface") -> readInterface()
-
-                tokens.equals(i, "static") && tokens.equals(i + 1, TokenType.OPEN_BLOCK) -> {
-                    i++
-                    // static init block
-                    // todo first get companion object scope...
-                    pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
-                        readMethodBody()
-                    }
-                }
-
-                tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                    // init block
-                    pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
-                        readMethodBody()
-                    }
-                }
-
-                consumeIf("@") -> annotations.add(readAnnotation())
-
-                tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) ->
-                    collectKeywords()
-
                 consumeIf(";") -> {}// just skip it
+                tokens.equals(i, TokenType.NAME) -> {
+                    if (tokens.equals(i, currPackage.name) && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
+                        i++ // skip class name
+                        // it is a constructor
+                        readConstructor()
+                    } else {
+                        // todo for methods, we may have generic parameters
+                        val tn = readTypeAndName()
+                            ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
+                        if (tokens.equals(i, "(")) {
+                            readMethodInClass(tn.first, tn.second)
+                        } else {
+                            readFieldInClass(tn.first, tn.second)
+                        }
+                    }
+                }
 
                 else -> throw NotImplementedError("Unknown token at ${tokens.err(i)}")
             }
         }
+    }
+
+    fun readConstructor() {
+        val origin = origin(i)
+        val scopeName = currPackage.generateName("constructor", origin)
+        val keywords = packKeywords()
+        pushScope(scopeName, ScopeType.CONSTRUCTOR) { scope ->
+            val valueParameters = pushCall { readParameterDeclarations(null) }
+            var superCall: InnerSuperCall? = null
+            val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                pushBlock(ScopeType.METHOD, "body") {
+                    // read the super call
+                    when {
+                        tokens.equals(i, "this") && tokens.equals(i + 1, TokenType.OPEN_CALL) -> {
+                            val origin = origin(i)
+                            consume("this")
+                            val params = readValueParameters()
+                            superCall = InnerSuperCall(InnerSuperCallTarget.THIS, params, origin)
+                        }
+                        tokens.equals(i, "super") && tokens.equals(i + 1, TokenType.OPEN_CALL) -> {
+                            val origin = origin(i)
+                            consume("super")
+                            val params = readValueParameters()
+                            superCall = InnerSuperCall(InnerSuperCallTarget.SUPER, params, origin)
+                        }
+                    }
+                    // then the remainder
+                    readMethodBody()
+                }
+            } else ExpressionList(ArrayList(), scope, origin(i))
+            scope.selfAsConstructor = Constructor(
+                valueParameters, scope, superCall,
+                body, keywords, origin
+            )
+        }
+    }
+
+    fun readMethodInClass(returnType: Type, name: String) {
+        val origin = origin(i)
+        val scopeName = currPackage.generateName(name, origin)
+        val keywords = packKeywords()
+        pushScope(scopeName, ScopeType.METHOD) { scope ->
+            val valueParameters = pushCall { readParameterDeclarations(null) }
+            val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                readBodyOrExpression(null)
+            } else null
+            scope.selfAsMethod = Method(
+                null, false, name, emptyList(),
+                valueParameters, scope, returnType, emptyList(), body, keywords, origin
+            )
+        }
+    }
+
+    fun readFieldInClass(valueType: Type, name: String) {
+        readFieldInMethod(valueType, name, currPackage)
     }
 
     fun readAnnotation(): Annotation {
@@ -426,11 +439,19 @@ class JavaASTBuilder(
             // skipping scope
             i += 2
         }
+
+        if (tokens.equals(i, "Override") && !tokens.equals(i + 1, TokenType.OPEN_CALL)) {
+            i++ // skip 'Override'
+            keywords = keywords or Keywords.OVERRIDE
+            val type = langScope.getOrPut("Override", ScopeType.INTERFACE).typeWithArgs
+            return Annotation(type, emptyList())
+        }
+
         check(tokens.equals(i, TokenType.NAME))
         val path = readTypePath(null)
             ?: throw IllegalStateException("Expected type for annotation at ${tokens.err(i)}")
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            pushCall { readParameterExpressions() }
+            readValueParameters()
         } else emptyList()
         return Annotation(path, params)
     }
@@ -447,6 +468,10 @@ class JavaASTBuilder(
                 consumeIf("value") -> Keywords.VALUE
                 consumeIf("annotation") -> Keywords.ANNOTATION
                 consumeIf("final") -> Keywords.FINAL
+                consumeIf("static") -> {
+                    isStatic = true
+                    0
+                }
                 else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
             }
             setLSType(i - 1, VSCodeType.KEYWORD, 0)
@@ -454,21 +479,6 @@ class JavaASTBuilder(
         }
 
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
-    }
-
-    fun readParameterExpressions(): ArrayList<NamedParameter> {
-        val params = ArrayList<NamedParameter>()
-        while (i < tokens.size) {
-            val name = if (tokens.equals(i, TokenType.NAME) &&
-                tokens.equals(i + 1, "=")
-            ) tokens.toString(i).apply { i += 2 } else null
-            val value = readExpression()
-            val param = NamedParameter(name, value)
-            params.add(param)
-            if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
-            readComma()
-        }
-        return params
     }
 
     override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
@@ -498,16 +508,13 @@ class JavaASTBuilder(
 
             val origin = origin(i)
             val name = consumeName(VSCodeType.PARAMETER, 0)
-            consume(":")
-
-            val initialValue = null
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
             val keywords = packKeywords()
             val parameter = Parameter(
                 parameters.size, !isVal, isVal, isVararg, name, type,
-                initialValue, currPackage, origin
+                null, currPackage, origin
             )
             parameter.getOrCreateField(selfType, keywords)
             parameters.add(parameter)
@@ -608,34 +615,22 @@ class JavaASTBuilder(
                 DoubleColonLambda(currPackage, name, currPackage, origin)
             }
 
-            consumeIf("if") -> readIfBranch()
-            consumeIf("else") -> throw IllegalStateException("Standalone 'else' at ${tokens.err(i - 1)}")
-            consumeIf("while") -> readWhileLoop(label)
-            consumeIf("do") -> readDoWhileLoop(label)
-            consumeIf("for") -> readForLoop(label)
-            // todo read a switch-case, like in C/C++?
-            /*consumeIf("when") -> {
-                when {
-                    tokens.equals(i, TokenType.OPEN_CALL) -> readWhenWithSubject(label)
-                    tokens.equals(i, TokenType.OPEN_BLOCK) -> readWhenWithConditions(label)
-                    else -> throw IllegalStateException("Unexpected token after when at ${tokens.err(i)}")
+            consumeIf("new") -> {
+                val origin = origin(i)
+                val type = readTypeNotNull(null, true)
+                // todo does Java support extra extends, implements?
+                val values = readValueParameters()
+                if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                    TODO("read inline class")
+                } else {
+                    type as ClassType
+                    ConstructorExpression(
+                        type.clazz, type.typeParameters,
+                        values, null,
+                        currPackage, origin
+                    )
                 }
-            }*/
-            consumeIf("try") -> readTryCatch()
-            consumeIf("return") -> readReturn(label)
-            consumeIf("throw") -> {
-                val origin = origin(i - 1)
-                ThrowExpression(readExpression(), currPackage, origin)
             }
-            consumeIf("break") -> BreakExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
-            consumeIf("continue") -> ContinueExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
-
-            // todo inline-classes are done differently:
-            //  new Object(...) { body }
-            /*tokens.equals(i, "object") &&
-                    (tokens.equals(i + 1, ":") || tokens.equals(i + 1, TokenType.OPEN_BLOCK)) -> {
-                readInlineClass()
-            }*/
 
             tokens.equals(i, TokenType.NAME) -> {
                 val origin = origin(i)
@@ -645,10 +640,7 @@ class JavaASTBuilder(
                     } else VSCodeType.VARIABLE
                 val namePath = consumeName(vsCodeType, 0)
                 val typeArgs = readTypeParameters(null)
-                if (
-                    tokens.equals(i, TokenType.OPEN_CALL) &&
-                    tokens.isSameLine(i - 1, i)
-                ) {
+                if (tokens.equals(i, TokenType.OPEN_CALL)) {
                     // constructor or function call with type args
                     val start = i
                     val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
@@ -659,126 +651,28 @@ class JavaASTBuilder(
                             }
                         }"
                     )
-                    val args = pushCall { readParameterExpressions() }
+                    val args = readValueParameters()
                     val base = nameExpression(namePath, origin, currPackage)
                     CallExpression(base, typeArgs, args, origin + 1)
-                } else if (
-                // todo validate that we have nothing before us...
-                    tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
-                    val i0 = i + 2
-                    i-- // skipping over name
-                    val type = readTypeNotNull(null, false)
-                    check(tokens.equals(i++, "::"))
-                    check(tokens.equals(i++, "class"))
-                    check(i == i0)
-                    GetClassFromTypeExpression(type, currPackage, origin)
                 } else {
                     nameExpression(namePath, origin, currPackage)
                 }
             }
             tokens.equals(i, TokenType.OPEN_CALL) -> {
-                // just something in brackets
-                pushCall { readExpression() }
-            }
-            tokens.equals(i, TokenType.OPEN_BLOCK) ->
-                pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
-
-            else -> {
-                tokens.printTokensInBlocks(max(i - 5, 0))
-                throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
-            }
-        }
-    }
-
-    private fun readForLoop(label: String?): Expression {
-        TODO("read C-style for loop")
-    }
-
-    private fun readReturn(label: String?): ReturnExpression {
-        val origin = origin(i - 1)
-        if (LOGGER.isDebugEnabled) LOGGER.debug("reading return")
-        if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
-            !tokens.equals(i, ",", ";")
-        ) {
-            val value = readExpression()
-            if (LOGGER.isDebugEnabled) LOGGER.debug("  with value $value")
-            return ReturnExpression(value, label, currPackage, origin)
-        } else {
-            if (LOGGER.isDebugEnabled) LOGGER.debug("  without value")
-            return ReturnExpression(unitInstance, label, currPackage, origin)
-        }
-    }
-
-    fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
-        val name = scopeName ?: currPackage.generateName(scopeType.name, origin(i))
-        return pushScope(name, scopeType) { childScope ->
-            val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
-            val result = tokens.push(blockEnd) { readImpl(childScope) }
-            consume(TokenType.CLOSE_BLOCK)
-            result
-        }
-    }
-
-    fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
-        return pushScope(scope) {
-            val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
-            val result = tokens.push(blockEnd) { readImpl(scope) }
-            consume(TokenType.CLOSE_BLOCK)
-            result
-        }
-    }
-
-    private fun <R> push(endTokenIdx: Int, readImpl: () -> R): R {
-        val result = tokens.push(endTokenIdx, readImpl)
-        i = endTokenIdx + 1 // skip }
-        return result
-    }
-
-    private fun nullExpr(scope: Scope, origin: Int): SpecialValueExpression {
-        return SpecialValueExpression(SpecialValue.NULL, scope, origin)
-    }
-
-    private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
-        val nullExpr = nullExpr(scope, origin)
-        return CheckEqualsOp(expr, nullExpr, false, true, scope, origin)
-    }
-
-    override fun readExpression(minPrecedence: Int): Expression {
-        var expr = readPrefix()
-        if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
-
-        // main elements
-        loop@ while (i < tokens.size) {
-            val symbol = when (tokens.getType(i)) {
-                TokenType.SYMBOL, TokenType.KEYWORD -> tokens.toString(i)
-                TokenType.NAME -> break@loop
-                TokenType.APPEND_STRING -> "+"
-                else -> {
-                    // postfix
-                    expr = tryReadPostfix(expr) ?: break@loop
-                    continue@loop
-                }
-            }
-
-            if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
-
-            val op = operators[symbol]
-            if (op == null) {
-                // postfix
-                expr = tryReadPostfix(expr) ?: break@loop
-            } else {
-
-                if (op.precedence < minPrecedence) break@loop
-
+                // this could be a cast... it is, if (type) name
+                val i0 = i
                 val origin = origin(i)
-                i++ // consume operator
-
-                val scope = currPackage
-                expr = when (symbol) {
-                    "as" -> createCastExpression(
-                        expr, scope, origin,
-                        readTypeNotNull(null, true)
-                    ) { ifFalseScope ->
+                var type: Type? = null
+                val hasType = pushCall {
+                    type = readType(null, true)
+                    val hasType = type != null && i == tokens.size
+                    i = tokens.size // prevent crash, because we didn't consume all tokens
+                    hasType
+                }
+                if (hasType && tokens.equals(i, TokenType.NAME)) {
+                    val name = consumeName(VSCodeType.VARIABLE, 0)
+                    val expr = nameExpression(name, origin(i - 1), currPackage)
+                    createCastExpression(expr, currPackage, origin, type!!) { ifFalseScope ->
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
                         val debugInfoParam = NamedParameter(null, debugInfoExpr)
                         CallExpression(
@@ -786,86 +680,171 @@ class JavaASTBuilder(
                             emptyList(), listOf(debugInfoParam), origin
                         )
                     }
-                    "as?" -> createCastExpression(
-                        expr, scope, origin,
-                        readTypeNotNull(null, true)
-                    ) { scope -> nullExpr(scope, origin) }
-                    "is" -> {
-                        val type = readTypeNotNull(null, true)
-                        IsInstanceOfExpr(expr, type, scope, origin)
+                } else {
+                    i = i0
+                    // just something in brackets
+                    pushCall { readExpression() }
+                }
+            }
+            else -> {
+                tokens.printTokensInBlocks(max(i - 5, 0))
+                throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
+            }
+        }
+    }
+
+    private fun readSwitchCase(label: String?): Expression {
+        TODO("read switch-case like C++")
+    }
+
+    private fun readForLoop(label: String?): Expression {
+        return pushScope(ScopeType.METHOD_BODY, "for") {
+            lateinit var initial: Expression
+            lateinit var condition: Expression
+            lateinit var increment: Expression
+            val origin = origin(i - 1)
+            pushCall {
+                // todo actually we expect a declaration
+                // todo we must also support for(name: values)
+                initial = readExpressionOrNullWithSemicolon() ?: unitInstance
+                condition = readExpressionOrNullWithSemicolon()
+                    ?: SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
+                increment = readExpressionOrNullWithSemicolon() ?: unitInstance
+            }
+            val body = pushScope(ScopeType.METHOD_BODY, "forBody") {
+                val body = readMethodBody()
+                ExpressionList(listOf(body, increment), currPackage, origin)
+            }
+            val result = ArrayList<Expression>()
+            if (initial != unitInstance) result.add(initial)
+            result.add(WhileLoop(condition, body, label))
+            ExpressionList(result, currPackage, origin)
+        }
+    }
+
+    private fun readExpressionOrNullWithSemicolon(): Expression? {
+        if (consumeIf(";")) return null
+        val expr = readExpression()
+        consume(";")
+        return expr
+    }
+
+    private fun readExpressionWithSemicolon(): Expression {
+        val expr = readExpression()
+        consume(";")
+        return expr
+    }
+
+    private fun readReturn(label: String?): ReturnExpression {
+        val origin = origin(i - 1)
+        val value = if (!tokens.equals(i, ",", ";")) readExpressionWithSemicolon() else unitInstance
+        return ReturnExpression(value, label, currPackage, origin)
+    }
+
+    private fun findExpressionEnd(): Int {
+        var depth = 0
+        var j = i
+        while (j < tokens.size) {
+            when (tokens.getType(j)) {
+                TokenType.OPEN_CALL, TokenType.OPEN_BLOCK, TokenType.OPEN_ARRAY -> depth++
+                TokenType.CLOSE_CALL, TokenType.CLOSE_BLOCK, TokenType.CLOSE_ARRAY -> {
+                    depth--
+                    if (depth < 0) return j
+                }
+                TokenType.SEMICOLON -> if (depth == 0) return j
+                else -> if (depth == 0) {
+                    if (tokens.equals(j, "if", "else", "for", "do", "while")) {
+                        return j
                     }
-                    "!is" -> {
-                        val type = readTypeNotNull(null, true)
-                        IsInstanceOfExpr(expr, type, scope, origin).not()
+                }
+            }
+            j++
+        }
+        return j
+    }
+
+    override fun readExpression(minPrecedence: Int): Expression {
+        tokens.push(findExpressionEnd()) {
+            var expr = readPrefix()
+            if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
+
+            // main elements
+            loop@ while (i < tokens.size) {
+                val symbol = when (tokens.getType(i)) {
+                    TokenType.SYMBOL, TokenType.KEYWORD -> tokens.toString(i)
+                    TokenType.NAME -> break@loop
+                    TokenType.APPEND_STRING -> "+"
+                    else -> {
+                        // postfix
+                        expr = tryReadPostfix(expr) ?: break@loop
+                        continue@loop
                     }
-                    "?:" -> createBranchExpression(
-                        expr, scope, origin,
-                        { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
-                        { fieldExpr, scope -> fieldExpr.clone(scope) }, // not null -> just the field
-                        { scope -> pushScope(scope) { readExpression() } },
-                    )
-                    "?." -> createBranchExpression(
-                        expr, scope, origin,
-                        { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
-                        { fieldExpr, scope ->
-                            pushScope(scope) {
-                                handleDotOperator(fieldExpr.clone(scope))
-                            }
-                        },
-                        { scope -> nullExpr(scope, origin) },
-                    )
-                    "." -> handleDotOperator(expr)
-                    "&&", "||" -> {
-                        val name = currPackage.generateName("shortcut", origin)
-                        val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
-                        if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, origin)
-                        else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
-                    }
-                    "::" -> {
-                        if (tokens.equals(i, "class")) {
-                            when (expr) {
-                                is UnresolvedFieldExpression -> {
-                                    val i0 = i + 1
-                                    i -= 2 // skipping over :: and name
-                                    val type = readTypeNotNull(null, false)
-                                    check(tokens.equals(i++, "::"))
-                                    check(tokens.equals(i++, "class"))
-                                    check(i == i0)
-                                    GetClassFromTypeExpression(type, scope, origin)
-                                }
-                                else -> throw NotImplementedError("Use left side as type ($expr, ${expr.javaClass.simpleName}), then generate ::class")
-                            }
-                        } else {
+                }
+
+                if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
+
+                val op = operators[symbol]
+                if (op == null) {
+                    // postfix
+                    expr = tryReadPostfix(expr) ?: break@loop
+                } else {
+
+                    // todo it could be a lambda:
+                    //  name -> ...
+                    //  or (names,) -> ...
+
+                    if (op.precedence < minPrecedence) break@loop
+
+                    val origin = origin(i)
+                    i++ // consume operator
+
+                    val scope = currPackage
+                    expr = when (symbol) {
+                        "instanceof" -> {
+                            val type = readTypeNotNull(null, true)
+                            val base = IsInstanceOfExpr(expr, type, scope, origin)
+                            if (tokens.equals(i, TokenType.NAME)) {
+                                // assign to temporary field to avoid double-invocation
+                                val tmpField = currPackage.createImmutableField(base.value)
+                                val tmpExpr = FieldExpression(tmpField, currPackage, origin)
+                                val baseWithTmp = base.withValue(tmpExpr)
+                                NamedCastExpression(baseWithTmp, tokens.toString(i++))
+                            } else base
+                        }
+                        // todo validate that this is sufficient for elvis expressions
+                        "?" -> createBranchExpression(
+                            expr, scope, origin,
+                            { fieldExpr -> fieldExpr },
+                            { _, scope ->
+                                pushScope(scope) { readExpression() }
+                            },
+                            { scope ->
+                                consume(":")
+                                pushScope(scope) { readExpression() }
+                            },
+                        )
+                        "." -> handleDotOperator(expr)
+                        "&&", "||" -> {
+                            val name = currPackage.generateName("shortcut", origin)
+                            val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
+                            if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, origin)
+                            else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
+                        }
+                        "::" -> {
+                            val rhs = readRHS(op)
+                            binaryOp(currPackage, expr, op.symbol, rhs)
+                        }
+                        else -> {
+                            // println("Reading RHS, symbol: $symbol")
                             val rhs = readRHS(op)
                             binaryOp(currPackage, expr, op.symbol, rhs)
                         }
                     }
-                    else -> {
-                        // println("Reading RHS, symbol: $symbol")
-                        val rhs = readRHS(op)
-                        binaryOp(currPackage, expr, op.symbol, rhs)
-                    }
                 }
             }
+
+            return expr
         }
-
-        return expr
-    }
-
-    private fun readRHS(op: Operator): Expression =
-        readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
-
-    private fun handleDotOperator(lhs: Expression): Expression {
-        val op = dotOperator
-        val rhs = readRHS(op)
-        if (rhs is CallExpression && rhs.self is MemberNameExpression) {
-            return NamedCallExpression(
-                lhs, rhs.self.name, rhs.self.nameAsImport,
-                rhs.typeParameters, rhs.valueParameters,
-                rhs.scope, rhs.origin
-            )
-        }
-        return binaryOp(currPackage, lhs, op.symbol, rhs)
     }
 
     private fun tryReadPostfix(expr: Expression): Expression? {
@@ -873,15 +852,12 @@ class JavaASTBuilder(
             i >= tokens.size -> null
             tokens.equals(i, TokenType.OPEN_CALL) -> {
                 val origin = origin(i)
-                val params = pushCall { readParameterExpressions() }
-                if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                    pushBlock(ScopeType.LAMBDA, null) { params += NamedParameter(null, readLambda(null)) }
-                }
+                val params = readValueParameters()
                 CallExpression(expr, null, params, origin)
             }
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 val origin = origin(i)
-                val params = pushArray { readParameterExpressions() }
+                val params = pushArray { readValueParametersImpl() }
                 if (consumeIf("=")) {
                     val value = NamedParameter(null, readExpression())
                     NamedCallExpression(
@@ -911,110 +887,101 @@ class JavaASTBuilder(
                     )
                 }
             }
-            tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                val origin = origin(i)
-                val lambda = pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
-                val lambdaParam = NamedParameter(null, lambda)
-                CallExpression(expr, null, listOf(lambdaParam), origin)
-            }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
             consumeIf("--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i - 1))
             else -> null
         }
     }
 
-    private fun readLambda(selfType: SelfType?): Expression {
-        val arrow = tokens.findToken(i, "->")
-        val variables = if (arrow >= 0) {
-            val variables = ArrayList<LambdaVariable>()
-            tokens.push(arrow) {
-                while (i < tokens.size) {
-                    if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        val origin0 = origin(i)
-                        val names = ArrayList<LambdaVariable>()
-                        pushCall {
-                            while (i < tokens.size) {
-                                check(tokens.equals(i, TokenType.NAME)) {
-                                    "Expected lambda-variable name at ${tokens.err(i)}"
-                                }
-                                names.add(readLambdaVariable(selfType))
-                                readComma()
-                            }
-                        }
-                        val name = "__ld${variables.size}"
-                        val field = currPackage.addField( // this is more of a parameter...
-                            null, false, isMutable = false, null,
-                            name, null, null, Keywords.SYNTHETIC, origin0
-                        )
-                        val variable = LambdaDestructuring(names, field)
-                        field.byParameter = variable
-                        variables.add(variable)
-                    } else if (tokens.equals(i, TokenType.NAME)) {
-                        variables.add(readLambdaVariable(selfType))
-                    } else throw NotImplementedError()
-                    readComma()
-                }
-            }
-            consume("->")
-            variables
-        } else null
-        val body = readMethodBody()
-        check(currPackage.scopeType == ScopeType.LAMBDA)
-        return LambdaExpression(variables, currPackage, body)
+    private fun readBreakLabel(): Scope {
+        return resolveBreakLabel(readBreakLabelName())
     }
 
-    private fun readLambdaVariable(selfType: Type?): LambdaVariable {
-        val origin = origin(i)
-        val name = tokens.toString(i++)
-        val type = readTypeOrNull(selfType)
-        // to do we neither know type nor initial value :/, both come from the called function/set variable
-        val field = currPackage.addField( // this is more of a parameter...
-            null, false, isMutable = false, null,
-            name, null, null, Keywords.NONE, origin
-        )
-        val variable = LambdaVariable(type, field)
-        field.byParameter = variable
-        return variable
+    private fun readBreakLabelName(): String? {
+        i++
+        return if (consumeIf("@")) {
+            check(tokens.equals(i, TokenType.NAME)) {
+                "Expected name for label, got ${tokens.err(i)}"
+            }
+            tokens.toString(i++)
+        } else null
     }
 
     override fun readMethodBody(): ExpressionList {
         val methodScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()
-        if (LOGGER.isDebugEnabled) LOGGER.debug("reading function body[$i], ${tokens.err(i)}")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading method body[$i], ${tokens.err(i)}")
         if (debug) tokens.printTokensInBlocks(i)
+
         while (i < tokens.size) {
             val oldSize = result.size
             val oldNumFields = currPackage.fields.size
 
+            println("Reading method body, ${tokens.err(i)}")
+
             when {
-                tokens.equals(i, TokenType.CLOSE_BLOCK) ->
-                    throw IllegalStateException("} in the middle at ${tokens.err(i)}")
                 consumeIf(";") -> {} // skip
                 consumeIf("@") -> annotations.add(readAnnotation())
+                consumeIf("if") -> result += readIfBranch()
+                consumeIf("do") -> result += readDoWhileLoop(null)
+                consumeIf("while") -> result += readWhileLoop(null)
+                consumeIf("for") -> result += readForLoop(null)
+                consumeIf("switch") -> result += readSwitchCase(null)
+                consumeIf("try") -> result += readTryCatch()
+                consumeIf("break") -> {
+                    val origin = origin(i - 1)
+                    result += BreakExpression(readBreakLabel(), currPackage, origin)
+                    consume(";")
+                }
+                consumeIf("continue") -> {
+                    val origin = origin(i - 1)
+                    result += ContinueExpression(readBreakLabel(), currPackage, origin)
+                    consume(";")
+                }
+                consumeIf("return") -> {
+                    result += readReturn(readBreakLabelName())
+                }
+                consumeIf("throw") -> {
+                    val origin = origin(i - 1)
+                    result += ThrowExpression(readExpressionWithSemicolon(), currPackage, origin)
+                }
+
+                tokens.equals(i, TokenType.NAME) && tokens.equals(i + 1, "@") &&
+                        tokens.equals(i + 2, TokenType.KEYWORD) -> {
+                    val label = tokens.toString(i++)
+                    consume("@")
+                    result += when {
+                        consumeIf("do") -> readDoWhileLoop(label)
+                        consumeIf("while") -> readWhileLoop(label)
+                        consumeIf("for") -> readForLoop(label)
+                        consumeIf("switch") -> readSwitchCase(label)
+                        else -> throw IllegalStateException("Unknown $label@${tokens.err(i)}")
+                    }
+                }
 
                 // todo we must skip some stuff, before we know whether we read a field declaration,
                 //  or just some assignment, or call
                 // todo methods inside methods aren't supported anyway
 
-                consumeIf("val") || consumeIf("var") -> {
-                    // immediately split scope to avoid duplicate fields on a context
-                    val isMutable = tokens.equals(i - 1, "var")
-                    val oldScope = currPackage
-                    val subName = oldScope.generateName("split")
-                    val newScope = oldScope.getOrPut(subName, ScopeType.METHOD_BODY)
-                    // field shall be declared in newScope, but expr shall be in old scope...
-                    val declaration = readFieldInMethod(isMutable, newScope)
-                    pushScope(newScope) {
-                        val remainder = readMethodBody()
-                        (remainder.list as ArrayList<Expression>).add(0, declaration)
-                        result.add(remainder)
-                    }
-                    break
+                consumeIf("var", VSCodeType.KEYWORD, 0) -> {
+                    val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
+                    result += readDeclaration(null, name)
                 }
+
                 else -> {
-                    result.add(readExpression())
-                    if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")
+                    val tn = readTypeAndName()
+                    if (tn != null) {
+                        result += readDeclaration(tn.first, tn.second)
+                        while (consumeIf(",")) {
+                            val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
+                            result += readDeclaration(tn.first, name)
+                        }
+                    } else {
+                        result.add(readExpression())
+                        consume(";")
+                        if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")
+                    }
                 }
             }
 
@@ -1032,43 +999,49 @@ class JavaASTBuilder(
         return code
     }
 
-    private fun readFieldInMethod(isMutable: Boolean, fieldScope: Scope): Expression {
+    private fun readDeclaration(type: Type?, name: String): ExpressionList {
+        val oldScope = currPackage
+        val subName = oldScope.generateName("split")
+        val newScope = oldScope.getOrPut(subName, ScopeType.METHOD_BODY)
+        // field shall be declared in newScope, but expr shall be in old scope...
+        val declaration = readFieldInMethod(type, name, newScope)
+        return pushScope(newScope) {
+            val remainder = readMethodBody()
+            (remainder.list as ArrayList<Expression>).add(0, declaration)
+            remainder
+        }
+    }
+
+    private fun readFieldInMethod(
+        type: Type?, name: String,
+        fieldScope: Scope
+    ): Expression {
 
         val i0 = i
         val origin = origin(i0)
-        var afterName = i
-        while (afterName < tokens.size) {
-            if (tokens.equals(afterName, ":", "=")) break
-            else afterName++
-        }
+        val isMutable = !keywords.hasFlag(Keywords.FINAL)
 
-        val selfType = if (afterName > i + 1) {
-            check(tokens.equals(afterName - 2, ".")) {
-                "Expected dot to separate type and name for field at ${tokens.err(i0)}"
-            }
-            val type = tokens.push(afterName - 2) {
-                readType(null, true)
-            }
-            consume(".")
-            check(i == afterName - 1) { "Unused tokens at ${tokens.err(i)}" }
-            type
-        } else null
-
-        val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
         val keywords = packKeywords()
 
         if (LOGGER.isDebugEnabled) LOGGER.debug("reading var/val $name")
 
-        val type = readTypeOrNull(null)
         val initialValue = if (consumeIf("=")) readExpression() else null
         check(type != null || initialValue != null) { "Field at ${tokens.err(i0)} either needs a type or a value" }
+        consume(";")
 
         // define variable in the scope
         val field = fieldScope.addField(
-            selfType, selfType != null, isMutable = isMutable, null,
+            null, false, isMutable = isMutable, null,
             name, type, initialValue, keywords, origin
         )
 
         return createDeclarationExpression(fieldScope, initialValue, field)
+    }
+
+    private fun readTypeAndName(): Pair<Type, String>? {
+        val type = readType(null, true) ?: return null
+        if (!tokens.equals(i, TokenType.NAME)) return null
+        val name = tokens.toString(i++)
+        return type to name
     }
 }

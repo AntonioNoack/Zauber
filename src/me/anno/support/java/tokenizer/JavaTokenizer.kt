@@ -5,20 +5,26 @@ import me.anno.zauber.tokenizer.ZauberTokenizerBase
 class JavaTokenizer(src: String, fileName: String) :
     ZauberTokenizerBase(src, fileName, KEYWORDS) {
 
+    init {
+        supportsDollarInName = true
+    }
+
     companion object {
         private val KEYWORDS = setOf(
             "true", "false", "null",
             "package", "import",
             "class", "interface",
-            "abstract", "override",
+            "abstract", "override", "final",
+            "public", "private", "protected",
 
             "if", "else", "do", "while", "switch", "for",
             "break", "continue",
             "return", "throw",
             "instanceof",
 
-            "super", "this",
-            "try", "catch", "finally"
+            "super", "this", "new",
+            "try", "catch", "finally",
+            "static", "void", "volatile",
         )
     }
 }

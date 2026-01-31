@@ -1,4 +1,4 @@
-package me.anno.cpp.typeresolution
+package me.anno.support.cpp.typeresolution
 
 import me.anno.support.cpp.ast.rich.CppASTBuilder
 import me.anno.support.cpp.ast.rich.CppStandard

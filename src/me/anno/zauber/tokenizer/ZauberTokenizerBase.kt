@@ -7,8 +7,10 @@ abstract class ZauberTokenizerBase(
 
     var supportsTickedNames = false
     var hasNotAsNotIn = false
+    var supportsDollarInName = false
 
     override fun tokenize(): TokenList {
+        val nameLetters = if (supportsDollarInName) "_$" else "_"
         while (i < n) {
             val c = src[i]
             when {
@@ -20,10 +22,10 @@ abstract class ZauberTokenizerBase(
                 c == '/' && i + 1 < n && src[i + 1] == '*' -> skipBlockComment()
 
                 // identifiers
-                c.isLetter() || c == '_' -> {
+                c.isLetter() || c in nameLetters -> {
                     val start = i
                     i++
-                    while (i < n && (src[i].isLetterOrDigit() || src[i] == '_')) i++
+                    while (i < n && (src[i].isLetterOrDigit() || src[i] in nameLetters)) i++
                     if (i < n && src[i] == '@') {
                         tokens.add(TokenType.LABEL, start, i)
                         i++

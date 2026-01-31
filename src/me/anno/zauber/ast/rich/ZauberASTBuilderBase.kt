@@ -2,23 +2,33 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
-import me.anno.zauber.ast.rich.controlflow.Catch
-import me.anno.zauber.ast.rich.controlflow.DoWhileLoop
-import me.anno.zauber.ast.rich.controlflow.Finally
-import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.controlflow.TryCatchBlock
-import me.anno.zauber.ast.rich.controlflow.WhileLoop
+import me.anno.support.java.ast.JavaASTBuilder
+import me.anno.support.java.ast.JavaASTClassScanner
+import me.anno.support.java.ast.NamedCastExpression
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.resolveTypeAliases
+import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.binaryOp
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.*
 import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.ByteType
+import me.anno.zauber.types.Types.CharType
+import me.anno.zauber.types.Types.DoubleType
+import me.anno.zauber.types.Types.FloatType
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.NumberType
+import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType.typeOrNull
@@ -114,9 +124,62 @@ abstract class ZauberASTBuilderBase(
         return pushCall { readExpression() }
     }
 
+    fun readValueParameters(): ArrayList<NamedParameter> {
+        return pushCall { readValueParametersImpl() }
+    }
+
+    fun readValueParametersImpl(): ArrayList<NamedParameter> {
+        val parameters = ArrayList<NamedParameter>()
+        while (i < tokens.size) {
+            val name = if (
+                (this !is JavaASTBuilder && this !is JavaASTClassScanner) &&
+                tokens.equals(i, TokenType.NAME) &&
+                tokens.equals(i + 1, "=")
+            ) {
+                val name = tokens.toString(i)
+                i += 2
+                name
+            } else null
+            val value = readExpression()
+            val param = NamedParameter(name, value)
+            println("param[${parameters.size}]: $name=$value")
+            parameters.add(param)
+            if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
+            readComma()
+        }
+        return parameters
+    }
+
+    fun readRHS(op: Operator): Expression =
+        readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
+
+    fun handleDotOperator(lhs: Expression): Expression {
+        val op = dotOperator
+        val rhs = readRHS(op)
+        if (rhs is CallExpression && rhs.self is MemberNameExpression) {
+            return NamedCallExpression(
+                lhs, rhs.self.name, rhs.self.nameAsImport,
+                rhs.typeParameters, rhs.valueParameters,
+                rhs.scope, rhs.origin
+            )
+        }
+        return binaryOp(currPackage, lhs, op.symbol, rhs)
+    }
+
     fun readIfBranch(): IfElseBranch {
+        val origin = origin(i)
         val condition = readExpressionCondition()
-        val ifTrue = readBodyOrExpression(null)
+        val ifTrue = if (condition is NamedCastExpression) {
+            // to do we could use the same scope for field and body...
+            pushScope(ScopeType.METHOD_BODY, "cast") { scopeForField ->
+                scopeForField.addField(
+                    null, false, false, null,
+                    condition.newName, condition.instanceTest.type,
+                    null, Keywords.NONE, origin
+                )
+                readBodyOrExpression(null)
+            }
+        } else readBodyOrExpression(null)
         val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
             i++
             readBodyOrExpression(null)
@@ -181,6 +244,11 @@ abstract class ZauberASTBuilderBase(
         if (consumeIf("*", VSCodeType.TYPE, 0)) {
             return UnknownType
         }
+        if (this is JavaASTBuilder || this is JavaASTClassScanner) {
+            if (consumeIf("?", VSCodeType.TYPE, 0)) {
+                return UnknownType
+            }
+        }
 
         var base = readTypeExpr(selfType, allowSubTypes, insideTypeParams)
             ?: run {
@@ -210,6 +278,35 @@ abstract class ZauberASTBuilderBase(
         return base
     }
 
+    fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
+        val name = scopeName ?: currPackage.generateName(scopeType.name, origin(i))
+        return pushScope(name, scopeType) { scope ->
+            readInBlock(scope, readImpl)
+        }
+    }
+
+    fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
+        return pushScope(scope) {
+            readInBlock(scope, readImpl)
+        }
+    }
+
+    fun <R> readInBlock(childScope: Scope, readImpl: (Scope) -> R): R {
+        val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
+        val result = tokens.push(blockEnd) { readImpl(childScope) }
+        check(i == blockEnd) {
+            "Tokens were skipped, $i != $blockEnd at ${tokens.err(i)}"
+        }
+        consume(TokenType.CLOSE_BLOCK)
+        return result
+    }
+
+    fun <R> push(endTokenIdx: Int, readImpl: () -> R): R {
+        val result = tokens.push(endTokenIdx, readImpl)
+        i = endTokenIdx + 1 // skip }
+        return result
+    }
+
     private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type? {
 
         if (consumeIf("*", VSCodeType.TYPE, 0)) {
@@ -228,20 +325,22 @@ abstract class ZauberASTBuilderBase(
             }
         }
 
-        if (tokens.equals(i, TokenType.NUMBER)) {
-            if (!insideTypeParams) {
-                throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+        if (this !is JavaASTBuilder && this !is JavaASTClassScanner) {
+            if (tokens.equals(i, TokenType.NUMBER)) {
+                if (!insideTypeParams) {
+                    throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+                }
+                val value = tokens.toString(i++)
+                return ComptimeValue(NumberType, listOf(value))
             }
-            val value = tokens.toString(i++)
-            return ComptimeValue(NumberType, listOf(value))
-        }
 
-        if (tokens.equals(i, TokenType.STRING)) {
-            if (!insideTypeParams) {
-                throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+            if (tokens.equals(i, TokenType.STRING)) {
+                if (!insideTypeParams) {
+                    throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+                }
+                val value = tokens.toString(i++)
+                return ComptimeValue(StringType, listOf(value))
             }
-            val value = tokens.toString(i++)
-            return ComptimeValue(StringType, listOf(value))
         }
 
         val path = readTypePath(selfType) // e.g. ArrayList
@@ -397,9 +496,24 @@ abstract class ZauberASTBuilderBase(
         if (this is ZauberASTBuilder) {
             setLSType(i - 1, VSCodeType.TYPE, 0)
         }
-        when (name) {
-            "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
-            "This" -> return ThisType(resolveSelfTypeI(selfType))
+
+        if (this !is JavaASTBuilder && this !is JavaASTClassScanner) {
+            when (name) {
+                "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
+                "This" -> return ThisType(resolveSelfTypeI(selfType))
+            }
+        } else {
+            when (name) {
+                "byte" -> return ByteType
+                "short" -> return ShortType
+                "char" -> return CharType
+                "int" -> return IntType
+                "long" -> return LongType
+                "float" -> return FloatType
+                "double" -> return DoubleType
+                "boolean" -> return BooleanType
+                "void" -> return UnitType
+            }
         }
 
         var path: Type? = genericParams.last()[name]

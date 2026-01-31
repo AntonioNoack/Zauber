@@ -12,8 +12,8 @@ enum class TokenType {
 
     APPEND_STRING,// special string concat operator
 
-    // todo the following could all be symbols
     COMMA,
+    SEMICOLON,
 
     OPEN_CALL,
     OPEN_BLOCK,

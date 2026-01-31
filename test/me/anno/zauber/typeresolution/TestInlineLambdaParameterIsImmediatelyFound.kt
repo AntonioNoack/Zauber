@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.collectNamedClasses
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.ExpressionList
