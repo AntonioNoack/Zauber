@@ -324,6 +324,9 @@ open class ZauberASTBuilderBase(
         if (!tokens.equals(i, TokenType.NAME)) return null
 
         val name = tokens.toString(i++)
+        if (this is ZauberASTBuilder) {
+            setLSType(i - 1, VSCodeType.TYPE, 0)
+        }
         when (name) {
             "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
             "This" -> return ThisType(resolveSelfTypeI(selfType))

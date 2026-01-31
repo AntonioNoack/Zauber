@@ -430,7 +430,7 @@ class ZauberASTBuilder(
         if (selfType != null) selfType = resolveTypeAliases(selfType)
 
         check(tokens.equals(i, TokenType.NAME))
-        val name = tokens.toString(i++)
+        val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
         val keywords = packKeywords()
 
         val type = readTypeOrNull(selfType)
@@ -996,7 +996,11 @@ class ZauberASTBuilder(
 
             tokens.equals(i, TokenType.NAME) -> {
                 val origin = origin(i)
-                val namePath = consumeName(VSCodeType.VARIABLE, 0)
+                val vsCodeType =
+                    if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
+                        VSCodeType.METHOD
+                    } else VSCodeType.VARIABLE
+                val namePath = consumeName(vsCodeType, 0)
                 val typeArgs = readTypeParameters(null)
                 if (
                     tokens.equals(i, TokenType.OPEN_CALL) &&
@@ -1123,8 +1127,7 @@ class ZauberASTBuilder(
             pushCall {
                 check(tokens.equals(i, TokenType.OPEN_CALL))
                 names = readDestructuringFields()
-                // to do type?
-                check(tokens.equals(i++, "in"))
+                consume("in")
                 iterable = readExpression()
                 check(i == tokens.size)
             }
@@ -1135,11 +1138,9 @@ class ZauberASTBuilder(
             var variableType: Type? = null
             val origin = origin(i)
             pushCall {
-                check(tokens.equals(i, TokenType.NAME))
-                name = tokens.toString(i++)
+                name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
                 variableType = readTypeOrNull(null)
-                // to do type?
-                check(tokens.equals(i++, "in"))
+                consume("in")
                 iterable = readExpression()
                 check(i == tokens.size)
             }
@@ -1198,6 +1199,7 @@ class ZauberASTBuilder(
                         return@push null
                     }
                     tokens.equals(i, "in") || tokens.equals(i, "!in") -> {
+                        setLSType(i, VSCodeType.OPERATOR, 0)
                         val symbol =
                             if (tokens.toString(i++) == "in") SubjectConditionType.CONTAINS
                             else SubjectConditionType.NOT_CONTAINS
@@ -1206,6 +1208,7 @@ class ZauberASTBuilder(
                         conditions.add(SubjectCondition(value, null, symbol, extra))
                     }
                     tokens.equals(i, "is") || tokens.equals(i, "!is") -> {
+                        setLSType(i, VSCodeType.OPERATOR, 0)
                         val symbol =
                             if (tokens.toString(i++) == "is") SubjectConditionType.INSTANCEOF
                             else SubjectConditionType.NOT_INSTANCEOF

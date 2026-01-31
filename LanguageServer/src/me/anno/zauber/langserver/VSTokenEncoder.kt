@@ -15,12 +15,6 @@ class VSTokenEncoder(private val builder: ZauberASTBuilder) {
     private var start = 0
     private var pos = 0
 
-    private fun resetPos() {
-        pos = 0
-        line = 0
-        start = 0
-    }
-
     private fun skipTo(i0: Int) {
         val source = tokens.source
         val i0 = min(i0, source.length)
@@ -52,11 +46,11 @@ class VSTokenEncoder(private val builder: ZauberASTBuilder) {
     }
 
     private var nextComment = 0
-    private fun pushCommentsUntil(i0c: Int) {
+    private fun pushCommentsUntil(maxI: Int) {
         while (nextComment < tokens.numComments) {
             val i0 = tokens.comments[nextComment * 2]
             val i1 = tokens.comments[nextComment * 2 + 1]
-            if (i1 > i0c) return
+            if (i1 > maxI) return
 
             push(VSCodeType.COMMENT.ordinal, 0, i0, i1)
             nextComment++
