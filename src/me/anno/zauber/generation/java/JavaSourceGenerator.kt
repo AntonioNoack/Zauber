@@ -363,6 +363,7 @@ object JavaSourceGenerator : Generator() {
             appendConstructors(scope, className)
             appendMethods(scope)
 
+            @Suppress("Since15")
             specializations.removeLast()
 
             // inner classes

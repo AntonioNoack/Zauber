@@ -1,11 +1,13 @@
 package me.anno.zauber.types.impl
 
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NullableAnyType
 
 /**
  * A scope, but also with optional type arguments,
@@ -31,16 +33,39 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     ) emptyParameterList() else typeParameters
 
     companion object {
+
+        /**
+         * yes for compiling,
+         * no for language server
+         * */
+        var strictMode = true
+
         fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
-            check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
-            check(clazz.typeParameters.size == typeParams.size) {
-                "Incorrect number of typeParams for $clazz, expected ${clazz.typeParameters.size}, got ${typeParams.size}"
+            if (strictMode) {
+                check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
+                check(clazz.typeParameters.size == typeParams.size) {
+                    "Incorrect number of typeParams for $clazz, expected ${clazz.typeParameters.size}, got ${typeParams.size}"
+                }
             }
-            val result = ParameterList(clazz.typeParameters)
-            for (i in typeParams.indices) {
-                result.set(i, typeParams[i], InsertMode.READ_ONLY)
+            if (clazz.typeParameters.size == typeParams.size) {
+                val result = ParameterList(clazz.typeParameters)
+                for (i in typeParams.indices) {
+                    result.set(i, typeParams[i], InsertMode.READ_ONLY)
+                }
+                return result
+            } else {
+                val fallbackGenerics = List(typeParams.size) {
+                    Parameter(
+                        it, ('A' + it).toString(),
+                        NullableAnyType, clazz, -1
+                    )
+                }
+                val result = ParameterList(fallbackGenerics)
+                for (i in typeParams.indices) {
+                    result.set(i, typeParams[i], InsertMode.READ_ONLY)
+                }
+                return result
             }
-            return result
         }
     }
 

@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -85,6 +86,16 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         } else false
     }
 
+    fun consumeIf(string: String, vsCodeType: VSCodeType, modifiers: Int): Boolean {
+        return if (tokens.equals(i, string) && !tokens.equals(i, TokenType.STRING)) {
+            if (this is ZauberASTBuilder) {
+                setLSType(i, vsCodeType, modifiers)
+            }
+            i++
+            true
+        } else false
+    }
+
     fun consumeIf(type: TokenType): Boolean {
         return if (tokens.equals(i, type)) {
             i++
@@ -105,6 +116,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     }
 
     fun popGenericParams() {
+        @Suppress("Since15")
         genericParams.removeLast()
     }
 

@@ -22,9 +22,5 @@ enum class TokenType {
     CLOSE_CALL,
     CLOSE_BLOCK,
     CLOSE_ARRAY,
-
-    LINE_COMMENT,
-    BLOCK_COMMENT
-
     ;
 }

@@ -7,14 +7,17 @@ abstract class Tokenizer(val src: String, fileName: String) {
     val tokens = TokenList(src, fileName)
     var tokenizeComments = false
 
+    fun withComments(): Tokenizer {
+        tokenizeComments = true
+        return this
+    }
+
     fun skipLineComment() {
         val i0 = i
         check(src.startsWith("//", i))
         i += 2
         while (i < n && src[i] != '\n') i++
-        if (tokenizeComments) {
-            tokens.add(TokenType.LINE_COMMENT, i0, i - 1)
-        }
+        if (tokenizeComments) tokens.addComment(i0, i)
     }
 
     fun skipBlockComment() {
@@ -28,9 +31,7 @@ abstract class Tokenizer(val src: String, fileName: String) {
             i++
         }
         i++ // skip last symbol
-        if (tokenizeComments) {
-            tokens.add(TokenType.BLOCK_COMMENT, i0, i - 1)
-        }
+        if (tokenizeComments) tokens.addComment(i0, i)
     }
 
     abstract fun tokenize(): TokenList

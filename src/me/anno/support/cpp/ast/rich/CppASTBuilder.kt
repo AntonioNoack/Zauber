@@ -1,7 +1,6 @@
-package me.anno.cpp.ast.rich
+package me.anno.support.cpp.ast.rich
 
-import me.anno.cpp.tokenizer.CppTokenizer.Companion.cKeywords
-import me.anno.cpp.tokenizer.CppTokenizer.Companion.cppKeywords
+import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
@@ -47,7 +46,7 @@ class CppASTBuilder(
     }
 
     val language = standard.kind()
-    val knownKeywords = if (language == LanguageKind.C) cKeywords else cppKeywords
+    val knownKeywords = if (language == LanguageKind.C) CppTokenizer.Companion.cKeywords else CppTokenizer.Companion.cppKeywords
 
     fun readFile() {
         while (i < tokens.size) {

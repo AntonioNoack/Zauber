@@ -1,8 +1,8 @@
 package me.anno.cpp.typeresolution
 
-import me.anno.cpp.ast.rich.CppASTBuilder
-import me.anno.cpp.ast.rich.CppStandard
-import me.anno.cpp.tokenizer.CppTokenizer
+import me.anno.support.cpp.ast.rich.CppASTBuilder
+import me.anno.support.cpp.ast.rich.CppStandard
+import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames

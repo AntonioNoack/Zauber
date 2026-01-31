@@ -200,6 +200,7 @@ class Runtime {
             thisStack.addAll(oldThisStack)
         }
 
+        @Suppress("Since15")
         check(callStack.removeLast() === call)
         // println("Returning $result from call to $method")
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
@@ -243,6 +244,7 @@ class Runtime {
                 }
             } finally {
                 while (thisStack.size > tss) {
+                    @Suppress("Since15")
                     thisStack.removeLast()
                 }
             }

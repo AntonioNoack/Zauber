@@ -1,4 +1,4 @@
-package me.anno.cpp.tokenizer
+package me.anno.support.cpp.tokenizer
 
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType

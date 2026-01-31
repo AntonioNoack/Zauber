@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.langserver.VSCodeModifier
+import me.anno.langserver.VSCodeType
 import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
@@ -87,16 +89,33 @@ class ZauberASTBuilder(
         }
     }
 
+    val lsTypes = IntArray(tokens.size).apply { fill(-1) }
+    val lsModifiers = IntArray(tokens.size)
+
+    fun setLSType(i: Int, type: VSCodeType, modifiers: Int) {
+        lsTypes[i] = type.ordinal
+        lsModifiers[i] = modifiers
+    }
+
+    init {
+        // numbers and strings are trivial to fill
+        for (i in 0 until tokens.size) {
+            lsTypes[i] = when (tokens.getType(i)) {
+                TokenType.NUMBER -> VSCodeType.NUMBER
+                TokenType.STRING -> VSCodeType.STRING
+                TokenType.SYMBOL -> VSCodeType.OPERATOR
+                TokenType.KEYWORD -> VSCodeType.KEYWORD
+                else -> continue
+            }.ordinal
+        }
+    }
+
     // todo assign them appropriately
     val annotations = ArrayList<Annotation>()
 
     private fun readClass(scopeType: ScopeType) {
-        check(tokens.equals(i, TokenType.NAME)) {
-            "Expected name after 'class' at ${tokens.err(i)}"
-        }
-
         val origin = origin(i)
-        val name = tokens.toString(i++)
+        val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
 
         val keywords = packKeywords()
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
@@ -190,10 +209,7 @@ class ZauberASTBuilder(
     }
 
     private fun readInterface() {
-        check(tokens.equals(i, TokenType.NAME)) {
-            "Expected name after 'interface' at ${tokens.err(i)}"
-        }
-        val name = tokens.toString(i++)
+        val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
         val keywords = packKeywords()
         clazz.typeParameters = readTypeParameterDeclarations(clazz)
@@ -213,8 +229,8 @@ class ZauberASTBuilder(
     private fun readObject(scopeType: ScopeType) {
         val origin = origin(i - 1)
         val isCompanionObject = scopeType == ScopeType.COMPANION_OBJECT
-        val name = if (tokens.equals(i, TokenType.NAME)) {
-            tokens.toString(i++)
+        val name = if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
+            consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
         } else if (isCompanionObject) {
             "Companion"
         } else throw IllegalStateException("Missing object name at ${tokens.err(i)}")
@@ -337,10 +353,10 @@ class ZauberASTBuilder(
             while (i < tokens.size) {
                 // read enum value
                 readAnnotations()
-                check(tokens.equals(i, TokenType.NAME))
 
                 val origin = origin(i)
-                val name = tokens.toString(i++)
+                val name = consumeName(VSCodeType.DECORATOR, 0)
+
                 val typeParameters = readTypeParameters(null)
                 val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                     pushCall { readParamExpressions() }
@@ -539,7 +555,7 @@ class ZauberASTBuilder(
         val selfType = selfType0 ?: getSelfType(methodScope)
 
         check(tokens.equals(i, TokenType.NAME))
-        val name = tokens.toString(i++)
+        val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 
         if (LOGGER.isDebugEnabled) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
 
@@ -770,6 +786,7 @@ class ZauberASTBuilder(
                 consumeIf("final") -> Keywords.FINAL
                 else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
             }
+            setLSType(i - 1, VSCodeType.KEYWORD, 0)
             return
         }
 
@@ -812,16 +829,17 @@ class ZauberASTBuilder(
                     consumeIf("crossinline") -> Keywords.CROSS_INLINE
                     else -> break
                 }
+                setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }
 
-            val isVararg = consumeIf("vararg")
-            val isVar = consumeIf("var")
-            val isVal = consumeIf("val")
+            val isVararg = consumeIf("vararg", VSCodeType.KEYWORD, 0)
+            val isVar = consumeIf("var", VSCodeType.KEYWORD, 0)
+            val isVal = consumeIf("val", VSCodeType.KEYWORD, 0)
 
             when {
                 tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD) -> {
                     val origin = origin(i)
-                    val name = tokens.toString(i++)
+                    val name = consumeName(VSCodeType.PARAMETER, 0)
                     consume(":")
 
                     var type = readTypeNotNull(null, true) // <-- handles generics now
@@ -903,7 +921,7 @@ class ZauberASTBuilder(
             else null
 
         return when {
-            consumeIf("@") -> {
+            consumeIf("@", VSCodeType.DECORATOR, 0) -> {
                 val annotation = readAnnotation()
                 AnnotatedExpression(annotation, readPrefix())
             }
@@ -960,11 +978,11 @@ class ZauberASTBuilder(
                 val origin = origin(i - 1)
                 ThrowExpression(readExpression(), currPackage, origin)
             }
-            consumeIf("yield") -> {
+            consumeIf("yield", VSCodeType.KEYWORD, 0) -> {
                 val origin = origin(i - 1)
                 YieldExpression(readExpression(), currPackage, origin)
             }
-            consumeIf("async") -> {
+            consumeIf("async", VSCodeType.KEYWORD, 0) -> {
                 val origin = origin(i - 1)
                 AsyncExpression(readExpression(), currPackage, origin)
             }
@@ -978,7 +996,7 @@ class ZauberASTBuilder(
 
             tokens.equals(i, TokenType.NAME) -> {
                 val origin = origin(i)
-                val namePath = tokens.toString(i++)
+                val namePath = consumeName(VSCodeType.VARIABLE, 0)
                 val typeArgs = readTypeParameters(null)
                 if (
                     tokens.equals(i, TokenType.OPEN_CALL) &&
@@ -1841,8 +1859,7 @@ class ZauberASTBuilder(
         val names = ArrayList<FieldDeclaration>()
         pushCall {
             while (i < tokens.size) {
-                check(tokens.equals(i, TokenType.NAME))
-                val name = tokens.toString(i++)
+                val name = consumeName(VSCodeType.VARIABLE, 0)
                 val type = readTypeOrNull(null)
                 names.add(FieldDeclaration(name, type))
                 readComma()
@@ -1888,8 +1905,7 @@ class ZauberASTBuilder(
             type
         } else null
 
-        check(tokens.equals(i, TokenType.NAME))
-        val name = tokens.toString(i++)
+        val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
         val keywords = packKeywords()
 
         if (LOGGER.isDebugEnabled) LOGGER.debug("reading var/val $name")

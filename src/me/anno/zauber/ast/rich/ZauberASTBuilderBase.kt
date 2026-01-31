@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.langserver.VSCodeModifier
+import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
@@ -42,8 +44,7 @@ open class ZauberASTBuilderBase(
     }
 
     fun readTypeAlias() {
-        check(tokens.equals(i, TokenType.NAME))
-        val newName = tokens.toString(i++)
+        val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val pseudoScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
         pseudoScope.typeParameters = readTypeParameterDeclarations(pseudoScope)
 
@@ -67,12 +68,11 @@ open class ZauberASTBuilderBase(
         tokens.push(i++, "<", ">") {
             while (i < tokens.size) {
                 // todo store & use these?
-                if (tokens.equals(i, "in")) i++
-                if (tokens.equals(i, "out")) i++
+                consumeIf("in")
+                consumeIf("out")
 
-                check(tokens.equals(i, TokenType.NAME)) { "Expected type parameter name" }
                 val origin = origin(i)
-                val name = tokens.toString(i++)
+                val name = consumeName(VSCodeType.TYPE_PARAM, 0)
 
                 // name might be needed for the type, so register it already here
                 genericParams.last()[name] = GenericType(classScope, name)
@@ -107,10 +107,10 @@ open class ZauberASTBuilderBase(
         isAndType: Boolean, insideTypeParams: Boolean
     ): Type? {
         val i0 = i
-        val negate = tokens.equals(i, "!")
-        if (negate) i++
-
-        if (consumeIf("*")) return UnknownType
+        val negate = consumeIf("!", VSCodeType.OPERATOR, 0)
+        if (consumeIf("*", VSCodeType.TYPE, 0)) {
+            return UnknownType
+        }
 
         var base = readTypeExpr(selfType, allowSubTypes, insideTypeParams)
             ?: run {
@@ -118,26 +118,22 @@ open class ZauberASTBuilderBase(
                 return null
             }
 
-        if (allowSubTypes && tokens.equals(i, ".")) {
-            i++
+        if (allowSubTypes && consumeIf(".")) {
             base = readType(base, true, isAndType, insideTypeParams)
                 ?: throw IllegalStateException("Expected to be able to read subtype")
             return if (negate) base.not() else base
         }
 
-        if (tokens.equals(i, "?")) {
-            i++
+        if (consumeIf("?")) {
             base = typeOrNull(base)
         }
 
         if (negate) base = base.not()
-        while (tokens.equals(i, "&")) {
-            i++
+        while (consumeIf("&", VSCodeType.OPERATOR, 0)) {
             val typeB = readType(null, allowSubTypes, true, insideTypeParams)!!
             base = andTypes(base, typeB)
         }
-        if (!isAndType && tokens.equals(i, "|")) {
-            i++
+        if (!isAndType && consumeIf("|", VSCodeType.OPERATOR, 0)) {
             val typeB = readType(null, allowSubTypes, false, insideTypeParams)!!
             return unionTypes(base, typeB)
         }
@@ -146,8 +142,7 @@ open class ZauberASTBuilderBase(
 
     private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type? {
 
-        if (tokens.equals(i, "*")) {
-            i++
+        if (consumeIf("*", VSCodeType.TYPE, 0)) {
             return UnknownType
         }
 
@@ -204,7 +199,13 @@ open class ZauberASTBuilderBase(
 
     fun readTypeParameters(selfType: Type?): List<Type>? {
         if (i < tokens.size) {
-            if (LOGGER.isDebugEnabled) LOGGER.debug("checking for type-args, ${tokens.err(i)}, ${isTypeArgsStartingHere(i)}")
+            if (LOGGER.isDebugEnabled) LOGGER.debug(
+                "checking for type-args, ${tokens.err(i)}, ${
+                    isTypeArgsStartingHere(
+                        i
+                    )
+                }"
+            )
         }
         // having type arguments means they no longer need to be resolved
         // todo any method call without them must resolve which ones and how many there are, e.g. mapOf, listOf, ...
@@ -217,17 +218,14 @@ open class ZauberASTBuilderBase(
         val args = ArrayList<Type>()
         while (true) {
             // todo store these (?)
-            if (tokens.equals(i, "in")) i++
-            if (tokens.equals(i, "out")) i++
+            consumeIf("in")
+            consumeIf("out")
             val type = readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
                 ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
             args.add(type) // recursive type
             when {
-                tokens.equals(i, TokenType.COMMA) -> i++
-                tokens.equals(i, ">") -> {
-                    i++ // consume '>'
-                    break
-                }
+                consumeIf(",") -> {}
+                consumeIf(">") -> break
                 else -> throw IllegalStateException("Expected , or > in type arguments, got ${tokens.err(i)}")
             }
         }
@@ -323,7 +321,8 @@ open class ZauberASTBuilderBase(
      * ClassType | SelfType
      * */
     fun readTypePath(selfType: Type?): Type? {
-        check(tokens.equals(i, TokenType.NAME))
+        if (!tokens.equals(i, TokenType.NAME)) return null
+
         val name = tokens.toString(i++)
         when (name) {
             "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
@@ -349,16 +348,28 @@ open class ZauberASTBuilderBase(
 
         // todo support deeper unresolved types??
         while (tokens.equals(i, ".") && tokens.equals(i + 1, TokenType.NAME)) {
-            val name = tokens.toString(i + 1)
+            i++ // skip period
+            val name = consumeName(VSCodeType.TYPE, 0)
             path = if (path is ClassType && !path.clazz.isTypeAlias()) {
                 path.clazz.getOrPut(name, null).typeWithoutArgs
             } else {
                 UnresolvedSubType(path!!, name, currPackage, imports)
             }
-            i += 2 // skip period and name
         }
 
         return path
     }
 
+    fun consumeName(vsCodeType: VSCodeType, modifiers: Int): String {
+        check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
+            "Expected name for $vsCodeType"
+        }
+        val name = tokens.toString(i)
+        if (this is ZauberASTBuilder) {
+            lsTypes[i] = vsCodeType.ordinal
+            lsModifiers[i] = modifiers
+        }
+        i++
+        return name
+    }
 }

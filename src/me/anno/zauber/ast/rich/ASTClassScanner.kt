@@ -193,6 +193,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
                 TokenType.OPEN_CALL, TokenType.OPEN_ARRAY -> depth++
                 TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY -> depth--
                 TokenType.CLOSE_BLOCK -> {
+                    @Suppress("Since15")
                     if (listening.removeLast()) {
                         currPackage = currPackage.parent ?: root
                     } else depth--

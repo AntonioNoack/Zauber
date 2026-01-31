@@ -1,4 +1,4 @@
-package me.anno.cpp.ast.rich
+package me.anno.support.cpp.ast.rich
 
 enum class CppStandard {
     C89, C99, C11, C17,

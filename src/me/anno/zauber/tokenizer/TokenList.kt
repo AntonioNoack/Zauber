@@ -10,6 +10,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(TokenList::class)
+        private val i0 = IntArray(0)
     }
 
     var size = 0
@@ -18,6 +19,20 @@ class TokenList(val source: CharSequence, val fileName: String) {
     private var tokenTypes = ByteArray(16)
     private var offsets = IntArray(32)
     val totalSize get() = tokenTypes.size
+
+    var comments = i0
+    var numComments = 0
+
+    fun addComment(i0: Int, i1: Int) {
+        if (numComments * 2 >= comments.size) {
+            val newSize = max(numComments * 2, 16)
+            comments = comments.copyOf(newSize * 2)
+        }
+
+        val i = (numComments++) * 2
+        comments[i] = i0
+        comments[i + 1] = i1
+    }
 
     inline fun <R> push(
         i: Int, open: TokenType, close: TokenType,
