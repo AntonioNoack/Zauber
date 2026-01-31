@@ -143,38 +143,38 @@ so if you don't use it, you don't need the (space)overhead.
 
 ### Progress Estimation
 
-Total Progress: 1.2 %
+Total Progress: 2.3 %
 
 ```yaml
 - Kotlin-Style:
   - Tokenizer: 90% of 1%
-  - AST: 80% of 3%
-  - Typealias: 50% of 0.2%
-  - Type-Resolution: 30% of 4%
-  - Baking(comptime) Generics: 0% of 2%
+  - AST: 85% of 3%
+  - Typealias: 75% of 0.2%
+  - Type-Resolution: 70% of 4%
+  - Baking(comptime) Generics: 50% of 2%
   - Dependency-Optimization: 0% of 4%
 - Rust-style Macros: 0% of 3%
 - Compile to C/C++: 1% of 3%
-- Choose Allocator for Instantiation: 0% of 3%
+- Choose Allocator for Instantiation: 10% of 3%
 - Arena Allocator: 0% of 2%
 - Store struct members on stack: 0% of 3%
 - Automatic Struct Of Arrays: 0% of 2%
-- Compile to JVM: 0% of 3%
+- Compile to JVM: 10% of 3%
 - Compile to WASM: 0% of 3%
 - Debug-Compile to x86 directly: 0% of 4%
 - Hot-reloading functions: 0% of 5%
 - JVM bindings for FileIO, OpenGL/GLFW, println, ...: 0% of 3%
 - WASM bindings for async IO, WebGL, println, ...: 0% of 3%
 - C++ bindings for FileIO, OpenGL, native libraries, ...: 0% of 3%
-- Automatically colored asynchronous Methods: 0% of 3%
+- Automatically colored asynchronous Methods: 5% of 3%
 - Fixed-Point numbers: 0% of 3%
-- Lambdas: 20% of 3%
-- Garbage Collector: 0% of 2%
+- Lambdas: 30% of 3%
+- Garbage Collector: 5% of 2%
 - Multithreading and Parallel GC: 0% of 5%
-- Completely Immutable Objects: 0% of 3%
-- CompileTime Interpreter: 0% of 5%
-- VisualStudioCode Extension for syntax checking: 0% of 3%
-- VisualStudioCode Extension for semantic checking: 0% of 5%
+- Completely Immutable Objects: 5% of 3%
+- CompileTime Interpreter: 10% of 5%
+- VisualStudioCode Extension for syntax checking: 70% of 3%
+- VisualStudioCode Extension for semantic checking: 3% of 5%
 - Intellij Idea Extension for syntax checking: 0% of 3%
 - Intellij Idea Extension for semantic checking: 0% of 5%
 - Custom Code Editor (Necromicon?, Grimoire): 0% of 5%
