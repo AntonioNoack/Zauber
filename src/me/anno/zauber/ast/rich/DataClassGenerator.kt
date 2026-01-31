@@ -60,7 +60,7 @@ object DataClassGenerator {
         }
     }
 
-    fun ZauberASTBuilder.finishDataClass(classScope: Scope) {
+    fun ZauberASTBuilderBase.finishDataClass(classScope: Scope) {
 
         check(currPackage === classScope) { "Expected currPackage to be classScope" }
         val origin = origin(i)
@@ -104,7 +104,7 @@ object DataClassGenerator {
         }
     }
 
-    private fun ZauberASTBuilder.generateHashCodeMethod(
+    private fun ZauberASTBuilderBase.generateHashCodeMethod(
         classScope: Scope, origin: Int,
         primaryFields: List<Field>
     ) {
@@ -130,7 +130,7 @@ object DataClassGenerator {
         )
     }
 
-    private fun ZauberASTBuilder.generateToStringMethod(
+    private fun ZauberASTBuilderBase.generateToStringMethod(
         classScope: Scope, origin: Int,
         primaryFields: List<Field>
     ) {
@@ -155,7 +155,7 @@ object DataClassGenerator {
         )
     }
 
-    private fun ZauberASTBuilder.generateEqualsAnyMethod(
+    private fun ZauberASTBuilderBase.generateEqualsAnyMethod(
         classScope: Scope, origin: Int,
         primaryFields: List<Field>
     ) {

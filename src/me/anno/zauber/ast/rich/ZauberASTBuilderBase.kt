@@ -3,10 +3,19 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
+import me.anno.zauber.ast.rich.controlflow.Catch
+import me.anno.zauber.ast.rich.controlflow.DoWhileLoop
+import me.anno.zauber.ast.rich.controlflow.Finally
+import me.anno.zauber.ast.rich.controlflow.IfElseBranch
+import me.anno.zauber.ast.rich.controlflow.TryCatchBlock
+import me.anno.zauber.ast.rich.controlflow.WhileLoop
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.*
+import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.NumberType
 import me.anno.zauber.types.Types.StringType
@@ -15,7 +24,7 @@ import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
-open class ZauberASTBuilderBase(
+abstract class ZauberASTBuilderBase(
     tokens: TokenList, root: Scope,
     val allowUnresolvedTypes: Boolean
 ) : ASTBuilderBase(tokens, root) {
@@ -42,6 +51,10 @@ open class ZauberASTBuilderBase(
                 ?: (selfType as? ClassType)?.clazz?.resolveType(name, imports)
         }
     }
+
+    abstract fun readMethodBody(): ExpressionList
+    abstract fun readExpression(minPrecedence: Int = 0): Expression
+    abstract fun readBodyOrExpression(label: String?): Expression
 
     fun readTypeAlias() {
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
@@ -95,6 +108,63 @@ open class ZauberASTBuilderBase(
             selfType, allowSubTypes,
             isAndType = false, insideTypeParams = false
         )
+    }
+
+    fun readExpressionCondition(): Expression {
+        return pushCall { readExpression() }
+    }
+
+    fun readIfBranch(): IfElseBranch {
+        val condition = readExpressionCondition()
+        val ifTrue = readBodyOrExpression(null)
+        val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
+            i++
+            readBodyOrExpression(null)
+        } else null
+        // println("Scopes: ${condition.scope}, ${ifTrue.scope}, ${ifFalse?.scope}")
+        return IfElseBranch(condition, ifTrue, ifFalse)
+    }
+
+    fun readWhileLoop(label: String?): WhileLoop {
+        val condition = readExpressionCondition()
+        val body = readBodyOrExpression(label ?: "")
+        return WhileLoop(condition, body, label)
+    }
+
+    fun readDoWhileLoop(label: String?): DoWhileLoop {
+        val body = readBodyOrExpression(label ?: "")
+        check(tokens.equals(i++, "while"))
+        val condition = readExpressionCondition()
+        return DoWhileLoop(body = body, condition = condition, label)
+    }
+
+    abstract fun readParameterDeclarations(selfType: Type?): List<Parameter>
+
+    fun readTryCatch(): TryCatchBlock {
+        val tryBody = readBodyOrExpression(null)
+        val catches = ArrayList<Catch>()
+        while (consumeIf("catch")) {
+            val origin = origin(i - 1)
+            check(tokens.equals(i, TokenType.OPEN_CALL))
+            val catchName = currPackage.generateName("catch", origin)
+            pushScope(catchName, ScopeType.METHOD_BODY) {
+                val params = pushCall { readParameterDeclarations(null) }
+                check(params.size == 1)
+                val handler = readBodyOrExpression(null)
+                catches.add(Catch(params[0], handler))
+            }
+        }
+        val finally = if (consumeIf("finally")) {
+            val origin = origin(i - 1)
+            val body = readBodyOrExpression(null)
+            val flagName = body.scope.generateName("finallyFlag", origin)
+            val flag = body.scope.addField(
+                null, false, true,
+                null, flagName, BooleanType, null, Keywords.SYNTHETIC, origin
+            )
+            Finally(body, flag)
+        } else null
+        return TryCatchBlock(tryBody, catches, finally)
     }
 
     fun readTypeNotNull(selfType: Type?, allowSubTypes: Boolean): Type {

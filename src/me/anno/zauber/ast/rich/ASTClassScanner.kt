@@ -2,6 +2,8 @@ package me.anno.zauber.ast.rich
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.ParameterList
@@ -183,7 +185,7 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
             i = j // skip stuff
         }
 
-        println("Found class '$name', tp: $genericParams, scope: $classScope, scopeType: ${classScope.scopeType}")
+        // println("Found class '$name', tp: $genericParams, scope: $classScope, scopeType: ${classScope.scopeType}")
     }
 
     private fun collectNamedClassesImpl() {
@@ -298,5 +300,21 @@ class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, tr
         }
 
         return false
+    }
+
+    override fun readExpression(minPrecedence: Int): Expression {
+        throw NotImplementedError()
+    }
+
+    override fun readBodyOrExpression(label: String?): Expression {
+        throw NotImplementedError()
+    }
+
+    override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
+        throw NotImplementedError()
+    }
+
+    override fun readMethodBody(): ExpressionList {
+        throw NotImplementedError()
     }
 }

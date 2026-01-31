@@ -1,189 +1,36 @@
 package me.anno.zauber.tokenizer
 
 class ZauberTokenizer(src: String, fileName: String) :
-    Tokenizer(src, fileName) {
+    ZauberTokenizerBase(src, fileName, KEYWORDS) {
 
     companion object {
-        private val KEYWORDS = listOf(
+        private val KEYWORDS = setOf(
             "true", "false", "null",
-            "class", "interface", "object", "package",
+            "class", "interface", "object",
+            "package", "import",
             "val", "var", "vararg", "lateinit", "fun",
             "abstract", "override",
 
             "if", "else", "do", "while", "when", "for",
-            "return", "throw", "yield", "break", "continue",
+            "break", "continue",
+            "return", "throw", "yield",
             "in", "!in", "is", "!is", "as", "as?",
 
             "super", "this",
-            "try", "typealias", "typeof",
+            "typealias",
+            "try", "catch", "finally",
 
             // keywords custom to Zauber:
             "defer", "errdefer", "async"
-        ).toSet()
+        )
     }
 
-    override fun tokenize(): TokenList {
-        while (i < n) {
-            val c = src[i]
-            when {
-                // c == '\n' -> list.add(TokenType.LINE_BREAK, i++, i)
-                c.isWhitespace() -> i++ // skip spaces
-
-                // comments
-                c == '/' && i + 1 < n && src[i + 1] == '/' -> skipLineComment()
-                c == '/' && i + 1 < n && src[i + 1] == '*' -> skipBlockComment()
-
-                // identifiers
-                c.isLetter() || c == '_' -> {
-                    val start = i
-                    i++
-                    while (i < n && (src[i].isLetterOrDigit() || src[i] == '_')) i++
-                    if (i < n && src[i] == '@') {
-                        tokens.add(TokenType.LABEL, start, i)
-                        i++
-                    } else tokens.add(TokenType.NAME, start, i)
-                }
-
-                c == '`' -> {
-                    val start = i++
-                    while (i < n && src[i] != '`') i++
-                    i++ // skip end '`'
-                    tokens.add(TokenType.NAME, start, i)
-                }
-
-                // numbers
-                c.isDigit() -> readNumber()
-
-                // char literal = number
-                c == '\'' -> {
-                    val start = i++
-                    if (i < n && src[i] == '\\') i += 2
-                    while (i < n && src[i] != '\'') i++
-                    if (i < n) i++ // skip \'
-                    tokens.add(TokenType.NUMBER, start, i)
-                }
-
-                // string with interpolation
-                c == '"' -> parseString()
-
-                // special one-char tokens
-                c == ',' -> tokens.add(TokenType.COMMA, i++, i)
-                c == '(' -> tokens.add(TokenType.OPEN_CALL, i++, i)
-                c == ')' -> tokens.add(TokenType.CLOSE_CALL, i++, i)
-                c == '{' -> tokens.add(TokenType.OPEN_BLOCK, i++, i)
-                c == '}' -> tokens.add(TokenType.CLOSE_BLOCK, i++, i)
-                c == '[' -> tokens.add(TokenType.OPEN_ARRAY, i++, i)
-                c == ']' -> tokens.add(TokenType.CLOSE_ARRAY, i++, i)
-
-                c == '?' -> {
-                    // parse 'as?'
-                    if (tokens.size > 0 && tokens.equals(tokens.size - 1, "as")) {
-                        val i0 = tokens.getI0(tokens.size - 1)
-                        tokens.removeLast()
-                        tokens.add(TokenType.SYMBOL, i0, ++i)
-                    } else tokens.add(TokenType.SYMBOL, i++, i)
-                }
-
-                c == '!' -> {
-                    // parse !in and !is
-                    if (i + 3 < src.length && src[i + 1] == 'i' && src[i + 2] in "sn" && src[i + 3].isWhitespace()) {
-                        tokens.add(TokenType.SYMBOL, i, i + 3)
-                        i += 3
-                    } else tokens.add(TokenType.SYMBOL, i++, i)
-                }
-
-                c == '.' -> {
-                    // parse !in and !is
-                    if (i + 1 < src.length && src[i + 1].isDigit() &&
-                        !(i > 0 && src[i - 1] == '.')
-                    ) {
-                        readNumber()
-                    } else tokens.add(TokenType.SYMBOL, i++, i)
-                }
-
-                // symbols
-                else -> tokens.add(TokenType.SYMBOL, i++, i)
-            }
-        }
-        convertHardKeywords()
-        return tokens
+    init {
+        supportsTickedNames = true
+        hasNotAsNotIn = true
     }
 
-    private fun readInteger() {
-        while (i < n && (src[i] in '0'..'9' || src[i] == '_')) i++
-    }
-
-    private fun readExponent() {
-        if (i < n && src[i] in "eE") {
-            i++
-            if (src[i] in "+-") i++
-            readInteger()
-        }
-    }
-
-    private fun readBinaryExponent() {
-        if (i < n && src[i] in "pP") {
-            i++
-            if (src[i] in "+-") i++
-            readInteger()
-        }
-    }
-
-    private fun readCommaDigits() {
-        if (i + 1 < n && src[i] == '.' && src[i + 1] in '0'..'9') {
-            i += 2
-            readInteger()
-        }
-    }
-
-    private fun readNumber() {
-        val start = i++
-        var first = src[start]
-        if (first in "+-") {
-            first = src[i]
-            i++
-        }
-        @Suppress("IntroduceWhenSubject")
-        when {
-            first == '0' && i < n && src[i] in "xX" -> {
-                i++ // skip 0x
-                while (i < n && (src[i] in '0'..'9' || src[i] in "abcdefABCDEF_")) i++
-                if (i + 1 < n && src[i] == '.' && src[i + 1] in '0'..'9') {
-                    i++
-                    while (i < n && (src[i] in '0'..'9' || src[i] in "abcdefABCDEF_")) i++
-                }
-                readBinaryExponent()
-            }
-            first == '0' && i < n && src[i] in "bB" -> {
-                i++ // skip 0b
-                while (i < n && (src[i] in "01_")) i++
-            }
-            first == '.' -> {
-                readInteger()
-                readExponent()
-            }
-            else -> {
-                readInteger()
-                readCommaDigits()
-                readExponent()
-            }
-        }
-        if (i < n && src[i] in "lLuUfFdDhH") i++
-        tokens.add(TokenType.NUMBER, start, i)
-    }
-
-    private fun convertHardKeywords() {
-        for (i in 0 until tokens.size) {
-            if (tokens.getType(i) == TokenType.NAME) {
-                val asString = tokens.toString(i)
-                if (asString in KEYWORDS) {
-                    tokens.setType(i, TokenType.KEYWORD)
-                }
-            }
-        }
-    }
-
-    private fun parseString() {
+    override fun parseString() {
         val open = i
         i++ // skip initial "
         tokens.add(TokenType.OPEN_CALL, open, open + 1)
@@ -247,27 +94,5 @@ class ZauberTokenizer(src: String, fileName: String) :
                 else -> i++
             }
         }
-    }
-
-    fun skipBlock() {
-        check(src[i - 1] == '{')
-        var depth = 1
-        loop@ while (i < n && depth > 0) {
-            when (src[i]) {
-                in "([{" -> depth++
-                in ")]}" -> depth--
-                '/' if (i + 1 < src.length && src[i + 1] == '/') -> skipLineComment()
-                '/' if (i + 1 < src.length && src[i + 1] == '*') -> skipBlockComment()
-                '"' -> {
-                    // skip string
-                    val size = tokens.size
-                    parseString()
-                    tokens.size = size
-                    continue@loop // must not call i++
-                }
-            }
-            i++
-        }
-        check(src[i - 1] == '}')
     }
 }
