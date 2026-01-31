@@ -7,6 +7,11 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 
+/**
+ * if (value instanceof T newName) {
+ *  ... newName is now a valid T ...
+ * }
+ * */
 class NamedCastExpression(val instanceTest: IsInstanceOfExpr, val newName: String) :
     Expression(instanceTest.scope, instanceTest.origin) {
 

@@ -39,6 +39,7 @@ import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
 import kotlin.math.min
 
+// todo this reader is closer to C++ than Zauber, create a common class for them(?)
 class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(tokens, root, false) {
 
     companion object {
