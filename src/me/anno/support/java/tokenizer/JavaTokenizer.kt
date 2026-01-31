@@ -14,7 +14,7 @@ class JavaTokenizer(src: String, fileName: String) :
             "true", "false", "null",
             "package", "import",
             "class", "interface",
-            "abstract", "override", "final",
+            "abstract", "override", "final", "sealed",
             "public", "private", "protected",
 
             "if", "else", "do", "while", "switch", "for",
@@ -24,7 +24,7 @@ class JavaTokenizer(src: String, fileName: String) :
 
             "super", "this", "new",
             "try", "catch", "finally",
-            "static", "void", "volatile",
+            "static", "volatile",
         )
     }
 }

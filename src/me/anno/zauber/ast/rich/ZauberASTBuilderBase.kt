@@ -10,11 +10,7 @@ import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.binaryOp
-import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
-import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
-import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -168,6 +164,16 @@ abstract class ZauberASTBuilderBase(
         return binaryOp(currPackage, lhs, op.symbol, rhs)
     }
 
+    fun handleShortcutOperator(
+        expr: Expression, symbol: String, op: Operator,
+        scope: Scope, origin: Int,
+    ): Expression {
+        val name = currPackage.generateName("shortcut", origin)
+        val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
+        return if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, origin)
+        else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
+    }
+
     fun readIfBranch(): IfElseBranch {
         val origin = origin(i)
         var condition = readExpressionCondition()
@@ -190,8 +196,16 @@ abstract class ZauberASTBuilderBase(
             }
         } else readBodyOrExpression(null)
         val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
-            i++
-            readBodyOrExpression(null)
+            consume("else")
+            pushScope(ScopeType.METHOD_BODY, "else") {
+                when {
+                    consumeIf("if") -> readIfBranch()
+                    consumeIf("for") -> TODO("read for after else")
+                    consumeIf("while") -> readWhileLoop(null)
+                    consumeIf("do") -> readDoWhileLoop(null)
+                    else -> readBodyOrExpression(null)
+                }
+            }
         } else null
         // println("Scopes: ${condition.scope}, ${ifTrue.scope}, ${ifFalse?.scope}")
         return IfElseBranch(condition, ifTrue, ifFalse)

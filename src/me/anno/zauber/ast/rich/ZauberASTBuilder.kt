@@ -1381,12 +1381,7 @@ class ZauberASTBuilder(
                         { scope -> nullExpr(scope, origin) },
                     )
                     "." -> handleDotOperator(expr)
-                    "&&", "||" -> {
-                        val name = currPackage.generateName("shortcut", origin)
-                        val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
-                        if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, origin)
-                        else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
-                    }
+                    "&&", "||" -> handleShortcutOperator(expr, symbol, op, scope, origin)
                     "::" -> {
                         if (tokens.equals(i, "class")) {
                             when (expr) {
