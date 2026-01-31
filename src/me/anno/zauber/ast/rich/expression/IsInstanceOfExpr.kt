@@ -18,7 +18,7 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // always boolean
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
 
-    override fun clone(scope: Scope): Expression {
+    override fun clone(scope: Scope): IsInstanceOfExpr {
         return IsInstanceOfExpr(value.clone(scope), type, scope, origin)
     }
 

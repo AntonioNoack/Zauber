@@ -404,7 +404,8 @@ object JavaSourceGenerator : Generator() {
         builder.append("public ")
         if (field == classScope.objectField) builder.append("static ")
         if (!field.isMutable) builder.append("final ")
-        appendType(field.valueType ?: NullableAnyType, classScope, false)
+        val valueType = (field.valueType ?: NullableAnyType).resolve(classScope)
+        appendType(valueType, classScope, false)
         builder.append(' ').append(field.name).append(';')
         nextLine()
     }

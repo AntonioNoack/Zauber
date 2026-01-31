@@ -46,25 +46,27 @@ abstract class Type {
         }
     }
 
-    fun resolve(): Type {
+    fun resolve(selfScope: Scope? = null): Type {
         if (isResolved()) return this
-        val resolved = resolveImpl()
+        val resolved = resolveImpl(selfScope)
         if (resolved == this) throw IllegalStateException("Failed to resolve $this (${javaClass.simpleName})")
-        return resolved.resolve()
+        return resolved.resolve(selfScope)
     }
 
-    fun resolveImpl(): Type {
+    fun resolveImpl(selfScope: Scope?): Type {
         return when (this) {
             is SelfType,
-            is ThisType -> throw IllegalStateException("Cannot resolve $this without scope data")
+            is ThisType ->
+                selfScope?.typeWithArgs
+                    ?: throw IllegalStateException("Cannot resolve $this without scope data")
             is LambdaType -> {
-                LambdaType(selfType?.resolve(), parameters.map {
-                    LambdaParameter(it.name, it.type.resolve())
-                }, returnType.resolve())
+                LambdaType(selfType?.resolve(selfScope), parameters.map {
+                    LambdaParameter(it.name, it.type.resolve(selfScope))
+                }, returnType.resolve(selfScope))
             }
             is GenericType -> specialization[this]!!
             is ClassType -> {
-                val parameters = typeParameters?.map { it.resolve() }
+                val parameters = typeParameters?.map { it.resolve(selfScope) }
                 ClassType(clazz, parameters)
             }
             is TypeOfField -> {
@@ -72,9 +74,9 @@ abstract class Type {
                 field.resolveValueType(context)
             }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
-            is UnionType -> unionTypes(types.map { it.resolve() })
-            is AndType -> andTypes(types.map { it.resolve() })
-            is NotType -> type.resolve().not()
+            is UnionType -> unionTypes(types.map { it.resolve(selfScope) })
+            is AndType -> andTypes(types.map { it.resolve(selfScope) })
+            is NotType -> type.resolve(selfScope).not()
             is UnresolvedType -> {
                 resolveTypeByName(null, className, scope, imports)
                     ?: throw IllegalStateException("Could not resolve $this")

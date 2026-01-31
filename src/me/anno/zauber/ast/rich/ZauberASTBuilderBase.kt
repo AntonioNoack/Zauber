@@ -10,7 +10,9 @@ import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.binaryOp
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.logging.LogManager
@@ -168,16 +170,23 @@ abstract class ZauberASTBuilderBase(
 
     fun readIfBranch(): IfElseBranch {
         val origin = origin(i)
-        val condition = readExpressionCondition()
+        var condition = readExpressionCondition()
         val ifTrue = if (condition is NamedCastExpression) {
             // to do we could use the same scope for field and body...
+            val instanceName = condition.newName
+            val instanceTest = condition.instanceTest
+            condition = condition.instanceTest
+
             pushScope(ScopeType.METHOD_BODY, "cast") { scopeForField ->
-                scopeForField.addField(
+                val dstField = scopeForField.addField(
                     null, false, false, null,
-                    condition.newName, condition.instanceTest.type,
+                    instanceName, instanceTest.type,
                     null, Keywords.NONE, origin
                 )
-                readBodyOrExpression(null)
+                val dstFieldExpr = FieldExpression(dstField, scopeForField, origin)
+                val assignment = AssignmentExpression(dstFieldExpr, instanceTest.value)
+                val remainder = readBodyOrExpression(null)
+                ExpressionList(listOf(assignment, remainder), scopeForField, origin)
             }
         } else readBodyOrExpression(null)
         val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
