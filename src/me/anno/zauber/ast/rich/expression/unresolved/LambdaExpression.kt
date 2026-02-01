@@ -128,7 +128,7 @@ class LambdaExpression(
                 val n = superType.parameters.size
                 ClassType(
                     langScope.getOrPut("Function$n", ScopeType.INTERFACE),
-                    superType.parameters.map { it.type } + superType.returnType)
+                    superType.parameters.map { it.type } + superType.returnType, origin)
             }
             else -> throw NotImplementedError("Convert $superType to class type")
         }

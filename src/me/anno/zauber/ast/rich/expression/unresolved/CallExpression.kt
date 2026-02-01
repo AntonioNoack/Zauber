@@ -54,7 +54,10 @@ class CallExpression(
     override fun splitsScope(): Boolean {
         return self.splitsScope() ||
                 valueParameters.any { it.value.splitsScope() } ||
-                (self is MemberNameExpression && (self.name == "check" || self.name == "require")) // this check is a little too loose
+                // these check is a little too loose
+                (self is UnresolvedFieldExpression && (self.name == "check" || self.name == "require")) ||
+                (self is FieldExpression && (self.field.name == "check" || self.field.name == "require")) ||
+                (self is MemberNameExpression && (self.name == "check" || self.name == "require"))
     }
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {

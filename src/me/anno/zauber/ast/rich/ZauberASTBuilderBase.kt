@@ -3,9 +3,15 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.cpp.ast.rich.ArrayType
+import me.anno.support.cpp.ast.rich.CppASTBuilder
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
+import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
+import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
+import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
@@ -33,6 +39,7 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import kotlin.math.min
 
 abstract class ZauberASTBuilderBase(
     tokens: TokenList, root: Scope,
@@ -66,7 +73,42 @@ abstract class ZauberASTBuilderBase(
     abstract fun readExpression(minPrecedence: Int = 0): Expression
     abstract fun readBodyOrExpression(label: String?): Expression
 
-    fun readTypeAlias() {
+    abstract fun readFileLevel()
+    abstract fun readAnnotation(): Annotation
+
+    // todo assign them appropriately
+    val annotations = ArrayList<Annotation>()
+
+    fun readAnnotations() {
+        if (consumeIf("@")) {
+            annotations.add(readAnnotation())
+        }
+    }
+
+    fun readClassBody(name: String, keywords: KeywordSet, scopeType: ScopeType): Scope {
+        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
+        classScope.keywords = classScope.keywords or keywords
+
+        if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+            pushBlock(classScope) {
+                if (classScope.scopeType == ScopeType.ENUM_CLASS) {
+                    val endIndex = readEnumBody()
+                    i = min(endIndex + 1, tokens.size) // skipping over semicolon
+                }
+                readFileLevel()
+            }
+        }
+
+        if (keywords.hasFlag(Keywords.DATA_CLASS) || keywords.hasFlag(Keywords.VALUE)) {
+            pushScope(classScope) {
+                finishDataClass(classScope)
+            }
+        }
+
+        return classScope
+    }
+
+    open fun readTypeAlias() {
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val pseudoScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
         pseudoScope.typeParameters = readTypeParameterDeclarations(pseudoScope)
@@ -132,7 +174,9 @@ abstract class ZauberASTBuilderBase(
         val parameters = ArrayList<NamedParameter>()
         while (i < tokens.size) {
             val name = if (
-                (this !is JavaASTBuilder && this !is JavaASTClassScanner) &&
+                (this !is JavaASTBuilder &&
+                        this !is JavaASTClassScanner &&
+                        this !is CppASTBuilder) &&
                 tokens.equals(i, TokenType.NAME) &&
                 tokens.equals(i + 1, "=")
             ) {
@@ -148,6 +192,17 @@ abstract class ZauberASTBuilderBase(
             readComma()
         }
         return parameters
+    }
+
+    fun createLambdaVariable(type: Type?, name: String, origin: Int): LambdaVariable {
+        // to do we neither know type nor initial value :/, both come from the called function/set variable
+        val field = currPackage.addField( // this is more of a parameter...
+            null, false, isMutable = false, null,
+            name, null, null, Keywords.NONE, origin
+        )
+        val variable = LambdaVariable(type, field)
+        field.byParameter = variable
+        return variable
     }
 
     fun readRHS(op: Operator): Expression =
@@ -197,6 +252,7 @@ abstract class ZauberASTBuilderBase(
                 ExpressionList(listOf(assignment, remainder), scopeForField, origin)
             }
         } else readBodyOrExpression(null)
+        if (tokens.equals(i + 1, "else")) consumeIf(";")
         val ifFalse = if (tokens.equals(i, "else") && !tokens.equals(i + 1, "->")) {
             consume("else")
             pushScope(ScopeType.METHOD_BODY, "else") {
@@ -294,7 +350,7 @@ abstract class ZauberASTBuilderBase(
         if (this is JavaASTBuilder || this is JavaASTClassScanner) {
             while (consumeIf(TokenType.OPEN_ARRAY)) {
                 if (consumeIf(TokenType.CLOSE_ARRAY)) {
-                    base = ClassType(ArrayType.clazz, listOf(base))
+                    base = ClassType(ArrayType.clazz, listOf(base), origin(i))
                 } else {
                     i-- // go one back for pushArray
                     val size = pushArray { readExpression() }
@@ -353,7 +409,7 @@ abstract class ZauberASTBuilderBase(
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             val endI = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
             if (tokens.equals(endI + 1, "->")) {
-                val parameters = pushCall { readLambdaParameter() }
+                val parameters = pushCall { readZauberLambdaParameters() }
                 i = endI + 2 // skip ) and ->
                 val returnType = readTypeNotNull(selfType, true)
                 return LambdaType(null, parameters, returnType)
@@ -385,7 +441,7 @@ abstract class ZauberASTBuilderBase(
 
         val typeArgs = readTypeParameters(selfType)
         val baseType = when {
-            path is ClassType -> ClassType(path.clazz, typeArgs)
+            path is ClassType -> ClassType(path.clazz, typeArgs, origin(i))
             path is UnresolvedType -> UnresolvedType(path.className, typeArgs, currPackage, imports)
             typeArgs == null -> path
             else -> throw IllegalStateException("Cannot combine $path with $typeArgs")
@@ -407,9 +463,7 @@ abstract class ZauberASTBuilderBase(
         if (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug(
                 "checking for type-args, ${tokens.err(i)}, ${
-                    isTypeArgsStartingHere(
-                        i
-                    )
+                    isTypeArgsStartingHere(i)
                 }"
             )
         }
@@ -419,14 +473,30 @@ abstract class ZauberASTBuilderBase(
             return null
         }
 
-        i++ // consume '<'
+        consume("<")
+        if (consumeIf(">")) {
+            return if (this is JavaASTBuilder || this is JavaASTClassScanner) {
+                null // = unknown
+            } else {
+                // Kotlin, weird, known but empty
+                emptyList()
+            }
+        }
 
         val args = ArrayList<Type>()
         while (true) {
             // todo store these (?)
             consumeIf("in")
             consumeIf("out")
-            val type = readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
+
+            val type0 = if (consumeIf("?")) {
+                if (tokens.equals(i, "super", "extends")) {
+                    i++ // skip super/extends, I'm not sure about their difference...
+                    readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
+                } else NullableAnyType
+            } else readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
+
+            val type = type0
                 ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
             args.add(type) // recursive type
             when {
@@ -438,7 +508,7 @@ abstract class ZauberASTBuilderBase(
         return args
     }
 
-    fun readLambdaParameter(): List<LambdaParameter> {
+    fun readZauberLambdaParameters(): List<LambdaParameter> {
         val result = ArrayList<LambdaParameter>()
         loop@ while (i < tokens.size) {
             if (tokens.equals(i, TokenType.NAME) &&
@@ -490,17 +560,21 @@ abstract class ZauberASTBuilderBase(
                         tokens.equals(i, "*") -> {
                     // ok
                 }
+                tokens.equals(i, TokenType.OPEN_ARRAY) ||
+                        tokens.equals(i, TokenType.CLOSE_ARRAY) ||
+                        tokens.equals(i, "super") -> {
+                    // can appear in Java types as List<? super T>
+                    // or as array notation, e.g. Object[]
+                    this is JavaASTClassScanner || this is JavaASTBuilder
+                }
                 tokens.equals(i, TokenType.OPEN_CALL) -> depth++
                 tokens.equals(i, TokenType.CLOSE_CALL) -> depth--
                 tokens.equals(i, TokenType.OPEN_BLOCK) ||
                         tokens.equals(i, TokenType.CLOSE_BLOCK) ||
-                        tokens.equals(i, TokenType.OPEN_ARRAY) ||
-                        tokens.equals(i, TokenType.CLOSE_ARRAY) ||
                         tokens.equals(i, TokenType.SYMBOL) ||
                         tokens.equals(i, TokenType.APPEND_STRING) ||
                         tokens.equals(i, "val", "var") ||
-                        tokens.equals(i, "else") ||
-                        tokens.equals(i, "fun", "override") ||
+                        tokens.equals(i, "else", "fun", "override") ||
                         tokens.equals(i, "this") -> return false
                 else -> throw NotImplementedError("Can ${tokens.err(i)} appear inside a type?")
             }
@@ -526,7 +600,7 @@ abstract class ZauberASTBuilderBase(
     /**
      * ClassType | SelfType
      * */
-    fun readTypePath(selfType: Type?): Type? {
+    open fun readTypePath(selfType: Type?): Type? {
         if (!tokens.equals(i, TokenType.NAME)) return null
 
         val name = tokens.toString(i++)
@@ -541,15 +615,15 @@ abstract class ZauberASTBuilderBase(
             }
         } else {
             when (name) {
-                "byte" -> return ByteType
-                "short" -> return ShortType
-                "char" -> return CharType
-                "int" -> return IntType
-                "long" -> return LongType
-                "float" -> return FloatType
-                "double" -> return DoubleType
-                "boolean" -> return BooleanType
-                "void" -> return UnitType
+                "byte", "Byte" -> return ByteType
+                "short", "Short" -> return ShortType
+                "char", "Character" -> return CharType
+                "int", "Integer" -> return IntType
+                "long", "Long" -> return LongType
+                "float", "Float" -> return FloatType
+                "double", "Double" -> return DoubleType
+                "boolean", "Boolean" -> return BooleanType
+                "void", "Void" -> return UnitType
             }
         }
 
@@ -596,4 +670,93 @@ abstract class ZauberASTBuilderBase(
         i++
         return name
     }
+
+    abstract fun readSuperCalls(classScope: Scope)
+
+    fun readClass(scopeType: ScopeType) {
+        val origin = origin(i)
+        val vsCodeType = when (scopeType) {
+            ScopeType.INTERFACE -> VSCodeType.INTERFACE
+            ScopeType.ENUM_CLASS -> VSCodeType.ENUM
+            else -> VSCodeType.CLASS
+        }
+
+        val name = consumeName(vsCodeType, VSCodeModifier.DECLARATION.flag)
+
+        val keywords = packKeywords()
+        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
+
+        val typeParameters = readTypeParameterDeclarations(classScope)
+        classScope.typeParameters = typeParameters
+        classScope.hasTypeParameters = true
+
+        val privatePrimaryConstructor = consumeIf("private")
+
+        readAnnotations()
+
+        consumeIf("constructor")
+
+        val constructorOrigin = origin(i)
+        val constructorParams = readPrimaryConstructorParameters(classScope)
+        val constructorBody = createAssignmentInstructionsForPrimaryConstructor(
+            classScope, constructorParams, constructorOrigin
+        )
+
+        readSuperCalls(classScope)
+
+        val primConstructorScope = classScope.getOrCreatePrimConstructorScope()
+        val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
+        val primaryConstructor = Constructor(
+            constructorParams ?: emptyList(),
+            primConstructorScope, if (primarySuperCall != null) {
+                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
+            } else null, constructorBody,
+            if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
+            constructorOrigin
+        )
+        primConstructorScope.selfAsConstructor = primaryConstructor
+
+        readClassBody(name, keywords, scopeType)
+        popGenericParams()
+    }
+
+    fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
+        val scopeType = classScope.scopeType
+        val constructorOrigin = origin(i)
+        println("reading primary constructor parameters at ${tokens.err(i)}")
+        return if (tokens.equals(i, TokenType.OPEN_CALL)) {
+            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            var parameters = pushScope(constructorScope) {
+                val selfType = ClassType(classScope, null)
+                pushCall { readParameterDeclarations(selfType) }
+            }
+            if (scopeType == ScopeType.ENUM_CLASS) {
+                parameters = listOf(
+                    Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
+                    Parameter(1, "name", StringType, constructorScope, constructorOrigin)
+                ) + parameters.map { it.shift(2) }
+            }
+            parameters
+        } else if (scopeType == ScopeType.ENUM_CLASS) {
+            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            val parameters = listOf(
+                Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
+                Parameter(1, "name", StringType, constructorScope, constructorOrigin)
+            )
+            parameters
+        } else null
+    }
+
+    fun readInterface() {
+        val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
+        val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
+        val keywords = packKeywords()
+        clazz.typeParameters = readTypeParameterDeclarations(clazz)
+        clazz.hasTypeParameters = true
+
+        readSuperCalls(clazz)
+        readClassBody(name, keywords, ScopeType.INTERFACE)
+        popGenericParams()
+    }
+
 }

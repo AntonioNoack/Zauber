@@ -8,6 +8,7 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
@@ -29,7 +30,7 @@ class ZauberASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, ro
         }
 
         fun collectNamedClasses(tokens: TokenList) {
-            ZauberASTClassScanner(tokens).collectNamedClassesImpl()
+            ZauberASTClassScanner(tokens).readFileLevel()
         }
 
         // todo I don't really want to deal with them during type-resolution,
@@ -188,7 +189,7 @@ class ZauberASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, ro
         // println("Found class '$name', tp: $genericParams, scope: $classScope, scopeType: ${classScope.scopeType}")
     }
 
-    private fun collectNamedClassesImpl() {
+    override fun readFileLevel() {
         while (i < tokens.size) {
             when (tokens.getType(i)) {
                 TokenType.OPEN_BLOCK -> handleBlockOpen()
@@ -310,11 +311,19 @@ class ZauberASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, ro
         return false
     }
 
+    override fun readSuperCalls(classScope: Scope) {
+        throw NotImplementedError()
+    }
+
     override fun readExpression(minPrecedence: Int): Expression {
         throw NotImplementedError()
     }
 
     override fun readBodyOrExpression(label: String?): Expression {
+        throw NotImplementedError()
+    }
+
+    override fun readAnnotation(): Annotation {
         throw NotImplementedError()
     }
 

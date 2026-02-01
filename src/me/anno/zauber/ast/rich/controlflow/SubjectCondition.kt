@@ -31,7 +31,7 @@ class SubjectCondition(
     private fun buildIsExpr(expr: SubjectCondition, subject: Expression, newScope: Scope): Expression {
         val type = when (expr.type) {
             is ClassType -> expr.type
-            is LambdaType -> lambdaTypeToClassType(expr.type)
+            is LambdaType -> lambdaTypeToClassType(expr.type, subject.origin)
             else -> throw NotImplementedError("Handle is ${expr.type?.javaClass}")
         }
         return IsInstanceOfExpr(subject, type, newScope, subject.origin)

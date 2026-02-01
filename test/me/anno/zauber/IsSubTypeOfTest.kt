@@ -1,8 +1,8 @@
 package me.anno.zauber
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -129,8 +129,8 @@ class IsSubTypeOfTest {
     open class A
     class B : A()
 """.testInheritance()
-        val listOfA = ClassType(listType, listOf(scope["A"]))
-        val listOfB = ClassType(listType, listOf(scope["B"]))
+        val listOfA = ClassType(listType, listOf(scope["A"]), -1)
+        val listOfB = ClassType(listType, listOf(scope["B"]), -1)
         assertTrue(isSubTypeOf(listOfA, listOfA))
         assertTrue(isSubTypeOf(listOfB, listOfB))
         assertTrue(isSubTypeOf(listOfA, listOfB))
@@ -228,7 +228,7 @@ class IsSubTypeOfTest {
     fun testInferredAsParameterType() {
         defineArrayListConstructors()
         val listType = ArrayListType.clazz
-        testInferred { ClassType(listType, listOf(it)) }
+        testInferred { ClassType(listType, listOf(it), -1) }
     }
 
     @Test

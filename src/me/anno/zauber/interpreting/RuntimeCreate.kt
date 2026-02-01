@@ -87,7 +87,7 @@ object RuntimeCreate {
         val type = getClass(StringType)
         val instance = type.createInstance()
         if (type.properties.isNotEmpty()) {
-            val arrayType = ClassType(ArrayType.clazz, listOf(ByteType))
+            val arrayType = ClassType(ArrayType.clazz, listOf(ByteType), -1)
             val content = getClass(arrayType).createInstance()
             val bytes = value.encodeToByteArray()
             content.properties[0] = createInt(bytes.size)

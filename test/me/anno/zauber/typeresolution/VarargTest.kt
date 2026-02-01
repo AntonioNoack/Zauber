@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 
 class VarargTest {
 
-    private val arrayOfFloatType = ClassType(ArrayType.clazz, listOf(FloatType))
+    private val arrayOfFloatType = ClassType(ArrayType.clazz, listOf(FloatType), -1)
 
     @Test
     fun testVarargWithNoParameters() {

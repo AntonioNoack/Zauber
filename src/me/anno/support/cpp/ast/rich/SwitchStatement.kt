@@ -1,6 +1,7 @@
 package me.anno.support.cpp.ast.rich
 
 import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject
@@ -17,7 +18,7 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Types.BooleanType
 
-fun CppASTBuilder.readSwitch(label: String?): Expression {
+fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
     val origin = origin(i - 1) // in switch
     val switchValue0 = readExpressionCondition()
@@ -30,7 +31,9 @@ fun CppASTBuilder.readSwitch(label: String?): Expression {
     val falseExpr = SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
 
     val scopeName = currPackage.generateName("switch", origin)
+
     val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
+        scope.breakLabel = label ?: ""
 
         val noPrevBranch = scope.addField(
             null, false, isMutable = true, null,
@@ -122,7 +125,7 @@ private fun Expression.or(other: Expression): Expression {
         .apply { resolvedType = BooleanType }
 }
 
-private fun CppASTBuilder.readCaseBody(): ArrayList<Expression> {
+private fun ZauberASTBuilderBase.readCaseBody(): ArrayList<Expression> {
     val expressions = ArrayList<Expression>()
     while (i < tokens.size) {
         when {

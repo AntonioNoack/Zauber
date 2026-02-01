@@ -84,7 +84,7 @@ object CallWithNames {
                         .filter { it.name == null }
                         .map { it.getType(targetType) }
                     val types = unionTypes(values)
-                    val arrayType = ClassType(type0.clazz, listOf(types))
+                    val arrayType = ClassType(type0.clazz, listOf(types), ev.origin)
                     result[index++] = ValueParameterImpl(null, arrayType, true)
                     break
                 }

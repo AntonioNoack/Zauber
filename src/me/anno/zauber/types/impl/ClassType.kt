@@ -1,6 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
@@ -15,9 +16,9 @@ import me.anno.zauber.types.Types.NullableAnyType
  * */
 class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
-    constructor(clazz: Scope, typeParams: List<Type>?) : this(
-        clazz, if (typeParams == null) null
-        else createParamList(clazz, typeParams)
+    constructor(clazz: Scope, typeParameters: List<Type>?, origin: Int) : this(
+        clazz, if (typeParameters == null) null
+        else createParameterList(clazz, typeParameters, origin)
     )
 
     init {
@@ -40,11 +41,16 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
          * */
         var strictMode = true
 
-        fun createParamList(clazz: Scope, typeParams: List<Type>): ParameterList {
+        fun createParameterList(clazz: Scope, typeParams: List<Type>, origin: Int): ParameterList {
             if (strictMode) {
-                check(clazz.hasTypeParameters) { "$clazz is missing type parameter definition" }
+                check(clazz.hasTypeParameters) {
+                    "$clazz is missing type parameter definition, at ${resolveOrigin(origin)}"
+                }
                 check(clazz.typeParameters.size == typeParams.size) {
-                    "Incorrect number of typeParams for $clazz, expected ${clazz.typeParameters.size}, got ${typeParams.size}"
+                    "Incorrect number of typeParams for $clazz, " +
+                            "expected ${clazz.typeParameters.size}, " +
+                            "got ${typeParams.size}, " +
+                            "at ${resolveOrigin(origin)}"
                 }
             }
             if (clazz.typeParameters.size == typeParams.size) {

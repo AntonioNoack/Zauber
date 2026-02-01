@@ -262,7 +262,7 @@ object TypeResolution {
             if (selfMatch != null) {
                 val typeParams: List<Type>? =
                     if (selfMatch.hasTypeParameters && selfMatch.typeParameters.isEmpty()) emptyList() else null
-                return ClassType(selfMatch, typeParams)
+                return ClassType(selfMatch, typeParams, -1)
             }
 
             val genericsMatch = scope.typeParameters.firstOrNull { it.name == name }

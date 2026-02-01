@@ -25,6 +25,7 @@ class JavaASTBuilderTest {
         sources.add(JavaTokenizer("""
             package zauber;
             class StackTraceElement
+            interface Iterator<V>
         """.trimIndent(), "helper.java").tokenize())
 
         for (source in sources) {

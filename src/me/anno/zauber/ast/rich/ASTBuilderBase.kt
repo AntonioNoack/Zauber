@@ -49,14 +49,20 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     }
 
     inline fun <R> pushCall(readImpl: () -> R): R {
-        val result = tokens.push(i++, TokenType.OPEN_CALL, TokenType.CLOSE_CALL, readImpl)
+        val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
+        consume(TokenType.OPEN_CALL)
+        val result = tokens.push(end, readImpl)
+        check(i == end) { "Missed reading tokens, $i != $end, ${tokens.err(i)}" }
         consume(TokenType.CLOSE_CALL)
         return result
     }
 
     inline fun <R> pushArray(readImpl: () -> R): R {
-        val result = tokens.push(i++, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY, readImpl)
-        consume("]")
+        val end = tokens.findBlockEnd(i, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY)
+        consume(TokenType.OPEN_ARRAY)
+        val result = tokens.push(end, readImpl)
+        check(i == end) { "Missed reading tokens, $i != $end, ${tokens.err(i)}" }
+        consume(TokenType.CLOSE_ARRAY)
         return result
     }
 

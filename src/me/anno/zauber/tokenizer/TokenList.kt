@@ -37,7 +37,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
     inline fun <R> push(
         i: Int, open: TokenType, close: TokenType,
         readImpl: () -> R
-    ): R = push(findBlockEnd(i, open, close), readImpl)
+    ): R {
+        val end = findBlockEnd(i, open, close)
+        return push(end, readImpl)
+    }
 
     inline fun <R> push(j: Int, readImpl: () -> R): R {
         val oldSize = size

@@ -2,6 +2,7 @@ package me.anno.support.cpp.ast.rich
 
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*
@@ -29,7 +30,7 @@ class CppASTBuilder(
     tokens: TokenList,
     root: Scope,
     val standard: CppStandard
-) : ASTBuilderBase(tokens, root) {
+) : ZauberASTBuilderBase(tokens, root, false) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(CppASTBuilder::class)
@@ -46,7 +47,8 @@ class CppASTBuilder(
     }
 
     val language = standard.kind()
-    val knownKeywords = if (language == LanguageKind.C) CppTokenizer.Companion.cKeywords else CppTokenizer.Companion.cppKeywords
+    val knownKeywords =
+        if (language == LanguageKind.C) CppTokenizer.Companion.cKeywords else CppTokenizer.Companion.cppKeywords
 
     fun readFile() {
         while (i < tokens.size) {
@@ -103,7 +105,7 @@ class CppASTBuilder(
         return path
     }
 
-    fun readTypePath(selfType: Type?): Type {
+    override fun readTypePath(selfType: Type?): Type {
         check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
             "Expected name or keyword for type, but got ${tokens.err(i)}, $i vs ${tokens.size}"
         }
@@ -120,6 +122,10 @@ class CppASTBuilder(
             i += 2 // skip period and name
         }
         return path
+    }
+
+    override fun readSuperCalls(classScope: Scope) {
+        TODO("Not yet implemented")
     }
 
     fun readTypeAndName(typeNameEnd: Int): Pair<Type, String> {
@@ -267,15 +273,8 @@ class CppASTBuilder(
         }
     }
 
-    fun readTypeAlias() {
+    override fun readTypeAlias() {
         TODO()
-    }
-
-    fun readExpressionCondition(): Expression {
-        consume(TokenType.OPEN_CALL)
-        val condition = readExpression()
-        consume(TokenType.CLOSE_CALL)
-        return condition
     }
 
     private fun readIf(): IfElseBranch {
@@ -298,7 +297,7 @@ class CppASTBuilder(
         return DoWhileLoop(body = body, condition = condition, label)
     }
 
-    fun readExpression(minPrecedence: Int = 0): Expression {
+    override fun readExpression(minPrecedence: Int): Expression {
         var expr = readPrefix()
 
         while (i < tokens.size) {
@@ -363,15 +362,23 @@ class CppASTBuilder(
         return expr
     }
 
-    private fun readRHS(op: Operator): Expression {
-        return readExpression(if (op.assoc == Assoc.LEFT) op.precedence + 1 else op.precedence)
+    override fun readBodyOrExpression(label: String?): Expression {
+        TODO("Not yet implemented")
+    }
+
+    override fun readFileLevel() {
+        TODO("Not yet implemented")
+    }
+
+    override fun readAnnotation(): Annotation {
+        TODO("Not yet implemented")
+    }
+
+    override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
+        TODO("Not yet implemented")
     }
 
     private fun looksLikeCast(): Boolean {
-        TODO()
-    }
-
-    private fun readTypeNotNull(selfType: Type?, allowSubTypes: Boolean): Type {
         TODO()
     }
 
@@ -522,40 +529,6 @@ class CppASTBuilder(
         )
     }
 
-    fun readValueParameters(): ArrayList<NamedParameter> {
-        val params = ArrayList<NamedParameter>()
-        while (i < tokens.size) {
-            val name = null // names are not supported
-            val value = readExpression()
-            val param = NamedParameter(name, value)
-            params.add(param)
-            if (LOGGER.isDebugEnabled) LOGGER.debug("read param: $param")
-            readComma()
-        }
-        return params
-    }
-
-    fun <R> pushBlock(scopeType: ScopeType, scopeName: String?, readImpl: (Scope) -> R): R {
-        val name = scopeName ?: currPackage.generateName(scopeType.name)
-        return pushScope(name, scopeType) { childScope ->
-            val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
-            // scanBlockForNewTypes(i, blockEnd)
-            val result = tokens.push(blockEnd) { readImpl(childScope) }
-            consume(TokenType.CLOSE_BLOCK)
-            result
-        }
-    }
-
-    fun <R> pushBlock(scope: Scope, readImpl: (Scope) -> R): R {
-        return pushScope(scope) {
-            val blockEnd = tokens.findBlockEnd(i++, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
-            // scanBlockForNewTypes(i, blockEnd)
-            val result = tokens.push(blockEnd) { readImpl(scope) }
-            consume(TokenType.CLOSE_BLOCK)
-            result
-        }
-    }
-
     fun readBodyOrExpression(): Expression {
         return if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
             pushBlock(ScopeType.METHOD_BODY, null) {
@@ -574,7 +547,7 @@ class CppASTBuilder(
         }
     }
 
-    fun readMethodBody(): ExpressionList {
+    override fun readMethodBody(): ExpressionList {
         val originalScope = currPackage
         val origin = origin(i)
         val result = ArrayList<Expression>()

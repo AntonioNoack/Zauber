@@ -101,7 +101,7 @@ class TestRuntime {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         )
-        val expectedType = rt.getClass(ClassType(ArrayType.clazz, listOf(IntType)))
+        val expectedType = rt.getClass(ClassType(ArrayType.clazz, listOf(IntType), -1))
         if (false) {
             // todo generics should match...
             //  somehow, we just get an array without any specific generics

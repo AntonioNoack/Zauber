@@ -24,7 +24,7 @@ object Types {
     fun getScope(i: String, numGenerics: Int): Scope {
         val scope = getScope0(i)
         if (scope.hasTypeParameters) {
-            check(scope.typeParameters.size == numGenerics){
+            check(scope.typeParameters.size == numGenerics) {
                 "Expected Types.getScope to have correct number of generics, ${scope.typeParameters.size} vs $numGenerics"
             }
             return scope
@@ -40,7 +40,8 @@ object Types {
     fun getType(i: String, numGenerics: Int): ClassType {
         return ClassType(
             getScope(i, numGenerics),
-            if (numGenerics == 0) emptyList() else null
+            if (numGenerics == 0) emptyList() else null,
+            -1
         )
     }
 
@@ -70,6 +71,6 @@ object Types {
     val PromiseType = getType("zauber.async.Promise", 3)
 
     // todo yes, it is Iterable<*>, but * = Nothing still feels wrong :/
-    val AnyIterableType = ClassType(getScope("Iterable", 1), listOf(NothingType))
-    val AnyClassType = ClassType(getScope("Class", 1), listOf(NothingType))
+    val AnyIterableType = ClassType(getScope("Iterable", 1), listOf(NothingType), -1)
+    val AnyClassType = ClassType(getScope("Class", 1), listOf(NothingType), -1)
 }

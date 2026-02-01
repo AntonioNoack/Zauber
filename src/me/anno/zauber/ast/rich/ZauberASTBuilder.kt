@@ -3,12 +3,9 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ZauberLanguage
-import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
-import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.resolveTypeAliases
@@ -26,7 +23,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Import
@@ -37,7 +33,6 @@ import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.ListType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
@@ -45,7 +40,6 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.SelfType
 import kotlin.math.max
-import kotlin.math.min
 
 // I want macros... how could we implement them? learn about Rust macros
 //  -> we get tokens as attributes in a specific pattern,
@@ -112,128 +106,6 @@ class ZauberASTBuilder(
         }
     }
 
-    // todo assign them appropriately
-    val annotations = ArrayList<Annotation>()
-
-    private fun readClass(scopeType: ScopeType) {
-        val origin = origin(i)
-        val vsCodeType = when (scopeType) {
-            ScopeType.INTERFACE -> VSCodeType.INTERFACE
-            ScopeType.ENUM_CLASS -> VSCodeType.ENUM
-            else -> VSCodeType.CLASS
-        }
-
-        val name = consumeName(vsCodeType, VSCodeModifier.DECLARATION.flag)
-
-        val keywords = packKeywords()
-        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-
-        val typeParameters = readTypeParameterDeclarations(classScope)
-        classScope.typeParameters = typeParameters
-        classScope.hasTypeParameters = true
-
-        val privatePrimaryConstructor = consumeIf("private")
-
-        readAnnotations()
-
-        consumeIf("constructor")
-
-        val constructorOrigin = origin(i)
-        val constructorParams = readPrimaryConstructorParameters(classScope)
-        val constructorBody = createAssignmentInstructionsForPrimaryConstructor(
-            classScope, constructorParams, constructorOrigin
-        )
-
-        readSuperCalls(classScope)
-
-        val primConstructorScope = classScope.getOrCreatePrimConstructorScope()
-        val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
-        val primaryConstructor = Constructor(
-            constructorParams ?: emptyList(),
-            primConstructorScope, if (primarySuperCall != null) {
-                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
-            } else null, constructorBody,
-            if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
-            constructorOrigin
-        )
-        primConstructorScope.selfAsConstructor = primaryConstructor
-
-        readClassBody(name, keywords, scopeType)
-        popGenericParams()
-    }
-
-    private fun createAssignmentInstructionsForPrimaryConstructor(
-        classScope: Scope, constructorParams: List<Parameter>?,
-        constructorOrigin: Int
-    ): ExpressionList {
-        val result = ArrayList<Expression>()
-        val scope = classScope.getOrCreatePrimConstructorScope()
-        if (constructorParams != null) {
-            for (parameter in constructorParams) {
-                if (!(parameter.isVal || parameter.isVar)) continue
-
-                val origin = parameter.origin
-                val parameterField = parameter.getOrCreateField(null, Keywords.NONE)
-                val classField = classScope.addField(
-                    classScope.typeWithArgs, false, isMutable = parameter.isVar,
-                    parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
-                )
-                val dstExpr = DotExpression(
-                    ThisExpression(classScope, scope, origin), null,
-                    FieldExpression(classField, scope, origin),
-                    scope, origin
-                )
-                val srcExpr = FieldExpression(parameterField, scope, origin)
-                result.add(AssignmentExpression(dstExpr, srcExpr))
-            }
-        }
-        return ExpressionList(result, scope, constructorOrigin)
-    }
-
-    private fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
-        val scopeType = classScope.scopeType
-        val constructorOrigin = origin(i)
-        return if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
-            var parameters = pushScope(constructorScope) {
-                val selfType = ClassType(classScope, null)
-                pushCall { readParameterDeclarations(selfType) }
-            }
-            if (scopeType == ScopeType.ENUM_CLASS) {
-                parameters = listOf(
-                    Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
-                    Parameter(1, "name", StringType, constructorScope, constructorOrigin)
-                ) + parameters.map { it.shift(2) }
-            }
-            parameters
-        } else if (scopeType == ScopeType.ENUM_CLASS) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
-            val parameters = listOf(
-                Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
-                Parameter(1, "name", StringType, constructorScope, constructorOrigin)
-            )
-            parameters
-        } else null
-    }
-
-    private fun readInterface() {
-        val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
-        val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
-        val keywords = packKeywords()
-        clazz.typeParameters = readTypeParameterDeclarations(clazz)
-        clazz.hasTypeParameters = true
-
-        readSuperCalls(clazz)
-        readClassBody(name, keywords, ScopeType.INTERFACE)
-        popGenericParams()
-    }
-
-    private fun readAnnotations() {
-        if (consumeIf("@")) {
-            annotations.add(readAnnotation())
-        }
-    }
-
     private fun readObject(scopeType: ScopeType) {
         val origin = origin(i - 1)
         val isCompanionObject = scopeType == ScopeType.COMPANION_OBJECT
@@ -264,7 +136,7 @@ class ZauberASTBuilder(
         classScope.hasTypeParameters = true // no type-params are supported
         if (classScope.objectField == null) classScope.objectField = classScope.addField(
             null, false, isMutable = false, null, classScope.name,
-            ClassType(classScope, emptyList()),
+            ClassType(classScope, emptyList(), origin),
             /* todo should we set initialValue? */ null, Keywords.NONE, origin
         )
 
@@ -275,7 +147,7 @@ class ZauberASTBuilder(
         }
     }
 
-    private fun readSuperCalls(classScope: Scope) {
+    override fun readSuperCalls(classScope: Scope) {
         if (consumeIf(":")) {
             var endIndex = findEndOfSuperCalls(i)
             if (endIndex < 0) endIndex = tokens.size
@@ -316,114 +188,6 @@ class ZauberASTBuilder(
             }
         }
         return -1
-    }
-
-    private fun readClassBody(name: String, keywords: KeywordSet, scopeType: ScopeType): Scope {
-        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        classScope.keywords = classScope.keywords or keywords
-
-        if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            pushBlock(classScope) {
-                if (classScope.scopeType == ScopeType.ENUM_CLASS) {
-                    val endIndex = readEnumBody()
-                    i = min(endIndex + 1, tokens.size) // skipping over semicolon
-                }
-                readFileLevel()
-            }
-        }
-
-        if (keywords.hasFlag(Keywords.DATA_CLASS) || keywords.hasFlag(Keywords.VALUE)) {
-            pushScope(classScope) {
-                finishDataClass(classScope)
-            }
-        }
-
-        return classScope
-    }
-
-    private fun readEnumBody(): Int {
-
-        val origin0 = origin(i)
-        var endIndex = tokens.findToken(i, ";")
-        if (endIndex < 0) endIndex = tokens.size
-        val enumScope = currPackage
-        val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-        // val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
-        val primaryConstructorScope = companionScope.getOrCreatePrimConstructorScope()
-        primaryConstructorScope.selfAsConstructor = Constructor(
-            emptyList(), primaryConstructorScope,
-            null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
-            Keywords.NONE, origin0
-        )
-
-        push(endIndex) {
-            var ordinal = 0
-            while (i < tokens.size) {
-                // read enum value
-                readAnnotations()
-
-                val origin = origin(i)
-                val name = consumeName(VSCodeType.ENUM_MEMBER, 0)
-
-                val typeParameters = readTypeParameters(null)
-                val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    readValueParameters()
-                } else emptyList()
-
-                val keywords = packKeywords()
-                val entryScope = readClassBody(name, Keywords.NONE, ScopeType.ENUM_ENTRY_CLASS)
-                // todo add name and id as parameters
-                val extraValueParameters = listOf(
-                    NamedParameter(null, NumberExpression((ordinal++).toString(), companionScope, origin)),
-                    NamedParameter(null, StringExpression(name, companionScope, origin)),
-                )
-                val initialValue = ConstructorExpression(
-                    enumScope, typeParameters,
-                    extraValueParameters + valueParameters,
-                    null, enumScope, origin
-                )
-                val valueType =
-                    if (enumScope.typeParameters.isNotEmpty()) null // we need to resolve them
-                    else enumScope.typeWithArgs
-                val field = companionScope.addField(
-                    companionScope.typeWithoutArgs,
-                    false, isMutable = false, null,
-                    name, valueType, initialValue, keywords, origin
-                )
-                entryScope.objectField = field
-
-                val fieldExpr = FieldExpression(field, primaryConstructorScope, origin)
-                primaryConstructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
-
-                readComma()
-            }
-        }
-
-        createEnumProperties(companionScope, enumScope, origin0)
-        return endIndex
-    }
-
-    private fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Int) {
-
-        companionScope.hasTypeParameters = true
-
-        val constructorScope = companionScope.getOrCreatePrimConstructorScope()
-        val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
-        val entryValues = enumScope.enumEntries.map { entryScope ->
-            val field = entryScope.objectField!!
-            FieldExpression(field, constructorScope, origin)
-        }
-        val initialValue = createArrayOfExpr(enumScope.typeWithoutArgs, entryValues, constructorScope, origin)
-
-        val entriesField = constructorScope.addField(
-            companionScope.typeWithoutArgs,
-            false, isMutable = false, null,
-            "entries", listType,
-            initialValue, Keywords.SYNTHETIC, origin
-        )
-
-        val entriesFieldExpr = FieldExpression(entriesField, constructorScope, origin)
-        constructorScope.code.add(AssignmentExpression(entriesFieldExpr, initialValue))
     }
 
     var lastField: Field? = null
@@ -689,7 +453,7 @@ class ZauberASTBuilder(
         }
     }
 
-    fun readFileLevel() {
+    override fun readFileLevel() {
         loop@ while (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
@@ -768,7 +532,7 @@ class ZauberASTBuilder(
         finishLastField()
     }
 
-    fun readAnnotation(): Annotation {
+    override fun readAnnotation(): Annotation {
         if (tokens.equals(i, TokenType.NAME) &&
             tokens.equals(i + 1, ":") &&
             tokens.equals(i + 2, TokenType.NAME)
@@ -817,9 +581,7 @@ class ZauberASTBuilder(
         val parameters = ArrayList<Parameter>()
         loop@ while (i < tokens.size) {
 
-            while (consumeIf("@")) {
-                annotations.add(readAnnotation())
-            }
+            readAnnotations()
 
             while ((tokens.equals(i, TokenType.KEYWORD) || tokens.equals(i, TokenType.NAME)) &&
                 !tokens.equals(i + 1, ":")
@@ -846,7 +608,7 @@ class ZauberASTBuilder(
             consume(":")
 
             var type = readTypeNotNull(null, true) // <-- handles generics now
-            if (isVararg) type = ClassType(ArrayType.clazz, listOf(type))
+            if (isVararg) type = ClassType(ArrayType.clazz, listOf(type), origin)
 
             val initialValue = if (consumeIf("=")) readExpression() else null
 
@@ -1493,40 +1255,44 @@ class ZauberASTBuilder(
         }
     }
 
+    private fun readLambdaVariables(selfType: Type?, arrow: Int): List<LambdaVariable> {
+        val variables = ArrayList<LambdaVariable>()
+        tokens.push(arrow) {
+            while (i < tokens.size) {
+                if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                    val origin0 = origin(i)
+                    val names = ArrayList<LambdaVariable>()
+                    pushCall {
+                        while (i < tokens.size) {
+                            check(tokens.equals(i, TokenType.NAME)) {
+                                "Expected lambda-variable name at ${tokens.err(i)}"
+                            }
+                            names.add(readLambdaVariable(selfType))
+                            readComma()
+                        }
+                    }
+                    val name = "__ld${variables.size}"
+                    val field = currPackage.addField( // this is more of a parameter...
+                        null, false, isMutable = false, null,
+                        name, null, null, Keywords.SYNTHETIC, origin0
+                    )
+                    val variable = LambdaDestructuring(names, field)
+                    field.byParameter = variable
+                    variables.add(variable)
+                } else if (tokens.equals(i, TokenType.NAME)) {
+                    variables.add(readLambdaVariable(selfType))
+                } else throw NotImplementedError()
+                readComma()
+            }
+        }
+        consume("->")
+        return variables
+    }
+
     private fun readLambda(selfType: SelfType?): Expression {
         val arrow = tokens.findToken(i, "->")
         val variables = if (arrow >= 0) {
-            val variables = ArrayList<LambdaVariable>()
-            tokens.push(arrow) {
-                while (i < tokens.size) {
-                    if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        val origin0 = origin(i)
-                        val names = ArrayList<LambdaVariable>()
-                        pushCall {
-                            while (i < tokens.size) {
-                                check(tokens.equals(i, TokenType.NAME)) {
-                                    "Expected lambda-variable name at ${tokens.err(i)}"
-                                }
-                                names.add(readLambdaVariable(selfType))
-                                readComma()
-                            }
-                        }
-                        val name = "__ld${variables.size}"
-                        val field = currPackage.addField( // this is more of a parameter...
-                            null, false, isMutable = false, null,
-                            name, null, null, Keywords.SYNTHETIC, origin0
-                        )
-                        val variable = LambdaDestructuring(names, field)
-                        field.byParameter = variable
-                        variables.add(variable)
-                    } else if (tokens.equals(i, TokenType.NAME)) {
-                        variables.add(readLambdaVariable(selfType))
-                    } else throw NotImplementedError()
-                    readComma()
-                }
-            }
-            consume("->")
-            variables
+            readLambdaVariables(selfType, arrow)
         } else null
         val body = readMethodBody()
         check(currPackage.scopeType == ScopeType.LAMBDA)
@@ -1537,14 +1303,7 @@ class ZauberASTBuilder(
         val origin = origin(i)
         val name = tokens.toString(i++)
         val type = readTypeOrNull(selfType)
-        // to do we neither know type nor initial value :/, both come from the called function/set variable
-        val field = currPackage.addField( // this is more of a parameter...
-            null, false, isMutable = false, null,
-            name, null, null, Keywords.NONE, origin
-        )
-        val variable = LambdaVariable(type, field)
-        field.byParameter = variable
-        return variable
+        return createLambdaVariable(type, name, origin)
     }
 
     override fun readMethodBody(): ExpressionList {

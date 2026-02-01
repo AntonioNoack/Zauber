@@ -3,10 +3,9 @@ package me.anno.support.java.ast
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.cpp.ast.rich.ArrayType
-import me.anno.zauber.ast.KeywordSet
+import me.anno.support.cpp.ast.rich.readSwitch
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
-import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
@@ -26,7 +25,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
@@ -34,10 +32,9 @@ import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.ListType
+import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
-import kotlin.math.min
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)
 class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(tokens, root, false) {
@@ -75,66 +72,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
-    // todo assign them appropriately
-    val annotations = ArrayList<Annotation>()
-
-    private fun readClass(scopeType: ScopeType) {
-        val origin = origin(i)
-        val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-
-        val keywords = packKeywords()
-        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-
-        val typeParameters = readTypeParameterDeclarations(classScope)
-        classScope.typeParameters = typeParameters
-        classScope.hasTypeParameters = true
-
-        val privatePrimaryConstructor = consumeIf("private")
-
-        readAnnotations()
-
-        consumeIf("constructor")
-
-        val constructorOrigin = origin(i)
-        val constructorBody = ExpressionList(ArrayList(), classScope, origin)
-
-        readSuperCalls(classScope)
-
-        val primConstructorScope = classScope.getOrCreatePrimConstructorScope()
-        val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
-        val primaryConstructor = Constructor(
-            emptyList(),
-            primConstructorScope, if (primarySuperCall != null) {
-                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
-            } else null, constructorBody,
-            if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
-            constructorOrigin
-        )
-        primConstructorScope.selfAsConstructor = primaryConstructor
-
-        readClassBody(name, keywords, scopeType)
-        popGenericParams()
-    }
-
-    private fun readInterface() {
-        val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
-        val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
-        val keywords = packKeywords()
-        clazz.typeParameters = readTypeParameterDeclarations(clazz)
-        clazz.hasTypeParameters = true
-
-        readSuperCalls(clazz)
-        readClassBody(name, keywords, ScopeType.INTERFACE)
-        popGenericParams()
-    }
-
-    private fun readAnnotations() {
-        if (consumeIf("@")) {
-            annotations.add(readAnnotation())
-        }
-    }
-
-    private fun readSuperCalls(classScope: Scope) {
+    override fun readSuperCalls(classScope: Scope) {
         if (consumeIf("extends")) {
             do {
                 val type = readTypeNotNull(null, true) as ClassType
@@ -153,114 +91,6 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
             classScope.superCalls.add(SuperCall(AnyType, emptyList(), null))
         }
-    }
-
-    private fun readClassBody(name: String, keywords: KeywordSet, scopeType: ScopeType): Scope {
-        val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        classScope.keywords = classScope.keywords or keywords
-
-        if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            pushBlock(classScope) {
-                if (classScope.scopeType == ScopeType.ENUM_CLASS) {
-                    val endIndex = readEnumBody()
-                    i = min(endIndex + 1, tokens.size) // skipping over semicolon
-                }
-                readFileLevel()
-            }
-        }
-
-        if (keywords.hasFlag(Keywords.DATA_CLASS) || keywords.hasFlag(Keywords.VALUE)) {
-            pushScope(classScope) {
-                finishDataClass(classScope)
-            }
-        }
-
-        return classScope
-    }
-
-    private fun readEnumBody(): Int {
-
-        val origin0 = origin(i)
-        var endIndex = tokens.findToken(i, ";")
-        if (endIndex < 0) endIndex = tokens.size
-        val enumScope = currPackage
-        val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-        // val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
-        val primaryConstructorScope = companionScope.getOrCreatePrimConstructorScope()
-        primaryConstructorScope.selfAsConstructor = Constructor(
-            emptyList(), primaryConstructorScope,
-            null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
-            Keywords.NONE, origin0
-        )
-
-        push(endIndex) {
-            var ordinal = 0
-            while (i < tokens.size) {
-                // read enum value
-                readAnnotations()
-
-                val origin = origin(i)
-                val name = consumeName(VSCodeType.ENUM_MEMBER, 0)
-
-                val typeParameters = readTypeParameters(null)
-                val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    readValueParameters()
-                } else emptyList()
-
-                val keywords = packKeywords()
-                val entryScope = readClassBody(name, Keywords.NONE, ScopeType.ENUM_ENTRY_CLASS)
-                // todo add name and id as parameters
-                val extraValueParameters = listOf(
-                    NamedParameter(null, NumberExpression((ordinal++).toString(), companionScope, origin)),
-                    NamedParameter(null, StringExpression(name, companionScope, origin)),
-                )
-                val initialValue = ConstructorExpression(
-                    enumScope, typeParameters,
-                    extraValueParameters + valueParameters,
-                    null, enumScope, origin
-                )
-                val valueType =
-                    if (enumScope.typeParameters.isNotEmpty()) null // we need to resolve them
-                    else enumScope.typeWithArgs
-                val field = companionScope.addField(
-                    companionScope.typeWithoutArgs,
-                    false, isMutable = false, null,
-                    name, valueType, initialValue, keywords, origin
-                )
-                entryScope.objectField = field
-
-                val fieldExpr = FieldExpression(field, primaryConstructorScope, origin)
-                primaryConstructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
-
-                readComma()
-            }
-        }
-
-        createEnumProperties(companionScope, enumScope, origin0)
-        return endIndex
-    }
-
-    private fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Int) {
-
-        companionScope.hasTypeParameters = true
-
-        val constructorScope = companionScope.getOrCreatePrimConstructorScope()
-        val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs))
-        val entryValues = enumScope.enumEntries.map { entryScope ->
-            val field = entryScope.objectField!!
-            FieldExpression(field, constructorScope, origin)
-        }
-        val initialValue = createArrayOfExpr(enumScope.typeWithoutArgs, entryValues, constructorScope, origin)
-
-        val entriesField = constructorScope.addField(
-            companionScope.typeWithoutArgs,
-            false, isMutable = false, null,
-            "entries", listType,
-            initialValue, Keywords.SYNTHETIC, origin
-        )
-
-        val entriesFieldExpr = FieldExpression(entriesField, constructorScope, origin)
-        constructorScope.code.add(AssignmentExpression(entriesFieldExpr, initialValue))
     }
 
     private fun applyImport(import: Import) {
@@ -284,7 +114,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         return pushScope("Companion", ScopeType.COMPANION_OBJECT) { scope -> scope }
     }
 
-    fun readFileLevel() {
+    override fun readFileLevel() {
         loop@ while (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
@@ -319,6 +149,10 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 }
 
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+                consumeIf("record") -> {
+                    keywords = keywords or Keywords.VALUE
+                    readClass(ScopeType.NORMAL_CLASS)
+                }
 
                 consumeIf("interface") -> readInterface()
 
@@ -342,19 +176,6 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 consumeIf("@") -> annotations.add(readAnnotation())
 
                 tokens.equals(i, TokenType.KEYWORD) -> collectKeywords()
-
-                // todo methods / fields need some read-ahead
-                /*consumeIf("fun") -> {
-                    if (consumeIf("interface")) {
-                        keywords = keywords or Keywords.FUN_INTERFACE
-                        readInterface()
-                    } else {
-                        readMethod()
-                    }
-                }
-                consumeIf("var") -> readFieldInClass(true)
-                consumeIf("val") -> readFieldInClass(false)*/
-                // todo it is a constructor, if the method name = class name
 
                 consumeIf(";") -> {}// just skip it
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
@@ -385,6 +206,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         val keywords = packKeywords()
         pushScope(scopeName, ScopeType.CONSTRUCTOR) { scope ->
             val valueParameters = pushCall { readParameterDeclarations(null) }
+            skipThrowList()
             var superCall: InnerSuperCall? = null
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 pushBlock(ScopeType.METHOD, "body") {
@@ -422,6 +244,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         val keywords = packKeywords()
         pushScope(scopeName, ScopeType.METHOD) { scope ->
             val valueParameters = pushCall { readParameterDeclarations(null) }
+            skipThrowList()
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 readBodyOrExpression(null)
             } else null
@@ -432,11 +255,20 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
+    fun skipThrowList() {
+        if (consumeIf("throws")) {
+            readTypeNotNull(null, true)
+            while (consumeIf(",")) {
+                readTypeNotNull(null, true)
+            }
+        }
+    }
+
     fun readFieldInClass(valueType: Type, name: String) {
         readFieldInMethod(valueType, name, currPackage)
     }
 
-    fun readAnnotation(): Annotation {
+    override fun readAnnotation(): Annotation {
         if (tokens.equals(i, TokenType.NAME) &&
             tokens.equals(i + 1, ":") &&
             tokens.equals(i + 2, TokenType.NAME)
@@ -470,11 +302,12 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 consumeIf("native") -> Keywords.EXTERNAL
                 consumeIf("override") -> Keywords.OVERRIDE
                 consumeIf("abstract") -> Keywords.ABSTRACT
-                consumeIf("data") -> Keywords.DATA_CLASS
-                consumeIf("value") -> Keywords.VALUE
                 consumeIf("annotation") -> Keywords.ANNOTATION
                 consumeIf("final") -> Keywords.FINAL
                 consumeIf("sealed") -> Keywords.SEALED
+                consumeIf("volatile") -> 0 // Keywords.VOLATILE -> todo do we need to support them?
+                // todo make it synchronized: pack the body into a try-finally with lock & unlock
+                consumeIf("synchronized") -> 0
                 consumeIf("static") -> {
                     isStatic = true
                     0
@@ -496,7 +329,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 annotations.add(readAnnotation())
             }
 
-            while ((tokens.equals(i, TokenType.KEYWORD) || tokens.equals(i, TokenType.NAME)) &&
+            while (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                 !tokens.equals(i + 1, ":")
             ) {
                 keywords = keywords or when {
@@ -507,13 +340,15 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             }
 
             val isVal = keywords.hasFlag(Keywords.FINAL)
-            check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD))
-
-            var type = readTypeNotNull(null, true)
-            val isVararg = consumeIf("...")
-            if (isVararg) type = ClassType(ArrayType.clazz, listOf(type))
+            check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
+                "Expected name, but got ${tokens.err(i)}"
+            }
 
             val origin = origin(i)
+            var type = readTypeNotNull(null, true)
+            val isVararg = consumeIf("...")
+            if (isVararg) type = ClassType(ArrayType.clazz, listOf(type), origin)
+
             val name = consumeName(VSCodeType.PARAMETER, 0)
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
@@ -578,6 +413,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
     private fun readPrefix(): Expression {
 
+        val origin = origin(i)
         val label =
             if (tokens.equals(i, TokenType.LABEL)) tokens.toString(i++)
             else null
@@ -587,35 +423,35 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 val annotation = readAnnotation()
                 AnnotatedExpression(annotation, readPrefix())
             }
-            consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin(i - 1))
-            consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
-            consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i - 1))
-            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i - 1))
-            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin(i - 1))
-            tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i), currPackage, origin(i++))
-            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i), currPackage, origin(i++))
+            consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
+            consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
+            consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
+            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin)
+            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
+            tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
+            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
+            consumeIf("return") -> readReturn(readBreakLabelName())
+            consumeIf("throw") -> ThrowExpression(readExpression(), currPackage, origin)
+            consumeIf("break") -> BreakExpression(readBreakLabel(), currPackage, origin)
+            consumeIf("continue") -> ContinueExpression(readBreakLabel(), currPackage, origin)
             consumeIf("!") -> {
-                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "not", currPackage, origin)
             }
             consumeIf("+") -> {
-                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "unaryPlus", currPackage, origin)
             }
             consumeIf("-") -> {
-                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "unaryMinus", currPackage, origin)
             }
-            consumeIf("++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin(i - 1), readExpression())
-            consumeIf("--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin(i - 1), readExpression())
+            consumeIf("++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin, readExpression())
+            consumeIf("--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin, readExpression())
             consumeIf("*") -> {
                 ArrayToVarargsStar(readExpression())
             }
             consumeIf("::") -> {
-                val origin = origin(i - 1)
                 check(tokens.equals(i, TokenType.NAME))
                 val name = tokens.toString(i++)
                 // :: means a function of the current class
@@ -662,29 +498,34 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             }
 
             tokens.equals(i, TokenType.NAME) -> {
-                val origin = origin(i)
-                val vsCodeType =
-                    if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
-                        VSCodeType.METHOD
-                    } else VSCodeType.VARIABLE
-                val namePath = consumeName(vsCodeType, 0)
-                val typeArgs = readTypeParameters(null)
-                if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    // constructor or function call with type args
-                    val start = i
-                    val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-                    if (LOGGER.isDebugEnabled) LOGGER.debug(
-                        "tokens for params: ${
-                            (start..end).map { idx ->
-                                "${tokens.getType(idx)}(${tokens.toString(idx)})"
-                            }
-                        }"
-                    )
-                    val args = readValueParameters()
-                    val base = nameExpression(namePath, origin, currPackage)
-                    CallExpression(base, typeArgs, args, origin + 1)
+                if (tokens.equals(i + 1, "->")) {
+                    readLambda(i)
                 } else {
-                    nameExpression(namePath, origin, currPackage)
+                    val origin = origin(i)
+                    val vsCodeType =
+                        if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
+                            VSCodeType.METHOD
+                        } else VSCodeType.VARIABLE
+                    val namePath = consumeName(vsCodeType, 0)
+                    val typeArgs = readTypeParameters(null)
+                    println("reading a call, $namePath, $typeArgs")
+                    if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                        // constructor or function call with type args
+                        val start = i
+                        val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
+                        if (LOGGER.isDebugEnabled) LOGGER.debug(
+                            "tokens for params: ${
+                                (start..end).map { idx ->
+                                    "${tokens.getType(idx)}(${tokens.toString(idx)})"
+                                }
+                            }"
+                        )
+                        val args = readValueParameters()
+                        val base = nameExpression(namePath, origin, currPackage)
+                        CallExpression(base, typeArgs, args, origin + 1)
+                    } else {
+                        nameExpression(namePath, origin, currPackage)
+                    }
                 }
             }
             tokens.equals(i, TokenType.OPEN_CALL) -> {
@@ -692,27 +533,23 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 val i0 = i
                 val origin = origin(i)
                 var type: Type? = null
-                val hasType = pushCall {
-                    type = readType(null, true)
-                    val hasType = type != null && i == tokens.size
-                    i = tokens.size // prevent crash, because we didn't consume all tokens
-                    hasType
-                }
-                if (hasType && tokens.equals(i, TokenType.NAME)) {
-                    val name = consumeName(VSCodeType.VARIABLE, 0)
-                    val expr = nameExpression(name, origin(i - 1), currPackage)
-                    createCastExpression(expr, currPackage, origin, type!!) { ifFalseScope ->
-                        val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
-                        val debugInfoParam = NamedParameter(null, debugInfoExpr)
-                        CallExpression(
-                            UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
-                            emptyList(), listOf(debugInfoParam), origin
-                        )
-                    }
+                val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
+                if (tokens.equals(end + 1, "->")) {
+                    readLambda(end)
                 } else {
-                    i = i0
-                    // just something in brackets
-                    pushCall { readExpression() }
+                    val hasType = pushCall {
+                        type = readType(null, true)
+                        val hasExactlyOneType = type != null && i == tokens.size
+                        i = tokens.size // prevent crash, because we didn't consume all tokens
+                        hasExactlyOneType
+                    }
+                    if (type != null && hasType && tokens.equals(i, TokenType.NAME)) {
+                        readCastExpression(type, origin)
+                    } else {
+                        i = i0
+                        // just something in brackets
+                        pushCall { readExpression() }
+                    }
                 }
             }
             else -> {
@@ -722,39 +559,104 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
-    private fun readSwitchCase(label: String?): Expression {
-        TODO("read switch-case like C++")
+    private fun readLambdaVariables(): List<LambdaVariable> {
+        val variables = ArrayList<LambdaVariable>()
+        while (i < tokens.size) {
+            // this is name or type + name
+            val origin = origin(i)
+            val justName = i + 1 == tokens.size || tokens.equals(i + 1, TokenType.COMMA)
+            val name: String
+            val type: Type?
+            if (justName) {
+                name = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
+                type = null
+            } else {
+                type = readTypeNotNull(null, true)
+                name = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
+            }
+            variables.add(createLambdaVariable(type, name, origin))
+            readComma()
+        }
+        return variables
+    }
+
+    private fun readLambda(end: Int): Expression {
+        return pushScope(ScopeType.LAMBDA, "lambda") { scope ->
+            val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                pushCall { readLambdaVariables() }
+            } else {
+                val origin = origin(i)
+                val name = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
+                listOf(createLambdaVariable(null, name, origin))
+            }
+
+            check(i == end + 1) { "Expected $i == $end for lambda, at ${tokens.err(i)}" }
+            consume("->")
+
+            val value = readBodyOrExpression(null)
+            LambdaExpression(params, scope, value)
+        }
+    }
+
+    private fun readCastExpression(type: Type, origin: Int): Expression {
+        val name = consumeName(VSCodeType.VARIABLE, 0)
+        val expr = nameExpression(name, origin(i - 1), currPackage)
+        return createCastExpression(expr, currPackage, origin, type) { ifFalseScope ->
+            val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
+            val debugInfoParam = NamedParameter(null, debugInfoExpr)
+            CallExpression(
+                UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
+                emptyList(), listOf(debugInfoParam), origin
+            )
+        }
     }
 
     private fun readForLoop(label: String?): Expression {
-        return pushScope(ScopeType.METHOD_BODY, "for") {
+        return pushScope(ScopeType.METHOD_BODY, "for") { scope ->
             lateinit var initial: Expression
             lateinit var condition: Expression
             lateinit var increment: Expression
+            lateinit var field: Field
+            var isIterator = false
             val origin = origin(i - 1)
             pushCall {
-                // todo actually we expect a declaration
-                // todo we must also support for(name: values)
-                initial = readExpressionOrNullWithSemicolon() ?: unitInstance
-                condition = readExpressionOrNullWithSemicolon()
-                    ?: SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
-                increment = readExpressionOrNullWithSemicolon() ?: unitInstance
+                val k = i
+                val tn = readTypeAndName()
+                if (tn != null && tokens.equals(i, ":")) {
+                    field = scope.addField(
+                        null, false, false, null,
+                        tn.second, tn.first, null, Keywords.NONE, origin
+                    )
+                    consume(":")
+                    initial = readExpression()
+                    isIterator = true
+                } else {
+                    i = k
+                    initial = readExpressionOrNullWithSemicolon() ?: unitInstance
+                    condition = readExpressionOrNullWithSemicolon()
+                        ?: SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
+                    increment = readExpressionOrNullWithSemicolon() ?: unitInstance
+                }
             }
-            val body = pushScope(ScopeType.METHOD_BODY, "forBody") {
-                val body = readMethodBody()
-                ExpressionList(listOf(body, increment), currPackage, origin)
+            val body = readBodyOrExpression(label)
+            if (isIterator) {
+                forLoop(field, initial, body, label)
+            } else {
+                val body = ExpressionList(listOf(body, increment), currPackage, origin)
+                val result = ArrayList<Expression>()
+                if (initial != unitInstance) result.add(initial)
+                result.add(WhileLoop(condition, body, label))
+                ExpressionList(result, currPackage, origin)
             }
-            val result = ArrayList<Expression>()
-            if (initial != unitInstance) result.add(initial)
-            result.add(WhileLoop(condition, body, label))
-            ExpressionList(result, currPackage, origin)
         }
     }
 
     private fun readExpressionOrNullWithSemicolon(): Expression? {
         if (consumeIf(";")) return null
         val expr = readExpression()
-        consume(";")
+        if (!tokens.equals(i - 1, TokenType.SEMICOLON)) {
+            consume(";")
+        }
         return expr
     }
 
@@ -777,10 +679,12 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             when (tokens.getType(j)) {
                 TokenType.OPEN_CALL, TokenType.OPEN_BLOCK, TokenType.OPEN_ARRAY -> depth++
                 TokenType.CLOSE_CALL, TokenType.CLOSE_BLOCK, TokenType.CLOSE_ARRAY -> {
+                    if (depth == 0) return j
                     depth--
-                    if (depth < 0) return j
                 }
-                TokenType.SEMICOLON -> if (depth == 0) return j
+                TokenType.SEMICOLON, TokenType.COMMA -> {
+                    if (depth == 0) return j
+                }
                 else -> if (depth == 0) {
                     if (tokens.equals(j, "if", "else", "for", "do", "while")) {
                         return j
@@ -811,6 +715,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 TokenType.APPEND_STRING -> "+"
                 else -> {
                     // postfix
+                    println("reading postfix for $expr")
                     expr = tryReadPostfix(expr) ?: break@loop
                     continue@loop
                 }
@@ -935,6 +840,33 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         } else null
     }
 
+    private fun readSynchronized(): Expression {
+        // store lock in a temporary field,
+        //  create try-finally for lock & unlock
+        val origin = origin(i - 1)
+        val lock = pushCall { readExpression() }
+        val scope = currPackage
+        val tmpField = scope.createImmutableField(lock)
+        val scopeName = scope.generateName("sync", origin)
+        val body = pushBlock(ScopeType.METHOD_BODY, scopeName) {
+            readMethodBody()
+        }
+        val lockMember = UnresolvedFieldExpression("lock", emptyList(), scope, origin)
+        val unlockMember = UnresolvedFieldExpression("unlock", emptyList(), scope, origin)
+        val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
+        val tmpFieldParam = listOf(NamedParameter(null, tmpFieldExpr))
+        val lockExpr = CallExpression(lockMember, emptyList(), tmpFieldParam, origin)
+        val unlockExpr = CallExpression(unlockMember, emptyList(), tmpFieldParam, origin)
+        val assignmentExpr = AssignmentExpression(tmpFieldExpr, lock)
+        val bodyPlusLock = ExpressionList(listOf(assignmentExpr, lockExpr, body), scope, origin)
+        val flagName = scope.generateName("deferFlag", origin)
+        val flag = scope.addField(
+            null, false, true, null, flagName,
+            BooleanType, null, Keywords.SYNTHETIC, origin
+        )
+        return TryCatchBlock(bodyPlusLock, emptyList(), Finally(unlockExpr, flag))
+    }
+
     override fun readMethodBody(): ExpressionList {
         val methodScope = currPackage
         val origin = origin(i)
@@ -955,8 +887,9 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 consumeIf("do") -> result += readDoWhileLoop(null)
                 consumeIf("while") -> result += readWhileLoop(null)
                 consumeIf("for") -> result += readForLoop(null)
-                consumeIf("switch") -> result += readSwitchCase(null)
+                consumeIf("switch") -> result += readSwitch(null)
                 consumeIf("try") -> result += readTryCatch()
+                consumeIf("synchronized") -> result += readSynchronized()
                 consumeIf("break") -> {
                     val origin = origin(i - 1)
                     result += BreakExpression(readBreakLabel(), currPackage, origin)
@@ -975,6 +908,23 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     val origin = origin(i - 1)
                     result += ThrowExpression(readExpressionWithSemicolon(), currPackage, origin)
                 }
+                consumeIf("assert") -> {
+                    val origin = origin(i - 1)
+                    val expr = readExpression()
+                    val message = if (consumeIf(":")) {
+                        readExpression()
+                    } else null
+                    consume(";")
+
+                    val checkName = UnresolvedFieldExpression("check", emptyList(), currPackage, origin)
+                    val params = if (message == null) {
+                        listOf(NamedParameter(null, expr))
+                    } else {
+                        val lambda = LambdaExpression(emptyList(), currPackage, message)
+                        listOf(NamedParameter(null, expr), NamedParameter(null, lambda))
+                    }
+                    result += CallExpression(checkName, emptyList(), params, origin)
+                }
 
                 tokens.equals(i, TokenType.NAME) && tokens.equals(i + 1, "@") &&
                         tokens.equals(i + 2, TokenType.KEYWORD) -> {
@@ -984,22 +934,31 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         consumeIf("do") -> readDoWhileLoop(label)
                         consumeIf("while") -> readWhileLoop(label)
                         consumeIf("for") -> readForLoop(label)
-                        consumeIf("switch") -> readSwitchCase(label)
+                        consumeIf("switch") -> readSwitch(label)
                         else -> throw IllegalStateException("Unknown $label@${tokens.err(i)}")
                     }
                 }
-
-                // todo we must skip some stuff, before we know whether we read a field declaration,
-                //  or just some assignment, or call
-                // todo methods inside methods aren't supported anyway
 
                 consumeIf("var", VSCodeType.KEYWORD, 0) -> {
                     val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
                     result += readDeclaration(null, name)
                 }
 
-                else -> {
+                consumeIf("final") -> {
+                    val k = i
                     val tn = readTypeAndName()
+                        ?: throw IllegalStateException("Expected type and name after 'final' at ${tokens.err(k)}")
+                    result += readDeclaration(tn.first, tn.second)
+                    while (consumeIf(",")) {
+                        val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
+                        result += readDeclaration(tn.first, name)
+                    }
+                }
+
+                else -> {
+                    val k = i
+                    val tn = readTypeAndName()
+                    println("type & name: $tn, $i vs $k")
                     if (tn != null) {
                         result += readDeclaration(tn.first, tn.second)
                         while (consumeIf(",")) {
@@ -1069,9 +1028,26 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     private fun readTypeAndName(): Pair<Type, String>? {
-        val type = readType(null, true) ?: return null
-        if (!tokens.equals(i, TokenType.NAME)) return null
-        val name = tokens.toString(i++)
-        return type to name
+        val i0 = i
+        val tn = readTypeAndNameImpl()
+        if (tn == null) i = i0
+        return tn
+    }
+
+    private fun readTypeAndNameImpl(): Pair<Type, String>? {
+        // early exit
+        if (tokens.equals(i + 1, TokenType.COMMA, TokenType.SEMICOLON) ||
+            tokens.equals(i + 1, TokenType.OPEN_CALL)
+        ) return null
+
+        try {
+            val type = readType(null, true) ?: return null
+            if (!tokens.equals(i, TokenType.NAME)) return null
+            val name = tokens.toString(i++)
+            return type to name
+        } catch (e: IllegalStateException) {
+            e.printStackTrace()
+            return null
+        }
     }
 }

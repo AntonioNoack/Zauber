@@ -2,6 +2,7 @@ package me.anno.support.java.ast
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase
@@ -9,6 +10,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
@@ -21,7 +23,7 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
 
     companion object {
         fun collectNamedJavaClasses(tokens: TokenList) {
-            JavaASTClassScanner(tokens).collectNamedClassesImpl()
+            JavaASTClassScanner(tokens).readFileLevel()
         }
     }
 
@@ -160,7 +162,7 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
         // println("Found class '$name', tp: $genericParams, scope: $classScope, scopeType: ${classScope.scopeType}")
     }
 
-    private fun collectNamedClassesImpl() {
+    override fun readFileLevel() {
         while (i < tokens.size) {
             when (tokens.getType(i)) {
                 TokenType.OPEN_BLOCK -> handleBlockOpen()
@@ -179,6 +181,10 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
             }
             i++
         }
+    }
+
+    override fun readSuperCalls(classScope: Scope) {
+        throw NotImplementedError()
     }
 
     private fun collectNamesOnDepth0(): Boolean {
@@ -243,6 +249,10 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
     }
 
     override fun readBodyOrExpression(label: String?): Expression {
+        throw NotImplementedError()
+    }
+
+    override fun readAnnotation(): Annotation {
         throw NotImplementedError()
     }
 

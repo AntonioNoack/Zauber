@@ -13,7 +13,7 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Ex
     }
 
     override fun resolveType(context: ResolutionContext): Type {
-        return ClassType(getScope("KClass", 1), listOf(type))
+        return ClassType(getScope("KClass", 1), listOf(type), origin)
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

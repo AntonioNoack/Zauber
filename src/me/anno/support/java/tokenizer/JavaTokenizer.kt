@@ -23,8 +23,8 @@ class JavaTokenizer(src: String, fileName: String) :
             "instanceof",
 
             "super", "this", "new",
-            "try", "catch", "finally",
-            "static", "volatile",
+            "try", "catch", "finally", "synchronized",
+            "static", "volatile", "assert", "record"
         )
     }
 }
