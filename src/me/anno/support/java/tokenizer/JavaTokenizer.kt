@@ -28,6 +28,7 @@ class JavaTokenizer(src: String, fileName: String) :
             "transient", // not serialized
             "default", // default methods for interfaces
             "yield", // inside switches with expressions
+            "non-sealed"
         )
     }
 }

@@ -211,31 +211,31 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
 
         if (listening.last()) {
             when {
-                tokens.equals(i, "enum") -> {
-                    check(tokens.equals(++i, TokenType.NAME)) {
-                        "Expected name after enum, got ${tokens.err(i)}"
-                    }
-                    val name = tokens.toString(i++)
+                tokens.equals(i, "enum") &&
+                        tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> {
+                    val name = tokens.toString(++i); i++
                     foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
                     return true// without i++
                 }
 
-                tokens.equals(i, "class") && !tokens.equals(i - 1, ".") -> {
-                    check(tokens.equals(++i, TokenType.NAME)) {
-                        "Expected name after class, got ${tokens.err(i)}"
-                    }
-                    val name = tokens.toString(i++)
+                tokens.equals(i, "record") &&
+                        tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> {
+                    val name = tokens.toString(++i); i++
                     foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
                     return true// without i++
                 }
 
-                consumeIf("interface") -> {
-                    check(tokens.equals(i, TokenType.NAME)) {
-                        "Expected name after interface, got ${tokens.err(i)}"
-                    }
-                    val name = tokens.toString(i++)
-                    val keywords = if (tokens.equals(i - 2, "fun")) Keywords.FUN_INTERFACE else Keywords.NONE
-                    foundNamedScope(name, keywords, ScopeType.INTERFACE)
+                tokens.equals(i, "class") && !tokens.equals(i - 1, ".") &&
+                        tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> {
+                    val name = tokens.toString(++i); i++
+                    foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
+                    return true// without i++
+                }
+
+                tokens.equals(i, "interface") &&
+                        tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> {
+                    val name = tokens.toString(++i); i++
+                    foundNamedScope(name, Keywords.NONE, ScopeType.INTERFACE)
                     return true// without i++
                 }
             }

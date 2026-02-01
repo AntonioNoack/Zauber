@@ -48,6 +48,11 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             "&" to Operator("&", 7, Assoc.LEFT),
             "^" to Operator("^", 6, Assoc.LEFT),
             "|" to Operator("|", 5, Assoc.LEFT),
+
+            // between +/- and </>/<=/>=
+            "<<" to Operator("<<", 10, Assoc.LEFT),
+            ">>" to Operator(">>", 10, Assoc.LEFT),
+            ">>>" to Operator(">>>", 10, Assoc.LEFT),
         )
     }
 
@@ -327,6 +332,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 consumeIf("volatile") -> 0 // Keywords.VOLATILE -> todo do we need to support them?
                 // todo make it synchronized: pack the body into a try-finally with lock & unlock
                 consumeIf("synchronized") -> 0
+                consumeIf("non-sealed") -> 0 // WTF
                 // todo store that somewhere?
                 consumeIf("transient") -> 0
                 consumeIf("static") -> {
@@ -559,18 +565,17 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 // this could be a cast... it is, if (type) name
                 val i0 = i
                 val origin = origin(i)
-                var type: Type? = null
                 val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
                 if (tokens.equals(end + 1, "->")) {
                     readLambda(end)
                 } else {
-                    val hasType = pushCall {
-                        type = readType(null, true)
-                        val hasExactlyOneType = type != null && i == tokens.size
-                        i = tokens.size // prevent crash, because we didn't consume all tokens
-                        hasExactlyOneType
+                    val type = try {
+                        pushCall { readType(null, true) }
+                    } catch (_: IllegalStateException) {
+                        null
                     }
-                    if (type != null && hasType && tokens.equals(i, TokenType.NAME)) {
+                    if (type != null && tokens.equals(i, TokenType.NAME, TokenType.OPEN_CALL)) {
+                        // open-call is just a double-cast, e.g. Long -> long -> int
                         readCastExpression(type, origin)
                     } else {
                         i = i0
@@ -626,10 +631,9 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     private fun readCastExpression(type: Type, origin: Int): Expression {
-        val name = consumeName(VSCodeType.VARIABLE, 0)
-        val expr = nameExpression(name, origin(i - 1), currPackage)
-        return createCastExpression(expr, currPackage, origin, type) { ifFalseScope ->
-            val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
+        val rhs = readExpression()
+        return createCastExpression(rhs, currPackage, origin, type) { ifFalseScope ->
+            val debugInfoExpr = StringExpression(rhs.toString(), ifFalseScope, origin)
             val debugInfoParam = NamedParameter(null, debugInfoExpr)
             CallExpression(
                 UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
@@ -1078,17 +1082,31 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
         if (LOGGER.isDebugEnabled) LOGGER.debug("reading var/val $name")
 
-        val initialValue = if (consumeIf("=")) readExpression() else null
-        check(type != null || initialValue != null) { "Field at ${tokens.err(i0)} either needs a type or a value" }
+        val assignments = ArrayList<Expression>()
+        var name = name
+
+        do {
+            val initialValue = if (consumeIf("=")) readExpression() else null
+            check(type != null || initialValue != null) { "Field at ${tokens.err(i0)} either needs a type or a value" }
+
+            // define variable in the scope
+            val field = fieldScope.addField(
+                null, false, isMutable = isMutable, null,
+                name, type, initialValue, keywords, origin
+            )
+
+            if (initialValue != null) {
+                val variableName = FieldExpression(field, currPackage, origin)
+                assignments += AssignmentExpression(variableName, initialValue)
+            }
+
+            if (consumeIf(",")) {
+                name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
+            } else break
+        } while (true)
         consume(";")
 
-        // define variable in the scope
-        val field = fieldScope.addField(
-            null, false, isMutable = isMutable, null,
-            name, type, initialValue, keywords, origin
-        )
-
-        return createDeclarationExpression(fieldScope, initialValue, field)
+        return ExpressionList(assignments, currPackage, origin)
     }
 
     private fun readTypeAndName(): Pair<Type?, String>? {

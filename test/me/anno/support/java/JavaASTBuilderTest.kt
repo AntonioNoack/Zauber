@@ -28,6 +28,7 @@ class JavaASTBuilderTest {
             class Object extends Any
             class StackTraceElement
             interface Iterator<V>
+            interface Runnable
             // todo is this properly supported???
             @interface SuppressWarnings
             class Throwable

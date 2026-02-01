@@ -67,15 +67,22 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     val values = ArrayList<Expression>()
 
                     val origin = origin(i)
+
                     // one or more `case X:`
-                    do {
-                        consume("case")
+                    consume("case")
+                    while (true) {
                         values += push(findCaseEnd()) {
                             readExpression()
                         }
                         i-- // undo skipping end
-                        consume(checkExpr())
-                    } while (tokens.equals(i, "case"))
+
+                        if (consumeIf("case")) continue // normal C/C++/Java
+                        if (consumeIf(",")) continue // supported for Java switch-expr
+
+                        break
+                    }
+                    // the end
+                    consume(checkExpr())
 
                     val equalsCondition = values.map {
                         CheckEqualsOp(
@@ -131,7 +138,7 @@ fun ZauberASTBuilderBase.findCaseEnd(): Int {
     var i = i
     while (i < tokens.size) {
         when (tokens.getType(i)) {
-            TokenType.SEMICOLON -> if (depth == 0) return i
+            TokenType.SEMICOLON, TokenType.COMMA -> if (depth == 0) return i
             TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
             TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
             else -> {

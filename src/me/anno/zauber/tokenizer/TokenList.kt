@@ -42,12 +42,14 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return push(end, readImpl)
     }
 
-    inline fun <R> push(j: Int, readImpl: () -> R): R {
+    inline fun <R> push(newSize: Int, readImpl: () -> R): R {
         val oldSize = size
-        size = j
-        val result = readImpl()
-        size = oldSize
-        return result
+        try {
+            size = newSize
+            return readImpl()
+        } finally {
+            size = oldSize
+        }
     }
 
     fun <R> push(

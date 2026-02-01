@@ -9,6 +9,8 @@ abstract class ZauberTokenizerBase(
     var hasNotAsNotIn = false
     var supportsDollarInName = false
 
+    val hasNonSealedKeyword = "non-sealed" in keywords
+
     override fun tokenize(): TokenList {
         val nameLetters = if (supportsDollarInName) "_$" else "_"
         while (i < n) {
@@ -29,7 +31,19 @@ abstract class ZauberTokenizerBase(
                     if (i < n && src[i] == '@') {
                         tokens.add(TokenType.LABEL, start, i)
                         i++
-                    } else tokens.add(TokenType.NAME, start, i)
+                    } else {
+                        // hack for non-sealed
+                        if (hasNonSealedKeyword && i - start == 3 &&
+                            src.startsWith("non-sealed", start) &&
+                            (start + "non-sealed".length < src.length ||
+                                    src[start + "non-sealed".length].isWhitespace())
+                        ) {
+                            i = start + "non-sealed".length
+                            tokens.add(TokenType.KEYWORD, start, i)
+                        } else {
+                            tokens.add(TokenType.NAME, start, i)
+                        }
+                    }
                 }
 
                 c == '`' && supportsTickedNames -> {

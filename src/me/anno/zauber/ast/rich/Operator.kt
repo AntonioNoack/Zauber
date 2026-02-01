@@ -56,6 +56,8 @@ val operators = mapOf(
     "as" to Operator("as", 12, Assoc.LEFT),
     "as?" to Operator("as?", 12, Assoc.LEFT),
 
+    // <<, >> is somewhere between +/- and >/</>=/<=
+
     // maths
     "+" to Operator("+", 15, Assoc.LEFT),
     "-" to Operator("-", 15, Assoc.LEFT),

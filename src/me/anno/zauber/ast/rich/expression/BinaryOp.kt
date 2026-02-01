@@ -50,6 +50,9 @@ fun ASTBuilderBase.binaryOp(
                 right is UnresolvedFieldExpression -> {
                     GetMethodFromValueExpression(left, right.name, right.origin)
                 }
+                right is FieldExpression -> {
+                    GetMethodFromValueExpression(left, right.field.name, right.origin)
+                }
                 else -> throw NotImplementedError(
                     "WhichType? $left::$right, " +
                             "(${left.javaClass.simpleName})::(${right.javaClass.simpleName}), " +
