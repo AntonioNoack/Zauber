@@ -245,17 +245,6 @@ class ZauberASTBuilder(
         popGenericParams()
     }
 
-    private fun skipTypeParametersToFindFunctionNameAndScope(origin: Int): Scope {
-        var j = i
-        if (tokens.equals(j, "<")) {
-            j = tokens.findBlockEnd(j, "<", ">") + 1
-        }
-        check(tokens.equals(j, TokenType.NAME))
-        val methodName = tokens.toString(j)
-        val uniqueName = currPackage.generateName("fun:$methodName", origin)
-        return currPackage.getOrPut(uniqueName, tokens.fileName, ScopeType.METHOD)
-    }
-
     private fun readFieldOrMethodSelfType(typeParameters: List<Parameter>, functionScope: Scope): Type? {
         if (tokens.equals(i + 1, ".") ||
             tokens.equals(i + 1, "<") ||

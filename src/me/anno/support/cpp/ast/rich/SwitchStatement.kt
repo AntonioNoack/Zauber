@@ -63,6 +63,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     do {
                         consume("case")
                         values += readExpression()
+                        // todo in Java, this can also be a '->', and this becomes an expression
                         consume(":")
                     } while (tokens.equals(i, "case"))
 

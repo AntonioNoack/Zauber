@@ -17,8 +17,10 @@ val operators = mapOf(
     "?:" to Operator("?:", 2, Assoc.LEFT),
 
     // logical
-    "||" to Operator("||", 6, Assoc.LEFT),
-    "&&" to Operator("&&", 7, Assoc.LEFT),
+    "||" to Operator("||", 3, Assoc.LEFT),
+    "&&" to Operator("&&", 4, Assoc.LEFT),
+
+    // | = 5, ^ = 6, & = 7
 
     // comparing
     "===" to Operator("===", 8, Assoc.LEFT),

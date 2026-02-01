@@ -55,13 +55,21 @@ abstract class ZauberTokenizerBase(
                 c == '"' -> parseString()
 
                 // special one-char tokens
-                c == ',' -> tokens.add(TokenType.COMMA, i++, i)
-                c == '(' -> tokens.add(TokenType.OPEN_CALL, i++, i)
-                c == ')' -> tokens.add(TokenType.CLOSE_CALL, i++, i)
-                c == '{' -> tokens.add(TokenType.OPEN_BLOCK, i++, i)
-                c == '}' -> tokens.add(TokenType.CLOSE_BLOCK, i++, i)
-                c == '[' -> tokens.add(TokenType.OPEN_ARRAY, i++, i)
-                c == ']' -> tokens.add(TokenType.CLOSE_ARRAY, i++, i)
+                c in ",;()[]{}" -> {
+                    val type = when (c) {
+                        ',' -> TokenType.COMMA
+                        ';' -> TokenType.SEMICOLON
+                        '(' -> TokenType.OPEN_CALL
+                        ')' -> TokenType.CLOSE_CALL
+                        '{' -> TokenType.OPEN_BLOCK
+                        '}' -> TokenType.CLOSE_BLOCK
+                        '[' -> TokenType.OPEN_ARRAY
+                        ']' -> TokenType.CLOSE_ARRAY
+                        else -> throw IllegalStateException()
+                    }
+                    tokens.add(type, i, i + 1)
+                    i++
+                }
 
                 c == '?' && hasNotAsNotIn -> {
                     // parse 'as?'

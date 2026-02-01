@@ -142,8 +142,13 @@ abstract class ZauberASTBuilderBase(
                 // name might be needed for the type, so register it already here
                 genericParams.last()[name] = GenericType(classScope, name)
 
-                val type = readTypeOrNull(classScope.typeWithoutArgs) ?: NullableAnyType
-                // if you print type here, typeParameters may not be available yet, and cause an NPE
+                val type = if (this is ZauberASTBuilder || this is ZauberASTClassScanner) {
+                    readTypeOrNull(classScope.typeWithoutArgs) ?: NullableAnyType
+                    // if you print type here, typeParameters may not be available yet, and cause an NPE
+                } else if (tokens.equals(i, "extends", "super")) {
+                    i++ // skip extends
+                    readTypeNotNull(null, true)
+                } else NullableAnyType
 
                 parameters.add(Parameter(parameters.size, name, type, classScope, origin))
                 readComma()
@@ -343,11 +348,16 @@ abstract class ZauberASTBuilderBase(
             return if (negate) base.not() else base
         }
 
-        if (consumeIf("?")) {
-            base = typeOrNull(base)
+        if (this is ZauberASTBuilder || this is ZauberASTClassScanner) {
+            if (consumeIf("?")) {
+                base = typeOrNull(base)
+            }
         }
 
-        if (this is JavaASTBuilder || this is JavaASTClassScanner) {
+        if (this is JavaASTBuilder ||
+            this is JavaASTClassScanner ||
+            this is CppASTBuilder
+        ) {
             while (consumeIf(TokenType.OPEN_ARRAY)) {
                 if (consumeIf(TokenType.CLOSE_ARRAY)) {
                     base = ClassType(ArrayType.clazz, listOf(base), origin(i))
@@ -759,4 +769,14 @@ abstract class ZauberASTBuilderBase(
         popGenericParams()
     }
 
+    fun skipTypeParametersToFindFunctionNameAndScope(origin: Int): Scope {
+        var j = i
+        if (tokens.equals(j, "<")) {
+            j = tokens.findBlockEnd(j, "<", ">") + 1
+        }
+        check(tokens.equals(j, TokenType.NAME))
+        val methodName = tokens.toString(j)
+        val uniqueName = currPackage.generateName("fun:$methodName", origin)
+        return currPackage.getOrPut(uniqueName, tokens.fileName, ScopeType.METHOD)
+    }
 }

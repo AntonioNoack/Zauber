@@ -43,8 +43,11 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)
 
         val operators = me.anno.zauber.ast.rich.operators + mapOf(
-            "instanceof" to Operator("instanceof", 35 /* extra strong? */, Assoc.LEFT),
+            "instanceof" to Operator("instanceof", 9 /* like comparing symbols */, Assoc.LEFT),
             "?" to Operator("?", 2 /* like ?: */, Assoc.LEFT),
+            "&" to Operator("&", 7, Assoc.LEFT),
+            "^" to Operator("^", 6, Assoc.LEFT),
+            "|" to Operator("|", 5, Assoc.LEFT),
         )
     }
 
@@ -188,11 +191,20 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         val tn = readTypeAndName()
                             ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
                         if (tokens.equals(i, "(")) {
-                            readMethodInClass(tn.first, tn.second)
+                            readMethodInClass(tn.first, tn.second, emptyList())
                         } else {
                             readFieldInClass(tn.first, tn.second)
                         }
                     }
+                }
+
+                tokens.equals(i, "<") -> {
+                    val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin(i))
+                    val typeParams = readTypeParameterDeclarations(methodScope)
+                    val tn = readTypeAndName()
+                        ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
+                    check(tokens.equals(i, "("))
+                    readMethodInClass(tn.first, tn.second, typeParams)
                 }
 
                 else -> throw NotImplementedError("Unknown token at ${tokens.err(i)}")
@@ -238,7 +250,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
-    fun readMethodInClass(returnType: Type, name: String) {
+    fun readMethodInClass(returnType: Type, name: String, typeParameters: List<Parameter>) {
         val origin = origin(i)
         val scopeName = currPackage.generateName(name, origin)
         val keywords = packKeywords()
@@ -249,7 +261,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 readBodyOrExpression(null)
             } else null
             scope.selfAsMethod = Method(
-                null, false, name, emptyList(),
+                null, false, name, typeParameters,
                 valueParameters, scope, returnType, emptyList(), body, keywords, origin
             )
         }
@@ -653,8 +665,15 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
     private fun readExpressionOrNullWithSemicolon(): Expression? {
         if (consumeIf(";")) return null
-        val expr = readExpression()
-        if (!tokens.equals(i - 1, TokenType.SEMICOLON)) {
+        val k = i
+        val tn = readTypeAndName()
+        val expr = if (tn != null) {
+            readFieldInMethod(tn.first, tn.second, currPackage)
+        } else {
+            i = k
+            readExpression()
+        }
+        if (i < tokens.size && !tokens.equals(i - 1, TokenType.SEMICOLON)) {
             consume(";")
         }
         return expr
@@ -668,7 +687,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
     private fun readReturn(label: String?): ReturnExpression {
         val origin = origin(i - 1)
-        val value = if (!tokens.equals(i, ";")) readExpression() else unitInstance
+        val value = if (i < tokens.size && !tokens.equals(i, TokenType.SEMICOLON)) readExpression() else unitInstance
         return ReturnExpression(value, label, currPackage, origin)
     }
 
@@ -704,11 +723,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     private fun readExpressionImpl(minPrecedence: Int): Expression {
+        println("reading expr at ${tokens.err(i)}")
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
+            println("next token: ${tokens.err(i)}")
             val symbol = when (tokens.getType(i)) {
                 TokenType.SYMBOL, TokenType.KEYWORD -> tokens.toString(i)
                 TokenType.NAME -> break@loop
@@ -726,6 +747,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             val op = operators[symbol]
             if (op == null) {
                 // postfix
+                println("binary[$symbol] -> null")
                 expr = tryReadPostfix(expr) ?: break@loop
             } else {
 
@@ -739,6 +761,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 i++ // consume operator
 
                 val scope = currPackage
+                println("binary[$symbol]")
                 expr = when (symbol) {
                     "instanceof" -> {
                         val type = readTypeNotNull(null, true)
@@ -763,7 +786,18 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                             pushScope(scope) { readExpression() }
                         },
                     )
-                    "." -> handleDotOperator(expr)
+                    "." -> {
+                        if (consumeIf("class")) {
+                            val type = when (expr) {
+                                is TypeExpression -> expr.type
+                                is UnresolvedFieldExpression -> currPackage.resolveType(expr.name, imports)
+                                else -> throw IllegalStateException("$expr (${expr.javaClass.simpleName}) is a type...")
+                            }
+                            GetClassFromTypeExpression(type, scope, origin)
+                        } else {
+                            handleDotOperator(expr)
+                        }
+                    }
                     "&&", "||" -> handleShortcutOperator(expr, symbol, op, scope, origin)
                     "::" -> {
                         val rhs = readRHS(op)
@@ -823,6 +857,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
             consumeIf("--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i - 1))
+
             else -> null
         }
     }
@@ -833,7 +868,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
     private fun readBreakLabelName(): String? {
         return if (consumeIf("@")) {
-            check(tokens.equals(i, TokenType.NAME)) {
+            check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
                 "Expected name for label, got ${tokens.err(i)}"
             }
             tokens.toString(i++)
