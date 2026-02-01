@@ -670,7 +670,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     increment = readExpressionOrNullWithSemicolon() ?: unitInstance
                 }
             }
-            val body = readBodyOrExpression(label)
+            val body = readBodyOrExpression(label ?: "")
             if (isIterator) {
                 forLoop(field, initial, body, label)
             } else {

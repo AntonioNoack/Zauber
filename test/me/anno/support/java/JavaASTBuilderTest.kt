@@ -34,6 +34,7 @@ class JavaASTBuilderTest {
             class Throwable
             class Error extends Throwable
             class InternalError extends Error
+            interface WeakHashMap<K, V>
         """.trimIndent(), "helper.java").tokenize())
 
         for (source in sources) {

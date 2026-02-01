@@ -645,6 +645,10 @@ abstract class ZauberASTBuilderBase(
             UnresolvedType(name, null, currPackage, imports)
         } else {
             resolveTypeByName(selfType, name, currPackage, imports)
+                ?: if (tokens.equals(i, ".")) {
+                    // get package under root
+                    root.children.firstOrNull { it.name == name }?.typeWithoutArgs
+                } else null
         }
 
         if (!allowUnresolvedTypes) {
