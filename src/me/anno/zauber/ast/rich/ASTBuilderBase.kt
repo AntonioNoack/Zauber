@@ -49,12 +49,12 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     }
 
     inline fun <R> pushCall(readImpl: () -> R): R {
-        val size0 = tokens.size
+        // val size0 = tokens.size
         val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
         consume(TokenType.OPEN_CALL)
         val result = tokens.push(end, readImpl)
         check(i == end) { "Missed reading tokens, $i != $end, ${tokens.err(i)}" }
-        println("pushCall, $i vs $size0 vs ${tokens.size}")
+        // println("pushCall, $i vs $size0 vs ${tokens.size}")
         consume(TokenType.CLOSE_CALL)
         return result
     }

@@ -569,7 +569,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         } else VSCodeType.VARIABLE
                     val namePath = consumeName(vsCodeType, 0)
                     val typeArgs = readTypeParameters(null)
-                    println("reading a call, $namePath, $typeArgs")
+                    // println("reading a call, $namePath, $typeArgs")
                     if (tokens.equals(i, TokenType.OPEN_CALL)) {
                         // constructor or function call with type args
                         val start = i
@@ -824,14 +824,14 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     private fun readExpressionImpl(minPrecedence: Int): Expression {
-        println("reading expr at ${tokens.err(i)}")
+        // println("reading expr at ${tokens.err(i)}")
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
             var opLength = 1
-            println("next token: ${tokens.err(i)}")
+            // println("next token: ${tokens.err(i)}")
             val symbol = when (tokens.getType(i)) {
                 TokenType.SYMBOL, TokenType.KEYWORD -> {
                     // support for <<, >>, >>>, <<=, >>=, >>>=
@@ -876,7 +876,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             val op = operators[symbol]
             if (op == null) {
                 // postfix
-                println("binary[$symbol] -> null")
+                // println("binary[$symbol] -> null")
                 expr = tryReadPostfix(expr) ?: break@loop
             } else {
 
@@ -890,7 +890,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 i += opLength // consume operator
 
                 val scope = currPackage
-                println("binary[$symbol]")
+                // println("binary[$symbol]")
                 expr = when (symbol) {
                     "instanceof" -> {
                         val type = readTypeNotNull(null, true)
@@ -1044,7 +1044,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             val oldSize = result.size
             val oldNumFields = currPackage.fields.size
 
-            println("Reading method body, ${tokens.err(i)}")
+            // println("Reading method body, ${tokens.err(i)}")
 
             when {
                 consumeIf(";") -> {} // skip
@@ -1132,7 +1132,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 else -> {
                     val k = i
                     val tn = readTypeAndName()
-                    println("type & name: $tn, $i vs $k")
+                    // println("type & name: $tn, $i vs $k")
                     if (tn != null) {
                         result += readDeclaration(tn.first, tn.second)
                         while (consumeIf(",")) {
@@ -1140,6 +1140,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                             result += readDeclaration(tn.first, name)
                         }
                     } else {
+                        i = k
                         result.add(readExpression())
                         consume(";")
                         if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")

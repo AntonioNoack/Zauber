@@ -22,6 +22,10 @@ class JavaASTBuilderTest {
 
     private val sources = ArrayList<TokenList>()
 
+    // 10071 / 14219 -> quite good already, but 30s is also pretty slow...
+    //  -> I removed some printing, and now we're down to 10s -> good enough, if we eliminate all printing?
+    // todo also, we should make type&name-scanning smarter, very often, it's not a type&name and the type-resolution is expensive
+
     @Test
     fun testJavaTokenizer() {
         val t0 = System.nanoTime()
