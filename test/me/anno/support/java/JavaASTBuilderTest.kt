@@ -65,6 +65,7 @@ class JavaASTBuilderTest {
             interface AutoCloseable
             interface FunctionalInterface
             interface Appendable // for BufferedWriter and such
+            interface Comparable<T>
         """.trimIndent(), "helper.java"
             ).tokenize()
         )

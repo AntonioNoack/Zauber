@@ -102,14 +102,15 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
         classScope.hasTypeParameters = true
         if (false) println("Defined type parameters for ${classScope.pathStr}")
 
-        if (tokens.equals(j, "private")) j++
-        if (tokens.equals(j, "protected")) j++
-        if (tokens.equals(j, "constructor")) j++
+        // if (tokens.equals(j, "private")) j++
+        // if (tokens.equals(j, "protected")) j++
+        // if (tokens.equals(j, "constructor")) j++
         if (tokens.equals(j, TokenType.OPEN_CALL)) {
             // skip constructor params
             j = tokens.findBlockEnd(j, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
         }
-        if (tokens.equals(j, ":")) {
+
+        fun collectSuperNames() {
             j++
             while (tokens.equals(j, TokenType.NAME)) {
                 val name = tokens.toString(j++)
@@ -124,6 +125,14 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
                 if (tokens.equals(j, TokenType.COMMA)) j++
                 else break
             }
+        }
+
+        if (tokens.equals(j, "extends")) {
+            collectSuperNames()
+        }
+
+        if (tokens.equals(j, "implements")) {
+            collectSuperNames()
         }
 
         if (scopeType == ScopeType.ENUM_CLASS && tokens.equals(j, "{")) {
