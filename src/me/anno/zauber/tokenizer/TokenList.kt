@@ -188,6 +188,13 @@ class TokenList(val source: CharSequence, val fileName: String) {
         }
     }
 
+    fun equals(i: Int, type: TokenType, type2: TokenType, type3: TokenType): Boolean {
+        return i in 0 until size && run {
+            val t = getType(i)
+            t == type || t == type2 || t == type3
+        }
+    }
+
     fun equals(i: Int, str: String): Boolean {
         if (i !in 0 until size) return false
         if (equals(i, TokenType.STRING)) return false

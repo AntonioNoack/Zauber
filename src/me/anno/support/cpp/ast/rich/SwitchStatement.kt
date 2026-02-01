@@ -1,5 +1,6 @@
 package me.anno.support.cpp.ast.rich
 
+import me.anno.support.java.ast.NamedCastExpression
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
@@ -8,6 +9,7 @@ import me.anno.zauber.ast.rich.controlflow.storeSubject
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
@@ -71,10 +73,21 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     // one or more `case X:`
                     consume("case")
                     while (true) {
-                        values += push(findCaseEnd()) {
-                            readExpression()
+                        if (tokens.equals(i, TokenType.NAME) &&
+                            tokens.equals(i + 1, TokenType.NAME) &&
+                            tokens.equals(i + 2, "->")
+                        ) {
+                            val origin = origin(i)
+                            val type = currPackage.resolveType(tokens.toString(i), this)
+                            val name = tokens.toString(i + 1)
+                            values += NamedCastExpression(IsInstanceOfExpr(switchValue, type, scope, origin), name)
+                            i += 2
+                        } else {
+                            values += push(findCaseEnd()) {
+                                readExpression()
+                            }
+                            i-- // undo skipping end
                         }
-                        i-- // undo skipping end
 
                         if (consumeIf("case")) continue // normal C/C++/Java
                         if (consumeIf(",")) continue // supported for Java switch-expr
@@ -85,10 +98,11 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     consume(checkExpr())
 
                     val equalsCondition = values.map {
-                        CheckEqualsOp(
-                            it, switchValue, false, false,
-                            scope, origin
-                        ) as Expression
+                        it as? NamedCastExpression
+                            ?: CheckEqualsOp(
+                                it, switchValue, false, false,
+                                scope, origin
+                            )
                     }.reduce { a, b -> a.or(b) }
 
                     val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...

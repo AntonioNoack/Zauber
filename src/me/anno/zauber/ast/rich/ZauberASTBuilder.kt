@@ -664,6 +664,7 @@ class ZauberASTBuilder(
 
     private fun readPrefix(): Expression {
 
+        val origin = origin(i)
         val label =
             if (tokens.equals(i, TokenType.LABEL)) tokens.toString(i++)
             else null
@@ -673,35 +674,37 @@ class ZauberASTBuilder(
                 val annotation = readAnnotation()
                 AnnotatedExpression(annotation, readPrefix())
             }
-            consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin(i - 1))
-            consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
-            consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i - 1))
-            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin(i - 1))
-            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin(i - 1))
-            tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i), currPackage, origin(i++))
-            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i), currPackage, origin(i++))
+            consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
+            consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
+            consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
+            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin)
+            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
+            tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
+            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
             consumeIf("!") -> {
-                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "not", currPackage, origin)
             }
             consumeIf("+") -> {
-                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "unaryPlus", currPackage, origin)
             }
             consumeIf("-") -> {
-                val origin = origin(i - 1)
                 val base = readExpression()
                 NamedCallExpression(base, "unaryMinus", currPackage, origin)
             }
-            consumeIf("++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin(i - 1), readExpression())
-            consumeIf("--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin(i - 1), readExpression())
+            consumeIf("++") -> {
+                val rhs = readRHS(unaryOperators["++"]!!)
+                createPrefixExpression(InplaceModifyType.INCREMENT, origin, rhs)
+            }
+            consumeIf("--") -> {
+                val rhs = readRHS(unaryOperators["--"]!!)
+                createPrefixExpression(InplaceModifyType.DECREMENT, origin, rhs)
+            }
             consumeIf("*") -> {
                 ArrayToVarargsStar(readExpression())
             }
             consumeIf("::") -> {
-                val origin = origin(i - 1)
                 check(tokens.equals(i, TokenType.NAME))
                 val name = tokens.toString(i++)
                 // :: means a function of the current class
@@ -723,15 +726,12 @@ class ZauberASTBuilder(
             consumeIf("try") -> readTryCatch()
             consumeIf("return") -> readReturn(label)
             consumeIf("throw") -> {
-                val origin = origin(i - 1)
                 ThrowExpression(readExpression(), currPackage, origin)
             }
             consumeIf("yield", VSCodeType.KEYWORD, 0) -> {
-                val origin = origin(i - 1)
                 YieldExpression(readExpression(), currPackage, origin)
             }
             consumeIf("async", VSCodeType.KEYWORD, 0) -> {
-                val origin = origin(i - 1)
                 AsyncExpression(readExpression(), currPackage, origin)
             }
             consumeIf("break") -> BreakExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
@@ -743,7 +743,6 @@ class ZauberASTBuilder(
             }
 
             tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
-                val origin = origin(i)
                 val vsCodeType =
                     if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
                         VSCodeType.METHOD

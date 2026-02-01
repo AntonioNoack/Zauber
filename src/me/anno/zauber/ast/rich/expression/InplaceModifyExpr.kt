@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
@@ -71,6 +72,6 @@ private fun splitGetterSetter(base: Expression): GetterSetter {
                 }
             }
         }
-        else -> TODO("Get base for ${base.javaClass.simpleName}")
+        else -> TODO("Get base for ${base.javaClass.simpleName}, at ${resolveOrigin(base.origin)}")
     }
 }

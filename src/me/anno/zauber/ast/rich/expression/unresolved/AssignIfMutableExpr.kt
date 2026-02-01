@@ -32,6 +32,12 @@ class AssignIfMutableExpr(
             "*", "*=" -> "times"
             "/", "/=" -> "div"
             "%", "%=" -> "rem"
+            "&", "&=" -> "and"
+            "^", "^=" -> "xor"
+            "|", "|=" -> "or"
+            "<<", "<<=" -> "shl"
+            ">>", ">>=" -> "shr"
+            ">>>", ">>>=" -> "ushr"
             else -> throw Exception("Unknown symbol $symbol")
         }
 
@@ -41,6 +47,12 @@ class AssignIfMutableExpr(
             "*", "*=" -> "timesAssign"
             "/", "/=" -> "divAssign"
             "%", "%=" -> "remAssign"
+            "&", "&=" -> "andAssign"
+            "^", "^=" -> "xorAssign"
+            "|", "|=" -> "orAssign"
+            "<<", "<<=" -> "shlAssign"
+            ">>", ">>=" -> "shrAssign"
+            ">>>", ">>>=" -> "ushrAssign"
             else -> throw Exception("Unknown symbol $symbol")
         }
     }

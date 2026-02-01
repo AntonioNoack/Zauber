@@ -25,6 +25,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
@@ -33,6 +34,14 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.ByteType
+import me.anno.zauber.types.Types.CharType
+import me.anno.zauber.types.Types.DoubleType
+import me.anno.zauber.types.Types.FloatType
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.ShortType
+import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
 
@@ -43,16 +52,33 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)
 
         val operators = me.anno.zauber.ast.rich.operators + mapOf(
-            "instanceof" to Operator("instanceof", 9 /* like comparing symbols */, Assoc.LEFT),
+            "&=" to Operator("&=", 1, Assoc.RIGHT),
+            "^=" to Operator("^=", 1, Assoc.RIGHT),
+            "|=" to Operator("|=", 1, Assoc.RIGHT),
+
             "?" to Operator("?", 2 /* like ?: */, Assoc.LEFT),
-            "&" to Operator("&", 7, Assoc.LEFT),
-            "^" to Operator("^", 6, Assoc.LEFT),
             "|" to Operator("|", 5, Assoc.LEFT),
+            "^" to Operator("^", 6, Assoc.LEFT),
+            "&" to Operator("&", 7, Assoc.LEFT),
+
+            "instanceof" to Operator("instanceof", 9 /* like comparing symbols */, Assoc.LEFT),
 
             // between +/- and </>/<=/>=
             "<<" to Operator("<<", 10, Assoc.LEFT),
             ">>" to Operator(">>", 10, Assoc.LEFT),
             ">>>" to Operator(">>>", 10, Assoc.LEFT),
+        )
+
+        val nativeTypes = mapOf(
+            "byte" to ByteType, "Byte" to ByteType,
+            "short" to ShortType, "Short" to ShortType,
+            "char" to CharType, "Character" to CharType,
+            "int" to IntType, "Integer" to IntType,
+            "long" to LongType, "Long" to LongType,
+            "float" to FloatType, "Float" to FloatType,
+            "double" to DoubleType, "Double" to DoubleType,
+            "boolean" to BooleanType, "Boolean" to BooleanType,
+            "void" to UnitType, "Void" to UnitType
         )
     }
 
@@ -208,7 +234,10 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     private fun readMethodOrFieldInClass() {
-        if (tokens.equals(i, currPackage.name) && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
+        if (tokens.equals(i, currPackage.name) &&
+            // open_block is supported in record classes
+            tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)
+        ) {
             i++ // skip class name
             // it is a constructor
             readConstructor()
@@ -229,7 +258,10 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         val scopeName = currPackage.generateName("constructor", origin)
         val keywords = packKeywords()
         pushScope(scopeName, ScopeType.CONSTRUCTOR) { scope ->
-            val valueParameters = pushCall { readParameterDeclarations(null) }
+            val valueParameters =
+                if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                    pushCall { readParameterDeclarations(null) }
+                } else emptyList()
             skipThrowList()
             var superCall: InnerSuperCall? = null
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
@@ -395,38 +427,15 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
     override fun readBodyOrExpression(label: String?): Expression {
         return if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            // if just names and -> follow, read a single expression instead
-            // if a destructuring and -> follow, read a single expression instead
-            var j = i + 1
-            //var depth = 0
-            arrowSearch@ while (j < tokens.size) {
-                when {
-                    // tokens.equals(j, TokenType.OPEN_CALL) -> depth++
-                    // tokens.equals(j, TokenType.CLOSE_CALL) -> depth--
-                    tokens.equals(j, "*") ||
-                            tokens.equals(j, "?") ||
-                            tokens.equals(j, ".") ||
-                            tokens.equals(j, TokenType.COMMA) ||
-                            tokens.equals(j, TokenType.NAME) -> {
-                    }
-                    tokens.equals(j, "->") -> {
-                        //if (depth == 0) {
-                        return readExprInNewScope(label)
-                        //}
-                    }
-                    else -> break@arrowSearch
-                }
-                j++
-            }
-
             val scopeName = currPackage.generateName("body", origin(i))
             pushBlock(ScopeType.METHOD_BODY, scopeName) { scope ->
-                scope.breakLabel = label
+                if (label != null) {
+                    println("registering label $label onto ${scope.pathStr}")
+                    scope.breakLabel = label
+                }
                 readMethodBody()
             }
-        } else {
-            readExprInNewScope(label)
-        }
+        } else readExprInNewScope(label)
     }
 
     private fun readExprInNewScope(label: String?): Expression {
@@ -442,8 +451,12 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
         val origin = origin(i)
         val label =
-            if (tokens.equals(i, TokenType.LABEL)) tokens.toString(i++)
-            else null
+            if (tokens.equals(i, TokenType.NAME) && tokens.equals(i + 1, ":") &&
+                tokens.equals(i + 2, "for", "while", "do", "switch")
+            ) {
+                i += 2
+                tokens.toString(i - 2)
+            } else null
 
         return when {
             consumeIf("@", VSCodeType.DECORATOR, 0) -> {
@@ -457,7 +470,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
-            consumeIf("return") -> readReturn(readBreakLabelName())
+            consumeIf("return") -> readReturn(null)
             consumeIf("throw") -> ThrowExpression(readExpression(), currPackage, origin)
             consumeIf("break") -> BreakExpression(readBreakLabel(), currPackage, origin)
             consumeIf("continue") -> ContinueExpression(readBreakLabel(), currPackage, origin)
@@ -484,8 +497,19 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 val base = readExpression()
                 NamedCallExpression(base, "unaryMinus", currPackage, origin)
             }
-            consumeIf("++") -> createPrefixExpression(InplaceModifyType.INCREMENT, origin, readExpression())
-            consumeIf("--") -> createPrefixExpression(InplaceModifyType.DECREMENT, origin, readExpression())
+            consumeIf("~") -> {
+                // todo do we need ~= ?
+                val base = readExpression()
+                NamedCallExpression(base, "inv", currPackage, origin)
+            }
+            consumeIf("++") -> {
+                val rhs = readRHS(unaryOperators["++"]!!)
+                createPrefixExpression(InplaceModifyType.INCREMENT, origin, rhs)
+            }
+            consumeIf("--") -> {
+                val rhs = readRHS(unaryOperators["--"]!!)
+                createPrefixExpression(InplaceModifyType.DECREMENT, origin, rhs)
+            }
             consumeIf("*") -> {
                 ArrayToVarargsStar(readExpression())
             }
@@ -513,9 +537,9 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 }
                 if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                     if (isArrayType) {
-                        TODO("read array contents")
+                        readArrayContents()
                     } else {
-                        TODO("read inline class")
+                        readInlineClass(type)
                     }
                 } else {
                     when (type) {
@@ -578,7 +602,9 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     } catch (_: IllegalStateException) {
                         null
                     }
-                    if (type != null && tokens.equals(i, TokenType.NAME, TokenType.OPEN_CALL)) {
+                    if (type != null && (tokens.equals(i, TokenType.NAME, TokenType.OPEN_CALL, TokenType.NUMBER) ||
+                                tokens.equals(i, "switch"))
+                    ) {
                         // open-call is just a double-cast, e.g. Long -> long -> int
                         readCastExpression(type, origin)
                     } else {
@@ -595,11 +621,47 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 val base = nameExpression(methodName, origin, currPackage)
                 CallExpression(base, typeParameters, valueParameters, origin)
             }
+            // apparently, inline record classes are allowed
+            consumeIf("record") -> {
+                keywords = keywords or Keywords.VALUE
+                readClass(ScopeType.NORMAL_CLASS)
+                unitInstance
+            }
             else -> {
                 tokens.printTokensInBlocks(max(i - 5, 0))
                 throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
             }
         }
+    }
+
+    private fun readArrayContents(): Expression {
+        val name = currPackage.generateName("array", origin(i))
+        return pushBlock(ScopeType.METHOD_BODY, name) {
+            val origin = origin(i)
+            val values = ArrayList<Expression>()
+            while (i < tokens.size) {
+                values +=
+                    if (tokens.equals(i, TokenType.OPEN_BLOCK)) readArrayContents()
+                    else readExpression()
+                readComma()
+            }
+            createArrayOfExpr(null, values, it, origin)
+        }
+    }
+
+    private fun readInlineClass(type: Type): Expression {
+        val origin = origin(i)
+        val name = currPackage.generateName("inline", origin)
+        val classScope = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
+        classScope.typeParameters = emptyList()
+        classScope.hasTypeParameters = true
+        classScope.superCalls.add(SuperCall(type as ClassType, null, null))
+
+        readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
+        return ConstructorExpression(
+            classScope, emptyList(), emptyList(),
+            null, currPackage, origin
+        )
     }
 
     private fun readLambdaVariables(): List<LambdaVariable> {
@@ -678,7 +740,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     initial = readExpressionOrNullWithSemicolon() ?: unitInstance
                     condition = readExpressionOrNullWithSemicolon()
                         ?: SpecialValueExpression(SpecialValue.TRUE, currPackage, origin(i - 1))
-                    increment = readExpressionOrNullWithSemicolon() ?: unitInstance
+                    increment = readExpressionOrNull() ?: unitInstance
                 }
             }
             val body = readBodyOrExpression(label ?: "")
@@ -694,8 +756,14 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
+    private fun readExpressionOrNull(): Expression? {
+        if (i >= tokens.size) return null
+        return readExpression()
+    }
+
     private fun readExpressionOrNullWithSemicolon(): Expression? {
         if (consumeIf(";")) return null
+
         val k = i
         val tn = readTypeAndName()
         val expr = if (tn != null) {
@@ -762,9 +830,37 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
 
         // main elements
         loop@ while (i < tokens.size) {
+            var opLength = 1
             println("next token: ${tokens.err(i)}")
             val symbol = when (tokens.getType(i)) {
-                TokenType.SYMBOL, TokenType.KEYWORD -> tokens.toString(i)
+                TokenType.SYMBOL, TokenType.KEYWORD -> {
+                    // support for <<, >>, >>>, <<=, >>=, >>>=
+                    when {
+                        tokens.equals(i, "<") && tokens.equals(i + 1, "<") -> {
+                            opLength++
+                            if (tokens.equals(i + 2, "=")) {
+                                opLength++
+                                "<<="
+                            } else "<<"
+                        }
+                        tokens.equals(i, ">") && tokens.equals(i + 1, ">") -> {
+                            opLength++
+                            if (tokens.equals(i + 2, ">")) {
+                                opLength++
+                                if (tokens.equals(i + 3, "=")) {
+                                    opLength++
+                                    ">>>="
+                                } else {
+                                    ">>>"
+                                }
+                            } else if (tokens.equals(i + 2, "=")) {
+                                opLength++
+                                ">>="
+                            } else ">>"
+                        }
+                        else -> tokens.toString(i)
+                    }
+                }
                 TokenType.NAME -> break@loop
                 TokenType.APPEND_STRING -> "+"
                 else -> {
@@ -791,7 +887,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 if (op.precedence < minPrecedence) break@loop
 
                 val origin = origin(i)
-                i++ // consume operator
+                i += opLength // consume operator
 
                 val scope = currPackage
                 println("binary[$symbol]")
@@ -823,7 +919,8 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         if (consumeIf("class")) {
                             val type = when (expr) {
                                 is TypeExpression -> expr.type
-                                is UnresolvedFieldExpression -> currPackage.resolveType(expr.name, imports)
+                                is UnresolvedFieldExpression -> nativeTypes[expr.name]
+                                    ?: currPackage.resolveType(expr.name, imports)
                                 else -> throw IllegalStateException("$expr (${expr.javaClass.simpleName}) is a type...")
                             }
                             GetClassFromTypeExpression(type, scope, origin)
@@ -904,10 +1001,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     private fun readBreakLabelName(): String? {
-        return if (consumeIf("@")) {
-            check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
-                "Expected name for label, got ${tokens.err(i)}"
-            }
+        return if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
             tokens.toString(i++)
         } else null
     }
@@ -973,7 +1067,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     consume(";")
                 }
                 consumeIf("return") -> {
-                    result += readReturn(readBreakLabelName())
+                    result += readReturn(null)
                     consume(";")
                 }
                 consumeIf("throw") -> {
@@ -998,10 +1092,11 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     result += CallExpression(checkName, emptyList(), params, origin)
                 }
 
-                tokens.equals(i, TokenType.NAME) && tokens.equals(i + 1, "@") &&
-                        tokens.equals(i + 2, TokenType.KEYWORD) -> {
+                tokens.equals(i, TokenType.NAME) && tokens.equals(i + 1, ":") &&
+                        tokens.equals(i + 2, "do", "while", "for", "switch") -> {
                     val label = tokens.toString(i++)
-                    consume("@")
+                    println("registering label $label")
+                    consume(":")
                     result += when {
                         consumeIf("do") -> readDoWhileLoop(label)
                         consumeIf("while") -> readWhileLoop(label)
@@ -1115,7 +1210,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
             } else break
         } while (true)
-        consume(";")
+        if (i < tokens.size) consume(";")
 
         return ExpressionList(assignments, currPackage, origin)
     }

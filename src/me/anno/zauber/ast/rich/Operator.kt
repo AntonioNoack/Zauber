@@ -71,4 +71,11 @@ val operators = mapOf(
     "::" to Operator("::", 30, Assoc.LEFT),
 )
 
+// extremely high binding force
+val unaryOperators = mapOf(
+    "++" to Operator("++", 50, Assoc.LEFT),
+    "--" to Operator("--", 50, Assoc.LEFT),
+    "~" to Operator("-", 15, Assoc.LEFT),
+)
+
 val dotOperator = operators["."]!!

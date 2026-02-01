@@ -24,17 +24,10 @@ import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.*
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.CharType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.NumberType
-import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType.typeOrNull
@@ -289,7 +282,23 @@ abstract class ZauberASTBuilderBase(
 
     abstract fun readParameterDeclarations(selfType: Type?): List<Parameter>
 
-    fun readTryCatch(): TryCatchBlock {
+    fun readTryCatch(): Expression {
+        // try with resource
+        if (tokens.equals(i, TokenType.OPEN_CALL)) {
+            // read the declaration...
+            val origin = origin(i)
+            return pushScope(ScopeType.METHOD_BODY, "tryWithRes") { scope ->
+                // todo forbid scope-splitting, so we don't forget any
+                val init = pushCall { readMethodBody() }
+                val resources = scope.fields
+
+                val catch = readTryCatch()
+
+                // todo close all listed resources in the finally-block
+                ExpressionList(listOf(init, catch), scope, origin)
+            }
+        }
+
         val tryBody = readBodyOrExpression(null)
         val catches = ArrayList<Catch>()
         while (consumeIf("catch")) {
@@ -621,23 +630,18 @@ abstract class ZauberASTBuilderBase(
             setLSType(i - 1, VSCodeType.TYPE, 0)
         }
 
-        if (this !is JavaASTBuilder && this !is JavaASTClassScanner) {
-            when (name) {
-                "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
-                "This" -> return ThisType(resolveSelfTypeI(selfType))
+        when (this) {
+            is ZauberASTBuilder, ZauberASTClassScanner -> {
+                when (name) {
+                    "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
+                    "This" -> return ThisType(resolveSelfTypeI(selfType))
+                }
             }
-        } else {
-            when (name) {
-                "byte", "Byte" -> return ByteType
-                "short", "Short" -> return ShortType
-                "char", "Character" -> return CharType
-                "int", "Integer" -> return IntType
-                "long", "Long" -> return LongType
-                "float", "Float" -> return FloatType
-                "double", "Double" -> return DoubleType
-                "boolean", "Boolean" -> return BooleanType
-                "void", "Void" -> return UnitType
+            is JavaASTBuilder, JavaASTClassScanner -> {
+                val nativeType = JavaASTBuilder.nativeTypes[name]
+                if (nativeType != null) return nativeType
             }
+            is CppASTBuilder -> {}
         }
 
         var path: Type? = genericParams.last()[name]

@@ -136,11 +136,28 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
     fun resolveBreakLabel(label: String?): Scope {
         var scope = currPackage
-        val label = label ?: ""
-        while (true) {
-            if (scope.breakLabel == label) return scope
-            scope = scope.parentIfSameFile
-                ?: throw IllegalStateException("Could not resolve break-label@$label in $currPackage")
+        if (label == null) {
+            while (true) {
+                if (scope.breakLabel != null) return scope
+                scope = scope.parentIfSameFile
+                    ?: throw IllegalStateException(
+                        "Could not resolve break-label@$label " +
+                                "in $currPackage " +
+                                "at ${tokens.err(i)}, " +
+                                "exit at ${scope.pathStr}"
+                    )
+            }
+        } else {
+            while (true) {
+                if (scope.breakLabel == label) return scope
+                scope = scope.parentIfSameFile
+                    ?: throw IllegalStateException(
+                        "Could not resolve break-label@$label " +
+                                "in $currPackage " +
+                                "at ${tokens.err(i)}, " +
+                                "exit at ${scope.pathStr}"
+                    )
+            }
         }
     }
 
