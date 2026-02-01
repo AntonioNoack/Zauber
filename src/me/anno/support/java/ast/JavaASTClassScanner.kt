@@ -46,6 +46,47 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
         hadNamedScope = false
     }
 
+    private fun collectGenericTypes(classScope: Scope, j: Int): Pair<Int, List<Parameter>> {
+        var j = j
+        val genericParams = if (tokens.equals(j, "<")) {
+            val typeParameters = ArrayList<Parameter>()
+
+            j++
+            var depth = 1
+            var canReadType = true
+            while (depth > 0) {
+                if (tokens.equals(j, "<")) depth++
+                else if (tokens.equals(j, ">")) depth--
+                else when (tokens.getType(j)) {
+                    TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+                    TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                    TokenType.COMMA -> if (depth == 1) canReadType = true
+                    else -> if (depth == 1 && canReadType) {
+                        // skip annotations
+                        if (tokens.equals(j, "@") && tokens.equals(j + 1, TokenType.NAME)) {
+                            j += 2
+                            while (tokens.equals(j, ".") && tokens.equals(j + 1, TokenType.NAME)) {
+                                j += 2
+                            }
+                        }
+
+                        if (tokens.equals(j, TokenType.NAME)) {
+                            val name = tokens.toString(j)
+                            val type = NullableAnyType
+                            typeParameters.add(Parameter(typeParameters.size, name, type, classScope, j))
+                            canReadType = false
+                        }
+                    }
+                }
+
+                j++
+            }
+
+            typeParameters
+        } else emptyList()
+        return j to genericParams
+    }
+
     private fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType?) {
         nextPackage = currPackage.getOrPut(name, scopeType)
         val classScope = nextPackage
@@ -54,33 +95,8 @@ class JavaASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root
 
         // LOGGER.info("discovered $nextPackage")
 
-        var j = i
-        val genericParams = if (tokens.equals(j, "<")) {
-            val typeParameters = ArrayList<Parameter>()
-
-            j++
-            var depth = 1
-            while (depth > 0) {
-                if (depth == 1 && tokens.equals(j, TokenType.NAME) &&
-                    ((j == i + 1) || (tokens.equals(j - 1, ",")))
-                ) {
-                    val name = tokens.toString(j)
-                    val type = NullableAnyType
-                    typeParameters.add(Parameter(typeParameters.size, name, type, classScope, j))
-                }
-
-                if (tokens.equals(j, "<")) depth++
-                else if (tokens.equals(j, ">")) depth--
-                else when (tokens.getType(j)) {
-                    TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
-                    TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
-                    else -> {}
-                }
-                j++
-            }
-
-            typeParameters
-        } else emptyList()
+        val (j0, genericParams) = collectGenericTypes(classScope, i)
+        var j = j0
 
         classScope.typeParameters = genericParams
         classScope.hasTypeParameters = true

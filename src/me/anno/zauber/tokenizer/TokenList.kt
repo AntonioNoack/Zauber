@@ -159,11 +159,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
             source[i0 - 1] != ';' &&
             (source[i0] != '>' || source[i0 - 1] == '-') && // ?>
             (source[i0 - 1] != '>' || source[i0] == '=') && // >?, >>, >>., but allow >=
-            !(source[i0 - 1] == '<' && source[i0] == '*') && // <*>
             !(source[i0 - 1] == '*' && source[i0] == '>') && // <*>
-            !(source[i0 - 1] == '<' && source[i0] == '?') && // <?
+            !(source[i0 - 1] == '<' && source[i0] in "*?@") && // <*>, <?, <@
             !(source[i0 - 1] == '!' && source[i0] in ":.") && // !!::, !!.
-            !(source[i0 - 1] == '.' && source[i0] in "+-") && // ..+3.0, ..-3.0
+            !(source[i0 - 1] == '.' && source[i0] in "+-<") && // ..+3.0, ..-3.0
             !(source[i0 - 1] in "&|" && source[i0] == '!') && // &!, |!
             (source[i0 - 1] != '=' || source[i0] == '=')
         ) {

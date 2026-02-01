@@ -50,7 +50,8 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
                     "Incorrect number of typeParams for $clazz, " +
                             "expected ${clazz.typeParameters.size}, " +
                             "got ${typeParams.size}, " +
-                            "at ${resolveOrigin(origin)}"
+                            "at ${resolveOrigin(origin)}, " +
+                            "defined in ${clazz.fileName}"
                 }
             }
             if (clazz.typeParameters.size == typeParams.size) {

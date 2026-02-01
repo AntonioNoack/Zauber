@@ -462,6 +462,10 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             consumeIf("break") -> BreakExpression(readBreakLabel(), currPackage, origin)
             consumeIf("continue") -> ContinueExpression(readBreakLabel(), currPackage, origin)
             consumeIf("switch") -> readSwitch(label)
+            consumeIf("if") -> readIfBranch()
+            consumeIf("for") -> readForLoop(label)
+            consumeIf("while") -> readWhileLoop(label)
+            consumeIf("do") -> readDoWhileLoop(label)
             consumeIf("yield") -> {
                 // return from a switch...
                 val value = readExpression()
@@ -583,6 +587,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         pushCall { readExpression() }
                     }
                 }
+            }
+            tokens.equals(i, "<") -> {
+                val typeParameters = readTypeParameters(null)
+                val methodName = consumeName(VSCodeType.METHOD, 0)
+                val valueParameters = readValueParameters()
+                val base = nameExpression(methodName, origin, currPackage)
+                CallExpression(base, typeParameters, valueParameters, origin)
             }
             else -> {
                 tokens.printTokensInBlocks(max(i - 5, 0))
@@ -725,9 +736,9 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     if (depth == 0) return j
                 }
                 else -> if (depth == 0) {
-                    if (tokens.equals(j, "if", "else", "for", "do", "while")) {
+                    /*if (tokens.equals(j, "if", "else", "for", "do", "while")) {
                         return j
-                    }
+                    }*/
                     // ':' is only allowed, if '?' came before...
                     // '->' is only allowed, if for a lambda...
                 }
