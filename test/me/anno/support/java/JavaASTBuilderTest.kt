@@ -66,6 +66,9 @@ class JavaASTBuilderTest {
             interface FunctionalInterface
             interface Appendable // for BufferedWriter and such
             interface Comparable<T>
+            // https://www.baeldung.com/java-20-scoped-values
+            //  -> something like ThreadLocal, but can be written only once, and lifetime is limited
+            class ScopedValue<T>
         """.trimIndent(), "helper.java"
             ).tokenize()
         )

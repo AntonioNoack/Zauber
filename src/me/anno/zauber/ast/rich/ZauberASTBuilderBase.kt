@@ -744,7 +744,7 @@ abstract class ZauberASTBuilderBase(
     fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
         val scopeType = classScope.scopeType
         val constructorOrigin = origin(i)
-        println("reading primary constructor parameters at ${tokens.err(i)}")
+        // println("reading primary constructor parameters at ${tokens.err(i)}")
         return if (tokens.equals(i, TokenType.OPEN_CALL)) {
             val constructorScope = classScope.getOrCreatePrimConstructorScope()
             var parameters = pushScope(constructorScope) {

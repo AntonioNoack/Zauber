@@ -82,6 +82,25 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                             val name = tokens.toString(i + 1)
                             values += NamedCastExpression(IsInstanceOfExpr(switchValue, type, scope, origin), name)
                             i += 2
+                        } else if (tokens.equals(i, TokenType.NAME) &&
+                            tokens.equals(i + 1, TokenType.OPEN_CALL) &&
+                            tokens.equals(
+                                tokens.findBlockEnd(i + 1,
+                                    TokenType.OPEN_CALL,
+                                    TokenType.CLOSE_CALL) + 1,
+                                "->"
+                            )
+                        ) {
+                            // todo lol, Rust-level destructuring
+                            // todo case QuicDatagram(var connection, var _, var _)
+                            //  -> we may have to read the type from the class...
+                            //  -> we need to read these properties already in the ASTScanner
+                            TODO("read switch-case with destructuring")
+                            /*val origin = origin(i)
+                            val type = currPackage.resolveType(tokens.toString(i), this)
+                            val name = tokens.toString(i + 1)
+                            values += NamedCastExpression(IsInstanceOfExpr(switchValue, type, scope, origin), name)
+                            i += 2*/
                         } else {
                             values += push(findCaseEnd()) {
                                 readExpression()

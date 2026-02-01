@@ -55,6 +55,9 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             "&=" to Operator("&=", 1, Assoc.RIGHT),
             "^=" to Operator("^=", 1, Assoc.RIGHT),
             "|=" to Operator("|=", 1, Assoc.RIGHT),
+            "<<=" to Operator("<<=", 1, Assoc.LEFT),
+            ">>=" to Operator(">>=", 1, Assoc.LEFT),
+            ">>>=" to Operator(">>>=", 1, Assoc.LEFT),
 
             "?" to Operator("?", 2 /* like ?: */, Assoc.LEFT),
             "|" to Operator("|", 5, Assoc.LEFT),
@@ -430,7 +433,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             val scopeName = currPackage.generateName("body", origin(i))
             pushBlock(ScopeType.METHOD_BODY, scopeName) { scope ->
                 if (label != null) {
-                    println("registering label $label onto ${scope.pathStr}")
+                    // println("registering label $label onto ${scope.pathStr}")
                     scope.breakLabel = label
                 }
                 readMethodBody()
@@ -836,6 +839,14 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 TokenType.SYMBOL, TokenType.KEYWORD -> {
                     // support for <<, >>, >>>, <<=, >>=, >>>=
                     when {
+                        tokens.equals(i, "<") && tokens.equals(i + 1, "<=") -> {
+                            opLength++
+                            "<<="
+                        }
+                        tokens.equals(i, ">") && tokens.equals(i + 1, ">=") -> {
+                            opLength++
+                            ">>="
+                        }
                         tokens.equals(i, "<") && tokens.equals(i + 1, "<") -> {
                             opLength++
                             if (tokens.equals(i + 2, "=")) {
@@ -890,7 +901,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 i += opLength // consume operator
 
                 val scope = currPackage
-                // println("binary[$symbol]")
+                // println("binary[$symbol], $opLength, next: ${tokens.err(i)}")
                 expr = when (symbol) {
                     "instanceof" -> {
                         val type = readTypeNotNull(null, true)
@@ -991,7 +1002,6 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
             consumeIf("--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i - 1))
-
             else -> null
         }
     }
@@ -1095,7 +1105,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 tokens.equals(i, TokenType.NAME) && tokens.equals(i + 1, ":") &&
                         tokens.equals(i + 2, "do", "while", "for", "switch") -> {
                     val label = tokens.toString(i++)
-                    println("registering label $label")
+                    // println("registering label $label")
                     consume(":")
                     result += when {
                         consumeIf("do") -> readDoWhileLoop(label)
