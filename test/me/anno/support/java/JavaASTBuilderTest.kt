@@ -69,6 +69,8 @@ class JavaASTBuilderTest {
             // https://www.baeldung.com/java-20-scoped-values
             //  -> something like ThreadLocal, but can be written only once, and lifetime is limited
             class ScopedValue<T>
+            class AtomicInteger
+            class AtomicLong
         """.trimIndent(), "helper.java"
             ).tokenize()
         )

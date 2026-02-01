@@ -1,6 +1,8 @@
 package me.anno.support.cpp.ast.rich
 
+import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.NamedCastExpression
+import me.anno.support.java.ast.NamedDestructuringExpression
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
@@ -14,6 +16,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.LambdaVariable
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Scope
@@ -73,39 +76,70 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     // one or more `case X:`
                     consume("case")
                     while (true) {
-                        if (tokens.equals(i, TokenType.NAME) &&
-                            tokens.equals(i + 1, TokenType.NAME) &&
-                            tokens.equals(i + 2, "->")
-                        ) {
-                            val origin = origin(i)
-                            val type = currPackage.resolveType(tokens.toString(i), this)
-                            val name = tokens.toString(i + 1)
-                            values += NamedCastExpression(IsInstanceOfExpr(switchValue, type, scope, origin), name)
-                            i += 2
-                        } else if (tokens.equals(i, TokenType.NAME) &&
-                            tokens.equals(i + 1, TokenType.OPEN_CALL) &&
-                            tokens.equals(
-                                tokens.findBlockEnd(i + 1,
-                                    TokenType.OPEN_CALL,
-                                    TokenType.CLOSE_CALL) + 1,
-                                "->"
-                            )
-                        ) {
-                            // todo lol, Rust-level destructuring
-                            // todo case QuicDatagram(var connection, var _, var _)
-                            //  -> we may have to read the type from the class...
-                            //  -> we need to read these properties already in the ASTScanner
-                            TODO("read switch-case with destructuring")
-                            /*val origin = origin(i)
-                            val type = currPackage.resolveType(tokens.toString(i), this)
-                            val name = tokens.toString(i + 1)
-                            values += NamedCastExpression(IsInstanceOfExpr(switchValue, type, scope, origin), name)
-                            i += 2*/
-                        } else {
+
+                        var foundCondition = false
+                        if (this is JavaASTBuilder) {
+                            val k = i
+                            val tn = readTypeAndName()
+                            if (tn != null && tn.first != null && tokens.equals(i, "->")) {
+                                val origin = origin(i)
+                                val type = tn.first!!
+                                val name = tn.second
+                                values += NamedCastExpression(IsInstanceOfExpr(switchValue, type, scope, origin), name)
+                                foundCondition = true
+                            } else {
+                                i = k
+                                if (tokens.equals(i, TokenType.NAME) && // todo <- this type could be complex
+                                    tokens.equals(i + 1, TokenType.OPEN_CALL) &&
+                                    tokens.equals(
+                                        tokens.findBlockEnd(
+                                            i + 1,
+                                            TokenType.OPEN_CALL,
+                                            TokenType.CLOSE_CALL
+                                        ) + 1,
+                                        "->"
+                                    )
+                                ) {
+                                    // lol, Rust-level destructuring
+                                    // case QuicDatagram(var connection, var _, var _)
+                                    //  -> we may have to read the type from the class...
+                                    //  -> we need to read these properties already in the ASTScanner
+                                    //  -> just use componentN()
+                                    // todo we need a new scope for this...
+                                    val scope = currPackage
+                                    val type = scope.resolveType(tokens.toString(i++), this)
+                                    val names = ArrayList<LambdaVariable?>()
+                                    pushCall {
+                                        while (i < tokens.size) {
+                                            val origin = origin(i)
+                                            val type = if (consumeIf("var")) null
+                                            else readTypeNotNull(null, true)
+                                            val name = tokens.toString(i++)
+                                            if (name == "_") names.add(null)
+                                            else {
+                                                val getterName = "component${names.size + 1}"
+                                                val initialValue = NamedCallExpression(switchValue, getterName, scope, origin)
+                                                val field = scope.addField(
+                                                    null, false, isMutable = false, null,
+                                                    name, type, initialValue,
+                                                    Keywords.NONE, origin
+                                                )
+                                                names += LambdaVariable(type, field)
+                                            }
+                                            readComma()
+                                        }
+                                    }
+                                    values += NamedDestructuringExpression(type, names, scope, origin)
+                                    foundCondition = true
+                                }
+                            }
+                        }
+
+                        if (!foundCondition) {
                             values += push(findCaseEnd()) {
                                 readExpression()
                             }
-                            i-- // undo skipping end
+                            i-- // undo skipping '->'/':'
                         }
 
                         if (consumeIf("case")) continue // normal C/C++/Java
@@ -113,15 +147,13 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
                         break
                     }
+
                     // the end
                     consume(checkExpr())
 
                     val equalsCondition = values.map {
-                        it as? NamedCastExpression
-                            ?: CheckEqualsOp(
-                                it, switchValue, false, false,
-                                scope, origin
-                            )
+                        if (it is NamedCastExpression || it is NamedDestructuringExpression) it
+                        else CheckEqualsOp(it, switchValue, byPointer = false, false, scope, origin)
                     }.reduce { a, b -> a.or(b) }
 
                     val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...

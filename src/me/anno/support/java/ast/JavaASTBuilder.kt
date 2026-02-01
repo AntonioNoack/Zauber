@@ -606,7 +606,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         null
                     }
                     if (type != null && (tokens.equals(i, TokenType.NAME, TokenType.OPEN_CALL, TokenType.NUMBER) ||
-                                tokens.equals(i, "switch"))
+                                tokens.equals(i, "switch", "null", "true", "false", "this"))
                     ) {
                         // open-call is just a double-cast, e.g. Long -> long -> int
                         readCastExpression(type, origin)
@@ -1226,7 +1226,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         return ExpressionList(assignments, currPackage, origin)
     }
 
-    private fun readTypeAndName(): Pair<Type?, String>? {
+    fun readTypeAndName(): Pair<Type?, String>? {
         val i0 = i
         val tn = readTypeAndNameImpl()
         if (tn == null) i = i0

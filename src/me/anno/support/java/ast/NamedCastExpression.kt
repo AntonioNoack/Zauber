@@ -21,9 +21,7 @@ class NamedCastExpression(val instanceTest: IsInstanceOfExpr, val newName: Strin
 
     override fun toStringImpl(depth: Int): String = "$newName[${instanceTest.toString(depth)}]"
 
-    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
-        return instanceTest.hasLambdaOrUnknownGenericsType(context)
-    }
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // Boolean is clear
 
     override fun needsBackingField(methodScope: Scope): Boolean {
         return instanceTest.needsBackingField(methodScope)
