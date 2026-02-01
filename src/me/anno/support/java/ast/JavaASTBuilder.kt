@@ -90,6 +90,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             } while (consumeIf(","))
         }
 
+        if (consumeIf("permits")) {
+            do {
+                val type = readTypeNotNull(null, true) as ClassType
+                classScope.sealedPermits.add(type)
+            } while (consumeIf(","))
+        }
+
         val addAnyIfEmpty = classScope != AnyType.clazz
         if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
             classScope.superCalls.add(SuperCall(AnyType, emptyList(), null))
@@ -146,18 +153,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     applyImport(import)
                 }
 
-                consumeIf("enum") -> {
-                    consume("class")
-                    readClass(ScopeType.ENUM_CLASS)
-                }
-
+                consumeIf("enum") -> readClass(ScopeType.ENUM_CLASS)
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+                consumeIf("interface") -> readInterface()
                 consumeIf("record") -> {
                     keywords = keywords or Keywords.VALUE
                     readClass(ScopeType.NORMAL_CLASS)
                 }
-
-                consumeIf("interface") -> readInterface()
 
                 tokens.equals(i, "static") && tokens.equals(i + 1, TokenType.OPEN_BLOCK) -> {
                     i++ // skip 'static'
@@ -176,26 +178,14 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     }
                 }
 
+                consumeIf(";") -> {}// just skip it
                 consumeIf("@") -> annotations.add(readAnnotation())
+                consumeIf("default") -> readMethodOrFieldInClass()
 
                 tokens.equals(i, TokenType.KEYWORD) -> collectKeywords()
 
-                consumeIf(";") -> {}// just skip it
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
-                    if (tokens.equals(i, currPackage.name) && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
-                        i++ // skip class name
-                        // it is a constructor
-                        readConstructor()
-                    } else {
-                        // todo for methods, we may have generic parameters
-                        val tn = readTypeAndName()
-                            ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
-                        if (tokens.equals(i, "(")) {
-                            readMethodInClass(tn.first, tn.second, emptyList())
-                        } else {
-                            readFieldInClass(tn.first, tn.second)
-                        }
-                    }
+                    readMethodOrFieldInClass()
                 }
 
                 tokens.equals(i, "<") -> {
@@ -204,10 +194,27 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     val tn = readTypeAndName()
                         ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
                     check(tokens.equals(i, "("))
-                    readMethodInClass(tn.first, tn.second, typeParams)
+                    readMethodInClass(tn.first!!, tn.second, typeParams)
                 }
 
                 else -> throw NotImplementedError("Unknown token at ${tokens.err(i)}")
+            }
+        }
+    }
+
+    private fun readMethodOrFieldInClass() {
+        if (tokens.equals(i, currPackage.name) && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
+            i++ // skip class name
+            // it is a constructor
+            readConstructor()
+        } else {
+            // todo for methods, we may have generic parameters
+            val tn = readTypeAndName()
+                ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
+            if (tokens.equals(i, "(")) {
+                readMethodInClass(tn.first!!, tn.second, emptyList())
+            } else {
+                readFieldInClass(tn.first!!, tn.second)
             }
         }
     }
@@ -320,6 +327,8 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 consumeIf("volatile") -> 0 // Keywords.VOLATILE -> todo do we need to support them?
                 // todo make it synchronized: pack the body into a try-finally with lock & unlock
                 consumeIf("synchronized") -> 0
+                // todo store that somewhere?
+                consumeIf("transient") -> 0
                 consumeIf("static") -> {
                     isStatic = true
                     0
@@ -446,6 +455,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             consumeIf("throw") -> ThrowExpression(readExpression(), currPackage, origin)
             consumeIf("break") -> BreakExpression(readBreakLabel(), currPackage, origin)
             consumeIf("continue") -> ContinueExpression(readBreakLabel(), currPackage, origin)
+            consumeIf("switch") -> readSwitch(label)
+            consumeIf("yield") -> {
+                // return from a switch...
+                val value = readExpression()
+                val label = resolveBreakLabel(null).name
+                ReturnExpression(value, label, currPackage, origin)
+            }
             consumeIf("!") -> {
                 val base = readExpression()
                 NamedCallExpression(base, "not", currPackage, origin)
@@ -464,9 +480,8 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                 ArrayToVarargsStar(readExpression())
             }
             consumeIf("::") -> {
-                check(tokens.equals(i, TokenType.NAME))
-                val name = tokens.toString(i++)
-                // :: means a function of the current class
+                val name = consumeName(VSCodeType.METHOD, 0)
+                // :: means a function of the current class, or 'new' for constructors
                 DoubleColonLambda(currPackage, name, currPackage, origin)
             }
 
@@ -633,10 +648,11 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             val origin = origin(i - 1)
             pushCall {
                 val k = i
+                val fieldIsFinal = consumeIf("final")
                 val tn = readTypeAndName()
                 if (tn != null && tokens.equals(i, ":")) {
                     field = scope.addField(
-                        null, false, false, null,
+                        null, false, !fieldIsFinal, null,
                         tn.second, tn.first, null, Keywords.NONE, origin
                     )
                     consume(":")
@@ -708,6 +724,8 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     if (tokens.equals(j, "if", "else", "for", "do", "while")) {
                         return j
                     }
+                    // ':' is only allowed, if '?' came before...
+                    // '->' is only allowed, if for a lambda...
                 }
             }
             j++
@@ -800,7 +818,11 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     }
                     "&&", "||" -> handleShortcutOperator(expr, symbol, op, scope, origin)
                     "::" -> {
-                        val rhs = readRHS(op)
+                        val rhs = if (consumeIf("new")) {
+                            UnresolvedFieldExpression("new", emptyList(), scope, origin)
+                        } else {
+                            readRHS(op)
+                        }
                         binaryOp(currPackage, expr, op.symbol, rhs)
                     }
                     else -> {
@@ -990,6 +1012,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     }
                 }
 
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> {
+                    // blocks can appear at any time in Java...
+                    pushBlock(ScopeType.METHOD_BODY, null) {
+                        readMethodBody()
+                    }
+                }
+
                 else -> {
                     val k = i
                     val tn = readTypeAndName()
@@ -1062,21 +1091,23 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         return createDeclarationExpression(fieldScope, initialValue, field)
     }
 
-    private fun readTypeAndName(): Pair<Type, String>? {
+    private fun readTypeAndName(): Pair<Type?, String>? {
         val i0 = i
         val tn = readTypeAndNameImpl()
         if (tn == null) i = i0
         return tn
     }
 
-    private fun readTypeAndNameImpl(): Pair<Type, String>? {
+    private fun readTypeAndNameImpl(): Pair<Type?, String>? {
         // early exit
         if (tokens.equals(i + 1, TokenType.COMMA, TokenType.SEMICOLON) ||
             tokens.equals(i + 1, TokenType.OPEN_CALL)
         ) return null
 
         try {
-            val type = readType(null, true) ?: return null
+            val type = if (consumeIf("var")) null else {
+                readType(null, true) ?: return null
+            }
             if (!tokens.equals(i, TokenType.NAME)) return null
             val name = tokens.toString(i++)
             return type to name

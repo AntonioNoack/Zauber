@@ -28,6 +28,11 @@ class JavaASTBuilderTest {
             class Object extends Any
             class StackTraceElement
             interface Iterator<V>
+            // todo is this properly supported???
+            @interface SuppressWarnings
+            class Throwable
+            class Error extends Throwable
+            class InternalError extends Error
         """.trimIndent(), "helper.java").tokenize())
 
         for (source in sources) {

@@ -406,6 +406,9 @@ abstract class ZauberASTBuilderBase(
 
     fun <R> push(endTokenIdx: Int, readImpl: () -> R): R {
         val result = tokens.push(endTokenIdx, readImpl)
+        check(i >= endTokenIdx) {
+            "Skipped tokens, $i != ${endTokenIdx + 1}"
+        }
         i = endTokenIdx + 1 // skip }
         return result
     }

@@ -31,6 +31,14 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
     val falseExpr = SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
 
     val scopeName = currPackage.generateName("switch", origin)
+    var isSwitchWithExpression = false
+
+    fun checkExpr(): String {
+        if (!isSwitchWithExpression && tokens.equals(i, "->")) {
+            isSwitchWithExpression = true
+        }
+        return if (isSwitchWithExpression) "->" else ":"
+    }
 
     val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
         scope.breakLabel = label ?: ""
@@ -62,9 +70,11 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     // one or more `case X:`
                     do {
                         consume("case")
-                        values += readExpression()
-                        // todo in Java, this can also be a '->', and this becomes an expression
-                        consume(":")
+                        values += push(findCaseEnd()) {
+                            readExpression()
+                        }
+                        i-- // undo skipping end
+                        consume(checkExpr())
                     } while (tokens.equals(i, "case"))
 
                     val equalsCondition = values.map {
@@ -95,7 +105,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                 consumeIf("default") -> {
                     val origin = origin(i - 1) // on default
                     // condition: noPrevBranch | prevBranchContinue
-                    consume(":")
+                    consume(checkExpr())
                     val totalCondition = noPrevBranchExpr.or(prevBranchContinueExpr)
                     val scopeName = scope.generateName("default", origin)
                     lateinit var bodyScope1: Scope
@@ -116,6 +126,28 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
     return createNamedBlock(body, label, currPackage, origin)
 }
 
+fun ZauberASTBuilderBase.findCaseEnd(): Int {
+    var depth = 0
+    var i = i
+    while (i < tokens.size) {
+        when (tokens.getType(i)) {
+            TokenType.SEMICOLON -> if (depth == 0) return i
+            TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+            TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+            else -> {
+                if (depth == 0 && tokens.equals(
+                        i, "->", ":", "if", "else",
+                        "for", "while", "do", "synchronized", "switch",
+                        "case", "default"
+                    )
+                ) return i
+            }
+        }
+        i++
+    }
+    return tokens.size
+}
+
 private fun Expression.and(other: Expression): Expression {
     return NamedCallExpression(this, "and", other, scope, origin)
         .apply { resolvedType = BooleanType }
@@ -127,6 +159,10 @@ private fun Expression.or(other: Expression): Expression {
 }
 
 private fun ZauberASTBuilderBase.readCaseBody(): ArrayList<Expression> {
+    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+        return arrayListOf(readBodyOrExpression(null))
+    }
+
     val expressions = ArrayList<Expression>()
     while (i < tokens.size) {
         when {

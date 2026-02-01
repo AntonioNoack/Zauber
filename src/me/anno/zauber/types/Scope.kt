@@ -41,6 +41,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val superCalls = ArrayList<SuperCall>()
     val superCallNames = ArrayList<SuperCallName>()
+    val sealedPermits = ArrayList<Type>(0) // for Java
 
     val enumEntries: List<Scope>
         get() = children.filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }

@@ -24,7 +24,10 @@ class JavaTokenizer(src: String, fileName: String) :
 
             "super", "this", "new",
             "try", "catch", "finally", "synchronized",
-            "static", "volatile", "assert", "record"
+            "static", "volatile", "assert", "record",
+            "transient", // not serialized
+            "default", // default methods for interfaces
+            "yield", // inside switches with expressions
         )
     }
 }
