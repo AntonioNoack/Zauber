@@ -1,33 +1,35 @@
-package me.anno.support.java
+package me.anno.support.csharp
 
-import me.anno.support.java.tokenizer.JavaTokenizer
+import me.anno.support.csharp.tokenizer.CSharpTokenizer
 import org.junit.jupiter.api.Test
 import java.io.File
 
 // todo instead of scanning tons of random files, we should use specific tests with baselines...
-class JavaTokenizerTest {
+class CSharpTokenizerTest {
 
     var numFiles = 0
     var numBytes = 0L
 
     @Test
-    fun testJavaTokenizer() {
+    fun testCSharpTokenizer() {
         val t0 = System.nanoTime()
-        val source = File("/mnt/LinuxGames/Code/jdk/src")
-        testJavaTokenizer(source)
+        val source = File("/mnt/LinuxGames/Code/runtime/src")
+        testCSharpTokenizer(source)
         val t1 = System.nanoTime()
         println("Tokenized $numFiles files in ${(t1 - t0) / 1e6f} ms, ${(numBytes / 1e6f)} MB")
     }
 
-    private fun testJavaTokenizer(source: File) {
+    private fun testCSharpTokenizer(source: File) {
         if (source.isDirectory) {
             for (file in source.listFiles()!!) {
-                testJavaTokenizer(file)
+                testCSharpTokenizer(file)
             }
-        } else if (source.extension == "java") {
-            JavaTokenizer(source.readText(), source.name)
+        } else if (source.extension == "cs") {
+            val text = source.readText()
+            CSharpTokenizer(text, source.name)
                 .tokenize()
             numFiles++
+            numBytes += text.length
         }
     }
 }

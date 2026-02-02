@@ -24,9 +24,10 @@ class CppTokenizer(
             "_Thread_local"
         )
 
+        @Suppress("SpellCheckingInspection")
         val cppKeywords = cKeywords + setOf(
             "alignas", "alignof", "and", "and_eq", "asm", "bitand",
-            "bitor", "bool", "catch", "char16_t", "char32_t",
+            "bitor", "bool", "catch",
             "class", "compl", "constexpr", "decltype", "delete",
             "dynamic_cast", "explicit", "export", "false",
             "friend", "mutable", "namespace", "new", "noexcept",
@@ -35,7 +36,7 @@ class CppTokenizer(
             "reinterpret_cast", "static_assert", "static_cast",
             "template", "this", "thread_local", "throw", "true",
             "try", "typeid", "typename", "using", "virtual",
-            "wchar_t", "xor", "xor_eq"
+            "xor", "xor_eq"
         )
     }
 
@@ -60,14 +61,32 @@ class CppTokenizer(
                 c == '\'' -> readChar()
 
                 // brackets
-                c == '(' -> tokens.add(TokenType.OPEN_CALL, i++, i)
-                c == ')' -> tokens.add(TokenType.CLOSE_CALL, i++, i)
-                c == '{' -> tokens.add(TokenType.OPEN_BLOCK, i++, i)
-                c == '}' -> tokens.add(TokenType.CLOSE_BLOCK, i++, i)
-                c == '[' -> tokens.add(TokenType.OPEN_ARRAY, i++, i)
-                c == ']' -> tokens.add(TokenType.CLOSE_ARRAY, i++, i)
+                c in ",;(){}[]" -> {
+                    val type = when (c) {
+                        '(' -> TokenType.OPEN_CALL
+                        ')' -> TokenType.CLOSE_CALL
+                        '{' -> TokenType.OPEN_BLOCK
+                        '}' -> TokenType.CLOSE_BLOCK
+                        '[' -> TokenType.OPEN_ARRAY
+                        ']' -> TokenType.CLOSE_ARRAY
+                        ',' -> TokenType.COMMA
+                        ';' -> TokenType.SEMICOLON
+                        else -> throw IllegalStateException("Unknown character $c")
+                    }
+                    tokens.add(type, i++, i)
+                }
 
-                c == ',' -> tokens.add(TokenType.COMMA, i++, i)
+                c == '*' -> {
+                    // star can stick to either side, and that makes a difference in declarations with multiple fields
+                    val spaceBefore = i > 0 && src[i - 1].isWhitespace()
+                    val spaceAfter = i + 1 < src.length && src[i + 1].isWhitespace()
+                    when {
+                        spaceBefore == spaceAfter -> tokens.add(TokenType.SYMBOL, i, i + 1)
+                        spaceBefore -> tokens.add(TokenType.SYMBOL, i - 1, i + 1)
+                        else -> tokens.add(TokenType.SYMBOL, i, i + 2)
+                    }
+                    i += if (spaceAfter) 2 else 1
+                }
 
                 // symbols (single-char ONLY)
                 else -> tokens.add(TokenType.SYMBOL, i++, i)
@@ -86,7 +105,6 @@ class CppTokenizer(
 
     private fun readNumber() {
         val start = i++
-        // todo I think C supports octal numbers and booleans, too
         if (src[start] == '0' && i < n && src[i] in "xX") {
             i++
             while (i < n && (src[i].isDigit() || src[i] in "abcdefABCDEF_")) i++

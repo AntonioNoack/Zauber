@@ -55,6 +55,8 @@ object Types {
     val LongType = getType("Long", 0)
     val FloatType = getType("Float", 0)
     val DoubleType = getType("Double", 0)
+    val UByteType = getType("UByte", 0)
+    val UShortType = getType("UShort", 0)
     val UIntType = getType("UInt", 0)
     val ULongType = getType("ULong", 0)
     val HalfType = getType("Half", 0)

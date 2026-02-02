@@ -114,7 +114,7 @@ class JavaASTBuilderTest {
                 testJavaTokenizer(file, rootLength)
             }
         } else if (source.extension == "java") {
-            val fileName = source.absolutePath// .substring(rootLength)
+            val fileName = source.absolutePath
             sources += JavaTokenizer(source.readText(), fileName).tokenize()
         }
     }

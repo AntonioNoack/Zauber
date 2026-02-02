@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
+import me.anno.support.csharp.ast.CSharpASTBuilder
+import me.anno.support.csharp.ast.CSharpASTClassScanner
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -47,11 +49,14 @@ object EnumProperties {
 
                 val keywords = packKeywords()
                 val entryScope = readClassBody(name, Keywords.NONE, ScopeType.ENUM_ENTRY_CLASS)
+                val integerValue = if (consumeIf("=")) readExpression() else null
+
                 // todo add name and id as parameters
                 val extraValueParameters = listOf(
-                    NamedParameter(null, NumberExpression((ordinal++).toString(), companionScope, origin)),
+                    NamedParameter(null, integerValue ?: NumberExpression(ordinal.toString(), companionScope, origin)),
                     NamedParameter(null, StringExpression(name, companionScope, origin)),
                 )
+
                 val initialValue = ConstructorExpression(
                     enumScope, typeParameters,
                     extraValueParameters + valueParameters,
@@ -70,6 +75,7 @@ object EnumProperties {
                 val fieldExpr = FieldExpression(field, primaryConstructorScope, origin)
                 primaryConstructorScope.code.add(AssignmentExpression(fieldExpr, initialValue))
 
+                ordinal++
                 readComma()
             }
         }

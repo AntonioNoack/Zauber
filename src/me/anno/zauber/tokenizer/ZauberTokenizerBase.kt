@@ -3,6 +3,7 @@ package me.anno.zauber.tokenizer
 abstract class ZauberTokenizerBase(
     src: String, fileName: String,
     val keywords: Set<String>,
+    val supportedNumberSuffixes: String
 ) : Tokenizer(src, fileName) {
 
     var supportsTickedNames = false
@@ -177,7 +178,7 @@ abstract class ZauberTokenizerBase(
                 readExponent()
             }
         }
-        if (i < n && src[i] in "lLuUfFdDhH") i++
+        if (i < n && src[i] in supportedNumberSuffixes) i++
         tokens.add(TokenType.NUMBER, start, i)
     }
 

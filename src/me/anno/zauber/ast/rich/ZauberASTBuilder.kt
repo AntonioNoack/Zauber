@@ -3,12 +3,12 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ZauberLanguage
+import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -25,7 +25,6 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.BooleanUtils.not
-import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -431,44 +430,12 @@ class ZauberASTBuilder(
         return constructor
     }
 
-    private fun applyImport(import: Import) {
-        imports.add(import)
-        if (import.allChildren) {
-            for (child in import.path.children) {
-                currPackage.imports += Import2(child.name, child, false)
-            }
-        } else {
-            currPackage.imports += Import2(import.name, import.path, true)
-        }
-    }
-
     override fun readFileLevel() {
         loop@ while (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
-                consumeIf("package") -> {
-                    val (path, nextI) = tokens.readPath(i)
-                    for (k in i until nextI) {
-                        if (tokens.equals(k, TokenType.NAME)) {
-                            setLSType(k, VSCodeType.NAMESPACE, 0)
-                        }
-                    }
-                    currPackage = path
-                    currPackage.mergeScopeTypes(ScopeType.PACKAGE)
-                    i = nextI
-                }
-
-                consumeIf("import") -> {
-                    val (import, nextI) = tokens.readImport(i)
-                    // todo if there is an 'as', that is a type/variable, not a namespace
-                    for (k in i until nextI) {
-                        if (tokens.equals(k, TokenType.NAME)) {
-                            setLSType(k, VSCodeType.NAMESPACE, 0)
-                        }
-                    }
-                    i = nextI
-                    applyImport(import)
-                }
+                consumeIf("package") -> readAndApplyPackage()
+                consumeIf("import") -> readAndApplyImport()
 
                 consumeIf("inner") -> {
                     consume("class")
@@ -538,32 +505,26 @@ class ZauberASTBuilder(
         return Annotation(path, params)
     }
 
-    fun collectKeywords() {
-        if (!tokens.equals(i, TokenType.STRING)) {
-            keywords = keywords or when {
-                consumeIf("public") -> Keywords.PUBLIC
-                consumeIf("private") -> Keywords.PRIVATE
-                consumeIf("external") -> Keywords.EXTERNAL
-                consumeIf("open") -> Keywords.OPEN
-                consumeIf("override") -> Keywords.OVERRIDE
-                consumeIf("abstract") -> Keywords.ABSTRACT
-                consumeIf("operator") -> Keywords.OPERATOR
-                consumeIf("inline") -> Keywords.INLINE
-                consumeIf("infix") -> Keywords.INFIX
-                consumeIf("data") -> Keywords.DATA_CLASS
-                consumeIf("value") -> Keywords.VALUE
-                consumeIf("annotation") -> Keywords.ANNOTATION
-                consumeIf("sealed") -> Keywords.SEALED
-                consumeIf("const") -> Keywords.CONSTEXPR
-                consumeIf("final") -> Keywords.FINAL
-                consumeIf("lateinit") -> Keywords.LATEINIT
-                else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
-            }
-            setLSType(i - 1, VSCodeType.KEYWORD, 0)
-            return
+    override fun consumeKeyword(): Int {
+        return when {
+            consumeIf("public") -> Keywords.PUBLIC
+            consumeIf("private") -> Keywords.PRIVATE
+            consumeIf("external") -> Keywords.EXTERNAL
+            consumeIf("open") -> Keywords.OPEN
+            consumeIf("override") -> Keywords.OVERRIDE
+            consumeIf("abstract") -> Keywords.ABSTRACT
+            consumeIf("operator") -> Keywords.OPERATOR
+            consumeIf("inline") -> Keywords.INLINE
+            consumeIf("infix") -> Keywords.INFIX
+            consumeIf("data") -> Keywords.DATA_CLASS
+            consumeIf("value") -> Keywords.VALUE
+            consumeIf("annotation") -> Keywords.ANNOTATION
+            consumeIf("sealed") -> Keywords.SEALED
+            consumeIf("const") -> Keywords.CONSTEXPR
+            consumeIf("final") -> Keywords.FINAL
+            consumeIf("lateinit") -> Keywords.LATEINIT
+            else -> super.consumeKeyword()
         }
-
-        throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
 
     override fun readParameterDeclarations(selfType: Type?): List<Parameter> {

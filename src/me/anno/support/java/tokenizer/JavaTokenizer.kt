@@ -3,7 +3,7 @@ package me.anno.support.java.tokenizer
 import me.anno.zauber.tokenizer.ZauberTokenizerBase
 
 class JavaTokenizer(src: String, fileName: String) :
-    ZauberTokenizerBase(src, fileName, KEYWORDS) {
+    ZauberTokenizerBase(src, fileName, KEYWORDS, "lLfFdD") {
 
     init {
         supportsDollarInName = true

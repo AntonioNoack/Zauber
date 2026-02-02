@@ -1,7 +1,5 @@
 package me.anno.support.cpp.ast.rich
 
-import me.anno.support.cpp.ast.rich.CppASTBuilder
-import me.anno.support.cpp.ast.rich.CppStandard
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ZauberASTBuilder
@@ -26,7 +24,7 @@ class CppParsingTest {
             val tokens = CppTokenizer(raw, "main.c", false).tokenize()
             // println("Tokens: $tokens")
 
-            CppASTBuilder(tokens, root, CppStandard.CPP11).readFile()
+            CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             resolveTypesAndNames(testScope)

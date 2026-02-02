@@ -1,8 +1,8 @@
 package me.anno.support.cpp.ast.rich
 
-import me.anno.support.cpp.tokenizer.CppTokenizer
+import me.anno.support.cpp.ast.rich.PointerType.Companion.ptr
+import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*
@@ -30,7 +30,7 @@ class CppASTBuilder(
     tokens: TokenList,
     root: Scope,
     val standard: CppStandard
-) : ZauberASTBuilderBase(tokens, root, false) {
+) : JavaASTBuilder(tokens, root) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(CppASTBuilder::class)
@@ -47,10 +47,8 @@ class CppASTBuilder(
     }
 
     val language = standard.kind()
-    val knownKeywords =
-        if (language == LanguageKind.C) CppTokenizer.Companion.cKeywords else CppTokenizer.Companion.cppKeywords
 
-    fun readFile() {
+    override fun readFileLevel() {
         while (i < tokens.size) {
             // println("Reading file $i < ${tokens.size}")
             when {
@@ -97,12 +95,20 @@ class CppASTBuilder(
     }
 
     fun readTypeImpl(): Type {
-        // check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD))
-        val path = readTypePath(null)
-        check(i == tokens.size) {
-            TODO("Implement more complex types, at ${tokens.err(i)}")
+        var type = readTypePath(null)
+        loop@ while (true) {
+            if (consumeIf("* ")) {
+                type = type.ptr()
+                continue@loop
+            }
+            if (tokens.equals(i, TokenType.OPEN_ARRAY)) {
+                val size = pushArray { readExpression() }
+                type = ArrayType(type, size)
+                continue@loop
+            }
+            break
         }
-        return path
+        return type
     }
 
     override fun readTypePath(selfType: Type?): Type {
@@ -128,6 +134,7 @@ class CppASTBuilder(
         TODO("Not yet implemented")
     }
 
+    // todo name can have additional stars
     fun readTypeAndName(typeNameEnd: Int): Pair<Type, String> {
         // consumeKeyword()
         val typeEnd = typeNameEnd - 1
@@ -260,7 +267,7 @@ class CppASTBuilder(
         classScope.hasTypeParameters = true
         classScope.keywords = classScope.keywords or packKeywords()
         pushBlock(classScope) {
-            readFile()
+            readFileLevel()
         }
     }
 
@@ -269,7 +276,7 @@ class CppASTBuilder(
         val name = tokens.toString(i++)
         val scope = currPackage.getOrPut(name, ScopeType.PACKAGE)
         pushBlock(scope) {
-            readFile()
+            readFileLevel()
         }
     }
 
@@ -360,22 +367,6 @@ class CppASTBuilder(
         }
 
         return expr
-    }
-
-    override fun readBodyOrExpression(label: String?): Expression {
-        TODO("Not yet implemented")
-    }
-
-    override fun readFileLevel() {
-        TODO("Not yet implemented")
-    }
-
-    override fun readAnnotation(): Annotation {
-        TODO("Not yet implemented")
-    }
-
-    override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
-        TODO("Not yet implemented")
     }
 
     private fun looksLikeCast(): Boolean {

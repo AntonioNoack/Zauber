@@ -27,7 +27,6 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
@@ -46,7 +45,7 @@ import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)
-class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(tokens, root, false) {
+open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(tokens, root, false) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)
@@ -72,7 +71,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             ">>>" to Operator(">>>", 10, Assoc.LEFT),
         )
 
-        val nativeTypes = mapOf(
+        val nativeJavaTypes = mapOf(
             "byte" to ByteType, "Byte" to ByteType,
             "short" to ShortType, "Short" to ShortType,
             "char" to CharType, "Character" to CharType,
@@ -109,6 +108,31 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
+    override fun consumeKeyword(): Int {
+        return when {
+            consumeIf("public") -> Keywords.PUBLIC
+            consumeIf("private") -> Keywords.PRIVATE
+            consumeIf("protected") -> Keywords.PROTECTED
+            consumeIf("native") -> Keywords.EXTERNAL
+            consumeIf("override") -> Keywords.OVERRIDE
+            consumeIf("abstract") -> Keywords.ABSTRACT
+            consumeIf("annotation") -> Keywords.ANNOTATION
+            consumeIf("final") -> Keywords.FINAL
+            consumeIf("sealed") -> Keywords.SEALED
+            consumeIf("volatile") -> 0 // Keywords.VOLATILE -> todo do we need to support them?
+            // todo make it synchronized: pack the body into a try-finally with lock & unlock
+            consumeIf("synchronized") -> 0
+            consumeIf("non-sealed") -> 0 // WTF
+            // todo store that somewhere?
+            consumeIf("transient") -> 0
+            consumeIf("static") -> {
+                isStatic = true
+                0
+            }
+            else -> super.consumeKeyword()
+        }
+    }
+
     override fun readSuperCalls(classScope: Scope) {
         if (consumeIf("extends")) {
             do {
@@ -137,17 +161,6 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
         }
     }
 
-    private fun applyImport(import: Import) {
-        imports.add(import)
-        if (import.allChildren) {
-            for (child in import.path.children) {
-                currPackage.imports + Import2(child.name, child, false)
-            }
-        } else {
-            currPackage.imports + Import2(import.name, import.path, true)
-        }
-    }
-
     private fun getStaticScope(): Scope {
         check(currPackage.isClassType()) {
             "Base class for static scope was not a class $currPackage"
@@ -159,32 +172,13 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
     }
 
     override fun readFileLevel() {
-        loop@ while (i < tokens.size) {
+        while (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug("readFileLevel[$i]: ${tokens.err(i)}")
             when {
-                consumeIf("package") -> {
-                    val (path, nextI) = tokens.readPath(i)
-                    for (k in i until nextI) {
-                        if (tokens.equals(k, TokenType.NAME)) {
-                            setLSType(k, VSCodeType.NAMESPACE, 0)
-                        }
-                    }
-                    currPackage = path
-                    currPackage.mergeScopeTypes(ScopeType.PACKAGE)
-                    i = nextI
-                }
-
+                consumeIf("package") -> readAndApplyPackage()
                 consumeIf("import") -> {
-                    consumeIf("static")
-                    val (import, nextI) = tokens.readImport(i)
-                    // todo if there is an 'as', that is a type/variable, not a namespace
-                    for (k in i until nextI) {
-                        if (tokens.equals(k, TokenType.NAME)) {
-                            setLSType(k, VSCodeType.NAMESPACE, 0)
-                        }
-                    }
-                    i = nextI
-                    applyImport(import)
+                    consumeIf("static") // just skipped, doesn't matter
+                    readAndApplyImport()
                 }
 
                 consumeIf("enum") -> readClass(ScopeType.ENUM_CLASS)
@@ -195,22 +189,10 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     readClass(ScopeType.NORMAL_CLASS)
                 }
 
-                tokens.equals(i, "static") && tokens.equals(i + 1, TokenType.OPEN_BLOCK) -> {
-                    i++ // skip 'static'
-                    val staticScope = getStaticScope()
-                    pushScope(staticScope) {
-                        pushBlock(staticScope.getOrCreatePrimConstructorScope()) {
-                            readMethodBody()
-                        }
-                    }
-                }
+                tokens.equals(i, "static") && tokens.equals(i + 1, TokenType.OPEN_BLOCK) ->
+                    readStaticBlock()
 
-                tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                    // init block
-                    pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
-                        readMethodBody()
-                    }
-                }
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> readInitBlock()
 
                 consumeIf(";") -> {}// just skip it
                 consumeIf("@") -> annotations.add(readAnnotation())
@@ -222,21 +204,39 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                     readMethodOrFieldInClass()
                 }
 
-                tokens.equals(i, "<") -> {
-                    val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin(i))
-                    val typeParams = readTypeParameterDeclarations(methodScope)
-                    val tn = readTypeAndName()
-                        ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
-                    check(tokens.equals(i, "("))
-                    readMethodInClass(tn.first!!, tn.second, typeParams)
-                }
+                tokens.equals(i, "<") -> readGenericMethod()
 
                 else -> throw NotImplementedError("Unknown token at ${tokens.err(i)}")
             }
         }
     }
 
-    private fun readMethodOrFieldInClass() {
+    fun readGenericMethod() {
+        val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin(i))
+        val typeParams = readTypeParameterDeclarations(methodScope)
+        val tn = readTypeAndName()
+            ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
+        check(tokens.equals(i, "("))
+        readMethodInClass(tn.first!!, tn.second, typeParams)
+    }
+
+    private fun readInitBlock() {
+        pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
+            readMethodBody()
+        }
+    }
+
+    private fun readStaticBlock() {
+        consume("static")
+        val staticScope = getStaticScope()
+        pushScope(staticScope) {
+            pushBlock(staticScope.getOrCreatePrimConstructorScope()) {
+                readMethodBody()
+            }
+        }
+    }
+
+    fun readMethodOrFieldInClass() {
         if (tokens.equals(i, currPackage.name) &&
             // open_block is supported in record classes
             tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)
@@ -350,37 +350,6 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
             readValueParameters()
         } else emptyList()
         return Annotation(path, params)
-    }
-
-    fun collectKeywords() {
-        if (!tokens.equals(i, TokenType.STRING)) {
-            keywords = keywords or when {
-                consumeIf("public") -> Keywords.PUBLIC
-                consumeIf("private") -> Keywords.PRIVATE
-                consumeIf("protected") -> Keywords.PROTECTED
-                consumeIf("native") -> Keywords.EXTERNAL
-                consumeIf("override") -> Keywords.OVERRIDE
-                consumeIf("abstract") -> Keywords.ABSTRACT
-                consumeIf("annotation") -> Keywords.ANNOTATION
-                consumeIf("final") -> Keywords.FINAL
-                consumeIf("sealed") -> Keywords.SEALED
-                consumeIf("volatile") -> 0 // Keywords.VOLATILE -> todo do we need to support them?
-                // todo make it synchronized: pack the body into a try-finally with lock & unlock
-                consumeIf("synchronized") -> 0
-                consumeIf("non-sealed") -> 0 // WTF
-                // todo store that somewhere?
-                consumeIf("transient") -> 0
-                consumeIf("static") -> {
-                    isStatic = true
-                    0
-                }
-                else -> throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
-            }
-            setLSType(i - 1, VSCodeType.KEYWORD, 0)
-            return
-        }
-
-        throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
 
     override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
@@ -930,7 +899,7 @@ class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(toke
                         if (consumeIf("class")) {
                             val type = when (expr) {
                                 is TypeExpression -> expr.type
-                                is UnresolvedFieldExpression -> nativeTypes[expr.name]
+                                is UnresolvedFieldExpression -> nativeJavaTypes[expr.name]
                                     ?: currPackage.resolveType(expr.name, imports)
                                 else -> throw IllegalStateException("$expr (${expr.javaClass.simpleName}) is a type...")
                             }

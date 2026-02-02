@@ -4,15 +4,19 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.CppASTBuilder
+import me.anno.support.csharp.ast.CSharpASTBuilder
+import me.anno.support.csharp.ast.CSharpASTBuilder.Companion.nativeCSharpTypes
+import me.anno.support.csharp.ast.CSharpASTClassScanner
 import me.anno.support.java.ast.JavaASTBuilder
+import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
 import me.anno.zauber.ast.rich.Keywords.hasFlag
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -72,7 +76,7 @@ abstract class ZauberASTBuilderBase(
     // todo assign them appropriately
     val annotations = ArrayList<Annotation>()
 
-    fun readAnnotations() {
+    open fun readAnnotations() {
         if (consumeIf("@")) {
             annotations.add(readAnnotation())
         }
@@ -637,8 +641,12 @@ abstract class ZauberASTBuilderBase(
                     "This" -> return ThisType(resolveSelfTypeI(selfType))
                 }
             }
+            is CSharpASTBuilder, CSharpASTClassScanner -> {
+                val nativeType = nativeCSharpTypes[name]
+                if (nativeType != null) return nativeType
+            }
             is JavaASTBuilder, JavaASTClassScanner -> {
-                val nativeType = JavaASTBuilder.nativeTypes[name]
+                val nativeType = nativeJavaTypes[name]
                 if (nativeType != null) return nativeType
             }
             is CppASTBuilder -> {}
@@ -789,5 +797,56 @@ abstract class ZauberASTBuilderBase(
         val methodName = tokens.toString(j)
         val uniqueName = currPackage.generateName("fun:$methodName", origin)
         return currPackage.getOrPut(uniqueName, tokens.fileName, ScopeType.METHOD)
+    }
+
+    fun readAndApplyPackage() {
+        val (path, nextI) = tokens.readPath(i)
+        markNamespace(nextI)
+        currPackage = path
+        currPackage.mergeScopeTypes(ScopeType.PACKAGE)
+        i = nextI
+    }
+
+    fun readAndApplyImport() {
+        val (import, nextI) = tokens.readImport(i)
+        markNamespace(nextI)
+        i = nextI
+        applyImport(import)
+    }
+
+    fun markNamespace(nextI: Int) {
+        if (this is ZauberASTBuilder) {
+            for (k in i until nextI) {
+                if (tokens.equals(k, TokenType.NAME)) {
+                    setLSType(k, VSCodeType.NAMESPACE, 0)
+                }
+            }
+        }
+    }
+
+    fun applyImport(import: Import) {
+        imports.add(import)
+        if (import.allChildren) {
+            for (child in import.path.children) {
+                currPackage.imports + Import2(child.name, child, false)
+            }
+        } else {
+            currPackage.imports + Import2(import.name, import.path, true)
+        }
+    }
+
+    fun collectKeywords() {
+        if (!tokens.equals(i, TokenType.STRING)) {
+            keywords = keywords or consumeKeyword()
+            if (this is ZauberASTBuilder) {
+                setLSType(i - 1, VSCodeType.KEYWORD, 0)
+            }
+            return
+        }
+        throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
+    }
+
+    open fun consumeKeyword(): Int {
+        throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
 }
