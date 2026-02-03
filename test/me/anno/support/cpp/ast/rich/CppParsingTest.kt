@@ -120,8 +120,8 @@ class CppParsingTest {
                     case 0:
                         test(x+1);
                     case 1:
-                        break;
                     case 2:
+                        break;
                     default:
                         break;
                 }

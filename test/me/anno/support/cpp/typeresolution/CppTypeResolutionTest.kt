@@ -32,7 +32,7 @@ class CppTypeResolutionTest {
 
             // todo run the preprocessor?
 
-            CppASTBuilder(tokens, root, CppStandard.CPP11).readFile()
+            CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             resolveTypesAndNames(testScope)

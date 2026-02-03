@@ -78,7 +78,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     while (true) {
 
                         var foundCondition = false
-                        if (this is JavaASTBuilder) {
+                        if (this is JavaASTBuilder && this !is CppASTBuilder) {
                             val k = i
                             val tn = readTypeAndName()
                             if (tn != null && tn.first != null && tokens.equals(i, "->")) {
@@ -118,7 +118,8 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                                             if (name == "_") names.add(null)
                                             else {
                                                 val getterName = "component${names.size + 1}"
-                                                val initialValue = NamedCallExpression(switchValue, getterName, scope, origin)
+                                                val initialValue =
+                                                    NamedCallExpression(switchValue, getterName, scope, origin)
                                                 val field = scope.addField(
                                                     null, false, isMutable = false, null,
                                                     name, type, initialValue,
@@ -206,14 +207,7 @@ fun ZauberASTBuilderBase.findCaseEnd(): Int {
             TokenType.SEMICOLON, TokenType.COMMA -> if (depth == 0) return i
             TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
             TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
-            else -> {
-                if (depth == 0 && tokens.equals(
-                        i, "->", ":", "if", "else",
-                        "for", "while", "do", "synchronized", "switch",
-                        "case", "default"
-                    )
-                ) return i
-            }
+            else -> if (depth == 0 && tokens.equals(i, "->", ":", "case", "default")) return i
         }
         i++
     }
@@ -231,19 +225,8 @@ private fun Expression.or(other: Expression): Expression {
 }
 
 private fun ZauberASTBuilderBase.readCaseBody(): ArrayList<Expression> {
-    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-        return arrayListOf(readBodyOrExpression(null))
+    return push(findCaseEnd()) {
+        val list = readMethodBody().list
+        list as? ArrayList<Expression> ?: ArrayList(list)
     }
-
-    val expressions = ArrayList<Expression>()
-    while (i < tokens.size) {
-        when {
-            tokens.equals(i, "case") ||
-                    tokens.equals(i, "default") ||
-                    tokens.equals(i, TokenType.CLOSE_BLOCK) -> break
-            consumeIf(";") -> {} // skip
-            else -> expressions += readExpression()
-        }
-    }
-    return expressions
 }
