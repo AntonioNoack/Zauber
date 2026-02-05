@@ -17,7 +17,9 @@ class TestRuntime {
     companion object {
         fun testExecute(code: String): Pair<Runtime, Instance> {
             val (runtime, value) = testExecuteCatch(code)
-            check(value.type == ReturnType.RETURN)
+            check(value.type == ReturnType.RETURN) {
+                "Expected function to return, got $value"
+            }
             return runtime to value.instance
         }
 

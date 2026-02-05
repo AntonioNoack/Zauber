@@ -228,6 +228,8 @@ class FieldResolutionTest {
         class Inner {
             val tested = Color.RED.ordinal
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!
@@ -244,6 +246,8 @@ class FieldResolutionTest {
                 val tested = RED.ordinal
             }
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
@@ -278,6 +282,8 @@ class FieldResolutionTest {
                 RED;
             }
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!
@@ -293,6 +299,8 @@ class FieldResolutionTest {
         class Inner {
             val tested = Color.RED
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!
@@ -310,6 +318,8 @@ class FieldResolutionTest {
                 val tested = RED
             }
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
@@ -326,6 +336,8 @@ class FieldResolutionTest {
                 RED;
             }
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!

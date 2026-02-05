@@ -232,6 +232,8 @@ class MethodResolutionTest {
         class Inner {
             val tested = Color.RED.x()
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!
@@ -250,6 +252,8 @@ class MethodResolutionTest {
                 val tested = RED.x()
             }
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
@@ -286,6 +290,8 @@ class MethodResolutionTest {
                 fun x(): Int = 0
             }
         }
+        package zauber
+        class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope["Inner"].getField("tested").valueType!!

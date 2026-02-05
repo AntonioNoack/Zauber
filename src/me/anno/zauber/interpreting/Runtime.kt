@@ -221,7 +221,8 @@ class Runtime {
 
     fun executeBlock(block0: SimpleNode): BlockReturn? {
         var block = block0
-        while (true) {
+        var returnValue: BlockReturn? = null
+        loop@ while (true) {
 
             val tss = thisStack.size
             val instructions = block.instructions
@@ -239,7 +240,24 @@ class Runtime {
                     // todo we must execute all (err)defer-things
                     lastValue = instr.execute(this)
                     if (lastValue != null && lastValue.type != ReturnType.VALUE) {
-                        return lastValue
+                        when (lastValue.type) {
+                            ReturnType.YIELD -> {
+                                TODO("yield somehow")
+                            }
+                            ReturnType.RETURN -> {
+                                block = block.onReturn ?: return returnValue ?: lastValue
+                                returnValue = lastValue
+                                continue@loop
+                            }
+                            ReturnType.THROW -> {
+                                // set 'thrown' field
+                                // continue in 'catches' block
+                                block = block.onThrow ?: return lastValue
+                                returnValue = null
+                                continue@loop
+                            }
+                            else -> throw NotImplementedError("Unknown exit type")
+                        }
                     }
                 }
             } finally {
@@ -257,7 +275,7 @@ class Runtime {
                 if (conditionJ) block.ifBranch else block.elseBranch
             } else {
                 block.nextBranch
-            } ?: return null
+            } ?: return returnValue
         }
     }
 

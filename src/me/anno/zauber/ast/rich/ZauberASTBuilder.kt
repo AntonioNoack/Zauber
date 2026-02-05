@@ -3,7 +3,6 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ZauberLanguage
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
@@ -198,7 +197,7 @@ class ZauberASTBuilder(
         val typeParameters = readTypeParameterDeclarations(classScope)
         val selfType0 = readFieldOrMethodSelfType(typeParameters, classScope)
         var selfType = selfType0 ?: getSelfType(classScope)
-        if (selfType != null) selfType = resolveTypeAliases(selfType)
+        if (selfType != null) selfType = selfType.resolve()
 
         check(tokens.equals(i, TokenType.NAME))
         val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)

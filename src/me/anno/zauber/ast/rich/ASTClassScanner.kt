@@ -6,55 +6,17 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NullableAnyType
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnresolvedType
 import kotlin.math.max
 
 /**
  * to make type-resolution immediately available/resolvable
  * */
 abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, true) {
-
-    companion object {
-        // todo I don't really want to deal with them during type-resolution,
-        //  because they are more of an import and should be able to be resolved really quickly
-        //  -> index type aliases when collecting names already
-        //  -> resolve the types when reading types already
-        fun resolveTypeAliases(type: Type): Type {
-            var currType = type
-            while (true) {
-                if (currType is UnresolvedType) {
-                    currType = currType.resolve()
-                    continue
-                }
-                if (currType is ClassType && currType.clazz.isTypeAlias()) {
-                    val scope = currType.clazz
-
-                    val genericNames = scope.typeParameters
-                    if (genericNames.isEmpty() || currType.typeParameters == null) {
-                        currType = scope.selfAsTypeAlias!!
-                        continue
-                    }
-
-                    val genericValues = ParameterList(genericNames, currType.typeParameters)
-                    currType = genericValues.resolveGenerics(null, currType)
-                    continue
-                }
-                // todo if typeAlias in any of the typeParameters, replace it, too
-                if (currType is ClassType && currType.typeParameters != null) {
-                    return ClassType(currType.clazz, currType.typeParameters.map { resolveTypeAliases(it) })
-                }
-                return currType
-            }
-        }
-    }
 
     open fun skipAnnotations() {
         if (tokens.equals(i, "@") && tokens.equals(i + 1, TokenType.NAME)) {

@@ -133,7 +133,6 @@ object ASTSimplifier {
                 var handlerBlock = graph.addNode()
                 val throwableField = handlerBlock.field(ThrowableType)
 
-
                 val finallyCondition = if (expr.finally != null) {
                     val field = graph.startBlock.field(BooleanType, booleanOwnership)
                     val trueField = block0.field(BooleanType, booleanOwnership)

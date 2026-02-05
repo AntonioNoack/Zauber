@@ -28,6 +28,12 @@ class SimpleNode(val graph: SimpleGraph) {
             linkTo(value)
         }
 
+    // todo exits, return has exception = null, throw has exception = Throwable
+    //  this must contain any catch-handler logic and finally-code
+    // todo when a throw or return occurs, we must execute this logic
+    var onThrow: SimpleNode? = null
+    var onReturn: SimpleNode? = null
+
     val isBranch get() = branchCondition != null && ifBranch != elseBranch
 
     private fun linkTo(value: SimpleNode?) {

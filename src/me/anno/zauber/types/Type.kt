@@ -3,6 +3,8 @@ package me.anno.zauber.types
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
 import me.anno.zauber.generation.Specializations.specialization
+import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.*
@@ -47,10 +49,14 @@ abstract class Type {
     }
 
     fun resolve(selfScope: Scope? = null): Type {
-        if (isResolved()) return this
-        val resolved = resolveImpl(selfScope)
-        if (resolved == this) throw IllegalStateException("Failed to resolve $this (${javaClass.simpleName})")
-        return resolved.resolve(selfScope)
+        var self = this
+        repeat(100) {
+            if (self.isResolved()) return self
+            val resolved = self.resolveImpl(selfScope)
+            if (resolved == self) throw IllegalStateException("Failed to resolve $this (${javaClass.simpleName}), returned self")
+            self = resolved
+        }
+        throw IllegalStateException("Failed to resolve $self, too complicated, maybe a recursive type?")
     }
 
     fun resolveImpl(selfScope: Scope?): Type {
@@ -66,8 +72,17 @@ abstract class Type {
             }
             is GenericType -> specialization[this]!!
             is ClassType -> {
-                val parameters = typeParameters?.map { it.resolve(selfScope) }
-                ClassType(clazz, parameters)
+                if (clazz.isTypeAlias()) {
+                    val typeAlias = clazz.selfAsTypeAlias!!
+                    val genericNames = clazz.typeParameters
+                    if (genericNames.isEmpty() || typeParameters.isNullOrEmpty()) typeAlias else {
+                        val genericValues = ParameterList(genericNames, typeParameters)
+                        genericValues.resolveGenerics(null, typeAlias)
+                    }
+                } else {
+                    val parameters = typeParameters!!.map { it.resolve(selfScope) }
+                    ClassType(clazz, parameters)
+                }
             }
             is TypeOfField -> {
                 val context = ResolutionContext(null, false, null, emptyMap())

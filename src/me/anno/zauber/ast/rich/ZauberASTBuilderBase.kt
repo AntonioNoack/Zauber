@@ -12,7 +12,6 @@ import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.ASTClassScanner.Companion.resolveTypeAliases
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
@@ -47,14 +46,7 @@ abstract class ZauberASTBuilderBase(
         private val LOGGER = LogManager.getLogger(ZauberASTBuilderBase::class)
 
         fun resolveUnresolvedTypes(path: Type?): Type? {
-            var path = path
-            while (true) {
-                path = when (path) {
-                    is UnresolvedType -> path.resolve()
-                    is ClassType if path.clazz.isTypeAlias() -> resolveTypeAliases(path)
-                    else -> return path
-                }
-            }
+           return path?.resolve()
         }
 
         fun resolveTypeByName(
