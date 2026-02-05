@@ -126,7 +126,7 @@ object TypeResolution {
         var scope = scope
         while (true) {
             if (scope.isClassType()) {
-                return scope.typeWithArgs
+                return scope.typeWithoutArgs
             }
 
             // if inside method, we need to check method.selfType
