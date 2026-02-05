@@ -414,10 +414,9 @@ object ASTSimplifier {
         block1.elseBranch = elseBlock
 
         if (expr.elseBranch == null) {
-
-            val (_, block2) = simplifyImpl(context, expr.ifBranch, ifBlock, graph, true) ?: return null
-            return UnitInstance to block2
-
+            val ifValue = simplifyImpl(context, expr.ifBranch, ifBlock, graph, true)
+            if (ifValue != null) ifValue.second.nextBranch = elseBlock
+            return UnitInstance to elseBlock
         } else {
 
             val ifValue = simplifyImpl(context, expr.ifBranch, ifBlock, graph, true)

@@ -119,7 +119,6 @@ class TestRuntime {
 
     @Test
     fun testFactorialAsRecursiveFunction() {
-        // todo this has some sort of cast-problem, too
         val code = """
             fun fac(i: Int): Int {
                 if (i <= 1) return 1
