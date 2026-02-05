@@ -54,7 +54,12 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
     ): ResolvedConstructor? {
         LOGGER.info("Checking $scope for constructors")
         check(scope.name == name)
+        if (scope.scopeType == ScopeType.TYPE_ALIAS) {
+            return getByTypeAlias(scope, returnType, selfType, typeParameters, valueParameters)
+        }
+
         val children = scope.children
+        var bestMatch: ResolvedConstructor? = null
         for (i in children.indices) {
             val constructor = children[i].selfAsConstructor ?: continue
             // if (method.name != name) continue
@@ -68,12 +73,11 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
                 /* todo is this ok?? */scope,
             )
             LOGGER.info("Match($constructor): $match")
-            if (match != null) return match
+            if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {
+                bestMatch = match
+            }
         }
-        if (scope.scopeType == ScopeType.TYPE_ALIAS) {
-            return getByTypeAlias(scope, returnType, selfType, typeParameters, valueParameters)
-        }
-        return null
+        return bestMatch
     }
 
     private fun getByTypeAlias(
@@ -121,14 +125,15 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             ?.toParameterList(constructor.selfType.clazz.typeParameters)
 
         LOGGER.info("Resolving generics for constructor $constructor")
+        val matchScore = MatchScore(constructor.valueParameters.size + 2)
         val generics = findGenericsForMatch(
             null, null,
             memberReturnType, returnType,
             constructor.selfType.clazz.typeParameters, typeParameters,
-            constructor.valueParameters, valueParameters
+            constructor.valueParameters, valueParameters, matchScore
         ) ?: return null
         val context = ResolutionContext(constructor.selfType, false, returnType, emptyMap())
-        return ResolvedConstructor(generics, constructor, context, codeScope)
+        return ResolvedConstructor(generics, constructor, context, codeScope, matchScore)
     }
 
     fun List<Type>.toParameterList(generics: List<Parameter>): ParameterList {

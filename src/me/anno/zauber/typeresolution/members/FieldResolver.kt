@@ -34,6 +34,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         // println("Searching for '$name' in $scope")
 
         val scopeSelfType = getSelfType(scope)
+        var bestMatch: ResolvedField? = null
         for (field in scope.fields) {
             if (field.name != name) continue
             if (field.typeParameters.isNotEmpty()) {
@@ -46,7 +47,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 typeParameters, valueParameters,
                 scope, origin
             )
-            if (match != null) return match
+            bestMatch = joinMatches(bestMatch, match)
         }
 
         val companion = scope.companionObject
@@ -60,13 +61,13 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                     typeParameters, valueParameters,
                     scope, origin
                 )
-                if (match != null) return match
+                bestMatch = joinMatches(bestMatch,match)
             }
-            val field = findMemberInScope(
+            val match = findMemberInScope(
                 companion, origin, name, returnType, selfType,
                 typeParameters, valueParameters,
             )
-            if (field != null) return field
+            bestMatch = joinMatches(bestMatch, match)
         }
 
         for (child in scope.children) {
@@ -79,9 +80,14 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 typeParameters, valueParameters,
                 scope, origin
             )
-            if (match != null) return match
+            bestMatch = joinMatches(bestMatch, match)
         }
-        return null
+        return bestMatch
+    }
+
+    fun joinMatches(bestMatch: ResolvedField?, match: ResolvedField?): ResolvedField? {
+        return if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) match
+        else bestMatch
     }
 
     fun getFieldReturnType(scopeSelfType: Type?, field: Field, returnType: Type?): Type? {
@@ -124,17 +130,18 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             )
 
             LOGGER.info("Resolving generics for field $field")
+            val matchScore = MatchScore(2)
             val generics = findGenericsForMatch(
                 null, null,
                 fieldReturnType, returnType,
                 field.typeParameters, actualTypeParams,
-                emptyList(), valueParameters
+                emptyList(), valueParameters, matchScore
             ) ?: return null
 
             val context = ResolutionContext(null, false, fieldReturnType, emptyMap())
             return ResolvedField(
                 emptyParameterList(), field,
-                generics, context, codeScope
+                generics, context, codeScope, matchScore
             )
         } else {
 
@@ -157,18 +164,19 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             )
 
             LOGGER.info("Resolving generics for field $field")
+            val matchScore = MatchScore(2)
             val generics = findGenericsForMatch(
                 fieldSelfType, selfTypeI,
                 fieldReturnType, returnType,
                 fieldSelfParams + field.typeParameters, actualTypeParams,
-                emptyList(), valueParameters
+                emptyList(), valueParameters, matchScore
             ) ?: return null
 
             val selfType = selfTypeI ?: fieldSelfType
             val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
             return ResolvedField(
-                generics.subList(0, fieldSelfParams.size),  field,
-                generics.subList(fieldSelfParams.size, generics.size), context, codeScope
+                generics.subList(0, fieldSelfParams.size), field,
+                generics.subList(fieldSelfParams.size, generics.size), context, codeScope, matchScore
             )
         }
     }

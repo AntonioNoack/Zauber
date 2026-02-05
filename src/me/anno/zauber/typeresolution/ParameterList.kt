@@ -92,17 +92,6 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         return dst
     }
 
-    fun filterNotNull(): ParameterList {
-        val newGenerics = ArrayList<Parameter>()
-        val newTypes = ArrayList<Type>()
-        for (i in generics.indices) {
-            val type = types[i] ?: continue
-            newGenerics.add(generics[i])
-            newTypes.add(type)
-        }
-        return ParameterList(newGenerics, newTypes)
-    }
-
     operator fun plus(other: ParameterList): ParameterList {
         val result = ParameterList(this.generics + other.generics)
         for (i in generics.indices) {
@@ -142,15 +131,6 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         for (i in generics.indices) {
             val type = types[i] ?: continue // null stays weak
             copy.set(i, type, InsertMode.READ_ONLY)
-        }
-        return copy
-    }
-
-    fun weak(): ParameterList {
-        val copy = ParameterList(generics)
-        for (i in generics.indices) {
-            val type = types[i] ?: continue // null stays weak
-            copy.set(i, type, InsertMode.WEAK)
         }
         return copy
     }

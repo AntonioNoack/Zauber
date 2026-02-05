@@ -500,10 +500,6 @@ class MethodResolutionTest {
 
     @Test
     fun testBestMatchIsChosen() {
-        // todo implement matching logic...
-        //  what should we prefer???
-        //  a) earlier scopes (iteration order)
-        //  b) better self-type matches (iteration order)
         val code = """
         open class A
         open class B: A()

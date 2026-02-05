@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
@@ -23,7 +24,8 @@ object Inheritance {
         actual: ValueParameter,
         expectedTypeParameters: List<Parameter>,
         actualTypeParameters: ParameterList,
-        insertMode: InsertMode
+        insertMode: InsertMode,
+        matchScore: MatchScore? = null
     ): Boolean {
         val expectedType = actualTypeParameters.resolveGenerics(selfTypeIfNeeded, expected.type)
         if (insertMode == InsertMode.READ_ONLY &&
@@ -41,7 +43,7 @@ object Inheritance {
         return isSubTypeOf(
             expectedType, actualType,
             expectedTypeParameters, actualTypeParameters,
-            insertMode
+            insertMode, matchScore
         )
     }
 
@@ -51,6 +53,7 @@ object Inheritance {
         expectedTypeParams: List<Parameter>,
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
+        matchScore: MatchScore? = null,
     ): Boolean {
         if (actualType == expectedType) {
             return true
@@ -66,6 +69,7 @@ object Inheritance {
             expectedTypeParams,
             actualTypeParameters,
             insertMode,
+            matchScore,
         )
         if (LOGGER.isInfoEnabled) {
             LOGGER.info("  got $result for $actualType instanceOf $expectedType")
@@ -78,7 +82,8 @@ object Inheritance {
         actualType: Type,
         expectedTypeParams: List<Parameter>,
         actualTypeParameters: List<Type?>,
-        insertMode: InsertMode
+        insertMode: InsertMode,
+        matchScore: MatchScore?,
     ): Boolean {
         check(insertMode != InsertMode.READ_ONLY)
 
@@ -104,6 +109,7 @@ object Inheritance {
                 expectedTypeParams,
                 actualTypeParameters,
                 InsertMode.READ_ONLY,
+                matchScore
             )
         ) return false
 
@@ -121,31 +127,37 @@ object Inheritance {
         expectedTypeParams: List<Parameter>,
         actualTypeParameters: List<Type?>,
         insertMode: InsertMode,
+        matchScore: MatchScore?,
     ): Boolean {
 
         if (expectedType == actualType) return true
         if (expectedType == NullableAnyType) return true
         if (expectedType == UnknownType) return true
 
+        matchScore?.inc()
+
         if (actualType == UnknownType) {
             // todo use the bounds of the generics instead, not 'Any?'
             return isSubTypeOf(
                 expectedType, NullableAnyType,
-                expectedTypeParams, actualTypeParameters, insertMode
+                expectedTypeParams, actualTypeParameters, insertMode,
+                matchScore,
             )
         }
 
         if (expectedType is NotType) {
             return !isSubTypeOf(
                 expectedType.not(), actualType,
-                expectedTypeParams, actualTypeParameters, insertMode
+                expectedTypeParams, actualTypeParameters, insertMode,
+                matchScore,
             )
         }
 
         if (actualType is NotType) {
             return !isSubTypeOf(
                 expectedType, actualType.not(),
-                expectedTypeParams, actualTypeParameters, insertMode
+                expectedTypeParams, actualTypeParameters, insertMode,
+                matchScore,
             )
         }
 
@@ -158,6 +170,7 @@ object Inheritance {
                     expectedTypeParams,
                     actualTypeParameters,
                     InsertMode.READ_ONLY,
+                    matchScore,
                 )
             }
             if (t0 || insertMode == InsertMode.READ_ONLY) return t0
@@ -168,6 +181,7 @@ object Inheritance {
                     expectedTypeParams,
                     actualTypeParameters,
                     insertMode,
+                    matchScore,
                 )
             }
         }
@@ -179,7 +193,8 @@ object Inheritance {
                     anyExpected, actualType,
                     expectedTypeParams,
                     actualTypeParameters,
-                    InsertMode.READ_ONLY
+                    InsertMode.READ_ONLY,
+                    matchScore,
                 )
             }
             if (t0 || insertMode == InsertMode.READ_ONLY) return t0
@@ -189,7 +204,8 @@ object Inheritance {
                     anyExpected, actualType,
                     expectedTypeParams,
                     actualTypeParameters,
-                    insertMode
+                    insertMode,
+                    matchScore,
                 )
             }
         }
@@ -201,7 +217,8 @@ object Inheritance {
                     anyExpected, actualType,
                     expectedTypeParams,
                     actualTypeParameters,
-                    InsertMode.READ_ONLY
+                    InsertMode.READ_ONLY,
+                    matchScore,
                 )
             }
             if (t0 || insertMode == InsertMode.READ_ONLY) return t0
@@ -211,7 +228,8 @@ object Inheritance {
                     anyExpected, actualType,
                     expectedTypeParams,
                     actualTypeParameters,
-                    insertMode
+                    insertMode,
+                    matchScore,
                 )
             }
         }
@@ -245,7 +263,7 @@ object Inheritance {
                     // does this work with just swapping them???
                     actualType, expectedType,
                     expectedTypeParams, actualTypeParameters,
-                    insertMode,
+                    insertMode, matchScore
                 )
             }
 
@@ -253,7 +271,7 @@ object Inheritance {
                 return tryInsertGenericType(
                     expectedType, actualType,
                     expectedTypeParams, actualTypeParameters,
-                    insertMode,
+                    insertMode, matchScore
                 )
             }
         }
@@ -305,7 +323,7 @@ object Inheritance {
                     if (!isSubTypeOf(
                             expectedType, actualType,
                             expectedTypeParams, actualTypeParameters,
-                            insertMode,
+                            insertMode, matchScore
                         )
                     ) return false
                 }
@@ -325,6 +343,7 @@ object Inheritance {
                     expectedTypeParams,
                     actualTypeParameters,
                     insertMode,
+                    matchScore
                 )
             }
         }
@@ -348,7 +367,7 @@ object Inheritance {
                     expectedType.parameters[paramIndex].type,
                     actualType.parameters[paramIndex].type,
                     expectedTypeParams, actualTypeParameters,
-                    insertMode,
+                    insertMode, matchScore
                 )
             }
         }
@@ -361,12 +380,16 @@ object Inheritance {
                 return isSubTypeOf(
                     expectedType, actualType,
                     expectedTypeParams, actualTypeParameters,
-                    insertMode,
+                    insertMode, matchScore
                 )
             }
         }
 
-        TODO("Is $actualType (${actualType.javaClass.simpleName}) a $expectedType (${expectedType.javaClass.simpleName})?, $expectedTypeParams, $actualTypeParameters [$insertMode]")
+        throw NotImplementedError(
+            "Is $actualType (${actualType.javaClass.simpleName}) " +
+                    "a $expectedType (${expectedType.javaClass.simpleName})?, " +
+                    "$expectedTypeParams, $actualTypeParameters [$insertMode]"
+        )
     }
 
     fun getSuperCalls(scope: Scope): List<SuperCall> {

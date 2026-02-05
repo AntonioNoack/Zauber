@@ -12,8 +12,9 @@ import me.anno.zauber.types.impl.ClassType
 
 class ResolvedMethod(
     ownerTypes: ParameterList, method: Method, callTypes: ParameterList,
-    context: ResolutionContext, codeScope: Scope
-) : ResolvedMember<Method>(ownerTypes, callTypes, method, context, codeScope) {
+    context: ResolutionContext, codeScope: Scope,
+    matchScore: MatchScore, // selfType, then all parameters
+) : ResolvedMember<Method>(ownerTypes, callTypes, method, context, codeScope, matchScore) {
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 

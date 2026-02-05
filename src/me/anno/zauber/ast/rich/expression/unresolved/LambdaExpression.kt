@@ -14,6 +14,7 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Scope
@@ -177,7 +178,8 @@ class LambdaExpression(
 
         val method = ResolvedConstructor(
             ParameterList.emptyParameterList(),
-            classConstructor.selfAsConstructor!!, context, scope
+            classConstructor.selfAsConstructor!!, context, scope,
+            MatchScore(0)
         )
         val params = listOf(selfMethod).map { it.resolve(context) }
         return ResolvedCallExpression(null, method, params, scope, origin)

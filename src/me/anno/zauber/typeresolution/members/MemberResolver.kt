@@ -32,7 +32,9 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             actualTypeParameters: ParameterList?,
 
             expectedValueParameters: List<Parameter>,
-            actualValueParameters: List<ValueParameter>
+            actualValueParameters: List<ValueParameter>,
+
+            matchScore: MatchScore?
         ): ParameterList? { // found generic values for a match
 
             if (expectedSelfType is ClassType && !expectedSelfType.clazz.isClassType()) {
@@ -90,7 +92,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters")
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
-            if (expectedSelfType != null && actualSelfType != null &&
+            if (expectedSelfType != null &&
+                actualSelfType != null &&
                 actualSelfType != expectedSelfType
             ) {
                 LOGGER.info("Start checking self-type")
@@ -98,7 +101,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     expectedSelfType, actualSelfType,
                     expectedTypeParameters,
                     actualTypeParametersI,
-                    InsertMode.STRONG
+                    InsertMode.STRONG,
+                    matchScore?.at(0)
                 )
                 LOGGER.info("Done checking self-type")
 
@@ -119,6 +123,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                     expectedTypeParameters,
                     actualTypeParametersI,
                     InsertMode.WEAK,
+                    matchScore?.at(expectedValueParameters.size + 1)
                 )
                 LOGGER.info("Done checking return-type")
 
@@ -134,29 +139,25 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 )
             }
 
-            if (expectedValueParameters.isNotEmpty()) {
-                LOGGER.info("Start checking arguments")
-                for (i in expectedValueParameters.indices) {
-                    val expectedValueParameter = expectedValueParameters[i]
-                    val actualValueParameter = sortedValueParameters[i]
-                    LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
-                    LOGGER.info("                       [$i]: $expectedTypeParameters vs $actualTypeParametersI")
-                    if (!isSubTypeOf(
-                            actualSelfType,
-                            expectedValueParameter, actualValueParameter,
-                            expectedTypeParameters, actualTypeParametersI,
-                            InsertMode.STRONG
-                        )
-                    ) {
-                        val type = actualValueParameter.getType(expectedValueParameter.type)
-                        LOGGER.info("  type mismatch: $type is not always a ${expectedValueParameter.type}")
-                        LOGGER.info("End checking arguments")
-                        LOGGER.info("End checking argument[$i]")
-                        return null
-                    }
+            for (i in expectedValueParameters.indices) {
+                val expectedValueParameter = expectedValueParameters[i]
+                val actualValueParameter = sortedValueParameters[i]
+                LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
+                LOGGER.info("                       [$i]: $expectedTypeParameters vs $actualTypeParametersI")
+                if (!isSubTypeOf(
+                        actualSelfType,
+                        expectedValueParameter, actualValueParameter,
+                        expectedTypeParameters, actualTypeParametersI,
+                        InsertMode.STRONG, matchScore?.at(i + 1)
+                    )
+                ) {
+                    val type = actualValueParameter.getType(expectedValueParameter.type)
+                    LOGGER.info("  type mismatch: $type is not always a ${expectedValueParameter.type}")
+                    LOGGER.info("End checking arguments")
                     LOGGER.info("End checking argument[$i]")
+                    return null
                 }
-                LOGGER.info("End checking arguments")
+                LOGGER.info("End checking argument[$i]")
             }
 
             LOGGER.info("Found match: $actualTypeParametersI")
@@ -174,9 +175,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>,
-
-        ): Resolved? {
+        valueParameters: List<ValueParameter>
+    ): Resolved? {
         var scope = scope ?: return null
         while (true) {
             val method = findMemberInScope(

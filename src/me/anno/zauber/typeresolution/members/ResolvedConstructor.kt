@@ -10,8 +10,9 @@ import me.anno.zauber.types.impl.ClassType
 
 class ResolvedConstructor(
     ownerTypes: ParameterList, constructor: Constructor,
-    context: ResolutionContext, codeScope: Scope
-) : ResolvedMember<Constructor>(ownerTypes, emptyParameterList(), constructor, context, codeScope) {
+    context: ResolutionContext, codeScope: Scope,
+    matchScore: MatchScore
+) : ResolvedMember<Constructor>(ownerTypes, emptyParameterList(), constructor, context, codeScope, matchScore) {
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 

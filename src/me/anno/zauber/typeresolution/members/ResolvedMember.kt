@@ -24,6 +24,7 @@ abstract class ResolvedMember<V>(
     val resolved: V,
     val context: ResolutionContext,
     val codeScope: Scope,
+    val matchScore: MatchScore
 ) {
 
     val ownerType get() = context.selfType
