@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToFloat
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -33,7 +34,7 @@ class GetterSetterTests {
             }
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(12, runtime.castToFloat(value))
+        assertEquals(12, runtime.castToInt(value))
     }
 
     @Test
@@ -57,7 +58,7 @@ class GetterSetterTests {
             }
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(12, runtime.castToFloat(value))
+        assertEquals(12, runtime.castToInt(value))
     }
 
     @Test
@@ -81,7 +82,7 @@ class GetterSetterTests {
             object Unit
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(12, runtime.castToFloat(value))
+        assertEquals(12, runtime.castToInt(value))
     }
 
 }

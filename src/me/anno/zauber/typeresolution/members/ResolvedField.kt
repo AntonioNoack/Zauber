@@ -32,7 +32,7 @@ class ResolvedField(
     ownerTypes: ParameterList,
     field: Field, callTypes: ParameterList,
     context: ResolutionContext, codeScope: Scope,
-    matchScore: MatchScore
+    val isBackingField: Boolean, matchScore: MatchScore
 ) : ResolvedMember<Field>(ownerTypes, callTypes, field, context, codeScope, matchScore) {
 
     companion object {

@@ -58,6 +58,18 @@ class Field(
                 codeScope == methodScope
     }
 
+    fun getBackedField(): Field? {
+        if (name != "field") return null
+        if (!keywords.hasFlag(Keywords.SYNTHETIC)) return null
+        val scope = codeScope
+        if (scope.scopeType != ScopeType.FIELD_GETTER &&
+            scope.scopeType != ScopeType.FIELD_SETTER
+        ) return null
+
+        val method = scope.selfAsMethod
+        return method?.backedField
+    }
+
     var getter: Method? = null
     var setter: Method? = null
 
@@ -138,4 +150,5 @@ class Field(
     }
 
     fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
+
 }

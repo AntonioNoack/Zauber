@@ -20,7 +20,7 @@ class SimpleGetField(
 
     override fun eval(runtime: Runtime): BlockReturn {
         val self = runtime[self]
-        // println("Self for $field: $self")
+        println("[GET] $self.${field.name}")
         val value = runtime[self, field]
         return BlockReturn(ReturnType.VALUE, value)
     }

@@ -125,12 +125,12 @@ class TryCatchTests {
         ensureUnitIsKnown()
         val code = """
             val tested: String get() {
-                for(i in 0 until 4) {
+                for (i in 0 until 4) {
                     try {} finally {
                         println(i)
                     }
                 }
-                "Test"
+                return "Test"
             }
             
             package zauber

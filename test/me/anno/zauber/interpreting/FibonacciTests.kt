@@ -15,6 +15,7 @@ class FibonacciTests {
             external operator fun minus(other: Int): Int
             external operator fun compareTo(other: Int): Int
             operator fun until(other: Int): IntRange = IntRange(this, other)
+            operator fun rangeTo(other: Int): IntRange = IntRange(this, other+1)
             fun inc() = this+1
             fun dec() = this-1
         }
@@ -47,7 +48,7 @@ class FibonacciTests {
         fun fib(i: Int): Int {
             var a = 1
             var b = 0
-            for (k in 0 until i) {
+            for (k in 0 .. i) {
                 val tmp = a
                 a = a + b
                 b = tmp

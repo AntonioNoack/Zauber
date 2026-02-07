@@ -20,6 +20,7 @@ class SimpleSetField(
     override fun execute(runtime: Runtime): BlockReturn? {
         val selfInstance = runtime[self]
         val value = runtime[src]
+        println("[SET] $selfInstance.${field.name} = $value")
         runtime[selfInstance, field] = value
         return null
     }

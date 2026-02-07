@@ -32,6 +32,11 @@ class Method(
      * */
     var backingField: Field? = null
 
+    /**
+     * for getters/setters
+     * */
+    var backedField: Field? = null
+
     // due to multi-interface, there may be many of them
     var overriddenMethods: List<Method> = emptyList()
     var overriddenBy: List<Method> = emptyList()

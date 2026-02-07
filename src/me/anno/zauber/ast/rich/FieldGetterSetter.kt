@@ -144,6 +144,7 @@ object FieldGetterSetter {
             getterScope, field.valueType, emptyList(),
             expr0, packKeywords() or field.keywords, origin
         )
+        method.backedField = field
         method.backingField = backingField
         getterScope.selfAsMethod = method
         field.getterExpr = expr0
@@ -173,6 +174,7 @@ object FieldGetterSetter {
             UnitType, emptyList(),
             expr, packKeywords() or field.keywords, origin
         )
+        method.backedField = field
         method.backingField = backingField
         setterScope.selfAsMethod = method
         field.setter = method

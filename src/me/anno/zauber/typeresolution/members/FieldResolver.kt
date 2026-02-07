@@ -61,7 +61,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                     typeParameters, valueParameters,
                     scope, origin
                 )
-                bestMatch = joinMatches(bestMatch,match)
+                bestMatch = joinMatches(bestMatch, match)
             }
             val match = findMemberInScope(
                 companion, origin, name, returnType, selfType,
@@ -109,7 +109,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     }
 
     fun findMemberMatch(
-        field: Field,
+        field0: Field,
         fieldReturnType: Type?,
 
         // todo what is the difference between fieldReturnType and returnType here?
@@ -122,6 +122,10 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         codeScope: Scope, origin: Int
     ): ResolvedField? {
         check(valueParameters.isEmpty())
+
+        val field = field0.getBackedField() ?: field0
+        val isBackingField = field0 != field
+
         if (field.selfType == null) {
 
             val actualTypeParams = mergeCallPart(
@@ -140,8 +144,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
             val context = ResolutionContext(null, false, fieldReturnType, emptyMap())
             return ResolvedField(
-                emptyParameterList(), field,
-                generics, context, codeScope, matchScore
+                emptyParameterList(), field, generics,
+                context, codeScope, isBackingField, matchScore
             )
         } else {
 
@@ -176,7 +180,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
             return ResolvedField(
                 generics.subList(0, fieldSelfParams.size), field,
-                generics.subList(fieldSelfParams.size, generics.size), context, codeScope, matchScore
+                generics.subList(fieldSelfParams.size, generics.size),
+                context, codeScope, isBackingField, matchScore
             )
         }
     }

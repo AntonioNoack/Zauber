@@ -252,9 +252,10 @@ object ASTSimplifier {
         val field = expr.field.resolved
         val valueType = expr.run { resolvedType ?: resolveType(context) }
         val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
+
         val dst = block1.field(valueType)
         // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useGetter = field.hasCustomGetter || !field.needsBackingFieldImpl()
+        val useGetter = !expr.field.isBackingField && (field.hasCustomGetter || !field.needsBackingFieldImpl())
         if (useGetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?
@@ -284,8 +285,9 @@ object ASTSimplifier {
         val field = expr.field.resolved
         val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
         val (value, block2) = simplifyImpl(context, expr.value, block1, graph, true) ?: return null
+
         // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useSetter = field.hasCustomSetter || !field.needsBackingFieldImpl()
+        val useSetter = !expr.field.isBackingField && (field.hasCustomSetter || !field.needsBackingFieldImpl())
         if (useSetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?
