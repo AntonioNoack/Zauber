@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
@@ -99,12 +100,14 @@ class AssignIfMutableExpr(
         val plusMethod = getMethodOrNull(leftContext, scope, plusName, plusImports, rightType)
         val plusAssignMethod = getMethodOrNull(leftContext, scope, plusAssignName, plusAssignImports, rightType)
         check(plusMethod != null || plusAssignMethod != null) {
-            "Either a plus or a plusAssign method must be declared on $leftType"
+            "Either $leftType.$plusName($rightType) or $leftType.$plusAssignName($rightType) method must be declared " +
+                    "for ${resolveOrigin(origin)}"
         }
 
         val isContentMutable = plusAssignMethod != null
         check(isFieldMutable != isContentMutable) {
-            "Either field or content must be mutable, $plusName? $plusMethod, $plusAssignName? $plusAssignMethod, fieldMutable? $isFieldMutable"
+            "Either field or content must be mutable, $plusName? $plusMethod, " +
+                    "$plusAssignName? $plusAssignMethod, fieldMutable? $isFieldMutable, at ${resolveOrigin(origin)}"
         }
 
         return if (isContentMutable) {

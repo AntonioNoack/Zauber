@@ -256,7 +256,7 @@ class Runtime {
                                 TODO("yield somehow")
                             }
                             ReturnType.RETURN -> {
-                                println("returning $returnValue / $lastValue from method")
+                                if (LOGGER.isInfoEnabled) LOGGER.info("Returning $returnValue / $lastValue from method")
                                 block = block.onReturn ?: return returnValue ?: lastValue
                                 returnValue = lastValue
                                 continue@loop
