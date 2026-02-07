@@ -131,9 +131,25 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val before = source.substring(0, getI0(i))
         val lineNumber = before.count { it == '\n' } + 1
         val lastLineBreak = before.lastIndexOf('\n')
-        val pos0 = getI0(i) - lastLineBreak
-        val pos1 = getI1(i) - lastLineBreak
-        return "$fileName:$lineNumber, ${pos0}-${pos1}, ${getTypeUnsafe(i)}, '${toStringUnsafe(i)}'"
+        val i0 = getI0(i) - lastLineBreak
+        val i1 = getI1(i) - lastLineBreak
+        // todo show position in line, and surroundings with arrow ^^^^ for the respective token
+        val posStr = getLinePosString(i0, i1, before, lineNumber, lastLineBreak)
+        return "$fileName:$lineNumber, ${i0}-${i1}, ${getTypeUnsafe(i)}, '${toStringUnsafe(i)}'\n$posStr"
+    }
+
+    fun getLinePosString(i0: Int, i1: Int, before: String, lineNumber: Int, lastLineBreak: Int): String {
+        var start = before.lastIndexOf('\n', lastLineBreak - 1) + 1
+        if (before.substring(start, lastLineBreak).all { it.isWhitespace() }) start = lastLineBreak + 1
+
+        var end = source.indexOf('\n', i1 + lastLineBreak)
+        if (end < 0) end = source.length
+        val length = i1 - i0
+        // todo nicely formatted line numbers before it...
+        // todo trim the lines? better...
+        return "${source.substring(start, end)}\n" +
+                " ".repeat(i0 - 1) +
+                "^".repeat(length)
     }
 
     fun getI0(i: Int) = offsets[i * 2]

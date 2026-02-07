@@ -62,6 +62,8 @@ class Field(
     var setter: Method? = null
 
     var getterExpr: Expression? = null
+    var hasCustomGetter = false
+    var hasCustomSetter = false
 
     fun selfTypeTypeParams(givenSelfType: Type?): List<Parameter> =
         selfTypeToTypeParams(selfType, givenSelfType)

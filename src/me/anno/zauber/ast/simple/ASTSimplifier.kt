@@ -3,10 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -18,6 +15,7 @@ import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.interpreting.ZClass.Companion.needsBackingFieldImpl
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
@@ -25,14 +23,17 @@ import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
+import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
@@ -157,7 +158,6 @@ object ASTSimplifier {
                     // catches must be built into a long else-if-else-if chain
                     val type = catch.param.type
                     val catchesAll = type == ThrowableType
-
                     if (catchesAll) {
                         hasCaughtAll = true
                         val catchBody1 = simplifyImpl(context, catch.body, handlerBlock, graph, needsValue)
@@ -254,16 +254,52 @@ object ASTSimplifier {
                 val valueType = expr.run { resolvedType ?: resolveType(context) }
                 val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
                 val dst = block1.field(valueType)
-                block1.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
-                return dst to block1
+                // todo also, if the field is marked as open (and has children), or if the class is an interface
+                val useGetter = field.hasCustomGetter || !field.needsBackingFieldImpl()
+                if (useGetter) {
+                    // todo we may need to resolve owner types, don't we?
+                    // todo is context correct?
+                    val method0 = ResolvedMethod(
+                        ParameterList.emptyParameterList(), field.getter!!,
+                        ParameterList.emptyParameterList(),
+                        context, expr.scope, MatchScore(0)
+                    )
+                    return simplifyCall(
+                        block1, self,
+                        ParameterList.emptyParameterList(),
+                        emptyList(), method0,
+                        null, expr.scope, expr.origin
+                    )
+                } else {
+                    block1.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
+                    return dst to block1
+                }
             }
 
             is ResolvedSetFieldExpression -> {
                 val field = expr.field.resolved
                 val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
                 val (value, block2) = simplifyImpl(context, expr.value, block1, graph, true) ?: return null
-                block2.add(SimpleSetField(self.use(), field, value.use(), expr.scope, expr.origin))
-                return UnitInstance to block2
+                // todo also, if the field is marked as open (and has children), or if the class is an interface
+                val useSetter = field.hasCustomSetter || !field.needsBackingFieldImpl()
+                if (useSetter) {
+                    // todo we may need to resolve owner types, don't we?
+                    // todo is context correct?
+                    val method0 = ResolvedMethod(
+                        ParameterList.emptyParameterList(), field.setter!!,
+                        ParameterList.emptyParameterList(),
+                        context, expr.scope, MatchScore(0)
+                    )
+                    return simplifyCall(
+                        block1, self,
+                        ParameterList.emptyParameterList(),
+                        listOf(value), method0,
+                        null, expr.scope, expr.origin
+                    )
+                } else {
+                    block2.add(SimpleSetField(self.use(), field, value.use(), expr.scope, expr.origin))
+                    return UnitInstance to block2
+                }
             }
 
             is NumberExpression -> {
@@ -317,6 +353,7 @@ object ASTSimplifier {
 
                 TODO("Simplify lambda ${expr.javaClass.simpleName}: $expr")
             }
+
             else -> {
                 if (!expr.isResolved()) {
                     val expr = expr.resolve(context)

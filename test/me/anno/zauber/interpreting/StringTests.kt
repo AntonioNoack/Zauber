@@ -20,7 +20,6 @@ class StringTests {
                 return result
             }
             
-            // todo it might be better to make this 'external' for performance
             fun copyInto(result: Array<V>, destinationOffset: Int, startIndex: Int, endIndex: Int) {
                 val deltaIndex = destinationOffset - startIndex
                 for (i in startIndex until endIndex) {
@@ -130,5 +129,45 @@ class StringTests {
         val (rt, value) = testExecute(code)
         assertEquals(StringType, value.type.type)
         assertEquals("Some String", rt.castToString(value))
+    }
+
+    @Test
+    fun testStringTrimUsingArrays() {
+        LogManager.disableLoggers("Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
+                "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
+                "Stdlib,ASTSimplifier,ResolvedMethod")
+        val code = """
+            val tested get() = " Hello  \r\n".trim()
+            
+            package zauber
+            $smallStdlib
+            
+            fun Char.isWhitespace(): Boolean = this in " \t\r\n"
+            fun String.trim(): String {
+                var startIndex = 0
+                while (startIndex < length && this[startIndex].isWhitespace()) {
+                    startIndex++
+                }
+                if (startIndex == length) return ""
+                var endIndex = length - 1
+                while (endIndex > startIndex && this[endIndex].isWhitespace()) {
+                    endIndex--
+                }
+                return substring(startIndex, endIndex+1)
+            }
+            
+            fun String.substring(startIndex: Int, endIndex: Int): String {
+                return String(content.copyOfRange(startIndex, endIndex))   
+            }
+            
+            fun <V> Array<V>.copyOfRange(startIndex: Int, endIndex: Int) {
+                val clone = Array(endIndex-startIndex)
+                copyInto(clone, 0, startIndex, endIndex)
+                return clone
+            }
+        """.trimIndent()
+        val (rt, value) = testExecute(code)
+        assertEquals(StringType, value.type.type)
+        assertEquals("Hello", rt.castToString(value))
     }
 }

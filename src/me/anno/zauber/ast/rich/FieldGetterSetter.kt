@@ -131,7 +131,7 @@ object FieldGetterSetter {
         getterScope: Scope, origin: Int
     ) {
         val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
-        val expr = expr ?: if (needsGetter(field)) {
+        val expr0 = expr ?: if (needsGetter(field)) {
             if (!isInterface) {
                 val fieldExpr = FieldExpression(backingField, getterScope, origin)
                 ReturnExpression(fieldExpr, null, getterScope, origin)
@@ -142,21 +142,22 @@ object FieldGetterSetter {
         val method = Method(
             field.selfType, false, methodName, emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
-            expr, packKeywords() or field.keywords, origin
+            expr0, packKeywords() or field.keywords, origin
         )
         method.backingField = backingField
         getterScope.selfAsMethod = method
-        field.getterExpr = expr
+        field.getterExpr = expr0
         field.getter = method
+        field.hasCustomGetter = expr0 != null
     }
 
     fun ZauberASTBuilder.createSetterMethod(
-        field: Field, expr: Expression?,
+        field: Field, expr0: Expression?,
         backingField: Field, valueField: Field,
         setterScope: Scope, origin: Int,
     ) {
         val isInterface = setterScope.parent?.scopeType == ScopeType.INTERFACE
-        val expr = expr ?: if (needsGetter(field)) {
+        val expr = expr0 ?: if (needsGetter(field)) {
             if (!isInterface) {
                 val backingExpr = FieldExpression(backingField, setterScope, origin)
                 val valueExpr = FieldExpression(valueField, setterScope, origin)
@@ -175,6 +176,7 @@ object FieldGetterSetter {
         method.backingField = backingField
         setterScope.selfAsMethod = method
         field.setter = method
+        field.hasCustomSetter = expr0 != null
     }
 
 }

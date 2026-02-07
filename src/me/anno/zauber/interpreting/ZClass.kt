@@ -15,9 +15,14 @@ class ZClass(val type: Type) {
             // val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
             // if (!isValidInstance) return emptyList()
             return type.clazz.fields.filter {
-                (!it.explicitSelfType || it.selfType == type) &&
-                        it.needsBackingField()
+                it.needsBackingFieldImpl()
             }
+        }
+
+        fun Field.needsBackingFieldImpl(): Boolean {
+            val type = codeScope.typeWithoutArgs
+            return (!explicitSelfType || selfType == type) &&
+                    needsBackingField()
         }
     }
 

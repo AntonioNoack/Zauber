@@ -7,6 +7,7 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
+import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -15,6 +16,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
@@ -91,8 +93,18 @@ class Runtime {
         check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.codeScope})" }
         if (fieldIndex >= instance.properties.size)
             throw IllegalStateException("Outdated instance? $instance")
+        if (instance.properties[fieldIndex] == null &&
+            clazz.type == StringType &&
+            field.name == "content"
+        ) {
+            createStringContentArray(instance, fieldIndex)
+        }
         return instance.properties[fieldIndex]
             ?: throw IllegalStateException("$instance.$field[$fieldIndex] accessed before initialization")
+    }
+
+    private fun createStringContentArray(instance: Instance, fieldIndex: Int) {
+        TODO("Create string content array for $instance")
     }
 
     operator fun set(field: SimpleField, value: Instance) {
