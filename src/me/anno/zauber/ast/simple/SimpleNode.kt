@@ -28,12 +28,7 @@ class SimpleNode(val graph: SimpleGraph) {
             linkTo(value)
         }
 
-    var thrownField: SimpleField? = null
-
-    // todo exits, return has exception = null, throw has exception = Throwable
-    //  this must contain any catch-handler logic and finally-code
-    // todo when a throw or return occurs, we must execute this logic
-    var onThrow: SimpleNode? = null
+    var onThrow: ThrowHandler? = null
     var onReturn: SimpleNode? = null
 
     val isBranch get() = branchCondition != null && ifBranch != elseBranch
@@ -114,7 +109,7 @@ class SimpleNode(val graph: SimpleGraph) {
         val or = onReturn
         if (or != null) builder.append('r').append(or.blockId)
         val ot = onThrow
-        if (ot != null) builder.append('t').append(ot.blockId)
+        if (ot != null) builder.append('t').append(ot.handler.blockId)
         builder.append(':')
         for (instr in instructions) {
             builder.append("\n  ").append(instr)

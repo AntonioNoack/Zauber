@@ -12,22 +12,22 @@ class SimpleGraph {
     /**
      * throwable-handler
      * */
-    var onThrow: SimpleNode? = null
+    var onThrow: ThrowHandler? = null
 
     /**
      * exit-handler
      * */
     var onReturn: SimpleNode? = null
 
-    fun <R> pushTryFinally(onThrow: SimpleNode?, onReturn: SimpleNode?, runnable: () -> R): R {
+    fun <R> pushTryFinally(onThrow: ThrowHandler?, onReturn: SimpleNode?, runnable: () -> R): R {
         val oldReturn = this.onReturn
-        val oldThrow = this.onReturn
+        val oldThrow = this.onThrow
         if (onReturn != null) {
             onReturn.onReturn = oldReturn
             this.onReturn = onReturn
         }
         if (onThrow != null) {
-            onThrow.onThrow = oldThrow
+            onThrow.handler.onThrow = oldThrow
             this.onThrow = onThrow
         }
         return try {

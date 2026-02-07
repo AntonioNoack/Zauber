@@ -36,11 +36,17 @@ object Stdlib {
 
     fun registerPrintln(runtime: Runtime) {
         runtime.register(langScope, "println", listOf(StringType)) { rt, _, params ->
-            val content = rt.castToString(params[0])
-            rt.printed += content
-            println(content)
-            rt.getUnit()
+            runPrintln(rt, rt.castToString(params[0]))
         }
+        runtime.register(langScope, "println", listOf(IntType)) { rt, _, params ->
+            runPrintln(rt, rt.castToInt(params[0]).toString())
+        }
+    }
+
+    private fun runPrintln(rt: Runtime, content: String): Instance {
+        rt.printed += content
+        println(content)
+        return rt.getUnit()
     }
 
     fun registerArrayAccess(runtime: Runtime) {

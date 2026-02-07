@@ -341,18 +341,18 @@ object ASTSimplifier {
     ): Pair<SimpleField, SimpleNode>? {
 
         var handlerBlock = if (expr.catches.isNotEmpty()) graph.addNode() else null
-        val handlerBlock0 = handlerBlock
-        val thrownField = if (handlerBlock != null) {
+        val handler = if (handlerBlock != null) {
             val field = handlerBlock.field(ThrowableType)
-            println("set ${handlerBlock.blockId}.thrownField")
-            handlerBlock.thrownField = field
-            field
+            // println("set ${handlerBlock.blockId}.thrownField")
+            val handler = ThrowHandler(field, handlerBlock)
+            handlerBlock.onThrow = handler
+            handler
         } else null
 
         val finallyHandler = if (expr.finally != null) graph.addNode() else null
-        if (expr.finally != null && finallyHandler != null) {
+        val afterFinally = if (expr.finally != null && finallyHandler != null) {
             simplifyImpl(context, expr.finally.body, finallyHandler, graph, false)
-        }
+        } else null
 
         // todo it would be good to calculate which stuff exactly can be thrown,
         //  so we can hint to the user what actually can be thrown
@@ -360,43 +360,43 @@ object ASTSimplifier {
         val blocksWithValue = ArrayList<Pair<SimpleField, SimpleNode>>()
 
         var hasCaughtAll = false
-        for (catch in expr.catches) {
-            handlerBlock!!
-            thrownField!!
+        graph.pushTryFinally(null, finallyHandler) { // if anything goes wrong, finally must still be executed
+            for (catch in expr.catches) {
 
-            // catches must be built into a long else-if-else-if chain
-            val type = catch.param.type
-            // todo we should compare with what actually can be thrown,
-            //  and then whether we cover all cases
-            val catchesAll = type == ThrowableType
-            if (catchesAll) {
-                hasCaughtAll = true
-                val catchBody1 = simplifyImpl(context, catch.body, handlerBlock, graph, needsValue)
-                if (catchBody1 != null) blocksWithValue.add(catchBody1)
-                break
-            } else {
-                val condition = handlerBlock.field(BooleanType, booleanOwnership)
-                handlerBlock.add(SimpleInstanceOf(condition, thrownField, type, expr.scope, expr.origin))
-                handlerBlock.branchCondition = condition.use()
+                // catches must be built into a long else-if-else-if chain
+                val type = catch.param.type
+                // todo we should compare with what actually can be thrown,
+                //  and then whether we cover all cases
+                val catchesAll = type == ThrowableType
+                if (catchesAll) {
+                    hasCaughtAll = true
+                    val catchBody1 = simplifyImpl(context, catch.body, handlerBlock!!, graph, needsValue)
+                    if (catchBody1 != null) blocksWithValue.add(catchBody1)
+                    break
+                } else {
+                    val condition = handlerBlock!!.field(BooleanType, booleanOwnership)
+                    handlerBlock!!.add(SimpleInstanceOf(condition, handler!!.thrownField, type, expr.scope, expr.origin))
+                    handlerBlock!!.branchCondition = condition.use()
 
-                val catchBlock0 = graph.addNode()
-                val continueBlock = graph.addNode()
-                handlerBlock.ifBranch = catchBlock0
-                handlerBlock.elseBranch = continueBlock
+                    val catchBlock0 = graph.addNode()
+                    val continueBlock = graph.addNode()
+                    handlerBlock!!.ifBranch = catchBlock0
+                    handlerBlock!!.elseBranch = continueBlock
 
-                val catchBody1 = simplifyImpl(context, catch.body, catchBlock0, graph, needsValue)
-                if (catchBody1 != null) blocksWithValue.add(catchBody1)
-                handlerBlock = continueBlock
+                    val catchBody1 = simplifyImpl(context, catch.body, catchBlock0, graph, needsValue)
+                    if (catchBody1 != null) blocksWithValue.add(catchBody1)
+                    handlerBlock = continueBlock
+                }
+            }
+
+            if (!hasCaughtAll && handlerBlock != null && handler != null) {
+                // the last handlerBlock case must be 'throw'
+                // except if one case handled all cases
+                handlerBlock.add(SimpleThrow(handler.thrownField, expr.scope, expr.origin))
             }
         }
 
-        if (!hasCaughtAll && handlerBlock != null && thrownField != null) {
-            // the last handlerBlock case must be 'throw'
-            // except if one case handled all cases
-            handlerBlock.add(SimpleThrow(thrownField, expr.scope, expr.origin))
-        }
-
-        val body = graph.pushTryFinally(handlerBlock0, finallyHandler) {
+        val body = graph.pushTryFinally(handler, finallyHandler) {
             val innerNode = graph.addNode()
             block0.nextBranch = innerNode
             simplifyImpl(context, expr.tryBody, innerNode, graph, needsValue)
@@ -419,7 +419,12 @@ object ASTSimplifier {
             blocksWithValue.add(joinedField to joined)
         }
 
-        return blocksWithValue.first()
+        val nextBlock = blocksWithValue.first()
+        // todo now we must execute finally-block
+        //  and finally-block-exit branches to empty-block / to continueBlock
+        //  depending on whether it was entered by an exception...
+
+        return nextBlock
     }
 
     private fun simplifyWhile(

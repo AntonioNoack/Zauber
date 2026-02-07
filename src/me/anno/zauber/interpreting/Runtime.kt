@@ -257,6 +257,7 @@ class Runtime {
                             }
                             ReturnType.RETURN -> {
                                 if (LOGGER.isInfoEnabled) LOGGER.info("Returning $returnValue / $lastValue from method")
+                                println("Got exit value from ${block.blockId}, executing finally: ${block.onReturn?.blockId}")
                                 block = block.onReturn ?: return returnValue ?: lastValue
                                 returnValue = lastValue
                                 continue@loop
@@ -264,9 +265,8 @@ class Runtime {
                             ReturnType.THROW -> {
                                 // set 'thrown' field
                                 // continue in 'catches' block
-                                block = block.onThrow ?: return lastValue
-                                val thrownField = block.thrownField
-                                check(thrownField != null) { "Expected onThrow(${block.blockId}) to have throwField" }
+                                val (thrownField, handlerBlock) = block.onThrow ?: return lastValue
+                                block = handlerBlock
                                 set(thrownField, lastValue.value)
                                 returnValue = null
                                 continue@loop
