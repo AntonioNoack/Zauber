@@ -345,6 +345,11 @@ object ASTSimplifier {
         //      try {} catch {} finally {} and
         //      try { try {} catch(e) } finally {},
         //  are the same
+        //  possible paths:
+        //   - yield -> our state must be stored and loaded from fields
+        //   - return -> only execute finally's
+        //   - throw -> just from catch to catch, but still execute finally's
+        //   - value -> execute finally's, then continue normal execution flow
 
         var handlerBlock = if (expr.catches.isNotEmpty()) graph.addNode() else null
         val handler = if (handlerBlock != null) {
