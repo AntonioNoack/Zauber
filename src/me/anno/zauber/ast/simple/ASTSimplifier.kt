@@ -340,6 +340,12 @@ object ASTSimplifier {
         needsValue: Boolean
     ): Pair<SimpleField, SimpleNode>? {
 
+        // todo this is complicated, can we separate try-catch and finally?
+        //  I think so
+        //      try {} catch {} finally {} and
+        //      try { try {} catch(e) } finally {},
+        //  are the same
+
         var handlerBlock = if (expr.catches.isNotEmpty()) graph.addNode() else null
         val handler = if (handlerBlock != null) {
             val field = handlerBlock.field(ThrowableType)
