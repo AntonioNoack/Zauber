@@ -20,8 +20,8 @@ abstract class SimpleAssignment(val dst: SimpleField, scope: Scope, origin: Int)
         val value = eval(runtime)
         return if (value.type == ReturnType.VALUE) {
             if (dst.numReads > 0) {
-                if (LOGGER.isDebugEnabled) LOGGER.debug("$dst is now ${value.instance} by $this (${javaClass.simpleName})")
-                runtime[dst] = value.instance
+                if (LOGGER.isDebugEnabled) LOGGER.debug("$dst is now ${value.value} by $this (${javaClass.simpleName})")
+                runtime[dst] = value.value
             }
             null
         } else value

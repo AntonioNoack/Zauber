@@ -1,7 +1,9 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.typeresolution.Inheritance
+import me.anno.zauber.typeresolution.InsertMode
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -60,7 +62,11 @@ class ZClass(val type: Type) {
     }
 
     fun isSubTypeOf(expectedType: ZClass): Boolean {
-        TODO()
+        return Inheritance.isSubTypeOf(
+            expectedType.type,
+            type, emptyList(), ParameterList.emptyParameterList(),
+            InsertMode.READ_ONLY
+        )
     }
 
     override fun toString(): String {

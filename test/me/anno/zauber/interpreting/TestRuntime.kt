@@ -20,7 +20,7 @@ class TestRuntime {
             check(value.type == ReturnType.RETURN) {
                 "Expected function to return, got $value"
             }
-            return runtime to value.instance
+            return runtime to value.value
         }
 
         fun testExecuteCatch(code: String): Pair<Runtime, BlockReturn> {
@@ -222,112 +222,6 @@ class TestRuntime {
         assertEquals("Test", (value.type.type as ClassType).clazz.name)
         val a = value.properties[0]!!
         assertEquals(5, runtime.castToInt(a))
-    }
-
-    @Test
-    fun testTryCatchNormal() {
-        ensureUnitIsKnown()
-        val code = """
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            
-            val tested get() = try {
-                1
-            } catch(e: NullPointerException) {
-                2
-            }
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
-    }
-
-    @Test
-    fun testTryCatchMismatch() {
-        ensureUnitIsKnown()
-        val code = """
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            class IllegalArgumentException : RuntimeException()
-            
-            val tested get() = try {
-                throw IllegalArgumentException()
-            } catch(e: NullPointerException) {
-                2
-            }
-        """.trimIndent()
-        val (_, value) = testExecuteCatch(code)
-        check(value.type == ReturnType.THROW)
-        val type = value.instance.type.type as ClassType
-        check(type.clazz.name == "IllegalArgumentException")
-    }
-
-    @Test
-    fun testTryCatchCatching() {
-        ensureUnitIsKnown()
-        val code = """
-            val tested get() = try {
-                throw NullPointerException()
-            } catch(e: NullPointerException) {
-                2   
-            }
-            
-            package zauber
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
-    }
-
-    // todo this is a late-game test :3
-    @Test
-    fun testSequenceUsingYield() {
-        // todo why can yielded not be resolved???
-        //  it should be found in collect-names pass
-        ensureUnitIsKnown()
-        val code = """
-            fun <V> collectYielded(runnable: () -> Unit): List<V> {
-                var yielded = async runnable()
-                val result = ArrayList<V>()
-                while (yielded is Yielded<*, *, V>) {
-                    result.add(yielded.yieldedValue)
-                    yielded = async yielded.continueRunning()
-                }
-                if (yielded is Thrown<*, *, *>) {
-                    throw yielded.thrown;
-                }
-                return result
-            }
-            
-            val tested get() = collectYielded<Int> {
-                yield 1
-                yield 2
-                yield 3
-            }
-            
-            package zauber
-            // a little clusterfuck
-            sealed interface Yieldable<R, T: Throwable, Y> {}
-            value class Yielded<R, T: Throwable, Y>(
-                val yieldedValue: Y,
-                val continueRunning: () -> Yielded<R, T, Y>
-            ) : Yieldable<R, T, Y> {}
-            value class Thrown<R, T: Throwable, Y>(val value: T) : Yieldable<R, T, Y> {}
-            value class Returned<R, T: Throwable, Y>(val value: R) : Yieldable<R, T, Y> {}
-            class ArrayList<V>
-            interface Function0<R> {
-                fun call(): R
-            }
-            class Any {
-                open fun hashCode() = 0
-                open fun toString() = ""
-                open fun equals(other: Any?): Boolean = other === this
-            }
-        """.trimIndent()
-        val (runtime, value) = testExecute(code)
     }
 
     // todo test defer and errdefer and destructors

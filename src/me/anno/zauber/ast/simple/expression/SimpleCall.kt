@@ -82,7 +82,7 @@ class SimpleCall(
 
         val result = runtime.executeCall(self, method, valueParameters)
         return if (result.type == ReturnType.RETURN) {
-            BlockReturn(ReturnType.VALUE, result.instance)
+            BlockReturn(ReturnType.VALUE, result.value)
         } else result
     }
 

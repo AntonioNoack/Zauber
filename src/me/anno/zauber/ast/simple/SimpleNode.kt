@@ -28,6 +28,8 @@ class SimpleNode(val graph: SimpleGraph) {
             linkTo(value)
         }
 
+    var thrownField: SimpleField? = null
+
     // todo exits, return has exception = null, throw has exception = Throwable
     //  this must contain any catch-handler logic and finally-code
     // todo when a throw or return occurs, we must execute this logic
@@ -94,17 +96,30 @@ class SimpleNode(val graph: SimpleGraph) {
         SimpleField(type, getOwnership(type), graph.numFields++, scopeIfThis)
 
     override fun toString(): String {
-        val suffix = if (nextBranch == null) {
-            "end"
+        val builder = StringBuilder()
+        builder.append('b').append(blockId)
+            .append('[')
+
+        if (nextBranch == null) {
+            builder.append("end")
         } else if (branchCondition != null) {
-            "$branchCondition ? ${ifBranch?.blockId} : ${elseBranch?.blockId}"
+            builder.append(branchCondition).append(" ? ")
+                .append(ifBranch?.blockId).append(" : ")
+                .append(elseBranch?.blockId)
         } else {
-            "${nextBranch?.blockId}"
+            builder.append(nextBranch?.blockId)
         }
-        val prefix = "b${blockId}[$suffix]:"
-        return instructions.joinToString("", prefix, "") { instr ->
-            "\n  $instr"
+
+        builder.append(']')
+        val or = onReturn
+        if (or != null) builder.append('r').append(or.blockId)
+        val ot = onThrow
+        if (ot != null) builder.append('t').append(ot.blockId)
+        builder.append(':')
+        for (instr in instructions) {
+            builder.append("\n  ").append(instr)
         }
+        return builder.toString()
     }
 
     fun isEmpty(): Boolean {

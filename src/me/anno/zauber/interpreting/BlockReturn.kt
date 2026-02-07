@@ -1,3 +1,3 @@
 package me.anno.zauber.interpreting
 
-data class BlockReturn(val type: ReturnType, val instance: Instance)
+data class BlockReturn(val type: ReturnType, val value: Instance)

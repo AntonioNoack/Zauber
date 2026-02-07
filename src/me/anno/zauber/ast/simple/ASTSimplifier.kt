@@ -3,14 +3,16 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield
@@ -33,8 +35,8 @@ import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
-import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
@@ -76,32 +78,7 @@ object ASTSimplifier {
         needsValue: Boolean
     ): Pair<SimpleField, SimpleNode>? {
         when (expr) {
-
-            is ExpressionList -> {
-
-                var result = UnitInstance
-                val exprScope = expr.scope
-
-                // declare fields -> needed?
-                for (field in exprScope.fields) {
-                    if (needsFieldByParameter(field.byParameter) &&
-                        // field.originalScope == field.codeScope && // not moved
-                        block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
-                    ) {
-                        val type = field.resolveValueType(context)
-                        block0.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
-                    }
-                }
-
-                var blockI = block0
-                for (expr in expr.list) {
-                    val tmp = simplifyImpl(context, expr, blockI, graph, needsValue) ?: return null
-                    result = tmp.first
-                    blockI = tmp.second
-                }
-                return result to blockI
-            }
-
+            is ExpressionList -> return simplifyList(context, expr, block0, graph, needsValue)
             is YieldExpression -> {
                 val field = simplifyImpl(context, expr.value, block0, graph, true) ?: return null
                 val block1 = field.second
@@ -129,107 +106,8 @@ object ASTSimplifier {
                 return null // nothing exists after
             }
 
-            is TryCatchBlock -> {
-                val scope = expr.tryBody.scope
-                var handlerBlock = graph.addNode()
-                val throwableField = handlerBlock.field(ThrowableType)
-
-                val finallyCondition = if (expr.finally != null) {
-                    val field = graph.startBlock.field(BooleanType, booleanOwnership)
-                    val trueField = block0.field(BooleanType, booleanOwnership)
-                    block0.add(SimpleSpecialValue(trueField, SpecialValue.TRUE, expr.scope, expr.origin))
-                    // todo what is self here???
-                    // todo we must initialize the field to false at the very start...
-                    block0.add(SimpleSetField(UnitInstance, expr.finally.flag, trueField, expr.scope, expr.origin))
-                    field
-                } else null
-
-                val prevHandler = graph.catchHandlers.put(scope, SimpleCatchHandler(throwableField, handlerBlock))
-                check(prevHandler == null)
-
-                val body = simplifyImpl(context, expr.tryBody, block0, graph, needsValue)
-                // todo the values of all catches must be joined if possible...
-
-                // todo it would be good to calculate which stuff exactly can be thrown,
-                //  and to therefore simplify this lots and lots
-
-                var hasCaughtAll = false
-                for (catch in expr.catches) {
-                    // catches must be built into a long else-if-else-if chain
-                    val type = catch.param.type
-                    val catchesAll = type == ThrowableType
-                    if (catchesAll) {
-                        hasCaughtAll = true
-                        val catchBody1 = simplifyImpl(context, catch.body, handlerBlock, graph, needsValue)
-                        break
-                    } else {
-                        val condition = handlerBlock.field(BooleanType, booleanOwnership)
-                        handlerBlock.add(SimpleInstanceOf(condition, throwableField, type, expr.scope, expr.origin))
-                        handlerBlock.branchCondition = condition.use()
-
-                        val catchBlock0 = graph.addNode()
-                        val continueBlock = graph.addNode()
-                        handlerBlock.ifBranch = catchBlock0
-                        handlerBlock.elseBranch = continueBlock
-
-                        val catchBody1 = simplifyImpl(context, catch.body, catchBlock0, graph, needsValue)
-                        handlerBlock = continueBlock
-                    }
-                }
-
-                if (!hasCaughtAll) {
-                    // todo the last handlerBlock case must be 'throw'
-                    // todo except if one case handled all cases
-
-                }
-
-                if (finallyCondition != null) {
-                    val finallyHandler = graph.addNode()
-                    simplifyImpl(context, expr.finally!!.body, finallyHandler, graph, false)
-                    graph.finallyBlocks.add(SimpleFinallyBlock(finallyCondition, finallyHandler))
-                }
-
-                // todo simplify body
-                // todo simplify handlers
-                return body
-            }
-
-            is ResolvedCompareOp -> {
-                val (left, block1) = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
-                val (right, block2) = simplifyImpl(context, expr.right, block1, graph, false) ?: return null
-                val tmp = block2.field(IntType)
-                val call = SimpleCall(
-                    tmp, "compareTo", emptyMap(), expr.callable.resolved, left.use(),
-                    noSpecialization, listOf(right.use()),
-                    expr.scope, expr.origin
-                )
-                block2.add(call)
-                val dst = block2.field(BooleanType, booleanOwnership)
-                val instr = SimpleCompare(
-                    dst, left.use(), right.use(), expr.type,
-                    tmp.use(), expr.scope, expr.origin
-                )
-                block2.add(instr)
-                return dst to block2
-            }
-
-            is ResolvedCallExpression -> {
-                val (base, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
-                // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
-                var blockI = block1
-                val valueParameters = expr.valueParameters.map { param ->
-                    val (value, blockJ) = simplifyImpl(context, param, blockI, graph, false) ?: return null
-                    blockI = blockJ
-                    value
-                }
-                val method = expr.callable
-                return simplifyCall(
-                    blockI, base,
-                    expr.callable.ownerTypes + expr.callable.callTypes,
-                    valueParameters, method, null,
-                    expr.scope, expr.origin
-                )
-            }
+            is ResolvedCompareOp -> return simplifyCompareOp(context, expr, block0, graph)
+            is ResolvedCallExpression -> return simplifyCall(context, expr, block0, graph)
 
             is SpecialValueExpression -> {
                 val type = when (expr.type) {
@@ -249,58 +127,8 @@ object ASTSimplifier {
                 return dst to block0
             }
 
-            is ResolvedGetFieldExpression -> {
-                val field = expr.field.resolved
-                val valueType = expr.run { resolvedType ?: resolveType(context) }
-                val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
-                val dst = block1.field(valueType)
-                // todo also, if the field is marked as open (and has children), or if the class is an interface
-                val useGetter = field.hasCustomGetter || !field.needsBackingFieldImpl()
-                if (useGetter) {
-                    // todo we may need to resolve owner types, don't we?
-                    // todo is context correct?
-                    val method0 = ResolvedMethod(
-                        ParameterList.emptyParameterList(), field.getter!!,
-                        ParameterList.emptyParameterList(),
-                        context, expr.scope, MatchScore(0)
-                    )
-                    return simplifyCall(
-                        block1, self,
-                        ParameterList.emptyParameterList(),
-                        emptyList(), method0,
-                        null, expr.scope, expr.origin
-                    )
-                } else {
-                    block1.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
-                    return dst to block1
-                }
-            }
-
-            is ResolvedSetFieldExpression -> {
-                val field = expr.field.resolved
-                val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
-                val (value, block2) = simplifyImpl(context, expr.value, block1, graph, true) ?: return null
-                // todo also, if the field is marked as open (and has children), or if the class is an interface
-                val useSetter = field.hasCustomSetter || !field.needsBackingFieldImpl()
-                if (useSetter) {
-                    // todo we may need to resolve owner types, don't we?
-                    // todo is context correct?
-                    val method0 = ResolvedMethod(
-                        ParameterList.emptyParameterList(), field.setter!!,
-                        ParameterList.emptyParameterList(),
-                        context, expr.scope, MatchScore(0)
-                    )
-                    return simplifyCall(
-                        block1, self,
-                        ParameterList.emptyParameterList(),
-                        listOf(value), method0,
-                        null, expr.scope, expr.origin
-                    )
-                } else {
-                    block2.add(SimpleSetField(self.use(), field, value.use(), expr.scope, expr.origin))
-                    return UnitInstance to block2
-                }
-            }
+            is ResolvedGetFieldExpression -> return simplifyGetField(context, expr, block0, graph)
+            is ResolvedSetFieldExpression -> return simplifySetField(context, expr, block0, graph)
 
             is NumberExpression -> {
                 val type = TypeResolution.resolveType(context, expr)
@@ -325,43 +153,271 @@ object ASTSimplifier {
             is IfElseBranch -> return simplifyBranch(context, expr, block0, graph, needsValue)
             is WhileLoop -> return simplifyWhile(context, expr, block0, graph)
             is DoWhileLoop -> return simplifyDoWhile(context, expr, block0, graph)
-
-            is CheckEqualsOp -> {
-                val (left, block1) = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
-                val (right, block2) = simplifyImpl(context, expr.right, block1, graph, true) ?: return null
-                val dst = block2.field(BooleanType, booleanOwnership)
-                val call = if (expr.byPointer) {
-                    SimpleCheckIdentical(
-                        dst, left.use(), right.use(),
-                        expr.negated, expr.scope, expr.origin
-                    )
-                } else {
-                    SimpleCheckEquals(
-                        dst, left.use(), right.use(),
-                        expr.negated, expr.scope, expr.origin
-                    )
-                }
-                block2.add(call)
-                return dst to block2
-            }
-
-            is LambdaExpression -> {
-                // if target is an inline function, inline it here
-                //  -> no, that should have been done previously
-                // todo create an instance accordingly,
-                //  constructor call + synthetic class
-
-                TODO("Simplify lambda ${expr.javaClass.simpleName}: $expr")
-            }
+            is TryCatchBlock -> return simplifyTryCatch(context, expr, block0, graph, needsValue)
+            is CheckEqualsOp -> return simplifyCheckEqualsOp(context, expr, block0, graph)
 
             else -> {
                 if (!expr.isResolved()) {
                     val expr = expr.resolve(context)
                     return simplifyImpl(context, expr, block0, graph, needsValue)
                 }
-                TODO("Simplify value ${expr.javaClass.simpleName}: $expr")
+                throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
             }
         }
+    }
+
+    private fun simplifyList(
+        context: ResolutionContext,
+        expr: ExpressionList,
+        block0: SimpleNode,
+        graph: SimpleGraph,
+        needsValue: Boolean
+    ): Pair<SimpleField, SimpleNode>? {
+        var result = UnitInstance
+        val exprScope = expr.scope
+
+        // declare fields -> needed?
+        for (field in exprScope.fields) {
+            if (needsFieldByParameter(field.byParameter) &&
+                // field.originalScope == field.codeScope && // not moved
+                block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
+            ) {
+                val type = field.resolveValueType(context)
+                block0.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
+            }
+        }
+
+        var blockI = block0
+        for (expr in expr.list) {
+            val tmp = simplifyImpl(context, expr, blockI, graph, needsValue) ?: return null
+            result = tmp.first
+            blockI = tmp.second
+        }
+        return result to blockI
+    }
+
+    private fun simplifyCall(
+        context: ResolutionContext,
+        expr: ResolvedCallExpression,
+        block0: SimpleNode,
+        graph: SimpleGraph
+    ): Pair<SimpleField, SimpleNode>? {
+        val (base, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
+        // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
+        var blockI = block1
+        val valueParameters = expr.valueParameters.map { param ->
+            val (value, blockJ) = simplifyImpl(context, param, blockI, graph, false) ?: return null
+            blockI = blockJ
+            value
+        }
+        val method = expr.callable
+        return simplifyCall(
+            blockI, base,
+            expr.callable.ownerTypes + expr.callable.callTypes,
+            valueParameters, method, null,
+            expr.scope, expr.origin
+        )
+    }
+
+    private fun simplifyCompareOp(
+        context: ResolutionContext,
+        expr: ResolvedCompareOp,
+        block0: SimpleNode,
+        graph: SimpleGraph
+    ): Pair<SimpleField, SimpleNode>? {
+        val (left, block1) = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
+        val (right, block2) = simplifyImpl(context, expr.right, block1, graph, false) ?: return null
+        val tmp = block2.field(IntType)
+        val call = SimpleCall(
+            tmp, "compareTo", emptyMap(), expr.callable.resolved, left.use(),
+            noSpecialization, listOf(right.use()),
+            expr.scope, expr.origin
+        )
+        block2.add(call)
+        val dst = block2.field(BooleanType, booleanOwnership)
+        val instr = SimpleCompare(
+            dst, left.use(), right.use(), expr.type,
+            tmp.use(), expr.scope, expr.origin
+        )
+        block2.add(instr)
+        return dst to block2
+    }
+
+    private fun simplifyGetField(
+        context: ResolutionContext,
+        expr: ResolvedGetFieldExpression,
+        block0: SimpleNode,
+        graph: SimpleGraph
+    ): Pair<SimpleField, SimpleNode>? {
+        val field = expr.field.resolved
+        val valueType = expr.run { resolvedType ?: resolveType(context) }
+        val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
+        val dst = block1.field(valueType)
+        // todo also, if the field is marked as open (and has children), or if the class is an interface
+        val useGetter = field.hasCustomGetter || !field.needsBackingFieldImpl()
+        if (useGetter) {
+            // todo we may need to resolve owner types, don't we?
+            // todo is context correct?
+            val method0 = ResolvedMethod(
+                ParameterList.emptyParameterList(), field.getter!!,
+                ParameterList.emptyParameterList(),
+                context, expr.scope, MatchScore(0)
+            )
+            return simplifyCall(
+                block1, self,
+                ParameterList.emptyParameterList(),
+                emptyList(), method0,
+                null, expr.scope, expr.origin
+            )
+        } else {
+            block1.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
+            return dst to block1
+        }
+    }
+
+    private fun simplifySetField(
+        context: ResolutionContext,
+        expr: ResolvedSetFieldExpression,
+        block0: SimpleNode,
+        graph: SimpleGraph
+    ): Pair<SimpleField, SimpleNode>? {
+        val field = expr.field.resolved
+        val (self, block1) = simplifyImpl(context, expr.self, block0, graph, true) ?: return null
+        val (value, block2) = simplifyImpl(context, expr.value, block1, graph, true) ?: return null
+        // todo also, if the field is marked as open (and has children), or if the class is an interface
+        val useSetter = field.hasCustomSetter || !field.needsBackingFieldImpl()
+        if (useSetter) {
+            // todo we may need to resolve owner types, don't we?
+            // todo is context correct?
+            val method0 = ResolvedMethod(
+                ParameterList.emptyParameterList(), field.setter!!,
+                ParameterList.emptyParameterList(),
+                context, expr.scope, MatchScore(0)
+            )
+            return simplifyCall(
+                block1, self,
+                ParameterList.emptyParameterList(),
+                listOf(value), method0,
+                null, expr.scope, expr.origin
+            )
+        } else {
+            block2.add(SimpleSetField(self.use(), field, value.use(), expr.scope, expr.origin))
+            return UnitInstance to block2
+        }
+    }
+
+    private fun simplifyCheckEqualsOp(
+        context: ResolutionContext,
+        expr: CheckEqualsOp,
+        block0: SimpleNode,
+        graph: SimpleGraph
+    ): Pair<SimpleField, SimpleNode>? {
+        val (left, block1) = simplifyImpl(context, expr.left, block0, graph, true) ?: return null
+        val (right, block2) = simplifyImpl(context, expr.right, block1, graph, true) ?: return null
+        val dst = block2.field(BooleanType, booleanOwnership)
+        val call = if (expr.byPointer) {
+            SimpleCheckIdentical(
+                dst, left.use(), right.use(),
+                expr.negated, expr.scope, expr.origin
+            )
+        } else {
+            SimpleCheckEquals(
+                dst, left.use(), right.use(),
+                expr.negated, expr.scope, expr.origin
+            )
+        }
+        block2.add(call)
+        return dst to block2
+    }
+
+    private fun simplifyTryCatch(
+        context: ResolutionContext,
+        expr: TryCatchBlock,
+        block0: SimpleNode,
+        graph: SimpleGraph,
+        needsValue: Boolean
+    ): Pair<SimpleField, SimpleNode>? {
+
+        var handlerBlock = if (expr.catches.isNotEmpty()) graph.addNode() else null
+        val handlerBlock0 = handlerBlock
+        val thrownField = if (handlerBlock != null) {
+            val field = handlerBlock.field(ThrowableType)
+            println("set ${handlerBlock.blockId}.thrownField")
+            handlerBlock.thrownField = field
+            field
+        } else null
+
+        val finallyHandler = if (expr.finally != null) graph.addNode() else null
+        if (expr.finally != null && finallyHandler != null) {
+            simplifyImpl(context, expr.finally.body, finallyHandler, graph, false)
+        }
+
+        // todo it would be good to calculate which stuff exactly can be thrown,
+        //  so we can hint to the user what actually can be thrown
+
+        val blocksWithValue = ArrayList<Pair<SimpleField, SimpleNode>>()
+
+        var hasCaughtAll = false
+        for (catch in expr.catches) {
+            handlerBlock!!
+            thrownField!!
+
+            // catches must be built into a long else-if-else-if chain
+            val type = catch.param.type
+            // todo we should compare with what actually can be thrown,
+            //  and then whether we cover all cases
+            val catchesAll = type == ThrowableType
+            if (catchesAll) {
+                hasCaughtAll = true
+                val catchBody1 = simplifyImpl(context, catch.body, handlerBlock, graph, needsValue)
+                if (catchBody1 != null) blocksWithValue.add(catchBody1)
+                break
+            } else {
+                val condition = handlerBlock.field(BooleanType, booleanOwnership)
+                handlerBlock.add(SimpleInstanceOf(condition, thrownField, type, expr.scope, expr.origin))
+                handlerBlock.branchCondition = condition.use()
+
+                val catchBlock0 = graph.addNode()
+                val continueBlock = graph.addNode()
+                handlerBlock.ifBranch = catchBlock0
+                handlerBlock.elseBranch = continueBlock
+
+                val catchBody1 = simplifyImpl(context, catch.body, catchBlock0, graph, needsValue)
+                if (catchBody1 != null) blocksWithValue.add(catchBody1)
+                handlerBlock = continueBlock
+            }
+        }
+
+        if (!hasCaughtAll && handlerBlock != null && thrownField != null) {
+            // the last handlerBlock case must be 'throw'
+            // except if one case handled all cases
+            handlerBlock.add(SimpleThrow(thrownField, expr.scope, expr.origin))
+        }
+
+        val body = graph.pushTryFinally(handlerBlock0, finallyHandler) {
+            val innerNode = graph.addNode()
+            block0.nextBranch = innerNode
+            simplifyImpl(context, expr.tryBody, innerNode, graph, needsValue)
+        }
+
+        if (blocksWithValue.isEmpty()) return body
+        if (body != null) blocksWithValue.add(body)
+
+        @Suppress("Since15")
+        while (blocksWithValue.size > 1) {
+            val (field0, block0) = blocksWithValue.removeLast()
+            val (field1, block1) = blocksWithValue.removeLast()
+            val joined = graph.addNode()
+            block0.nextBranch = joined
+            block1.nextBranch = joined
+
+            val joinedType = unionTypes(field0.type, field1.type)
+            val joinedField = joined.field(joinedType)
+            joined.add(SimpleMerge(joinedField, block0, field0.use(), block1, field1.use(), expr))
+            blocksWithValue.add(joinedField to joined)
+        }
+
+        return blocksWithValue.first()
     }
 
     private fun simplifyWhile(

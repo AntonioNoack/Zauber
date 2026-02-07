@@ -1,7 +1,5 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.types.Scope
-
 class SimpleGraph {
 
     var numFields = 0
@@ -11,8 +9,34 @@ class SimpleGraph {
     val continueLabels = HashMap<String?, SimpleNode>()
     val breakLabels = HashMap<String?, SimpleNode>()
 
-    val catchHandlers = HashMap<Scope, SimpleCatchHandler>()
-    val finallyBlocks = ArrayList<SimpleFinallyBlock>()
+    /**
+     * throwable-handler
+     * */
+    var onThrow: SimpleNode? = null
+
+    /**
+     * exit-handler
+     * */
+    var onReturn: SimpleNode? = null
+
+    fun <R> pushTryFinally(onThrow: SimpleNode?, onReturn: SimpleNode?, runnable: () -> R): R {
+        val oldReturn = this.onReturn
+        val oldThrow = this.onReturn
+        if (onReturn != null) {
+            onReturn.onReturn = oldReturn
+            this.onReturn = onReturn
+        }
+        if (onThrow != null) {
+            onThrow.onThrow = oldThrow
+            this.onThrow = onThrow
+        }
+        return try {
+            runnable()
+        } finally {
+            this.onReturn = oldReturn
+            this.onThrow = oldThrow
+        }
+    }
 
     init {
         startBlock.isEntryPoint = true
@@ -21,6 +45,8 @@ class SimpleGraph {
 
     fun addNode(): SimpleNode {
         val node = SimpleNode(this)
+        node.onReturn = this.onReturn
+        node.onThrow = this.onThrow
         nodes.add(node)
         return node
     }

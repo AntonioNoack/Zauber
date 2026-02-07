@@ -7,7 +7,6 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
-import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -266,6 +265,9 @@ class Runtime {
                                 // set 'thrown' field
                                 // continue in 'catches' block
                                 block = block.onThrow ?: return lastValue
+                                val thrownField = block.thrownField
+                                check(thrownField != null) { "Expected onThrow(${block.blockId}) to have throwField" }
+                                set(thrownField, lastValue.value)
                                 returnValue = null
                                 continue@loop
                             }
@@ -287,7 +289,7 @@ class Runtime {
                 val conditionJ = castToBool(conditionI)
                 if (conditionJ) block.ifBranch else block.elseBranch
             } else {
-                block.nextBranch
+                block.nextBranch ?: block.onReturn
             } ?: return returnValue
         }
     }
