@@ -4,7 +4,6 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
-import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -17,6 +16,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.specialization.Specialization
 
 abstract class ResolvedMember<V>(
     val ownerTypes: ParameterList,
@@ -28,6 +28,7 @@ abstract class ResolvedMember<V>(
 ) {
 
     val ownerType get() = context.selfType
+    val specialization = Specialization(ownerTypes + callTypes)
 
     abstract fun getTypeFromCall(): Type
     abstract fun getScopeOfResolved(): Scope

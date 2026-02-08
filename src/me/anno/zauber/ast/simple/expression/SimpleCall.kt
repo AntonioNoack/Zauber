@@ -38,7 +38,7 @@ class SimpleCall(
     val specialization: Specialization,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleAssignment(dst, scope, origin) {
+) : SimpleCallable(dst, scope, origin) {
 
     constructor(
         dst: SimpleField,
@@ -61,7 +61,7 @@ class SimpleCall(
     // todo these depend on whether all types are instantiable,
     //   and also on available specializations...
 
-    val thrownType: Type by lazy {
+    /*val thrownType: Type by lazy {
         val types = methods.values.map { method -> IsMethodThrowing[method] }
         unionTypes(types)
     }
@@ -69,10 +69,7 @@ class SimpleCall(
     val yieldedType: Type by lazy {
         val types = methods.values.map { method -> IsMethodYielding[method] }
         unionTypes(types)
-    }
-
-    // todo set this, where necessary
-    var onThrown: Flow? = null
+    }*/
 
     override fun toString(): String {
         return "$dst = $self[${sample.selfType}].${methodName}${valueParameters.joinToString(", ", "(", ")")}"

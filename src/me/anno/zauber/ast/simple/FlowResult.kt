@@ -25,6 +25,14 @@ data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) 
         return FlowResult(null, returned.join(other.returned), thrown.join(other.thrown))
     }
 
+    /**
+     * joins returned and thrown flows;
+     * value is unknown/null
+     * */
+    fun joinError(other: Flow): FlowResult {
+        return FlowResult(null, returned, thrown.join(other))
+    }
+
     fun joinErrorNoValue(other: FlowResult): FlowResult {
         return joinError(other).noValue()
     }

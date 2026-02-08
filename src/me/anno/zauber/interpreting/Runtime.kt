@@ -7,6 +7,8 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleCallable
+import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -250,7 +252,7 @@ class Runtime {
                     if (LOGGER.isDebugEnabled) LOGGER.debug("Executing $instr")
                     lastValue = instr.execute(this)
                     if (lastValue != null) {
-                        if (lastValue.type == ReturnType.THROW && instr is SimpleCall) {
+                        if (lastValue.type == ReturnType.THROW && instr is SimpleCallable) {
                             val handler = instr.onThrown
                             if (handler != null) {
                                 this[handler.value] = lastValue.value

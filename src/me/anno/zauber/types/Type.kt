@@ -14,6 +14,19 @@ import me.anno.zauber.types.specialization.Specialization
 
 abstract class Type {
 
+    fun contains(type: GenericType): Boolean {
+        if (this == type) return true
+        return when (this) {
+            is UnionType -> types.any { member -> member.contains(type) }
+            NullType -> false
+            is SelfType, is ThisType -> throw NotImplementedError("Does $this contain $type?")
+            is ClassType -> typeParameters?.any { it.contains(type) } == true
+            is LambdaType -> false // todo does it??? kind of known...
+            is GenericType -> false // not the same; todo we might need to check super/redirects
+            else -> throw NotImplementedError("Does $this contain $type?")
+        }
+    }
+
     fun containsGenerics(): Boolean {
         return when (this) {
             NullType -> false

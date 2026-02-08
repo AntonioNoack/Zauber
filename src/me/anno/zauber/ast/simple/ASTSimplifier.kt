@@ -30,8 +30,10 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Scope
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
@@ -228,7 +230,7 @@ object ASTSimplifier {
 
         val method = expr.callable
         return simplifyCall(
-            blockI.value!!.block, blockI, base.value.use(),
+            blockI.value!!.block, blockI, graph, base.value.use(),
             expr.callable.ownerTypes + expr.callable.callTypes,
             valueParameters, method, null,
             expr.scope, expr.origin
@@ -261,7 +263,7 @@ object ASTSimplifier {
                 context, expr.scope, MatchScore(0)
             )
             return simplifyCall(
-                block1v.block, block1, self,
+                block1v.block, block1, graph, self,
                 ParameterList.emptyParameterList(),
                 emptyList(), method0,
                 null, expr.scope, expr.origin
@@ -301,7 +303,7 @@ object ASTSimplifier {
                 context, expr.scope, MatchScore(0)
             )
             return simplifyCall(
-                block2v.block, block2, self,
+                block2v.block, block2, graph, self,
                 ParameterList.emptyParameterList(),
                 listOf(value), method0,
                 null, expr.scope, expr.origin
@@ -328,19 +330,27 @@ object ASTSimplifier {
         val right = block2v.value
 
         val tmp = block2v.block.field(IntType)
+        val method = expr.callable.resolved
+        val specialization = expr.callable.specialization
         val call = SimpleCall(
-            tmp, expr.callable.resolved, left.use(),
-            noSpecialization, listOf(right.use()),
+            tmp, method, left.use(),
+            specialization, listOf(right.use()),
             expr.scope, expr.origin
         )
-        block2v.block.add(call)
-        val dst = block2v.block.field(BooleanType, booleanOwnership)
+
+        val block3 = handleThrown(
+            block2v.block, block2, graph,
+            tmp, call, method.getThrownType(specialization)
+        )
+        val block3v = block3.value ?: return block3
+
+        val dst = block3v.block.field(BooleanType, booleanOwnership)
         val instr = SimpleCompare(
             dst, left.use(), right.use(), expr.type,
             tmp.use(), expr.scope, expr.origin
         )
-        block2v.block.add(instr)
-        return block2.withValue(dst, block2v.block)
+        block3v.block.add(instr)
+        return block3.withValue(dst)
     }
 
     private fun simplifyCheckEqualsOp(
@@ -664,8 +674,8 @@ object ASTSimplifier {
         val dst = block1v.block.field(method0.getTypeFromCall())
         for (param in valueParametersI) param.use()
         val specialization = collectSpecialization(method, typeParameters)
-        block1v.block.add(SimpleCall(dst, method, self0.value.use(), specialization, valueParametersI, scope, origin))
-        return block1.withValue(dst, block1v.block)
+        val call = SimpleCall(dst, method, self0.value.use(), specialization, valueParametersI, scope, origin)
+        return handleThrown(block1v.block, block1, graph, dst, call, method.getThrownType(specialization))
     }
 
     private fun simplifyConstructorCall(
@@ -691,7 +701,7 @@ object ASTSimplifier {
         if (params == null || block1v == null) return block1
 
         return createConstructorInvocation(
-            block1v.block, block1,
+            block1v.block, block1, graph,
             method, params, method0,
             selfIfInsideConstructor, scope, origin
         )
@@ -759,6 +769,7 @@ object ASTSimplifier {
     private fun simplifyCall(
         block0: SimpleNode,
         flow0: FlowResult,
+        graph: SimpleGraph,
 
         selfExpr: SimpleField,
         typeParameters: ParameterList,
@@ -774,14 +785,13 @@ object ASTSimplifier {
         return when (val method = method0.resolved) {
             is Method -> {
                 // then execute it
-                // todo handle & process errors
                 val dst = block0.field(method0.getTypeFromCall())
                 val specialization = collectSpecialization(method, typeParameters)
-                block0.add(SimpleCall(dst, method, selfExpr.use(), specialization, valueParameters, scope, origin))
-                flow0.withValue(dst, block0)
+                val call = SimpleCall(dst, method, selfExpr.use(), specialization, valueParameters, scope, origin)
+                handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
             }
             is Constructor -> createConstructorInvocation(
-                block0, flow0, method, valueParameters,
+                block0, flow0, graph, method, valueParameters,
                 method0, selfIfInsideConstructor, scope, origin
             )
             else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
@@ -791,6 +801,7 @@ object ASTSimplifier {
     private fun createConstructorInvocation(
         block0: SimpleNode,
         flow0: FlowResult,
+        graph: SimpleGraph,
 
         method: Constructor,
         valueParameters: List<SimpleField>,
@@ -802,23 +813,39 @@ object ASTSimplifier {
         origin: Int
     ): FlowResult {
         return if (selfIfInsideConstructor != null) {
-            // todo handle & process errors
-            block0.add(
-                SimpleSelfConstructor(
-                    selfIfInsideConstructor,
-                    method, valueParameters, scope, origin
-                )
+            val constructor = SimpleSelfConstructor(
+                UnitInstance,
+                selfIfInsideConstructor,
+                method, valueParameters, scope, origin
             )
-            flow0.withValue(UnitInstance, block0)
+            handleThrown(block0, flow0, graph, UnitInstance, constructor, method.getThrownType(method0.specialization))
         } else {
-            // todo handle & process errors
             val dst = block0.field(method0.getTypeFromCall())
+            // todo this could fail, too...
             block0.add(SimpleAllocateInstance(dst, method.selfType, scope, origin))
             val unusedTmp = block0.field(UnitType)
             // todo use correct specialization; depends on outer class, if present, too
-            block0.add(SimpleCall(unusedTmp, method, dst.use(), noSpecialization, valueParameters, scope, origin))
-            flow0.withValue(dst, block0)
+            val specialization = noSpecialization
+            val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)
+            handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
         }
+    }
+
+    fun handleThrown(
+        block0: SimpleNode, flow0: FlowResult, graph: SimpleGraph,
+        result: SimpleField, callable: SimpleCallable, thrownType: Type
+    ): FlowResult {
+
+        block0.add(callable)
+
+        val flow1 = flow0.withValue(result, block0)
+        if (thrownType == NothingType) return flow1
+
+        val throwBlock = graph.addNode()
+        val throwField = throwBlock.field(thrownType)
+        val throwFlow = Flow(throwField, throwBlock)
+        callable.onThrown = throwFlow
+        return flow1.joinError(throwFlow)
     }
 
     fun reorderParameters(

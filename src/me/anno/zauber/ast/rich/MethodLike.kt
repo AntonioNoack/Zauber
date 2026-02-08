@@ -6,11 +6,13 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
-import me.anno.zauber.expansion.IsMethodYielding
+import me.anno.zauber.generation.Specializations
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization
 
 open class MethodLike(
 
@@ -28,16 +30,35 @@ open class MethodLike(
 
     var simpleBody: SimpleNode? = null
 
-    val isRecursive: Boolean
-        get() = IsMethodRecursive[this]
+    fun isRecursive(specialization: Specialization): Boolean {
+        return IsMethodRecursive[MethodSpecialization(this, specialization)]
+    }
 
-    val thrownType: Type
-        get() = IsMethodThrowing[this]
+    fun getThrownType(specialization: Specialization): Type {
+        return IsMethodThrowing[MethodSpecialization(this, specialization)]
+    }
 
-    val yieldedType: Type
-        get() = IsMethodYielding[this]
+    fun getYieldedType(specialization: Specialization): Type {
+        return IsMethodThrowing[MethodSpecialization(this, specialization)]
+    }
 
-    val resolvedBodies = HashMap<Specialization, Expression>()
+    fun getSpecializedBody(specialization: Specialization): Expression? {
+        val body = body ?: return null
+        return specializations.getOrPut(specialization) {
+            Specializations.specializations.add(specialization)
+            return try {
+                // todo is this ok?
+                val context = ResolutionContext(selfType, true, returnType)
+                Specializations.foundMethodSpecialization(this, specialization)
+                body.resolve(context)
+            } finally {
+                @Suppress("Since15")
+                Specializations.specializations.removeLast()
+            }
+        }
+    }
+
+    val specializations = HashMap<Specialization, Expression>()
 
     /**
      * Whether the storage location (field/argument) is needed to resolve this's return type
@@ -57,18 +78,4 @@ open class MethodLike(
 
     var selfTypeIfNecessary: Type? = null
 
-    companion object {
-        fun Type.contains(type: GenericType): Boolean {
-            if (this == type) return true
-            return when (this) {
-                is UnionType -> types.any { member -> member.contains(type) }
-                NullType -> false
-                is SelfType, is ThisType -> throw NotImplementedError("Does $this contain $type?")
-                is ClassType -> typeParameters?.any { it.contains(type) } == true
-                is LambdaType -> false // todo does it??? kind of known...
-                is GenericType -> false // not the same; todo we might need to check super/redirects
-                else -> throw NotImplementedError("Does $this contain $type?")
-            }
-        }
-    }
 }

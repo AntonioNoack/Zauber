@@ -1,6 +1,7 @@
 package me.anno.zauber.generation
 
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
@@ -29,7 +30,7 @@ object Specializations {
         }
     }
 
-    fun foundMethodSpecialization(type: Method, specialization: Specialization) {
+    fun foundMethodSpecialization(type: MethodLike, specialization: Specialization) {
         val spec = MethodSpecialization(type, specialization)
         if (doneMethodSpecializations.add(spec)) {
             todoMethodSpecializations.add(spec)

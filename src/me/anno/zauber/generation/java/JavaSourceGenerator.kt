@@ -100,7 +100,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     fun extendScope(spec: MethodSpecialization, dst: File, writer: DeltaWriter) {
-        val method = spec.method
+        val method = spec.method as Method
         val classScope = method.scope.parent!!
         appendMethod(classScope, method, spec.specialization)
 
