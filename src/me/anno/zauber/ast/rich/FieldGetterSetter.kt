@@ -24,6 +24,7 @@ object FieldGetterSetter {
             field.valueType = readType(null, true)
             LOGGER.info("Defined lastField $field as ${field.valueType}")
         }
+
         pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
             val origin = origin(i)
             val backingField = createBackingField(field, getterScope, origin)
@@ -36,7 +37,7 @@ object FieldGetterSetter {
                         readMethodBody()
                     }
                 }
-                else -> throw IllegalStateException("Expected = or {} after get() at ${tokens.err(i)}")
+                else -> null // e.g. 'private get' -> just a visibility modifier
             }
 
             createGetterMethod(field, getterExpr, backingField, getterScope, origin)
@@ -127,11 +128,11 @@ object FieldGetterSetter {
     }
 
     fun ZauberASTBuilder.createGetterMethod(
-        field: Field, expr: Expression?, backingField: Field,
+        field: Field, expr0: Expression?, backingField: Field,
         getterScope: Scope, origin: Int
     ) {
         val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
-        val expr0 = expr ?: if (needsGetter(field)) {
+        val expr = expr0 ?: if (needsGetter(field)) {
             if (!isInterface) {
                 val fieldExpr = FieldExpression(backingField, getterScope, origin)
                 ReturnExpression(fieldExpr, null, getterScope, origin)
@@ -142,12 +143,12 @@ object FieldGetterSetter {
         val method = Method(
             field.selfType, false, methodName, emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
-            expr0, packKeywords() or field.keywords, origin
+            expr, packKeywords() or field.keywords, origin
         )
         method.backedField = field
         method.backingField = backingField
         getterScope.selfAsMethod = method
-        field.getterExpr = expr0
+        field.getterExpr = expr
         field.getter = method
         field.hasCustomGetter = expr0 != null
     }

@@ -55,7 +55,7 @@ abstract class MethodColoring<Color : Any> {
                 when (expr) { // only top-level needs to be checked
                     is YieldExpression, is ReturnExpression, is ThrowExpression,
                     is ThisExpression, is NumberExpression, is StringExpression,
-                    is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList -> {
+                    is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock -> {
                         // no direct call
                     }
                     is ResolvedCallExpression -> {

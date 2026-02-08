@@ -183,7 +183,7 @@ class Runtime {
         var simpleBody = method.simpleBody
         if (simpleBody == null) {
             val context = ResolutionContext(self.type.type, true, method.returnType, emptyMap())
-            simpleBody = ASTSimplifier.simplify(context, body).startBlock
+            simpleBody = ASTSimplifier.simplify(context, body, method).startBlock
             method.simpleBody = simpleBody
         }
 
@@ -270,12 +270,14 @@ class Runtime {
                                     )
                                 }
                                 // handlers inside the function all were processed already :3
-                                ReturnType.RETURN, ReturnType.THROW -> return lastValue
+                                ReturnType.RETURN, ReturnType.THROW -> {
+                                    println("Exited with $lastValue (${instr.javaClass.simpleName}) from ${block0.graph.method}")
+                                    return lastValue
+                                }
                                 else -> throw NotImplementedError("Unknown exit type")
                             }
                         }
                     }
-
                 }
             } finally {
                 while (thisStack.size > tss) {
@@ -283,6 +285,8 @@ class Runtime {
                     thisStack.removeLast()
                 }
             }
+
+            println("Finished $block")
 
             // find the next block to execute
             val condition = block.branchCondition
@@ -292,7 +296,10 @@ class Runtime {
                 if (conditionJ) block.ifBranch else block.elseBranch
             } else {
                 block.nextBranch
-            } ?: return null
+            } ?: run {
+                println("Exited without return from ${block0.graph.method}")
+                return null
+            }
         }
     }
 

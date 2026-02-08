@@ -55,18 +55,18 @@ object ASTSimplifier {
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
-    fun simplify(context: ResolutionContext, expr: Expression): SimpleGraph {
+    fun simplify(context: ResolutionContext, expr: Expression, method: MethodLike): SimpleGraph {
         return cache.getOrPut(context to expr) {
             val expr = expr.resolve(context)
-            // LOGGER.info("Simplifying $expr")
-            val graph = SimpleGraph()
+            LOGGER.info("Simplifying $expr")
+            val graph = SimpleGraph(method)
             val flow0 = FlowResult(Flow(UnitInstance, graph.startBlock), null, null)
             val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, graph, false)
             val flow1r = flow1.returned
-            flow1r?.block?.add(SimpleReturn(flow1r.value, expr.scope, expr.origin))
+            flow1r?.block?.add(SimpleReturn(flow1r.value.use(), expr.scope, expr.origin))
             val flow1t = flow1.thrown
-            flow1t?.block?.add(SimpleThrow(flow1t.value, expr.scope, expr.origin))
-            LOGGER.info("Simplified to $graph")
+            flow1t?.block?.add(SimpleThrow(flow1t.value.use(), expr.scope, expr.origin))
+            LOGGER.info("Simplified $flow1 to $graph for $method")
             graph
         }
     }
@@ -433,11 +433,11 @@ object ASTSimplifier {
 
         val ifBlock = graph.addNode()
         val elseBlock = graph.addNode()
-        block0b.branchCondition = instanceOfField
+        block0b.branchCondition = instanceOfField.use()
         block0b.ifBranch = ifBlock
         block0b.elseBranch = elseBlock
 
-        val ifFlow = flow0.withValue(UnitInstance, ifBlock)
+        val ifFlow = FlowResult(Flow(UnitInstance, ifBlock), null, null)
 
         // val notThrownType = andTypes(catch.param.type.not(), block0.value.type)
         val elseFlow = flow0.withThrown(block0.value, elseBlock)
@@ -845,7 +845,11 @@ object ASTSimplifier {
         val throwField = throwBlock.field(thrownType)
         val throwFlow = Flow(throwField, throwBlock)
         callable.onThrown = throwFlow
-        return flow1.joinError(throwFlow)
+
+        val flow2 = flow1.joinError(throwFlow)
+            .withValue(result, block0)
+        println("joining: $flow1 x $throwFlow = $flow2")
+        return flow2
     }
 
     fun reorderParameters(

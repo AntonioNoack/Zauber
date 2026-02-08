@@ -3,6 +3,9 @@ package me.anno.zauber.types.impl
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
+import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
+import me.anno.zauber.types.impl.TypeUtils.isDistinctFrom
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class AndType(val types: List<Type>) : Type() {
@@ -65,7 +68,25 @@ class AndType(val types: List<Type>) : Type() {
                 return yesTypes
             }
 
-            return yesTypes + NotType(unionTypes(notTypesOr))
+            return reduceAndTypes2(yesTypes) + NotType(unionTypes(notTypesOr))
+        }
+
+        private fun reduceAndTypes2(types: List<Type>): List<Type> {
+            var classTypes = types.filterIsInstance<ClassType>()
+
+            // remove parents: if a child is included, remove the parent
+            // todo unit-test that AndType(Exception,Throwable) = Exception
+            if (classTypes.size > 1) {
+                classTypes = classTypes.sortedBy { it.clazz.getHierarchyDepth() }
+                classTypes = classTypes.filterIndexed { index, parentType ->
+                    classTypes.subList(index + 1, classTypes.size).none { childType ->
+                        childType.isChildTypeOf(parentType)
+                    }
+                }
+            }
+
+            val nonClassTypes = types.filter { it !is ClassType }
+            return classTypes + nonClassTypes
         }
 
         private fun canInstanceBeBoth(t1: Type, t2: Type): Boolean {
@@ -75,14 +96,15 @@ class AndType(val types: List<Type>) : Type() {
             if (t2 is UnionType) return t2.types.any { t2i -> canInstanceBeBoth(t1, t2i) }
             if (t1 is NullType && t2 is ClassType) return false
             if (t2 is NullType && t1 is ClassType) return false
-            if (t1 is ClassType && t2 is ClassType) {
-                // todo check hierarchy...
-                //  if nothing is common, return NothingType
-            }
+            if (t1 is ClassType && t2 is ClassType &&
+                isDistinctFrom(t1, t2)
+            ) return false
+
             // todo complete this... is complicated...
             //  and ideally, all these should be resolved/specialized...
             return true // idk
         }
+
     }
 
     init {

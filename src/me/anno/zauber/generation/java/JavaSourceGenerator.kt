@@ -558,7 +558,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
         writeBlock {
             try {
-                val simplified = ASTSimplifier.simplify(context, body)
+                val simplified = ASTSimplifier.simplify(context, body, method)
                 CodeReconstruction.createCodeFromGraph(simplified)
                 // todo simplify all entry points as methods...
                 appendSimplifiedAST(method, simplified.startBlock)

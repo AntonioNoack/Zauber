@@ -1335,6 +1335,7 @@ class ZauberASTBuilder(
         val remainder = readMethodBody()
         if (remainder.list.isNotEmpty()) {
             val forTryBody = ArrayList(result)
+            forTryBody.addAll(remainder.list)
             result.clear()
             result.add(
                 TryCatchBlock(
@@ -1344,6 +1345,7 @@ class ZauberASTBuilder(
                 )
             )
         } else {
+            result.addAll(remainder.list)
             // can immediately be executed
             result.add(action)
         }
@@ -1361,6 +1363,7 @@ class ZauberASTBuilder(
         val remainder = readMethodBody()
         if (remainder.list.isNotEmpty()) {
             val forTryBody = ArrayList(result)
+            forTryBody.addAll(remainder.list)
             result.clear()
 
             val parameter = Parameter(0, "e", ThrowableType, errCatch, origin)
@@ -1377,6 +1380,7 @@ class ZauberASTBuilder(
         } else {
             // can immediately be executed,
             //  but we don't need it, because we cannot crash on nothing
+            result.addAll(remainder.list)
         }
     }
 

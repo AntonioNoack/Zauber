@@ -33,15 +33,6 @@ data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) 
         return FlowResult(null, returned, thrown.join(other))
     }
 
-    fun joinErrorNoValue(other: FlowResult): FlowResult {
-        return joinError(other).noValue()
-    }
-
-    fun noValue(): FlowResult {
-        if (value == null) return this
-        return FlowResult(null, returned, thrown)
-    }
-
     fun joinReturnNoValue(newReturnValue: SimpleField, newReturnBlock: SimpleNode): FlowResult {
         val joinedValue = returned.join(newReturnValue, newReturnBlock)
         return FlowResult(null, joinedValue, thrown)

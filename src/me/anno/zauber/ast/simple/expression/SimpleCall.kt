@@ -3,11 +3,8 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
-import me.anno.zauber.ast.simple.Flow
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.expansion.IsMethodThrowing
-import me.anno.zauber.expansion.IsMethodYielding
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
@@ -23,7 +20,6 @@ import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
 
 class SimpleCall(
@@ -72,7 +68,17 @@ class SimpleCall(
     }*/
 
     override fun toString(): String {
-        return "$dst = $self[${sample.selfType}].${methodName}${valueParameters.joinToString(", ", "(", ")")}"
+        val builder = StringBuilder()
+        builder.append(dst).append(" = ")
+            .append(self).append('[').append(sample.selfType).append("].")
+            .append(methodName)
+            .append(valueParameters.joinToString(", ", "(", ")"))
+        val ot = onThrown
+        if (ot != null) {
+            builder.append(" throws b").append(ot.block.blockId)
+                .append("(%").append(ot.value.id).append(')')
+        }
+        return builder.toString()
     }
 
     override fun eval(runtime: Runtime): BlockReturn {

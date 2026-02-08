@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple
 
-class SimpleGraph {
+import me.anno.zauber.ast.rich.MethodLike
+
+class SimpleGraph(val method: MethodLike) {
 
     var numFields = 0
     val nodes = ArrayList<SimpleNode>()
