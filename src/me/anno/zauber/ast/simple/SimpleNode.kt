@@ -28,9 +28,6 @@ class SimpleNode(val graph: SimpleGraph) {
             linkTo(value)
         }
 
-    var onThrow: ThrowHandler? = null
-    var onReturn: SimpleNode? = null
-
     val isBranch get() = branchCondition != null && ifBranch != elseBranch
 
     private fun linkTo(value: SimpleNode?) {
@@ -106,10 +103,10 @@ class SimpleNode(val graph: SimpleGraph) {
         }
 
         builder.append(']')
-        val or = onReturn
+        /*val or = onReturn
         if (or != null) builder.append('r').append(or.blockId)
         val ot = onThrow
-        if (ot != null) builder.append('t').append(ot.handler.blockId)
+        if (ot != null) builder.append('t').append(ot.handler.blockId)*/
         builder.append(':')
         for (instr in instructions) {
             builder.append("\n  ").append(instr)

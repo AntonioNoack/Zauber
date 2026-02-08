@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.simple.Flow
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.expansion.IsMethodThrowing
@@ -69,6 +70,9 @@ class SimpleCall(
         val types = methods.values.map { method -> IsMethodYielding[method] }
         unionTypes(types)
     }
+
+    // todo set this, where necessary
+    var onThrown: Flow? = null
 
     override fun toString(): String {
         return "$dst = $self[${sample.selfType}].${methodName}${valueParameters.joinToString(", ", "(", ")")}"

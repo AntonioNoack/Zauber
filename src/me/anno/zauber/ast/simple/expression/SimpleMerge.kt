@@ -6,6 +6,7 @@ import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.types.Scope
 
 /**
  * Merges the result of an if and an else into one value.
@@ -17,8 +18,15 @@ class SimpleMerge(
     val ifField: SimpleField,
     val elseBlock: SimpleNode,
     val elseField: SimpleField,
-    val base: Expression
-) : SimpleAssignment(dst, base.scope, base.origin) {
+    scope: Scope, origin: Int
+) : SimpleAssignment(dst, scope, origin) {
+
+    constructor(
+        dst: SimpleField,
+        ifBlock: SimpleNode, ifField: SimpleField,
+        elseBlock: SimpleNode, elseField: SimpleField,
+        expr: Expression
+    ) : this(dst, ifBlock, ifField, elseBlock, elseField, expr.scope, expr.origin)
 
     init {
         // todo is this ok???? we might loose values/assignments

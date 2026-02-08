@@ -1004,12 +1004,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         val unlockExpr = CallExpression(unlockMember, emptyList(), tmpFieldParam, origin)
         val assignmentExpr = AssignmentExpression(tmpFieldExpr, lock)
         val bodyPlusLock = ExpressionList(listOf(assignmentExpr, lockExpr, body), scope, origin)
-        val flagName = scope.generateName("deferFlag", origin)
-        val flag = scope.addField(
-            null, false, true, null, flagName,
-            BooleanType, null, Keywords.SYNTHETIC, origin
-        )
-        return TryCatchBlock(bodyPlusLock, emptyList(), Finally(unlockExpr, flag))
+        return TryCatchBlock(bodyPlusLock, emptyList(), unlockExpr)
     }
 
     override fun readMethodBody(): ExpressionList {

@@ -309,14 +309,7 @@ abstract class ZauberASTBuilderBase(
             }
         }
         val finally = if (consumeIf("finally")) {
-            val origin = origin(i - 1)
-            val body = readBodyOrExpression(null)
-            val flagName = body.scope.generateName("finallyFlag", origin)
-            val flag = body.scope.addField(
-                null, false, true,
-                null, flagName, BooleanType, null, Keywords.SYNTHETIC, origin
-            )
-            Finally(body, flag)
+            readBodyOrExpression(null)
         } else null
         return TryCatchBlock(tryBody, catches, finally)
     }

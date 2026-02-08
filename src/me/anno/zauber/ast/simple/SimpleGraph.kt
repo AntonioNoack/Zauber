@@ -9,35 +9,6 @@ class SimpleGraph {
     val continueLabels = HashMap<String?, SimpleNode>()
     val breakLabels = HashMap<String?, SimpleNode>()
 
-    /**
-     * throwable-handler
-     * */
-    var onThrow: ThrowHandler? = null
-
-    /**
-     * exit-handler
-     * */
-    var onReturn: SimpleNode? = null
-
-    fun <R> pushTryFinally(onThrow: ThrowHandler?, onReturn: SimpleNode?, runnable: () -> R): R {
-        val oldReturn = this.onReturn
-        val oldThrow = this.onThrow
-        if (onReturn != null) {
-            onReturn.onReturn = oldReturn
-            this.onReturn = onReturn
-        }
-        if (onThrow != null) {
-            onThrow.handler.onThrow = oldThrow
-            this.onThrow = onThrow
-        }
-        return try {
-            runnable()
-        } finally {
-            this.onReturn = oldReturn
-            this.onThrow = oldThrow
-        }
-    }
-
     init {
         startBlock.isEntryPoint = true
         nodes.add(startBlock)
@@ -45,8 +16,6 @@ class SimpleGraph {
 
     fun addNode(): SimpleNode {
         val node = SimpleNode(this)
-        node.onReturn = this.onReturn
-        node.onThrow = this.onThrow
         nodes.add(node)
         return node
     }
@@ -55,5 +24,4 @@ class SimpleGraph {
         return "Graph[${nodes.size} nodes, $numFields fields]\n" +
                 nodes.joinToString("\n") { it.toString() }
     }
-
 }

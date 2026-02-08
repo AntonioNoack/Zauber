@@ -9,7 +9,7 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class TryCatchBlock(
     val tryBody: Expression, val catches: List<Catch>,
-    val finally: Finally?
+    val finally: Expression?
 ) : Expression(tryBody.scope, tryBody.origin) {
 
     override fun resolveType(context: ResolutionContext): Type {
@@ -29,7 +29,7 @@ class TryCatchBlock(
     override fun needsBackingField(methodScope: Scope): Boolean {
         return tryBody.needsBackingField(methodScope) ||
                 catches.any { it.body.needsBackingField(methodScope) } ||
-                finally?.body?.needsBackingField(methodScope) == true
+                finally?.needsBackingField(methodScope) == true
     }
 
     // already a split on its own, or is it?
@@ -41,7 +41,7 @@ class TryCatchBlock(
 
     override fun isResolved(): Boolean = tryBody.isResolved() &&
             catches.all { it.param.type.isResolved() && it.body.isResolved() } &&
-            (finally == null || finally.body.isResolved())
+            (finally == null || finally.isResolved())
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         return TryCatchBlock(tryBody.resolve(context), catches.map {
@@ -50,11 +50,18 @@ class TryCatchBlock(
     }
 
     override fun toStringImpl(depth: Int): String {
-        return "try { $tryBody } ${
-            catches.joinToString(" ") {
-                "catch(${it.param} { ${it.body}})"
-            }
-        } finally { ${finally?.body} }"
+        val builder = StringBuilder()
+        builder.append("try { ").append(tryBody).append(" }")
+        for (catch in catches) {
+            builder.append(" catch(${catch.param}) { ")
+                .append(catch.body)
+                .append(" }")
+        }
+        if (finally != null) {
+            builder.append(" finally { ")
+                .append(finally).append(" }")
+        }
+        return builder.toString()
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
@@ -62,7 +69,7 @@ class TryCatchBlock(
         for (catch in catches) {
             callback(catch.body)
         }
-        if (finally != null) callback(finally.body)
+        if (finally != null) callback(finally)
     }
 
 }

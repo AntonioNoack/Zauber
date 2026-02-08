@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -232,7 +233,6 @@ class Runtime {
 
     fun executeBlock(block0: SimpleNode): BlockReturn? {
         var block = block0
-        var returnValue: BlockReturn? = null
         loop@ while (true) {
 
             val tss = thisStack.size
@@ -248,32 +248,32 @@ class Runtime {
                 for (i in instructions.indices) {
                     val instr = instructions[i]
                     if (LOGGER.isDebugEnabled) LOGGER.debug("Executing $instr")
-                    // todo we must execute all (err)defer-things
                     lastValue = instr.execute(this)
-                    if (lastValue != null && lastValue.type != ReturnType.VALUE) {
-                        when (lastValue.type) {
-                            ReturnType.YIELD -> {
-                                TODO("yield somehow")
-                            }
-                            ReturnType.RETURN -> {
-                                if (LOGGER.isInfoEnabled) LOGGER.info("Returning $returnValue / $lastValue from method")
-                                println("Got exit value from ${block.blockId}, executing finally: ${block.onReturn?.blockId}")
-                                block = block.onReturn ?: return returnValue ?: lastValue
-                                returnValue = lastValue
+                    if (lastValue != null) {
+                        if (lastValue.type == ReturnType.THROW && instr is SimpleCall) {
+                            val handler = instr.onThrown
+                            if (handler != null) {
+                                this[handler.value] = lastValue.value
+                                block = handler.block
                                 continue@loop
                             }
-                            ReturnType.THROW -> {
-                                // set 'thrown' field
-                                // continue in 'catches' block
-                                val (thrownField, handlerBlock) = block.onThrow ?: return lastValue
-                                block = handlerBlock
-                                set(thrownField, lastValue.value)
-                                returnValue = null
-                                continue@loop
+                        }
+
+                        if (lastValue.type != ReturnType.VALUE) {
+                            when (lastValue.type) {
+                                ReturnType.YIELD -> {
+                                    TODO(
+                                        "yield: store all fields in a (new?) lambda instance, " +
+                                                "return without handlers"
+                                    )
+                                }
+                                // handlers inside the function all were processed already :3
+                                ReturnType.RETURN, ReturnType.THROW -> return lastValue
+                                else -> throw NotImplementedError("Unknown exit type")
                             }
-                            else -> throw NotImplementedError("Unknown exit type")
                         }
                     }
+
                 }
             } finally {
                 while (thisStack.size > tss) {
@@ -289,8 +289,8 @@ class Runtime {
                 val conditionJ = castToBool(conditionI)
                 if (conditionJ) block.ifBranch else block.elseBranch
             } else {
-                block.nextBranch ?: block.onReturn
-            } ?: return returnValue
+                block.nextBranch
+            } ?: return null
         }
     }
 

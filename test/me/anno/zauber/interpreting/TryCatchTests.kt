@@ -5,6 +5,7 @@ import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecuteCatch
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -99,6 +100,10 @@ class TryCatchTests {
 
     @Test
     fun testCascadedFinallyIsExecuted() {
+        LogManager.disableLoggers(
+            "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
+                    "MethodResolver,ResolvedMethod"
+        )
         ensureUnitIsKnown()
         val code = """
             val tested get() = try {
@@ -122,6 +127,11 @@ class TryCatchTests {
 
     @Test
     fun testLoopedFinallyIsExecuted() {
+        LogManager.disableLoggers(
+            "TypeResolution,MemberResolver,Inheritance,ResolvedMethod," +
+                    "MethodResolver,CallExpression,Field,ConstructorResolver,ResolvedField,FieldResolver," +
+                    "FieldExpression"
+        )
         ensureUnitIsKnown()
         val code = """
             val tested: String get() {

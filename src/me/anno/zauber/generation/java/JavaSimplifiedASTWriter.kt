@@ -225,11 +225,11 @@ object JavaSimplifiedASTWriter {
                 val setter = field.setter
                 if (setter != null) {
                     builder.append(setter.name).append('(')
-                    builder.append1(expr.src)
+                    builder.append1(expr.value)
                     builder.append(')')
                 } else {
                     builder.append(field.name)
-                        .append(" = ").append1(expr.src)
+                        .append(" = ").append1(expr.value)
                 }
                 builder.append(';')
             }

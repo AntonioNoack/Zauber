@@ -29,7 +29,6 @@ import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.ThrowableType
@@ -1337,16 +1336,11 @@ class ZauberASTBuilder(
         if (remainder.list.isNotEmpty()) {
             val forTryBody = ArrayList(result)
             result.clear()
-            val flagName = scope.generateName("deferFlag", origin)
-            val flag = scope.addField(
-                null, false, true, null, flagName,
-                BooleanType, null, Keywords.SYNTHETIC, origin
-            )
             result.add(
                 TryCatchBlock(
                     ExpressionList(forTryBody, scope, origin),
                     emptyList(),
-                    Finally(action, flag)
+                    action
                 )
             )
         } else {
