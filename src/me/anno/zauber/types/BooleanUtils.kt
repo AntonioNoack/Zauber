@@ -16,7 +16,7 @@ object BooleanUtils {
         }
 
         if (this is CheckEqualsOp) {
-            return CheckEqualsOp(left, right, byPointer, !negated, scope, origin)
+            return CheckEqualsOp(left, right, byPointer, !negated, null, scope, origin)
         }
 
         resolvedType = BooleanType

@@ -3,7 +3,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
-import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
+import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.ConstructorResolver
@@ -53,8 +53,8 @@ class ConstructorExpression(
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         val method = resolveMethod(context)
-        val params = reorderParameters(valueParameters, method.resolved.valueParameters, scope, origin)
-            .map { it.resolve(context) }
+        val targetParams = method.resolved.valueParameters
+        val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
         return ResolvedCallExpression(null, method, params, scope, origin)
     }
 

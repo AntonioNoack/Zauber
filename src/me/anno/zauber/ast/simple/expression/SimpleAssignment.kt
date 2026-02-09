@@ -18,7 +18,7 @@ abstract class SimpleAssignment(val dst: SimpleField, scope: Scope, origin: Int)
 
     override fun execute(runtime: Runtime): BlockReturn? {
         val value = eval(runtime)
-        return if (value.type == ReturnType.VALUE) {
+        return if (value.type == ReturnType.VALUE || value.type == ReturnType.RETURN) {
             if (dst.numReads > 0) {
                 if (LOGGER.isDebugEnabled) LOGGER.debug("$dst is now ${value.value} by $this (${javaClass.simpleName})")
                 runtime[dst] = value.value

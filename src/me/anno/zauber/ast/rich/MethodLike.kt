@@ -3,7 +3,6 @@ package me.anno.zauber.ast.rich
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.generation.Specializations
@@ -28,8 +27,6 @@ open class MethodLike(
     val origin: Int
 ) {
 
-    var simpleBody: SimpleNode? = null
-
     fun isRecursive(specialization: Specialization): Boolean {
         return IsMethodRecursive[MethodSpecialization(this, specialization)]
     }
@@ -45,15 +42,10 @@ open class MethodLike(
     fun getSpecializedBody(specialization: Specialization): Expression? {
         val body = body ?: return null
         return specializations.getOrPut(specialization) {
-            Specializations.specializations.add(specialization)
-            return try {
-                // todo is this ok?
-                val context = ResolutionContext(selfType, true, returnType)
+            Specializations.push(specialization) {
+                val context = ResolutionContext(null, specialization, true, null)
                 Specializations.foundMethodSpecialization(this, specialization)
                 body.resolve(context)
-            } finally {
-                @Suppress("Since15")
-                Specializations.specializations.removeLast()
             }
         }
     }

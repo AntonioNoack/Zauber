@@ -1,8 +1,10 @@
 package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.controlflow.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.logging.LogManager
@@ -55,7 +57,8 @@ abstract class MethodColoring<Color : Any> {
                 when (expr) { // only top-level needs to be checked
                     is YieldExpression, is ReturnExpression, is ThrowExpression,
                     is ThisExpression, is NumberExpression, is StringExpression,
-                    is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock -> {
+                    is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock,
+                    is CheckEqualsOp, is SpecialValueExpression -> {
                         // no direct call
                     }
                     is ResolvedCallExpression -> {

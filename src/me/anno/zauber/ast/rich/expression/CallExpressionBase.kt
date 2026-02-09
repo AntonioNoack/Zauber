@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
+import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
@@ -186,11 +187,11 @@ abstract class CallExpressionBase(
             is ResolvedMethod -> {
                 val method = callable.resolved
                 val isInlineMethod = method.isInline()
-                val params0 = reorderParameters(valueParameters, method.valueParameters, scope, origin)
                 // we can only inline, if some or our parameters are lambdas
                 //  or lambda-likes... (Type::add) should work, too
                 //  -> no, we can always inline :)
                 if (isInlineMethod) {
+                    val params0 = reorderParameters(valueParameters, method.valueParameters, scope, origin)
                     resolveInlineMethod(context, callable, params0)
                 } else {
                     // todo base must be defined, so resolve instance/this
@@ -201,17 +202,18 @@ abstract class CallExpressionBase(
                         self.resolve(context)
                     } else null // else base was consumed to be the method
                     // println("base for call: $method, base: $base, this.base: ${this.base}")
-                    val params1 = params0.map { it.resolve(context) }
-                    ResolvedCallExpression(base, callable, params1, scope, origin)
+                    val targetParams = method.valueParameters
+                    val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
+                    ResolvedCallExpression(base, callable, params, scope, origin)
                 }
             }
             is ResolvedConstructor -> {
                 check(self is TypeExpression || self is UnresolvedFieldExpression) {
                     "In ResolvedConstructor, base should be a TypeExpression/UFE, but got ${self.javaClass.simpleName}"
                 }
-                val params0 = reorderParameters(valueParameters, callable.resolved.valueParameters, scope, origin)
-                val params1 = params0.map { it.resolve(context) }
-                ResolvedCallExpression(null, callable, params1, scope, origin)
+                val targetParams = callable.resolved.valueParameters
+                val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
+                ResolvedCallExpression(null, callable, params, scope, origin)
             }
             is ResolvedField -> {
                 val inlineBody = context.knownLambdas[callable.resolved]
@@ -222,8 +224,8 @@ abstract class CallExpressionBase(
                 val base = self.resolve(context)
                 val valueParameters1 = resolveValueParameters(context, valueParameters)
                 val calledMethod = callable.resolveCalledMethod(typeParameters, valueParameters1)
-                val params = reorderParameters(valueParameters, calledMethod.resolved.valueParameters, scope, origin)
-                    .map { it.resolve(context) }
+                val targetParams = calledMethod.resolved.valueParameters
+                val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
                 val base1 = ResolvedGetFieldExpression(base, callable, scope, origin)
                 ResolvedCallExpression(base1, calledMethod, params, scope, origin)
             }

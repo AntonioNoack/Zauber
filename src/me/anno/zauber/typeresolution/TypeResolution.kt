@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
+import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Scope
@@ -106,10 +107,10 @@ object TypeResolution {
         }
         try {
             val selfType = if (field.explicitSelfType) field.selfType else null
-            val higherSelves = if (scopeSelfType != null) {
-                mapOf(field.codeScope to scopeSelfType)
-            } else emptyMap()
-            val context = ResolutionContext(selfType, higherSelves, false, null, emptyMap())
+            val context = ResolutionContext(
+                selfType, Specializations.specialization,
+                false, null, emptyMap()
+            )
             field.valueType = field.resolveValueType(context)
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolved $field to ${field.valueType}")
             numSuccesses++

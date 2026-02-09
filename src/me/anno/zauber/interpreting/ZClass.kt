@@ -7,6 +7,8 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 class ZClass(val type: Type) {
 
@@ -52,7 +54,8 @@ class ZClass(val type: Type) {
             check(primaryConstructor.valueParameters.isEmpty()) {
                 "Object/package must not have valueParameters, found some in $scope"
             }
-            runtime.executeCall(objectInstance, primaryConstructor, emptyList())
+            val method1 = MethodSpecialization(primaryConstructor, noSpecialization)
+            runtime.executeCall(objectInstance, method1, emptyList())
         }
         return objectInstance
     }

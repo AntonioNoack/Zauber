@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
-import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
+import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
@@ -193,7 +193,8 @@ class DotExpression(
                 if (callable.resolved !is MethodLike) {
                     throw IllegalStateException("Implement DotExpression with methodType, but field: $this")
                 }
-                val params = reorderParameters(right.valueParameters, callable.resolved.valueParameters, scope, origin)
+                val targetParams = callable.resolved.valueParameters
+                val params = reorderResolveParameters(context, right.valueParameters, targetParams, scope, origin)
                 return ResolvedCallExpression(base, callable, params, scope, origin)
             }
             else -> throw NotImplementedError("Resolve DotExpression with type ${right.javaClass.simpleName}")

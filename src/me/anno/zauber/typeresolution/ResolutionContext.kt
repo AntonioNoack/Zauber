@@ -3,8 +3,8 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
-import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.specialization.Specialization
 
 data class ResolutionContext(
     /**
@@ -13,12 +13,11 @@ data class ResolutionContext(
      * if not, we can match any higher self, or imported/available objects
      * */
     val selfType: Type?,
-    // todo there may be multiple selves:
-    //  one for each scope:
-    //  in a method, self,
-    //  if inside a class, that scope,
-    //  if inside an inner class, also the outer class
-    val higherSelves: Map<Scope, Type>,
+    /**
+     * any generic value should be defined in this specialization
+     * for code generation and runtime; for IDEs, this may be incomplete
+     * */
+    val specialization: Specialization,
     /**
      * Whether something without type, like while(true){}, is supported;
      * This is meant to prevent assignments and while-loops in call arguments: AssignmentExpr will throw if !allowTypeless
@@ -35,33 +34,36 @@ data class ResolutionContext(
     constructor(
         selfType: Type?, allowTypeless: Boolean, targetType: Type?,
         knownLambdas: Map<Field, Expression> = emptyMap()
-    ) : this(selfType, emptyMap(), allowTypeless, targetType, knownLambdas)
+    ) : this(selfType, Specialization.noSpecialization, allowTypeless, targetType, knownLambdas)
+
+    constructor(selfType: Type?, specialization: Specialization, allowTypeless: Boolean, targetType: Type?) :
+            this(selfType, specialization, allowTypeless, targetType, emptyMap())
 
     val selfScope = typeToScope(selfType)
 
     fun withTargetType(newTargetType: Type?): ResolutionContext {
         if (newTargetType == targetType) return this
-        return ResolutionContext(selfType, higherSelves, allowTypeless, newTargetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, newTargetType, knownLambdas)
     }
 
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
-        return ResolutionContext(newSelfType, higherSelves, allowTypeless, targetType, knownLambdas)
+        return ResolutionContext(newSelfType, specialization, allowTypeless, targetType, knownLambdas)
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
         if (allowTypeless == newAllowTypeless) return this
-        return ResolutionContext(selfType, higherSelves, newAllowTypeless, targetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, newAllowTypeless, targetType, knownLambdas)
     }
 
     fun withKnownLambdas(newKnownLambdas: Map<Field, Expression>): ResolutionContext {
         if (knownLambdas == newKnownLambdas) return this
-        return ResolutionContext(selfType, higherSelves, allowTypeless, targetType, newKnownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, targetType, newKnownLambdas)
     }
 
     override fun toString(): String {
         return "ResolutionContext(selfType=$selfType, " +
-                "higherSelves: $higherSelves, " +
+                "spec=$specialization, " +
                 "allowTypeless=$allowTypeless, " +
                 "targetType=$targetType, " +
                 "knownLambdas=$knownLambdas)"

@@ -481,7 +481,7 @@ object JavaSourceGenerator : Generator() {
         appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
         val body = method.body
         if (body != null) {
-            val context = ResolutionContext(method.selfType, true, null, emptyMap())
+            val context = ResolutionContext(method.selfType, specialization, true, null, emptyMap())
             appendCode(context, method, body)
         } else {
             builder.append(";")
@@ -558,7 +558,8 @@ object JavaSourceGenerator : Generator() {
     private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
         writeBlock {
             try {
-                val simplified = ASTSimplifier.simplify(context, body, method)
+                val method1 = MethodSpecialization(method, context.specialization)
+                val simplified = ASTSimplifier.simplify(method1)
                 CodeReconstruction.createCodeFromGraph(simplified)
                 // todo simplify all entry points as methods...
                 appendSimplifiedAST(method, simplified.startBlock)

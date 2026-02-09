@@ -1,6 +1,5 @@
 package me.anno.zauber.generation
 
-import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.specialization.MethodSpecialization
@@ -20,6 +19,16 @@ object Specializations {
 
     val doneTypeSpecializations = HashSet<TypeSpecialization>()
     val doneMethodSpecializations = HashSet<MethodSpecialization>()
+
+    fun <R> push(specialization: Specialization, runnable: () -> R): R {
+        return try {
+            specializations.add(specialization)
+            runnable()
+        } finally {
+            @Suppress("Since15")
+            specializations.removeLast()
+        }
+    }
 
     fun foundTypeSpecialization(type: Scope, specialization: Specialization) {
         // todo if inside the current scope, we must extend the specialization,

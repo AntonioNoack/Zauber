@@ -154,7 +154,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
                     val equalsCondition = values.map {
                         if (it is NamedCastExpression || it is NamedDestructuringExpression) it
-                        else CheckEqualsOp(it, switchValue, byPointer = false, false, scope, origin)
+                        else CheckEqualsOp(it, switchValue, byPointer = false, false, null, scope, origin)
                     }.reduce { a, b -> a.or(b) }
 
                     val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...

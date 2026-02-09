@@ -2,19 +2,15 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleNode
-import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
-import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
@@ -22,6 +18,7 @@ import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.specialization.MethodSpecialization
 
 class Runtime {
 
@@ -164,10 +161,11 @@ class Runtime {
     }
 
     fun executeCall(
-        self: Instance, method: MethodLike,
+        self: Instance, method1: MethodSpecialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
         val valueParameters = valueParameters.map { this[it] }
+        val method = method1.method
         if (method.isExternal()) {
             val name = (method as Method).name!!
             val key = ExternalKey(method.scope.parent!!, name, method.valueParameters.map { it.type })
@@ -177,15 +175,11 @@ class Runtime {
             return BlockReturn(ReturnType.RETURN, value)
         }
 
-        val body = method.body
-            ?: throw IllegalStateException("Missing body for method $method")
-
-        var simpleBody = method.simpleBody
-        if (simpleBody == null) {
-            val context = ResolutionContext(self.type.type, true, method.returnType, emptyMap())
-            simpleBody = ASTSimplifier.simplify(context, body, method).startBlock
-            method.simpleBody = simpleBody
+        if (method.body == null) {
+            throw IllegalStateException("Missing body for method $method")
         }
+
+        val simpleBody = ASTSimplifier.simplify(method1)
 
         val call = Call(self)
         callStack.add(call)
@@ -208,7 +202,7 @@ class Runtime {
         thisStack.add(This(self, thisScope))
 
         val result = try {
-            executeBlock(simpleBody)
+            executeBlock(simpleBody.startBlock)
         } finally {
             thisStack.clear()
             thisStack.addAll(oldThisStack)

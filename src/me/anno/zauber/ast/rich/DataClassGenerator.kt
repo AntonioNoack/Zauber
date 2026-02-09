@@ -177,7 +177,7 @@ object DataClassGenerator {
                     CheckEqualsOp(
                         fieldExpr, otherFieldExpr,
                         byPointer = false, negated = false,
-                        subScope, origin
+                        null, subScope, origin
                     )
                 }
             }

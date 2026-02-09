@@ -5,8 +5,6 @@ import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
 import org.junit.jupiter.api.Test
 
 class YieldTests {
-
-    // todo this is a late-game test :3
     @Test
     fun testSequenceUsingYield() {
         // todo why can yielded not be resolved???

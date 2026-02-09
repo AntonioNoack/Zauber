@@ -5,9 +5,12 @@ import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,7 +38,8 @@ class TestRuntime {
             Stdlib.registerStringMethods(runtime)
             Stdlib.registerPrintln(runtime)
             Stdlib.registerArrayAccess(runtime)
-            val value = runtime.executeCall(runtime.getNull(), getter, emptyList())
+            val getter1 = MethodSpecialization(getter, noSpecialization)
+            val value = runtime.executeCall(runtime.getNull(), getter1, emptyList())
             return runtime to value
         }
     }
@@ -138,7 +142,20 @@ class TestRuntime {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         )
-        // todo check contents of array...
+        when (val contents = value.rawValue) {
+            is IntArray -> {
+                // todo it should be this one..., but it's the other one
+                val intParam = ParameterList(ArrayType.clazz.typeParameters, listOf(IntType))
+                val arrayOfInts = ClassType(ArrayType.clazz, intParam)
+                assertEquals(arrayOfInts, value.type.type)
+                assertEquals(listOf(1, 2, 3), contents.toList())
+            }
+            is Array<*> -> {
+                assertEquals(ArrayType, value.type.type)
+                assertEquals(listOf(1, 2, 3), contents.map { value -> rt.castToInt(value as Instance) })
+            }
+            else -> throw IllegalStateException("$value is incorrect")
+        }
     }
 
     @Test

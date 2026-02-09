@@ -24,10 +24,10 @@ fun ASTBuilderBase.binaryOp(
         "<" -> CompareOp(left, right, CompareType.LESS)
         ">=" -> CompareOp(left, right, CompareType.GREATER_EQUALS)
         ">" -> CompareOp(left, right, CompareType.GREATER)
-        "==" -> CheckEqualsOp(left, right, byPointer = false, negated = false, scope, origin)
-        "!=" -> CheckEqualsOp(left, right, byPointer = false, negated = true, scope, origin)
-        "===" -> CheckEqualsOp(left, right, byPointer = true, negated = false, scope, origin)
-        "!==" -> CheckEqualsOp(left, right, byPointer = true, negated = true, scope, origin)
+        "==" -> CheckEqualsOp(left, right, byPointer = false, negated = false, null, scope, origin)
+        "!=" -> CheckEqualsOp(left, right, byPointer = false, negated = true, null, scope, origin)
+        "===" -> CheckEqualsOp(left, right, byPointer = true, negated = false, null, scope, origin)
+        "!==" -> CheckEqualsOp(left, right, byPointer = true, negated = true, null, scope, origin)
         "&&", "||" -> throw IllegalStateException("&& and || should be handled separately")
         "::" -> {
 

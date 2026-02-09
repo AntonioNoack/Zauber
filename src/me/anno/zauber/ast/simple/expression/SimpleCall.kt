@@ -20,6 +20,7 @@ import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 
 class SimpleCall(
@@ -31,10 +32,10 @@ class SimpleCall(
     val methods: Map<Type, MethodLike>,
     val sample: MethodLike,
     val self: SimpleField,
-    val specialization: Specialization,
+    specialization: Specialization,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleCallable(dst, scope, origin) {
+) : SimpleCallable(dst, specialization, scope, origin) {
 
     constructor(
         dst: SimpleField,
@@ -87,7 +88,8 @@ class SimpleCall(
 
         initializeArrayIfNeeded(self, method, runtime)
 
-        val result = runtime.executeCall(self, method, valueParameters)
+        val method1 = MethodSpecialization(method, specialization)
+        val result = runtime.executeCall(self, method1, valueParameters)
         return if (result.type == ReturnType.RETURN) {
             BlockReturn(ReturnType.VALUE, result.value)
         } else result

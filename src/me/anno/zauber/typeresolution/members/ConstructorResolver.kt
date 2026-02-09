@@ -12,6 +12,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.specialization.Specialization
 
 object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() {
 
@@ -132,7 +133,10 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             constructor.selfType.clazz.typeParameters, typeParameters,
             constructor.valueParameters, valueParameters, matchScore
         ) ?: return null
-        val context = ResolutionContext(constructor.selfType, false, returnType, emptyMap())
+        val context = ResolutionContext(
+            constructor.selfType, Specialization(generics),
+            false, returnType, emptyMap()
+        )
         return ResolvedConstructor(generics, constructor, context, codeScope, matchScore)
     }
 

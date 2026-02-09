@@ -7,13 +7,18 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.generation.Specializations
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 object CallWithNames {
+
+    private val LOGGER = LogManager.getLogger(CallWithNames::class)
 
     private fun hasTooFewParameters(
         anyIsVararg: Boolean,
@@ -192,6 +197,8 @@ object CallWithNames {
     ): Expression {
 
         val typeParameters = if (instanceType != null) listOf(instanceType) else null
+        println("createArrayOfExpr($values, $typeParameters), spec: ${Specializations.specialization}")
+        if (instanceType is GenericType) LOGGER.warn("Unknown instance type: $instanceType")
 
         // this shall be the implementation of ArrayOf():
         //  create an Array-instance,

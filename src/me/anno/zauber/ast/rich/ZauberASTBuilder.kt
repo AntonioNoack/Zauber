@@ -521,6 +521,7 @@ class ZauberASTBuilder(
             consumeIf("const") -> Keywords.CONSTEXPR
             consumeIf("final") -> Keywords.FINAL
             consumeIf("lateinit") -> Keywords.LATEINIT
+            consumeIf("tailrec") -> 0 // just a compiler hint...
             else -> super.consumeKeyword()
         }
     }
@@ -1000,7 +1001,7 @@ class ZauberASTBuilder(
 
     private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
         val nullExpr = nullExpr(scope, origin)
-        return CheckEqualsOp(expr, nullExpr, false, true, scope, origin)
+        return CheckEqualsOp(expr, nullExpr, false, true, null, scope, origin)
     }
 
     override fun readExpression(minPrecedence: Int): Expression {

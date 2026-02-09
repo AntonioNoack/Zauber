@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
@@ -8,6 +10,7 @@ import me.anno.zauber.types.Types.BooleanType
 class CheckEqualsOp(
     val left: Expression, val right: Expression,
     val byPointer: Boolean, val negated: Boolean,
+    val resolved: ResolvedCallExpression?,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
@@ -34,11 +37,16 @@ class CheckEqualsOp(
     }
 
     override fun clone(scope: Scope) =
-        CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, scope, origin)
+        CheckEqualsOp(left.clone(scope), right.clone(scope), byPointer, negated, resolved, scope, origin)
 
-    override fun isResolved(): Boolean = left.isResolved() && right.isResolved()
+    override fun isResolved(): Boolean = left.isResolved() && right.isResolved() && (byPointer || resolved != null)
     override fun resolveImpl(context: ResolutionContext): Expression {
-        return CheckEqualsOp(left.resolve(context), right.resolve(context), byPointer, negated, scope, origin)
+        val resolved = resolved ?: if (!byPointer) {
+            NamedCallExpression(left, "equals", right, scope, origin)
+                .resolve(context) as ResolvedCallExpression
+        } else null
+
+        return CheckEqualsOp(left.resolve(context), right.resolve(context), byPointer, negated, resolved, scope, origin)
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

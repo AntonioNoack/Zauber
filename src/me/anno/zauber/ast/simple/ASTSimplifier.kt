@@ -38,8 +38,8 @@ import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 object ASTSimplifier {
 
@@ -49,17 +49,18 @@ object ASTSimplifier {
     val voidResult = FlowResult(null, null, null)
     val booleanOwnership = Ownership.COMPTIME
 
-    val cache = HashMap<Pair<ResolutionContext, Expression>, SimpleGraph>()
+    private val cache = HashMap<MethodSpecialization, SimpleGraph>()
 
     // todo inline functions
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
-    fun simplify(context: ResolutionContext, expr: Expression, method: MethodLike): SimpleGraph {
-        return cache.getOrPut(context to expr) {
-            val expr = expr.resolve(context)
+    fun simplify(method: MethodSpecialization): SimpleGraph {
+        return cache.getOrPut(method) {
+            val context = ResolutionContext(null, method.specialization, true, null)
+            val expr = method.method.getSpecializedBody(method.specialization)!!
             LOGGER.info("Simplifying $expr")
-            val graph = SimpleGraph(method)
+            val graph = SimpleGraph(method.method)
             val flow0 = FlowResult(Flow(UnitInstance, graph.startBlock), null, null)
             val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, graph, false)
             val flow1r = flow1.returned
@@ -171,10 +172,7 @@ object ASTSimplifier {
             is CheckEqualsOp -> return simplifyCheckEqualsOp(context, expr, block0, flow0, graph)
 
             else -> {
-                if (!expr.isResolved()) {
-                    val expr = expr.resolve(context)
-                    return simplifyImpl(context, expr, block0, flow0, graph, needsValue)
-                }
+                if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")
                 throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
             }
         }
@@ -231,7 +229,6 @@ object ASTSimplifier {
         val method = expr.callable
         return simplifyCall(
             blockI.value!!.block, blockI, graph, base.value.use(),
-            expr.callable.ownerTypes + expr.callable.callTypes,
             valueParameters, method, null,
             expr.scope, expr.origin
         )
@@ -264,7 +261,6 @@ object ASTSimplifier {
             )
             return simplifyCall(
                 block1v.block, block1, graph, self,
-                ParameterList.emptyParameterList(),
                 emptyList(), method0,
                 null, expr.scope, expr.origin
             )
@@ -304,7 +300,6 @@ object ASTSimplifier {
             )
             return simplifyCall(
                 block2v.block, block2, graph, self,
-                ParameterList.emptyParameterList(),
                 listOf(value), method0,
                 null, expr.scope, expr.origin
             )
@@ -375,10 +370,17 @@ object ASTSimplifier {
                 expr.negated, expr.scope, expr.origin
             )
         } else {
+            // a == null ? b == null : b != null ? a.equals(b) : false
+            // todo inline this call if both sides are non-nullable??
+            /*if(left.type.mayBeNull() || right.type.mayBeNull()) {
+
+            }*/
             SimpleCheckEquals(
                 dst, left.use(), right.use(),
-                expr.negated, expr.scope, expr.origin
+                expr.negated, expr.resolved!!.callable as ResolvedMethod,
+                expr.scope, expr.origin
             )
+            // todo handle error
         }
         block2v.block.add(call)
         return flow0
@@ -604,7 +606,7 @@ object ASTSimplifier {
         }
     }
 
-    fun collectSpecialization(method: Method, typeParameters: ParameterList): Specialization {
+    fun collectSpecialization(method: MethodLike, typeParameters: ParameterList): Specialization {
         // todo implement this...
         //  we must collect the following:
         //  method-type-parameters,
@@ -629,7 +631,7 @@ object ASTSimplifier {
     ): FlowResult {
         return when (val method = method0.resolved) {
             is Method -> simplifyMethodCall(
-                context, block0, flow0, graph, selfExpr, typeParameters, valueParameters,
+                context, block0, flow0, graph, selfExpr, valueParameters,
                 method0, method, scope, origin
             )
             is Constructor -> simplifyConstructorCall(
@@ -651,7 +653,6 @@ object ASTSimplifier {
         graph: SimpleGraph,
 
         selfExpr: Expression,
-        typeParameters: ParameterList,
         valueParameters: List<NamedParameter>,
 
         method0: ResolvedMember<*>,
@@ -673,7 +674,7 @@ object ASTSimplifier {
         // then execute it
         val dst = block1v.block.field(method0.getTypeFromCall())
         for (param in valueParametersI) param.use()
-        val specialization = collectSpecialization(method, typeParameters)
+        val specialization = method0.specialization
         val call = SimpleCall(dst, method, self0.value.use(), specialization, valueParametersI, scope, origin)
         return handleThrown(block1v.block, block1, graph, dst, call, method.getThrownType(specialization))
     }
@@ -772,7 +773,6 @@ object ASTSimplifier {
         graph: SimpleGraph,
 
         selfExpr: SimpleField,
-        typeParameters: ParameterList,
         valueParameters: List<SimpleField>,
 
         method0: ResolvedMember<*>,
@@ -786,7 +786,7 @@ object ASTSimplifier {
             is Method -> {
                 // then execute it
                 val dst = block0.field(method0.getTypeFromCall())
-                val specialization = collectSpecialization(method, typeParameters)
+                val specialization = method0.specialization
                 val call = SimpleCall(dst, method, selfExpr.use(), specialization, valueParameters, scope, origin)
                 handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
             }
@@ -816,16 +816,15 @@ object ASTSimplifier {
             val constructor = SimpleSelfConstructor(
                 UnitInstance,
                 selfIfInsideConstructor,
-                method, valueParameters, scope, origin
+                method, method0.specialization, valueParameters, scope, origin
             )
             handleThrown(block0, flow0, graph, UnitInstance, constructor, method.getThrownType(method0.specialization))
         } else {
             val dst = block0.field(method0.getTypeFromCall())
-            // todo this could fail, too...
+            // todo allocation could fail, too...
             block0.add(SimpleAllocateInstance(dst, method.selfType, scope, origin))
             val unusedTmp = block0.field(UnitType)
-            // todo use correct specialization; depends on outer class, if present, too
-            val specialization = noSpecialization
+            val specialization = method0.specialization
             val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)
             handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
         }
@@ -850,6 +849,16 @@ object ASTSimplifier {
             .withValue(result, block0)
         println("joining: $flow1 x $throwFlow = $flow2")
         return flow2
+    }
+
+    fun reorderResolveParameters(
+        context: ResolutionContext,
+        src: List<NamedParameter>, targetParams: List<Parameter>,
+        scope: Scope, origin: Int
+    ): List<Expression> {
+        return reorderParameters(src, targetParams, scope, origin).mapIndexed { index, param ->
+            param.resolve(context.withTargetType(targetParams[index].type))
+        }
     }
 
     fun reorderParameters(

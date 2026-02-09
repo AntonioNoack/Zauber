@@ -16,17 +16,21 @@ class ResolvedCallExpression(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
+    init {
+        check(valueParameters.all { it.isResolved() })
+    }
+
     val self = self ?: callable.getBaseIfMissing(scope, origin)
     val context get() = callable.context
 
     override fun clone(scope: Scope) = ResolvedCallExpression(
-        this@ResolvedCallExpression.self.clone(scope), callable,
+        self.clone(scope), callable,
         valueParameters.map { it.clone(scope) },
         scope, origin
     )
 
     override fun needsBackingField(methodScope: Scope): Boolean {
-        return this@ResolvedCallExpression.self.needsBackingField(methodScope) ||
+        return self.needsBackingField(methodScope) ||
                 valueParameters.any { it.needsBackingField(methodScope) }
     }
 
@@ -36,7 +40,7 @@ class ResolvedCallExpression(
     override fun isResolved(): Boolean = true
 
     override fun toStringImpl(depth: Int): String {
-        val base = this@ResolvedCallExpression.self.toString(depth)
+        val base = self.toString(depth)
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         val typeParameters = callable.callTypes
         val name = when (val m = callable.resolved) {
@@ -53,7 +57,7 @@ class ResolvedCallExpression(
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
-        callback(this@ResolvedCallExpression.self)
+        callback(self)
         for (param in valueParameters) callback(param)
     }
 
