@@ -16,6 +16,7 @@ class FibonacciTests {
             external operator fun compareTo(other: Int): Int
             operator fun until(other: Int): IntRange = IntRange(this, other)
             operator fun rangeTo(other: Int): IntRange = IntRange(this, other+1)
+            operator fun equals(other: Int): Boolean = this >= other && this <= other
             fun inc() = this+1
             fun dec() = this-1
         }
@@ -42,7 +43,7 @@ class FibonacciTests {
         }
         
         class Any {
-            open fun equals(other: Any?): Boolean
+            open fun equals(other: Any?): Boolean = this === other
         }
         """.trimIndent()
 

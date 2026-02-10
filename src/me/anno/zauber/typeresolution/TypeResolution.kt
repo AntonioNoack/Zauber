@@ -184,16 +184,7 @@ object TypeResolution {
         while (true) {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
             when {
-                scope.isClassType() -> return scope
-                scope.isMethodType() -> {
-                    val func = scope.selfAsMethod!!
-                    val self = func.selfType
-                    if (self != null) {
-                        val selfScope = typeToScope(self)!!
-                        LOGGER.info("Method-SelfType[${scope.pathStr}]: $self -> $selfScope")
-                        return resolveThisScope(selfScope)
-                    }
-                }
+                scope.isClassType() || scope.isMethodType() -> return scope
                 else -> {}
             }
             scope = scope.parent!!
