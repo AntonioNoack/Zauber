@@ -219,7 +219,7 @@ class ZauberASTBuilder(
         }
 
         val field = currPackage.addField(
-            selfType, selfType0 != null, isMutable = isMutable, null,
+            selfType0, selfType0 != null, isMutable = isMutable, null,
             name, type, initialValue, keywords, origin
         )
 
@@ -568,7 +568,7 @@ class ZauberASTBuilder(
                 parameters.size, isVar, isVal, isVararg, name, type,
                 initialValue, currPackage, origin
             )
-            parameter.getOrCreateField(selfType, keywords)
+            parameter.getOrCreateField(null, keywords)
             parameters.add(parameter)
 
             readComma()

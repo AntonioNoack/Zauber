@@ -33,7 +33,7 @@ class Parameter(
     fun getOrCreateField(selfType: Type?, keywords: KeywordSet): Field {
         // automatically gets added to fieldScope
         val field = field ?: scope.addField(
-            selfType, false, isMutable = isVar, this,
+            selfType, selfType != null, isMutable = isVar, this,
             name, type, defaultValue, keywords, origin
         )
         this.field = field

@@ -76,6 +76,10 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     override fun iterator(): Iterator<Type> = listIterator(0)
     override fun containsAll(elements: Collection<Type>): Boolean = types.toList().containsAll(elements)
 
+    fun containsNull(): Boolean {
+        return types.any { it == null }
+    }
+
     fun getOrNull(index: Int): Type? = types.getOrNull(index)
     override fun get(index: Int): Type = types[index]!!// ?: generics[index].type
     override fun indexOf(element: Type): Int = types.indexOf(element)

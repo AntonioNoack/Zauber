@@ -161,7 +161,8 @@ object CallWithNames {
                     }
                     // collect all varargs
                     val values = actualParameters.subList(j, actualParameters.size).filter { it.name == null }
-                    result[index++] = createArrayOfExpr(ev, values, scope, origin)
+                    val context = ResolutionContext(null, false, ev.type)
+                    result[index++] = createArrayOfExpr(context, ev, values, scope, origin)
                     break
                 }
             }
@@ -171,7 +172,8 @@ object CallWithNames {
                 if (!ev.isVararg) return null
                 // check(ev.isVararg) { "Expected vararg in last place" }
                 // println("Using instanceType $instanceType for empty varargs")
-                result[index] = createArrayOfExpr(ev, emptyList(), scope, origin)
+                val context = ResolutionContext(null, false, ev.type)
+                result[index] = createArrayOfExpr(context, ev, emptyList(), scope, origin)
             }
 
             check(result.none { it == null })
@@ -182,23 +184,55 @@ object CallWithNames {
     }
 
     fun createArrayOfExpr(
+        context: ResolutionContext,
         ev: Parameter, values: List<NamedParameter>,
         scope: Scope, origin: Int,
     ): Expression {
         val arrayType = ev.type
-        check(arrayType is ClassType && arrayType.clazz.name == "Array")
+        check(arrayType is ClassType && arrayType.clazz.pathStr == "zauber.Array")
         val instanceType = ev.type.typeParameters?.first()
-        return createArrayOfExpr(instanceType, values.map { it.value }, scope, origin)
+        return createArrayOfExpr(context, instanceType, values.map { it.value }, scope, origin)
+    }
+
+    private fun isUnknownGenericType(instanceType: Type?): Boolean {
+        return instanceType == null || instanceType !is GenericType ||
+                (instanceType.scope.parent?.pathStr == "zauber" && run {
+                    val name = instanceType.scope.selfAsMethod?.name
+                    name == "arrayOf" || name == "listOf"
+                })
+    }
+
+    private fun Type?.nullIfUnknown(): Type? {
+        return if (isUnknownGenericType(this)) null else this
     }
 
     fun createArrayOfExpr(
-        instanceType: Type?, values: List<Expression>,
+        context: ResolutionContext,
+        instanceType0: Type?, values: List<Expression>,
         scope: Scope, origin: Int,
     ): Expression {
 
-        val typeParameters = if (instanceType != null) listOf(instanceType) else null
-        println("createArrayOfExpr($values, $typeParameters), spec: ${Specializations.specialization}")
-        if (instanceType is GenericType) LOGGER.warn("Unknown instance type: $instanceType")
+        val instanceType = instanceType0?.nullIfUnknown()
+            ?: run {
+                val tt = context.targetType
+                if (tt is ClassType && tt.clazz.pathStr == "zauber.Array") tt.typeParameters?.first()?.nullIfUnknown()
+                else null
+            } ?: run {
+                val types = values.map { it.resolveType(context.withTargetType(null)) }
+                if (types.isNotEmpty()) unionTypes(types) else null
+            }
+
+        val typeParameters =
+            if (instanceType != null && isUnknownGenericType(instanceType)) listOf(instanceType) else null
+
+        println("createArrayOfExpr($values, $typeParameters by $instanceType), spec: ${Specializations.specialization}")
+        if (instanceType is GenericType) LOGGER.warn(
+            "Unknown instance type: $instanceType, ${
+                isUnknownGenericType(
+                    instanceType
+                )
+            }, ${instanceType.scope.selfAsMethod?.name}"
+        )
 
         // this shall be the implementation of ArrayOf():
         //  create an Array-instance,

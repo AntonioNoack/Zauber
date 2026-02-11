@@ -22,7 +22,7 @@ object ConstructorHelper {
                 val origin = parameter.origin
                 val parameterField = parameter.getOrCreateField(null, Keywords.NONE)
                 val classField = classScope.addField(
-                    classScope.typeWithArgs, false, isMutable = parameter.isVar,
+                    null, false, isMutable = parameter.isVar,
                     parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
                 )
                 val dstExpr = DotExpression(

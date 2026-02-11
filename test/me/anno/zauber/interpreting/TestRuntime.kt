@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 
 class TestRuntime {
+
     companion object {
         fun testExecute(code: String): Pair<Runtime, Instance> {
             val (runtime, value) = testExecuteCatch(code)
@@ -46,7 +47,7 @@ class TestRuntime {
 
     @BeforeEach
     fun init() {
-        LogManager.disableLoggers(
+        if (false) LogManager.disableLoggers(
             "MethodResolver,Inheritance,MemberResolver," +
                     "TypeResolution,ResolvedField,FieldExpression," +
                     "FieldResolver,ConstructorResolver,ResolvedMethod," +
@@ -108,17 +109,10 @@ class TestRuntime {
         """.trimIndent()
         )
         val expectedType = rt.getClass(ClassType(ArrayType.clazz, listOf(IntType), -1))
-        if (false) {
-            // todo generics should match...
-            //  somehow, we just get an array without any specific generics
-            assertEquals(expectedType, valueT.type)
-        }
+        assertEquals(expectedType, valueT.type)
         val contents = valueT.rawValue
-        assertInstanceOf<Array<*>>(contents)
-        assertEquals(3, contents.size)
-        assertEquals(1, rt.castToInt(contents[0] as Instance))
-        assertEquals(2, rt.castToInt(contents[1] as Instance))
-        assertEquals(3, rt.castToInt(contents[2] as Instance))
+        assertInstanceOf<IntArray>(contents)
+        assertEquals(listOf(1, 2, 3), contents.toList())
     }
 
     // todo "const" could be a "deep" value, aka fully immutable
@@ -171,5 +165,6 @@ class TestRuntime {
         assertEquals(5, runtime.castToInt(a))
     }
 
-    // todo test defer and errdefer and destructors
+    // todo implement and test destructors...
+    // implement and test GC for runtime -> we don't need that, we have Java's GC
 }

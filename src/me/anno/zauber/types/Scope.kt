@@ -1,6 +1,5 @@
 package me.anno.zauber.types
 
-import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
@@ -126,6 +125,8 @@ class Scope(val name: String, val parent: Scope? = null) {
         keywords: KeywordSet,
         origin: Int
     ): Field {
+        check((selfType != null) == explicitSelfType)
+
         val sameField = fields.firstOrNull { it.name == name && it.origin == origin }
         if (sameField != null) return sameField
         val instance = Field(

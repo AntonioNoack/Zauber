@@ -89,7 +89,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             val actualTypeParametersI = actualTypeParameters?.readonly()
                 ?: ParameterList(expectedTypeParameters)
 
-            LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters")
+            LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters, expected: $expectedTypeParameters")
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
             if (expectedSelfType != null &&

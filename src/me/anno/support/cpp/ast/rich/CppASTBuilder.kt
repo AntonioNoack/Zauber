@@ -249,7 +249,7 @@ class CppASTBuilder(
                         null, classScope, origin
                     )
                     entryScope.objectField = classScope.addField(
-                        classScope.typeWithoutArgs, false, isMutable = false, null,
+                        null, false, isMutable = false, null,
                         valueName, classScope.typeWithoutArgs, initialValue, keywords, origin
                     )
 

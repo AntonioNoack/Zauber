@@ -1,8 +1,6 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
-import me.anno.support.csharp.ast.CSharpASTBuilder
-import me.anno.support.csharp.ast.CSharpASTClassScanner
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -11,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Types.ListType
@@ -66,8 +65,7 @@ object EnumProperties {
                     if (enumScope.typeParameters.isNotEmpty()) null // we need to resolve them
                     else enumScope.typeWithArgs
                 val field = companionScope.addField(
-                    companionScope.typeWithoutArgs,
-                    false, isMutable = false, null,
+                    null, false, isMutable = false, null,
                     name, valueType, initialValue, keywords, origin
                 )
                 entryScope.objectField = field
@@ -94,11 +92,11 @@ object EnumProperties {
             val field = entryScope.objectField!!
             FieldExpression(field, constructorScope, origin)
         }
-        val initialValue = createArrayOfExpr(enumScope.typeWithoutArgs, entryValues, constructorScope, origin)
+        val context = ResolutionContext(null, false, null)
+        val initialValue = createArrayOfExpr(context, enumScope.typeWithoutArgs, entryValues, constructorScope, origin)
 
         val entriesField = constructorScope.addField(
-            companionScope.typeWithoutArgs,
-            false, isMutable = false, null,
+            null, false, isMutable = false, null,
             "entries", listType,
             initialValue, Keywords.SYNTHETIC, origin
         )

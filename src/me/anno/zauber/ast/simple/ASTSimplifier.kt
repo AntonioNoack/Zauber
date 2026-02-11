@@ -37,6 +37,7 @@ import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
@@ -821,11 +822,16 @@ object ASTSimplifier {
             handleThrown(block0, flow0, graph, UnitInstance, constructor, method.getThrownType(method0.specialization))
         } else {
             val dst = block0.field(method0.getTypeFromCall())
+            var selfType = method.selfType
+            if (selfType.typeParameters == null) {
+                selfType = ClassType(selfType.clazz, method0.ownerTypes)
+            }
             // todo allocation could fail, too...
-            block0.add(SimpleAllocateInstance(dst, method.selfType, scope, origin))
+            block0.add(SimpleAllocateInstance(dst, selfType, scope, origin))
             val unusedTmp = block0.field(UnitType)
             val specialization = method0.specialization
             val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)
+            println("finding throw type for $method0")
             handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
         }
     }

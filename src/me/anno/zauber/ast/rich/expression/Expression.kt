@@ -17,6 +17,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
 
     fun resolve(context: ResolutionContext): Expression {
         if (isResolved()) return this
+        println("Resolving expr $this in $context")
         val resolved = resolveImpl(context)
         // println("Resolved $this to $resolved")
         check(resolved.isResolved()) {

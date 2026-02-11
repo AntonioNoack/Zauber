@@ -13,6 +13,11 @@ class SimpleAllocateInstance(
     scope: Scope, origin: Int
 ) : SimpleAssignment(dst, scope, origin) {
 
+    init {
+        if (selfType.clazz.typeParameters.isNotEmpty() && selfType.typeParameters == null)
+            throw IllegalStateException("Illegal $selfType creation: all types must be known")
+    }
+
     override fun toString(): String {
         return "$dst = new $selfType"
     }

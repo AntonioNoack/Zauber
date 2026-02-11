@@ -26,6 +26,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
@@ -617,7 +618,8 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                     else readExpression()
                 readComma()
             }
-            createArrayOfExpr(null, values, it, origin)
+            val context = ResolutionContext(null, false, null)
+            createArrayOfExpr(context, null, values, it, origin)
         }
     }
 
