@@ -8,6 +8,8 @@ import me.anno.zauber.types.impl.NullType.typeOrNull
 
 object Types {
 
+    private val types = ArrayList<ClassType>()
+
     private fun getScope0(i: String): Scope {
         if ('.' !in i) {
             return langScope.getOrPut(i, null)
@@ -37,12 +39,14 @@ object Types {
         }
     }
 
-    fun getType(i: String, genericNames: String): ClassType {
-        return ClassType(
+    private fun getType(i: String, genericNames: String): ClassType {
+        val type = ClassType(
             getScope(i, genericNames.length),
             if (genericNames.isEmpty()) emptyList() else null,
             -1
         )
+        types += type
+        return type
     }
 
     val AnyType = getType("Any", "")
@@ -63,6 +67,7 @@ object Types {
     val StringType = getType("String", "")
     val NumberType = getType("Number", "")
     val ThrowableType = getType("Throwable", "")
+    val YieldedType = getType("Yielded", "")
     val NothingType = getType("Nothing", "")
     val BooleanType = getType("Boolean", "")
     val ArrayType = getType("Array", "V")
@@ -72,7 +77,14 @@ object Types {
     val PairType = getType("Pair", "FS")
     val YieldableType = getType("Yieldable", "RTY")
 
-    // todo yes, it is Iterable<*>, but * = Nothing still feels wrong :/
-    val AnyIterableType = ClassType(getScope("Iterable", 1), listOf(NothingType), -1)
-    val AnyClassType = ClassType(getScope("Class", 1), listOf(NothingType), -1)
+    fun register() {
+        for (type in types) {
+            var scope = type.clazz
+            while (true) {
+                val parent = scope.parent ?: break
+                if (scope !in parent.children) parent.children.add(scope)
+                scope = parent
+            }
+        }
+    }
 }

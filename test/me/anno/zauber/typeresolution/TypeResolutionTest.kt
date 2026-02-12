@@ -2,17 +2,19 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
+import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.CharType
@@ -34,7 +36,12 @@ class TypeResolutionTest {
     companion object {
         var ctr = 0
 
-        fun testTypeResolutionGetField(code: String): Field {
+        fun testTypeResolution0(code: String): Scope {
+
+            // clean slate
+            root.clear()
+            Types.register()
+
             val testScopeName = "test${ctr++}"
             val tokens = ZauberTokenizer(
                 """
@@ -49,7 +56,11 @@ class TypeResolutionTest {
             val testScope = root.children.first { it.name == testScopeName }
             resolveOverrides(testScope)
             resolveTypesAndNames(testScope)
-            return testScope.fields.first { it.name == "tested" }
+            return testScope
+        }
+
+        fun testTypeResolutionGetField(code: String): Field {
+            return testTypeResolution0(code).fields.first { it.name == "tested" }
         }
 
         fun testTypeResolution(code: String): Type {
@@ -59,18 +70,7 @@ class TypeResolutionTest {
         }
 
         fun testMethodBodyResolution(code: String): List<Type> {
-            val testScopeName = "test${ctr++}"
-            val tokens = ZauberTokenizer(
-                """
-            package $testScopeName
-            
-            $code
-        """.trimIndent(), "Test.zbr"
-            ).tokenize()
-            ZauberASTBuilder(tokens, root).readFileLevel()
-            createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }
-            resolveTypesAndNames(testScope)
+            val testScope = testTypeResolution0(code)
             val method = testScope.methods.first { it.name == "tested" }
             val types = ArrayList<Type>()
             fun scan(expr: Expression) {
@@ -86,29 +86,6 @@ class TypeResolutionTest {
             }
             scan(method.body!!)
             return types
-        }
-
-        fun defineArrayListConstructors() {
-            val arrayListType = ArrayListType.clazz
-
-            // we need to define the constructor without any args
-            val constructors = arrayListType.constructors
-            if (constructors.none { it.valueParameters.isEmpty() }) {
-                val scope = arrayListType.getOrCreatePrimConstructorScope()
-                scope.selfAsConstructor = Constructor(
-                    emptyList(),
-                    scope, null, null,
-                    Keywords.NONE, -1
-                )
-            }
-            if (constructors.none { it.valueParameters.size == 1 }) {
-                val scope = arrayListType.getOrPut(arrayListType.generateName("constructor"), ScopeType.CONSTRUCTOR)
-                scope.selfAsConstructor = Constructor(
-                    listOf(Parameter(0, "size", IntType, arrayListType, -1)),
-                    scope, null, null,
-                    Keywords.NONE, -1
-                )
-            }
         }
 
         fun defineListParameters() {

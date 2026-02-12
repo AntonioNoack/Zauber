@@ -8,7 +8,6 @@ import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
-import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.defineArrayListConstructors
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
@@ -121,7 +120,6 @@ class IsSubTypeOfTest {
 
     @Test
     fun testTypeParameters() {
-        defineArrayListConstructors()
         val listType = ArrayListType.clazz
         assertEquals(1, listType.typeParameters.size)
 
@@ -226,7 +224,6 @@ class IsSubTypeOfTest {
 
     @Test
     fun testInferredAsParameterType() {
-        defineArrayListConstructors()
         val listType = ArrayListType.clazz
         testInferred { ClassType(listType, listOf(it), -1) }
     }

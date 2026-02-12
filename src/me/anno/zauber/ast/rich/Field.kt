@@ -12,13 +12,11 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeTo
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnresolvedType
 
 class Field(
     var codeScope: Scope,
 
-    val selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
+    selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
     val explicitSelfType: Boolean,
 
     val isMutable: Boolean,
@@ -35,14 +33,7 @@ class Field(
         private val LOGGER = LogManager.getLogger(Field::class)
     }
 
-    init {
-        if (selfType is UnresolvedType) {
-            throw IllegalStateException("$selfType must be resolved")
-        }
-        if (selfType is ClassType && !selfType.clazz.isClassType()) {
-            throw IllegalStateException("$this has invalid selfType: $selfType")
-        }
-    }
+    val selfType = selfType?.resolve()
 
     fun needsBackingField(): Boolean {
         val getterBody = getter?.body ?: return true

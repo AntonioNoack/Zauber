@@ -11,11 +11,13 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
+import me.anno.zauber.types.Types
 
 object ResolutionUtils {
     fun typeResolveScope(code: String): Scope {
 
         root.clear()
+        Types.register()
 
         val testScopeName = "test${ctr++}"
 

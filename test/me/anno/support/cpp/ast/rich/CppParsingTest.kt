@@ -30,16 +30,6 @@ class CppParsingTest {
             resolveTypesAndNames(testScope)
             return testScope
         }
-
-        fun ensureUnitIsKnown() {
-            val tokens = ZauberTokenizer(
-                """
-            package zauber
-            object Unit
-        """.trimIndent(), "Test.cpp"
-            ).tokenize()
-            ZauberASTBuilder(tokens, root).readFileLevel()
-        }
     }
 
     @Test
@@ -88,7 +78,6 @@ class CppParsingTest {
 
     @Test
     fun testMethod() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             void main(int a, int b, int c) {
@@ -100,7 +89,6 @@ class CppParsingTest {
 
     @Test
     fun testVoidArgsMethod() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             void main(void) {
@@ -112,7 +100,6 @@ class CppParsingTest {
 
     @Test
     fun testSimpleSwitchCase() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             void test(int x) {
@@ -132,7 +119,6 @@ class CppParsingTest {
 
     @Test
     fun testDeclarationInMethod() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             void main(void) {
@@ -144,7 +130,6 @@ class CppParsingTest {
 
     @Test
     fun testCallInMethod() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             void main(void) {
@@ -156,7 +141,6 @@ class CppParsingTest {
 
     @Test
     fun testAssignmentInMethod() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             int x;
@@ -169,7 +153,6 @@ class CppParsingTest {
 
     @Test
     fun testDeepAssignmentInMethod() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             struct Vec {
@@ -185,7 +168,6 @@ class CppParsingTest {
 
     @Test
     fun testEvilSwitchCase() {
-        ensureUnitIsKnown()
         testCppParsing(
             """
             void test(int x) {

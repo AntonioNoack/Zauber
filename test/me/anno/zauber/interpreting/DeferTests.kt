@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.support.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
 import me.anno.zauber.logging.LogManager
@@ -15,7 +14,6 @@ class DeferTests {
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
-        ensureUnitIsKnown()
         val code = """
             fun run(): String {
                 defer println("World")
@@ -39,7 +37,6 @@ class DeferTests {
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
-        ensureUnitIsKnown()
         val code = """
             fun run(): String {
                 try {
@@ -58,6 +55,7 @@ class DeferTests {
             class Exception(): Throwable()
             external fun println(str: String)
             enum class Boolean { TRUE, FALSE }
+            object Unit
             class Array<V>(val size: Int) {
                 external operator fun set(index: Int, value: V)
             }
@@ -74,7 +72,6 @@ class DeferTests {
                     "MethodResolver,ResolvedMethod"
         )
         LogManager.getLogger("Runtime").isDebugEnabled = true
-        ensureUnitIsKnown()
         val code = """
             fun run(): String {
                 errdefer println("World")

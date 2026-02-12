@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.support.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
 import me.anno.zauber.types.Types.IntType
@@ -11,7 +10,6 @@ class ArithmeticTests {
 
     @Test
     fun testSimpleIntCalculation() {
-        ensureUnitIsKnown()
         val code = """
             val tested get() = 1+3*7
             
@@ -28,7 +26,6 @@ class ArithmeticTests {
 
     @Test
     fun testSimpleIntCalculationWithIntermediate() {
-        ensureUnitIsKnown()
         val code = """
             val tested: Int
                 get() {
@@ -49,7 +46,6 @@ class ArithmeticTests {
 
     @Test
     fun testSimpleIntCalculationWithIntermediateAndInc() {
-        ensureUnitIsKnown()
         val code = """
             val tested: Int
                 get() {
@@ -72,7 +68,6 @@ class ArithmeticTests {
 
     @Test
     fun testSimpleIntCalculationWithIntermediateAndPlusAssign() {
-        ensureUnitIsKnown()
         val code = """
             val tested: Int
                 get() {

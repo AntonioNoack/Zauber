@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.support.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
@@ -14,7 +13,6 @@ class TryCatchTests {
 
     @Test
     fun testTryCatchNormal() {
-        ensureUnitIsKnown()
         val code = """
             class Exception: Throwable()
             class RuntimeException : Exception()
@@ -32,7 +30,6 @@ class TryCatchTests {
 
     @Test
     fun testTryCatchMismatch() {
-        ensureUnitIsKnown()
         val code = """
             val tested get() = try {
                 throw IllegalArgumentException()
@@ -58,7 +55,6 @@ class TryCatchTests {
 
     @Test
     fun testTryCatchCatching() {
-        ensureUnitIsKnown()
         val code = """
             val tested get() = try {
                 throw NullPointerException()
@@ -81,7 +77,6 @@ class TryCatchTests {
 
     @Test
     fun testSimpleFinallyIsExecuted() {
-        ensureUnitIsKnown()
         val code = """
             val tested get() = try {
                 "Test"
@@ -104,7 +99,6 @@ class TryCatchTests {
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
-        ensureUnitIsKnown()
         val code = """
             val tested get() = try {
                 try {
@@ -132,7 +126,6 @@ class TryCatchTests {
                     "MethodResolver,CallExpression,Field,ConstructorResolver,ResolvedField,FieldResolver," +
                     "FieldExpression"
         )
-        ensureUnitIsKnown()
         val code = """
             val tested: String get() {
                 for (i in 0 until 4) {

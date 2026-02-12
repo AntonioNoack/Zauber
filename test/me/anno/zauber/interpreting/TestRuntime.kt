@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.support.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
@@ -57,7 +56,6 @@ class TestRuntime {
 
     @Test
     fun testPrintln() {
-        ensureUnitIsKnown()
         val code = """
             val tested: Int get() {
                 println("Hello World!")
@@ -74,7 +72,6 @@ class TestRuntime {
 
     @Test
     fun testBoolean() {
-        ensureUnitIsKnown()
         val stdlib = """
             package zauber
             enum class Boolean {
@@ -96,7 +93,6 @@ class TestRuntime {
 
     @Test
     fun testArrayOf() {
-        ensureUnitIsKnown()
         val (rt, valueT) = testExecute(
             """
             val tested get() = arrayOf(1, 2, 3)
@@ -120,7 +116,6 @@ class TestRuntime {
 
     @Test
     fun testListOf() {
-        ensureUnitIsKnown()
         val (rt, value) = testExecute(
             """
             val tested get() = listOf(1, 2, 3)
@@ -154,7 +149,6 @@ class TestRuntime {
 
     @Test
     fun testCreateClassInstance() {
-        ensureUnitIsKnown()
         val code = """
             class Test(val a: Int)
             val tested get() = Test(5)

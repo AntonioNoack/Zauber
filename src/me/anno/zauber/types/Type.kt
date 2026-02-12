@@ -40,12 +40,10 @@ abstract class Type {
 
     fun isResolved(): Boolean {
         return when (this) {
-            NullType, UnknownType -> true
+            NullType, UnknownType, is SelfType, is ThisType -> true
             is GenericType -> !specialization.contains(this)
             is TypeOfField,
-            is UnresolvedType,
-            is SelfType,
-            is ThisType -> false
+            is UnresolvedType -> false
             is LambdaType -> selfType?.isResolved() != false &&
                     parameters.all { it.type.isResolved() } &&
                     returnType.isResolved()
@@ -74,10 +72,6 @@ abstract class Type {
 
     fun resolveImpl(selfScope: Scope?): Type {
         return when (this) {
-            is SelfType,
-            is ThisType ->
-                selfScope?.typeWithArgs
-                    ?: throw IllegalStateException("Cannot resolve $this without scope data")
             is LambdaType -> {
                 LambdaType(selfType?.resolve(selfScope), parameters.map {
                     LambdaParameter(it.name, it.type.resolve(selfScope))
@@ -117,7 +111,7 @@ abstract class Type {
         return when (this) {
             NullType, NothingType,
             is UnknownType -> true
-            is GenericType -> false
+            is GenericType, is ThisType, is SelfType -> false
             is ClassType -> typeParameters == null || typeParameters.all { it.isFullySpecialized() }
             is UnionType -> types.all { it.isFullySpecialized() }
             is AndType -> types.all { it.isFullySpecialized() }

@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.support.cpp.ast.rich.CppParsingTest.Companion.ensureUnitIsKnown
 import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
 import org.junit.jupiter.api.Test
 
@@ -9,7 +8,6 @@ class YieldTests {
     fun testSequenceUsingYield() {
         // todo why can yielded not be resolved???
         //  it should be found in collect-names pass
-        ensureUnitIsKnown()
         val code = """
             fun <V> collectYielded(runnable: () -> Unit): List<V> {
                 var yielded = async runnable()

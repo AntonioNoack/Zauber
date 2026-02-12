@@ -5,8 +5,7 @@ import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolu
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class SelfTypeTest {
@@ -30,7 +29,7 @@ class SelfTypeTest {
         val type1 = type0.types.first { it != NullType }
         LOGGER.info("Resolved Self to $type1 (should be B)")
         assertTrue(type1 is ClassType)
-        assertTrue((type1 as ClassType).clazz.name == "B")
+        assertEquals("B", (type1 as ClassType).clazz.name)
         LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
         assertFalse(type1.clazz.fields.any { it.name == "other" })
     }

@@ -1,10 +1,13 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types.YieldedType
 
 abstract class Expression(val scope: Scope, val origin: Int) {
 
@@ -14,8 +17,15 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     var resolvedType: Type? = null
 
     abstract fun resolveReturnType(context: ResolutionContext): Type
-    open fun resolveThrownType(context: ResolutionContext): Type = throw NotImplementedError("Implement resolveThrownType for ${javaClass.simpleName}")
-    open fun resolveYieldedType(context: ResolutionContext): Type = throw NotImplementedError("Implement resolveYieldedType for ${javaClass.simpleName}")
+    open fun resolveThrownType(context: ResolutionContext): Type {
+        LOGGER.warn("Implement resolveThrownType for ${javaClass.simpleName}")
+        return ThrowableType // just assume all
+    }
+
+    open fun resolveYieldedType(context: ResolutionContext): Type {
+        LOGGER.warn("Implement resolveYieldedType for ${javaClass.simpleName}")
+        return YieldedType
+    }
 
     fun resolve(context: ResolutionContext): Expression {
         if (isResolved()) return this
@@ -93,6 +103,8 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     }
 
     companion object {
+        private val LOGGER = LogManager.getLogger(Expression::class)
+
         var numExpressionsCreated = 0
             private set
     }
