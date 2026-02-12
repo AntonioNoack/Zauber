@@ -156,6 +156,8 @@ class FibonacciTests {
 
     @Test
     fun testMemoizedFibonacci() {
+        // todo IntArray doesn't know type-parameter to be Int... where is it getting lost???
+
         val code = """
         fun fib(i: Int): Int {
             val memory = IntArray(i + 1)
