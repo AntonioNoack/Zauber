@@ -45,7 +45,7 @@ class LambdaExpression(
     override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false // I don't think so
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")
         val bodyContext = context
             .withTargetType(null)
@@ -123,7 +123,7 @@ class LambdaExpression(
         val classScope = scope.getOrPut(scopeName, ScopeType.INLINE_CLASS)
         val classConstructor = classScope.getOrCreatePrimConstructorScope()
 
-        val superTypeI: ClassType = when (val superType = resolveType(context)) {
+        val superTypeI: ClassType = when (val superType = resolveReturnType(context)) {
             is ClassType -> superType
             is LambdaType -> {
                 val n = superType.parameters.size

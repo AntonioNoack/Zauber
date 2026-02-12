@@ -37,40 +37,40 @@ object Types {
         }
     }
 
-    fun getType(i: String, numGenerics: Int): ClassType {
+    fun getType(i: String, genericNames: String): ClassType {
         return ClassType(
-            getScope(i, numGenerics),
-            if (numGenerics == 0) emptyList() else null,
+            getScope(i, genericNames.length),
+            if (genericNames.isEmpty()) emptyList() else null,
             -1
         )
     }
 
-    val AnyType = getType("Any", 0)
+    val AnyType = getType("Any", "")
     val NullableAnyType = typeOrNull(AnyType)
-    val UnitType = getType("Unit", 0)
-    val CharType = getType("Char", 0)
-    val ByteType = getType("Byte", 0)
-    val ShortType = getType("Short", 0)
-    val IntType = getType("Int", 0)
-    val LongType = getType("Long", 0)
-    val FloatType = getType("Float", 0)
-    val DoubleType = getType("Double", 0)
-    val UByteType = getType("UByte", 0)
-    val UShortType = getType("UShort", 0)
-    val UIntType = getType("UInt", 0)
-    val ULongType = getType("ULong", 0)
-    val HalfType = getType("Half", 0)
-    val StringType = getType("String", 0)
-    val NumberType = getType("Number", 0)
-    val ThrowableType = getType("Throwable", 0)
-    val NothingType = getType("Nothing", 0)
-    val BooleanType = getType("Boolean", 0)
-    val ArrayType = getType("Array", 1)
-    val ListType = getType("List", 1)
-    val ArrayListType = getType("ArrayList", 1)
-    val MapType = getType("Map", 2)
-    val PairType = getType("Pair", 2)
-    val PromiseType = getType("zauber.async.Promise", 3)
+    val UnitType = getType("Unit", "")
+    val CharType = getType("Char", "")
+    val ByteType = getType("Byte", "")
+    val ShortType = getType("Short", "")
+    val IntType = getType("Int", "")
+    val LongType = getType("Long", "")
+    val FloatType = getType("Float", "")
+    val DoubleType = getType("Double", "")
+    val UByteType = getType("UByte", "")
+    val UShortType = getType("UShort", "")
+    val UIntType = getType("UInt", "")
+    val ULongType = getType("ULong", "")
+    val HalfType = getType("Half", "")
+    val StringType = getType("String", "")
+    val NumberType = getType("Number", "")
+    val ThrowableType = getType("Throwable", "")
+    val NothingType = getType("Nothing", "")
+    val BooleanType = getType("Boolean", "")
+    val ArrayType = getType("Array", "V")
+    val ListType = getType("List", "V")
+    val ArrayListType = getType("ArrayList", "V")
+    val MapType = getType("Map", "KV")
+    val PairType = getType("Pair", "FS")
+    val YieldableType = getType("Yieldable", "RTY")
 
     // todo yes, it is Iterable<*>, but * = Nothing still feels wrong :/
     val AnyIterableType = ClassType(getScope("Iterable", 1), listOf(NothingType), -1)

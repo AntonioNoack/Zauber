@@ -14,7 +14,10 @@ class ReturnExpression(value: Expression, label: String?, scope: Scope, origin: 
         else "return@$label ${value.toString(depth)}"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
+    override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
+
     override fun clone(scope: Scope) = ReturnExpression(value.clone(scope), label, scope, origin)
     override fun splitsScope(): Boolean = false
     override fun resolveImpl(context: ResolutionContext) =

@@ -13,7 +13,9 @@ abstract class Expression(val scope: Scope, val origin: Int) {
      * */
     var resolvedType: Type? = null
 
-    abstract fun resolveType(context: ResolutionContext): Type
+    abstract fun resolveReturnType(context: ResolutionContext): Type
+    open fun resolveThrownType(context: ResolutionContext): Type = throw NotImplementedError("Implement resolveThrownType for ${javaClass.simpleName}")
+    open fun resolveYieldedType(context: ResolutionContext): Type = throw NotImplementedError("Implement resolveYieldedType for ${javaClass.simpleName}")
 
     fun resolve(context: ResolutionContext): Expression {
         if (isResolved()) return this
@@ -25,7 +27,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
         }
         // it's fully resolved, so we can infer the type once and for all
         if (resolved.resolvedType == null) {
-            resolved.resolvedType = resolved.resolveType(context)
+            resolved.resolvedType = resolved.resolveReturnType(context)
         }
         return resolved
     }

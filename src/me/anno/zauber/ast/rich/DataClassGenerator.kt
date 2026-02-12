@@ -8,6 +8,8 @@ import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
@@ -26,8 +28,9 @@ object DataClassGenerator {
 
     val i31 = NumberExpression("31", root, -1)
     val i1 = NumberExpression("1", root, -1)
+    val iTrue = SpecialValueExpression(SpecialValue.TRUE, root, -1)
 
-    private const val keywords = Keywords.SYNTHETIC or Keywords.OVERRIDE
+    private const val KEYWORDS = Keywords.SYNTHETIC or Keywords.OVERRIDE
 
     class ExpressionBuilder(var scope: Scope, val origin: Int, val type: Type) {
         var expr: Expression? = null
@@ -99,7 +102,9 @@ object DataClassGenerator {
                 emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithoutArgs, false))
             ) != null
             if (!hasEqualsSelfMethod) {
-                // todo generate this method?
+                // saves type-check and cast, and therefore should be much faster,
+                //  and allow us to not runtime-allocate some instances
+                generateEqualsSelfMethod(classScope, origin, primaryFields)
             }
         }
     }
@@ -126,7 +131,7 @@ object DataClassGenerator {
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "hashCode", emptyList(), emptyList(),
-            methodScope, IntType, emptyList(), body, DataClassGenerator.keywords, origin
+            methodScope, IntType, emptyList(), body, KEYWORDS, origin
         )
     }
 
@@ -151,7 +156,7 @@ object DataClassGenerator {
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "toString", emptyList(), emptyList(),
-            methodScope, StringType, emptyList(), body, DataClassGenerator.keywords, origin
+            methodScope, StringType, emptyList(), body, KEYWORDS, origin
         )
     }
 
@@ -182,12 +187,45 @@ object DataClassGenerator {
                 }
             }
 
-            body = ReturnExpression(builder.expr ?: i1, null, scope, origin)
+            body = ReturnExpression(builder.expr ?: iTrue, null, scope, origin)
             scope
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "equals", emptyList(), listOf(parameter),
-            methodScope, BooleanType, emptyList(), body, DataClassGenerator.keywords, origin
+            methodScope, BooleanType, emptyList(), body, KEYWORDS, origin
+        )
+    }
+
+    private fun ZauberASTBuilderBase.generateEqualsSelfMethod(
+        classScope: Scope, origin: Int,
+        primaryFields: List<Field>
+    ) {
+        lateinit var body: Expression
+        lateinit var parameter: Parameter
+        val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
+            parameter = Parameter(0, "other", classScope.typeWithArgs, scope, origin)
+            val otherField = parameter.getOrCreateField(null, Keywords.NONE)
+
+            val builder = ExpressionBuilder(scope, origin, BooleanType)
+            for (field in primaryFields) {
+                builder.shortcutAnd { subScope ->
+                    val fieldExpr = FieldExpression(field, subScope, origin)
+                    val otherInstanceI = FieldExpression(otherField, subScope, origin) // must be here for implicit cast
+                    val otherFieldExpr = DotExpression(otherInstanceI, emptyList(), fieldExpr, subScope, origin)
+                    CheckEqualsOp(
+                        fieldExpr, otherFieldExpr,
+                        byPointer = false, negated = false,
+                        null, subScope, origin
+                    )
+                }
+            }
+
+            body = ReturnExpression(builder.expr ?: iTrue, null, scope, origin)
+            scope
+        }
+        methodScope.selfAsMethod = Method(
+            classScope.typeWithArgs, false, "equals", emptyList(), listOf(parameter),
+            methodScope, BooleanType, emptyList(), body, KEYWORDS, origin
         )
     }
 

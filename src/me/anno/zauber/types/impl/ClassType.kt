@@ -33,6 +33,10 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         clazz.typeParameters.isEmpty()
     ) emptyParameterList() else typeParameters
 
+    fun withTypeParameters(typeParameters: List<Type>): ClassType {
+        return ClassType(clazz, ParameterList(clazz.typeParameters, typeParameters))
+    }
+
     companion object {
 
         /**

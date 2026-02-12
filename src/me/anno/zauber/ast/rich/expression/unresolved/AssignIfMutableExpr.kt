@@ -118,7 +118,7 @@ class AssignIfMutableExpr(
         }
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         resolveMethod(context) // to crash if something is wrong; not strictly needed
         return exprHasNoType(context)
     }

@@ -22,7 +22,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type
-    override fun resolveType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun needsBackingField(methodScope: Scope): Boolean {
         return dst.needsBackingField(methodScope) ||
                 src.needsBackingField(methodScope)

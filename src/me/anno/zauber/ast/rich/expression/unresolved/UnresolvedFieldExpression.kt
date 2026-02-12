@@ -8,6 +8,7 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 
 class UnresolvedFieldExpression(
     val name: String,
@@ -30,9 +31,13 @@ class UnresolvedFieldExpression(
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = false
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         return resolveField(context).getValueType()
     }
+
+    // todo this would be a getter by default... resolve its type...
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     override fun resolveImpl(context: ResolutionContext): ResolvedGetFieldExpression {
         val field = resolveField(context)

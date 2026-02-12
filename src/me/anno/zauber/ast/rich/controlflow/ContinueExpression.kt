@@ -12,7 +12,10 @@ class ContinueExpression(val label: Scope, scope: Scope, origin: Int) : Expressi
         return "continue@$label"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+
     override fun clone(scope: Scope): Expression = ContinueExpression(label, scope, origin)
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type

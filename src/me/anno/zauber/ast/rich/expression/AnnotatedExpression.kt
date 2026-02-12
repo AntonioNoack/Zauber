@@ -12,7 +12,11 @@ class AnnotatedExpression(val annotation: Annotation, val value: Expression) : E
     }
 
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
-    override fun resolveType(context: ResolutionContext): Type = value.resolveType(context)
+
+    override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)
+    override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
+    override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
+
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean =
         value.hasLambdaOrUnknownGenericsType(context)
 

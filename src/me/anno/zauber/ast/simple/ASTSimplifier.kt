@@ -243,7 +243,7 @@ object ASTSimplifier {
         graph: SimpleGraph
     ): FlowResult {
         val field = expr.field.resolved
-        val valueType = expr.run { resolvedType ?: resolveType(context) }
+        val valueType = expr.run { resolvedType ?: resolveReturnType(context) }
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, graph, true)
         val block1v = block1.value ?: return block1

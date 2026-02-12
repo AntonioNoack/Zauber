@@ -12,7 +12,7 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Ex
         return "${type.toString(depth)}::class"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         return ClassType(getScope("KClass", 1), listOf(type), origin)
     }
 

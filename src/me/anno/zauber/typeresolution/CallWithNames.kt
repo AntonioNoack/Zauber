@@ -218,7 +218,7 @@ object CallWithNames {
                 if (tt is ClassType && tt.clazz.pathStr == "zauber.Array") tt.typeParameters?.first()?.nullIfUnknown()
                 else null
             } ?: run {
-                val types = values.map { it.resolveType(context.withTargetType(null)) }
+                val types = values.map { it.resolveReturnType(context.withTargetType(null)) }
                 if (types.isNotEmpty()) unionTypes(types) else null
             }
 

@@ -6,6 +6,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class CheckEqualsOp(
     val left: Expression, val right: Expression,
@@ -26,7 +27,19 @@ class CheckEqualsOp(
         return "(${left.toString(depth)})$symbol(${right.toString(depth)})"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
+    override fun resolveThrownType(context: ResolutionContext): Type {
+        val context1 = context.withTargetType(null)
+        if (byPointer) return unionTypes(left.resolveThrownType(context1), right.resolveThrownType(context1))
+        TODO("check method itself")
+    }
+
+    override fun resolveYieldedType(context: ResolutionContext): Type {
+        val context1 = context.withTargetType(null)
+        if (byPointer) return unionTypes(left.resolveYieldedType(context1), right.resolveYieldedType(context1))
+        TODO("check method itself")
+    }
+
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // result is always Boolean
     override fun needsBackingField(methodScope: Scope): Boolean {
         return left.needsBackingField(methodScope) || right.needsBackingField(methodScope)

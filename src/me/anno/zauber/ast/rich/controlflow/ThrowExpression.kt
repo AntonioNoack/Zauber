@@ -5,6 +5,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
     ExitExpression(value, null, scope, origin) {
@@ -13,7 +14,14 @@ class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
         return "throw ${value.toString(depth)}"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type {
+        // if value returns or throws, we throw
+        return unionTypes(value.resolveReturnType(context), value.resolveThrownType(context))
+    }
+
+    override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
+
     override fun clone(scope: Scope) = ThrowExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = false
     override fun resolveImpl(context: ResolutionContext) =

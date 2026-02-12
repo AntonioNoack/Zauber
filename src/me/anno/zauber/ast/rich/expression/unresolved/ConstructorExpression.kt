@@ -27,7 +27,7 @@ class ConstructorExpression(
         return typeParameters?.any { it.containsGenerics() } ?: clazz.typeParameters.isNotEmpty()
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         return resolveMethod(context).getTypeFromCall()
     }
 

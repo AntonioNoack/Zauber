@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 
 /**
  * ::callMeNow -> type is some lambda
@@ -15,10 +16,13 @@ class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, o
         return "($left)::$methodName"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         // todo we need to resolve the method...
         TODO("Not yet implemented")
     }
+
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
     override fun needsBackingField(methodScope: Scope): Boolean = false

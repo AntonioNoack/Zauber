@@ -20,7 +20,7 @@ class CompareOp(
         return "(${left.toString(depth)} ${type.symbol} ${right.toString(depth)})"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
 
     /** return type is always Boolean*/
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

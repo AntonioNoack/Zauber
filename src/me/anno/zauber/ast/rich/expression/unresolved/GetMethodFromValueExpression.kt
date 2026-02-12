@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 
 /**
  * Generates a lambda from the base, effectively being a::b -> { a.b(allParamsNeeded) }
@@ -15,10 +16,13 @@ class GetMethodFromValueExpression(val self: Expression, val name: String, origi
         return "${self.toString(depth)}::$name"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         // todo resolve method, then resolve lambdaType from that
         TODO("Not yet implemented")
     }
+
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     // todo or if the resolved method has some...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {

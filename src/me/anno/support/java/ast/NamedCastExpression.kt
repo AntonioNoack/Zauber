@@ -6,6 +6,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types.NothingType
 
 /**
  * if (value instanceof T newName) {
@@ -15,7 +16,9 @@ import me.anno.zauber.types.Types.BooleanType
 class NamedCastExpression(val instanceTest: IsInstanceOfExpr, val newName: String) :
     Expression(instanceTest.scope, instanceTest.origin) {
 
-    override fun resolveType(context: ResolutionContext): Type = BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     override fun clone(scope: Scope): Expression = NamedCastExpression(instanceTest.clone(scope), newName)
 

@@ -34,7 +34,7 @@ class ResolvedCallExpression(
                 valueParameters.any { it.needsBackingField(methodScope) }
     }
 
-    override fun resolveType(context: ResolutionContext): Type = callable.getTypeFromCall()
+    override fun resolveReturnType(context: ResolutionContext): Type = callable.getTypeFromCall()
     override fun splitsScope(): Boolean = false
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun isResolved(): Boolean = true

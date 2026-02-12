@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.StringType
 
 class StringExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
@@ -14,9 +15,9 @@ class StringExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
     override fun toStringImpl(depth: Int): String = "\"$value\""
 
-    override fun resolveType(context: ResolutionContext): Type {
-        return StringType
-    }
+    override fun resolveReturnType(context: ResolutionContext): Type = StringType
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     override fun clone(scope: Scope) = StringExpression(value, scope, origin)
 

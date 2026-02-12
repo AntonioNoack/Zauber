@@ -72,7 +72,7 @@ class MemberNameExpression(
     override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         val field = FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
         if (field != null) return field.getValueType()
 

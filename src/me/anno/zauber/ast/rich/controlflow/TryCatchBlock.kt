@@ -5,6 +5,8 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class TryCatchBlock(
@@ -12,7 +14,7 @@ class TryCatchBlock(
     val finally: Expression?
 ) : Expression(tryBody.scope, tryBody.origin) {
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         val bodyType = TypeResolution.resolveType(context, tryBody)
         val catchTypes = catches.map {
             TypeResolution.resolveType(context, it.body)
@@ -20,6 +22,21 @@ class TryCatchBlock(
         return if (catchTypes == null) bodyType
         else unionTypes(bodyType, catchTypes)
     }
+
+    override fun resolveThrownType(context: ResolutionContext): Type {
+        val base = tryBody.resolveThrownType(context)
+        val fallthrough = andTypes(listOf(base) + catches.map { it.param.type.not() })
+        return unionTypes(fallthrough, finally?.resolveThrownType(context) ?: NothingType)
+    }
+
+    override fun resolveYieldedType(context: ResolutionContext): Type =
+        unionTypes(
+            tryBody.resolveYieldedType(context),
+            unionTypes(
+                unionTypes(catches.map { it.body.resolveYieldedType(context) }),
+                finally?.resolveYieldedType(context) ?: NothingType,
+            )
+        )
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         return tryBody.hasLambdaOrUnknownGenericsType(context) ||

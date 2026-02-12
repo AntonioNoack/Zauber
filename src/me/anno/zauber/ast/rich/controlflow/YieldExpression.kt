@@ -30,7 +30,10 @@ class YieldExpression(value: Expression, scope: Scope, origin: Int) :
         return "yield ${value.toString(depth)}"
     }
 
-    override fun resolveType(context: ResolutionContext): Type = UnitType
+    override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveReturnType(context)
+    override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
+
     override fun clone(scope: Scope) = YieldExpression(value.clone(scope), scope, origin)
     override fun splitsScope(): Boolean = true // yes, this even stops execution
     override fun resolveImpl(context: ResolutionContext): Expression =

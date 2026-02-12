@@ -44,7 +44,7 @@ class FieldExpression(
         )
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         return resolveField(context).getValueType()
     }
 

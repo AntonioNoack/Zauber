@@ -12,6 +12,7 @@ import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.HalfType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.LongType
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.Types.UIntType
 import me.anno.zauber.types.Types.ULongType
@@ -136,7 +137,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         return "NumberExpr($value)"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         val dataType = resolvedType0
         val targetType = context.targetType ?: return dataType
         if (targetType == dataType) return targetType
@@ -190,6 +191,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     }
 
     override fun clone(scope: Scope) = NumberExpression(value, scope, origin)
+
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false

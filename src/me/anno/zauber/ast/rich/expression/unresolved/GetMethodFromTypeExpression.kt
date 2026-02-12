@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 
 class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scope, origin: Int) :
     Expression(scope, origin) {
@@ -12,10 +13,13 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
         return "$base::$name"
     }
 
-    override fun resolveType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): Type {
         // todo resolve method, then convert signature into lambda
         TODO("Not yet implemented")
     }
+
+    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
 
     // todo if the base has some...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = base.typeParameters.isNotEmpty()

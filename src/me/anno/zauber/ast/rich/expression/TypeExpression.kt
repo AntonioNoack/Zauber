@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.ClassType
 
 class TypeExpression(val type: Type, scope: Scope, origin: Int) :
@@ -13,7 +14,10 @@ class TypeExpression(val type: Type, scope: Scope, origin: Int) :
     override fun clone(scope: Scope) = TypeExpression(type, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false
-    override fun resolveType(context: ResolutionContext): Type = type
+
+    override fun resolveReturnType(context: ResolutionContext): Type = type // only if it is an object or package...
+    // todo throws and yields that of the constructor...
+
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = false
     override fun forEachExpression(callback: (Expression) -> Unit) {}
