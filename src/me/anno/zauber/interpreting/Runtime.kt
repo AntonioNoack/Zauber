@@ -39,40 +39,34 @@ class Runtime {
         externalMethods[key] = method
     }
 
-    operator fun get(field: SimpleField): Instance {
-        // todo a field may be used for both use-cases...
+    private fun getMergedField(field: SimpleField): SimpleField {
         var field = field
         while (true) {
-            field = field.mergeInfo?.dst ?: break
+            field = field.mergeInfo?.dst
+                ?: return field
         }
+    }
 
+    operator fun get(field: SimpleField): Instance {
+        val field = getMergedField(field)
         val selfScope = field.scopeIfIsThis
-        if (selfScope != null) {
-            // should we check only within the current call? I think so...
-            for (i in thisStack.lastIndex downTo 0) {
-                val self = thisStack[i]
-                if (self.scope == selfScope) {
-                    // println("Found this@$selfScope: ${self.instance}")
-                    return self.instance
-                }
-            }
+        return if (selfScope != null) getSelf(selfScope) else {
+            val currCall = callStack.last()
+            currCall.simpleFields[field]
+                ?: throw IllegalStateException("Missing field $field, fields: ${currCall.simpleFields}")
+        }
+    }
 
-            if (selfScope.isObject()) {
-                // might be an object...
-                // println("Returning object instance for $selfScope")
-                return getObjectInstance(selfScope.typeWithoutArgs)
-            } else if (!selfScope.isObject()) {
-                val currCall = callStack.last()
-                return currCall.scopes.getOrPut(selfScope) {
-                    val type = selfScope.typeWithoutArgs
-                    getClass(type).createInstance()
-                }
+    private fun getSelf(selfScope: Scope): Instance {
+        val self = thisStack.last()
+        return when {
+            self.scope == selfScope -> self.instance
+            selfScope.isObject() -> getObjectInstance(selfScope.typeWithoutArgs)
+            else -> callStack.last().scopes.getOrPut(selfScope) {
+                val type = selfScope.typeWithoutArgs
+                getClass(type).createInstance()
             }
         }
-
-        val currCall = callStack.last()
-        return currCall.simpleFields[field]
-            ?: throw IllegalStateException("Missing field $field, fields: ${currCall.simpleFields}")
     }
 
     operator fun get(instance: Instance, field: Field): Instance {
