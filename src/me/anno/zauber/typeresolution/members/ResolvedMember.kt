@@ -28,8 +28,8 @@ abstract class ResolvedMember<V>(
 ) {
 
     init {
-        check(!ownerTypes.containsNull()) { "Resolved member must only have resolved owner-types, $this" }
-        check(!callTypes.containsNull()) { "Resolved member must only have resolved call-types, $this" }
+        check(!ownerTypes.containsNull()) { "All owner-types within $this must be resolved, $this" }
+        check(!callTypes.containsNull()) { "All call-types within $this must be resolved, $this" }
     }
 
     val ownerType get() = context.selfType

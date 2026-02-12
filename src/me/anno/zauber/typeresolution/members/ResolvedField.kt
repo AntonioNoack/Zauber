@@ -194,7 +194,8 @@ class ResolvedField(
             // check for self-type: it's another argument...
             val numArguments = (if (baseType.selfType != null) 1 else 0) + baseType.parameters.size
             val className = "Function$numArguments"
-            val lambdaClassScope = getScope(className, numArguments + 1)
+            val genericNames = String(CharArray(numArguments + 1) { 'A' + it })
+            val lambdaClassScope = getScope(className, genericNames)
 
             val method = lambdaClassScope.methods.firstOrNull { it.name == "call" }
                 ?: throw IllegalStateException("Class $className is missing .call() method")

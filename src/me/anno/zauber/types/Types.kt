@@ -23,25 +23,29 @@ object Types {
         return scope
     }
 
-    fun getScope(i: String, numGenerics: Int): Scope {
+    fun getScope(i: String, genericNames: String): Scope {
         val scope = getScope0(i)
+        ensureTypeParameters(scope, genericNames)
+        return scope
+    }
+
+    private fun ensureTypeParameters(scope: Scope, genericNames: String) {
+        val numGenerics = genericNames.length
         if (scope.hasTypeParameters) {
             check(scope.typeParameters.size == numGenerics) {
                 "Expected Types.getScope to have correct number of generics, ${scope.typeParameters.size} vs $numGenerics"
             }
-            return scope
         } else {
             scope.typeParameters =
                 if (numGenerics == 0) emptyList()
-                else List(numGenerics) { Parameter(it, ('A' + it).toString(), NullableAnyType, scope, -1) }
+                else List(numGenerics) { Parameter(it, genericNames[it].toString(), NullableAnyType, scope, -1) }
             scope.hasTypeParameters = true
-            return scope
         }
     }
 
-    private fun getType(i: String, genericNames: String): ClassType {
+    fun getType(i: String, genericNames: String): ClassType {
         val type = ClassType(
-            getScope(i, genericNames.length),
+            getScope(i, genericNames),
             if (genericNames.isEmpty()) emptyList() else null,
             -1
         )

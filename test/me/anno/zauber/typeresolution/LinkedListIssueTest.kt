@@ -1,17 +1,19 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
+import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types.getType
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class LinkedListIssueTest {
     @Test
     fun testInnerCallResolution() {
-        // why can getStorageIndex not be resolved?
-        //  probably because the class isn't confident in being able to access the outer class
-        // todo solve next issue...
-        testTypeResolution(
+        val type = testTypeResolution(
             """
+        val tested = LinkedList<Int>(1)
         
+        package zauber
         interface Iterator<V> {
             fun hasNext(): Boolean
             fun next(): V
@@ -24,6 +26,15 @@ class LinkedListIssueTest {
         class Array<V>(override val size: Int) : Iterable<V> {
             external override operator fun get(index: Int): V
             external operator fun set(index: Int, value: V)
+            external operator fun get(index: Int): V
+        }
+        
+        fun repeat(count: Int, runnable: () -> Unit) {
+            var i = count
+            while (i > 0) {
+                runnable()
+                i--
+            }
         }
         
         class LinkedList<V>(capacity: Int = 16) : Iterable<V> {
@@ -64,14 +75,12 @@ class LinkedListIssueTest {
             }
         }
         
-        val tested = LinkedList<Int>(1)
-        
-        package zauber
         class Int {
             external fun unaryMinus(): Int
             external fun minus(other: Int): Int
         }
             """.trimIndent()
         )
+        assertEquals(getType("LinkedList", "V").withTypeParameter(IntType), type)
     }
 }
