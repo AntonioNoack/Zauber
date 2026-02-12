@@ -1,6 +1,7 @@
 package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
@@ -54,6 +55,9 @@ object DefaultParameterExpansion {
             val scope = scopeParent.generate("f:${self.name}", ScopeType.METHOD)
             scope.typeParameters = self.typeParameters
 
+            val subValueParameters = self.valueParameters.subList(0, i).map { it.clone(scope) }
+            subValueParameters.forEach { param -> param.getOrCreateField(null, Keywords.NONE) }
+
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
                 val value =
@@ -76,9 +80,9 @@ object DefaultParameterExpansion {
             }
             val newMethod = Method(
                 self.selfType, self.explicitSelfType, self.name,
-                self.typeParameters, self.valueParameters.subList(0, i),
+                self.typeParameters, subValueParameters,
                 scope, self.returnType, self.extraConditions,
-                newBody,
+                ReturnExpression(newBody, null, scope, origin),
                 self.keywords,
                 origin
             )
