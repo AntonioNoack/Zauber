@@ -154,17 +154,14 @@ class ResolvedField(
     override fun getScopeOfResolved(): Scope = resolved.codeScope
 
     fun getValueType(): Type {
-        LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}")
+        LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}, selfType: $selfType")
 
-        val field = resolved
-        val selfType = field.selfType
+        val valueType = resolved.resolveValueType(context)
+        val forType = selfTypeParameters.resolveGenerics(selfType, valueType)
+        val forCall = callTypeParameters.resolveGenerics(selfType, forType)
 
-        val valueType = field.resolveValueType(context)
-        val forType = ownerTypes.resolveGenerics(selfType, valueType)
-        val forCall = callTypes.resolveGenerics(selfType, forType)
-
-        val context = context.withSelfType(field.selfType)
-        return filterTypeByScopeConditions(field, forCall, context, codeScope)
+        val context = context.withSelfType(selfType)
+        return filterTypeByScopeConditions(resolved, forCall, context, codeScope)
     }
 
     override fun getTypeFromCall(): Type {

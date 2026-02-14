@@ -17,10 +17,10 @@ class ResolvedConstructor(
     override fun getScopeOfResolved(): Scope = resolved.scope
 
     override fun getTypeFromCall(): Type {
-        return ClassType(resolved.selfType.clazz, ownerTypes)
+        return ClassType(resolved.selfType.clazz, selfTypeParameters)
     }
 
     override fun toString(): String {
-        return "ResolvedConstructor(constructor=$resolved, generics=$ownerTypes)"
+        return "ResolvedConstructor(constructor=$resolved, generics=$selfTypeParameters)"
     }
 }

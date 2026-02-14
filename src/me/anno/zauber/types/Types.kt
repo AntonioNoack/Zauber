@@ -80,6 +80,7 @@ object Types {
     val MapType = getType("Map", "KV")
     val PairType = getType("Pair", "FS")
     val YieldableType = getType("Yieldable", "RTY")
+    val NullPointerExceptionType = getType("NullPointerException", "")
 
     fun register() {
         for (type in types) {

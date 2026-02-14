@@ -34,7 +34,7 @@ object Compile {
 
     private val LOGGER = LogManager.getLogger(Compile::class)
 
-    val stdlib = "zauber"
+    val stdlibName = "zauber"
 
     val root = Scope("*")
 

@@ -133,23 +133,38 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val lastLineBreak = before.lastIndexOf('\n')
         val i0 = getI0(i) - lastLineBreak
         val i1 = getI1(i) - lastLineBreak
-        // todo show position in line, and surroundings with arrow ^^^^ for the respective token
+        // show position in line, and surroundings with arrow ^^^^ for the respective token
         val posStr = getLinePosString(i0, i1, before, lineNumber, lastLineBreak)
         return "$fileName:$lineNumber, ${i0}-${i1}, ${getTypeUnsafe(i)}, '${toStringUnsafe(i)}'\n$posStr"
     }
 
     fun getLinePosString(i0: Int, i1: Int, before: String, lineNumber: Int, lastLineBreak: Int): String {
         var start = before.lastIndexOf('\n', lastLineBreak - 1) + 1
-        if (before.substring(start, lastLineBreak).all { it.isWhitespace() }) start = lastLineBreak + 1
+        val isSingleLine = before.substring(start, lastLineBreak).all { it.isWhitespace() }
+        if (isSingleLine) start = lastLineBreak + 1
 
         var end = source.indexOf('\n', i1 + lastLineBreak)
         if (end < 0) end = source.length
-        val length = i1 - i0
-        // todo nicely formatted line numbers before it...
-        // todo trim the lines? better...
+        val tokenLength = i1 - i0
+
+        if (isSingleLine) {
+            var i0 = i0
+            while (source[start].isWhitespace()) {
+                start++
+                i0--
+            }
+
+            val lnPrefix = "$fileName:$lineNumber | "
+            return "$lnPrefix${source.substring(start, end)}\n" +
+                    " ".repeat(i0 + lnPrefix.length - 1) +
+                    "^".repeat(tokenLength)
+        }
+
+        // todo nicely formatted line numbers before it
+        // todo trim the lines
         return "${source.substring(start, end)}\n" +
                 " ".repeat(i0 - 1) +
-                "^".repeat(length)
+                "^".repeat(tokenLength)
     }
 
     fun getI0(i: Int) = offsets[i * 2]

@@ -84,6 +84,11 @@ class SimpleCall(
 
     override fun eval(runtime: Runtime): BlockReturn {
         val self = runtime[self]
+        if (runtime.isNull(self)) {
+            // this should never happen
+            throw IllegalStateException("Unexpected NPE: $this")
+        }
+
         val method = methods[self.type.type] ?: sample
 
         initializeArrayIfNeeded(self, method, runtime)

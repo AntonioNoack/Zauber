@@ -20,6 +20,10 @@ class SimpleGetField(
 
     override fun eval(runtime: Runtime): BlockReturn {
         val self = runtime[self]
+        if (runtime.isNull(self)) {
+            // this should never happen
+            throw IllegalStateException("Unexpected NPE: $this")
+        }
         println("[GET] $self.${field.name}")
         val value = runtime[self, field]
         return BlockReturn(ReturnType.VALUE, value)

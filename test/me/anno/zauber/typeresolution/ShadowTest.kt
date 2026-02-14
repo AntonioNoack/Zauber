@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.Compile.stdlib
+import me.anno.zauber.Compile.stdlibName
 import me.anno.zauber.types.Types.FloatType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -23,7 +23,7 @@ class ShadowTest {
                 val tested = main(0)
                 
                 // register classes
-                package $stdlib
+                package $stdlibName
                 class Int
                 class Float
             """.trimIndent()

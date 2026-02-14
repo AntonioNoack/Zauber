@@ -158,6 +158,11 @@ class Runtime {
         self: Instance, method1: MethodSpecialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
+
+        if (isNull(self)) {
+            throw IllegalArgumentException("Cannot execute $method1 on null instance")
+        }
+
         val valueParameters = valueParameters.map { this[it] }
         val method = method1.method
         if (method.isExternal()) {
@@ -217,7 +222,9 @@ class Runtime {
     }
 
     fun getObjectInstance(type: ClassType): Instance {
-        check(type.clazz.isObject()) { "Only objects have an object instance, not ${type.clazz.pathStr}" }
+        check(type.clazz.isObjectLike() || type.clazz.scopeType == null) {
+            "Only objects have an object instance, not ${type.clazz.pathStr})"
+        }
         return getClass(type).getOrCreateObjectInstance(this)
     }
 

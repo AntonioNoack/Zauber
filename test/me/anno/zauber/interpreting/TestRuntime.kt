@@ -39,7 +39,8 @@ class TestRuntime {
             Stdlib.registerPrintln(runtime)
             Stdlib.registerArrayAccess(runtime)
             val getter1 = MethodSpecialization(getter, noSpecialization)
-            val value = runtime.executeCall(runtime.getNull(), getter1, emptyList())
+            val self = runtime.getObjectInstance(scope.typeWithArgs)
+            val value = runtime.executeCall(self, getter1, emptyList())
             return runtime to value
         }
     }

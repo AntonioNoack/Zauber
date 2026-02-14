@@ -26,7 +26,6 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.*
 import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.Types.NumberType
@@ -46,7 +45,7 @@ abstract class ZauberASTBuilderBase(
         private val LOGGER = LogManager.getLogger(ZauberASTBuilderBase::class)
 
         fun resolveUnresolvedTypes(path: Type?): Type? {
-           return path?.resolve()
+            return path?.resolve()
         }
 
         fun resolveTypeByName(
@@ -103,7 +102,12 @@ abstract class ZauberASTBuilderBase(
         pseudoScope.typeParameters = readTypeParameterDeclarations(pseudoScope)
 
         check(tokens.equals(i++, "="))
-        val trueType = readType(null, true)
+
+        var trueType = readType(null, true)
+        if (trueType is ClassType && trueType.typeParameters == null) {
+            trueType = trueType.withTypeParameters(emptyList())
+        }
+
         pseudoScope.selfAsTypeAlias = trueType
         popGenericParams()
     }

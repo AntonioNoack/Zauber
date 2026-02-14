@@ -6,7 +6,9 @@ import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
@@ -61,6 +63,12 @@ class ZClass(val type: Type) {
     }
 
     fun createInstance(): Instance {
+        if (type == NullType || type == NothingType) {
+            throw IllegalStateException("Cannot create instance of $type")
+        }
+        if (type !is ClassType) {
+            throw IllegalStateException("Type to create must be concrete and fully specified ($type)")
+        }
         return Instance(this, arrayOfNulls(properties.size))
     }
 

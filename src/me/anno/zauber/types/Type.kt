@@ -18,10 +18,11 @@ abstract class Type {
         if (this == type) return true
         return when (this) {
             is UnionType -> types.any { member -> member.contains(type) }
+            is AndType -> types.any { member -> member.contains(type) }
             NullType -> false
             is SelfType, is ThisType -> throw NotImplementedError("Does $this contain $type?")
             is ClassType -> typeParameters?.any { it.contains(type) } == true
-            is LambdaType -> false // todo does it??? kind of known...
+            is LambdaType -> (selfType?.contains(type) ?: false) || returnType.contains(type)
             is GenericType -> false // not the same; todo we might need to check super/redirects
             else -> throw NotImplementedError("Does $this contain $type?")
         }
@@ -32,6 +33,8 @@ abstract class Type {
             NullType -> false
             is ClassType -> typeParameters?.any { it.containsGenerics() } ?: false
             is UnionType -> types.any { it.containsGenerics() }
+            is AndType -> types.any { it.containsGenerics() }
+            is NotType -> type.containsGenerics()
             is GenericType -> true
             is LambdaType -> parameters.any { it.type.containsGenerics() } || returnType.containsGenerics()
             else -> throw NotImplementedError("Does $this contain generics?")
@@ -112,9 +115,9 @@ abstract class Type {
             NullType, NothingType,
             is UnknownType -> true
             is GenericType, is ThisType, is SelfType -> false
-            is ClassType -> typeParameters == null || typeParameters.all { it.isFullySpecialized() }
-            is UnionType -> types.all { it.isFullySpecialized() }
-            is AndType -> types.all { it.isFullySpecialized() }
+            is ClassType -> typeParameters?.all { member -> member.isFullySpecialized() } ?: true
+            is UnionType -> types.all { member -> member.isFullySpecialized() }
+            is AndType -> types.all { member -> member.isFullySpecialized() }
             is NotType -> type.isFullySpecialized()
             is LambdaType -> (selfType?.isFullySpecialized() ?: true) &&
                     parameters.all { it.type.isFullySpecialized() } &&

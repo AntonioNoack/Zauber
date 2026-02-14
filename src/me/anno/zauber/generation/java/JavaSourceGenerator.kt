@@ -558,7 +558,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
         writeBlock {
             try {
-                val method1 = MethodSpecialization(method, context.specialization)
+                val method1 = MethodSpecialization(method, context.spec)
                 val simplified = ASTSimplifier.simplify(method1)
                 CodeReconstruction.createCodeFromGraph(simplified)
                 // todo simplify all entry points as methods...

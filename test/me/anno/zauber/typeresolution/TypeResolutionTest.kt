@@ -16,6 +16,7 @@ import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.Types.ArrayListType
+import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.CharType
 import me.anno.zauber.types.Types.DoubleType
@@ -119,20 +120,16 @@ class TypeResolutionTest {
 
     @Test
     fun testConstructorWithParameter() {
-        val intArrayType = standardClasses["IntArray"]!!
-        // we need to define the constructor without any args
-        val constructors = intArrayType.constructors
-        if (constructors.none { it.valueParameters.size == 1 }) {
-            val scope = intArrayType.getOrCreatePrimConstructorScope()
-            scope.selfAsConstructor = Constructor(
-                listOf(Parameter(0, "size", IntType, intArrayType, -1)),
-                scope, null, null,
-                Keywords.NONE, -1
-            )
-        }
-        assertEquals(intArrayType.typeWithoutArgs, testTypeResolution("val tested = IntArray(5)"))
+        val code = """
+            val tested = IntArray(5)
+            
+            package zauber
+            class Array<V>(val size: Int)
+            typealias IntArray = Array<Int>
+        """.trimIndent()
+        assertEquals(ArrayType.withTypeParameter(IntType), testTypeResolution(code))
     }
-
+    
     @Test
     fun testGetOperator() {
         val type = testTypeResolution(

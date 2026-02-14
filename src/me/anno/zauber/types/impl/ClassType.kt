@@ -37,6 +37,11 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         return ClassType(clazz, ParameterList(clazz.typeParameters, typeParameters))
     }
 
+    fun withTypeParameters(typeParameters: ParameterList?): ClassType {
+        typeParameters ?: return this
+        return ClassType(clazz, typeParameters)
+    }
+
     fun withTypeParameter(typeParameter: Type): ClassType {
         return ClassType(clazz, ParameterList(clazz.typeParameters, listOf(typeParameter)))
     }

@@ -12,6 +12,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.Specialization
 
 object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() {
@@ -53,7 +54,6 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
     ): ResolvedConstructor? {
-        LOGGER.info("Checking $scope for constructors")
         check(scope.name == name)
         if (scope.scopeType == ScopeType.TYPE_ALIAS) {
             return getByTypeAlias(scope, returnType, selfType, typeParameters, valueParameters)
@@ -95,14 +95,17 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         //  because we don't know yet whether a method call is a constructor with 100% accuracy
 
         val newType = scope.selfAsTypeAlias!!
+        val newTypeParams = (newType as? ClassType)?.typeParameters
+
         val typeParameters0 = typeParameters
             ?.toParameterList(scope.typeParameters)
+
 
         val newType2 = typeParameters0.resolveGenerics(selfType, newType)
 
         val typeParameters2 = typeParameters?.map { typeParam ->
             typeParameters0.resolveGenerics(selfType, typeParam)
-        }
+        } ?: newTypeParams
 
         val scope = typeToScope(newType2)!!
         return findMemberInScopeImpl(
@@ -127,8 +130,9 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
         LOGGER.info("Resolving generics for constructor $constructor")
         val matchScore = MatchScore(constructor.valueParameters.size + 2)
+        val tmpSelfType = constructor.selfType.withTypeParameters(typeParameters)
         val generics = findGenericsForMatch(
-            null, null,
+            tmpSelfType, tmpSelfType,
             memberReturnType, returnType,
             constructor.selfType.clazz.typeParameters, typeParameters,
             constructor.valueParameters, valueParameters, matchScore

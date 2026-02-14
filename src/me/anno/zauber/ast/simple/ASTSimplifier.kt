@@ -757,8 +757,8 @@ object ASTSimplifier {
         var blockI = flow0
         val values = params.mapIndexed { index, parameter ->
             var targetType = method.valueParameters[index].type
-            targetType = method0.ownerTypes.resolveGenerics(null, targetType)
-            targetType = method0.callTypes.resolveGenerics(null, targetType)
+            targetType = method0.selfTypeParameters.resolveGenerics(null, targetType)
+            targetType = method0.callTypeParameters.resolveGenerics(null, targetType)
             targetType = targetType.resolve().specialize()
             val contextI = context.withTargetType(targetType)
             // (value, blockJ)
@@ -824,7 +824,7 @@ object ASTSimplifier {
             val dst = block0.field(method0.getTypeFromCall())
             var selfType = method.selfType
             if (selfType.typeParameters == null) {
-                selfType = ClassType(selfType.clazz, method0.ownerTypes)
+                selfType = ClassType(selfType.clazz, method0.selfTypeParameters)
             }
             // todo allocation could fail, too...
             block0.add(SimpleAllocateInstance(dst, selfType, scope, origin))

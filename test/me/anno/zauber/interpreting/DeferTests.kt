@@ -23,6 +23,7 @@ class DeferTests {
             val tested get() = run()
             
             package zauber
+            object Unit
             class String
             external fun println(str: String)
         """.trimIndent()

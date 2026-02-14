@@ -19,8 +19,8 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
 
 abstract class ResolvedMember<V>(
-    val ownerTypes: ParameterList,
-    val callTypes: ParameterList,
+    val selfTypeParameters: ParameterList,
+    val callTypeParameters: ParameterList,
     val resolved: V,
     val context: ResolutionContext,
     val codeScope: Scope,
@@ -28,18 +28,18 @@ abstract class ResolvedMember<V>(
 ) {
 
     init {
-        check(!ownerTypes.containsNull()) { "All owner-types within $this must be resolved" }
-        check(!callTypes.containsNull()) { "All call-types within $this must be resolved" }
+        check(!selfTypeParameters.containsNull()) { "All owner-types within $this must be resolved" }
+        check(!callTypeParameters.containsNull()) { "All call-types within $this must be resolved" }
     }
 
-    val ownerType get() = context.selfType
-    val specialization = Specialization(ownerTypes + callTypes)
+    val selfType get() = context.selfType
+    val specialization = Specialization(selfTypeParameters + callTypeParameters)
 
     abstract fun getTypeFromCall(): Type
     abstract fun getScopeOfResolved(): Scope
 
     fun getBaseIfMissing(scope: Scope, origin: Int): Expression {
-        val type = ownerType?.resolve()
+        val type = selfType?.resolve()
         if (type == null) {
             var rs = getScopeOfResolved()
             while (true) {
@@ -84,11 +84,13 @@ abstract class ResolvedMember<V>(
                     genericValues.getOrNull(idx) ?: type
                 }
                 is UnionType -> {
-                    val types = type.types.map { genericValues.resolveGenerics(selfType, it) }
+                    val types = type.types
+                        .map { genericValues.resolveGenerics(selfType, it) }
                     unionTypes(types)
                 }
                 is AndType -> {
-                    val types = type.types.map { genericValues.resolveGenerics(selfType, it) }
+                    val types = type.types
+                        .map { genericValues.resolveGenerics(selfType, it) }
                     andTypes(types)
                 }
                 is ClassType -> {
@@ -110,13 +112,8 @@ abstract class ResolvedMember<V>(
                     }
                     LambdaType(newSelfType, newParameters, newReturnType)
                 }
-                is SelfType -> selfType ?: run {
-                    LOGGER.warn("SelfType missing... ${type.scope}")
-                    type.scope.typeWithoutArgs
-                }
-                is ThisType -> selfType ?: run {
-                    LOGGER.warn("ThisType missing... ${type.javaClass}")
-                    type.type
+                is SelfType, is ThisType -> selfType ?: run {
+                    throw IllegalStateException("ThisType/SelfType missing... $type")
                 }
                 is TypeOfField -> {
                     val valueType = type.field.valueType

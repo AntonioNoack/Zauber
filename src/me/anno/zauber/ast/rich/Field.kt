@@ -108,7 +108,7 @@ class Field(
             }
         }
 
-        throw IllegalStateException("Field $this (${resolveOrigin(origin)}) has neither type, nor initial/getter, cannot resolve type")
+        throw IllegalStateException("Field $this at ${resolveOrigin(origin)} has neither type, nor initial/getter, cannot resolve type")
     }
 
     fun getGetterOrSetterScope(): Scope? {

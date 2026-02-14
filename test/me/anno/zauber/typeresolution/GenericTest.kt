@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.Compile.stdlib
+import me.anno.zauber.Compile.stdlibName
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.StandardTypes.standardClasses
@@ -117,7 +117,7 @@ class GenericTest {
                 val tested = emptyList<Int>().map { it + 1f }
                 
                 // mark Int as a class (that extends Any)
-                package $stdlib
+                package $stdlibName
                 class Int: Any() {
                     operator fun plus(other: Int): Int
                     operator fun plus(other: Float): Float
@@ -182,7 +182,7 @@ class GenericTest {
     }
 
     @Test
-    fun testListReduce() {
+    fun testListReduceWithLambda() {
         // todo this passes alone, but fails in a group...
         assertEquals(
             IntType,
@@ -193,7 +193,35 @@ class GenericTest {
                 val tested = emptyList<Int>().reduce { a,b -> a + b }
                 
                 // mark Int as a class (that extends Any)
-                package $stdlib
+                package $stdlibName
+                class Int: Any() {
+                    operator fun plus(other: Int): Int
+                    operator fun plus(other: Float): Float
+                }
+                // mark Any as a class
+                class Any()
+                // give some List-details
+                interface List<V> {
+                    val size: Int
+                    operator fun get(index: Int): V
+                }
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testListReduceWithTypeMethod() {
+        assertEquals(
+            IntType,
+            testTypeResolution(
+                """
+                fun <V> emptyList(): List<V>
+                fun <V> List<V>.reduce(map: (V, V) -> V): V
+                val tested = emptyList<Int>().reduce(Int::plus)
+                
+                // mark Int as a class (that extends Any)
+                package $stdlibName
                 class Int: Any() {
                     operator fun plus(other: Int): Int
                     operator fun plus(other: Float): Float

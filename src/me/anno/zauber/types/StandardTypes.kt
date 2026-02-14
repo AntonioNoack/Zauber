@@ -1,7 +1,7 @@
 package me.anno.zauber.types
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.Compile.stdlib
+import me.anno.zauber.Compile.stdlibName
 
 /**
  * types, that are automatically imported into every file
@@ -10,77 +10,77 @@ object StandardTypes {
 
     init {
         // stdlib must be a package to be searched for children automatically
-        root.getOrPut(stdlib, ScopeType.PACKAGE)
+        root.getOrPut(stdlibName, ScopeType.PACKAGE)
     }
 
     val standardClasses = mapOf(
         // strings
-        "String" to stdlib,
-        "StringBuilder" to stdlib,
-        "CharSequence" to stdlib,
+        "String" to stdlibName,
+        "StringBuilder" to stdlibName,
+        "CharSequence" to stdlibName,
 
         // special types
-        "Any" to stdlib,
-        "Nothing" to stdlib,
-        "Unit" to stdlib,
-        "Array" to stdlib,
+        "Any" to stdlibName,
+        "Nothing" to stdlibName,
+        "Unit" to stdlibName,
+        "Array" to stdlibName,
 
         // util
-        "Class" to stdlib,
-        "Enum" to stdlib,
-        "IntRange" to stdlib,
-        "ClosedFloatingPointRange" to stdlib,
-        "Lazy" to stdlib,
+        "Class" to stdlibName,
+        "Enum" to stdlibName,
+        "IntRange" to stdlibName,
+        "ClosedFloatingPointRange" to stdlibName,
+        "Lazy" to stdlibName,
 
-        "Comparable" to stdlib,
-        "Comparator" to stdlib,
+        "Comparable" to stdlibName,
+        "Comparator" to stdlibName,
 
-        "Iterator" to stdlib,
-        "ListIterator" to stdlib,
-        "MutableIterator" to stdlib,
-        "MutableListIterator" to stdlib,
-        "Iterable" to stdlib,
-        "Collection" to stdlib,
-        "MutableCollection" to stdlib,
+        "Iterator" to stdlibName,
+        "ListIterator" to stdlibName,
+        "MutableIterator" to stdlibName,
+        "MutableListIterator" to stdlibName,
+        "Iterable" to stdlibName,
+        "Collection" to stdlibName,
+        "MutableCollection" to stdlibName,
 
-        "List" to stdlib,
-        "ArrayList" to stdlib,
-        "MutableList" to stdlib,
+        "List" to stdlibName,
+        "ArrayList" to stdlibName,
+        "MutableList" to stdlibName,
 
-        "IndexedValue" to stdlib,
+        "IndexedValue" to stdlibName,
 
-        "Set" to stdlib,
-        "HashSet" to stdlib,
-        "MutableSet" to stdlib,
+        "Set" to stdlibName,
+        "HashSet" to stdlibName,
+        "MutableSet" to stdlibName,
 
-        "Map" to stdlib,
-        "HashMap" to stdlib,
-        "MutableMap" to stdlib,
+        "Map" to stdlibName,
+        "HashMap" to stdlibName,
+        "MutableMap" to stdlibName,
 
-        "Annotation" to stdlib,
-        "Suppress" to stdlib,
-        "Deprecated" to stdlib,
+        "Annotation" to stdlibName,
+        "Suppress" to stdlibName,
+        "Deprecated" to stdlibName,
 
-        "Throwable" to stdlib,
-        "Exception" to stdlib,
-        "RuntimeException" to stdlib,
-        "InterruptedException" to stdlib,
-        "InstantiationException" to stdlib,
-        "NoSuchMethodException" to stdlib,
-        "IllegalArgumentException" to stdlib,
-        "IllegalStateException" to stdlib,
-        "ClassCastException" to stdlib,
-        "Error" to stdlib,
-        "NoClassDefFoundError" to stdlib,
-        "ClassNotFoundException" to stdlib,
-        "NoSuchFieldException" to stdlib,
-        "NoSuchMethodException" to stdlib,
-        "OutOfMemoryError" to stdlib,
-        "IndexOutOfBoundsException" to stdlib,
+        "Throwable" to stdlibName,
+        "Exception" to stdlibName,
+        "RuntimeException" to stdlibName,
+        "InterruptedException" to stdlibName,
+        "InstantiationException" to stdlibName,
+        "NoSuchMethodException" to stdlibName,
+        "IllegalArgumentException" to stdlibName,
+        "IllegalStateException" to stdlibName,
+        "ClassCastException" to stdlibName,
+        "Error" to stdlibName,
+        "NoClassDefFoundError" to stdlibName,
+        "ClassNotFoundException" to stdlibName,
+        "NoSuchFieldException" to stdlibName,
+        "NoSuchMethodException" to stdlibName,
+        "OutOfMemoryError" to stdlibName,
+        "IndexOutOfBoundsException" to stdlibName,
 
-        "Pair" to stdlib,
-        "Triple" to stdlib,
-        "Number" to stdlib,
+        "Pair" to stdlibName,
+        "Triple" to stdlibName,
+        "Number" to stdlibName,
 
         // util²
         "JvmField" to "kotlin.jvm",
@@ -95,24 +95,24 @@ object StandardTypes {
         "RandomAccess" to "java.util",
 
         // natives
-        "Boolean" to stdlib,
-        "Byte" to stdlib,
-        "Short" to stdlib,
-        "Char" to stdlib,
-        "Int" to stdlib,
-        "Long" to stdlib,
-        "Float" to stdlib,
-        "Double" to stdlib,
+        "Boolean" to stdlibName,
+        "Byte" to stdlibName,
+        "Short" to stdlibName,
+        "Char" to stdlibName,
+        "Int" to stdlibName,
+        "Long" to stdlibName,
+        "Float" to stdlibName,
+        "Double" to stdlibName,
 
         // native arrays
-        "BooleanArray" to stdlib,
-        "ByteArray" to stdlib,
-        "ShortArray" to stdlib,
-        "CharArray" to stdlib,
-        "IntArray" to stdlib,
-        "LongArray" to stdlib,
-        "FloatArray" to stdlib,
-        "DoubleArray" to stdlib,
+        "BooleanArray" to stdlibName,
+        "ByteArray" to stdlibName,
+        "ShortArray" to stdlibName,
+        "CharArray" to stdlibName,
+        "IntArray" to stdlibName,
+        "LongArray" to stdlibName,
+        "FloatArray" to stdlibName,
+        "DoubleArray" to stdlibName,
     ).mapValues { (name, packageName) ->
         val parts = packageName.split('.')
         var currPackage = root

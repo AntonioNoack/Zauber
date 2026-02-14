@@ -42,7 +42,7 @@ class ResolvedCallExpression(
     override fun toStringImpl(depth: Int): String {
         val base = self.toString(depth)
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
-        val typeParameters = callable.callTypes
+        val typeParameters = callable.callTypeParameters
         val name = when (val m = callable.resolved) {
             is Method -> m.name
             is Field -> m.name

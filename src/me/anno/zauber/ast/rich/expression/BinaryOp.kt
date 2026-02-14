@@ -45,13 +45,14 @@ fun ASTBuilderBase.binaryOp(
                     GetMethodFromTypeExpression(getBase(), right.name, right.scope, right.origin)
                 }
                 right is MemberNameExpression -> {
-                    GetMethodFromValueExpression(left, right.name, right.origin)
+                    GetMethodFromValueExpression(left, right.name, right.nameAsImport, right.origin)
                 }
                 right is UnresolvedFieldExpression -> {
-                    GetMethodFromValueExpression(left, right.name, right.origin)
+                    GetMethodFromValueExpression(left, right.name, right.nameAsImport, right.origin)
                 }
                 right is FieldExpression -> {
-                    GetMethodFromValueExpression(left, right.field.name, right.origin)
+                    val name = right.field.name
+                    GetMethodFromValueExpression(left, name, nameAsImport(name), right.origin)
                 }
                 else -> throw NotImplementedError(
                     "WhichType? $left::$right, " +

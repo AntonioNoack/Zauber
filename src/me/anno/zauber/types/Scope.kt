@@ -407,6 +407,11 @@ class Scope(val name: String, val parent: Scope? = null) {
             ?: throw IllegalStateException("Unresolved type '$name' in $this, children: ${children.map { it.name }}")
     }
 
+    fun resolveTypeOrNull(name: String, imports: List<Import>): Type? {
+        val name = if (name == "kotlin") "zauber" else name
+        return resolveTypeOrNull(name, imports, true)
+    }
+
     @Deprecated("Please use the version with origin, if possible")
     fun generateName(prefix: String): String {
         return "$${prefix}_n${nextAnonymousName.incrementAndGet()}"
@@ -456,6 +461,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isMethodType(): Boolean = scopeType?.isMethodType() == true
     fun isTypeAlias(): Boolean = scopeType == ScopeType.TYPE_ALIAS
     fun isObject(): Boolean = scopeType?.isObject() == true
+    fun isObjectLike(): Boolean = isObject() || scopeType == ScopeType.PACKAGE
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
     fun isValueType(): Boolean = keywords.hasFlag(Keywords.VALUE)
 

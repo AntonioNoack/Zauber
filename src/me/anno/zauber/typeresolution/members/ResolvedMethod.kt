@@ -35,7 +35,7 @@ class ResolvedMethod(
     }
 
     override fun toString(): String {
-        return "ResolvedMethod(method=$resolved, generics=$callTypes)"
+        return "ResolvedMethod(method=$resolved, generics=$callTypeParameters)"
     }
 
     companion object {
