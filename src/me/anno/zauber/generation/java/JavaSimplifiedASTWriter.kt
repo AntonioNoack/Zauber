@@ -120,15 +120,6 @@ object JavaSimplifiedASTWriter {
         val instructions = expr.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
-            if (instr is SimpleMerge) {
-                appendAssign(instr)
-                builder.setLength(builder.length - 3) // remove " = "
-                builder.append(';')
-                nextLine()
-            }
-        }
-        for (i in instructions.indices) {
-            val instr = instructions[i]
             appendSimplifiedAST(method, instr /*loop*/)
             if (instr is SimpleAssignment &&
                 instr.dst.type == NothingType
@@ -150,7 +141,6 @@ object JavaSimplifiedASTWriter {
         method: MethodLike, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
-        if (expr is SimpleMerge) return
         if (expr is SimpleAssignment && expr.dst.type != NothingType) {
             val notNeeded = expr.dst.numReads == 0
             if (notNeeded) comment { appendAssign(expr) }

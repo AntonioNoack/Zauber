@@ -11,6 +11,8 @@ import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.impl.ClassType
 
 class NamedCallExpression(
     base: Expression,
@@ -75,6 +77,17 @@ class NamedCallExpression(
         val valueParameters = resolveValueParameters(context, valueParameters)
         val constructor = null
         val contextI = context.withSelfType(baseType)
+        println("Resolving callable with baseType $baseType")
+        if (baseType is ClassType && baseType.clazz.typeParameters.isNotEmpty() && baseType.typeParameters == null) {
+            println("self: $self (${self.javaClass.simpleName})")
+            if (self is FieldExpression) {
+                println("self-type: ${self.field.valueType}")
+                if (self.field.name == "content" && self.field.valueType == ArrayType) {
+                    throw IllegalStateException("Expected ${self.field}: ${self.field.valueType} to have type parameters")
+                }
+            }
+            throw IllegalStateException("Missing type parameters for $baseType in $this, $context")
+        }
         return MethodResolver.resolveCallable(
             contextI, scope, name, nameAsImport, constructor,
             typeParameters, valueParameters, origin

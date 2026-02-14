@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.ast.simple.expression.SimpleMerge
+import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.Type
 

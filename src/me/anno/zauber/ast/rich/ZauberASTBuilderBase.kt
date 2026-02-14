@@ -454,7 +454,14 @@ abstract class ZauberASTBuilderBase(
         val path = readTypePath(selfType) // e.g. ArrayList
             ?: return null
 
-        val typeArgs = readTypeParameters(selfType)
+        val typeArgs0 = readTypeParameters(selfType)
+        if (typeArgs0 != null && path is ClassType && path.typeParameters != null) {
+            throw IllegalStateException("Type-args collision/resolution needed: $path + <$typeArgs0>")
+        }
+
+        val typeArgs = typeArgs0
+            ?: (path as? ClassType)?.typeParameters
+
         val baseType = when {
             path is ClassType -> ClassType(path.clazz, typeArgs, origin(i))
             path is UnresolvedType -> UnresolvedType(path.className, typeArgs, currPackage, imports)

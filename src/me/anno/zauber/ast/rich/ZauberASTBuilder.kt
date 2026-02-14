@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -561,7 +562,7 @@ class ZauberASTBuilder(
 
             val initialValue = if (consumeIf("=")) readExpression() else null
 
-            // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
+            println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
             val keywords = packKeywords()
             val parameter = Parameter(

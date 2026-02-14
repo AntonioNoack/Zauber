@@ -183,7 +183,11 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                 }
 
                 consumeIf("enum") -> readClass(ScopeType.ENUM_CLASS)
-                consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+                consumeIf("class") -> {
+                    val type = if (currPackage.isClassType() && !isStatic) ScopeType.INNER_CLASS
+                    else ScopeType.NORMAL_CLASS
+                    readClass(type)
+                }
                 consumeIf("interface") -> readInterface()
                 consumeIf("record") -> {
                     keywords = keywords or Keywords.VALUE

@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.simple.expression.SimpleMerge
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 data class Flow(val value: SimpleField, val block: SimpleNode) {
@@ -14,13 +13,7 @@ data class Flow(val value: SimpleField, val block: SimpleNode) {
 
         val joinedType = unionTypes(value.type, other.value.type)
         val joinedField = joinedBlock.field(joinedType)
-        joinedBlock.add(
-            SimpleMerge(
-                joinedField,
-                block, value.use(), other.block, other.value.use(),
-                root, -1
-            )
-        )
+        joinedBlock.add(SimpleMerge(joinedField, value.use(), other.value.use(), root, -1))
         return joinedField
     }
 
@@ -45,14 +38,7 @@ data class Flow(val value: SimpleField, val block: SimpleNode) {
             val joinedField = joinedBlock.field(joinedType)
             block.nextBranch = joinedBlock
             otherNode.nextBranch = joinedBlock
-            joinedBlock.add(
-                SimpleMerge(
-                    joinedField,
-                    block, value.use(),
-                    otherNode, other.use(),
-                    root, -1
-                )
-            )
+            joinedBlock.add(SimpleMerge(joinedField, value.use(), other.use(), root, -1))
             return Flow(joinedField, joinedBlock)
         }
     }

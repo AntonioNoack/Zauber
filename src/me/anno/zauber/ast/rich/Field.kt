@@ -12,6 +12,7 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeTo
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ArrayType
 
 class Field(
     var codeScope: Scope,
@@ -34,6 +35,12 @@ class Field(
     }
 
     val selfType = selfType?.resolve()
+
+    init {
+        if (name == "content" && valueType == ArrayType) {
+            throw IllegalStateException("Testing: field should know array type")
+        }
+    }
 
     fun needsBackingField(): Boolean {
         val getterBody = getter?.body ?: return true

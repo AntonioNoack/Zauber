@@ -114,6 +114,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
             val selfType = selfType ?: method.selfType
             val context = ResolutionContext(selfType, false, returnType, emptyMap())
+            println("selfType: $selfType, generics: $generics")
             ResolvedMethod(
                 generics.subList(0, methodSelfParams.size), method,
                 generics.subList(methodSelfParams.size, generics.size),
