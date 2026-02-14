@@ -71,7 +71,7 @@ object Types {
     val StringType = getType("String", "")
     val NumberType = getType("Number", "")
     val ThrowableType = getType("Throwable", "")
-    val YieldedType = getType("Yielded", "")
+    val YieldedType = getType("Yielded", "RTY")
     val NothingType = getType("Nothing", "")
     val BooleanType = getType("Boolean", "")
     val ArrayType = getType("Array", "V")

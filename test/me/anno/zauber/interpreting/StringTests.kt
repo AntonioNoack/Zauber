@@ -74,8 +74,8 @@ class StringTests {
                 val whitespace = " \t\r\n"
             }
         
-            val size get() = content.size
-            val length get() = content.size
+            val size: Int get() = content.size
+            val length: Int get() = content.size
         
             constructor(str: String, startIndex: Int, endIndex: Int):
                 this(str.content.copyOfRange(startIndex, endIndex))

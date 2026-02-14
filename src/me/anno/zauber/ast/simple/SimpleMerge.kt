@@ -14,9 +14,10 @@ class SimpleMerge(
     elseField: SimpleField,
     scope: Scope, origin: Int
 ) : SimpleInstruction(scope, origin) {
+
     init {
-        check(ifField.mergeInfo == null)
-        check(elseField.mergeInfo == null)
+        check(ifField.mergeInfo == null) { "IfField is merged twice? $ifField" }
+        check(elseField.mergeInfo == null) { "ElseField is merged twice? $elseField" }
         ifField.mergeInfo = this
         elseField.mergeInfo = this
     }

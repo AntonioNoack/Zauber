@@ -139,8 +139,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun getLinePosString(i0: Int, i1: Int, before: String, lineNumber: Int, lastLineBreak: Int): String {
-        var start = before.lastIndexOf('\n', lastLineBreak - 1) + 1
-        val isSingleLine = before.substring(start, lastLineBreak).all { it.isWhitespace() }
+        var start = before.lastIndexOf('\n', max(lastLineBreak - 1, 0)) + 1
+        val isSingleLine = before.substring(start, max(lastLineBreak, 0)).all { it.isWhitespace() }
         if (isSingleLine) start = lastLineBreak + 1
 
         var end = source.indexOf('\n', i1 + lastLineBreak)
