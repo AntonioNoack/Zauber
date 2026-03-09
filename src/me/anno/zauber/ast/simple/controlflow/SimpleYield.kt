@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple.controlflow
 import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 // todo this is very special...
 //  idk if we even should have a SimpleYield, or if we should "simplify" it in-place

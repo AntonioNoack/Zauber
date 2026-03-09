@@ -1,7 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 object TypeUtils {
 

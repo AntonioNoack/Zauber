@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 class Call(val self: Instance) {
     val simpleFields = HashMap<SimpleField, Instance>()

@@ -1,7 +1,7 @@
 package me.anno.zauber.generation.js
 
 import me.anno.zauber.generation.Generator
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import java.io.File
 
 // todo this is just like Java source code, except that

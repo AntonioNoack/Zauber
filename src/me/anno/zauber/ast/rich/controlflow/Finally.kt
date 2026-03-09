@@ -2,7 +2,7 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 class Finally(val body: Expression) {
     fun clone(scope: Scope): Finally = Finally(body.clone(scope))

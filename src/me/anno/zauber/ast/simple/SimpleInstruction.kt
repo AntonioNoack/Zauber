@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 /**
  * todo implement this:

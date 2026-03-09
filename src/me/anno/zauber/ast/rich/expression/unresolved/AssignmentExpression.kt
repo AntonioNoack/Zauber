@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 /**

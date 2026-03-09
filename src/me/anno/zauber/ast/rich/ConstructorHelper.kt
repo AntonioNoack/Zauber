@@ -6,7 +6,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 object ConstructorHelper {
     fun createAssignmentInstructionsForPrimaryConstructor(

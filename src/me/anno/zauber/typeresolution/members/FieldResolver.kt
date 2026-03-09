@@ -12,7 +12,7 @@ import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeCallPart
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 

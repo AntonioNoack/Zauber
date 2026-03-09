@@ -6,7 +6,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Import
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 

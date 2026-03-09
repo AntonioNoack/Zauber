@@ -15,8 +15,8 @@ import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.generation.java.JavaSourceGenerator.comment
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.ByteType

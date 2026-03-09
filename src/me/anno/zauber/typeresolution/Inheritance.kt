@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.members.MatchScore
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.NullableAnyType

@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.ScopeType
 
 object ScopeSplit {
 

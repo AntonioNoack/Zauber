@@ -9,8 +9,8 @@ import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.utils.NumberUtils.f1

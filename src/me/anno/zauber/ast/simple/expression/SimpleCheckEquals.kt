@@ -5,7 +5,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.specialization.MethodSpecialization
 
 class SimpleCheckEquals(

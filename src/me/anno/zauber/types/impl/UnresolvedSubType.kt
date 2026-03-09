@@ -1,7 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.types.Import
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 class UnresolvedSubType(

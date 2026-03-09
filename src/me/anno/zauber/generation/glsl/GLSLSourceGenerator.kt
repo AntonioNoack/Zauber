@@ -1,7 +1,7 @@
 package me.anno.zauber.generation.glsl
 
 import me.anno.zauber.generation.Generator
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import java.io.File
 
 // todo given a main function and some context info,

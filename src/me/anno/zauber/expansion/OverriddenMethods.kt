@@ -4,8 +4,8 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 
 // todo also implement/support overridden fields, getters/setters
 // todo start with high classes, and go down the hierarchy,

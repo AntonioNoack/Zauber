@@ -1,5 +1,7 @@
 package me.anno.zauber.types
 
+import me.anno.zauber.scope.Scope
+
 class Import(val path: Scope, val allChildren: Boolean, val name: String) {
     override fun toString(): String {
         return if(allChildren) "Import(${path.pathStr}.*)"

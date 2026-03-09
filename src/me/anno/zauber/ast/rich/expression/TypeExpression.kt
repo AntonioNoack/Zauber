@@ -2,9 +2,8 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.ClassType
 
 class TypeExpression(val type: Type, scope: Scope, origin: Int) :

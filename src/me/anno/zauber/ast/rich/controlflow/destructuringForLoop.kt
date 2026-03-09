@@ -1,14 +1,13 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.FieldDeclaration
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 fun ASTBuilderBase.destructuringForLoop(
     scope: Scope,

@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import java.io.File
 
 object CompileSources {

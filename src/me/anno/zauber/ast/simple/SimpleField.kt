@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.ast.simple.SimpleMerge
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 // todo 'this' is a special field, that cannot be reassigned

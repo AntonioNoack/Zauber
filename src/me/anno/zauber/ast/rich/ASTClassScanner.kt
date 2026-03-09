@@ -1,16 +1,27 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.langserver.VSCodeModifier
+import me.anno.langserver.VSCodeType
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.rich.FieldGetterSetter.createBackingField
+import me.anno.zauber.ast.rich.FieldGetterSetter.createGetterMethod
+import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod
+import me.anno.zauber.ast.rich.FieldGetterSetter.createValueField
+import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
+import me.anno.zauber.ast.rich.FieldGetterSetter.needsGetter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.scope.lazy.LazyExpression
+import me.anno.zauber.scope.lazy.TokenSubList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types.UnitType
 import kotlin.math.max
 
 /**
@@ -243,24 +254,122 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("typealias") -> readTypeAlias()
             consumeIf("var") || consumeIf("val") -> readField()
             consumeIf("fun") -> readMethod()
+            consumeIf("constructor") -> readConstructor()
             listening.last() -> checkForTypes()
         }
     }
 
     open fun readField() {
         hadNamedScope = false
-
+        val origin = origin(i - 1)
         val isMutable = tokens.equals(i - 1, "var")
-        val genericParams = if (consumeIf("<")) {
-            collectGenericParameters(currPackage)
-        } else emptyList()
+        val fieldScope = currPackage.generate("field", origin, ScopeType.FIELD)
+        pushScope(fieldScope) {
 
-        val nameStart = i
+            val genericParams = if (consumeIf("<")) {
+                collectGenericParameters(fieldScope)
+            } else emptyList()
 
+            val nameStart = i
+
+            val end = findFieldNameEnd()
+
+            check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
+                "Expected field name at ${tokens.err(end - 1)}"
+            }
+
+            check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
+
+            val name = tokens.toString(end - 1)
+            val selfType = if (nameStart < end - 1) readSelfType(end) else null
+
+            i = end
+
+            var valueType = if (consumeIf(":")) {
+                readType(selfType, true)
+            } else null
+
+            val initialValue = if (consumeIf("=")) {
+                readLazyValue()
+            } else null
+
+            val getVisibility = readVisibility()
+            var setVisibility = getVisibility
+            var getterOrigin = origin
+            val getterBody: Expression? = if (consumeIf("get")) {
+                getterOrigin = origin(i - 1)
+                val body = if (consumeIf(TokenType.OPEN_CALL)) {
+                    consume(TokenType.CLOSE_CALL)
+                    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                        readLazyBody()
+                    } else if (consumeIf("=")) {
+                        readLazyValue()
+                    } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+                } else null
+                setVisibility = readVisibility()
+                body
+            } else null
+
+            lateinit var setterName: String
+            var setterOrigin = origin
+            val setterBody: Expression? = if (consumeIf("set")) {
+                setterOrigin = origin(i - 1)
+                if (consumeIf(TokenType.OPEN_CALL)) {
+                    setterName = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
+                    val setterType = if (consumeIf(":")) {
+                        readType(null, true)
+                    } else null
+                    if (valueType == null) valueType = setterType
+
+                    consume(TokenType.CLOSE_CALL)
+                    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                        readLazyBody()
+                    } else if (consumeIf("=")) {
+                        readLazyValue()
+                    } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+                } else null
+            } else null
+
+            val field = Field(
+                fieldScope.parent!!,
+                selfType, selfType != null, isMutable, null,
+                name, valueType, initialValue, Keywords.NONE, origin
+            )
+            fieldScope.selfAsField = field
+
+            if (getterBody != null) {
+                val backingField = createBackingField(field, getterBody.scope, origin)
+                createGetterMethod(field, getterBody, backingField, getterBody.scope, origin)
+            }
+            if (setterBody != null) {
+                val backingField = createBackingField(field, setterBody.scope, origin)
+                val valueField = createValueField(field, setterName, setterBody.scope, origin)
+                createSetterMethod(field, setterBody, backingField, valueField, setterBody.scope, origin)
+            }
+            if (needsGetter(field)) {
+                finishField(field)
+            }
+        }
+    }
+
+    private fun readVisibility(): Int {
+        var flags = 0
+        while (i < tokens.size) {
+            when {
+                consumeIf("public") -> {}
+                consumeIf("private") -> flags = flags or Keywords.PRIVATE
+                consumeIf("protected") -> flags = flags or Keywords.PROTECTED
+                else -> return flags
+            }
+        }
+        return flags
+    }
+
+    private fun findFieldNameEnd(): Int {
         // val x, var A<>.x
         // val x: Int, val x = 0
         //  end symbols: [:, =, get(), set(), public, private, protected]
-        var end = nameStart
+        var end = i
         var depth = 0
         findFieldEnd@ while (end < tokens.size) {
             val j0 = end++
@@ -271,71 +380,149 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     tokens.equals(j0, "<") -> depth++
                     tokens.equals(j0, ">") -> depth--
                     tokens.equals(j0, ":", "=", "get", "set", "public", "private", "protected") -> {
-                        if (depth == 0) {
-                            end--
-                            break@findFieldEnd
-                        }
+                        if (depth == 0) return j0
                     }
                 }
             }
             check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
         }
 
-        check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
-            "Expected field name at ${tokens.err(end - 1)}"
+        throw IllegalStateException("Missing field end at ${tokens.err(i)}")
+    }
+
+    open fun readConstructor() {
+        val origin = origin(i - 1)
+        val classScope = currPackage
+        val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
+        hadNamedScope = false
+
+        pushScope(constrScope) {
+            val selfType = classScope.typeWithArgs
+            val parameters = readParameterDeclarations(selfType)
+
+            val superCall = if (consumeIf(":")) {
+                TODO("read inner super call")
+            } else null
+
+            val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) readLazyBody() else null
+            constrScope.selfAsConstructor = Constructor(
+                parameters,
+                constrScope, superCall, body,
+                Keywords.NONE, origin
+            )
         }
-
-        check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
-
-        val name = tokens.toString(end - 1)
-        val selfType = if (nameStart < end - 1) {
-            check(tokens.equals(end - 2, ".")) {
-                "Expected period for field with receiver type at ${tokens.err(end - 2)}"
-            }
-
-            tokens.push(end - 2) {
-                readType(null, true)
-            }
-        } else null
-
-        i = end
-
-        when {
-            tokens.equals(i, ":") -> TODO("read & skip type")
-            tokens.equals(i, "=") -> TODO("skip expression")
-        }
-
-        consumeVisibility@ while (true) {
-            when {
-                consumeIf("public") || consumeIf("protected") ||
-                        consumeIf("private") -> {
-                }
-                else -> break@consumeVisibility
-            }
-        }
-
-        if (consumeIf("get")) {
-            TODO("read scope for getter")
-        }
-
-        if (consumeIf("set")) {
-            TODO("read scope for setter")
-        }
-
     }
 
     open fun readMethod() {
+        val origin = origin(i - 1)
+        val methodScope = currPackage.generate("fun", origin, ScopeType.METHOD)
         hadNamedScope = false
-        val genericParams = if (consumeIf("<")) {
-            collectGenericParameters(currPackage)
-        } else emptyList()
 
-        val nameStart = i
+        pushScope(methodScope) {
+            val genericParams = if (consumeIf("<")) {
+                collectGenericParameters(methodScope)
+            } else emptyList()
 
+            val nameStart = i
+            val end = findParameterStart()
+
+            check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
+                "Expected field name at ${tokens.err(end - 1)}"
+            }
+
+            check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
+
+            val selfType = if (nameStart < end - 1) readSelfType(end) else null
+
+            val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
+            val parameters = readParameterDeclarations(selfType)
+            val extraConditions = readExtraConditions()
+
+            val returnType = if (consumeIf(":")) {
+                readType(selfType, true)
+            } else if (tokens.equals(i, "{")) {
+                UnitType
+            } else null
+
+            val body = when {
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
+                consumeIf("=") -> readLazyValue()
+                else -> null
+            }
+
+            methodScope.selfAsMethod = Method(
+                selfType, selfType != null, name,
+                genericParams, parameters,
+                methodScope, returnType, extraConditions, body,
+                Keywords.NONE, origin
+            )
+        }
+    }
+
+    private fun readLazyBody(): Expression {
+        return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
+            val tokens1 = TokenSubList(tokens, i, tokens.size, imports)
+            val expr = LazyExpression(tokens1, scope, origin(i))
+            i = tokens.size
+            expr
+        }
+    }
+
+    private fun findLazyValueEnd(): Int {
+        var end = i
+        var depth = 0
+        searchEnd@ while (end < tokens.size) {
+            val j0 = end++
+            when (tokens.getType(j0)) {
+                TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                else -> if (depth == 0) when {
+                    tokens.equals(
+                        j0, "fun", "val", "var", "lateinit",
+                        "public", "private", "protected", "class", "interface"
+                    ) -> {
+                        return j0
+                    }
+                    // enum class, data class, private class... these depend on the work after them...
+                    tokens.equals(j0 + 1, "class") &&
+                            tokens.equals(j0, "data", "enum", "value", "inner") -> {
+                        return j0
+                    }
+                }
+            }
+        }
+        return tokens.size
+    }
+
+    private fun readLazyValue(): Expression {
+        val end = findLazyValueEnd()
+        return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
+            val tokens1 = TokenSubList(tokens, i, end, imports)
+            val expr = LazyExpression(tokens1, scope, origin(i))
+            i = end
+            expr
+        }
+    }
+
+    private fun readSelfType(end: Int): Type {
+        check(tokens.equals(end - 2, ".")) {
+            "Expected period for field with receiver type at ${tokens.err(end - 2)}"
+        }
+
+        val type = tokens.push(end - 2) {
+            readType(null, true)!!
+        }
+
+        consume(".")
+
+        return type
+    }
+
+    private fun findParameterStart(): Int {
         // val x, var A<>.x
         // val x: Int, val x = 0
         //  end symbols: [:, =, get(), set(), public, private, protected]
-        var end = nameStart
+        var end = i
         var depth = 0
         findFieldEnd@ while (end < tokens.size) {
             val j0 = end++
@@ -355,32 +542,13 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
             check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
         }
+        return end
+    }
 
-        check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
-            "Expected field name at ${tokens.err(end - 1)}"
-        }
-
-        check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
-
-        val name = tokens.toString(end - 1)
-        val selfType = if (nameStart < end - 1) {
-            check(tokens.equals(end - 2, ".")) {
-                "Expected period for field with receiver type at ${tokens.err(end - 2)}"
-            }
-
-            tokens.push(end - 2) {
-                readType(null, true)
-            }
-        } else null
-
-        i = end
-
-        check(tokens.equals(i, TokenType.OPEN_CALL)) {
-            "Expected method parameters at ${tokens.err(i)}"
-        }
-
-        TODO("read method $name()")
-
+    private fun readExtraConditions(): List<TypeCondition> {
+        return if (consumeIf("where")) {
+            TODO("read extra conditions")
+        } else emptyList()
     }
 
     open fun checkForTypes() {
@@ -462,7 +630,29 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
-        throw NotImplementedError()
+        val parameters = ArrayList<Parameter>()
+        pushCall {
+            while (i < tokens.size) {
+                // todo comptime name: type
+                val isVararg = consumeIf("vararg")
+                val paramOrigin = origin(i)
+                val name = consumeName(VSCodeType.PARAMETER, 0)
+                consume(":")
+                val type = readType(selfType, true)
+                    ?: throw IllegalStateException("Missing type at ${tokens.err(i)}")
+                val defaultValue = if (tokens.equals(i, "=")) {
+                    readLazyValue()
+                } else null
+                val parameter = Parameter(
+                    parameters.size, false, true, isVararg,
+                    name, type, defaultValue,
+                    currPackage, paramOrigin
+                )
+                parameters.add(parameter)
+                readComma()
+            }
+        }
+        return parameters
     }
 
     override fun readMethodBody(): ExpressionList {

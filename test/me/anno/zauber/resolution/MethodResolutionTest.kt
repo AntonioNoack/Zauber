@@ -4,7 +4,7 @@ import me.anno.zauber.resolution.ResolutionUtils.firstChild
 import me.anno.zauber.resolution.ResolutionUtils.get
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals

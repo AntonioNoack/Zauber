@@ -1,7 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NullableAnyType
 

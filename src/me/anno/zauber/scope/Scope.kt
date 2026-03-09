@@ -1,13 +1,18 @@
-package me.anno.zauber.types
+package me.anno.zauber.scope
 
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.scope.lazy.LazyScope
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.types.Import
+import me.anno.zauber.types.StandardTypes
+import me.anno.zauber.types.SuperCallName
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import java.util.concurrent.atomic.AtomicInteger
@@ -49,10 +54,32 @@ class Scope(val name: String, val parent: Scope? = null) {
             .filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
             .map { it.scope.value }
 
-    var selfAsTypeAlias: Type? = null
+    // only one can be true, so we can store just one field, and extract everything else
+    private var selfAs: Any? = null
 
-    var selfAsConstructor: Constructor? = null
-    var selfAsMethod: Method? = null
+    var selfAsTypeAlias: Type?
+        get() = selfAs as? Type
+        set(value) {
+            selfAs = value
+        }
+
+    var selfAsConstructor: Constructor?
+        get() = selfAs as? Constructor
+        set(value) {
+            selfAs = value
+        }
+
+    var selfAsMethod: Method?
+        get() = selfAs as? Method
+        set(value) {
+            selfAs = value
+        }
+
+    var selfAsField: Field?
+        get() = selfAs as? Field
+        set(value) {
+            selfAs = value
+        }
 
     // todo register this where appropriate
     var breakLabel: String? = null

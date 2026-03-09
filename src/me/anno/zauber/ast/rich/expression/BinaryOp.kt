@@ -9,7 +9,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Compani
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.BooleanUtils.not
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 private val LOGGER = LogManager.getLogger("BinaryOp")

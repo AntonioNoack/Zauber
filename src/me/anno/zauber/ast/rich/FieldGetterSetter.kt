@@ -6,8 +6,8 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types.UnitType
 
 object FieldGetterSetter {
@@ -78,18 +78,18 @@ object FieldGetterSetter {
         }// else LOGGER.info("found set without anything else, ${field.name}")
     }
 
-    private fun createValueField(
+    fun createValueField(
         field: Field, fieldName: String,
         scope: Scope, origin: Int,
     ): Field {
         return scope.addField(
-             null, false, isMutable = false, /* todo we actually have a parameter */null,
+            null, false, isMutable = false, /* todo we actually have a parameter */null,
             fieldName, field.valueType, field.initialValue ?: field.getterExpr,
             Keywords.NONE, origin
         )
     }
 
-    private fun createBackingField(field: Field, scope: Scope, origin: Int): Field = scope.addField(
+    fun createBackingField(field: Field, scope: Scope, origin: Int): Field = scope.addField(
         field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
         "field", field.valueType, field.initialValue ?: field.getterExpr,
         Keywords.SYNTHETIC, origin
@@ -98,26 +98,30 @@ object FieldGetterSetter {
     fun ZauberASTBuilder.finishLastField() {
         val field = lastField ?: return
         if (needsGetter(field)) {
-            keywords = 0
-            val origin = field.origin
-            if (field.getter == null) {
-                pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
-                    val backingField = createBackingField(field, getterScope, origin)
-                    createGetterMethod(field, null, backingField, getterScope, origin)
-                }
-            }
-            if (field.isMutable && field.setter == null) {
-                pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->
-                    val backingField = createBackingField(field, setterScope, origin)
-                    val valueField = createValueField(field, "value", setterScope, origin)
-                    createSetterMethod(field, null, backingField, valueField, setterScope, origin)
-                }
-            }
+            finishField(field)
         }
         lastField = null
     }
 
-    private fun needsGetter(field: Field): Boolean {
+    fun ZauberASTBuilderBase.finishField(field: Field) {
+        keywords = 0
+        val origin = field.origin
+        if (field.getter == null) {
+            pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
+                val backingField = createBackingField(field, getterScope, origin)
+                createGetterMethod(field, null, backingField, getterScope, origin)
+            }
+        }
+        if (field.isMutable && field.setter == null) {
+            pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->
+                val backingField = createBackingField(field, setterScope, origin)
+                val valueField = createValueField(field, "value", setterScope, origin)
+                createSetterMethod(field, null, backingField, valueField, setterScope, origin)
+            }
+        }
+    }
+
+    fun needsGetter(field: Field): Boolean {
         return true // just to make our lives easier in testing
         /* if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
          if (field.codeScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
@@ -127,7 +131,7 @@ object FieldGetterSetter {
          return false*/
     }
 
-    fun ZauberASTBuilder.createGetterMethod(
+    fun ZauberASTBuilderBase.createGetterMethod(
         field: Field, expr0: Expression?, backingField: Field,
         getterScope: Scope, origin: Int
     ) {
@@ -153,7 +157,7 @@ object FieldGetterSetter {
         field.hasCustomGetter = expr0 != null
     }
 
-    fun ZauberASTBuilder.createSetterMethod(
+    fun ZauberASTBuilderBase.createSetterMethod(
         field: Field, expr0: Expression?,
         backingField: Field, valueField: Field,
         setterScope: Scope, origin: Int,

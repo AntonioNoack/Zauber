@@ -1,4 +1,4 @@
-package me.anno.zauber.types
+package me.anno.zauber.scope
 
 enum class ScopeType {
     // structural

@@ -1,6 +1,6 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 class This(val instance: Instance, val scope: Scope) {
     override fun toString(): String {

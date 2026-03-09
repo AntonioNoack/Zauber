@@ -2,12 +2,10 @@ package me.anno.support.cpp.ast.rich
 
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import org.junit.jupiter.api.Test
 
 class CppParsingTest {

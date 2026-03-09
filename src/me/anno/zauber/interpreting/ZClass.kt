@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.ClassType

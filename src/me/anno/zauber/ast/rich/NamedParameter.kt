@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 /**
  * Used in calls: a named parameter

@@ -9,7 +9,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType

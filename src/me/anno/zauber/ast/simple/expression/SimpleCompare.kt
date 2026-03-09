@@ -6,7 +6,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 class SimpleCompare(
     dst: SimpleField,

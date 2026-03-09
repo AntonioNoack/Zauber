@@ -7,7 +7,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 abstract class SimpleAssignment(val dst: SimpleField, scope: Scope, origin: Int) :
     SimpleInstruction(scope, origin) {

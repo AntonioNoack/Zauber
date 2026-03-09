@@ -2,7 +2,7 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 class WhenCase(val condition: Expression?, val body: Expression) {
     override fun toString(): String {

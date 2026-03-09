@@ -9,7 +9,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.resolution.ResolutionUtils.firstChild
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.impl.LambdaType
 import org.junit.jupiter.api.Test
 

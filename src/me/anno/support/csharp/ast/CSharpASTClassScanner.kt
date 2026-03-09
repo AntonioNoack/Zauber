@@ -4,7 +4,7 @@ import me.anno.langserver.VSCodeType
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.ScopeType
 
 /**
  * to make type-resolution immediately available/resolvable

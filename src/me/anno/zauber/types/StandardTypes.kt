@@ -2,6 +2,7 @@ package me.anno.zauber.types
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.Compile.stdlibName
+import me.anno.zauber.scope.ScopeType
 
 /**
  * types, that are automatically imported into every file

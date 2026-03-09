@@ -1,7 +1,6 @@
 package me.anno.zauber.generation
 
-import me.anno.zauber.generation.java.JavaSimplifiedASTWriter
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import java.io.File
 
 // todo we could compile to other languages, too,

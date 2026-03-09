@@ -7,8 +7,8 @@ import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.specialization.MethodSpecialization

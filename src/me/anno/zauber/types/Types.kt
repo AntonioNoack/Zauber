@@ -2,6 +2,9 @@ package me.anno.zauber.types
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.scope.lazy.LazyScope
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType.typeOrNull

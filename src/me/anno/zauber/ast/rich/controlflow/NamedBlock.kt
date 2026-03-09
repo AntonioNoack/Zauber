@@ -3,7 +3,7 @@ package me.anno.zauber.ast.rich.controlflow
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 fun createNamedBlock(body: Expression, label: String?, scope: Scope, origin: Int):
         DoWhileLoop {

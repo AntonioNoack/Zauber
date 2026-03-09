@@ -5,7 +5,7 @@ import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 
 class SimpleSetField(
     val self: SimpleField,

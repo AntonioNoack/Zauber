@@ -1,7 +1,7 @@
 package me.anno.zauber.generation
 
 import me.anno.zauber.ast.rich.MethodLike
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization

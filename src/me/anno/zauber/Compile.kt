@@ -10,7 +10,7 @@ import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.utils.NumberUtils.f3
 import java.io.File
 

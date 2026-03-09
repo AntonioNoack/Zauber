@@ -3,7 +3,7 @@ package me.anno.zauber.tokenizer
 import me.anno.zauber.Compile.root
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Import
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import kotlin.math.max
 
 class TokenList(val source: CharSequence, val fileName: String) {

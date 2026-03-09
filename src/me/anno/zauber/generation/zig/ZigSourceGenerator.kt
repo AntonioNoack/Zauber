@@ -1,7 +1,7 @@
 package me.anno.zauber.generation.zig
 
 import me.anno.zauber.generation.Generator
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import java.io.File
 
 // todo this is like C, just different commands?

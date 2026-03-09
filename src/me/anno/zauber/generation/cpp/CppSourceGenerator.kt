@@ -1,7 +1,7 @@
 package me.anno.zauber.generation.cpp
 
 import me.anno.zauber.generation.Generator
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import java.io.File
 
 // todo compared to C, this has inheritance built-in, which

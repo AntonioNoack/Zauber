@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Scope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 // todo this generates a hidden field, initializes it, and creates a setter and getter method
