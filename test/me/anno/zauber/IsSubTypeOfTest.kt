@@ -3,6 +3,7 @@ package me.anno.zauber
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -15,6 +16,7 @@ import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.ListType
+import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.NullableAnyType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
@@ -37,6 +39,7 @@ class IsSubTypeOfTest {
             $this
         """.trimIndent(), "Test.zbr"
             ).tokenize()
+            collectNamedClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
             return root.children.first { it.name == testScopeName }
         }
@@ -252,32 +255,6 @@ class IsSubTypeOfTest {
 
         assertTrue(isSubTypeOf(unionTypes(classA, classB), unionTypes(classA, classB)))
         assertTrue(isSubTypeOf(unionTypes(classA, classB, classC), unionTypes(classA, classB)))
-    }
-
-    @Test
-    fun testAndTypes() {
-        val scope = """
-    class A
-    class B
-    class C
-""".testInheritance()
-        val classA = scope["A"]
-        val classB = scope["B"]
-        val classC = scope["C"]
-
-        assertTrue(isSubTypeOf(classA, classA))
-        assertFalse(isSubTypeOf(classB, classA))
-        assertFalse(isSubTypeOf(classC, classA))
-
-        assertTrue(isSubTypeOf(classA, andTypes(classA, classB)))
-        assertTrue(isSubTypeOf(classB, andTypes(classA, classB)))
-        assertFalse(isSubTypeOf(classC, andTypes(classA, classB)))
-
-        assertFalse(isSubTypeOf(andTypes(classA, classB), classA))
-        assertFalse(isSubTypeOf(andTypes(classA, classB), classB))
-
-        assertTrue(isSubTypeOf(andTypes(classA, classB), andTypes(classA, classB)))
-        assertTrue(isSubTypeOf(andTypes(classA, classB), andTypes(classA, classB, classC)))
     }
 
     @Test

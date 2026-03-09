@@ -14,6 +14,12 @@ class AndType(val types: List<Type>) : Type() {
 
         fun andTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
+            if (typeA == NullType || typeB == NullType ||
+                typeA == NothingType || typeB == NothingType
+            ) return NothingType
+            if (typeA == UnknownType) return typeB
+            if (typeB == UnknownType) return typeA
+
             if (typeA is UnionType && typeB is NotType &&
                 typeB.type in typeA.types
             ) {

@@ -562,7 +562,7 @@ class ZauberASTBuilder(
 
             val initialValue = if (consumeIf("=")) readExpression() else null
 
-            println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
+            // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
             val keywords = packKeywords()
             val parameter = Parameter(

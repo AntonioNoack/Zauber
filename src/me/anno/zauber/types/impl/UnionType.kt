@@ -16,6 +16,7 @@ class UnionType(val types: List<Type>) : Type() {
             if (typeA == typeB) return typeA
             if (typeA == NothingType) return typeB
             if (typeB == NothingType) return typeA
+            if (typeA == UnknownType || typeB == UnknownType) return UnknownType
             return reduceUnionTypes(getTypes(typeA) + getTypes(typeB))
         }
 
@@ -37,6 +38,7 @@ class UnionType(val types: List<Type>) : Type() {
             val types = types.distinct().filter { it != NothingType }
             if (types.isEmpty()) return NothingType
             if (types.size == 1) return types[0]
+            if (UnknownType in types) return UnknownType
 
             // todo we can do something equivalent with andTypes
             // sort entries by depth,

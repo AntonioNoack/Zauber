@@ -14,10 +14,23 @@ import me.anno.zauber.types.Scope
 import me.anno.zauber.utils.NumberUtils.f3
 import java.io.File
 
-// todo inline functions
-// todo expand generics
-// todo function coloring: async, throws, yields, uses-non-inline-lambdas, pure (no side-effects -> comptime)
-// todo generate .toString(), .equals() and .hashCode for data classes unless already defined
+// todo convert JVM Bytecode AST into simplified AST...
+//  what about generics? we can either keep them generic, or specialize them... both would be good...
+//  generally, we should make specialization optional... union super-types will always be specialized
+
+// todo make variable capture by lambdas explicit:
+//  mark mutable fields as captured;
+//  mutable fields then need some sort of wrapper in the method
+
+// todo at compile-time define types???
+// todo collect field names & visibility flags at collectNames-time? would allow for immediate name resolution for first names of chains
+// todo make any field const-able; if a field is const:
+//  - it must be computable from just that expression
+//  - and other const values
+//  - comptime exact maths?
+//  - allow file IO?
+//  - allow method calls
+//  - execute with specializations ofc
 
 // todo expand macros:
 //   compile-time if
