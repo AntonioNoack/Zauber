@@ -87,7 +87,10 @@ object Types {
             var scope = type.clazz
             while (true) {
                 val parent = scope.parent ?: break
-                if (scope !in parent.children) parent.children.add(scope)
+                if (parent.children.none { it.name == scope.name }) {
+                    // todo might be an interface
+                    parent.children.add(LazyScope(scope.name, scope.name, ScopeType.NORMAL_CLASS, lazy { scope }))
+                }
                 scope = parent
             }
         }

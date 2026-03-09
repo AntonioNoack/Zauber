@@ -3,7 +3,7 @@ package me.anno.zauber.types.typeresolution
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
@@ -11,11 +11,8 @@ import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.Scope
-import me.anno.zauber.types.ScopeType
-import me.anno.zauber.types.StandardTypes.standardClasses
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.Types.ArrayListType
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.CharType
@@ -51,10 +48,10 @@ class TypeResolutionTest {
             $code
         """.trimIndent(), "Test.zbr"
             ).tokenize()
-            collectNamedClasses(tokens)
+            scanClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }
+            val testScope = root.children.first { it.name == testScopeName }.scope.value
             resolveOverrides(testScope)
             resolveTypesAndNames(testScope)
             return testScope

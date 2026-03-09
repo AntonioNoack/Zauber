@@ -119,8 +119,7 @@ class LambdaExpression(
         //  - decide/generate name
 
         // todo generics are inherited from outer method & class...
-        val scopeName = scope.generateName("lambda", origin)
-        val classScope = scope.getOrPut(scopeName, ScopeType.INLINE_CLASS)
+        val classScope = scope.generate("lambda", origin, ScopeType.INLINE_CLASS)
         val classConstructor = classScope.getOrCreatePrimConstructorScope()
 
         val superTypeI: ClassType = when (val superType = resolveReturnType(context)) {

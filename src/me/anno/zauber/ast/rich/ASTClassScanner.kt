@@ -238,24 +238,149 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     open fun collectNamesOnDepth0() {
+        when {
+            listening.size == 1 && checkImports() -> return
+            consumeIf("typealias") -> readTypeAlias()
+            consumeIf("var") || consumeIf("val") -> readField()
+            consumeIf("fun") -> readMethod()
+            listening.last() -> checkForTypes()
+        }
+    }
 
-        if (listening.size == 1) {
-            if (checkImports()) return
+    open fun readField() {
+        hadNamedScope = false
+
+        val isMutable = tokens.equals(i - 1, "var")
+        val genericParams = if (consumeIf("<")) {
+            collectGenericParameters(currPackage)
+        } else emptyList()
+
+        val nameStart = i
+
+        // val x, var A<>.x
+        // val x: Int, val x = 0
+        //  end symbols: [:, =, get(), set(), public, private, protected]
+        var end = nameStart
+        var depth = 0
+        findFieldEnd@ while (end < tokens.size) {
+            val j0 = end++
+            when (tokens.getType(j0)) {
+                TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                else -> when {
+                    tokens.equals(j0, "<") -> depth++
+                    tokens.equals(j0, ">") -> depth--
+                    tokens.equals(j0, ":", "=", "get", "set", "public", "private", "protected") -> {
+                        if (depth == 0) {
+                            end--
+                            break@findFieldEnd
+                        }
+                    }
+                }
+            }
+            check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
         }
 
-        if (consumeIf("typealias")) {
-            readTypeAlias()
-            return
+        check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
+            "Expected field name at ${tokens.err(end - 1)}"
         }
 
-        if (tokens.equals(i, "var") || tokens.equals(i, "val") || tokens.equals(i, "fun")) {
-            hadNamedScope = false
-            return
+        check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
+
+        val name = tokens.toString(end - 1)
+        val selfType = if (nameStart < end - 1) {
+            check(tokens.equals(end - 2, ".")) {
+                "Expected period for field with receiver type at ${tokens.err(end - 2)}"
+            }
+
+            tokens.push(end - 2) {
+                readType(null, true)
+            }
+        } else null
+
+        i = end
+
+        when {
+            tokens.equals(i, ":") -> TODO("read & skip type")
+            tokens.equals(i, "=") -> TODO("skip expression")
         }
 
-        if (listening.last()) {
-            checkForTypes()
+        consumeVisibility@ while (true) {
+            when {
+                consumeIf("public") || consumeIf("protected") ||
+                        consumeIf("private") -> {
+                }
+                else -> break@consumeVisibility
+            }
         }
+
+        if (consumeIf("get")) {
+            TODO("read scope for getter")
+        }
+
+        if (consumeIf("set")) {
+            TODO("read scope for setter")
+        }
+
+    }
+
+    open fun readMethod() {
+        hadNamedScope = false
+        val genericParams = if (consumeIf("<")) {
+            collectGenericParameters(currPackage)
+        } else emptyList()
+
+        val nameStart = i
+
+        // val x, var A<>.x
+        // val x: Int, val x = 0
+        //  end symbols: [:, =, get(), set(), public, private, protected]
+        var end = nameStart
+        var depth = 0
+        findFieldEnd@ while (end < tokens.size) {
+            val j0 = end++
+            when (tokens.getType(j0)) {
+                TokenType.OPEN_CALL -> {
+                    if (depth == 0) {
+                        end--
+                        break@findFieldEnd
+                    } else depth++
+                }
+                TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                else -> when {
+                    tokens.equals(j0, "<") -> depth++
+                    tokens.equals(j0, ">") -> depth--
+                }
+            }
+            check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
+        }
+
+        check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
+            "Expected field name at ${tokens.err(end - 1)}"
+        }
+
+        check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
+
+        val name = tokens.toString(end - 1)
+        val selfType = if (nameStart < end - 1) {
+            check(tokens.equals(end - 2, ".")) {
+                "Expected period for field with receiver type at ${tokens.err(end - 2)}"
+            }
+
+            tokens.push(end - 2) {
+                readType(null, true)
+            }
+        } else null
+
+        i = end
+
+        check(tokens.equals(i, TokenType.OPEN_CALL)) {
+            "Expected method parameters at ${tokens.err(i)}"
+        }
+
+        TODO("read method $name()")
+
     }
 
     open fun checkForTypes() {

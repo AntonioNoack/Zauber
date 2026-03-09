@@ -78,7 +78,7 @@ object CompileSources {
     fun printPackages(root: Scope, depth: Int) {
         LOGGER.info("  ".repeat(depth) + root.name)
         for (child in root.children) {
-            printPackages(child, depth + 1)
+            printPackages(child.scope.value, depth + 1)
         }
     }
 

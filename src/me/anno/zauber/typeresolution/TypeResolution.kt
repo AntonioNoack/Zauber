@@ -74,7 +74,7 @@ object TypeResolution {
         val scopeSelfType = getSelfType(scope)
         val children = scope.children
         for (i in children.indices) {
-            val method = children[i].selfAsMethod ?: continue
+            val method = children[i].scope.value.selfAsMethod ?: continue
             resolveMethod(scope, scopeSelfType, method)
         }
         for (field in scope.fields) {
@@ -250,8 +250,9 @@ object TypeResolution {
         var scope = scope ?: return null
         while (true) {
 
-            val selfMatch = scope.children.firstOrNull { it.name == name && it.isClassType() }
+            val selfMatch = scope.children.firstOrNull { it.name == name && it.scope.value.isClassType() }
             if (selfMatch != null) {
+                val selfMatch = selfMatch.scope.value
                 val typeParams: List<Type>? =
                     if (selfMatch.hasTypeParameters && selfMatch.typeParameters.isEmpty()) emptyList() else null
                 return ClassType(selfMatch, typeParams, -1)

@@ -29,10 +29,10 @@ class JavaGenerationTest {
             ZauberASTBuilder(tokens, root).readFileLevel()
             resolveOverrides(root)
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }
+            val testScope = root.children.first { it.name == testScopeName }.scope.value
             resolveTypesAndNames(testScope)
             val testClassName = "Test"
-            val testClass = testScope.children.first { it.name == testClassName }
+            val testClass = testScope.children.first { it.name == testClassName }.scope.value
             val sourceCode = JavaSourceGenerator.run {
                 generateInside(testClassName, testClass, noSpecialization)
                 if (builder.endsWith('\n')) builder.setLength(builder.length - 1)

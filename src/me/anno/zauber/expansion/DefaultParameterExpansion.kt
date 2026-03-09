@@ -39,7 +39,7 @@ object DefaultParameterExpansion {
             // check if class has another function with that parameter defined
             val expectedParamsForMatch = self.valueParameters.subList(0, i).map { param -> param.type }
             val match = scopeParent.children.firstOrNull {
-                val method = it.selfAsMethod
+                val method = it.scope.value.selfAsMethod
                 method != null && method.name == self.name &&
                         method.selfType == self.selfType &&
                         method.valueParameters.map { param -> param.type } ==
@@ -102,7 +102,7 @@ object DefaultParameterExpansion {
             // check if class has another function with that parameter defined
             val expectedParamsForMatch = self.valueParameters.subList(0, i).map { param -> param.type }
             val match = classScope.children.firstOrNull {
-                val method = it.selfAsConstructor
+                val method = it.scope.value.selfAsConstructor
                 method != null &&
                         method.selfType == self.selfType &&
                         method.valueParameters.map { param -> param.type } ==

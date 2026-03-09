@@ -26,7 +26,7 @@ class CppParsingTest {
 
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }
+            val testScope = root.children.first { it.name == testScopeName }.scope.value
             resolveTypesAndNames(testScope)
             return testScope
         }

@@ -17,6 +17,11 @@ enum class ScopeType {
     OBJECT,
     COMPANION_OBJECT,
 
+    /**
+     * for lazy-eval
+     * */
+    FIELD,
+
     // methods
     /**
      * definition space for method arguments
@@ -31,7 +36,6 @@ enum class ScopeType {
     FIELD_GETTER,
     FIELD_SETTER,
     LAMBDA,
-    // METHOD_BODY,
 
     // inside expressions
     METHOD_BODY,

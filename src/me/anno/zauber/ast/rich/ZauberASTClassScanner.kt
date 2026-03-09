@@ -7,14 +7,14 @@ import me.anno.zauber.tokenizer.TokenList
  * */
 class ZauberASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
     companion object {
-        fun collectNamedClassesForTypeResolution(allTokens: List<TokenList>) {
+        fun scanAllClasses(allTokens: List<TokenList>) {
             for (i in allTokens.indices) {
                 val tokens = allTokens[i]
-                collectNamedClasses(tokens)
+                scanClasses(tokens)
             }
         }
 
-        fun collectNamedClasses(tokens: TokenList) {
+        fun scanClasses(tokens: TokenList) {
             ZauberASTClassScanner(tokens).readFileLevel()
         }
     }

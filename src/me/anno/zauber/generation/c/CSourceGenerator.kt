@@ -70,7 +70,7 @@ object CSourceGenerator : Generator() {
                 }
             }
             for (child in scope.children) {
-                generateCode(child)
+                generateCode(child.scope.value)
             }
         }
 

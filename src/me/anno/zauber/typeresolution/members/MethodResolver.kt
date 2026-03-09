@@ -35,7 +35,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         val children = scope.children
         var bestMatch: ResolvedMethod? = null
         for (i in children.indices) {
-            val method = children[i].selfAsMethod ?: continue
+            val method = children[i].scope.value.selfAsMethod ?: continue
             if (method.name != name) continue
             if (LOGGER.isInfoEnabled && method.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $method on $selfType, with target $returnType, can we deduct any generics from that?")

@@ -3,7 +3,7 @@ package me.anno.zauber.types
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTBuilder
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -36,13 +36,13 @@ class IsSubTypeOfTest {
             $this
         """.trimIndent(), "Test.zbr"
             ).tokenize()
-            collectNamedClasses(tokens)
+            scanClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
-            return root.children.first { it.name == testScopeName }
+            return root.children.first { it.name == testScopeName }.scope.value
         }
 
         operator fun Scope.get(name: String): ClassType {
-            return children.first { it.name == name }.typeWithoutArgs
+            return children.first { it.name == name }.scope.value.typeWithoutArgs
         }
 
         fun isSubTypeOf(expected: Type, actual: Type): Boolean {

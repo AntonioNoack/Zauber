@@ -1,17 +1,17 @@
 package me.anno.zauber.resolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.ZauberASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 
 object ResolutionUtils {
     fun typeResolveScope(code: String): Scope {
@@ -40,7 +40,7 @@ object ResolutionUtils {
         }
 
         for (index in tokens.indices) {
-            collectNamedClasses(tokens[index])
+            scanClasses(tokens[index])
         }
 
         for (index in tokens.indices) {
@@ -61,15 +61,16 @@ object ResolutionUtils {
         for (packageName in packageNames) {
             val scope = root.children.firstOrNull { it.name == packageName }
                 ?: throw IllegalStateException("Missing '$packageName' in root, available: ${root.children.map { it.name }}")
-            resolveTypesAndNames(scope)
+            resolveTypesAndNames(scope.scope.value)
         }
 
-        return root.children.first { it.name == testScopeName }
+        return root.children.first { it.name == testScopeName }.scope.value
     }
 
     operator fun Scope.get(name: String): Scope {
-        return children.firstOrNull { it.name == name }
+        val child = children.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Tried finding '$name', but only found ${children.map { it.name }}")
+        return child.scope.value
     }
 
     fun Scope.getField(name: String): Field {
@@ -78,8 +79,9 @@ object ResolutionUtils {
     }
 
     fun Scope.firstChild(scopeType: ScopeType): Scope {
-        return children.firstOrNull { it.scopeType == scopeType }
+        val child = children.firstOrNull { it.scopeType == scopeType }
             ?: throw IllegalStateException("Tried finding '$scopeType', but only found ${children.map { it.scopeType }}")
+        return child.scope.value
     }
 
 }

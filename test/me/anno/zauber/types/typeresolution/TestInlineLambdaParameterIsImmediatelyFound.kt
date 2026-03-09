@@ -1,7 +1,7 @@
 package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.collectNamedClasses
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -9,7 +9,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.resolution.ResolutionUtils.firstChild
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.impl.LambdaType
 import org.junit.jupiter.api.Test
@@ -30,10 +29,10 @@ class TestInlineLambdaParameterIsImmediatelyFound {
             }
         """.trimIndent(), "Test.zbr"
         ).tokenize()
-        collectNamedClasses(tokens)
+        scanClasses(tokens)
         ZauberASTBuilder(tokens, root).readFileLevel()
         val testScope = root.children.first { it.name == testScopeName }
-        val method = testScope.firstChild(ScopeType.METHOD)
+        val method = testScope.scope.value.firstChild(ScopeType.METHOD)
         val body = method.selfAsMethod!!.body as ExpressionList
         val expr = body.list[0] as CallExpression
         println("${expr.self}, ${expr.self.javaClass.simpleName}")
