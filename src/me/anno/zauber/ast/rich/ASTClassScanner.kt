@@ -17,6 +17,7 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.scope.lazy.LazyExpression
+import me.anno.zauber.scope.lazy.LazyScope
 import me.anno.zauber.scope.lazy.TokenSubList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -44,69 +45,74 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     private val listening = ArrayList<Boolean>()
         .apply { add(true) }
 
-    private var depth = 0
-    private var hadNamedScope = false
+    fun pushNamedScopeLazy(
+        name: String,
+        listenType: Int,
+        scopeType: ScopeType,
+        readLazily: (scope: Scope, readBody: Boolean) -> Unit
+    ) {
+        val i0 = i
+        val i1 = tokens.size
+        val parentScope = currPackage
 
-    var nextPackage = root
-
-    private fun handleBlockOpen() {
-        if (hadNamedScope) {
-            listening.add(true)
-            currPackage = nextPackage
-        } else {
-            depth++
-            listening.add(false)
-        }
-        hadNamedScope = false
-    }
-
-    fun pushNamedScope(name: String, listenType: Int, scopeType: ScopeType): Scope {
-        nextPackage = currPackage.getOrPut(name, scopeType)
-        val classScope = nextPackage
+        val classScope = Scope(name, parentScope)
         classScope.keywords = classScope.keywords or listenType
         classScope.fileName = tokens.fileName
-        return classScope
+
+        readLazily(classScope, false)
+
+        parentScope.children.add(LazyScope(tokens.fileName, name, scopeType, lazy {
+
+            i = i0
+            tokens.size = i1
+            currPackage = parentScope
+            readLazily(classScope, true)
+
+            classScope
+        }))
     }
 
     open fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
-        val classScope = pushNamedScope(name, listenType, scopeType)
-        classScope.keywords = classScope.keywords or popKeywords()
+        pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
+            classScope.keywords = classScope.keywords or popKeywords()
 
-        val genericParams = if (consumeIf("<")) {
-            collectGenericParameters(classScope)
-        } else emptyList()
+            val genericParams = if (consumeIf("<")) {
+                collectGenericParameters(classScope)
+            } else emptyList()
 
-        classScope.typeParameters = genericParams
-        classScope.hasTypeParameters = true
-        if (false) println("Defined type parameters for ${classScope.pathStr}")
+            classScope.typeParameters = genericParams
+            classScope.hasTypeParameters = true
+            if (false) println("Defined type parameters for ${classScope.pathStr}")
 
-        if (consumeIf("private")) keywords = keywords or Keywords.PRIVATE
-        if (consumeIf("protected")) keywords = keywords or Keywords.PROTECTED
+            if (consumeIf("private")) keywords = keywords or Keywords.PRIVATE
+            if (consumeIf("protected")) keywords = keywords or Keywords.PROTECTED
 
-        consumeIf("constructor")
-        if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            // skip constructor params
-            i = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
+            consumeIf("constructor")
+            if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                // skip constructor params
+                i = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
+            }
+
+            if (consumeIf(":")) {
+                collectSuperNames(classScope)
+            }
+
+            handleClassBody(classScope, scopeType, readBody)
         }
-
-        if (consumeIf(":")) {
-            collectSuperNames(classScope)
-        }
-
-        handleClassBody(classScope, scopeType)
     }
 
-    fun handleClassBody(classScope: Scope, scopeType: ScopeType) {
-        if (scopeType == ScopeType.ENUM_CLASS && tokens.equals(i, "{")) {
-            hadNamedScope = true
-            handleBlockOpen()
-            i++
+    fun handleClassBody(classScope: Scope, scopeType: ScopeType, readBody: Boolean) {
+        if (!tokens.equals(i, TokenType.OPEN_BLOCK)) return
+        if (readBody) {
+            pushBlock(classScope) {
+                if (scopeType == ScopeType.ENUM_CLASS) {
+                    collectEnumNames(classScope)
+                    currPackage.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+                }
 
-            collectEnumNames(classScope)
-            currPackage.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-        } else {
-            hadNamedScope = true
-        }
+                readFileLevel()
+            }
+        } else skipBlock()
     }
 
     fun collectGenericParameters(classScope: Scope): List<Parameter> {
@@ -206,21 +212,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         while (i < tokens.size) {
             val i0 = i
             when (tokens.getType(i)) {
-                TokenType.OPEN_BLOCK -> handleBlockOpen()
-                TokenType.OPEN_CALL, TokenType.OPEN_ARRAY -> depth++
-                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY -> depth--
-                TokenType.CLOSE_BLOCK -> {
-                    @Suppress("Since15")
-                    if (listening.removeLast()) {
-                        if (listening.isEmpty()) {
-                            throw IllegalStateException("Bracket in-balance at ${tokens.err(i)}")
-                        }
-                        currPackage = currPackage.parent ?: root
-                    } else depth--
-                }
-                else -> if (depth == 0) {
-                    collectNamesOnDepth0()
-                }
+                TokenType.OPEN_BLOCK, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY,
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK ->
+                    throw IllegalStateException("Unexpected token ${tokens.err(i)}")
+                else -> collectNamesOnDepth0()
             }
             i = max(i0 + 1, i)
         }
@@ -269,7 +264,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     open fun readField() {
-        hadNamedScope = false
         val origin = origin(i - 1)
         val isMutable = tokens.equals(i - 1, "var")
         val end = findFieldNameEnd()
@@ -419,7 +413,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val origin = origin(i - 1)
         val classScope = currPackage
         val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
-        hadNamedScope = false
 
         pushScope(constrScope) {
             val selfType = classScope.typeWithArgs
@@ -440,7 +433,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun readMethod() {
         val origin = origin(i - 1)
-        hadNamedScope = false
 
         val end = findParameterStart()
         val name = tokens.toString(end - 1)

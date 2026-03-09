@@ -143,7 +143,8 @@ class Runtime {
         val boolInstance = getObjectInstance(boolCompanion.typeWithoutArgs)
         val fields = boolInstance.type.properties
         val name = if (bool) "TRUE" else "FALSE"
-        val field = fields.first { it.name == name }
+        val field = fields.firstOrNull { it.name == name }
+            ?: throw IllegalStateException("Missing enum Boolean.$name")
         return this[boolInstance, field]
     }
 

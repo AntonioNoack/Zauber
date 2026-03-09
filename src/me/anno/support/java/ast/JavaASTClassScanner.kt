@@ -5,10 +5,10 @@ import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.ASTClassScanner
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.tokenizer.TokenList
-import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.tokenizer.TokenList
+import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Types.NullableAnyType
 
 /**
@@ -55,24 +55,25 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
     }
 
     override fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
-        val classScope = pushNamedScope(name, listenType, scopeType)
-        val genericParams = collectGenericTypes(classScope)
+        pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
+            val genericParams = collectGenericTypes(classScope)
 
-        classScope.typeParameters = genericParams
-        classScope.hasTypeParameters = true
-        if (false) println("Defined type parameters for ${classScope.pathStr}")
+            classScope.typeParameters = genericParams
+            classScope.hasTypeParameters = true
+            if (false) println("Defined type parameters for ${classScope.pathStr}")
 
-        skipValueParameters()
+            skipValueParameters()
 
-        if (consumeIf("extends")) {
-            collectSuperNames(classScope)
+            if (consumeIf("extends")) {
+                collectSuperNames(classScope)
+            }
+
+            if (consumeIf("implements")) {
+                collectSuperNames(classScope)
+            }
+
+            handleClassBody(classScope, scopeType, readBody)
         }
-
-        if (consumeIf("implements")) {
-            collectSuperNames(classScope)
-        }
-
-        handleClassBody(classScope, scopeType)
     }
 
     override fun readImport() {

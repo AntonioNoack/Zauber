@@ -12,6 +12,6 @@ class UnresolvedType(
     val resolved: Type by lazy { resolve() }
 
     override fun toStringImpl(depth: Int): String {
-        return "$className?<$typeParameters>"
+        return "¿$className?<$typeParameters>"
     }
 }
