@@ -68,6 +68,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
         val classScope = pushNamedScope(name, listenType, scopeType)
+        classScope.keywords = classScope.keywords or popKeywords()
 
         val genericParams = if (consumeIf("<")) {
             collectGenericParameters(classScope)
@@ -77,8 +78,9 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         classScope.hasTypeParameters = true
         if (false) println("Defined type parameters for ${classScope.pathStr}")
 
-        consumeIf("private")
-        consumeIf("protected")
+        if (consumeIf("private")) keywords = keywords or Keywords.PRIVATE
+        if (consumeIf("protected")) keywords = keywords or Keywords.PROTECTED
+
         consumeIf("constructor")
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             // skip constructor params
@@ -255,6 +257,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("var") || consumeIf("val") -> readField()
             consumeIf("fun") -> readMethod()
             consumeIf("constructor") -> readConstructor()
+            consumeIf("external") -> keywords = keywords or Keywords.EXTERNAL
+            consumeIf("public") -> keywords = keywords or Keywords.PUBLIC
+            consumeIf("protected") -> keywords = keywords or Keywords.PROTECTED
+            consumeIf("private") -> keywords = keywords or Keywords.PRIVATE
             listening.last() -> checkForTypes()
         }
     }
@@ -334,7 +340,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val field = Field(
                 fieldScope.parent!!,
                 selfType, selfType != null, isMutable, null,
-                name, valueType, initialValue, Keywords.NONE, origin
+                name, valueType, initialValue, popKeywords(), origin
             )
             fieldScope.selfAsField = field
 
@@ -358,6 +364,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             if (getter != null) getter.keywords = getter.keywords or getterVisibility
             if (setter != null) setter.keywords = setter.keywords or setterVisibility
         }
+    }
+
+    private fun popKeywords(): Int {
+        val k = keywords
+        keywords = 0
+        return k
     }
 
     private fun readVisibility(): Int {
@@ -416,7 +428,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             constrScope.selfAsConstructor = Constructor(
                 parameters,
                 constrScope, superCall, body,
-                Keywords.NONE, origin
+                popKeywords(), origin
             )
         }
     }
@@ -465,7 +477,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 selfType, selfType != null, name,
                 genericParams, parameters,
                 methodScope, returnType, extraConditions, body,
-                Keywords.NONE, origin
+                popKeywords(), origin
             )
         }
     }

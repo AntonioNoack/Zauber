@@ -8,16 +8,17 @@ import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
 
 class Runtime {
@@ -167,7 +168,11 @@ class Runtime {
         val method = method1.method
         if (method.isExternal()) {
             val name = (method as Method).name!!
-            val key = ExternalKey(method.scope.parent!!, name, method.valueParameters.map { it.type })
+            val parameterTypes = method.valueParameters.map { parameter ->
+                val type = parameter.type
+                (type as? UnresolvedType)?.resolved ?: type
+            }
+            val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]
                 ?: throw IllegalStateException("Missing external method $key")
             val value = method.process(this, self, valueParameters)
