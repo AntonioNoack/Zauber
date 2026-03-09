@@ -8,7 +8,7 @@ import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameter
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
-import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Scope
 import me.anno.zauber.types.ScopeType
 import me.anno.zauber.types.Types

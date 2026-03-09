@@ -10,7 +10,7 @@ import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameter
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
-import me.anno.zauber.typeresolution.TypeResolutionTest.Companion.ctr
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals

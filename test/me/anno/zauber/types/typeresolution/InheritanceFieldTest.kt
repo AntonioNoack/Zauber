@@ -1,0 +1,120 @@
+package me.anno.zauber.types.typeresolution
+
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
+import me.anno.zauber.types.StandardTypes
+import me.anno.zauber.types.Types.IntType
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+class InheritanceFieldTest {
+
+    @BeforeEach
+    fun init() {
+        // ensure std types are loaded for testing
+        StandardTypes.standardClasses
+        check(IntType.classHasNoTypeParams())
+    }
+
+    @Test
+    fun testDirectField() {
+        assertEquals(
+            IntType,
+            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+                """
+                class A {
+                    val size: Int
+                }
+                
+                val tested = A().size
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testDirectFieldWithGenerics() {
+        assertEquals(
+            IntType,
+            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+                """
+                class A<V> {
+                    val size: Int
+                }
+                
+                val tested = A<Int>().size
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testSuperFieldX1() {
+        assertEquals(
+            IntType,
+            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+                """
+                open class A {
+                    val size: Int
+                }
+                class B: A()
+                
+                val tested = B().size
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testSuperFieldX1WithGenerics() {
+        assertEquals(
+            IntType,
+            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+                """
+                open class A<V> {
+                    val size: Int
+                }
+                class B<X>: A<X>()
+                
+                val tested = B<Float>().size
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testSuperFieldX2() {
+        assertEquals(
+            IntType,
+            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+                """
+                open class A {
+                    val size: Int
+                }
+                open class B: A()
+                class C: B()
+                
+                val tested = C().size
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testSuperFieldX2WithGenerics() {
+        assertEquals(
+            IntType,
+            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+                """
+                open class A<I> {
+                    val size: Int
+                }
+                open class B<J>: A<J>()
+                class C<K>: B<K>()
+                
+                val tested = C<Float>().size
+            """.trimIndent()
+            )
+        )
+    }
+}
