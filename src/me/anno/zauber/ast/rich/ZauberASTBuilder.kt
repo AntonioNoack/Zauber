@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
+import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -270,34 +271,6 @@ class ZauberASTBuilder(
         } else return null
     }
 
-    private fun readWhereConditions(): List<TypeCondition> {
-        return if (consumeIf("where")) {
-            val conditions = ArrayList<TypeCondition>()
-            while (true) {
-
-                check(tokens.equals(i, TokenType.NAME))
-                check(tokens.equals(i + 1, ":"))
-
-                val name = tokens.toString(i++)
-                consume(TokenType.COMMA)
-                val type = readTypeNotNull(null, true)
-                conditions.add(TypeCondition(name, type))
-
-                if (tokens.equals(i, ",") &&
-                    tokens.equals(i + 1, TokenType.NAME) &&
-                    tokens.equals(i + 2, ":")
-                ) {
-                    // skip comma and continue reading conditions
-                    consume(TokenType.COMMA)
-                } else {
-                    // done
-                    break
-                }
-            }
-            conditions
-        } else emptyList()
-    }
-
     private fun readMethod(): Method {
         val origin = origin(i - 1) // on 'fun'
 
@@ -334,6 +307,7 @@ class ZauberASTBuilder(
         var returnType =
             if (!tokens.equals(i, "=", ":")) UnitType // todo if there is a where, we first need to skip it
             else readTypeOrNull(selfType)
+
         val extraConditions = readWhereConditions()
 
         val method = Method(

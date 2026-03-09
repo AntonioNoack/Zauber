@@ -10,6 +10,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod
 import me.anno.zauber.ast.rich.FieldGetterSetter.createValueField
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.FieldGetterSetter.needsGetter
+import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.scope.Scope
@@ -459,7 +460,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
             val parameters = readParameterDeclarations(selfType)
-            val extraConditions = readExtraConditions()
+            val whereConditions = readWhereConditions()
 
             val returnType = if (consumeIf(":")) {
                 readType(selfType, true)
@@ -476,7 +477,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             methodScope.selfAsMethod = Method(
                 selfType, selfType != null, name,
                 genericParams, parameters,
-                methodScope, returnType, extraConditions, body,
+                methodScope, returnType, whereConditions, body,
                 popKeywords(), origin
             )
         }
@@ -566,12 +567,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
         }
         return end
-    }
-
-    private fun readExtraConditions(): List<TypeCondition> {
-        return if (consumeIf("where")) {
-            TODO("read extra conditions")
-        } else emptyList()
     }
 
     open fun checkForTypes() {
