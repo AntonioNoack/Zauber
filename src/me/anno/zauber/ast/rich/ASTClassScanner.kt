@@ -263,16 +263,19 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         hadNamedScope = false
         val origin = origin(i - 1)
         val isMutable = tokens.equals(i - 1, "var")
-        val fieldScope = currPackage.generate("field", origin, ScopeType.FIELD)
+        val end = findFieldNameEnd()
+        val name = tokens.toString(end - 1)
+
+        val fieldScope = currPackage.generate(name, origin, ScopeType.FIELD)
         pushScope(fieldScope) {
 
             val genericParams = if (consumeIf("<")) {
                 collectGenericParameters(fieldScope)
             } else emptyList()
 
-            val nameStart = i
+            check(genericParams.isEmpty()) { "TypeParams for field not yet supported" }
 
-            val end = findFieldNameEnd()
+            val nameStart = i
 
             check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
                 "Expected field name at ${tokens.err(end - 1)}"
@@ -280,10 +283,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             check(end > nameStart) { "Expected field name at ${tokens.err(nameStart)}" }
 
-            val name = tokens.toString(end - 1)
             val selfType = if (nameStart < end - 1) readSelfType(end) else null
-
-            i = end
+            val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
             var valueType = if (consumeIf(":")) {
                 readType(selfType, true)
@@ -293,8 +294,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 readLazyValue()
             } else null
 
-            val getVisibility = readVisibility()
-            var setVisibility = getVisibility
+            val getterVisibility = readVisibility()
+            var setterVisibility = getterVisibility
             var getterOrigin = origin
             val getterBody: Expression? = if (consumeIf("get")) {
                 getterOrigin = origin(i - 1)
@@ -306,7 +307,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                         readLazyValue()
                     } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
                 } else null
-                setVisibility = readVisibility()
+                setterVisibility = readVisibility()
                 body
             } else null
 
@@ -338,17 +339,24 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             fieldScope.selfAsField = field
 
             if (getterBody != null) {
-                val backingField = createBackingField(field, getterBody.scope, origin)
-                createGetterMethod(field, getterBody, backingField, getterBody.scope, origin)
+                val backingField = createBackingField(field, getterBody.scope, getterOrigin)
+                createGetterMethod(field, getterBody, backingField, getterBody.scope, getterOrigin)
             }
+
             if (setterBody != null) {
-                val backingField = createBackingField(field, setterBody.scope, origin)
-                val valueField = createValueField(field, setterName, setterBody.scope, origin)
-                createSetterMethod(field, setterBody, backingField, valueField, setterBody.scope, origin)
+                val backingField = createBackingField(field, setterBody.scope, setterOrigin)
+                val valueField = createValueField(field, setterName, setterBody.scope, setterOrigin)
+                createSetterMethod(field, setterBody, backingField, valueField, setterBody.scope, setterOrigin)
             }
+
             if (needsGetter(field)) {
                 finishField(field)
             }
+
+            val getter = field.getter
+            val setter = field.setter
+            if (getter != null) getter.keywords = getter.keywords or getterVisibility
+            if (setter != null) setter.keywords = setter.keywords or setterVisibility
         }
     }
 
@@ -415,16 +423,19 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun readMethod() {
         val origin = origin(i - 1)
-        val methodScope = currPackage.generate("fun", origin, ScopeType.METHOD)
         hadNamedScope = false
 
+        val end = findParameterStart()
+        val name = tokens.toString(end - 1)
+        val methodScope = currPackage.generate(name, origin, ScopeType.METHOD)
+
         pushScope(methodScope) {
+            // todo skip these for now, and read them when we know the name...
             val genericParams = if (consumeIf("<")) {
                 collectGenericParameters(methodScope)
             } else emptyList()
 
             val nameStart = i
-            val end = findParameterStart()
 
             check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
                 "Expected field name at ${tokens.err(end - 1)}"

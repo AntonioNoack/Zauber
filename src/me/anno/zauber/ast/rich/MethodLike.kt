@@ -24,7 +24,7 @@ open class MethodLike(
     var returnType: Type?,
     val scope: Scope,
     var body: Expression?,
-    val keywords: KeywordSet,
+    var keywords: KeywordSet,
     val origin: Int
 ) {
 
@@ -88,13 +88,15 @@ open class MethodLike(
      * Whether the storage location (field/argument) is needed to resolve this's return type
      * todo use this property in CallExpression.hasLambdaOrUnderdefined
      * */
-    val hasUnderdefinedGenerics = typeParameters.any { typeParam ->
-        if (typeParam.scope == scope) {
-            val genericType = GenericType(typeParam.scope, typeParam.name)
-            returnType?.contains(genericType)
-                ?: ((selfType?.contains(genericType) == true) ||
-                        valueParameters.none { it.type.contains(genericType) })
-        } else false // else resolved by parent
+    val hasUnderdefinedGenerics by lazy {
+        typeParameters.any { typeParam ->
+            if (typeParam.scope == scope) {
+                val genericType = GenericType(typeParam.scope, typeParam.name)
+                returnType?.contains(genericType)
+                    ?: ((selfType?.contains(genericType) == true) ||
+                            valueParameters.none { it.type.contains(genericType) })
+            } else false // else resolved by parent
+        }
     }
 
     fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)

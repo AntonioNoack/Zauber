@@ -133,6 +133,15 @@ object Inheritance {
         if (expectedType == actualType) return true
         if (expectedType == NullableAnyType) return true
         if (expectedType == UnknownType) return true
+        if (actualType is UnresolvedType) return isSubTypeOf(
+            expectedType, actualType.resolved,
+            expectedTypeParams, actualTypeParameters, insertMode, matchScore
+        )
+        if (expectedType is UnresolvedType) return isSubTypeOf(
+            expectedType.resolved, actualType,
+            expectedTypeParams, actualTypeParameters, insertMode, matchScore
+        )
+
 
         matchScore?.inc()
 

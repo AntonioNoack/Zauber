@@ -25,7 +25,7 @@ abstract class Type {
             is ClassType -> typeParameters?.any { it.contains(type) } == true
             is LambdaType -> (selfType?.contains(type) ?: false) || returnType.contains(type)
             is GenericType -> false // not the same; todo we might need to check super/redirects
-            else -> throw NotImplementedError("Does $this contain $type?")
+            else -> throw NotImplementedError("Does ${this.javaClass.simpleName} contain $type?")
         }
     }
 
@@ -105,7 +105,7 @@ abstract class Type {
             is NotType -> type.resolve(selfScope).not()
             is UnresolvedType -> {
                 resolveTypeByName(null, className, scope, imports)
-                    ?: throw IllegalStateException("Could not resolve $this")
+                    ?: throw IllegalStateException("Could not resolve $this in $scope")
             }
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
         }

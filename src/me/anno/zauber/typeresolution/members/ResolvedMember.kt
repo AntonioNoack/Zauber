@@ -5,13 +5,13 @@ import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenericsOrNull
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.LambdaParameter
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
@@ -125,6 +125,7 @@ abstract class ResolvedMember<V>(
                     }
                 }
                 is NotType -> resolveGenerics(selfType, type.type, genericNames, genericValues).not()
+                is UnresolvedType -> resolveGenerics(selfType, type.resolved, genericNames, genericValues)
                 else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
             }
         }

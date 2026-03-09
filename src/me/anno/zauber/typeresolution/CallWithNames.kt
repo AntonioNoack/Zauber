@@ -15,6 +15,7 @@ import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.UnresolvedType
 
 object CallWithNames {
 
@@ -83,7 +84,7 @@ object CallWithNames {
                 } else {
                     check(index == result.lastIndex) { "vararg must be in last place, $index vs ${result.lastIndex}" }
                     // collect all varargs
-                    val type0 = ev.type as ClassType
+                    val type0 = ((ev.type as? UnresolvedType)?.resolved ?: ev.type) as ClassType
                     val targetType = type0.typeParameters!![0]
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }
