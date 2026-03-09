@@ -19,6 +19,8 @@ import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.interpreting.ZClass.Companion.needsBackingFieldImpl
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -29,7 +31,6 @@ import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.IntType
@@ -171,6 +172,7 @@ object ASTSimplifier {
             is DoWhileLoop -> return simplifyDoWhile(context, expr, block0, flow0, graph)
             is TryCatchBlock -> return simplifyTryCatch(context, expr, block0, flow0, graph, needsValue)
             is CheckEqualsOp -> return simplifyCheckEqualsOp(context, expr, block0, flow0, graph)
+            is LazyExpression -> return simplifyImpl(context, expr.value, block0, flow0, graph, needsValue)
 
             else -> {
                 if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")

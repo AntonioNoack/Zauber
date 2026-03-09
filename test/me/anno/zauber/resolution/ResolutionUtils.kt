@@ -26,10 +26,10 @@ object ResolutionUtils {
             .mapIndexed { index, content ->
                 if (index == 0) {
                     """
-            package $testScopeName
-            
-            $content
-        """.trimIndent()
+                        package $testScopeName
+                        
+                        $content
+                    """.trimIndent()
                 } else {
                     "package $content"
                 }
@@ -41,10 +41,6 @@ object ResolutionUtils {
 
         for (index in tokens.indices) {
             scanClasses(tokens[index])
-        }
-
-        for (index in tokens.indices) {
-            ZauberASTBuilder(tokens[index], root).readFileLevel()
         }
 
         val packageNames = sources.mapIndexed { index, content ->

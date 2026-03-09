@@ -28,7 +28,8 @@ class TestRuntime {
 
         fun testExecuteCatch(code: String): Pair<Runtime, BlockReturn> {
             val scope = typeResolveScope(code)
-            val field = scope.fields.first { it.name == "tested" }
+            val field = scope.fields.firstOrNull { it.name == "tested" }
+                ?: throw IllegalStateException("Missing 'tested' field in scope ${scope.pathStr}")
             val getter = field.getter
                 ?: throw IllegalStateException("Missing getter for $field")
 

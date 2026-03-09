@@ -11,6 +11,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.createValueField
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.FieldGetterSetter.needsGetter
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.scope.Scope
@@ -262,6 +263,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("public") -> keywords = keywords or Keywords.PUBLIC
             consumeIf("protected") -> keywords = keywords or Keywords.PROTECTED
             consumeIf("private") -> keywords = keywords or Keywords.PRIVATE
+            consumeIf("abstract") -> keywords = keywords or Keywords.ABSTRACT
             listening.last() -> checkForTypes()
         }
     }
@@ -273,7 +275,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val end = findFieldNameEnd()
         val name = tokens.toString(end - 1)
 
-        val fieldScope = currPackage.generate(name, origin, ScopeType.FIELD)
+        val ownerScope = currPackage
+        val fieldScope = ownerScope.generate(name, origin, ScopeType.FIELD)
         pushScope(fieldScope) {
 
             val genericParams = if (consumeIf("<")) {
@@ -311,7 +314,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                         readLazyBody()
                     } else if (consumeIf("=")) {
-                        readLazyValue()
+                        val originI = origin(i - 1)
+                        ReturnExpression(readLazyValue(), null, fieldScope, originI)
                     } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
                 } else null
                 setterVisibility = readVisibility()
@@ -333,13 +337,13 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                         readLazyBody()
                     } else if (consumeIf("=")) {
-                        readLazyValue()
+                        val originI = origin(i - 1)
+                        ReturnExpression(readLazyValue(), null, fieldScope, originI)
                     } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
                 } else null
             } else null
 
-            val field = Field(
-                fieldScope.parent!!,
+            val field = ownerScope.addField(
                 selfType, selfType != null, isMutable, null,
                 name, valueType, initialValue, popKeywords(), origin
             )
@@ -470,7 +474,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             val body = when {
                 tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
-                consumeIf("=") -> readLazyValue()
+                consumeIf("=") -> {
+                    val originI = origin(i - 1)
+                    ReturnExpression(readLazyValue(), null, methodScope, originI)
+                }
                 else -> null
             }
 

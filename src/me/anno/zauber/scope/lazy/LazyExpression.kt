@@ -13,7 +13,7 @@ class LazyExpression(
     scope: Scope, origin: Int,
 ) : Expression(scope, origin) {
 
-    private val self by lazy {
+    val value by lazy {
         val tmp = ZauberASTBuilder(tokens.tokens, root, ZauberLanguage.ZAUBER)
         tmp.imports.addAll(tokens.imports)
 
@@ -22,20 +22,20 @@ class LazyExpression(
         tmp.readExpression()
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = self.resolveReturnType(context)
-    override fun clone(scope: Scope): Expression = self.clone(scope)
-    override fun toStringImpl(depth: Int): String = self.toStringImpl(depth)
-    override fun resolveImpl(context: ResolutionContext): Expression = self.resolveImpl(context)
+    override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)
+    override fun clone(scope: Scope): Expression = value.clone(scope)
+    override fun toStringImpl(depth: Int): String = value.toStringImpl(depth)
+    override fun resolveImpl(context: ResolutionContext): Expression = value.resolveImpl(context)
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean =
-        self.hasLambdaOrUnknownGenericsType(context)
+        value.hasLambdaOrUnknownGenericsType(context)
 
-    override fun needsBackingField(methodScope: Scope): Boolean = self.needsBackingField(methodScope)
-    override fun splitsScope(): Boolean = self.splitsScope()
-    override fun isResolved(): Boolean = self.isResolved()
+    override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
+    override fun splitsScope(): Boolean = value.splitsScope()
+    override fun isResolved(): Boolean = value.isResolved()
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
-        self.forEachExpression(callback)
+        value.forEachExpression(callback)
     }
 
 
