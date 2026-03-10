@@ -83,8 +83,9 @@ class ZauberASTBuilder(
         }
     }
 
-    val lsTypes = IntArray(tokens.size).apply { fill(-1) }
-    val lsModifiers = IntArray(tokens.size)
+    // todo now that we use lazy-parsing, we should but these into ASTClassScanner...
+    val lsTypes = IntArray(tokens.totalSize).apply { fill(-1) }
+    val lsModifiers = IntArray(tokens.totalSize)
 
     fun setLSType(i: Int, type: VSCodeType, modifiers: Int) {
         lsTypes[i] = type.ordinal
@@ -93,7 +94,9 @@ class ZauberASTBuilder(
 
     init {
         // numbers and strings are trivial to fill
-        for (i in 0 until tokens.size) {
+        val tmp = tokens.size
+        tokens.size = tokens.totalSize
+        for (i in 0 until tokens.totalSize) {
             lsTypes[i] = when (tokens.getType(i)) {
                 TokenType.NUMBER -> VSCodeType.NUMBER
                 TokenType.STRING -> VSCodeType.STRING
@@ -102,6 +105,7 @@ class ZauberASTBuilder(
                 else -> continue
             }.ordinal
         }
+        tokens.size = tmp
     }
 
     private fun readObject(scopeType: ScopeType) {
@@ -684,6 +688,7 @@ class ZauberASTBuilder(
 
                 val namePath = consumeName(vsCodeType, 0)
                 val typeArgs = readTypeParameters(null)
+
                 if (
                     tokens.equals(i, TokenType.OPEN_CALL) &&
                     tokens.isSameLine(i - 1, i)

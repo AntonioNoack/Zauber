@@ -90,10 +90,13 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             classScope.typeParameters = genericParams
             classScope.hasTypeParameters = true
 
-            if (consumeIf("private")) keywords = keywords or Keywords.PRIVATE
-            if (consumeIf("protected")) keywords = keywords or Keywords.PROTECTED
-
-            consumeIf("constructor")
+            if (consumeIf("private")) {
+                keywords = keywords or Keywords.PRIVATE
+                consume("constructor")
+            } else if (consumeIf("protected")) {
+                keywords = keywords or Keywords.PROTECTED
+                consume("constructor")
+            } else consumeIf("constructor")
 
             if (readBody) {
                 val constrOrigin = origin(i)
@@ -263,13 +266,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val selfType = readSelfTypeIfPresent(end)
             val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
-            var valueType = if (consumeIf(":")) {
-                readType(selfType, true)
-            } else null
-
-            val initialValue = if (consumeIf("=")) {
-                readLazyValue()
-            } else null
+            var valueType = if (consumeIf(":")) readType(selfType, true) else null
+            val initialValue = if (consumeIf("=")) readLazyValue() else null
 
             val getterVisibility = readVisibility()
             var setterVisibility = getterVisibility

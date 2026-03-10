@@ -19,6 +19,7 @@ class LazyExpression(
 
         tmp.i = tokens.i0
         tmp.tokens.size = tokens.i1
+        tmp.currPackage = scope
         tmp.readExpression()
     }
 

@@ -3,14 +3,14 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.Specialization
@@ -28,16 +28,18 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>
     ): ResolvedConstructor? {
-        LOGGER.info("Checking $scope for constructor $name")
+        LOGGER.info("Checking scope '$scope' for constructor '$name'")
         scope ?: return null
         if (scope.name == name) {
             val constructor = findMemberInScopeImpl(scope, name, returnType, selfType, typeParameters, valueParameters)
             if (constructor != null) return constructor
         }
-        // LOGGER.info("  children: ${scope.children.map { it.name }}")
+        LOGGER.info("  children: ${scope.children.map { it.name }}")
         for (child in scope.children) {
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
-                val constructor = findMemberInScopeImpl(child.scope, name, returnType, selfType, typeParameters, valueParameters)
+                LOGGER.info("Found constructor-name pre-match: $child")
+                val constructor =
+                    findMemberInScopeImpl(child.scope, name, returnType, selfType, typeParameters, valueParameters)
                 if (constructor != null) return constructor
             }
         }
@@ -97,7 +99,6 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
         val typeParameters0 = typeParameters
             ?.toParameterList(scope.typeParameters)
-
 
         val newType2 = typeParameters0.resolveGenerics(selfType, newType)
 
