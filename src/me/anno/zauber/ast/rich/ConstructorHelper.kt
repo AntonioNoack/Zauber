@@ -14,7 +14,7 @@ object ConstructorHelper {
         constructorOrigin: Int
     ): ExpressionList {
         val result = ArrayList<Expression>()
-        val scope = classScope.getOrCreatePrimConstructorScope()
+        val scope = classScope.getOrCreatePrimaryConstructorScope()
         if (constructorParams != null) {
             for (parameter in constructorParams) {
                 if (!(parameter.isVal || parameter.isVar)) continue

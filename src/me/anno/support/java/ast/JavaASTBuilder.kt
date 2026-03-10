@@ -226,7 +226,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
     }
 
     private fun readInitBlock() {
-        pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
+        pushBlock(currPackage.getOrCreatePrimaryConstructorScope()) {
             readMethodBody()
         }
     }
@@ -235,7 +235,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         consume("static")
         val staticScope = getStaticScope()
         pushScope(staticScope) {
-            pushBlock(staticScope.getOrCreatePrimConstructorScope()) {
+            pushBlock(staticScope.getOrCreatePrimaryConstructorScope()) {
                 readMethodBody()
             }
         }

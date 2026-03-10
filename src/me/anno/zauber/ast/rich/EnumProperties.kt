@@ -25,7 +25,7 @@ object EnumProperties {
         val enumScope = currPackage
         val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
         // val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
-        val primaryConstructorScope = companionScope.getOrCreatePrimConstructorScope()
+        val primaryConstructorScope = companionScope.getOrCreatePrimaryConstructorScope()
         primaryConstructorScope.selfAsConstructor = Constructor(
             emptyList(), primaryConstructorScope,
             null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
@@ -86,7 +86,7 @@ object EnumProperties {
 
         companionScope.hasTypeParameters = true
 
-        val constructorScope = companionScope.getOrCreatePrimConstructorScope()
+        val constructorScope = companionScope.getOrCreatePrimaryConstructorScope()
         val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs), origin)
         val entryValues = enumScope.enumEntries.map { entryScope ->
             val field = entryScope.objectField!!

@@ -127,7 +127,7 @@ class ZauberASTBuilder(
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
         readSuperCalls(classScope)
 
-        val primaryConstructor = classScope.getOrCreatePrimConstructorScope()
+        val primaryConstructor = classScope.getOrCreatePrimaryConstructorScope()
         primaryConstructor.selfAsConstructor = Constructor(
             emptyList(), primaryConstructor,
             null, ExpressionList(ArrayList(), primaryConstructor, origin), keywords, origin
@@ -209,7 +209,7 @@ class ZauberASTBuilder(
 
         val type = readTypeOrNull(selfType)
 
-        val constructorScope = classScope.getOrCreatePrimConstructorScope()
+        val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
         val initialValue = pushScope(constructorScope) {
             // println("Fields in primary constructor for $primScope: ${primScope.fields}")
             if (tokens.equals(i, "=")) {
@@ -443,7 +443,7 @@ class ZauberASTBuilder(
                 consumeIf("val") -> readFieldInClass(false)
                 consumeIf("init") -> {
                     check(tokens.equals(i, TokenType.OPEN_BLOCK))
-                    pushBlock(currPackage.getOrCreatePrimConstructorScope()) {
+                    pushBlock(currPackage.getOrCreatePrimaryConstructorScope()) {
                         readMethodBody()
                     }
                 }

@@ -141,7 +141,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     var primaryConstructorScope: Scope? = null
         private set
 
-    fun getOrCreatePrimConstructorScope(): Scope {
+    fun getOrCreatePrimaryConstructorScope(): Scope {
         return primaryConstructorScope ?: run {
             val scope = getOrPut("prim", ScopeType.CONSTRUCTOR)
             primaryConstructorScope = scope

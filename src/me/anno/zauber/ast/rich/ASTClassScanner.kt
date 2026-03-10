@@ -17,14 +17,18 @@ import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.scope.lazy.TokenSubList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
@@ -100,10 +104,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             if (readBody) {
                 val constrOrigin = origin(i)
-                val constructorScope = classScope.getOrCreatePrimConstructorScope()
+                val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
                 constructorScope.keywords = constructorScope.keywords or packKeywords()
                 pushScope(constructorScope) {
-                    val selfType: Type? = null
+                    val selfType = classScope.typeWithoutArgs
                     var valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                         readParameterDeclarations(selfType)
                     } else emptyList()
@@ -111,20 +115,36 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     if (scopeType == ScopeType.ENUM_CLASS) {
                         val param0 = Parameter(0, "ordinal", IntType, constructorScope, constrOrigin)
                         val param1 = Parameter(1, "name", StringType, constructorScope, constrOrigin)
-                        param0.getOrCreateField(selfType, Keywords.SYNTHETIC)
-                        param1.getOrCreateField(selfType, Keywords.SYNTHETIC)
+                        param0.getOrCreateField(null, Keywords.SYNTHETIC)
+                        param1.getOrCreateField(null, Keywords.SYNTHETIC)
                         valueParameters = listOf(param0, param1) + valueParameters.map { it.shift(2) }
                     }
 
+                    val instr = ArrayList<Expression>()
                     for (param in valueParameters) {
                         if (param.isVal || param.isVar) {
-                            finishField(param.getOrCreateField(selfType, Keywords.NONE))
+                            val paramField = param.field!!
+                            val initialValue = FieldExpression(paramField, constructorScope, param.origin)
+                            val classField = classScope.addField(
+                                null, false, param.isVar,
+                                null, param.name, param.type, initialValue,
+                                paramField.keywords, param.origin
+                            )
+                            finishField(classField)
+
+                            // todo is this our job? compare with ZauberASTBuilder
+                            instr.add(
+                                AssignmentExpression(
+                                    FieldExpression(classField, constructorScope, param.origin),
+                                    initialValue
+                                )
+                            )
                         }
                     }
 
                     constructorScope.selfAsConstructor = Constructor(
                         valueParameters, constructorScope,
-                        null, ExpressionList(ArrayList(), constructorScope, constrOrigin), keywords, constrOrigin
+                        null, ExpressionList(instr, constructorScope, constrOrigin), keywords, constrOrigin
                     )
                 }
             } else if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -205,6 +225,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     open fun readPackage() {
         val (path, ni) = tokens.readPath(i)
         currPackage = path
+        currPackage.mergeScopeTypes(ScopeType.PACKAGE)
         i = ni
     }
 
@@ -235,6 +256,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("abstract") -> keywords = keywords or Keywords.ABSTRACT
             consumeIf("operator") -> keywords = keywords or Keywords.OPERATOR
             consumeIf("open") -> keywords = keywords or Keywords.OPEN
+            consumeIf("sealed") -> keywords = keywords or Keywords.SEALED
             consumeIf("tailrec") -> {}// keywords = keywords or Keywords.TAILREC
             else -> checkForTypes()
         }
@@ -263,7 +285,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             check(genericParams.isEmpty()) { "TypeParams for field not yet supported" }
 
-            val selfType = readSelfTypeIfPresent(end)
+            val selfType0 = readSelfTypeIfPresent(end)
+            var selfType = selfType0 ?: getSelfType(ownerScope)
+            if (selfType != null) selfType = selfType.resolve()
+
             val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
             var valueType = if (consumeIf(":")) readType(selfType, true) else null
@@ -309,7 +334,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             } else null
 
             val field = ownerScope.addField(
-                selfType, selfType != null, isMutable, null,
+                selfType0, selfType0 != null, isMutable, null,
                 name, valueType, initialValue, packKeywords(), origin
             )
             fieldScope.selfAsField = field
@@ -402,14 +427,18 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
         val end = findParameterStart()
         val name = tokens.toString(end - 1)
-        val methodScope = currPackage.generate(name, origin, ScopeType.METHOD)
+        val ownerScope = currPackage
+        val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
         methodScope.keywords = methodScope.keywords or packKeywords()
 
         pushScope(methodScope) {
             // todo skip these for now, and read them when we know the name...
             val genericParams = collectGenericTypes(methodScope)
 
-            val selfType = readSelfTypeIfPresent(end)
+            val selfType0 = readSelfTypeIfPresent(end)
+            var selfType = selfType0 ?: getSelfType(ownerScope)
+            if (selfType != null) selfType = selfType.resolve()
+
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 
             val valueParameters = readParameterDeclarations(selfType)
@@ -444,7 +473,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     private fun readLazyBody(): Expression {
         return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, tokens.size, imports)
-            val expr = LazyExpression(tokens1, scope, origin(i))
+            val expr = LazyExpression(tokens1, true, scope, origin(i))
             i = tokens.size
             expr
         }
@@ -482,9 +511,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     private fun readLazyValue(): Expression {
         val end = findLazyValueEnd()
+        check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
         return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, end, imports)
-            val expr = LazyExpression(tokens1, scope, origin(i))
+            val expr = LazyExpression(tokens1, false, scope, origin(i))
             i = end
             expr
         }
@@ -623,18 +653,22 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 val name = consumeName(VSCodeType.PARAMETER, 0)
                 consume(":")
 
-                val type = readType(selfType, true)
+                var type = readType(selfType, true)
                     ?: throw IllegalStateException("Missing type at ${tokens.err(i)}")
 
                 val defaultValue = if (consumeIf("=")) readLazyValue() else null
 
+                if (isVararg) type = ArrayType.withTypeParameter(type)
                 val parameter = Parameter(
                     parameters.size, isVar, isVal, isVararg,
                     name, type, defaultValue,
                     currPackage, paramOrigin
                 )
                 parameters.add(parameter)
-                parameter.getOrCreateField(selfType, keywords)
+
+                val size = tokens.size
+                parameter.getOrCreateField(null, keywords)
+                check(size == tokens.size) { "Token size changed" }
 
                 readComma()
             }

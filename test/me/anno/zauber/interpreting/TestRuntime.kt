@@ -157,6 +157,9 @@ class TestRuntime {
         """.trimIndent()
         val (runtime, value) = testExecute(code)
         assertEquals("Test", (value.type.type as ClassType).clazz.name)
+        check(value.properties.isNotEmpty()) {
+            "${value.type} somehow has no properties"
+        }
         val a = value.properties[0]!!
         assertEquals(5, runtime.castToInt(a))
     }

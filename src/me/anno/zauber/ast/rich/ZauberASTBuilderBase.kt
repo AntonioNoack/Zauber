@@ -732,7 +732,7 @@ abstract class ZauberASTBuilderBase(
 
         readSuperCalls(classScope)
 
-        val primConstructorScope = classScope.getOrCreatePrimConstructorScope()
+        val primConstructorScope = classScope.getOrCreatePrimaryConstructorScope()
         val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
         val primaryConstructor = Constructor(
             constructorParams ?: emptyList(),
@@ -753,7 +753,7 @@ abstract class ZauberASTBuilderBase(
         val constructorOrigin = origin(i)
         // println("reading primary constructor parameters at ${tokens.err(i)}")
         return if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
             var parameters = pushScope(constructorScope) {
                 val selfType = ClassType(classScope, null)
                 pushCall { readParameterDeclarations(selfType) }
@@ -766,7 +766,7 @@ abstract class ZauberASTBuilderBase(
             }
             parameters
         } else if (scopeType == ScopeType.ENUM_CLASS) {
-            val constructorScope = classScope.getOrCreatePrimConstructorScope()
+            val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
             val parameters = listOf(
                 Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
                 Parameter(1, "name", StringType, constructorScope, constructorOrigin)

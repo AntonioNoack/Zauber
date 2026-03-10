@@ -41,14 +41,15 @@ abstract class ResolvedMember<V>(
     fun getBaseIfMissing(scope: Scope, origin: Int): Expression {
         val type = selfType?.resolve()
         if (type == null) {
-            var rs = getScopeOfResolved()
+            val resolvedScope = getScopeOfResolved()
+            var baseScope = resolvedScope
             while (true) {
-                val scopeType = rs.scopeType
+                val scopeType = baseScope.scopeType
                 if (scopeType != null && (scopeType.isClassType() || scopeType == ScopeType.PACKAGE)) {
-                    return ThisExpression(rs, codeScope, origin)
+                    return ThisExpression(baseScope, codeScope, origin)
                 }
-                rs = rs.parent
-                    ?: throw IllegalStateException("Resolved must be in class or package, but found nothing ${getScopeOfResolved()}")
+                baseScope = baseScope.parent
+                    ?: throw IllegalStateException("Resolved must be in class or package, but found nothing $resolvedScope")
             }
         }
 

@@ -27,6 +27,7 @@ class ZClass(val type: Type) {
 
         fun Field.needsBackingFieldImpl(): Boolean {
             val type = codeScope.typeWithoutArgs
+            println("$this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
             return (!explicitSelfType || selfType == type) &&
                     needsBackingField()
         }

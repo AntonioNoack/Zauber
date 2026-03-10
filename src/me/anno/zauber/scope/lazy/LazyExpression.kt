@@ -10,6 +10,7 @@ import me.anno.zauber.types.Type
 
 class LazyExpression(
     val tokens: TokenSubList,
+    val isBody: Boolean,
     scope: Scope, origin: Int,
 ) : Expression(scope, origin) {
 
@@ -18,9 +19,11 @@ class LazyExpression(
         tmp.imports.addAll(tokens.imports)
 
         tmp.i = tokens.i0
-        tmp.tokens.size = tokens.i1
         tmp.currPackage = scope
-        tmp.readExpression()
+        tmp.tokens.push(tokens.i1) {
+            if (isBody) tmp.readMethodBody()
+            else tmp.readExpression()
+        }
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)

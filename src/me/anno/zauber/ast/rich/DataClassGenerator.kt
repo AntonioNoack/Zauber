@@ -68,7 +68,7 @@ object DataClassGenerator {
         check(currPackage === classScope) { "Expected currPackage to be classScope" }
         val origin = origin(i)
 
-        val primaryFields = classScope.getOrCreatePrimConstructorScope()
+        val primaryFields = classScope.getOrCreatePrimaryConstructorScope()
             .selfAsConstructor!!
             .valueParameters
             .mapNotNull { it.field }
