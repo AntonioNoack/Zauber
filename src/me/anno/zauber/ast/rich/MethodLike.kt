@@ -100,6 +100,7 @@ open class MethodLike(
     }
 
     fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
+    fun isProtected(): Boolean = keywords.hasFlag(Keywords.PROTECTED)
     fun isExternal(): Boolean = keywords.hasFlag(Keywords.EXTERNAL)
 
     var selfTypeIfNecessary: Type? = null

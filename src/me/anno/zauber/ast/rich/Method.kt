@@ -8,6 +8,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
+import java.lang.reflect.Modifier.isProtected
 
 class Method(
     selfType: Type?,
@@ -54,6 +55,9 @@ class Method(
 
     override fun toString(): String {
         val builder = StringBuilder()
+        if (isPrivate()) builder.append("private ")
+        if (isProtected()) builder.append("protected ")
+        if (isExternal()) builder.append("external ")
         builder.append("fun ")
         if (typeParameters.isNotEmpty()) {
             builder.append('<')

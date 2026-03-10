@@ -194,7 +194,10 @@ class Runtime {
         for (i in valueParameters.indices) {
             val parameter = valueParameters[i]
             val field = methodScopeInstance.type.properties.getOrNull(i)
-                ?: throw IllegalStateException("Method needs at least as many fields as parameters, $method")
+                ?: throw IllegalStateException("Method needs at least as many fields as parameters, " +
+                        "$method, " +
+                        "fields: ${(methodScopeInstance.type.type as ClassType).clazz.fields} -> " +
+                        "properties: ${methodScopeInstance.type.properties}")
             check(field.name == method.valueParameters[i].name) {
                 "Field order not as expected, expected parameters to come first"
             }

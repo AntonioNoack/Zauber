@@ -16,10 +16,10 @@ class ZClass(val type: Type) {
 
     companion object {
         fun getProperties(type: Type): List<Field> {
-            if (type !is ClassType) return emptyList()
-            // val scopeType = type.clazz.scopeType
-            // val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
-            // if (!isValidInstance) return emptyList()
+            if (type !is ClassType) {
+                println("type $type is not a ClassType")
+                return emptyList()
+            }
             return type.clazz.scope.fields.filter {
                 it.needsBackingFieldImpl()
             }

@@ -57,7 +57,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val parentScope = currPackage
 
         val classScope = parentScope.getOrPut(name, scopeType)
-        classScope.keywords = classScope.keywords or listenType
+        classScope.keywords = classScope.keywords or listenType or packKeywords()
         classScope.fileName = tokens.fileName
         classScope.initParts += {
             i = i0
@@ -71,7 +71,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
-            classScope.keywords = classScope.keywords or packKeywords()
 
             val genericParams = readTypeParameterDeclarations(classScope)
 
@@ -88,24 +87,36 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             if (readBody) {
                 val constrOrigin = origin(i)
                 val constructorScope = classScope.getOrCreatePrimConstructorScope()
-                var parameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    readParameterDeclarations(classScope.typeWithArgs)
-                } else emptyList()
+                constructorScope.keywords = constructorScope.keywords or packKeywords()
+                pushScope(constructorScope) {
+                    val selfType: Type? = null
+                    var valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                        readParameterDeclarations(selfType)
+                    } else emptyList()
 
-                if (scopeType == ScopeType.ENUM_CLASS) {
-                    parameters = listOf(
-                        Parameter(0, "ordinal", IntType, constructorScope, constrOrigin),
-                        Parameter(1, "name", StringType, constructorScope, constrOrigin)
-                    ) + parameters.map { it.shift(2) }
+                    if (scopeType == ScopeType.ENUM_CLASS) {
+                        val param0 = Parameter(0, "ordinal", IntType, constructorScope, constrOrigin)
+                        val param1 = Parameter(1, "name", StringType, constructorScope, constrOrigin)
+                        param0.getOrCreateField(selfType, Keywords.SYNTHETIC)
+                        param1.getOrCreateField(selfType, Keywords.SYNTHETIC)
+                        valueParameters = listOf(param0, param1) + valueParameters.map { it.shift(2) }
+                    }
+
+                    for (param in valueParameters) {
+                        if (param.isVal || param.isVar) {
+                            finishField(param.getOrCreateField(selfType, Keywords.NONE))
+                        }
+                    }
+
+                    constructorScope.selfAsConstructor = Constructor(
+                        valueParameters, constructorScope,
+                        null, ExpressionList(ArrayList(), constructorScope, constrOrigin), keywords, constrOrigin
+                    )
                 }
-
-                constructorScope.selfAsConstructor = Constructor(
-                    parameters, constructorScope,
-                    null, ExpressionList(ArrayList(), constructorScope, constrOrigin), keywords, constrOrigin
-                )
             } else if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 // skip constructor params
                 skipCall()
+                packKeywords()
             }
 
             if (consumeIf(":")) {
@@ -207,6 +218,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("protected") -> keywords = keywords or Keywords.PROTECTED
             consumeIf("private") -> keywords = keywords or Keywords.PRIVATE
             consumeIf("abstract") -> keywords = keywords or Keywords.ABSTRACT
+            consumeIf("operator") -> keywords = keywords or Keywords.OPERATOR
             else -> checkForTypes()
         }
     }
@@ -357,7 +369,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         constrScope.keywords = constrScope.keywords or packKeywords()
 
         pushScope(constrScope) {
-            val selfType = classScope.typeWithArgs
+            val selfType = classScope.typeWithoutArgs
             val valueParameters = readParameterDeclarations(selfType)
 
             val superCall = if (consumeIf(":")) {
@@ -411,7 +423,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 selfType, selfType != null, name,
                 genericParams, valueParameters,
                 methodScope, returnType, whereConditions, body,
-                packKeywords(), origin
+                methodScope.keywords, origin
             )
         }
     }
@@ -504,63 +516,51 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun checkForTypes() {
         when {
-            tokens.equals(i, "class") && tokens.equals(i - 1, "enum") -> {
-                check(tokens.equals(++i, TokenType.NAME)) {
-                    "Expected name after enum class, got ${tokens.err(i)}"
-                }
-                val name = tokens.toString(i++)
+            tokens.equals(i + 1, "class") && tokens.equals(i, "enum") -> {
+                i += 2 // skip 'enum' & 'class'
+                val name = consumeName(VSCodeType.ENUM, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
             }
 
-            tokens.equals(i, "class") && tokens.equals(i - 1, "inner") -> {
-                check(tokens.equals(++i, TokenType.NAME)) {
-                    "Expected name after inner class, got ${tokens.err(i)}"
-                }
-                val name = tokens.toString(i++)
+            tokens.equals(i + 1, "class") && tokens.equals(i, "inner") -> {
+                i += 2 // skip 'inner' & 'class'
+                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
             }
 
             tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
-                check(tokens.equals(++i, TokenType.NAME)) {
-                    "Expected name after class, got ${tokens.err(i)}"
-                }
-                val name = tokens.toString(i++)
+                i++ // skip 'class'
+                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
             }
 
             tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
                     && !tokens.equals(i + 1, ":") -> {
-                check(tokens.equals(++i, TokenType.NAME)) {
-                    "Expected name for object, but got ${tokens.err(i)}"
-                }
-                val name = tokens.toString(i++)
+                i++ // skip 'object'
+                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
             }
 
             consumeIf("companion") -> {
-                check(tokens.equals(i++, "object"))
-                val name = if (tokens.equals(i, TokenType.NAME)) {
-                    tokens.toString(i++)
+                consume("object")
+                val name = if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
+                    consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 } else "Companion"
                 foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
             }
 
             consumeIf("interface") -> {
-                check(tokens.equals(i, TokenType.NAME)) {
-                    "Expected name after interface, got ${tokens.err(i)}"
-                }
-                val name = tokens.toString(i++)
+                val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
                 val keywords = if (tokens.equals(i - 2, "fun")) Keywords.FUN_INTERFACE else Keywords.NONE
                 foundNamedScope(name, keywords, ScopeType.INTERFACE)
             }
 
             consumeIf("typealias") -> {
-                check(tokens.equals(i, TokenType.NAME)) {
-                    "Expected name after typealias, got ${tokens.err(i)}"
-                }
-                val name = tokens.toString(i++)
+                val name = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
             }
+
+            else -> throw IllegalStateException("Unknown token ${tokens.toString(i)}")
         }
     }
 
