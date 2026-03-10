@@ -20,7 +20,7 @@ class ZClass(val type: Type) {
             // val scopeType = type.clazz.scopeType
             // val isValidInstance = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isClassType()
             // if (!isValidInstance) return emptyList()
-            return type.clazz.fields.filter {
+            return type.clazz.scope.fields.filter {
                 it.needsBackingFieldImpl()
             }
         }

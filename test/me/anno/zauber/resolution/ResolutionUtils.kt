@@ -57,16 +57,16 @@ object ResolutionUtils {
         for (packageName in packageNames) {
             val scope = root.children.firstOrNull { it.name == packageName }
                 ?: throw IllegalStateException("Missing '$packageName' in root, available: ${root.children.map { it.name }}")
-            resolveTypesAndNames(scope.scope.value)
+            resolveTypesAndNames(scope.scope)
         }
 
-        return root.children.first { it.name == testScopeName }.scope.value
+        return root.children.first { it.name == testScopeName }.scope
     }
 
     operator fun Scope.get(name: String): Scope {
         val child = children.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Tried finding '$name', but only found ${children.map { it.name }}")
-        return child.scope.value
+        return child.scope
     }
 
     fun Scope.getField(name: String): Field {
@@ -77,7 +77,7 @@ object ResolutionUtils {
     fun Scope.firstChild(scopeType: ScopeType): Scope {
         val child = children.firstOrNull { it.scopeType == scopeType }
             ?: throw IllegalStateException("Tried finding '$scopeType', but only found ${children.map { it.scopeType }}")
-        return child.scope.value
+        return child.scope
     }
 
 }

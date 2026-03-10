@@ -269,7 +269,7 @@ object JavaSourceGenerator : Generator() {
             //  inner classes: yes
             if (specialization.isEmpty()) {
                 for (child in scope.children) {
-                    generate(child.scope.value, dst, writer, noSpecialization)
+                    generate(child.scope, dst, writer, noSpecialization)
                 }
             }
         }
@@ -374,7 +374,7 @@ object JavaSourceGenerator : Generator() {
                     if (childType.isClassType()) {
                         // some spacing
                         nextLine()
-                        generateInside(child.name, child.scope.value, specialization)
+                        generateInside(child.name, child.scope, specialization)
                     }
                 }
             }

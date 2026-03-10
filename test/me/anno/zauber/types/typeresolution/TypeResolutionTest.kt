@@ -51,7 +51,7 @@ class TypeResolutionTest {
             scanClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }.scope.value
+            val testScope = root.children.first { it.name == testScopeName }.scope
             resolveOverrides(testScope)
             resolveTypesAndNames(testScope)
             return testScope

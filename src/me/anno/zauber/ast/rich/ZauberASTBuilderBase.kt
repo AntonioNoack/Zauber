@@ -658,7 +658,7 @@ abstract class ZauberASTBuilderBase(
                 ?: if (tokens.equals(i, ".")) {
                     // get package under root
                     val scope = root.children.firstOrNull { it.name == name }
-                    scope?.scope?.value?.typeWithoutArgs
+                    scope?.scope?.typeWithoutArgs
                 } else null
         }
 
@@ -827,7 +827,7 @@ abstract class ZauberASTBuilderBase(
         imports.add(import)
         if (import.allChildren) {
             for (child in import.path.children) {
-                currPackage.imports + Import2(child.name, child.scope.value, false)
+                currPackage.imports + Import2(child.name, child.scope, false)
             }
         } else {
             currPackage.imports + Import2(import.name, import.path, true)

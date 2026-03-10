@@ -34,7 +34,7 @@ class CppTypeResolutionTest {
 
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }.scope.value
+            val testScope = root.children.first { it.name == testScopeName }.scope
             resolveTypesAndNames(testScope)
             val field = testScope.fields.first { it.name == "tested" }
             return field.valueType

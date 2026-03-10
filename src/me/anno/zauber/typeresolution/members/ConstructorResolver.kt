@@ -37,7 +37,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         // LOGGER.info("  children: ${scope.children.map { it.name }}")
         for (child in scope.children) {
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
-                val constructor = findMemberInScopeImpl(child.scope.value, name, returnType, selfType, typeParameters, valueParameters)
+                val constructor = findMemberInScopeImpl(child.scope, name, returnType, selfType, typeParameters, valueParameters)
                 if (constructor != null) return constructor
             }
         }
@@ -61,7 +61,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         val children = scope.children
         var bestMatch: ResolvedConstructor? = null
         for (i in children.indices) {
-            val constructor = children[i].scope.value.selfAsConstructor ?: continue
+            val constructor = children[i].scope.selfAsConstructor ?: continue
             // if (method.name != name) continue
             if (constructor.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $constructor on $selfType, with target $returnType, can we deduct any generics from that?")

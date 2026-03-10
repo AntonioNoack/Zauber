@@ -32,7 +32,7 @@ class TestInlineLambdaParameterIsImmediatelyFound {
         scanClasses(tokens)
         ZauberASTBuilder(tokens, root).readFileLevel()
         val testScope = root.children.first { it.name == testScopeName }
-        val method = testScope.scope.value.firstChild(ScopeType.METHOD)
+        val method = testScope.scope.firstChild(ScopeType.METHOD)
         val body = method.selfAsMethod!!.body as ExpressionList
         val expr = body.list[0] as CallExpression
         println("${expr.self}, ${expr.self.javaClass.simpleName}")

@@ -2,7 +2,6 @@ package me.anno.zauber.types
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.scope.lazy.LazyScope
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -91,8 +90,7 @@ object Types {
             while (true) {
                 val parent = scope.parent ?: break
                 if (parent.children.none { it.name == scope.name }) {
-                    // todo might be an interface
-                    parent.children.add(LazyScope(scope.name, scope.name, ScopeType.NORMAL_CLASS, lazy { scope }))
+                    parent.children.add(scope)
                 }
                 scope = parent
             }

@@ -5,7 +5,6 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.scope.lazy.LazyScope
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -28,20 +27,20 @@ class Scope(val name: String, val parent: Scope? = null) {
     var fileName: String? = parent?.fileName
 
     var keywords: KeywordSet = 0
-    val children = ArrayList<LazyScope>()
+    val children = ArrayList<Scope>()
     val sources = ArrayList<TokenList>()
 
     val code: ArrayList<Expression>
         get() = (selfAsConstructor!!.body as ExpressionList).list as ArrayList<Expression>
 
     val constructors: List<Constructor>
-        get() = children.mapNotNull { it.scope.value.selfAsConstructor }
+        get() = children.mapNotNull { it.scope.selfAsConstructor }
     val methods: List<Method>
-        get() = children.mapNotNull { it.scope.value.selfAsMethod }
+        get() = children.mapNotNull { it.scope.selfAsMethod }
     val companionObject: Scope?
         get() = children
             .firstOrNull { it.scopeType == ScopeType.COMPANION_OBJECT }
-            ?.scope?.value
+            ?.scope
 
     val fields = ArrayList<Field>()
 
@@ -52,7 +51,19 @@ class Scope(val name: String, val parent: Scope? = null) {
     val enumEntries: List<Scope>
         get() = children
             .filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
-            .map { it.scope.value }
+            .map { it.scope }
+
+
+    val initParts = ArrayList<() -> Unit>()
+
+    val scope: Scope
+        get() {
+            while (true) {
+                val initializationPart = initParts.removeLastOrNull() ?: break
+                initializationPart()
+            }
+            return this
+        }
 
     // only one can be true, so we can store just one field, and extract everything else
     private var selfAs: Any? = null
@@ -237,15 +248,16 @@ class Scope(val name: String, val parent: Scope? = null) {
         check(scopeHierarchyIsAllowed(this.scopeType, scopeType)) {
             "$scopeType cannot be placed inside ${this.scopeType} ($pathStr.$name)"
         }
+
         val child = Scope(name, this)
         child.scopeType = scopeType
-        children.add(LazyScope(fileName ?: "?", name, scopeType, lazy { child }))
+        children.add(child)
         return child
     }
 
     fun getOrPut(name: String, scopeType: ScopeType?): Scope {
         val name = langAlias(name)
-        var child = children.firstOrNull { it.name == name }?.scope?.value
+        var child = children.firstOrNull { it.name == name }?.scope
         if (child != null) {
             // if (child.fileName == null) child.fileName = fileName
             child.mergeScopeTypes(scopeType)
@@ -258,7 +270,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
         child = Scope(name, this)
         child.scopeType = scopeType
-        children.add(LazyScope(fileName ?: "?", name, scopeType, lazy { child }))
+        children.add(child)
         return child
     }
 
@@ -299,7 +311,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun resolveTypeInner(name: String): Scope? {
         if (name == this.name) return this
         for (child in children) {
-            if (child.name == name) return child.scope.value
+            if (child.name == name) return child.scope
         }
 
         val parent = parent
@@ -357,7 +369,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         }
         // println("rtsf[$name,$this] -> $folderScope -> ${folderScope.children.map { it.name }}")
         for (child in folderScope.children) {
-            if (child.name == name) return child.scope.value
+            if (child.name == name) return child.scope
         }
         return null
     }
@@ -400,7 +412,7 @@ class Scope(val name: String, val parent: Scope? = null) {
                 // scan all of that scope
                 for (child in path.children) {
                     if (child.name == name) {
-                        return child.scope.value.typeWithoutArgs
+                        return child.scope.typeWithoutArgs
                     }
                 }
             } else if (import.name == name) {
@@ -418,14 +430,14 @@ class Scope(val name: String, val parent: Scope? = null) {
         // check siblings
         if (parent != null) {
             for (child in parent.children) {
-                if (child.name == name) return child.scope.value.typeWithoutArgs
+                if (child.name == name) return child.scope.typeWithoutArgs
             }
         }
 
         // we must also check langScope for any valid paths...
         for (child in langScope.children) {
             if (child.name == name) {
-                return child.scope.value.typeWithoutArgs
+                return child.scope.typeWithoutArgs
             }
         }
 
@@ -513,10 +525,9 @@ class Scope(val name: String, val parent: Scope? = null) {
         // todo it would be nice to clear everything, but to do that,
         //  we need to store IntType etc on an instance level, or re-register them
         // children.clear()
+        initParts.clear()
         for (child in children) {
-            if (child.scope.isInitialized()) {
-                child.scope.value.clear()
-            }
+            child.clear()
         }
         fields.clear()
         // scopeType = null
@@ -539,7 +550,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun forEachScope(callback: (Scope) -> Unit) {
         callback(this)
         for (i in children.indices) {
-            children[i].scope.value.forEachScope(callback)
+            children[i].scope.forEachScope(callback)
         }
     }
 

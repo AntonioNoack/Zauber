@@ -39,11 +39,11 @@ class IsSubTypeOfTest {
             ).tokenize()
             scanClasses(tokens)
             ZauberASTBuilder(tokens, root).readFileLevel()
-            return root.children.first { it.name == testScopeName }.scope.value
+            return root.children.first { it.name == testScopeName }.scope
         }
 
         operator fun Scope.get(name: String): ClassType {
-            return children.first { it.name == name }.scope.value.typeWithoutArgs
+            return children.first { it.name == name }.scope.typeWithoutArgs
         }
 
         fun isSubTypeOf(expected: Type, actual: Type): Boolean {
