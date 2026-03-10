@@ -1,7 +1,7 @@
 package me.anno.zauber.types.impl
 
-import me.anno.zauber.types.Import
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 
 class UnresolvedType(
@@ -9,7 +9,7 @@ class UnresolvedType(
     val scope: Scope, val imports: List<Import>
 ) : Type() {
 
-    val resolved: Type by lazy { resolve() }
+    override val resolved: Type by lazy { resolve() }
 
     override fun toStringImpl(depth: Int): String {
         return "¿$className?<$typeParameters>"

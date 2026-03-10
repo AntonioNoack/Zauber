@@ -60,10 +60,23 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         classScope.keywords = classScope.keywords or listenType or packKeywords()
         classScope.fileName = tokens.fileName
         classScope.initParts += {
+
+            // store old state
+            val prevPackage = currPackage
+            val prevSize = tokens.size
+            val prevI = i
+
+            // set original state
             i = i0
             tokens.size = i1
             currPackage = parentScope
+
             readLazily(classScope, true)
+
+            // restore state
+            currPackage = prevPackage
+            tokens.size = prevSize
+            i = prevI
         }
 
         readLazily(classScope, false)
@@ -76,8 +89,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             classScope.typeParameters = genericParams
             classScope.hasTypeParameters = true
-
-            println("Defined type parameters for ${classScope.pathStr}: $genericParams")
 
             if (consumeIf("private")) keywords = keywords or Keywords.PRIVATE
             if (consumeIf("protected")) keywords = keywords or Keywords.PROTECTED
@@ -205,6 +216,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     open fun collectNamesOnDepth0() {
+        // to do switch is probably faster...
         when {
             consumeIf("package") -> readPackage()
             consumeIf("import") -> readImport()
@@ -219,6 +231,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("private") -> keywords = keywords or Keywords.PRIVATE
             consumeIf("abstract") -> keywords = keywords or Keywords.ABSTRACT
             consumeIf("operator") -> keywords = keywords or Keywords.OPERATOR
+            consumeIf("open") -> keywords = keywords or Keywords.OPEN
+            consumeIf("tailrec") -> {}// keywords = keywords or Keywords.TAILREC
             else -> checkForTypes()
         }
     }
@@ -399,6 +413,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             val selfType = readSelfTypeIfPresent(end)
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
+
             val valueParameters = readParameterDeclarations(selfType)
             val whereConditions = readWhereConditions()
 
@@ -444,7 +459,11 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val j0 = end++
             when (tokens.getType(j0)) {
                 TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
-                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> {
+                    if (depth == 0) return j0
+                    depth--
+                }
+                TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0
                 else -> if (depth == 0) when {
                     tokens.equals(
                         j0, "fun", "val", "var", "lateinit",
@@ -585,6 +604,19 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         pushCall {
             while (i < tokens.size) {
                 // todo comptime name: type
+                var keywords = Keywords.NONE
+
+                while (true) {
+                    keywords = keywords or when {
+                        consumeIf("public") -> Keywords.PUBLIC
+                        consumeIf("protected") -> Keywords.PROTECTED
+                        consumeIf("private") -> Keywords.PRIVATE
+                        consumeIf("open") -> Keywords.OPEN
+                        consumeIf("override") -> Keywords.OVERRIDE
+                        else -> break
+                    }
+                }
+
                 val isVararg = consumeIf("vararg")
                 val isVal = consumeIf("val")
                 val isVar = consumeIf("var")
@@ -592,18 +624,20 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 val paramOrigin = origin(i)
                 val name = consumeName(VSCodeType.PARAMETER, 0)
                 consume(":")
+
                 val type = readType(selfType, true)
                     ?: throw IllegalStateException("Missing type at ${tokens.err(i)}")
-                val defaultValue = if (tokens.equals(i, "=")) {
-                    readLazyValue()
-                } else null
+
+                val defaultValue = if (consumeIf("=")) readLazyValue() else null
+
                 val parameter = Parameter(
                     parameters.size, isVar, isVal, isVararg,
                     name, type, defaultValue,
                     currPackage, paramOrigin
                 )
                 parameters.add(parameter)
-                parameter.getOrCreateField(selfType, Keywords.NONE)
+                parameter.getOrCreateField(selfType, keywords)
+
                 readComma()
             }
         }

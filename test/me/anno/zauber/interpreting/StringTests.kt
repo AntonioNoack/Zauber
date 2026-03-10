@@ -117,9 +117,11 @@ class StringTests {
 
     @Test
     fun testStringConcatUsingArrays() {
-        LogManager.disableLoggers("Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
-                "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
-                "Stdlib,ASTSimplifier,ResolvedMethod")
+        LogManager.disableLoggers(
+            "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
+                    "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
+                    "Stdlib,ASTSimplifier,ResolvedMethod"
+        )
         val code = """
             val tested get() = "Some " + "String"
             
@@ -133,9 +135,11 @@ class StringTests {
 
     @Test
     fun testStringTrimUsingArrays() {
-        LogManager.disableLoggers("Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
-                "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
-                "Stdlib,ASTSimplifier,ResolvedMethod")
+        LogManager.disableLoggers(
+            "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
+                    "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
+                    "Stdlib,ASTSimplifier,ResolvedMethod"
+        )
         val code = """
             val tested get() = " Hello  \r\n".trim()
             

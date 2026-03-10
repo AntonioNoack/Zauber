@@ -2,14 +2,13 @@ package me.anno.zauber.resolution
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
-import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.tokenizer.ZauberTokenizer
+import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 
@@ -36,6 +35,10 @@ object ResolutionUtils {
             }
 
         val tokens = sources.map { content ->
+            if (false) {
+                println("Test.zbr")
+                println(content.formatLines())
+            }
             ZauberTokenizer(content, "Test.zbr").tokenize()
         }
 
@@ -61,6 +64,14 @@ object ResolutionUtils {
         }
 
         return root.children.first { it.name == testScopeName }.scope
+    }
+
+    fun String.formatLines(): String {
+        val lines = lines()
+        val pad = lines.size.toString().length
+        return lines.mapIndexed { lineIndex, line ->
+            "${(lineIndex + 1).toString().padStart(pad)} | $line"
+        }.joinToString("\n")
     }
 
     operator fun Scope.get(name: String): Scope {

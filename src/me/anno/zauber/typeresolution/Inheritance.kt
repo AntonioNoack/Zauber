@@ -3,9 +3,9 @@ package me.anno.zauber.typeresolution
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.members.MatchScore
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.NullableAnyType
@@ -133,15 +133,10 @@ object Inheritance {
         if (expectedType == actualType) return true
         if (expectedType == NullableAnyType) return true
         if (expectedType == UnknownType) return true
-        if (actualType is UnresolvedType) return isSubTypeOf(
-            expectedType, actualType.resolved,
+        if (actualType is UnresolvedType || expectedType is UnresolvedType) return isSubTypeOf(
+            expectedType.resolved, actualType.resolved,
             expectedTypeParams, actualTypeParameters, insertMode, matchScore
         )
-        if (expectedType is UnresolvedType) return isSubTypeOf(
-            expectedType.resolved, actualType,
-            expectedTypeParams, actualTypeParameters, insertMode, matchScore
-        )
-
 
         matchScore?.inc()
 

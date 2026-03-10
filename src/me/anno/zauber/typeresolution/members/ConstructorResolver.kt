@@ -67,8 +67,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
                 LOGGER.info("Given $constructor on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val match = findMemberMatch(
-                constructor, constructor.selfType,
-                returnType,
+                constructor, constructor.selfType, returnType,
                 typeParameters, valueParameters,
                 /* todo is this ok?? */scope,
             )

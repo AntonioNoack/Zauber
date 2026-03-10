@@ -152,4 +152,6 @@ abstract class Type {
     }
 
     open fun not(): Type = NotType(this)
+
+    open val resolved: Type get() = this
 }

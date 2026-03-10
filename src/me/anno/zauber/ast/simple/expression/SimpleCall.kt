@@ -101,23 +101,26 @@ class SimpleCall(
     }
 
     fun initializeArrayIfNeeded(self: Instance, method: MethodLike, runtime: Runtime) {
-        val selfType = self.type.type
+        val selfType = self.type.type.resolved
         if (selfType is ClassType && selfType.clazz.pathStr == "zauber.Array" &&
             method is Constructor && valueParameters.size == 1 &&
-            method.valueParameters[0].type == IntType
+            method.valueParameters[0].type.resolved == IntType
         ) {
             val size = runtime.castToInt(runtime[valueParameters[0]])
-            self.rawValue = when (selfType.typeParameters?.get(0)) {
-                BooleanType -> BooleanArray(size)
-                ByteType -> ByteArray(size)
-                ShortType -> ShortArray(size)
-                IntType -> IntArray(size)
-                LongType -> LongArray(size)
-                FloatType -> FloatArray(size)
-                DoubleType -> DoubleArray(size)
-                else -> arrayOfNulls<Instance>(size)
-            }
+            self.rawValue = createArray(selfType.typeParameters?.get(0)?.resolved, size)
         }
     }
 
+    fun createArray(type: Type?, size: Int): Any {
+        return when (type) {
+            BooleanType -> BooleanArray(size)
+            ByteType -> ByteArray(size)
+            ShortType -> ShortArray(size)
+            IntType -> IntArray(size)
+            LongType -> LongArray(size)
+            FloatType -> FloatArray(size)
+            DoubleType -> DoubleArray(size)
+            else -> arrayOfNulls<Instance>(size)
+        }
+    }
 }
