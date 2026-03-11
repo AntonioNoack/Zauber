@@ -125,10 +125,8 @@ class TryCatchTests {
                fun equals(other: Any?) = other is Int
             }
         """.trimIndent()
-        val (_, value) = testExecuteCatch(code)
-        check(value.type == ReturnType.THROW)
-        val type = value.value.type.type as ClassType
-        check(type.clazz.name == "NullPointerException")
+        val (rt, value) = testExecute(code)
+        assertEquals(2, rt.castToInt(value))
     }
 
     @Test
