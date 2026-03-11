@@ -46,8 +46,7 @@ abstract class Type {
         return when (this) {
             NullType, UnknownType, is SelfType, is ThisType -> true
             is GenericType -> !specialization.contains(this)
-            is TypeOfField,
-            is UnresolvedType -> false
+            is TypeOfField, is UnresolvedType -> false
             is LambdaType -> selfType?.isResolved() != false &&
                     parameters.all { it.type.isResolved() } &&
                     returnType.isResolved()

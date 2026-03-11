@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
@@ -58,7 +59,7 @@ abstract class MethodColoring<Color : Any> {
                     is YieldExpression, is ReturnExpression, is ThrowExpression,
                     is ThisExpression, is NumberExpression, is StringExpression,
                     is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock,
-                    is CheckEqualsOp, is SpecialValueExpression -> {
+                    is CheckEqualsOp, is SpecialValueExpression, is LazyExpression -> {
                         // no direct call
                     }
                     is ResolvedCallExpression -> {

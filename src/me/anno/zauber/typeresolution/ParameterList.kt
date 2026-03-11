@@ -12,7 +12,7 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         fun emptyParameterList(): ParameterList = empty
 
         fun ParameterList?.resolveGenerics(selfType: Type?, type: Type): Type {
-            if (this == null) return type
+            if (this == null) return type.resolved
             return resolveGenerics(selfType, type, generics, this)
         }
 

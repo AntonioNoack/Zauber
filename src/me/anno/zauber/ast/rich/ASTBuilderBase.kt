@@ -87,15 +87,15 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         i++
     }
 
-    fun consumeIf(string: String): Boolean {
-        return if (tokens.equals(i, string) && !tokens.equals(i, TokenType.STRING)) {
+    fun consumeIf(keyword: String): Boolean {
+        return if (tokens.equals(i, keyword)) {
             i++
             true
         } else false
     }
 
-    fun consumeIf(string: String, vsCodeType: VSCodeType, modifiers: Int): Boolean {
-        return if (tokens.equals(i, string) && !tokens.equals(i, TokenType.STRING)) {
+    fun consumeIf(keyword: String, vsCodeType: VSCodeType, modifiers: Int): Boolean {
+        return if (tokens.equals(i, keyword)) {
             if (this is ZauberASTBuilder) {
                 setLSType(i, vsCodeType, modifiers)
             }

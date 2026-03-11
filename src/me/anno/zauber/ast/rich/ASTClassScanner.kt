@@ -492,9 +492,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 }
                 TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0
                 else -> if (depth == 0) when {
+                    // todo object: would be ok...
                     tokens.equals(
                         j0, "fun", "val", "var", "lateinit",
-                        "public", "private", "protected", "class", "interface"
+                        "public", "private", "protected", "class", "interface",
+                        "package", "import", "object", "companion",
+                        "open", "abstract", "override"
                     ) -> {
                         return j0
                     }
@@ -563,20 +566,33 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun checkForTypes() {
         when {
-            tokens.equals(i + 1, "class") && tokens.equals(i, "enum") -> {
-                i += 2 // skip 'enum' & 'class'
+            consumeIf("enum") -> {
+                consume("class")
                 val name = consumeName(VSCodeType.ENUM, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
             }
 
-            tokens.equals(i + 1, "class") && tokens.equals(i, "inner") -> {
-                i += 2 // skip 'inner' & 'class'
+            consumeIf("inner") -> {
+                consume("class")
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
             }
 
-            tokens.equals(i, "class") && !tokens.equals(i - 1, "::") -> {
-                i++ // skip 'class'
+            consumeIf("data") -> {
+                consume("class")
+                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
+                foundNamedScope(name, Keywords.DATA_CLASS, ScopeType.NORMAL_CLASS)
+            }
+
+            consumeIf("value") -> {
+                // todo could also be value val, value var
+                consume("class")
+                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
+                foundNamedScope(name, Keywords.VALUE, ScopeType.NORMAL_CLASS)
+            }
+
+            consumeIf("class") -> {
+                check(!tokens.equals(i - 2, "::"))
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
             }

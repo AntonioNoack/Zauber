@@ -14,4 +14,17 @@ class UnresolvedType(
     override fun toStringImpl(depth: Int): String {
         return "¿$className?<$typeParameters>"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other === NullType || other === UnknownType) return false
+        if (other is UnresolvedType &&
+            other.className == className &&
+            other.typeParameters == typeParameters &&
+            other.scope == scope
+        ) return true
+        return other is Type && resolved == ((other as? UnknownType)?.resolved ?: other)
+    }
+
+    override fun hashCode(): Int = className.hashCode()
 }

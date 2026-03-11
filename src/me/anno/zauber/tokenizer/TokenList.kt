@@ -2,8 +2,8 @@ package me.anno.zauber.tokenizer
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Import
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Import
 import kotlin.math.max
 
 class TokenList(val source: CharSequence, val fileName: String) {
@@ -46,7 +46,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val oldSize = size
         try {
             size = newSize
-            return readImpl()
+           return readImpl()
         } finally {
             size = oldSize
         }
@@ -232,9 +232,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val i0 = getI0(i)
         val i1 = getI1(i)
         if (i1 - i0 != str.length) return false
-        return str.indices.all { strIndex ->
-            str[strIndex] == source[i0 + strIndex]
-        }
+        return source.regionMatches(i0, str, 0, str.length, false)
     }
 
     fun equals(i: Int, str: String, str2: String): Boolean {

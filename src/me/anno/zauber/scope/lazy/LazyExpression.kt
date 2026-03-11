@@ -20,7 +20,7 @@ class LazyExpression(
 
         tmp.i = tokens.i0
         tmp.currPackage = scope
-        tmp.tokens.push(tokens.i1) {
+        tmp.push(tokens.i1) {
             if (isBody) tmp.readMethodBody()
             else tmp.readExpression()
         }
@@ -41,6 +41,5 @@ class LazyExpression(
     override fun forEachExpression(callback: (Expression) -> Unit) {
         value.forEachExpression(callback)
     }
-
 
 }

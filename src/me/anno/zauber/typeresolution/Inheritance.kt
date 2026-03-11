@@ -28,6 +28,9 @@ object Inheritance {
         matchScore: MatchScore? = null
     ): Boolean {
         val expectedType = actualTypeParameters.resolveGenerics(selfTypeIfNeeded, expected.type)
+        check(expectedType !is UnresolvedType)
+        // println("ExpectedType: ${expectedType.javaClass.simpleName}, ${(expectedType as? ClassType)?.clazz?.pathStr}")
+
         if (insertMode == InsertMode.READ_ONLY &&
             actualTypeParameters.types.any { it == null }
         ) {
@@ -38,7 +41,7 @@ object Inheritance {
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
         }
 
-        val actualType = actual.getType(expectedType)
+        val actualType = actual.getType(expectedType).resolved
         if (LOGGER.isInfoEnabled) LOGGER.info("ActualType[$actual,$expectedType] -> $actualType")
         return isSubTypeOf(
             expectedType, actualType,
@@ -55,9 +58,10 @@ object Inheritance {
         insertMode: InsertMode,
         matchScore: MatchScore? = null,
     ): Boolean {
-        if (actualType == expectedType) {
-            return true
-        }
+        val actualType = actualType.resolved
+        val expectedType = expectedType.resolved
+        if (actualType == expectedType) return true
+
         if (LOGGER.isInfoEnabled) {
             LOGGER.info("Checking $actualType instanceOf $expectedType")
             LOGGER.info("  with generics $expectedTypeParams vs $actualTypeParameters")
