@@ -28,6 +28,10 @@ open class MethodLike(
     val origin: Int
 ) {
 
+    fun addKeywords(keywords: KeywordSet) {
+        this.keywords = this.keywords or keywords
+    }
+
     fun isRecursive(specialization: Specialization): Boolean {
         return IsMethodRecursive[MethodSpecialization(this, specialization)]
     }

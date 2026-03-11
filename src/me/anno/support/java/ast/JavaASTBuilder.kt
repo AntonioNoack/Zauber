@@ -23,13 +23,13 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Compani
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
@@ -190,7 +190,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                 }
                 consumeIf("interface") -> readInterface()
                 consumeIf("record") -> {
-                    keywords = keywords or Keywords.VALUE
+                    addKeyword(Keywords.VALUE)
                     readClass(ScopeType.NORMAL_CLASS)
                 }
 
@@ -343,7 +343,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
         if (tokens.equals(i, "Override") && !tokens.equals(i + 1, TokenType.OPEN_CALL)) {
             i++ // skip 'Override'
-            keywords = keywords or Keywords.OVERRIDE
+            addKeyword(Keywords.OVERRIDE)
             val type = langScope.getOrPut("Override", ScopeType.INTERFACE).typeWithArgs
             return Annotation(type, emptyList())
         }
@@ -368,11 +368,11 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             while (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                 !tokens.equals(i + 1, ":")
             ) {
-                keywords = keywords or when {
+                val keyword = when {
                     consumeIf("final") -> Keywords.FINAL
                     else -> break
                 }
-                setLSType(i - 1, VSCodeType.KEYWORD, 0)
+                addKeyword(keyword)
             }
 
             val isVal = keywords.hasFlag(Keywords.FINAL)
@@ -600,7 +600,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             }
             // apparently, inline record classes are allowed
             consumeIf("record") -> {
-                keywords = keywords or Keywords.VALUE
+                addKeyword(Keywords.VALUE)
                 readClass(ScopeType.NORMAL_CLASS)
                 unitInstance
             }

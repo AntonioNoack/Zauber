@@ -26,7 +26,9 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.*
+import me.anno.zauber.types.Import
+import me.anno.zauber.types.LambdaParameter
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.NullableAnyType
@@ -836,7 +838,7 @@ abstract class ZauberASTBuilderBase(
 
     fun collectKeywords() {
         if (!tokens.equals(i, TokenType.STRING)) {
-            keywords = keywords or consumeKeyword()
+            addKeyword(consumeKeyword())
             if (this is ZauberASTBuilder) {
                 setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }

@@ -22,6 +22,10 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         return result
     }
 
+    fun addKeyword(keyword: KeywordSet) {
+        keywords = keywords or keyword
+    }
+
     inline fun <R> pushScope(scopeType: ScopeType, prefix: String, callback: (Scope) -> R): R {
         val name = currPackage.generateName(prefix)
         return pushScope(name, scopeType, callback)

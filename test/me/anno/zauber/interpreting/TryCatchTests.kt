@@ -76,6 +76,62 @@ class TryCatchTests {
     }
 
     @Test
+    fun testLateinitUninitialized() {
+        val code = """
+            lateinit var likeNull: Int
+            val tested: Int get() = try {
+                likeNull
+            } catch(e: NullPointerException) {
+                2
+            }
+            
+            package zauber
+            class Exception: Throwable()
+            class RuntimeException : Exception()
+            class NullPointerException : RuntimeException()
+            class IllegalArgumentException : RuntimeException()
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external fun set(index: Int, value: V)
+            }
+        """.trimIndent()
+        val (rt, value) = testExecute(code)
+        assertEquals(2, rt.castToInt(value))
+    }
+
+    @Test
+    fun testNullPointerException() {
+        val code = """
+            val likeNull: Int? = null
+            val tested get() = try {
+                likeNull!!
+            } catch(e: NullPointerException) {
+                2
+            }
+            
+            package zauber
+            class Exception: Throwable()
+            class RuntimeException : Exception()
+            class NullPointerException : RuntimeException()
+            class IllegalArgumentException : RuntimeException()
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external fun set(index: Int, value: V)
+            }
+            fun throwNPE(message: String): Nothing {
+                throw NullPointerException(message)
+            }
+            class Int {
+               fun equals(other: Any?) = other is Int
+            }
+        """.trimIndent()
+        val (_, value) = testExecuteCatch(code)
+        check(value.type == ReturnType.THROW)
+        val type = value.value.type.type as ClassType
+        check(type.clazz.name == "NullPointerException")
+    }
+
+    @Test
     fun testSimpleFinallyIsExecuted() {
         val code = """
             val tested get() = try {

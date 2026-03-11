@@ -546,6 +546,10 @@ class Scope(val name: String, val parent: Scope? = null) {
         // typeWithArgs
     }
 
+    fun addKeywords(keywords: KeywordSet) {
+        this.keywords = this.keywords or keywords
+    }
+
     @Deprecated("Forcing all scopes to be loaded is overkill")
     fun forEachScope(callback: (Scope) -> Unit) {
         callback(this)

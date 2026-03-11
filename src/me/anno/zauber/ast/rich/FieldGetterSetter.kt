@@ -1,13 +1,21 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Types.UnitType
 
 object FieldGetterSetter {
@@ -123,7 +131,7 @@ object FieldGetterSetter {
 
     fun needsGetter(field: Field): Boolean {
         return true // just to make our lives easier in testing
-        /* if ("override" in field.keywords || "open" in field.keywords) return true // for virtual call resolution
+        /* if ("override" in field.keywords || "open" in field.keywords || "lateinit" in field.keywords) return true // for virtual call resolution
          if (field.codeScope.scopeType == ScopeType.INTERFACE) return true // to grab the field
          if (field.codeScope.scopeType == ScopeType.OBJECT ||
              field.codeScope.scopeType == ScopeType.COMPANION_OBJECT
@@ -139,7 +147,22 @@ object FieldGetterSetter {
         val expr = expr0 ?: if (needsGetter(field)) {
             if (!isInterface) {
                 val fieldExpr = FieldExpression(backingField, getterScope, origin)
-                ReturnExpression(fieldExpr, null, getterScope, origin)
+                val valueExpr = if (field.keywords.hasFlag(Keywords.LATEINIT)) {
+                    val nullExpr = SpecialValueExpression(SpecialValue.NULL, getterScope, origin)
+                    val condition = CheckEqualsOp(
+                        fieldExpr, nullExpr, byPointer = true, negated = false, null,
+                        getterScope, origin
+                    )
+                    val ifScope = getterScope.generate("if", ScopeType.METHOD_BODY)
+                    val elseScope = getterScope.generate("if", ScopeType.METHOD_BODY)
+                    val debugInfoParam = StringExpression(field.name, ifScope, origin)
+                    val throwExpr = CallExpression(
+                        UnresolvedFieldExpression("throwJNE", shouldBeResolvable, ifScope, origin),
+                        emptyList(), listOf(NamedParameter(null, debugInfoParam)), origin
+                    )
+                    IfElseBranch(condition, throwExpr, fieldExpr.clone(elseScope))
+                } else fieldExpr
+                ReturnExpression(valueExpr, null, getterScope, origin)
             } else null
         } else return
 

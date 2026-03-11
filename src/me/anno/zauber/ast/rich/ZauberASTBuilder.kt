@@ -21,12 +21,12 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Compani
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.BooleanUtils.not
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
@@ -430,7 +430,7 @@ class ZauberASTBuilder(
                 consumeIf("object") -> readObject(ScopeType.OBJECT)
                 consumeIf("fun") -> {
                     if (consumeIf("interface")) {
-                        keywords = keywords or Keywords.FUN_INTERFACE
+                        addKeyword(Keywords.FUN_INTERFACE)
                         readInterface()
                     } else {
                         readMethod()
@@ -513,7 +513,7 @@ class ZauberASTBuilder(
             while ((tokens.equals(i, TokenType.KEYWORD) || tokens.equals(i, TokenType.NAME)) &&
                 !tokens.equals(i + 1, ":")
             ) {
-                keywords = keywords or when {
+                val keyword = when {
                     consumeIf("private") -> Keywords.PRIVATE
                     consumeIf("public") -> Keywords.PUBLIC
                     consumeIf("protected") -> Keywords.PROTECTED
@@ -523,6 +523,7 @@ class ZauberASTBuilder(
                     consumeIf("crossinline") -> Keywords.CROSS_INLINE
                     else -> break
                 }
+                addKeyword(keyword)
                 setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }
 

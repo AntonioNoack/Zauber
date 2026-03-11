@@ -6,10 +6,10 @@ import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Keywords
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.tokenizer.TokenList
-import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.tokenizer.TokenList
+import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.ByteType
 import me.anno.zauber.types.Types.DoubleType
@@ -65,11 +65,11 @@ class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, 
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
                 consumeIf("interface") -> readInterface()
                 consumeIf("struct") -> {
-                    keywords = keywords or Keywords.VALUE
+                    addKeyword(Keywords.VALUE)
                     readClass(ScopeType.NORMAL_CLASS)
                 }
                 consumeIf("record") -> {
-                    keywords = keywords or Keywords.VALUE
+                    addKeyword(Keywords.VALUE)
                     readClass(ScopeType.NORMAL_CLASS)
                 }
 

@@ -260,12 +260,12 @@ class CppASTBuilder(
     }
 
     fun readStructOrClass(isStruct: Boolean) {
-        if (isStruct) keywords += Keywords.CPP_STRUCT
+        if (isStruct) addKeyword(Keywords.CPP_STRUCT)
         check(tokens.equals(i, TokenType.NAME)) { "Expected class name at ${tokens.err(i)}" }
         val name = tokens.toString(i++)
         val classScope = currPackage.getOrPut(name, ScopeType.NORMAL_CLASS)
         classScope.hasTypeParameters = true
-        classScope.keywords = classScope.keywords or packKeywords()
+        classScope.addKeywords(packKeywords())
         pushBlock(classScope) {
             readFileLevel()
         }

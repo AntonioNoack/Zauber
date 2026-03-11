@@ -17,7 +17,7 @@ import me.anno.zauber.types.Types.ArrayType
 class Field(
     var codeScope: Scope,
 
-    selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
+    val selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
     val explicitSelfType: Boolean,
 
     val isMutable: Boolean,
@@ -34,11 +34,9 @@ class Field(
         private val LOGGER = LogManager.getLogger(Field::class)
     }
 
-    val selfType = selfType?.resolve()
-
     init {
         if (name == "content" && valueType == ArrayType) {
-            throw IllegalStateException("Testing: field should know array type")
+            throw IllegalStateException("Testing: field should know array type, $valueType -> ${valueType?.resolved}")
         }
     }
 

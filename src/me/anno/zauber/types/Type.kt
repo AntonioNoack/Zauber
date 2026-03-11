@@ -85,8 +85,11 @@ abstract class Type {
                 if (clazz.isTypeAlias()) {
                     val typeAlias = clazz.selfAsTypeAlias!!
                     val genericNames = clazz.typeParameters
-                    if (genericNames.isEmpty() || typeParameters.isNullOrEmpty()) typeAlias else {
-                        val genericValues = ParameterList(genericNames, typeParameters)
+                    if (genericNames.isEmpty()) {
+                        check((typeParameters?.size ?: 0) == 0)
+                        typeAlias
+                    } else {
+                        val genericValues = ParameterList(genericNames, typeParameters ?: emptyList())
                         genericValues.resolveGenerics(null, typeAlias)
                     }
                 } else {
@@ -103,8 +106,13 @@ abstract class Type {
             is AndType -> andTypes(types.map { it.resolve(selfScope) })
             is NotType -> type.resolve(selfScope).not()
             is UnresolvedType -> {
-                resolveTypeByName(null, className, scope, imports)
+                val baseType = resolveTypeByName(null, className, scope, imports)
                     ?: throw IllegalStateException("Could not resolve $this in $scope")
+                if (!typeParameters.isNullOrEmpty()) {
+                    baseType as ClassType
+                    check(baseType.typeParameters == null)
+                    baseType.withTypeParameters(typeParameters)
+                } else baseType
             }
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
         }
