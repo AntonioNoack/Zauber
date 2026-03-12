@@ -227,7 +227,9 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     open fun readPackage() {
         val (path, ni) = tokens.readPath(i)
         currPackage = path
-        currPackage.mergeScopeTypes(ScopeType.PACKAGE)
+        path.mergeScopeTypes(ScopeType.PACKAGE)
+        path.typeParameters = emptyList()
+        path.hasTypeParameters = true
         i = ni
     }
 

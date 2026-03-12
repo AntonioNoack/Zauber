@@ -80,7 +80,7 @@ abstract class MethodColoring<Color : Any> {
                     is ResolvedGetFieldExpression -> {
                         val field = expr.field.resolved
                         val getter = field.getter
-                        if (getter != null && field.hasCustomGetter) {
+                        if (getter != null && (field.hasCustomGetter || field.isLateinit())) {
                             result.add(MethodSpecialization(getter, expr.field.specialization))
                         }
                     }

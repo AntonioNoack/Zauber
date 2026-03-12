@@ -29,16 +29,8 @@ object RuntimeCreate {
             else -> 10
         }
         return when (type) {
-            ByteType -> {
-                val instance = Instance(getClass(ByteType), emptyArray())
-                instance.rawValue = value.toByte(basis)
-                instance
-            }
-            ShortType -> {
-                val instance = Instance(getClass(ShortType), emptyArray())
-                instance.rawValue = value.toShort(basis)
-                instance
-            }
+            ByteType -> createByte(value.toByte(basis))
+            ShortType -> createShort(value.toShort(basis))
             IntType -> createInt(value.toInt(basis))
             LongType -> createLong(value.toLong(basis))
             FloatType -> createFloat(if (basis == 10) value.toFloat() else parseHexFloat(value).toFloat())

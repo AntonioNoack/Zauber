@@ -27,8 +27,11 @@ class Runtime {
         private val LOGGER = LogManager.getLogger(Runtime::class)
     }
 
+    private var instanceCounter = 0
+    fun nextInstanceId() = instanceCounter++
+
     private val classes = HashMap<Type, ZClass>()
-    private val nullInstance = Instance(getClass(NullType), emptyArray())
+    private val nullInstance = Instance(getClass(NullType), emptyArray(), nextInstanceId())
 
     val callStack = ArrayList<Call>()
     val thisStack = ArrayList<This>()
@@ -62,7 +65,7 @@ class Runtime {
         val self = thisStack.last()
         return when {
             self.scope == selfScope -> self.instance
-            selfScope.isObject() -> getObjectInstance(selfScope.typeWithoutArgs)
+            selfScope.isObjectLike() -> getObjectInstance(selfScope.typeWithoutArgs)
             else -> callStack.last().scopes.getOrPut(selfScope) {
                 val type = selfScope.typeWithoutArgs
                 getClass(type).createInstance()
@@ -152,7 +155,7 @@ class Runtime {
 
     fun getClass(selfType: Type): ZClass {
         return classes.getOrPut(selfType) {
-            ZClass(selfType)
+            ZClass(selfType, this)
         }
     }
 
@@ -194,10 +197,12 @@ class Runtime {
         for (i in valueParameters.indices) {
             val parameter = valueParameters[i]
             val field = methodScopeInstance.type.properties.getOrNull(i)
-                ?: throw IllegalStateException("Method needs at least as many fields as parameters, " +
-                        "$method, " +
-                        "fields: ${(methodScopeInstance.type.type as ClassType).clazz.fields} -> " +
-                        "properties: ${methodScopeInstance.type.properties}")
+                ?: throw IllegalStateException(
+                    "Method needs at least as many fields as parameters, " +
+                            "$method, " +
+                            "fields: ${(methodScopeInstance.type.type as ClassType).clazz.fields} -> " +
+                            "properties: ${methodScopeInstance.type.properties}"
+                )
             check(field.name == method.valueParameters[i].name) {
                 "Field order not as expected, expected parameters to come first"
             }
@@ -291,15 +296,15 @@ class Runtime {
                 }
             }
 
-            println("Finished $block")
-
             // find the next block to execute
             val condition = block.branchCondition
             block = if (condition != null) {
                 val conditionI = this[condition]
                 val conditionJ = castToBool(conditionI)
+                println("Finished $block, condition: $conditionJ -> ${(if (conditionJ) block.ifBranch else block.elseBranch)?.blockId}")
                 if (conditionJ) block.ifBranch else block.elseBranch
             } else {
+                println("Finished $block, next: ${block.nextBranch?.blockId}")
                 block.nextBranch
             } ?: run {
                 println("Exited without return from ${block0.graph.method}")

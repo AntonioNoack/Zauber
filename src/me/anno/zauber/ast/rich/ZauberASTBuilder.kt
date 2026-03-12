@@ -6,6 +6,7 @@ import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
 import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
 import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
+import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
@@ -220,6 +221,8 @@ class ZauberASTBuilder(
                 i++
                 // todo find reasonable end index, e.g. fun, class, private, object, and limit to that
                 DelegateExpression(readExpression())
+            } else if (keywords.hasFlag(Keywords.LATEINIT)) {
+                SpecialValueExpression(SpecialValue.NULL, constructorScope, origin)
             } else null
         }
 
@@ -981,7 +984,7 @@ class ZauberASTBuilder(
 
     private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
         val nullExpr = nullExpr(scope, origin)
-        return CheckEqualsOp(expr, nullExpr, false, true, null, scope, origin)
+        return CheckEqualsOp(expr, nullExpr, byPointer = true, negated = true, null, scope, origin)
     }
 
     override fun readExpression(minPrecedence: Int): Expression {
@@ -1101,7 +1104,7 @@ class ZauberASTBuilder(
                                 listOf(param), expr.scope, origin
                             )
                         } else {
-                            binaryOp(currPackage, expr, op.symbol, rhs)
+                            binaryOp(currPackage, expr, op.symbol, rhs, origin)
                         }
                     }
                 }

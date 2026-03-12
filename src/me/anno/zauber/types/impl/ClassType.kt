@@ -92,15 +92,12 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     override fun equals(other: Any?): Boolean {
         return other is ClassType &&
                 clazz == other.clazz &&
-                (typeParameters == other.typeParameters ||
-                        (classHasNoTypeParams() && typeParamsOrEmpty() == other.typeParamsOrEmpty()))
+                (classHasNoTypeParams() || (typeParameters == other.typeParameters))
     }
 
     override fun hashCode(): Int {
         return clazz.pathStr.hashCode()
     }
-
-    private fun typeParamsOrEmpty() = typeParameters ?: emptyList()
 
     fun classHasNoTypeParams(): Boolean {
         return clazz.hasTypeParameters && clazz.typeParameters.isEmpty()

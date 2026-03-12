@@ -1,13 +1,18 @@
 package me.anno.zauber.interpreting
 
-class Instance(val type: ZClass, val properties: Array<Instance?>) {
+class Instance(
+    val type: ZClass,
+    val properties: Array<Instance?>,
+    val id: Int
+) {
+
     var rawValue: Any? = null
 
     override fun toString(): String {
         return if (rawValue == null) {
-            "Instance($type,${properties.toList()})"
+            "Instance@$id($type,${properties.toList()})"
         } else {
-            "Instance($type,${properties.toList()},$rawValue)"
+            "Instance@$id($type,${properties.toList()},$rawValue)"
         }
     }
 }

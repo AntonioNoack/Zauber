@@ -10,8 +10,8 @@ import me.anno.zauber.scope.Scope
  * */
 class SimpleMerge(
     val dst: SimpleField,
-    ifField: SimpleField,
-    elseField: SimpleField,
+    val ifField: SimpleField,
+    val elseField: SimpleField,
     scope: Scope, origin: Int
 ) : SimpleInstruction(scope, origin) {
 
@@ -23,4 +23,6 @@ class SimpleMerge(
     }
 
     override fun execute(runtime: Runtime): BlockReturn? = null
+
+    override fun toString(): String = "$dst = Merge($ifField,$elseField)"
 }

@@ -146,5 +146,6 @@ class Field(
     }
 
     fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
+    fun isLateinit(): Boolean = keywords.hasFlag(Keywords.LATEINIT)
 
 }

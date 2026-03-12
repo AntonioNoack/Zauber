@@ -1,10 +1,11 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.ClassType
@@ -12,12 +13,14 @@ import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
-class ZClass(val type: Type) {
+class ZClass(val type: Type, val runtime: Runtime) {
 
     companion object {
+        private val LOGGER = LogManager.getLogger(ZClass::class)
+
         fun getProperties(type: Type): List<Field> {
             if (type !is ClassType) {
-                println("type $type is not a ClassType")
+                if (type != NullType) LOGGER.warn("type $type is not a ClassType")
                 return emptyList()
             }
             return type.clazz.scope.fields.filter {
@@ -27,7 +30,7 @@ class ZClass(val type: Type) {
 
         fun Field.needsBackingFieldImpl(): Boolean {
             val type = codeScope.typeWithoutArgs
-            println("$this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
+            LOGGER.info("$this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
             return (!explicitSelfType || selfType == type) &&
                     needsBackingField()
         }
@@ -70,7 +73,7 @@ class ZClass(val type: Type) {
         if (type !is ClassType) {
             throw IllegalStateException("Type to create must be concrete and fully specified ($type)")
         }
-        return Instance(this, arrayOfNulls(properties.size))
+        return Instance(this, arrayOfNulls(properties.size), runtime.nextInstanceId())
     }
 
     fun isSubTypeOf(expectedType: ZClass): Boolean {

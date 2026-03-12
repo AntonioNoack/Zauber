@@ -253,7 +253,7 @@ object ASTSimplifier {
 
         val dst = block1v.block.field(valueType)
         // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useGetter = !expr.field.isBackingField && (field.hasCustomGetter || !field.needsBackingFieldImpl())
+        val useGetter = !expr.field.isBackingField && (field.hasCustomGetter || field.isLateinit() || !field.needsBackingFieldImpl())
         if (useGetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?

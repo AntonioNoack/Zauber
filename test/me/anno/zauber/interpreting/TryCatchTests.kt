@@ -86,11 +86,13 @@ class TryCatchTests {
             }
             
             package zauber
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            class IllegalArgumentException : RuntimeException()
+            class Throwable(val message: String?)
+            class Exception(message: String?): Throwable(message)
+            class NullPointerException(message: String?) : Exception(message)
             enum class Boolean { TRUE, FALSE }
+            fun throwJNE(name: String): Nothing {
+                throw NullPointerException(name)
+            }
             class Array<V>(val size: Int) {
                 external fun set(index: Int, value: V)
             }
@@ -100,7 +102,34 @@ class TryCatchTests {
     }
 
     @Test
-    fun testNullPointerException() {
+    fun testNullPointerExceptionManual() {
+        val code = """
+            val likeNull: Int? = null
+            val tested get() = try {
+                likeNull ?: throw NullPointerException("Missing likeNull")
+            } catch(e: NullPointerException) {
+                2
+            }
+            
+            package zauber
+            class Throwable(val message: String?)
+            class Exception(message: String?): Throwable(message)
+            class NullPointerException(message: String?) : Exception(message)
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external fun set(index: Int, value: V)
+            }
+            class Any
+            class Int {
+               fun equals(other: Any?) = other is Int
+            }
+        """.trimIndent()
+        val (rt, value) = testExecute(code)
+        assertEquals(2, rt.castToInt(value))
+    }
+
+    @Test
+    fun testNullPointerExceptionByNPECall() {
         val code = """
             val likeNull: Int? = null
             val tested get() = try {
@@ -110,10 +139,9 @@ class TryCatchTests {
             }
             
             package zauber
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            class IllegalArgumentException : RuntimeException()
+            class Throwable(val message: String?)
+            class Exception(message: String?): Throwable(message)
+            class NullPointerException(message: String?) : Exception(message)
             enum class Boolean { TRUE, FALSE }
             class Array<V>(val size: Int) {
                 external fun set(index: Int, value: V)
@@ -121,6 +149,7 @@ class TryCatchTests {
             fun throwNPE(message: String): Nothing {
                 throw NullPointerException(message)
             }
+            class Any
             class Int {
                fun equals(other: Any?) = other is Int
             }
