@@ -7,6 +7,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -131,9 +132,9 @@ class DotExpression(
 
     fun handleNOCT(context: ResolutionContext, baseType: NonObjectClassType, rightName: String): ResolvedField {
         val child = baseType.type.clazz.children
-            .firstOrNull { it.name == rightName && it.isClassLike() }
+            .firstOrNull { it.name == rightName && (it.isClassLike() || it.scopeType == ScopeType.ENUM_ENTRY_CLASS) }
             ?: throw IllegalStateException("No valid object '${rightName}' found in ${baseType.type}")
-        if (child.isObjectLike()) {
+        if (child.isObjectLike() || child.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
             val field = child.objectField
                 ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
             return ResolvedField(
