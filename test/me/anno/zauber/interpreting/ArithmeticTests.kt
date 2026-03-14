@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -11,7 +11,7 @@ class ArithmeticTests {
     @Test
     fun testSimpleIntCalculation() {
         val code = """
-            val tested get() = 1+3*7
+            val tested = 1+3*7
             
             package zauber
             class Int {
@@ -91,7 +91,7 @@ class ArithmeticTests {
     @Test
     fun testSimpleIntCalculationByCall() {
         val code = """
-            val tested get() = sq(5)
+            val tested = sq(5)
             fun sq(x: Int) = x*x
             
             package zauber

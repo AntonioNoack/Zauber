@@ -50,6 +50,14 @@ object Inheritance {
         )
     }
 
+    fun isSubTypeOf(expectedType: Type, actualType: Type): Boolean {
+        return isSubTypeOf(
+            expectedType, actualType,
+            emptyList(), emptyList(),
+            InsertMode.READ_ONLY
+        )
+    }
+
     fun isSubTypeOf(
         expectedType: Type,
         actualType: Type,

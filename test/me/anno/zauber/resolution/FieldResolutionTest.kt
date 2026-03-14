@@ -564,7 +564,7 @@ class FieldResolutionTest {
     @Test
     fun testFieldWithCallAfter() {
         val code = """
-            val tested get() = sq(5)
+            val tested = sq(5)
             fun sq(x: Int) = x*x
             
             package zauber

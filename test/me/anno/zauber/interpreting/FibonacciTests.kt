@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -38,7 +38,7 @@ class FibonacciTests {
         
         enum class Boolean { TRUE, FALSE }
         class Array<V>(val size: Int) {
-            external operator fun get(i: Int)
+            external operator fun get(i: Int): V
             external operator fun set(i: Int, value: V)
         }
         
@@ -60,7 +60,7 @@ class FibonacciTests {
             }
             return b
         }
-        val tested get() = fib(7)
+        val tested = fib(7)
         $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
@@ -83,7 +83,7 @@ class FibonacciTests {
             }
             return b
         }
-        val tested get() = fib(7)
+        val tested = fib(7)
         $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
@@ -98,7 +98,7 @@ class FibonacciTests {
             if (i < 2) return 1
             return fib(i-1) + fib(i-2)
         }
-        val tested get() = fib(5)
+        val tested = fib(5)
         $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8
@@ -113,7 +113,7 @@ class FibonacciTests {
             if (i < 2) return b
             return fib(i - 1, b, a + b)
         }
-        val tested get() = fib(5)
+        val tested = fib(5)
         $stdlib
         """.trimIndent()
 
@@ -128,7 +128,7 @@ class FibonacciTests {
             0, 1 -> 1
             else -> fib(i - 1) + fib(i - 2)
         }
-        val tested get() = fib(5)
+        val tested = fib(5)
         $stdlib
         """.trimIndent()
 
@@ -146,7 +146,7 @@ class FibonacciTests {
             }
             return go(i)
         }
-        val tested get() = fib(5)
+        val tested = fib(5)
         $stdlib
         """.trimIndent()
 
@@ -167,7 +167,7 @@ class FibonacciTests {
             }
             return go(i)
         }
-        val tested get() = fib(5)
+        val tested = fib(5)
         package zauber
         typealias IntArray = Array<Int>
         $stdlib
@@ -187,7 +187,7 @@ class FibonacciTests {
                     return Fib(i - 1).value + Fib(i - 2).value
                 }
         }
-        val tested get() = Fib(5).value
+        val tested = Fib(5).value
         $stdlib
         """.trimIndent()
 

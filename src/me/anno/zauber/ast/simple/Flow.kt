@@ -13,7 +13,9 @@ data class Flow(val value: SimpleField, val block: SimpleNode) {
 
         val joinedType = unionTypes(value.type, other.value.type)
         val joinedField = joinedBlock.field(joinedType)
-        joinedBlock.add(SimpleMerge(joinedField, value.use(), other.value.use(), root, -1))
+        val ifField = value.use()
+        val elseField = other.value.use()
+        joinedBlock.add(SimpleMerge(joinedField, ifField, elseField, root, -1))
         return joinedField
     }
 
@@ -38,7 +40,9 @@ data class Flow(val value: SimpleField, val block: SimpleNode) {
             val joinedField = joinedBlock.field(joinedType)
             block.nextBranch = joinedBlock
             otherNode.nextBranch = joinedBlock
-            joinedBlock.add(SimpleMerge(joinedField, value.use(), other.use(), root, -1))
+            val ifField = value.use()
+            val elseField = other.use()
+            joinedBlock.add(SimpleMerge(joinedField, ifField, elseField, root, -1))
             return Flow(joinedField, joinedBlock)
         }
     }

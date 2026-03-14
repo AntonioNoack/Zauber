@@ -28,7 +28,6 @@ import me.anno.zauber.scope.lazy.TokenSubList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
-import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.IntType
@@ -41,6 +40,17 @@ import kotlin.math.min
  * to make type-resolution immediately available/resolvable
  * */
 abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, true) {
+
+    companion object {
+        private val classPrefixes = arrayOf("data", "enum", "value", "inner")
+        private val notValueKeywords = arrayOf(
+            "fun", "val", "var", "lateinit",
+            "public", "private", "protected", "class", "interface",
+            "package", "import", "companion",
+            "open", "abstract", "override", "operator",
+            "get", "set"
+        )
+    }
 
     open fun skipAnnotations() {
         if (tokens.equals(i, "@") && tokens.equals(i + 1, TokenType.NAME)) {
@@ -178,19 +188,14 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     fun collectSuperNames(classScope: Scope) {
-        while (tokens.equals(i, TokenType.NAME)) {
-            val name = tokens.toString(i++)
-            // LOGGER.info("discovered $nextPackage extends $name")
-            classScope.superCallNames.add(SuperCallName(name, imports))
-            if (tokens.equals(i, "<")) {
-                i = tokens.findBlockEnd(i, "<", ">") + 1
-            }
-            if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                i = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
-            }
-            if (tokens.equals(i, TokenType.COMMA)) i++
-            else break
-        }
+        do {
+            val type = readTypeNotNull(classScope.typeWithoutArgs, true)
+            val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                readValueParameters()
+            } else null
+            val delegate = if (consumeIf("by")) readLazyValue() else null
+            classScope.superCalls.add(SuperCall(type, valueParameters, delegate))
+        } while (consumeIf(TokenType.COMMA))
     }
 
     fun skipValueParameters() {
@@ -263,6 +268,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("sealed") -> addKeyword(Keywords.SEALED)
             consumeIf("tailrec") -> {}// addKeyword(Keywords.TAILREC)
             consumeIf("lateinit") -> addKeyword(Keywords.LATEINIT)
+            consumeIf("inline") -> addKeyword(Keywords.INLINE)
+            consumeIf("crossinline") -> addKeyword(Keywords.CROSS_INLINE)
+            consumeIf("const") -> {
+                addKeyword(Keywords.CONSTEXPR)
+                readField()
+            }
             else -> checkForTypes()
         }
     }
@@ -286,10 +297,11 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val fieldScope = ownerScope.generate(name, origin, ScopeType.FIELD)
         fieldScope.addKeywords(packKeywords())
         pushScope(fieldScope) {
+            val typeParameters = readTypeParameterDeclarations(fieldScope)
+            fieldScope.typeParameters = typeParameters
+            fieldScope.hasTypeParameters = true
 
-            val genericParams = readTypeParameterDeclarations(fieldScope)
-
-            check(genericParams.isEmpty()) { "TypeParams for field not yet supported" }
+            check(typeParameters.isEmpty()) { "TypeParameters for field not yet supported" }
 
             val selfType0 = readSelfTypeIfPresent(end)
             var selfType = selfType0 ?: getSelfType(ownerScope)
@@ -297,7 +309,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
-            var valueType = if (consumeIf(":")) readType(selfType, true) else null
+            var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
             val initialValue =
                 if (consumeIf("=")) {
                     readLazyValue()
@@ -312,12 +324,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 getterOrigin = origin(i - 1)
                 val body = if (consumeIf(TokenType.OPEN_CALL)) {
                     consume(TokenType.CLOSE_CALL)
-                    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                        readLazyBody()
-                    } else if (consumeIf("=")) {
-                        val originI = origin(i - 1)
-                        ReturnExpression(readLazyValue(), null, fieldScope, originI)
-                    } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+                    tryReadBody(fieldScope)
                 } else null
                 setterVisibility = readVisibility()
                 body
@@ -330,17 +337,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 if (consumeIf(TokenType.OPEN_CALL)) {
                     setterName = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
                     val setterType = if (consumeIf(":")) {
-                        readType(null, true)
+                        readTypeNotNull(null, true)
                     } else null
                     if (valueType == null) valueType = setterType
 
                     consume(TokenType.CLOSE_CALL)
-                    if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                        readLazyBody()
-                    } else if (consumeIf("=")) {
-                        val originI = origin(i - 1)
-                        ReturnExpression(readLazyValue(), null, fieldScope, originI)
-                    } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+                    tryReadBody(fieldScope)
                 } else null
             } else null
 
@@ -374,6 +376,15 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             field.getter?.addKeywords(getterVisibility)
             field.setter?.addKeywords(setterVisibility)
         }
+    }
+
+    private fun tryReadBody(fieldScope: Scope): Expression {
+        return if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+            readLazyBody()
+        } else if (consumeIf("=")) {
+            val originI = origin(i - 1)
+            ReturnExpression(readLazyValue(), null, fieldScope, originI)
+        } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
     }
 
     private fun readVisibility(): Int {
@@ -447,8 +458,9 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         methodScope.keywords = methodScope.keywords or packKeywords()
 
         pushScope(methodScope) {
-            // todo skip these for now, and read them when we know the name...
-            val genericParams = collectGenericTypes(methodScope)
+            val typeParameters = collectGenericTypes(methodScope)
+            methodScope.typeParameters = typeParameters
+            methodScope.hasTypeParameters = true
 
             val selfType0 = readSelfTypeIfPresent(end)
             var selfType = selfType0 ?: getSelfType(ownerScope)
@@ -460,7 +472,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val whereConditions = readWhereConditions()
 
             val returnType = if (consumeIf(":")) {
-                readType(selfType, true)
+                readTypeNotNull(selfType, true)
             } else if (tokens.equals(i, "{") ||
                 methodScope.keywords.hasFlag(Keywords.EXTERNAL)
             ) { // type is implicitly Unit
@@ -478,7 +490,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             methodScope.selfAsMethod = Method(
                 selfType, selfType != null, name,
-                genericParams, valueParameters,
+                typeParameters, valueParameters,
                 methodScope, returnType, whereConditions, body,
                 methodScope.keywords, origin
             )
@@ -507,17 +519,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 }
                 TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0
                 else -> if (depth == 0) when {
-                    tokens.equals(
-                        j0, "fun", "val", "var", "lateinit",
-                        "public", "private", "protected", "class", "interface",
-                        "package", "import", "companion",
-                        "open", "abstract", "override",
-                        "get", "set"
-                    ) -> return j0
+                    tokens.equals(j0, *notValueKeywords) -> return j0
                     tokens.equals(j0, "object") && !tokens.equals(j0, ":") -> return j0
                     // enum class, data class, private class... these depend on the work after them...
-                    tokens.equals(j0 + 1, "class") &&
-                            tokens.equals(j0, "data", "enum", "value", "inner") -> {
+                    tokens.equals(j0 + 1, "class") && tokens.equals(j0, *classPrefixes) -> {
                         return j0
                     }
                 }
@@ -543,7 +548,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
 
         val type = tokens.push(end - 2) {
-            readType(null, true)!!
+            readTypeNotNull(null, true)
         }
 
         consume(".")
@@ -645,9 +650,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         throw NotImplementedError()
     }
 
-    override fun readExpression(minPrecedence: Int): Expression {
-        throw NotImplementedError()
-    }
+    override fun readExpression(minPrecedence: Int): Expression = readLazyValue()
 
     override fun readBodyOrExpression(label: String?): Expression {
         throw NotImplementedError()
@@ -683,8 +686,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 val name = consumeName(VSCodeType.PARAMETER, 0)
                 consume(":")
 
-                var type = readType(selfType, true)
-                    ?: throw IllegalStateException("Missing type at ${tokens.err(i)}")
+                var type = readTypeNotNull(selfType, true)
 
                 val defaultValue = if (consumeIf("=")) readLazyValue() else null
 

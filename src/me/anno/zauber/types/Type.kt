@@ -38,6 +38,7 @@ abstract class Type {
             is NotType -> type.containsGenerics()
             is GenericType -> true
             is LambdaType -> parameters.any { it.type.containsGenerics() } || returnType.containsGenerics()
+            is UnresolvedType -> resolved.containsGenerics()
             else -> throw NotImplementedError("Does $this contain generics?")
         }
     }

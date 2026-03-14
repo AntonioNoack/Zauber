@@ -1325,7 +1325,7 @@ class ZauberASTBuilder(
                 TryCatchBlock(
                     ExpressionList(forTryBody, scope, origin),
                     emptyList(),
-                    action
+                    action, scope, origin
                 )
             )
         } else {
@@ -1357,8 +1357,8 @@ class ZauberASTBuilder(
             result.add(
                 TryCatchBlock(
                     ExpressionList(forTryBody, scope, origin),
-                    listOf(Catch(parameter, ExpressionList(listOf(action, throwImpl), errCatch, origin))),
-                    null
+                    listOf(Catch(parameter, ExpressionList(listOf(action, throwImpl), errCatch, origin), origin)),
+                    null, scope, origin
                 )
             )
         } else {
@@ -1411,7 +1411,7 @@ class ZauberASTBuilder(
                 "Expected dot to separate type and name for field at ${tokens.err(i0)}"
             }
             val type = tokens.push(afterName - 2) {
-                readType(null, true)
+                readTypeNotNull(null, true)
             }
             consume(".")
             check(i == afterName - 1) { "Unused tokens at ${tokens.err(i)}" }

@@ -2,7 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToDouble
 import me.anno.zauber.interpreting.RuntimeCast.castToFloat
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import kotlin.math.pow
@@ -12,7 +12,7 @@ class FloatFormatTests {
     @Test
     fun testSimpleFloatField() {
         val code = """
-            val tested get() = 17f
+            val tested = 17f
         """.trimIndent()
         val (runtime, value) = testExecute(code)
         assertEquals(17f, runtime.castToFloat(value))
@@ -21,7 +21,7 @@ class FloatFormatTests {
     @Test
     fun testNegativeFloatField() {
         val code = """
-            val tested get() = -17f
+            val tested = -17f
             
             package zauber
             class Float {

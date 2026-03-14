@@ -10,7 +10,6 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.StandardTypes
-import me.anno.zauber.types.SuperCallName
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
@@ -45,7 +44,6 @@ class Scope(val name: String, val parent: Scope? = null) {
     val fields = ArrayList<Field>()
 
     val superCalls = ArrayList<SuperCall>()
-    val superCallNames = ArrayList<SuperCallName>()
     val sealedPermits = ArrayList<Type>(0) // for Java
 
     val enumEntries: List<Scope>
@@ -320,8 +318,8 @@ class Scope(val name: String, val parent: Scope? = null) {
             if (byParent != null) return byParent
         }
 
-        forEachSuperType { type ->
-            val scope = extractScope(type)
+        for (superCall in superCalls) {
+            val scope = extractScope(superCall.type)
             val bySuperCall = scope.resolveTypeInner(name)
             // println("rti[$name,$this] -> $type -> $scope -> $bySuperCall")
             if (bySuperCall != null) return bySuperCall
@@ -331,23 +329,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     private inline fun forEachSuperType(callback: (Type) -> Unit) {
-        if (superCalls.size < superCallNames.size) {
-            for (superCall in superCallNames) {
-                val resolved = superCall.resolved
-                if (resolved != null) {
-                    callback(resolved)
-                } else {
-                    val type = resolveTypeOrNull(superCall.name, superCall.imports, false)
-                    if (type != null) {
-                        superCall.resolved = type
-                        callback(type)
-                    } else throw IllegalStateException("Could not resolve ${superCall.name} inside $this!")
-                }
-            }
-        } else {
-            for (superCall in superCalls) {
-                callback(superCall.type)
-            }
+        for (superCall in superCalls) {
+            callback(superCall.type)
         }
     }
 
@@ -536,7 +519,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         imports = emptyList()
         objectField = null
         superCalls.clear()
-        superCallNames.clear()
         fileName = null
         keywords = 0
         selfAsMethod = null

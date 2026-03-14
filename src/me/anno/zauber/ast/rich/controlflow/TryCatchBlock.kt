@@ -1,9 +1,9 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
@@ -11,8 +11,8 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class TryCatchBlock(
     val tryBody: Expression, val catches: List<Catch>,
-    val finally: Expression?
-) : Expression(tryBody.scope, tryBody.origin) {
+    val finally: Expression?, scope: Scope, origin: Int
+) : Expression(scope, origin) {
 
     override fun resolveReturnType(context: ResolutionContext): Type {
         val bodyType = TypeResolution.resolveType(context, tryBody)
@@ -53,8 +53,11 @@ class TryCatchBlock(
     override fun splitsScope(): Boolean = false
 
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
-        Catch(it.param.clone(it.param.scope /* I don't think we should override this */), it.body.clone(scope))
-    }, finally?.clone(scope))
+        Catch(
+            it.param.clone(it.param.scope /* I don't think we should override this */),
+            it.body.clone(scope), it.origin
+        )
+    }, finally?.clone(scope), scope, origin)
 
     override fun isResolved(): Boolean = tryBody.isResolved() &&
             catches.all { it.param.type.isResolved() && it.body.isResolved() } &&
@@ -62,8 +65,8 @@ class TryCatchBlock(
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         return TryCatchBlock(tryBody.resolve(context), catches.map {
-            Catch(it.param, it.body.resolve(context))
-        }, finally?.resolve(context))
+            Catch(it.param, it.body.resolve(context), it.origin)
+        }, finally?.resolve(context), scope, origin)
     }
 
     override fun toStringImpl(depth: Int): String {

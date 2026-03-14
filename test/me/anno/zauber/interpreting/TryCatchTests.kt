@@ -2,8 +2,8 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.RuntimeCast.castToString
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecuteCatch
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,7 +18,7 @@ class TryCatchTests {
             class RuntimeException : Exception()
             class NullPointerException : RuntimeException()
             
-            val tested get() = try {
+            val tested = try {
                 1
             } catch(e: NullPointerException) {
                 2
@@ -56,7 +56,7 @@ class TryCatchTests {
     @Test
     fun testTryCatchCatching() {
         val code = """
-            val tested get() = try {
+            val tested = try {
                 throw NullPointerException()
             } catch(e: NullPointerException) {
                 2   
@@ -105,7 +105,7 @@ class TryCatchTests {
     fun testNullPointerExceptionManual() {
         val code = """
             val likeNull: Int? = null
-            val tested get() = try {
+            val tested = try {
                 likeNull ?: throw NullPointerException("Missing likeNull")
             } catch(e: NullPointerException) {
                 2
@@ -132,7 +132,7 @@ class TryCatchTests {
     fun testNullPointerExceptionByNPECall() {
         val code = """
             val likeNull: Int? = null
-            val tested get() = try {
+            val tested = try {
                 likeNull!!
             } catch(e: NullPointerException) {
                 2
@@ -161,7 +161,7 @@ class TryCatchTests {
     @Test
     fun testSimpleFinallyIsExecuted() {
         val code = """
-            val tested get() = try {
+            val tested = try {
                 "Test"
             } finally {
                 println("Hello World")
@@ -183,7 +183,7 @@ class TryCatchTests {
                     "MethodResolver,ResolvedMethod"
         )
         val code = """
-            val tested get() = try {
+            val tested = try {
                 try {
                     "Test"
                 } finally {

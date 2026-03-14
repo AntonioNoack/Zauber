@@ -17,6 +17,7 @@ import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
 import me.anno.zauber.interpreting.ZClass.Companion.needsBackingFieldImpl
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -41,7 +42,6 @@ import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
 
 object ASTSimplifier {
 
@@ -163,7 +163,7 @@ object ASTSimplifier {
                 val block1 = simplifyImpl(context, expr.value, block0, flow0, graph, true)
                 val block1v = block1.value ?: return block1
                 val dst = block1v.block.field(BooleanType, booleanOwnership)
-                block1v.block.add(SimpleInstanceOf(dst, block1v.value.use(), expr.type, expr.scope, expr.origin))
+                block1v.block.add(createSimpleInstanceOf(dst, block1v.value.use(), expr.type, expr.scope, expr.origin))
                 return block1.withValue(dst, block1v.block)
             }
 
@@ -253,7 +253,8 @@ object ASTSimplifier {
 
         val dst = block1v.block.field(valueType)
         // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useGetter = !expr.field.isBackingField && (field.hasCustomGetter || field.isLateinit() || !field.needsBackingFieldImpl())
+        val useGetter =
+            !expr.field.isBackingField && (field.hasCustomGetter || field.isLateinit() || !field.needsBackingFieldImpl())
         if (useGetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?
@@ -432,28 +433,56 @@ object ASTSimplifier {
         val block0 = flow0.thrown ?: return flow0
         val block0b = block0.block
 
-        val thrownType = andTypes(catch.param.type, block0.value.type)
+        val thrownType = catch.param.type
         val instanceOfField = block0b.field(BooleanType, booleanOwnership)
-        block0b.add(SimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, expr.origin))
+        val instanceCheck = createSimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
 
-        val ifBlock = graph.addNode()
-        val elseBlock = graph.addNode()
-        block0b.branchCondition = instanceOfField.use()
-        block0b.ifBranch = ifBlock
-        block0b.elseBranch = elseBlock
+        val alwaysHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.TRUE
+        val neverHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.FALSE
+        println("Catch handling($instanceCheck by ${block0.value} is $thrownType), body: ${catch.body}")
 
+        return when {
+            alwaysHandled -> simplifyCatchHandleBranch(context, expr, catch, graph, needsValue, block0, block0b)
+            neverHandled -> simplifyCatchContinueBranch(flow0, block0, block0b)
+            else -> {
+                block0b.add(instanceCheck)
+
+                val ifBlock = graph.addNode()
+                val elseBlock = graph.addNode()
+                block0b.branchCondition = instanceOfField.use()
+                block0b.ifBranch = ifBlock
+                block0b.elseBranch = elseBlock
+
+                val ifFlow = simplifyCatchHandleBranch(context, expr, catch, graph, needsValue, block0, ifBlock)
+                val elseFlow = simplifyCatchContinueBranch(flow0, block0, elseBlock)
+                ifFlow.joinWith(elseFlow)
+            }
+        }
+    }
+
+    private fun simplifyCatchHandleBranch(
+        context: ResolutionContext,
+        expr: TryCatchBlock,
+        catch: Catch,
+        graph: SimpleGraph,
+        needsValue: Boolean,
+        block0: Flow,
+        ifBlock: SimpleNode,
+    ): FlowResult {
         val ifFlow = FlowResult(Flow(UnitInstance, ifBlock), null, null)
-
-        // val notThrownType = andTypes(catch.param.type.not(), block0.value.type)
-        val elseFlow = flow0.withThrown(block0.value, elseBlock)
-
         val methodType = catch.param.scope.typeWithoutArgs
         val selfField = ifBlock.field(methodType, catch.param.scope)
         val thrownField = catch.param.getOrCreateField(null, Keywords.NONE)
         ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, expr.scope, expr.origin))
-        val ifFlow1 = simplifyImpl(context, catch.body, ifBlock, ifFlow, graph, needsValue)
+        return simplifyImpl(context, catch.body, ifBlock, ifFlow, graph, needsValue)
+    }
 
-        return ifFlow1.joinWith(elseFlow)
+    private fun simplifyCatchContinueBranch(
+        flow0: FlowResult,
+        block0: Flow,
+        elseBlock: SimpleNode,
+    ): FlowResult {
+        return flow0.withThrown(block0.value, elseBlock)
     }
 
     private fun simplifyFinally(
@@ -586,6 +615,8 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val condition = block1v.value
 
+        // todo when the condition to a branch is a simple boolean, skip evaluating the other branch!
+
         val ifBlock = graph.addNode()
         val elseBlock = graph.addNode()
 
@@ -607,14 +638,6 @@ object ASTSimplifier {
             val elseValue = simplifyImpl(context, expr.elseBranch, elseBlock, elseFlow, graph, needsValue)
             return ifValue.joinWith(elseValue)
         }
-    }
-
-    fun collectSpecialization(method: MethodLike, typeParameters: ParameterList): Specialization {
-        // todo implement this...
-        //  we must collect the following:
-        //  method-type-parameters,
-        //  outer class type-parameters
-        return Specialization(typeParameters)
     }
 
     private fun simplifyCall(

@@ -1,6 +1,6 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Test
 
 class YieldTests {
@@ -22,7 +22,7 @@ class YieldTests {
                 return result
             }
             
-            val tested get() = collectYielded<Int> {
+            val tested = collectYielded<Int> {
                 yield 1
                 yield 2
                 yield 3

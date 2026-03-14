@@ -2,7 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToFloat
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

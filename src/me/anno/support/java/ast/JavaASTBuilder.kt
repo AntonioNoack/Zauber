@@ -1010,7 +1010,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         val unlockExpr = CallExpression(unlockMember, emptyList(), tmpFieldParam, origin)
         val assignmentExpr = AssignmentExpression(tmpFieldExpr, lock)
         val bodyPlusLock = ExpressionList(listOf(assignmentExpr, lockExpr, body), scope, origin)
-        return TryCatchBlock(bodyPlusLock, emptyList(), unlockExpr)
+        return TryCatchBlock(bodyPlusLock, emptyList(), unlockExpr, scope, origin)
     }
 
     override fun readMethodBody(): ExpressionList {

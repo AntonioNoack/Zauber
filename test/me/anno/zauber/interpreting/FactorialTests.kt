@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -15,7 +15,7 @@ class FactorialTests {
                 if (i <= 1) return 1
                 return i * fac(i-1)
             }
-            val tested get() = fac(5)
+            val tested = fac(5)
             
             package zauber
             class Int {
@@ -52,7 +52,7 @@ class FactorialTests {
                 }
                 return f
             }
-            val tested get() = fac(10)
+            val tested = fac(10)
             
             package zauber
             class Int {
@@ -92,7 +92,7 @@ class FactorialTests {
                 }
                 return product
             }
-            val tested get() = fac(10)
+            val tested = fac(10)
             
             package zauber
             object Unit

@@ -118,8 +118,7 @@ abstract class ZauberASTBuilderBase(
 
     fun readTypeOrNull(selfType: Type?): Type? {
         return if (consumeIf(":")) {
-            readType(selfType, true)
-                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+            readTypeNotNull(selfType, true)
         } else null
     }
 
@@ -288,6 +287,7 @@ abstract class ZauberASTBuilderBase(
 
     fun readTryCatch(): Expression {
         // try with resource
+        val origin = origin(i - 1)
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             // read the declaration...
             val origin = origin(i)
@@ -313,13 +313,13 @@ abstract class ZauberASTBuilderBase(
                 val params = pushCall { readParameterDeclarations(null) }
                 check(params.size == 1)
                 val handler = readBodyOrExpression(null)
-                catches.add(Catch(params[0], handler))
+                catches.add(Catch(params[0], handler, origin))
             }
         }
         val finally = if (consumeIf("finally")) {
             readBodyOrExpression(null)
         } else null
-        return TryCatchBlock(tryBody, catches, finally)
+        return TryCatchBlock(tryBody, catches, finally, currPackage, origin)
     }
 
     fun readTypeNotNull(selfType: Type?, allowSubTypes: Boolean): Type {

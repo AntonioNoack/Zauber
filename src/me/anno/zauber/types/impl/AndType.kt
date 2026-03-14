@@ -3,6 +3,7 @@ package me.anno.zauber.types.impl
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.impl.TypeUtils.canInstanceBeBoth
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
 import me.anno.zauber.types.impl.TypeUtils.isDistinctFrom
@@ -51,6 +52,7 @@ class AndType(val types: List<Type>) : Type() {
             val types = types.distinct()
             val notTypes = types.filterIsInstance<NotType>()
             val yesTypes = types.filter { it !is NotType && it != NullableAnyType }
+
             for (i in 1 until yesTypes.size) {
                 for (j in 0 until i) {
                     if (!canInstanceBeBoth(yesTypes[i], yesTypes[j])) {
@@ -61,7 +63,7 @@ class AndType(val types: List<Type>) : Type() {
             }
 
             if (yesTypes == types) {
-                return types
+                return reduceAndTypes2(types)
             }
 
             val notTypesOr = notTypes.flatMap {
@@ -81,7 +83,6 @@ class AndType(val types: List<Type>) : Type() {
             var classTypes = types.filterIsInstance<ClassType>()
 
             // remove parents: if a child is included, remove the parent
-            // todo unit-test that AndType(Exception,Throwable) = Exception
             if (classTypes.size > 1) {
                 classTypes = classTypes.sortedBy { it.clazz.getHierarchyDepth() }
                 classTypes = classTypes.filterIndexed { index, parentType ->
@@ -94,23 +95,6 @@ class AndType(val types: List<Type>) : Type() {
             val nonClassTypes = types.filter { it !is ClassType }
             return classTypes + nonClassTypes
         }
-
-        private fun canInstanceBeBoth(t1: Type, t2: Type): Boolean {
-            if (t1 == NothingType || t2 == NothingType) return false
-            if (t1 == t2) return true
-            if (t1 is UnionType) return t1.types.any { t1i -> canInstanceBeBoth(t1i, t2) }
-            if (t2 is UnionType) return t2.types.any { t2i -> canInstanceBeBoth(t1, t2i) }
-            if (t1 is NullType && t2 is ClassType) return false
-            if (t2 is NullType && t1 is ClassType) return false
-            if (t1 is ClassType && t2 is ClassType &&
-                isDistinctFrom(t1, t2)
-            ) return false
-
-            // todo complete this... is complicated...
-            //  and ideally, all these should be resolved/specialized...
-            return true // idk
-        }
-
     }
 
     init {

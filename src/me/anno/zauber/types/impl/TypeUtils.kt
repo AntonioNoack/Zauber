@@ -2,6 +2,8 @@ package me.anno.zauber.types.impl
 
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types.NothingType
 
 object TypeUtils {
 
@@ -26,27 +28,47 @@ object TypeUtils {
     }
 
     fun isDistinctFrom(typeA: ClassType, typeB: ClassType): Boolean {
-        // todo if either is an interface, we need other logic...
         if (typeA.clazz.isInterface()) return false
         if (typeB.clazz.isInterface()) return false
 
-        var a = typeA
-        var b = typeB
+        var superTypeA = typeA
+        var superTypeB = typeB
 
-        var ad = a.clazz.getHierarchyDepth()
-        var bd = b.clazz.getHierarchyDepth()
+        var aDepth = superTypeA.clazz.getHierarchyDepth()
+        var bDepth = superTypeB.clazz.getHierarchyDepth()
 
-        while (ad > bd) {
-            a = getSuperType(a, typeA)
-            ad--
+        while (aDepth > bDepth) {
+            superTypeA = getSuperType(superTypeA, typeA)
+            aDepth--
         }
 
-        while (bd > ad) {
-            b = getSuperType(b, typeB)
-            bd--
+        while (bDepth > aDepth) {
+            superTypeB = getSuperType(superTypeB, typeB)
+            bDepth--
         }
 
-        return a != b
+        println("$typeA -$aDepth> $superTypeA =?= $superTypeB <$bDepth- $typeB")
+
+        return superTypeA != superTypeB
+    }
+
+    fun canInstanceBeBoth(t1: Type, t2: Type): Boolean {
+        if (t1 is UnresolvedType || t2 is UnresolvedType)
+            return canInstanceBeBoth(t1.resolved, t2.resolved)
+
+        if (t1 == NothingType || t2 == NothingType) return false
+        if (t1 == t2) return true
+        if (t1 is UnionType) return t1.types.any { t1i -> canInstanceBeBoth(t1i, t2) }
+        if (t2 is UnionType) return t2.types.any { t2i -> canInstanceBeBoth(t1, t2i) }
+        if (t1 == NullType && t2 is ClassType) return false
+        if (t2 == NullType && t1 is ClassType) return false
+
+        // if t1 or t2 are interfaces, an instance still could be both
+        if (t1 is ClassType && t2 is ClassType && isDistinctFrom(t1, t2)) return false
+
+        // todo complete this... is complicated...
+        //  and ideally, all these should be resolved/specialized...
+        return true // idk
     }
 
     fun getSuperType(a: ClassType, selfType: ClassType): ClassType {

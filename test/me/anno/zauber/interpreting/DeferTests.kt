@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToString
-import me.anno.zauber.interpreting.TestRuntime.Companion.testExecute
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -20,7 +20,7 @@ class DeferTests {
                 println("Hello ")
                 return "Test"
             }
-            val tested get() = run()
+            val tested = run()
             
             package zauber
             object Unit
@@ -48,7 +48,7 @@ class DeferTests {
                     return "Test"
                 }
             }
-            val tested get() = run()
+            val tested = run()
             
             package zauber
             class String
@@ -79,7 +79,7 @@ class DeferTests {
                 println("Hello!")
                 return "Test"
             }
-            val tested get() = run()
+            val tested = run()
             
             package zauber
             class String

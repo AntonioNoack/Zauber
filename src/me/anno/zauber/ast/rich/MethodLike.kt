@@ -75,7 +75,6 @@ open class MethodLike(
         val body = body ?: return null
 
         validateSpecialization(specialization)
-        println("spec for $this: $specialization")
 
         return specializations.getOrPut(specialization) {
             Specializations.push(specialization) {
