@@ -76,11 +76,8 @@ class ZauberASTBuilder(
 
         val unitInstance by lazy {
             val scope = UnitType.clazz
-            if (scope.objectField == null) scope.objectField = scope.addField(
-                null, false, isMutable = false, null,
-                scope.name, scope.typeWithArgs, null, Keywords.NONE, -1
-            )
-            FieldExpression(scope.objectField!!, scope, -1)
+            val field = scope.getOrCreateObjectField(-1)
+            FieldExpression(field, scope, -1)
         }
     }
 
@@ -137,11 +134,7 @@ class ZauberASTBuilder(
         readClassBody(name, keywords, scopeType)
 
         classScope.hasTypeParameters = true // no type-params are supported
-        if (classScope.objectField == null) classScope.objectField = classScope.addField(
-            null, false, isMutable = false, null, classScope.name,
-            ClassType(classScope, emptyList(), origin),
-            /* todo should we set initialValue? */ null, Keywords.NONE, origin
-        )
+        classScope.getOrCreateObjectField(origin)
 
         if (isCompanionObject) {
             check(currPackage.companionObject != null) {

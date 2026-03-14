@@ -127,6 +127,15 @@ class Scope(val name: String, val parent: Scope? = null) {
      * */
     var objectField: Field? = null
 
+    fun getOrCreateObjectField(origin: Int): Field {
+        if (objectField == null) objectField = addField(
+            null, false, isMutable = false, null, name,
+            ClassType(this, emptyList(), origin),
+            /* todo should we set initialValue? */ null, Keywords.NONE, origin
+        )
+        return objectField!!
+    }
+
     /**
      * for each if/else-chain, these shall be filled in
      * */
@@ -498,6 +507,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun isClassType(): Boolean = scopeType?.isClassType() == true
+    fun isClassLike(): Boolean = isClassType() || isObjectLike()
     fun isMethodType(): Boolean = scopeType?.isMethodType() == true
     fun isTypeAlias(): Boolean = scopeType == ScopeType.TYPE_ALIAS
     fun isObject(): Boolean = scopeType?.isObject() == true

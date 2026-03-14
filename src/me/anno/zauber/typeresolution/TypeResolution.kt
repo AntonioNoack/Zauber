@@ -8,9 +8,9 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.utils.NumberUtils.f1
@@ -154,8 +154,8 @@ object TypeResolution {
             return alreadyResolved
         } else {
             LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
-            val type = expr.resolveReturnType(context)
-            LOGGER.info("[${depth--}] Resolved type of $expr to $type")
+            val type = expr.resolveReturnType(context).resolved
+            LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
             expr.resolvedType = type
             return type
         }
@@ -197,9 +197,9 @@ object TypeResolution {
         while (true) {
             LOGGER.info("Checking ${scopeI.pathStr}/${scopeI.scopeType} for 'this'")
             when {
-                scopeI.isClassType() ||
-                        scopeI.scopeType == ScopeType.PACKAGE -> {
-                    return scopeI.typeWithoutArgs
+                scopeI.isClassType() || scopeI.scopeType == ScopeType.PACKAGE -> {
+                    val base = scopeI.typeWithoutArgs
+                    return if (scopeI.isObjectLike()) base else NonObjectClassType(base)
                 }
                 scopeI.isMethodType() -> {
                     val func = scopeI.selfAsMethod

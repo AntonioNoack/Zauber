@@ -48,7 +48,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             "public", "private", "protected", "class", "interface",
             "package", "import", "companion",
             "open", "abstract", "override", "operator",
-            "get", "set"
+            "get", "set", "typealias"
         )
     }
 
@@ -99,6 +99,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     open fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
+        val origin = origin(i - 1)
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
 
             val genericParams = readTypeParameterDeclarations(classScope)
@@ -169,7 +170,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 collectSuperNames(classScope)
             }
 
+            if (scopeType == ScopeType.OBJECT || scopeType == ScopeType.COMPANION_OBJECT) {
+                classScope.getOrCreateObjectField(origin)
+            }
+
             handleClassBody(classScope, scopeType, readBody)
+            popGenericParams()
         }
     }
 
@@ -310,8 +316,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             check(typeParameters.isEmpty()) { "TypeParameters for field not yet supported" }
 
             val selfType0 = readSelfTypeIfPresent(end)
-            var selfType = selfType0 ?: getSelfType(ownerScope)
-            if (selfType != null) selfType = selfType.resolve()
+            val selfType = selfType0 ?: getSelfType(ownerScope)
+            // if (selfType != null) selfType = selfType.resolve()
 
             val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
@@ -381,6 +387,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             field.getter?.addKeywords(getterVisibility)
             field.setter?.addKeywords(setterVisibility)
+            popGenericParams()
         }
     }
 
@@ -520,7 +527,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             when (tokens.getType(j0)) {
                 TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
                 TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> {
-                    if (depth == 0) return j0
+                    if (depth == 0) return end
                     depth--
                 }
                 TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0

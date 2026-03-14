@@ -6,14 +6,17 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
+import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.NonObjectClassType
 
 /**
  * left.right
@@ -93,42 +96,27 @@ class DotExpression(
         // println("resolveField(): LHS: $baseType, RHS: ${right.javaClass.simpleName}")
         when (right) {
             is MemberNameExpression -> {
-                // todo replace own generics, because we don't know them yet
-                /*val selfType = context.selfType
-                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
-                    resolveGenerics(
-                        baseType,
-                        selfType.clazz.typeParameters,
-                        selfType.clazz.typeParameters.map { it.type })
-                } else baseType*/
+                if (baseType is NonObjectClassType) {
+                    return handleNOCT(context, baseType, right.name)
+                }
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType), scope,
                     right.name, right.nameAsImport, null, origin,
                 )
             }
             is UnresolvedFieldExpression -> {
-                // todo replace own generics, because we don't know them yet
-                /*val selfType = context.selfType
-                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
-                    resolveGenerics(
-                        baseType,
-                        selfType.clazz.typeParameters,
-                        selfType.clazz.typeParameters.map { it.type })
-                } else baseType*/
+                if (baseType is NonObjectClassType) {
+                    return handleNOCT(context, baseType, right.name)
+                }
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType), scope,
                     right.name, right.nameAsImport, null, origin,
                 )
             }
             is FieldExpression -> {
-                // todo replace own generics, because we don't know them yet
-                /*val selfType = context.selfType
-                val baseType = if (baseType.containsGenerics() && selfType is ClassType) {
-                    resolveGenerics(
-                        baseType,
-                        selfType.clazz.typeParameters,
-                        selfType.clazz.typeParameters.map { it.type })
-                } else baseType*/
+                if (baseType is NonObjectClassType) {
+                    return handleNOCT(context, baseType, right.field.name)
+                }
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
                     right.field, null, scope, origin,
@@ -138,6 +126,23 @@ class DotExpression(
                 "dot-operator with $right (${right.javaClass.simpleName}) in " +
                         TokenListIndex.resolveOrigin(origin)
             )
+        }
+    }
+
+    fun handleNOCT(context: ResolutionContext, baseType: NonObjectClassType, rightName: String): ResolvedField {
+        val child = baseType.type.clazz.children
+            .firstOrNull { it.name == rightName && it.isClassLike() }
+            ?: throw IllegalStateException("No valid object '${rightName}' found in ${baseType.type}")
+        if (child.isObjectLike()) {
+            val field = child.objectField
+                ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
+            return ResolvedField(
+                ParameterList.emptyParameterList(),
+                field, ParameterList.emptyParameterList(), context, scope,
+                false, MatchScore(0)
+            )
+        } else {
+            TODO("return class-like instance")
         }
     }
 

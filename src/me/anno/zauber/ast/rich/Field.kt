@@ -85,7 +85,7 @@ class Field(
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
         if (valueType != null) {
-            return valueType
+            return valueType.resolved
         }
 
         val initialValue = initialValue

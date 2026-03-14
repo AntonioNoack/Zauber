@@ -53,7 +53,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         val companion = scope.companionObject
         if (companion != null) {
             if (scope.name == name) {
-                val field = companion.objectField!!
+                val field = companion.getOrCreateObjectField(-1)
                 val valueType = getFieldReturnType(scopeSelfType, field, returnType)
                 val match = findMemberMatch(
                     field, valueType,

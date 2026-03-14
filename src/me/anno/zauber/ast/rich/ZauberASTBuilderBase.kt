@@ -102,17 +102,12 @@ abstract class ZauberASTBuilderBase(
 
     open fun readTypeAlias() {
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
-        val pseudoScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
-        pseudoScope.typeParameters = readTypeParameterDeclarations(pseudoScope)
+        val aliasScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
+        aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope)
 
-        check(tokens.equals(i++, "="))
+        consume("=")
 
-        var trueType = readType(null, true)
-        if (trueType is ClassType && trueType.typeParameters == null) {
-            trueType = trueType.withTypeParameters(emptyList())
-        }
-
-        pseudoScope.selfAsTypeAlias = trueType
+        aliasScope.selfAsTypeAlias = readType(null, true)
         popGenericParams()
     }
 
