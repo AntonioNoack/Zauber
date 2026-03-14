@@ -14,7 +14,7 @@ class VarargTest {
     fun testVarargWithNoParameters() {
         assertEquals(
             arrayOfFloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.testTypeResolution(
+            TypeResolutionTest.testTypeResolution(
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf<Float>()
@@ -27,7 +27,7 @@ class VarargTest {
     fun testVarargWithOneParameter() {
         assertEquals(
             arrayOfFloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.testTypeResolution(
+            TypeResolutionTest.testTypeResolution(
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf(0f)
@@ -40,7 +40,7 @@ class VarargTest {
     fun testVarargWithSomeParameters() {
         assertEquals(
             arrayOfFloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.testTypeResolution(
+            TypeResolutionTest.testTypeResolution(
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf(0f,1f,2f,43f)

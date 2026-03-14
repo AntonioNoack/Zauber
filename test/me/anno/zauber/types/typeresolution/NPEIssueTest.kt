@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class NPEIssueTest {
     @Test
     fun testNPE() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+        TypeResolutionTest.Companion.testTypeResolution(
             """
         typealias SomeFloat = Float | Double
         fun <N : SomeFloat> N.reciprocal(): N {

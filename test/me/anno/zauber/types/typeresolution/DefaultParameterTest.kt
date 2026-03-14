@@ -18,7 +18,7 @@ class DefaultParameterTest {
     fun testDefaultParameterWithoutSelf() {
         assertEquals(
             FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun call(x: Int = 0): Float
                 
@@ -32,7 +32,7 @@ class DefaultParameterTest {
     fun testDefaultParameterWithSelf() {
         assertEquals(
             FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 class X {
                     fun call(x: Int = 0): Float
@@ -48,7 +48,7 @@ class DefaultParameterTest {
     fun testDefaultParameterWithSelfExtension() {
         assertEquals(
             FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 class X
                 fun X.call(x: Int = 0): Float
@@ -63,7 +63,7 @@ class DefaultParameterTest {
     fun testDefaultConstructorParam() {
         assertEquals(
             FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 class X(val x: Int = 0) {
                     fun call(): Float

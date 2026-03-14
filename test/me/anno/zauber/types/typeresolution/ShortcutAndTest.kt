@@ -7,7 +7,7 @@ class ShortcutAndTest {
     // why ever, we get a StackOverflow error for lots of these :/
     @Test
     fun testShortcutAnd() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+        TypeResolutionTest.Companion.testTypeResolution(
             """
             class X(val x: Int, val y: Float) {
                 override fun equals(other: Any?): Boolean {

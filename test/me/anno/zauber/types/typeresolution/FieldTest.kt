@@ -10,7 +10,7 @@ class FieldTest {
     fun testTypeByAssignment() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 val tested = 0
             """.trimIndent()
@@ -22,7 +22,7 @@ class FieldTest {
     fun testTypeByDeclaration() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 val tested: Int
             """.trimIndent()
@@ -34,7 +34,7 @@ class FieldTest {
     fun testTypeByGetter() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 val tested
                     get() = 0

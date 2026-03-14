@@ -15,7 +15,7 @@ class ExtensionTest {
     fun testExtensionMethods() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 fun Impl.get() = 0
@@ -30,7 +30,7 @@ class ExtensionTest {
     fun testExtensionFields() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 val Impl.value get() = 0
@@ -45,7 +45,7 @@ class ExtensionTest {
     fun testExtensionMethodsOnSuperClass() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Super()
                 class Impl(): Super()
@@ -61,7 +61,7 @@ class ExtensionTest {
     fun testExtensionFieldsOnSuperClass() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Super()
                 class Impl(): Super()
@@ -77,7 +77,7 @@ class ExtensionTest {
     fun testExtensionMethodsOnInterfaces() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 interface Func
                 class Impl(): Func
@@ -93,7 +93,7 @@ class ExtensionTest {
     fun testExtensionFieldOnInterfaces() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 interface Func
                 class Impl(): Func
@@ -107,11 +107,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByMethod() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 fun <V> Impl.get(): List<V>
@@ -126,11 +126,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionFieldsByField() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 val <V> Impl.value: List<V>
@@ -145,11 +145,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl<V>()
                 // illegal syntax: V is not defined
@@ -168,11 +168,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass2() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl()
                 // illegal syntax: V is not defined
@@ -191,11 +191,11 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionFieldsByClass() {
-        _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.defineListParameters()
+        defineListParameters()
 
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl<V>()
                 // illegal syntax: V is not defined
@@ -216,7 +216,7 @@ class ExtensionTest {
     fun testExtensionMethodToMethod() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl() {
                     fun calc() = 0
@@ -233,7 +233,7 @@ class ExtensionTest {
     fun testExtensionMethodToField() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl {
                     val calc = 0
@@ -250,7 +250,7 @@ class ExtensionTest {
     fun testExtensionFieldToMethod() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl {
                     fun calc() = 0
@@ -267,7 +267,7 @@ class ExtensionTest {
     fun testExtensionFieldToField() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class Impl {
                     val calc = 0

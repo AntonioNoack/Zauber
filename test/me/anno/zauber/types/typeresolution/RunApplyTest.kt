@@ -11,7 +11,7 @@ class RunApplyTest {
     fun testRun() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 inline fun <V, R> V.run(runnable: V.() -> R): R {
                     return runnable()
@@ -29,7 +29,7 @@ class RunApplyTest {
     fun testApply() {
         assertEquals(
             StringType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 inline fun <V> V.apply(runnable: V.() -> Unit): V {
                     runnable()

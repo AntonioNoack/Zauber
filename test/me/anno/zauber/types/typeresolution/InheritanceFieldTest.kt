@@ -20,7 +20,7 @@ class InheritanceFieldTest {
     fun testDirectField() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 class A {
                     val size: Int
@@ -36,7 +36,7 @@ class InheritanceFieldTest {
     fun testDirectFieldWithGenerics() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 class A<V> {
                     val size: Int
@@ -52,7 +52,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX1() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 open class A {
                     val size: Int
@@ -69,7 +69,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX1WithGenerics() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 open class A<V> {
                     val size: Int
@@ -86,7 +86,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX2() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 open class A {
                     val size: Int
@@ -104,7 +104,7 @@ class InheritanceFieldTest {
     fun testSuperFieldX2WithGenerics() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 open class A<I> {
                     val size: Int

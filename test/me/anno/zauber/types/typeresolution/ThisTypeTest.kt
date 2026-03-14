@@ -8,7 +8,7 @@ class ThisTypeTest {
     @Test
     fun testThisType() {
         val actualType =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             open class A {
                 fun setName(): This

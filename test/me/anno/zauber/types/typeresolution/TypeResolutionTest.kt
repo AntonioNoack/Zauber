@@ -99,40 +99,40 @@ class TypeResolutionTest {
     @Test
     fun testConstants() {
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = true")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = true")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = false")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = false")
         )
         assertEquals(NullType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = null")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = null")
         )
         assertEquals(IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0")
         )
         assertEquals(LongType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0L")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0L")
         )
         assertEquals(FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f")
         )
         assertEquals(FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0.0f")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0.0f")
         )
         assertEquals(DoubleType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0d")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0d")
         )
         assertEquals(DoubleType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0.0")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0.0")
         )
         assertEquals(DoubleType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 1e3")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 1e3")
         )
         assertEquals(CharType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = ' '")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = ' '")
         )
         assertEquals(StringType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = \"Test 123\"")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = \"Test 123\"")
         )
     }
 
@@ -140,7 +140,7 @@ class TypeResolutionTest {
     fun testNullableTypes() {
         assertEquals(
             UnionType(listOf(ClassType(BooleanType.clazz, null), NullType)),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested: Boolean?")
+            TypeResolutionTest.Companion.testTypeResolution("val tested: Boolean?")
         )
     }
 
@@ -154,14 +154,14 @@ class TypeResolutionTest {
             typealias IntArray = Array<Int>
         """.trimIndent()
         assertEquals(ArrayType.withTypeParameter(IntType),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(code)
+            TypeResolutionTest.Companion.testTypeResolution(code)
         )
     }
     
     @Test
     fun testGetOperator() {
         val type =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             class Node(val value: Int)
             val x: Node
@@ -174,7 +174,7 @@ class TypeResolutionTest {
     @Test
     fun testIfNullOperator() {
         val type =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             val x: Int?
             val tested = x ?: 0f
@@ -186,7 +186,7 @@ class TypeResolutionTest {
     @Test
     fun testNullableGetOperator() {
         val type =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             class Node(val parent: Node?, val value: Int)
             val x: Node?
@@ -199,63 +199,63 @@ class TypeResolutionTest {
     @Test
     fun testCompareOperators() {
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 < 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 < 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 <= 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 <= 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 > 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 > 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 >= 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 >= 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 == 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 == 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 != 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 != 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 === 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 === 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0 !== 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0 !== 1")
         )
     }
 
     @Test
     fun testCompareOperatorsMixed() {
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f < 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f < 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f <= 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f <= 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f > 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f > 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f >= 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f >= 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f == 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f == 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f != 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f != 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f === 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f === 1")
         )
         assertEquals(BooleanType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = 0f !== 1")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = 0f !== 1")
         )
     }
 
     @Test
     fun testValueType() {
         val field =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolutionGetField(
+            TypeResolutionTest.Companion.testTypeResolutionGetField(
                 "value val tested = \"\""
             )
         check(field.keywords.hasFlag(Keywords.VALUE))

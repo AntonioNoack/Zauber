@@ -14,7 +14,7 @@ class ExprOrNullTest {
     fun testExprOrNull() {
         assertEquals(
             unionTypes(FloatType, NullType),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
                 
@@ -33,7 +33,7 @@ class ExprOrNullTest {
     fun testExprOrOther() {
         assertEquals(
             unionTypes(FloatType, DoubleType),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
                 

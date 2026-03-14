@@ -255,7 +255,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("import") -> readImport()
             consumeIf("typealias") -> readTypeAlias()
             consumeIf("var") || consumeIf("val") -> readField()
-            consumeIf("fun") -> readMethod()
+            consumeIf("fun") -> {
+                if (consumeIf("interface")) {
+                    val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
+                    foundNamedScope(name, Keywords.FUN_INTERFACE, ScopeType.INTERFACE)
+                } else readMethod()
+            }
             consumeIf("constructor") -> readConstructor()
             consumeIf("external") -> addKeyword(Keywords.EXTERNAL)
             consumeIf("override") -> addKeyword(Keywords.OVERRIDE)
@@ -274,6 +279,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 addKeyword(Keywords.CONSTEXPR)
                 readField()
             }
+            consumeIf(";") -> {}
             else -> checkForTypes()
         }
     }
@@ -519,6 +525,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 }
                 TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0
                 else -> if (depth == 0) when {
+                    tokens.equals(j0, ".", "+", "&&", "||", "-") -> end++ // skip another one
                     tokens.equals(j0, *notValueKeywords) -> return j0
                     tokens.equals(j0, "object") && !tokens.equals(j0, ":") -> return j0
                     // enum class, data class, private class... these depend on the work after them...

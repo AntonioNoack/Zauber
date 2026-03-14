@@ -19,7 +19,7 @@ class TestInlineLambdaParameterIsImmediatelyFound {
      * */
     @Test
     fun testLambdaCallIsImmediatelyResolvedToParameter() {
-        val testScopeName = "test${_root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr++}"
+        val testScopeName = "test${TypeResolutionTest.Companion.ctr++}"
         val tokens = ZauberTokenizer(
             """
             package $testScopeName

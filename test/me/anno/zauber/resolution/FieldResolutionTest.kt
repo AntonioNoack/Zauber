@@ -1,9 +1,11 @@
 package me.anno.zauber.resolution
 
+import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.resolution.ResolutionUtils.firstChild
 import me.anno.zauber.resolution.ResolutionUtils.get
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.Types.IntType
@@ -12,6 +14,21 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class FieldResolutionTest {
+
+    companion object {
+        fun findField(scope: Scope, name: String = "tested"): Field =
+            tryFindField(scope, name) ?: throw IllegalStateException("Missing field '$name' in scope '$scope'")
+
+        fun tryFindField(scope: Scope, name: String): Field? {
+            val field = scope.fields.firstOrNull { it.name == name }
+            if (field != null) return field
+            for (child in scope.children) {
+                val field = tryFindField(child.scope, name)
+                if (field != null) return field
+            }
+            return null
+        }
+    }
 
     @Test
     fun testSimple() {
@@ -24,7 +41,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Target"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -39,7 +56,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Target"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -54,7 +71,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Target"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -72,7 +89,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Shadowed"]["Target"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -93,7 +110,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Misleading"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -116,7 +133,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Target"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -137,7 +154,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = scope["Misleading"]["Inner"].getField("tested").valueType!!
+        val tested0 = findField(scope).valueType!!
         assertEquals(IntType, tested0)
     }
 
@@ -159,8 +176,8 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val misleading = scope["Target"]["MisleadingNoInstance"]
-        val tested0 = misleading["NotInnerClassC"].getField("tested").valueType!!
-        val tested1 = misleading["NotInnerClassO"].getField("tested").valueType!!
+        val tested0 = findField(misleading["NotInnerClassC"]).valueType!!
+        val tested1 = findField(misleading["NotInnerClassO"]).valueType!!
         assertEquals(IntType, tested0)
         assertEquals(IntType, tested1)
     }
@@ -185,8 +202,8 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val misleading = scope["Target"]["MisleadingNoInstance"]
-        val tested0 = misleading["NotInnerClassC"].getField("tested").valueType!!
-        val tested1 = misleading["NotInnerClassO"].getField("tested").valueType!!
+        val tested0 = findField(misleading["NotInnerClassC"]).valueType!!
+        val tested1 = findField(misleading["NotInnerClassO"]).valueType!!
         assertEquals(IntType, tested0)
         assertEquals(IntType, tested1)
     }
@@ -213,8 +230,8 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val misleading = scope["Target"]["MisleadingNoInstance"]
-        val tested0 = misleading["NotInnerClassC"].getField("tested").valueType!!
-        val tested1 = misleading["NotInnerClassO"].getField("tested").valueType!!
+        val tested0 = findField(misleading["NotInnerClassC"]).valueType!!
+        val tested1 = findField(misleading["NotInnerClassO"]).valueType!!
         assertEquals(IntType, tested0)
         assertEquals(IntType, tested1)
     }
@@ -232,7 +249,7 @@ class FieldResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -250,7 +267,7 @@ class FieldResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -268,7 +285,7 @@ class FieldResolutionTest {
                 }
                 """.trimIndent()
             )
-            val actualType = scope["Outer"]["Inner"].getField("tested").valueType!!
+            val actualType = findField(scope).valueType!!
             assertEquals(IntType, actualType)
         }
     }
@@ -286,7 +303,7 @@ class FieldResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -303,7 +320,7 @@ class FieldResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         val colorType = scope["Color"].typeWithArgs
         assertEquals(colorType, actualType)
     }
@@ -322,7 +339,7 @@ class FieldResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Color"]["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         val expectedType = scope["Color"].typeWithArgs
         assertEquals(expectedType, actualType)
     }
@@ -340,7 +357,7 @@ class FieldResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         val colorType = scope["Inner"]["Color"].typeWithoutArgs
         assertEquals(colorType, actualType)
     }
@@ -359,7 +376,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -377,7 +394,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -395,7 +412,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -410,7 +427,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -430,7 +447,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -450,7 +467,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope["Inner"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -468,10 +485,7 @@ class FieldResolutionTest {
         class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val methodScope = scope["Inner"].firstChild(ScopeType.METHOD)
-        // why is this called split? -> because there is a field declaration
-        val splitScope = methodScope.firstChild(ScopeType.METHOD_BODY)
-        val actualType = splitScope.getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(FloatType, actualType)
     }
 
@@ -491,8 +505,7 @@ class FieldResolutionTest {
         class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val method = scope["Inner"].firstChild(ScopeType.METHOD)
-        val actualType = method["Tested"].getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(FloatType, actualType)
     }
 
@@ -514,10 +527,7 @@ class FieldResolutionTest {
         class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val methodScope = scope["Inner"].firstChild(ScopeType.METHOD)
-        // why is this called split? -> because there is a field declaration
-        val splitScope = methodScope.firstChild(ScopeType.METHOD_BODY)
-        val actualType = splitScope.getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(FloatType, actualType)
     }
 
@@ -528,7 +538,7 @@ class FieldResolutionTest {
         val tested = target
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -539,7 +549,7 @@ class FieldResolutionTest {
         val tested = 0.target
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -553,11 +563,7 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope
-            .firstChild(ScopeType.METHOD)
-            .firstChild(ScopeType.METHOD_BODY)
-            .firstChild(ScopeType.METHOD_BODY) // first scope split
-            .getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 
@@ -573,7 +579,7 @@ class FieldResolutionTest {
             }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = findField(scope).valueType!!
         assertEquals(IntType, actualType)
     }
 }

@@ -11,7 +11,7 @@ class TypeAliasExtensionTest {
     fun testSimpleTypeAlias() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             class A
             typealias B = A
@@ -26,7 +26,7 @@ class TypeAliasExtensionTest {
     fun testSimpleTypeAliasRev() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             val B.next get() = 0
             typealias B = A
@@ -41,7 +41,7 @@ class TypeAliasExtensionTest {
     fun testTypeRecursive() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             val C.next get() = 0
             typealias D = C

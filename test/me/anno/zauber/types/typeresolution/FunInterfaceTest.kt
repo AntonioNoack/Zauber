@@ -11,7 +11,7 @@ class FunInterfaceTest {
             BooleanType,
             // todo somehow check that the inside of the functions work, too
             //  (I know they don't because we haven't implemented calls on fun-interfaces yet)
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.testTypeResolution(
                 """
                 fun interface Condition {
                     fun calculate(value: Int): Boolean

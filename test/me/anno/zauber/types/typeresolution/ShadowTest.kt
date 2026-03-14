@@ -10,7 +10,7 @@ class ShadowTest {
     fun testShadowedFields() {
         assertEquals(
             FloatType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun main(x: Int): Float {
                     val x = x+1

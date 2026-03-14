@@ -28,7 +28,7 @@ class GenericTest {
                 ArrayListType.clazz,
                 listOf(ClassType(IntType.clazz, null)), -1
             ),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested: ArrayList<Int>")
+            TypeResolutionTest.Companion.testTypeResolution("val tested: ArrayList<Int>")
         )
     }
 
@@ -39,7 +39,7 @@ class GenericTest {
                 ArrayListType.clazz,
                 listOf(ClassType(IntType.clazz, null)), -1
             ),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution("val tested = ArrayList<Int>(8)")
+            TypeResolutionTest.Companion.testTypeResolution("val tested = ArrayList<Int>(8)")
         )
     }
 
@@ -48,7 +48,7 @@ class GenericTest {
         val listClass = standardClasses["List"]!!
         assertEquals(
             ClassType(listClass, listOf(IntType), -1),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
                 val tested = listOf(0)
@@ -57,7 +57,7 @@ class GenericTest {
         )
         assertEquals(
             ClassType(listClass, listOf(StringType), -1),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
                 val tested = listOf("Hello World!")
@@ -77,7 +77,7 @@ class GenericTest {
                 standardClasses["Map"]!!,
                 listOf(StringType, IntType), -1
             ),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <K, V> mapOf(entry: Pair<K,V>): Map<K,V>
                 infix fun <F,S> F.to(other: S): Pair<F,S>
@@ -94,7 +94,7 @@ class GenericTest {
                 standardClasses["List"]!!,
                 listOf(ClassType(IntType.clazz, null, -1)), -1
             ),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> emptyList(): List<V> = ArrayList<V>(0)
                 val tested = emptyList<Int>()
@@ -110,7 +110,7 @@ class GenericTest {
                 standardClasses["List"]!!,
                 listOf(ClassType(FloatType.clazz, null)), -1
             ),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
                 fun <V,R> List<V>.map(map: (V) -> R): List<R>
@@ -133,7 +133,7 @@ class GenericTest {
     fun testEmptyListAsParameter() {
         assertEquals(
             LongType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
                 fun sum(list: List<Int>): Long
@@ -170,7 +170,7 @@ class GenericTest {
 
         assertEquals(
             ClassType(mapClass, listOf(IntType, FloatType), -1),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 infix fun <F,S> F.to(s: S): Pair<F,S>
                 fun <K,V> mapOf(vararg entries: Pair<K,V>): Map<K,V>
@@ -186,7 +186,7 @@ class GenericTest {
         // todo this passes alone, but fails in a group...
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
                 fun <V> List<V>.reduce(map: (V, V) -> V): V
@@ -214,7 +214,7 @@ class GenericTest {
     fun testListReduceWithTypeMethod() {
         assertEquals(
             IntType,
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
                 fun <V> List<V>.reduce(map: (V, V) -> V): V
@@ -242,7 +242,7 @@ class GenericTest {
     fun testListsAreNotConfused() {
         assertEquals(
             ListType.withTypeParameter(FloatType),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
                 fun intsToFloats(v: List<Int>): List<Float>
@@ -253,7 +253,7 @@ class GenericTest {
         )
         assertEquals(
             ListType.withTypeParameter(FloatType),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun listOf(v: Int): List<Int>
                 fun intsToFloats(v: List<Int>): List<Float>
@@ -272,7 +272,7 @@ class GenericTest {
         val listOfInt =ListType.withTypeParameters(listOf(IntType))
         assertEquals(
             ListType.withTypeParameters(listOf(listOfInt)),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
                 fun <V,R> List<V>.map(map: (V) -> R): List<R>
@@ -298,7 +298,7 @@ class GenericTest {
         val mixedType = unionTypes(listOf(StringType, IntType, FloatType))
         assertEquals(
             ClassType(listType, listOf(mixedType), -1),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
                 fun <V> listOf(vararg values: V): List<V>
                 

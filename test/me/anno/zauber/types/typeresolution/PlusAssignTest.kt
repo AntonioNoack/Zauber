@@ -12,7 +12,7 @@ class PlusAssignTest {
     private fun runTest(code: String) {
         assertEquals(
             listOf(UnitType, UnitType),
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testMethodBodyResolution(code)
+            TypeResolutionTest.Companion.testMethodBodyResolution(code)
         )
     }
 

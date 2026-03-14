@@ -64,6 +64,8 @@ class JavaGenerationTest {
               
               public Test() {
                 super();
+                {
+                }
               }
             }
         """.trimIndent()
@@ -222,6 +224,7 @@ public final class Test {
                 package zauber
                 class Int {
                     fun compareTo(other: Int): Int
+                    fun equals(other: Int): Boolean
                 }
             """.trimIndent()
         )
@@ -243,6 +246,7 @@ public final class Test {
                 package zauber
                 class Float {
                     fun compareTo(other: Int): Int
+                    fun equals(other: Int): Boolean
                 }
             """.trimIndent()
         )

@@ -178,7 +178,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         return instance
     }
 
-    fun addField(field: Field) {
+    fun addField(field: Field): Field {
         val other = fields.firstOrNull { it.name == field.name }
         if (other != null) {
             throw IllegalStateException(
@@ -188,6 +188,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             )
         }
         fields.add(field)
+        return field
     }
 
     fun ScopeType?.getClassHierarchy(): Int {

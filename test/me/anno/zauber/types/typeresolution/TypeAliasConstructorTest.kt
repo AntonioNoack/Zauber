@@ -11,7 +11,7 @@ class TypeAliasConstructorTest {
     @Test
     fun testSimpleTypeAlias() {
         val actualType =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             class A
             typealias B = A
@@ -26,7 +26,7 @@ class TypeAliasConstructorTest {
     @Test
     fun testSimpleTypeAliasRev() {
         val actualType =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             typealias B = A
             class A
@@ -41,7 +41,7 @@ class TypeAliasConstructorTest {
     @Test
     fun testTypeRecursive() {
         val actualType =
-            _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution(
+            TypeResolutionTest.Companion.testTypeResolution(
                 """
             typealias D = C
             typealias C = B

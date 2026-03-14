@@ -16,7 +16,7 @@ class TypeParserTest {
 
     companion object {
         fun String.parseType(): Type {
-            return _root_ide_package_.me.anno.zauber.types.typeresolution.TypeResolutionTest.testTypeResolution(
+            return TypeResolutionTest.testTypeResolution(
                 """
                 val tested: $this
             """.trimIndent()
