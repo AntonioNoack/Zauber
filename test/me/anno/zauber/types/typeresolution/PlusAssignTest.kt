@@ -12,7 +12,7 @@ class PlusAssignTest {
     private fun runTest(code: String) {
         assertEquals(
             listOf(UnitType, UnitType),
-            TypeResolutionTest.Companion.testMethodBodyResolution(code)
+            TypeResolutionTest.testMethodBodyResolution(code)
         )
     }
 

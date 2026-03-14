@@ -22,4 +22,7 @@ class NotType(val type: Type) : Type() {
     override fun hashCode(): Int {
         return type.hashCode()
     }
+
+    override val resolved: Type
+        get() = type.resolved.not()
 }

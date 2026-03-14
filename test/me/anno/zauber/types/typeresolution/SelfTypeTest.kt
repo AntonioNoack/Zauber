@@ -1,10 +1,10 @@
 package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -19,7 +19,7 @@ class SelfTypeTest {
         // this has a hacky solution, how does it know of the type being B???
         //  -> it was using the constructor parameter...
         val type0 =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             open class A(val other: Self?)
             class B(other: Self?): A(other)
@@ -28,10 +28,10 @@ class SelfTypeTest {
             )
         check(type0 is UnionType && NullType in type0.types && type0.types.size == 2)
         val type1 = type0.types.first { it != NullType }
-        SelfTypeTest.Companion.LOGGER.info("Resolved Self to $type1 (should be B)")
+        LOGGER.info("Resolved Self to $type1 (should be B)")
         assertTrue(type1 is ClassType)
         assertEquals("B", (type1 as ClassType).clazz.name)
-        SelfTypeTest.Companion.LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
+        LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
         assertFalse(type1.clazz.fields.any { it.name == "other" })
     }
 
@@ -39,14 +39,14 @@ class SelfTypeTest {
     fun testSelfType2() {
         // todo somehow the field is missing??? How???
         val type =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             open class A(val other: Self?)
             class B(other: Self?): A(other)
             val tested = B(null).other!!
         """.trimIndent()
             )
-        SelfTypeTest.Companion.LOGGER.info("Resolved Self to $type (should be B)")
+        LOGGER.info("Resolved Self to $type (should be B)")
         assertTrue(type is ClassType)
         assertTrue((type as ClassType).clazz.name == "B")
     }
@@ -54,7 +54,7 @@ class SelfTypeTest {
     @Test
     fun testInterlinkedTypes() {
         val type =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             open class Node<L: Link<Self>>
             open class Link<N: Node<Self>>(val from: N, val to: N)

@@ -25,6 +25,7 @@ abstract class Type {
             is ClassType -> typeParameters?.any { it.contains(type) } == true
             is LambdaType -> (selfType?.contains(type) ?: false) || returnType.contains(type)
             is GenericType -> false // not the same; todo we might need to check super/redirects
+            is UnresolvedType -> resolved.contains(type)
             else -> throw NotImplementedError("Does ${this.javaClass.simpleName} contain $type?")
         }
     }

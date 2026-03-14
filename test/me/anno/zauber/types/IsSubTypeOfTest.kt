@@ -38,7 +38,6 @@ class IsSubTypeOfTest {
         """.trimIndent(), "Test.zbr"
             ).tokenize()
             scanClasses(tokens)
-            ZauberASTBuilder(tokens, root).readFileLevel()
             return root.children.first { it.name == testScopeName }.scope
         }
 
@@ -151,7 +150,9 @@ class IsSubTypeOfTest {
         // first check without bounds
         val anyOrNullGeneric = GenericType(scope, "V")
         val anyOrNullParameter = Parameter(0, "V", NullableAnyType, scope, -1)
+        scope.hasTypeParameters = false // this is a hack!
         scope.typeParameters = listOf(anyOrNullParameter)
+        scope.hasTypeParameters = true
 
         // parameter is available, writable -> true
         assertTrue(

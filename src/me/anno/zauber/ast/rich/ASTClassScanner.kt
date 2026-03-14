@@ -313,8 +313,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             fieldScope.typeParameters = typeParameters
             fieldScope.hasTypeParameters = true
 
-            check(typeParameters.isEmpty()) { "TypeParameters for field not yet supported" }
-
             val selfType0 = readSelfTypeIfPresent(end)
             val selfType = selfType0 ?: getSelfType(ownerScope)
             // if (selfType != null) selfType = selfType.resolve()
@@ -362,6 +360,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 selfType0, selfType0 != null, isMutable, null,
                 name, valueType, initialValue, fieldScope.keywords, origin
             )
+            field.typeParameters = typeParameters
             fieldScope.selfAsField = field
 
             if (initialValue != null) {
@@ -514,6 +513,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, tokens.size, imports)
             val expr = LazyExpression(tokens1, true, scope, origin(i))
+            scope.initParts += { expr.value } // load expression contents, if we need them
             i = tokens.size
             expr
         }
@@ -551,6 +551,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, end, imports)
             val expr = LazyExpression(tokens1, false, scope, origin(i))
+            scope.initParts += { expr.value } // load expression contents, if we need them
             i = end
             expr
         }
@@ -618,10 +619,21 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
 
             consumeIf("value") -> {
-                // todo could also be value val, value var
-                consume("class")
-                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.VALUE, ScopeType.NORMAL_CLASS)
+                when {
+                    consumeIf("class") -> {
+                        val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
+                        foundNamedScope(name, Keywords.VALUE, ScopeType.NORMAL_CLASS)
+                    }
+                    consumeIf("val") -> {
+                        addKeyword(Keywords.VALUE)
+                        readField()
+                    }
+                    consumeIf("var") -> {
+                        addKeyword(Keywords.VALUE)
+                        readField()
+                    }
+                    else -> throw IllegalStateException("Expected class, val or var after 'value' at ${tokens.err(i)}")
+                }
             }
 
             consumeIf("class") -> {

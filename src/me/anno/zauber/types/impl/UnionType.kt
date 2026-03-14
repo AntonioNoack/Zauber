@@ -79,4 +79,8 @@ class UnionType(val types: List<Type>) : Type() {
     override fun hashCode(): Int {
         return types.toSet().hashCode()
     }
+
+    // todo we need another check & resolver for this...
+    override val resolved: Type
+        get() = unionTypes(types.map { it.resolved })
 }

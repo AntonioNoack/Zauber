@@ -43,17 +43,17 @@ class UnionTypeSimplificationTest {
 
         assertEquals(UnionType(listOf(classA, classB)), unionTypes(classA, classB))
         assertEquals(UnionType(listOf(classA, classB, classC)),
-            IsSubTypeOfTest.Companion.unionTypes(classA, classB, classC)
+            IsSubTypeOfTest.unionTypes(classA, classB, classC)
         )
     }
 
     @Test
     fun testHierarchicalUnionTypes() {
         val scope = """
-    class A
-    class B: A()
-    class C: B()
-""".testInheritance()
+            class A
+            class B: A()
+            class C: B()
+        """.testInheritance()
         val classA = scope["A"]
         val classB = scope["B"]
         val classC = scope["C"]
@@ -61,7 +61,7 @@ class UnionTypeSimplificationTest {
         assertEquals(classA, unionTypes(classA, classB))
         assertEquals(classA, unionTypes(classA, classC))
         assertEquals(classB, unionTypes(classB, classC))
-        assertEquals(classA, IsSubTypeOfTest.Companion.unionTypes(classA, classB, classC))
+        assertEquals(classA, IsSubTypeOfTest.unionTypes(classA, classB, classC))
     }
 
 }

@@ -3,6 +3,7 @@ package me.anno.zauber.types.typeresolution
 import me.anno.zauber.types.Types.ArrayType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -14,7 +15,7 @@ class VarargTest {
     fun testVarargWithNoParameters() {
         assertEquals(
             arrayOfFloatType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf<Float>()
@@ -27,7 +28,7 @@ class VarargTest {
     fun testVarargWithOneParameter() {
         assertEquals(
             arrayOfFloatType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf(0f)
@@ -40,7 +41,7 @@ class VarargTest {
     fun testVarargWithSomeParameters() {
         assertEquals(
             arrayOfFloatType,
-            TypeResolutionTest.testTypeResolution(
+            testTypeResolution(
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf(0f,1f,2f,43f)

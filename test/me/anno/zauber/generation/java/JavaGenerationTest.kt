@@ -2,6 +2,7 @@ package me.anno.zauber.generation.java
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ZauberASTBuilder
+import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
@@ -26,7 +27,7 @@ class JavaGenerationTest {
             $code
         """.trimIndent(), "Test.zbr"
             ).tokenize()
-            ZauberASTBuilder(tokens, root).readFileLevel()
+            scanClasses(tokens)
             resolveOverrides(root)
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }.scope
