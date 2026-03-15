@@ -108,7 +108,7 @@ abstract class Type {
             is AndType -> andTypes(types.map { it.resolve(selfScope) })
             is NotType -> type.resolve(selfScope).not()
             is UnresolvedType -> {
-                val baseType = resolveTypeByName(null, className, scope, imports)
+                val baseType = resolveTypeByName(findSelfType(scope), className, scope, imports)
                     ?: throw IllegalStateException("Could not resolve $this in $scope")
                 if (!typeParameters.isNullOrEmpty()) {
                     baseType as ClassType
@@ -117,6 +117,18 @@ abstract class Type {
                 } else baseType
             }
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
+        }
+    }
+
+    private fun findSelfType(scope: Scope): Type? {
+        var scope = scope
+        while (true) {
+            if (scope.isClassLike()) {
+                return scope.typeWithoutArgs
+            }
+
+            scope = scope.parentIfSameFile
+                ?: return null
         }
     }
 

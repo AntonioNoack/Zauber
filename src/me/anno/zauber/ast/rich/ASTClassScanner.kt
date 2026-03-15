@@ -4,7 +4,6 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
 import me.anno.zauber.ast.rich.FieldGetterSetter.createBackingField
 import me.anno.zauber.ast.rich.FieldGetterSetter.createGetterMethod
 import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod
@@ -33,7 +32,6 @@ import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * to make type-resolution immediately available/resolvable
@@ -47,7 +45,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             "public", "private", "protected", "class", "interface",
             "package", "import", "companion",
             "open", "abstract", "override", "operator",
-            "get", "set", "typealias"
+            "get", "set", "typealias", "external"
         )
     }
 
@@ -171,23 +169,14 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 classScope.getOrCreateObjectField(origin)
             }
 
-            handleClassBody(classScope, scopeType, readBody)
+            readClassBody(classScope, readBody)
             popGenericParams()
         }
     }
 
-    fun handleClassBody(classScope: Scope, scopeType: ScopeType, readBody: Boolean) {
-        if (!tokens.equals(i, TokenType.OPEN_BLOCK)) return
-        if (readBody) {
-            pushBlock(classScope) {
-                if (scopeType == ScopeType.ENUM_CLASS) {
-                    val endIndex = readEnumBody()
-                    i = min(endIndex + 1, tokens.size) // skipping over semicolon
-                }
-
-                readFileLevel()
-            }
-        } else skipBlock()
+    fun readClassBody(classScope: Scope, readBody: Boolean) {
+        if (readBody) readClassBody(classScope)
+        else if (tokens.equals(i, TokenType.OPEN_BLOCK)) skipBlock()
     }
 
     fun collectSuperNames(classScope: Scope) {
@@ -283,6 +272,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 readField()
             }
             consumeIf("infix") -> addKeyword(Keywords.INFIX)
+            consumeIf("external") -> addKeyword(Keywords.EXTERNAL)
             consumeIf(";") -> {}
             else -> checkForTypes()
         }

@@ -75,18 +75,18 @@ object ResolutionUtils {
     }
 
     operator fun Scope.get(name: String): Scope {
-        val child = children.firstOrNull { it.name == name }
+        val child = scope.children.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Tried finding '$name', but only found ${children.map { it.name }}")
         return child.scope
     }
 
     fun Scope.getField(name: String): Field {
-        return fields.firstOrNull { it.name == name && it.byParameter == null }
+        return scope.fields.firstOrNull { it.name == name && it.byParameter == null }
             ?: throw IllegalStateException("Tried finding '$name', but only found ${fields.map { it.name }}")
     }
 
     fun Scope.firstChild(scopeType: ScopeType): Scope {
-        val child = children.firstOrNull { it.scopeType == scopeType }
+        val child = scope.children.firstOrNull { it.scopeType == scopeType }
             ?: throw IllegalStateException("Tried finding '$scopeType', but only found ${children.map { it.scopeType }}")
         return child.scope
     }

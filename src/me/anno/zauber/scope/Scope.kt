@@ -56,6 +56,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val scope: Scope
         get() {
+            parent?.scope
             while (true) {
                 val initializationPart = initParts.removeLastOrNull() ?: break
                 initializationPart()
@@ -543,12 +544,28 @@ class Scope(val name: String, val parent: Scope? = null) {
         this.keywords = this.keywords or keywords
     }
 
-    @Deprecated("Forcing all scopes to be loaded is overkill")
-    fun forEachScope(callback: (Scope) -> Unit) {
-        callback(this)
-        for (i in children.indices) {
-            children[i].scope.forEachScope(callback)
+    fun forEachScopeLazy(callback: (Scope) -> Unit) {
+        if (initParts.isEmpty()) {
+            // fully loaded already
+            callback(this)
+            for (i in children.indices) {
+                // children may not be loaded yet -> still lazy
+                children[i].forEachScopeLazy(callback)
+            }
+        } else {
+            // execute it when we're ready
+            initParts += {
+                callback(this)
+                for (i in children.indices) {
+                    children[i].forEachScopeLazy(callback)
+                }
+            }
         }
+    }
+
+    fun isInsideExpression(): Boolean {
+        val scopeType = scopeType ?: return false
+        return scopeType.isInsideExpression()
     }
 
     companion object {

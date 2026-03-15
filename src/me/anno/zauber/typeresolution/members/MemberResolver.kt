@@ -229,18 +229,21 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         val print = !catchFailures && LOGGER.isInfoEnabled
         if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${context.selfScope}, ${context.selfType})")
 
-        if (context.selfScope != null && context.selfType != null) {
-            if (print) LOGGER.info("Checking[0] ${context.selfScope} with ${context.selfType}")
-            val result = callback(context.selfScope, context.selfType)
+        val contextSelfScope = context.selfScope
+        val contextSelfType = context.selfType
+        if (contextSelfScope != null && contextSelfType != null) {
+            if (print) LOGGER.info("Checking[0] $contextSelfScope with ${contextSelfType}, " +
+                    "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods.map { it.name }}")
+            val result = callback(contextSelfScope, contextSelfType)
             if (result != null) return result
 
-            val selfCompanion = context.selfScope.companionObject
+            val selfCompanion = contextSelfScope.companionObject
             if (selfCompanion != null) {
                 if (print) LOGGER.info("Checking[1] $selfCompanion")
                 val result = callback(selfCompanion, selfCompanion.typeWithArgs)
                 if (result != null) return result
             } else {
-                if (print) LOGGER.info("${context.selfScope} has no companion")
+                if (print) LOGGER.info("$contextSelfScope has no companion")
             }
         }
 
@@ -321,7 +324,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
     private fun resolveTypeFromScoping(candidateScope: Scope, context: ResolutionContext): Type {
         var candidateScope: Scope = candidateScope
-        while (candidateScope.scopeType?.isInsideExpression() == true) {
+        while (candidateScope.isInsideExpression()) {
             candidateScope = candidateScope.parentIfSameFile ?: break
         }
         if (candidateScope == context.selfType) {

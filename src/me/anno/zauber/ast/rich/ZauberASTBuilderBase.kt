@@ -79,8 +79,13 @@ abstract class ZauberASTBuilderBase(
 
     fun readClassBody(name: String, keywords: KeywordSet, scopeType: ScopeType): Scope {
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        classScope.keywords = classScope.keywords or keywords
+        classScope.addKeywords(keywords)
 
+        readClassBody(classScope)
+        return classScope
+    }
+
+    fun readClassBody(classScope: Scope) {
         if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
             pushBlock(classScope) {
                 if (classScope.scopeType == ScopeType.ENUM_CLASS) {
@@ -91,13 +96,12 @@ abstract class ZauberASTBuilderBase(
             }
         }
 
+        val keywords = classScope.keywords
         if (keywords.hasFlag(Keywords.DATA_CLASS) || keywords.hasFlag(Keywords.VALUE)) {
             pushScope(classScope) {
                 finishDataClass(classScope)
             }
         }
-
-        return classScope
     }
 
     open fun readTypeAlias() {

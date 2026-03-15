@@ -37,7 +37,7 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
                 collectSuperNames(classScope)
             }
 
-            handleClassBody(classScope, scopeType, readBody)
+            readClassBody(classScope, readBody)
             popGenericParams()
         }
     }

@@ -1,16 +1,14 @@
 package me.anno.zauber.generation.java
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.OverriddenMethods
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -174,8 +172,8 @@ public final class Test {
         """.trimIndent()
         )
         check("Exception" !in code && "Error" !in code) { code }
-        check("int index;" in code) { code }
-        check("V value;" in code) { code }
+        check("int index;" in code) { "Missing 'int index;' in $code" }
+        check("V value;" in code) { "Missing V value; in $code" }
     }
 
     @Test

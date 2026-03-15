@@ -17,7 +17,7 @@ object DefaultParameterExpansion {
     private val LOGGER = LogManager.getLogger(DefaultParameterExpansion::class)
 
     fun createDefaultParameterFunctions(scope: Scope) {
-        scope.forEachScope { scopeI ->
+        scope.forEachScopeLazy { scopeI ->
             when (scopeI.scopeType) {
                 ScopeType.METHOD ->
                     createDefaultParameterMethod(scopeI)

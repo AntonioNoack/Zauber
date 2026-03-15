@@ -20,7 +20,7 @@ object OverriddenMethods {
 
     fun resolveOverrides(root: Scope) {
         processedScopes.clear()
-        root.forEachScope(::resolveOverridesImpl)
+        root.forEachScopeLazy(::resolveOverridesImpl)
     }
 
     private fun resolveOverridesImpl(scope: Scope) {
@@ -28,7 +28,7 @@ object OverriddenMethods {
         if (scope in processedScopes) return
 
         processedScopes += scope
-        for (superCall in scope.superCalls) {
+        for (superCall in scope.scope.superCalls) {
             val superScope = superCall.type.clazz
             resolveOverridesImpl(superScope)
             addAllMethodOverrides(scope, superCall, superScope)
@@ -37,7 +37,7 @@ object OverriddenMethods {
     }
 
     private fun addAllMethodOverrides(scope: Scope, superCall: SuperCall, superScope: Scope) {
-        val selfMethods0 = scope.methods.filter { !it.explicitSelfType }
+        val selfMethods0 = scope.scope.methods.filter { !it.explicitSelfType }
         val selfMethods = selfMethods0.groupBy { it.name }
         val foundMethods = HashSet<Method>()
         // todo check that all methods with override-flag have found their partner

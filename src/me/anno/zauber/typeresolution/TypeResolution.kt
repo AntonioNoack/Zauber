@@ -43,7 +43,7 @@ object TypeResolution {
     //  do not call this method in the future...
     fun resolveTypesAndNames(root: Scope) {
         resetStats()
-        root.forEachScope(::resolveTypesAndNamesImpl)
+        root.forEachScopeLazy(::resolveTypesAndNamesImpl)
         if (LOGGER.isInfoEnabled) printStats()
     }
 

@@ -70,7 +70,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             bestMatch = joinMatches(bestMatch, match)
         }
 
-        for (child in scope.children) {
+        for (child in scope.scope.children) {
             if (child.name != name) continue
             val field = child.scope.objectField ?: continue
             val valueType = getFieldReturnType(scopeSelfType, field, returnType)

@@ -50,6 +50,10 @@ object Keywords {
         return (this and flag) == flag
     }
 
+    fun KeywordSet.hasAnyFlag(flags: KeywordSet): Boolean {
+        return (this and flags) != 0
+    }
+
     fun KeywordSet.withFlag(flag: KeywordSet): KeywordSet {
         return this or flag
     }
