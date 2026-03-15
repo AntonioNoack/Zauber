@@ -285,7 +285,7 @@ class FieldResolutionTest {
                 }
                 """.trimIndent()
             )
-            val actualType = findField(scope).valueType!!
+            val actualType = findField(scope).valueType!!.resolved
             assertEquals(IntType, actualType)
         }
     }

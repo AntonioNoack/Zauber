@@ -4,12 +4,9 @@ import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.ASTClassScanner
 import me.anno.zauber.ast.rich.Keywords
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Types.NullableAnyType
 
 /**
  * to make type-resolution immediately available/resolvable
@@ -20,43 +17,11 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
         fun collectNamedJavaClasses(tokens: TokenList) {
             JavaASTClassScanner(tokens).readFileLevel()
         }
-
-        fun ASTClassScanner.collectGenericTypes(classScope: Scope): List<Parameter> {
-            val genericParams = if (consumeIf("<")) {
-                val typeParameters = ArrayList<Parameter>()
-                var depth = 1
-                var canReadType = true
-                while (depth > 0 && i < tokens.size) {
-                    if (tokens.equals(i, "<")) depth++
-                    else if (tokens.equals(i, ">")) depth--
-                    else when (tokens.getType(i)) {
-                        TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
-                        TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
-                        TokenType.COMMA -> if (depth == 1) canReadType = true
-                        else -> if (depth == 1 && canReadType) {
-                            // skip annotations
-                            skipAnnotations()
-
-                            if (tokens.equals(i, TokenType.NAME)) {
-                                val name = tokens.toString(i)
-                                val type = NullableAnyType
-                                typeParameters.add(Parameter(typeParameters.size, name, type, classScope, i))
-                                canReadType = false
-                            }
-                        }
-                    }
-                    i++
-                }
-                typeParameters
-            } else emptyList()
-            return genericParams
-        }
-
     }
 
     override fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
-            val genericParams = collectGenericTypes(classScope)
+            val genericParams = readTypeParameterDeclarations(classScope)
 
             classScope.typeParameters = genericParams
             classScope.hasTypeParameters = true
@@ -73,6 +38,7 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
             }
 
             handleClassBody(classScope, scopeType, readBody)
+            popGenericParams()
         }
     }
 

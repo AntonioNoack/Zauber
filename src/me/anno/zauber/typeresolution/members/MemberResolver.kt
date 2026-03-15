@@ -37,10 +37,6 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             matchScore: MatchScore?
         ): ParameterList? { // found generic values for a match
 
-            if (expectedSelfType is ClassType && !expectedSelfType.clazz.isClassType()) {
-                throw IllegalArgumentException("Expected type cannot be $expectedSelfType, because type is unknown")
-            }
-
             // todo objects don't need actualSelfType, if properly in scope or imported...
             if ((expectedSelfType != null) != (actualSelfType != null)) {
                 LOGGER.info("SelfType mismatch: $expectedSelfType vs $actualSelfType")

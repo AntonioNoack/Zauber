@@ -45,10 +45,10 @@ class AndTypeSimplificationTest {
     @Test
     fun testHierarchicalAndTypes() {
         val scope = """
-    open class A
-    open class B: A()
-    class C: B()
-""".testInheritance()
+            open class A
+            open class B: A()
+            class C: B()
+        """.testInheritance()
         val classA = scope["A"]
         val classB = scope["B"]
         val classC = scope["C"]

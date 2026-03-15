@@ -7,7 +7,7 @@ class ShortcutAndTest {
     // why ever, we get a StackOverflow error for lots of these :/
     @Test
     fun testShortcutAnd() {
-        TypeResolutionTest.Companion.testTypeResolution(
+        testTypeResolution(
             """
             class X(val x: Int, val y: Float) {
                 override fun equals(other: Any?): Boolean {

@@ -10,7 +10,7 @@ class LinkedListIssueTest {
     @Test
     fun testInnerCallResolution() {
         val type =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
         val tested = LinkedList<Int>(1)
         

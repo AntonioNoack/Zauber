@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class InnerResolutionTest {
     @Test
     fun testResolvingMethodFromInsideInnerClass() {
-        TypeResolutionTest.Companion.testTypeResolution(
+        testTypeResolution(
             """
             interface Calculator {
                 fun calculate(): Int

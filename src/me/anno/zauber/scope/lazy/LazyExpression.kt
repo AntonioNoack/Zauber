@@ -6,17 +6,22 @@ import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.GenericType
 
 class LazyExpression(
     val tokens: TokenSubList,
     val isBody: Boolean,
     scope: Scope, origin: Int,
+    val imports: List<Import>,
+    val generics: HashMap<String, GenericType>
 ) : Expression(scope, origin) {
 
     val value by lazy {
         val tmp = ZauberASTBuilder(tokens.tokens, root, ZauberLanguage.ZAUBER)
-        tmp.imports.addAll(tokens.imports)
+        tmp.imports.addAll(imports)
+        tmp.genericParams.add(generics)
 
         tmp.i = tokens.i0
         tmp.currPackage = scope

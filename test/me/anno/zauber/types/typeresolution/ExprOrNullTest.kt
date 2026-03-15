@@ -1,10 +1,10 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import me.anno.zauber.types.Types.DoubleType
 import me.anno.zauber.types.Types.FloatType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -14,7 +14,7 @@ class ExprOrNullTest {
     fun testExprOrNull() {
         assertEquals(
             unionTypes(FloatType, NullType),
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
                 
@@ -33,7 +33,7 @@ class ExprOrNullTest {
     fun testExprOrOther() {
         assertEquals(
             unionTypes(FloatType, DoubleType),
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
                 

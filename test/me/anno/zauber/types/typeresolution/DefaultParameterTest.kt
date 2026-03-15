@@ -2,6 +2,7 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.types.StandardTypes
 import me.anno.zauber.types.Types.FloatType
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,7 +19,7 @@ class DefaultParameterTest {
     fun testDefaultParameterWithoutSelf() {
         assertEquals(
             FloatType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 fun call(x: Int = 0): Float
                 
@@ -32,7 +33,7 @@ class DefaultParameterTest {
     fun testDefaultParameterWithSelf() {
         assertEquals(
             FloatType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class X {
                     fun call(x: Int = 0): Float
@@ -48,7 +49,7 @@ class DefaultParameterTest {
     fun testDefaultParameterWithSelfExtension() {
         assertEquals(
             FloatType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class X
                 fun X.call(x: Int = 0): Float
@@ -63,7 +64,7 @@ class DefaultParameterTest {
     fun testDefaultConstructorParam() {
         assertEquals(
             FloatType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class X(val x: Int = 0) {
                     fun call(): Float

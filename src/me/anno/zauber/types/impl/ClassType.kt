@@ -56,6 +56,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
         fun createParameterList(clazz: Scope, typeParams: List<Type>, origin: Int): ParameterList {
             if (strictMode) {
+                clazz.scope
                 check(clazz.hasTypeParameters) {
                     "$clazz is missing type parameter definition, at ${resolveOrigin(origin)}"
                 }

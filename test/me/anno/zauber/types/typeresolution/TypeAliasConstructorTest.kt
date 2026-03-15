@@ -11,7 +11,7 @@ class TypeAliasConstructorTest {
     @Test
     fun testSimpleTypeAlias() {
         val actualType =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             class A
             typealias B = A
@@ -26,7 +26,7 @@ class TypeAliasConstructorTest {
     @Test
     fun testSimpleTypeAliasRev() {
         val actualType =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             typealias B = A
             class A
@@ -41,7 +41,7 @@ class TypeAliasConstructorTest {
     @Test
     fun testTypeRecursive() {
         val actualType =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             typealias D = C
             typealias C = B

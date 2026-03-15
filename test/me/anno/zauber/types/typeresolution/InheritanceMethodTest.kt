@@ -20,7 +20,7 @@ class InheritanceMethodTest {
     fun testDirectCall() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class A {
                     fun call(): Int
@@ -36,7 +36,7 @@ class InheritanceMethodTest {
     fun testDirectCallWithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 class A<V> {
                     fun call(): Int
@@ -52,7 +52,7 @@ class InheritanceMethodTest {
     fun testSuperCallX1() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A {
                     fun call(): Int
@@ -69,7 +69,7 @@ class InheritanceMethodTest {
     fun testSuperCallX1WithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A<V> {
                     fun call(): Int
@@ -86,7 +86,7 @@ class InheritanceMethodTest {
     fun testSuperCallX2() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A {
                     fun call(): Int
@@ -104,7 +104,7 @@ class InheritanceMethodTest {
     fun testSuperCallX2WithGenerics() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 open class A<I> {
                     fun call(): Int

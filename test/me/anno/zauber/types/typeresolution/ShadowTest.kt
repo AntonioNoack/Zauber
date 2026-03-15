@@ -2,6 +2,7 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.Compile.stdlibName
 import me.anno.zauber.types.Types.FloatType
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -10,7 +11,7 @@ class ShadowTest {
     fun testShadowedFields() {
         assertEquals(
             FloatType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 fun main(x: Int): Float {
                     val x = x+1

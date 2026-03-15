@@ -39,7 +39,14 @@ class GenericTest {
                 ArrayListType.clazz,
                 listOf(ClassType(IntType.clazz, null)), -1
             ),
-            testTypeResolution("val tested = ArrayList<Int>(8)")
+            testTypeResolution(
+                """
+                val tested = ArrayList<Int>(8)
+                
+                package zauber
+                class ArrayList<Int>(initialCapacity: Int)
+            """.trimIndent()
+            )
         )
     }
 

@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
-import me.anno.support.java.ast.JavaASTClassScanner.Companion.collectGenericTypes
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
@@ -101,10 +100,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     open fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
         val origin = origin(i - 1)
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
-
-            val genericParams = readTypeParameterDeclarations(classScope)
-
-            classScope.typeParameters = genericParams
+            val typeParameters = readTypeParameterDeclarations(classScope)
+            classScope.typeParameters = typeParameters
             classScope.hasTypeParameters = true
 
             if (consumeIf("private")) {
@@ -285,6 +282,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 addKeyword(Keywords.CONSTEXPR)
                 readField()
             }
+            consumeIf("infix") -> addKeyword(Keywords.INFIX)
             consumeIf(";") -> {}
             else -> checkForTypes()
         }
@@ -470,7 +468,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         methodScope.keywords = methodScope.keywords or packKeywords()
 
         pushScope(methodScope) {
-            val typeParameters = collectGenericTypes(methodScope)
+            val typeParameters = readTypeParameterDeclarations(methodScope)
             methodScope.typeParameters = typeParameters
             methodScope.hasTypeParameters = true
 
@@ -506,15 +504,29 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 methodScope, returnType, whereConditions, body,
                 methodScope.keywords, origin
             )
+
+            popGenericParams()
         }
     }
 
     private fun readLazyBody(): Expression {
         return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
-            val tokens1 = TokenSubList(tokens, i, tokens.size, imports)
-            val expr = LazyExpression(tokens1, true, scope, origin(i))
+            val tokens1 = TokenSubList(tokens, i, tokens.size)
+            val expr = LazyExpression(tokens1, true, scope, origin(i), imports, genericParams.last())
             scope.initParts += { expr.value } // load expression contents, if we need them
             i = tokens.size
+            expr
+        }
+    }
+
+    private fun readLazyValue(): Expression {
+        val end = findLazyValueEnd()
+        check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
+        return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
+            val tokens1 = TokenSubList(tokens, i, end)
+            val expr = LazyExpression(tokens1, false, scope, origin(i), imports, genericParams.last())
+            scope.initParts += { expr.value } // load expression contents, if we need them
+            i = end
             expr
         }
     }
@@ -543,18 +555,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
         }
         return tokens.size
-    }
-
-    private fun readLazyValue(): Expression {
-        val end = findLazyValueEnd()
-        check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
-        return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
-            val tokens1 = TokenSubList(tokens, i, end, imports)
-            val expr = LazyExpression(tokens1, false, scope, origin(i))
-            scope.initParts += { expr.value } // load expression contents, if we need them
-            i = end
-            expr
-        }
     }
 
     private fun readSelfType(end: Int): Type {

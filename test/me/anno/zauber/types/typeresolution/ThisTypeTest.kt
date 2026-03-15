@@ -8,7 +8,7 @@ class ThisTypeTest {
     @Test
     fun testThisType() {
         val actualType =
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
             open class A {
                 fun setName(): This

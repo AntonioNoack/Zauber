@@ -2,7 +2,7 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -11,7 +11,7 @@ class RunApplyTest {
     fun testRun() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 inline fun <V, R> V.run(runnable: V.() -> R): R {
                     return runnable()
@@ -29,7 +29,7 @@ class RunApplyTest {
     fun testApply() {
         assertEquals(
             StringType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 inline fun <V> V.apply(runnable: V.() -> Unit): V {
                     runnable()

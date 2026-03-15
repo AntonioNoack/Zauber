@@ -1,6 +1,7 @@
 package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -9,7 +10,7 @@ class PackageScopeTest {
     fun testPackageScopeField() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 val value = 0
                 val tested = value
@@ -22,7 +23,7 @@ class PackageScopeTest {
     fun testPackageScopeMethod() {
         assertEquals(
             IntType,
-            TypeResolutionTest.Companion.testTypeResolution(
+            testTypeResolution(
                 """
                 fun method() = 0
                 val tested = method()
