@@ -274,6 +274,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("infix") -> addKeyword(Keywords.INFIX)
             consumeIf("external") -> addKeyword(Keywords.EXTERNAL)
             consumeIf(";") -> {}
+            consumeIf("init") -> {
+                currPackage.primaryConstructorScope!!
+                    .code.add(readLazyBody())
+            }
             else -> checkForTypes()
         }
     }

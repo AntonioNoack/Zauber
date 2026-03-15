@@ -154,7 +154,7 @@ object TypeResolution {
             return alreadyResolved
         } else {
             LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
-            val type = expr.resolveReturnType(context).resolved
+            val type = expr.resolveReturnType(context).resolvedName
             LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
             expr.resolvedType = type
             return type

@@ -83,7 +83,7 @@ object CallWithNames {
                 } else {
                     check(index == result.lastIndex) { "vararg must be in last place, $index vs ${result.lastIndex}" }
                     // collect all varargs
-                    val type0 = ev.type.resolved as ClassType
+                    val type0 = ev.type.resolvedName as ClassType
                     val targetType = type0.typeParameters!![0]
                     val values = actualParameters.subList(j, actualParameters.size)
                         .filter { it.name == null }

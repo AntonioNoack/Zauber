@@ -126,6 +126,9 @@ class ThisTests {
             inline fun <S, R> S.run(runnable: S.() -> R): R {
                 return runnable()
             }
+            fun interface Function1<P0, R> {
+                fun call(p0: P0): R
+            }
         """.trimIndent()
         val (runtime, value) = testExecute(code)
         assertEquals(3, runtime.castToInt(value))

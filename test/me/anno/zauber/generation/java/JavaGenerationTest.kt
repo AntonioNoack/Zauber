@@ -86,6 +86,7 @@ class JavaGenerationTest {
                 }
             }
         """.trimIndent()
+        // todo disable type comments...
         val actual1 = testClassGeneration(source1)
         val actual2 = testClassGeneration(source2)
         println("Generated1:\n$actual1")
@@ -325,7 +326,8 @@ public final class Test {
             }
             
             package zauber
-            class Boolean {
+            enum class Boolean {
+                TRUE, FALSE;
                 external fun not(): Boolean
             }
             fun interface Function1<V,R> {

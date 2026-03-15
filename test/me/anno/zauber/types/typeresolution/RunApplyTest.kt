@@ -9,10 +9,8 @@ import org.junit.jupiter.api.Test
 class RunApplyTest {
     @Test
     fun testRun() {
-        assertEquals(
-            IntType,
-            testTypeResolution(
-                """
+        val actualType = testTypeResolution(
+            """
                 inline fun <V, R> V.run(runnable: V.() -> R): R {
                     return runnable()
                 }
@@ -21,25 +19,30 @@ class RunApplyTest {
                 
                 val tested = Impl(1).run { x }
             """.trimIndent()
-            )
         )
+        assertEquals(IntType, actualType)
     }
 
     @Test
     fun testApply() {
-        assertEquals(
-            StringType,
-            testTypeResolution(
-                """
+        // todo selfType somehow is not put into context...
+        val actualType = testTypeResolution(
+            """
                 inline fun <V> V.apply(runnable: V.() -> Unit): V {
                     runnable()
                     return this
                 }
                 
-                val tested = "Test".apply { println(size) }
+                val tested = "Test".apply { println("Hello") }
+                
+                package zauber
+                external fun println(str: String)
+                fun interface Function0<R> {
+                    fun call(): R
+                }
             """.trimIndent()
-            )
         )
+        assertEquals(StringType, actualType)
     }
 
 }

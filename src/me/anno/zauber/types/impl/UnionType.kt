@@ -81,6 +81,6 @@ class UnionType(val types: List<Type>) : Type() {
     }
 
     // todo we need another check & resolver for this...
-    override val resolved: Type
-        get() = unionTypes(types.map { it.resolved })
+    override val resolvedName: Type
+        get() = unionTypes(types.map { it.resolvedName })
 }

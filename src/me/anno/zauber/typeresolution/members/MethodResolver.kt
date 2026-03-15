@@ -58,7 +58,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     fun getMethodReturnType(scopeSelfType: Type?, method: Method): Type? {
         if (method.returnType == null) {
-            val selfType = method.selfType?.resolved ?: scopeSelfType
+            val selfType = method.selfType?.resolvedName ?: scopeSelfType
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolving ${method.scope}.type by ${method.body}, selfType: $selfType")
             val context = ResolutionContext(selfType, false, null, emptyMap())
             method.returnType = method.resolveReturnType(context)
@@ -106,13 +106,13 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolving generics for $method")
             val generics = findGenericsForMatch(
-                method.selfType.resolved, selfType,
+                method.selfType.resolvedName, selfType,
                 methodReturnType, returnType,
                 methodSelfParams + method.typeParameters, actualTypeParams,
                 method.valueParameters, actualValueParameters, matchScore
             ) ?: return null
 
-            val selfType = selfType ?: method.selfType.resolved
+            val selfType = selfType ?: method.selfType.resolvedName
             val context = ResolutionContext(selfType, false, returnType, emptyMap())
             println("selfType: $selfType, generics: $generics")
             ResolvedMethod(

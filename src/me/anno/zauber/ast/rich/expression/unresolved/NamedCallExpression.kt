@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.unresolved.DotExpression.Companion.handleNOCTForCall
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
@@ -73,7 +74,7 @@ class NamedCallExpression(
     }
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
-        val baseType = calculateBaseType(context)
+        val baseType = calculateBaseType(context).handleNOCTForCall()
         val valueParameters = resolveValueParameters(context, valueParameters)
         val constructor = null
         val contextI = context.withSelfType(baseType)

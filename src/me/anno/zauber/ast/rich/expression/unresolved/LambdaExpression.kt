@@ -10,15 +10,16 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.LambdaParameter
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
@@ -97,15 +98,35 @@ class LambdaExpression(
             }
             null -> {
                 // else 'it' is not defined
-                if (variables == null) variables = emptyList()
-
                 val returnType = TypeResolution.resolveType(bodyContext, body)
-                return LambdaType(null, variables!!.map {
+                return LambdaType(null, ensureVariables().map {
                     LambdaParameter(it.name, it.type!!)
                 }, returnType)
             }
             else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
         }
+    }
+
+    private fun ensureVariables(): List<LambdaVariable> {
+        var variables = variables
+        if (variables == null) {
+            variables = emptyList()
+            this.variables = variables
+        }
+        return variables
+    }
+
+    private fun findSelfType(context: ResolutionContext): Type {
+        var selfMethodScope = scope.scope
+        while (true) {
+            if (selfMethodScope.isMethodType()) break
+
+            selfMethodScope = selfMethodScope.parentIfSameFile?.scope
+                ?: return context.selfType
+                    ?: throw IllegalStateException("Missing method scope for $this by $scope in ${resolveOrigin(origin)}, context: $context")
+        }
+
+        return selfMethodScope.typeWithArgs
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {
@@ -135,16 +156,7 @@ class LambdaExpression(
         classScope.superCalls.clear()
         classScope.superCalls.add(SuperCall(superTypeI, null, null))
 
-        var selfMethodScope = scope
-        while (true) {
-            if (selfMethodScope.scopeType?.isMethodType() == true) break
-
-            selfMethodScope = selfMethodScope.parentIfSameFile
-                ?: throw IllegalStateException("Missing method scope for $this in ${resolveOrigin(origin)}")
-        }
-
-        val selfMethodType = selfMethodScope.typeWithArgs
-
+        val selfMethodType = findSelfType(context)
         // todo if selfType != null, we need a second self-parameter
         val methodParameter = Parameter(0, "self", selfMethodType, classConstructor, origin)
         val methodField = classScope.addField(
@@ -168,7 +180,7 @@ class LambdaExpression(
             ExpressionList(constructorBody, scope, origin), Keywords.SYNTHETIC, origin
         )
 
-        val selfMethod = ThisExpression(selfMethodScope, scope, origin)
+        val selfMethod = ThisExpression(typeToScope(selfMethodType)!!, scope, origin)
         /*return ConstructorExpression(
             classScope, emptyList(),
             listOf(NamedParameter(null, selfMethod)),

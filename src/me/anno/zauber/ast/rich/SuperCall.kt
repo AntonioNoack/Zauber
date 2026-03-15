@@ -10,7 +10,7 @@ class SuperCall(
     val delegate: Expression?
 ) {
     val type: ClassType
-        get() = typeI.resolved as ClassType
+        get() = typeI.resolvedName as ClassType
 
     override fun toString(): String {
         return "$type($valueParameters) by $delegate"

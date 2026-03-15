@@ -54,7 +54,7 @@ object TypeUtils {
 
     fun canInstanceBeBoth(t1: Type, t2: Type): Boolean {
         if (t1 is UnresolvedType || t2 is UnresolvedType)
-            return canInstanceBeBoth(t1.resolved, t2.resolved)
+            return canInstanceBeBoth(t1.resolvedName, t2.resolvedName)
 
         if (t1 == NothingType || t2 == NothingType) return false
         if (t1 == t2) return true

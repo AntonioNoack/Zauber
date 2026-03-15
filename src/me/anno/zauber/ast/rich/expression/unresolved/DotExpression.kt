@@ -11,11 +11,8 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.typeresolution.members.FieldResolver
-import me.anno.zauber.typeresolution.members.MatchScore
-import me.anno.zauber.typeresolution.members.MethodResolver
-import me.anno.zauber.typeresolution.members.ResolvedField
-import me.anno.zauber.typeresolution.members.ResolvedMember
+import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.*
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.NonObjectClassType
 
@@ -28,6 +25,18 @@ class DotExpression(
     val right: Expression,
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
+
+    companion object {
+        fun Type.handleNOCTForCall(): Type {
+            val self = resolvedName
+            if (self is NonObjectClassType) {
+                val companion = self.type.clazz.companionObject
+                    ?: throw IllegalStateException("Expected $self to have companion object")
+                return companion.typeWithoutArgs
+            }
+            return self
+        }
+    }
 
     init {
         if (right is DotExpression) {
@@ -98,7 +107,7 @@ class DotExpression(
         when (right) {
             is MemberNameExpression -> {
                 if (baseType is NonObjectClassType) {
-                    return handleNOCT(context, baseType, right.name)
+                    return handleNOCTField(context, baseType, right.name)
                 }
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType), scope,
@@ -107,7 +116,7 @@ class DotExpression(
             }
             is UnresolvedFieldExpression -> {
                 if (baseType is NonObjectClassType) {
-                    return handleNOCT(context, baseType, right.name)
+                    return handleNOCTField(context, baseType, right.name)
                 }
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType), scope,
@@ -116,7 +125,7 @@ class DotExpression(
             }
             is FieldExpression -> {
                 if (baseType is NonObjectClassType) {
-                    return handleNOCT(context, baseType, right.field.name)
+                    return handleNOCTField(context, baseType, right.field.name)
                 }
                 return FieldResolver.resolveField(
                     context.withSelfType(baseType),
@@ -130,31 +139,14 @@ class DotExpression(
         }
     }
 
-    fun handleNOCT(context: ResolutionContext, baseType: NonObjectClassType, rightName: String): ResolvedField {
-        val child = baseType.type.clazz.children
-            .firstOrNull { it.name == rightName && (it.isClassLike() || it.scopeType == ScopeType.ENUM_ENTRY_CLASS) }
-            ?: throw IllegalStateException("No valid object '${rightName}' found in ${baseType.type}")
-        if (child.isObjectLike() || child.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
-            val field = child.objectField
-                ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
-            return ResolvedField(
-                ParameterList.emptyParameterList(),
-                field, ParameterList.emptyParameterList(), context, scope,
-                false, MatchScore(0)
-            )
-        } else {
-            TODO("return class-like instance")
-        }
-    }
-
     fun resolveCallable(context: ResolutionContext, baseType: Type): ResolvedMember<*> {
         right as CallExpression
         when (val base = right.self) {
             is MemberNameExpression -> {
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
-                val valueParameters = TypeResolution.resolveValueParameters(context, right.valueParameters)
-                val context = context.withSelfType(baseType)
+                val valueParameters = resolveValueParameters(context, right.valueParameters)
+                val context = context.withSelfType(baseType.handleNOCTForCall())
                 return MethodResolver.resolveCallable(
                     context, scope, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,
@@ -166,8 +158,8 @@ class DotExpression(
             is UnresolvedFieldExpression -> {
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
-                val valueParameters = TypeResolution.resolveValueParameters(context, right.valueParameters)
-                val context = context.withSelfType(baseType)
+                val valueParameters = resolveValueParameters(context, right.valueParameters)
+                val context = context.withSelfType(baseType.handleNOCTForCall())
                 return MethodResolver.resolveCallable(
                     context, scope, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,
@@ -177,6 +169,31 @@ class DotExpression(
                 )
             }
             else -> throw NotImplementedError("Resolve type of call $base (${base.javaClass.simpleName})")
+        }
+    }
+
+    private fun findNOCTScope(baseType: NonObjectClassType, rightName: String): Scope {
+        return baseType.type.clazz.children
+            .firstOrNull { it.name == rightName && (it.isClassLike() || it.scopeType == ScopeType.ENUM_ENTRY_CLASS) }
+            ?: throw IllegalStateException("No valid object '${rightName}' found in ${baseType.type}")
+    }
+
+    fun handleNOCTField(
+        context: ResolutionContext,
+        baseType: NonObjectClassType,
+        rightName: String
+    ): ResolvedField {
+        val child = findNOCTScope(baseType, rightName)
+        if (child.isObjectLike() || child.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
+            val field = child.objectField
+                ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
+            return ResolvedField(
+                ParameterList.emptyParameterList(),
+                field, ParameterList.emptyParameterList(), context, scope,
+                false, MatchScore(0)
+            )
+        } else {
+            TODO("return class-like instance")
         }
     }
 

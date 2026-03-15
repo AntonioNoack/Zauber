@@ -41,7 +41,7 @@ object Inheritance {
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolved ${expected.type} to $expectedType for isSubTypeOf")
         }
 
-        val actualType = actual.getType(expectedType).resolved
+        val actualType = actual.getType(expectedType).resolvedName
         if (LOGGER.isInfoEnabled) LOGGER.info("ActualType[$actual,$expectedType] -> $actualType")
         return isSubTypeOf(
             expectedType, actualType,
@@ -66,8 +66,8 @@ object Inheritance {
         insertMode: InsertMode,
         matchScore: MatchScore? = null,
     ): Boolean {
-        val actualType = actualType.resolved
-        val expectedType = expectedType.resolved
+        val actualType = actualType.resolvedName
+        val expectedType = expectedType.resolvedName
         if (actualType == expectedType) return true
 
         if (LOGGER.isInfoEnabled) {
@@ -146,7 +146,7 @@ object Inheritance {
         if (expectedType == NullableAnyType) return true
         if (expectedType == UnknownType) return true
         if (actualType is UnresolvedType || expectedType is UnresolvedType) return isSubTypeOf(
-            expectedType.resolved, actualType.resolved,
+            expectedType.resolvedName, actualType.resolvedName,
             expectedTypeParams, actualTypeParameters, insertMode, matchScore
         )
 

@@ -46,22 +46,8 @@ object ResolutionUtils {
             scanClasses(tokens[index])
         }
 
-        val packageNames = sources.mapIndexed { index, content ->
-            if (index == 0) testScopeName else
-                content
-                    .substringAfter("package ") // remove package prefix
-                    .substringBefore('\n') // split first line
-                    .substringBefore(';') // remove ; if there is any
-        }
-
         createDefaultParameterFunctions(root)
         resolveOverrides(root)
-
-        for (packageName in packageNames) {
-            val scope = root.children.firstOrNull { it.name == packageName }
-                ?: throw IllegalStateException("Missing '$packageName' in root, available: ${root.children.map { it.name }}")
-            resolveTypesAndNames(scope.scope)
-        }
 
         return root.children.first { it.name == testScopeName }.scope
     }

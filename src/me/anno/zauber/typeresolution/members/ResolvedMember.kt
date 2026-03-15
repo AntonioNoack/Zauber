@@ -126,7 +126,7 @@ abstract class ResolvedMember<V>(
                     }
                 }
                 is NotType -> resolveGenerics(selfType, type.type, genericNames, genericValues).not()
-                is UnresolvedType -> resolveGenerics(selfType, type.resolved, genericNames, genericValues)
+                is UnresolvedType -> resolveGenerics(selfType, type.resolvedName, genericNames, genericValues)
                 else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
             }
         }

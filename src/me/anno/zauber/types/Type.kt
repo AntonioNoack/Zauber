@@ -25,7 +25,7 @@ abstract class Type {
             is ClassType -> typeParameters?.any { it.contains(type) } == true
             is LambdaType -> (selfType?.contains(type) ?: false) || returnType.contains(type)
             is GenericType -> false // not the same; todo we might need to check super/redirects
-            is UnresolvedType -> resolved.contains(type)
+            is UnresolvedType -> resolvedName.contains(type)
             else -> throw NotImplementedError("Does ${this.javaClass.simpleName} contain $type?")
         }
     }
@@ -39,7 +39,7 @@ abstract class Type {
             is NotType -> type.containsGenerics()
             is GenericType -> true
             is LambdaType -> parameters.any { it.type.containsGenerics() } || returnType.containsGenerics()
-            is UnresolvedType -> resolved.containsGenerics()
+            is UnresolvedType -> resolvedName.containsGenerics()
             else -> throw NotImplementedError("Does $this contain generics?")
         }
     }
@@ -174,5 +174,5 @@ abstract class Type {
 
     open fun not(): Type = NotType(this)
 
-    open val resolved: Type get() = this
+    open val resolvedName: Type get() = this
 }

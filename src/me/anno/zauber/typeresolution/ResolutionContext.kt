@@ -68,4 +68,8 @@ data class ResolutionContext(
                 "targetType=$targetType, " +
                 "knownLambdas=$knownLambdas)"
     }
+
+    companion object {
+        val minimal = ResolutionContext(null, false, null)
+    }
 }

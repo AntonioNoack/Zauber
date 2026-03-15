@@ -287,7 +287,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         val self = this
         if (scopeType != null) {
             if (self.scopeType == null || self.scopeType == scopeType) self.scopeType = scopeType
-            else throw IllegalStateException("ScopeType conflict! ${self.scopeType} vs $scopeType")
+            else throw IllegalStateException("ScopeType conflict in '$pathStr'! ${self.scopeType} vs $scopeType")
         }
         val parentType = parent?.scopeType
         if (!scopeHierarchyIsAllowed(parentType, scopeType)) {

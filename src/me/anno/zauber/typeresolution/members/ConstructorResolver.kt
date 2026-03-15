@@ -94,7 +94,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         // this can still happen during type-resolution,
         //  because we don't know yet whether a method call is a constructor with 100% accuracy
 
-        val newType = scope.selfAsTypeAlias!!.resolved
+        val newType = scope.selfAsTypeAlias!!.resolvedName
         val newTypeParams = (newType as? ClassType)?.typeParameters
 
         val typeParameters0 = typeParameters

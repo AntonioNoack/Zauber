@@ -23,6 +23,6 @@ class NotType(val type: Type) : Type() {
         return type.hashCode()
     }
 
-    override val resolved: Type
-        get() = type.resolved.not()
+    override val resolvedName: Type
+        get() = type.resolvedName.not()
 }

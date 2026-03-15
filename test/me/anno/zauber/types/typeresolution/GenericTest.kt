@@ -275,10 +275,9 @@ class GenericTest {
     fun testLambdaInsideLambda() {
         // what about listOf("1,2,3").map{it.split(',').map{it.toInt()}}?
         //  can we somehow hide lambdas? I don't think so...
-        val listType = standardClasses["List"]!!
         val listOfInt = ListType.withTypeParameters(listOf(IntType))
         assertEquals(
-            ListType.withTypeParameters(listOf(listOfInt)),
+            ListType.withTypeParameter(listOfInt),
             testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
@@ -301,10 +300,9 @@ class GenericTest {
 
     @Test
     fun testMixedList() {
-        val listType = standardClasses["List"]!!
         val mixedType = unionTypes(listOf(StringType, IntType, FloatType))
         assertEquals(
-            ClassType(listType, listOf(mixedType), -1),
+            ListType.withTypeParameter(mixedType),
             testTypeResolution(
                 """
                 fun <V> listOf(vararg values: V): List<V>
@@ -317,6 +315,35 @@ class GenericTest {
                 class Int
                 class String
                 class Float
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testGenericField() {
+        assertEquals(
+            StringType,
+            testTypeResolution(
+                """
+                class A<V>(val a: V)
+                
+                val tested = A("").a
+            """.trimIndent()
+            )
+        )
+    }
+
+    @Test
+    fun testGenericFieldInSuperClass() {
+        assertEquals(
+            StringType,
+            testTypeResolution(
+                """
+                class A<V>(val a: V)
+                class B<W>(a: W): A<W>(a)
+                
+                val tested = B("").a
             """.trimIndent()
             )
         )

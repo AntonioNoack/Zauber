@@ -36,7 +36,7 @@ class Field(
 
     init {
         if (name == "content" && valueType == ArrayType) {
-            throw IllegalStateException("Testing: field should know array type, $valueType -> ${valueType?.resolved}")
+            throw IllegalStateException("Testing: field should know array type, $valueType -> ${valueType?.resolvedName}")
         }
     }
 
@@ -85,7 +85,7 @@ class Field(
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
         if (valueType != null) {
-            return valueType.resolved
+            return valueType.resolvedName
         }
 
         val initialValue = initialValue

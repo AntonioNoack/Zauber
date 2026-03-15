@@ -174,7 +174,7 @@ class Runtime {
             val name = (method as Method).name!!
             val parameterTypes = method.valueParameters.map { parameter ->
                 val type = parameter.type
-                (type as? UnresolvedType)?.resolved ?: type
+                (type as? UnresolvedType)?.resolvedName ?: type
             }
             val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]

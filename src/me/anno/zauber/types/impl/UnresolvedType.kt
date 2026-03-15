@@ -9,7 +9,7 @@ class UnresolvedType(
     val scope: Scope, val imports: List<Import>
 ) : Type() {
 
-    override val resolved: Type by lazy { resolve() }
+    override val resolvedName: Type by lazy { resolve() }
 
     override fun toStringImpl(depth: Int): String {
         return "¿$className?<$typeParameters>"
@@ -23,7 +23,7 @@ class UnresolvedType(
             other.typeParameters == typeParameters &&
             other.scope == scope
         ) return true
-        return other is Type && resolved == ((other as? UnknownType)?.resolved ?: other)
+        return other is Type && resolvedName == ((other as? UnknownType)?.resolvedName ?: other)
     }
 
     override fun hashCode(): Int = className.hashCode()

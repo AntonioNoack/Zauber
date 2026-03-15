@@ -54,7 +54,7 @@ class TypeResolutionTest {
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }.scope
             resolveOverrides(testScope)
-            resolveTypesAndNames(testScope)
+            // resolveTypesAndNames(testScope)
             return testScope
         }
 
@@ -64,8 +64,8 @@ class TypeResolutionTest {
 
         fun testTypeResolution(code: String): Type {
             val field = testTypeResolutionGetField(code)
-            return field.valueType?.resolved
-                ?: throw IllegalStateException("Could not resolve type for $field")
+            val context = ResolutionContext(null, false, null)
+            return field.resolveValueType(context)
         }
 
         fun testMethodBodyResolution(code: String): List<Type> {
