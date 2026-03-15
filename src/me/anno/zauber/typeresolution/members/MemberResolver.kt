@@ -226,11 +226,12 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         callback: (scope: Scope, selfType: Type) -> R?
     ): R? {
 
-        val print = !catchFailures && LOGGER.isInfoEnabled
-        if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${context.selfScope}, ${context.selfType})")
-
-        val contextSelfScope = context.selfScope
+        val contextSelfScope = context.selfScope?.scope
         val contextSelfType = context.selfType
+
+        val print = !catchFailures && LOGGER.isInfoEnabled
+        if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${contextSelfScope}, ${contextSelfType})")
+
         if (contextSelfScope != null && contextSelfType != null) {
             if (print) LOGGER.info("Checking[0] $contextSelfScope with ${contextSelfType}, " +
                     "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods.map { it.name }}")
