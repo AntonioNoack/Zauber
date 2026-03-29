@@ -402,10 +402,10 @@ object JavaSimplifiedASTWriter {
             } else {
                 builder.append1(self).append('.')
             }
-        } else if (field.codeScope == method.scope.parent) {
+        } else if (field.scope == method.scope.parent) {
             builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this").append('.')
-        } else if (field.codeScope.parent?.isObject() == true) {
-            appendType(field.codeScope.parent!!.typeWithoutArgs, exprScope, true)
+        } else if (field.scope.parent?.isObject() == true) {
+            appendType(field.scope.parent!!.typeWithoutArgs, exprScope, true)
             builder.append(".__instance__.")
         }
     }

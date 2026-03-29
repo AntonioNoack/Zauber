@@ -16,7 +16,7 @@ class Constructor(
 ) : MethodLike(
     scope.parent!!.typeWithoutArgs, false,
     scope.typeParameters, valueParameters,
-    UnitType, scope, body, keywords, origin
+    UnitType, scope, "?", body, keywords, origin
 ) {
 
     override val selfType: ClassType

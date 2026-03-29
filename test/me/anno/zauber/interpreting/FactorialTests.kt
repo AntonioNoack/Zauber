@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -84,16 +84,8 @@ class FactorialTests {
             "Inheritance,MemberResolver,MemberResolver,FieldExpression,FieldResolver,TypeResolution," +
                     "CallExpression,ConstructorResolver,ResolvedMethod,MethodResolver,ResolvedField,Field"
         )
-        val code = """
-            fun fac(n: Int): Int {
-                var product = 1
-                for (k in 2 .. n) {
-                    product *= k
-                }
-                return product
-            }
-            val tested = fac(10)
-            
+        LogManager.enableDebug("Runtime")
+        val stdlib = """
             package zauber
             object Unit
             class Int {
@@ -128,6 +120,16 @@ class FactorialTests {
                 external operator fun set(i: Int, value: V)
             }
         """.trimIndent()
+        val code = """
+            fun fac(n: Int): Int {
+                var product = 1
+                for (k in 2 .. n) {
+                    product *= k
+                }
+                return product
+            }
+            val tested = fac(10)
+        """.trimIndent() + stdlib
         val (runtime, value) = testExecute(code)
         assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, runtime.castToInt(value))
     }

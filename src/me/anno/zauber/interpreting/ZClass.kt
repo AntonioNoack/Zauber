@@ -23,14 +23,14 @@ class ZClass(val type: Type, val runtime: Runtime) {
                 if (type != NullType) LOGGER.warn("type $type is not a ClassType")
                 return emptyList()
             }
-            return type.clazz.scope.fields.filter {
-                it.needsBackingFieldImpl()
+            return type.clazz.scope.fields.filter { field ->
+                field.needsBackingFieldImpl(type)
             }
         }
 
-        fun Field.needsBackingFieldImpl(): Boolean {
-            val type = codeScope.typeWithoutArgs
-            LOGGER.info("$this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
+        fun Field.needsBackingFieldImpl(type0: Type): Boolean {
+            val type = scope.typeWithoutArgs
+            LOGGER.info("[$type0] $this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
             return (!explicitSelfType || selfType == type) &&
                     needsBackingField()
         }

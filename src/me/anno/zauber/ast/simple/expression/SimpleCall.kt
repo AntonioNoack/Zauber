@@ -83,7 +83,7 @@ class SimpleCall(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
-        val self = runtime[self]
+        val self = runtime[self, this]
         if (runtime.isNull(self)) {
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")
@@ -94,7 +94,7 @@ class SimpleCall(
         initializeArrayIfNeeded(self, method, runtime)
 
         val method1 = MethodSpecialization(method, specialization)
-        val result = runtime.executeCall(self, method1, valueParameters)
+        val result = runtime.executeCall(self, method1, valueParameters, this)
         return if (result.type == ReturnType.RETURN) {
             BlockReturn(ReturnType.VALUE, result.value)
         } else result
@@ -106,7 +106,8 @@ class SimpleCall(
             method is Constructor && valueParameters.size == 1 &&
             method.valueParameters[0].type.resolvedName == IntType
         ) {
-            val size = runtime.castToInt(runtime[valueParameters[0]])
+            val sizeParam = valueParameters[0]
+            val size = runtime.castToInt(runtime[sizeParam])
             self.rawValue = createArray(selfType.typeParameters?.get(0)?.resolvedName, size)
         }
     }

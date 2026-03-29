@@ -38,9 +38,9 @@ import me.anno.zauber.types.Types.IntType
 import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.UnitType
-import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnknownType
 import me.anno.zauber.types.specialization.MethodSpecialization
 
 object ASTSimplifier {
@@ -198,7 +198,7 @@ object ASTSimplifier {
                 block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
             ) {
                 val type = field.resolveValueType(context)
-                block0.add(SimpleDeclaration(type, field.name, field.codeScope, field.origin))
+                block0.add(SimpleDeclaration(type, field.name, field.scope, field.origin))
             }
         }
 
@@ -254,7 +254,9 @@ object ASTSimplifier {
         val dst = block1v.block.field(valueType)
         // todo also, if the field is marked as open (and has children), or if the class is an interface
         val useGetter =
-            !expr.field.isBackingField && (field.hasCustomGetter || field.isLateinit() || !field.needsBackingFieldImpl())
+            !expr.field.isBackingField && (
+                    field.hasCustomGetter || field.isLateinit() ||
+                    !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
         if (useGetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?
@@ -293,7 +295,8 @@ object ASTSimplifier {
         val value = block2v.value
 
         // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useSetter = !expr.field.isBackingField && (field.hasCustomSetter || !field.needsBackingFieldImpl())
+        val useSetter = !expr.field.isBackingField &&
+                (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
         if (useSetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?

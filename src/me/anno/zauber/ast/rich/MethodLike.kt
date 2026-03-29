@@ -6,27 +6,26 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.generation.Specializations
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 
 open class MethodLike(
-
-    open val selfType: Type?,
-    val explicitSelfType: Boolean,
+    selfType: Type?,
+    explicitSelfType: Boolean,
 
     val typeParameters: List<Parameter>,
     val valueParameters: List<Parameter>,
     var returnType: Type?,
-    val scope: Scope,
+    scope: Scope, name: String,
     var body: Expression?,
-    var keywords: KeywordSet,
-    val origin: Int
-) {
+    keywords: KeywordSet,
+    origin: Int
+) : Member(selfType, explicitSelfType, name, scope, keywords, origin) {
 
     fun addKeywords(keywords: KeywordSet) {
         this.keywords = this.keywords or keywords

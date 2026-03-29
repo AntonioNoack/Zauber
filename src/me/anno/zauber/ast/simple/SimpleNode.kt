@@ -82,9 +82,9 @@ class SimpleNode(val graph: SimpleGraph) {
     }
 
     fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
-        SimpleField(type, ownership, graph.numFields++, null)
+        SimpleField(type, ownership, graph.numFields++)
 
-    fun field(type: Type, scopeIfThis: Scope?): SimpleField =
+    fun field(type: Type, scopeIfThis: Scope): SimpleField =
         SimpleField(type, getOwnership(type), graph.numFields++, scopeIfThis)
 
     override fun toString(): String {

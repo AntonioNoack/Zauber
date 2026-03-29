@@ -5,8 +5,11 @@ import me.anno.zauber.types.Type
 
 class SimpleField(
     val type: Type, val ownership: Ownership, val id: Int,
-    val scopeIfIsThis: Scope?
+    val scopeIfIsThis: Scope?,
 ) {
+
+    constructor(type: Type, ownership: Ownership, id: Int) :
+            this(type, ownership, id, null)
 
     var numReads = 0
     var mergeInfo: SimpleMerge? = null
@@ -17,7 +20,7 @@ class SimpleField(
     }
 
     override fun toString(): String {
-        return if(scopeIfIsThis == null) "%$id[$type]"
+        return if (scopeIfIsThis == null) "%$id[$type]"
         else "this@$scopeIfIsThis[$type]"
     }
 }

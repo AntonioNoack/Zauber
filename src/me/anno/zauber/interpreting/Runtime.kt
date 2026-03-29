@@ -4,14 +4,18 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
+import me.anno.zauber.ast.simple.expression.SimpleGetField
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.BooleanType
 import me.anno.zauber.types.Types.StringType
@@ -51,25 +55,60 @@ class Runtime {
         }
     }
 
-    operator fun get(field: SimpleField): Instance {
+    operator fun get(field: SimpleField, hint: SimpleInstruction? = null): Instance {
         val field = getMergedField(field)
         val selfScope = field.scopeIfIsThis
-        return if (selfScope != null) getSelf(selfScope) else {
+        println("getting $field, selfScope: $selfScope")
+        return if (selfScope != null) getSelf(field, selfScope, hint) else {
             val currCall = callStack.last()
             currCall.simpleFields[field]
                 ?: throw IllegalStateException("Missing field $field, fields: ${currCall.simpleFields}")
         }
     }
 
-    private fun getSelf(selfScope: Scope): Instance {
+    private fun getSelf(field: SimpleField, selfScope: Scope, hint: SimpleInstruction?): Instance {
         val self = thisStack.last()
+        if (selfScope.selfAsMethod?.explicitSelfType == true) {
+            // "this" inside methods with self-type is ambiguous :(
+            //  could actually be one of two things:
+            //  - method scope
+            //  - receiver type
+            // not: outer type (has diff scope)
+
+            check(self.scope == selfScope) { "Expected scope to match..., ${self.scope} vs $selfScope" }
+            println("fieldType for self: ${field.type} (${field.type.javaClass.simpleName})")
+            val fieldBelongsToMethod = if (field.type is ClassType) {
+                if (field.type.clazz.isMethodType()) false
+                else if (field.type.clazz.isClassLike()) true
+                else TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
+            } else when (hint) {
+                // check if field belongs to a method...
+                is SimpleGetField -> hint.field.scope.isMethodType()
+                is SimpleCall -> {
+                    TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
+                }
+                else -> {
+                    TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
+                }
+            }
+            val selfScopeI = if (fieldBelongsToMethod) {
+                selfScope
+            } else {
+                typeToScope(selfScope.selfAsMethod!!.selfType!!)!!
+            }
+            return getSelfFromCallstack(selfScopeI)
+        }
         return when {
             self.scope == selfScope -> self.instance
             selfScope.isObjectLike() -> getObjectInstance(selfScope.typeWithoutArgs)
-            else -> callStack.last().scopes.getOrPut(selfScope) {
-                val type = selfScope.typeWithoutArgs
-                getClass(type).createInstance()
-            }
+            else -> getSelfFromCallstack(selfScope)
+        }
+    }
+
+    private fun getSelfFromCallstack(selfScope: Scope): Instance {
+        return callStack.last().scopes.getOrPut(selfScope) {
+            val type = selfScope.typeWithoutArgs
+            getClass(type).createInstance()
         }
     }
 
@@ -87,7 +126,7 @@ class Runtime {
                 return vp[parameter.index]
             }
         }*/
-        check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.codeScope})" }
+        check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.scope})" }
         if (fieldIndex >= instance.properties.size)
             throw IllegalStateException("Outdated instance? $instance")
         if (instance.properties[fieldIndex] == null &&
@@ -161,17 +200,18 @@ class Runtime {
 
     fun executeCall(
         self: Instance, method1: MethodSpecialization,
-        valueParameters: List<SimpleField>
+        valueParameters: List<SimpleField>,
+        hint: SimpleInstruction? = null
     ): BlockReturn {
 
         if (isNull(self)) {
             throw IllegalArgumentException("Cannot execute $method1 on null instance")
         }
 
-        val valueParameters = valueParameters.map { this[it] }
+        val valueParameters = valueParameters.map { this[it, hint] }
         val method = method1.method
         if (method.isExternal()) {
-            val name = (method as Method).name!!
+            val name = (method as Method).name
             val parameterTypes = method.valueParameters.map { parameter ->
                 val type = parameter.type
                 (type as? UnresolvedType)?.resolvedName ?: type

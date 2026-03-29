@@ -20,7 +20,7 @@ class SimpleCompare(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
-        val rawValue = runtime[tmp]
+        val rawValue = runtime[tmp, this]
         val asInt = runtime.castToInt(rawValue)
         val asBool = type.eval(asInt)
         return BlockReturn(ReturnType.VALUE, runtime.getBool(asBool))

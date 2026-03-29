@@ -14,6 +14,14 @@ object LogManager {
         return getLogger(clazz.java.simpleName, debug)
     }
 
+    fun enableDebug(loggers: String) {
+        for (name in loggers.split(',')) {
+            val logger = getLogger(name, true)
+            logger.isInfoEnabled = true
+            logger.isDebugEnabled = true
+        }
+    }
+
     fun disableLoggers(loggers: String) {
         for (name in loggers.split(',')) {
             val logger = getLogger(name, false)

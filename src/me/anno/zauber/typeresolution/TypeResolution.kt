@@ -97,7 +97,7 @@ object TypeResolution {
     }
 
     private fun resolveField(scope: Scope, scopeSelfType: Type?, field: Field) {
-        if (field.codeScope != scope) return // just inherited
+        if (field.scope != scope) return // just inherited
         if (field.valueType != null) return // done already
         if (field.initialValue == null && field.getterExpr == null) return // cannot be solved
 

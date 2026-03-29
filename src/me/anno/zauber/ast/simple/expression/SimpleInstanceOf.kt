@@ -24,7 +24,7 @@ class SimpleInstanceOf private constructor(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
-        val instance = runtime[value]
+        val instance = runtime[value, this]
         val givenType = instance.type
         val expectedType = runtime.getClass(type)
         val value = runtime.getBool(givenType.isSubTypeOf(expectedType))

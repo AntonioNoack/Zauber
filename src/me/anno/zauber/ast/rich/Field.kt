@@ -6,28 +6,31 @@ import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.ArrayType
 
 class Field(
-    var codeScope: Scope,
+    scope: Scope,
 
-    val selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
-    val explicitSelfType: Boolean,
+    selfType: Type?, // may be null inside methods (self is stack) and on package level (self is static)
+    explicitSelfType: Boolean,
 
     val isMutable: Boolean,
     var byParameter: Any?, // Parameter | LambdaParameter | null
 
-    val name: String,
+    name: String,
     var valueType: Type?,
     val initialValue: Expression?,
-    val keywords: KeywordSet,
-    val origin: Int
+    keywords: KeywordSet,
+    origin: Int
+) : Member(
+    selfType, explicitSelfType,
+    name, scope, keywords, origin
 ) {
 
     companion object {
@@ -51,13 +54,13 @@ class Field(
     fun isBackingField(methodScope: Scope): Boolean {
         return name == "field" &&
                 keywords.hasFlag(Keywords.SYNTHETIC) &&
-                codeScope == methodScope
+                scope == methodScope
     }
 
     fun getBackedField(): Field? {
         if (name != "field") return null
         if (!keywords.hasFlag(Keywords.SYNTHETIC)) return null
-        val scope = codeScope
+        val scope = scope
         if (scope.scopeType != ScopeType.FIELD_GETTER &&
             scope.scopeType != ScopeType.FIELD_SETTER
         ) return null
@@ -117,7 +120,7 @@ class Field(
     }
 
     fun getGetterOrSetterScope(): Scope? {
-        var scope = codeScope
+        var scope = scope
         while (true) {
             when (scope.scopeType) {
                 ScopeType.FIELD_GETTER,
@@ -140,8 +143,8 @@ class Field(
     }
 
     fun moveToScope(newScope: Scope) {
-        check(codeScope.fields.remove(this)) { "Failed to remove field from scope" }
-        codeScope = newScope
+        check(scope.fields.remove(this)) { "Failed to remove field from scope" }
+        scope = newScope
         newScope.addField(this)
     }
 

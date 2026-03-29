@@ -22,8 +22,8 @@ class SimpleCheckEquals(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
-        val va = runtime[left]
-        val vb = runtime[right]
+        val va = runtime[left, this]
+        val vb = runtime[right, this]
         if (va == vb) return BlockReturn(ReturnType.VALUE, runtime.getBool(!negated))
 
         val vaNull = runtime.isNull(va)

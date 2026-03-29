@@ -4,16 +4,15 @@ import me.anno.zauber.ast.KeywordSet
 import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import java.lang.reflect.Modifier.isProtected
 
 class Method(
     selfType: Type?,
     explicitSelfType: Boolean,
-    var name: String?,
+    name: String?,
     typeParameters: List<Parameter>,
     valueParameters: List<Parameter>,
     // todo defined constructors need this extra scope, too
@@ -24,8 +23,9 @@ class Method(
     keywords: KeywordSet,
     origin: Int
 ) : MethodLike(
-    selfType, explicitSelfType, typeParameters, valueParameters, returnType,
-    scope, body, keywords, origin
+    selfType, explicitSelfType,
+    typeParameters, valueParameters, returnType,
+    scope, name ?: "?", body, keywords, origin
 ) {
 
     /**

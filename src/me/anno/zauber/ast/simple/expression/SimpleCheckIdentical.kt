@@ -17,8 +17,8 @@ class SimpleCheckIdentical(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
-        val left = runtime[left]
-        val right = runtime[right]
+        val left = runtime[left, this]
+        val right = runtime[right, this]
         val instance = runtime.getBool((left == right) xor negated)
         return BlockReturn(ReturnType.VALUE, instance)
     }

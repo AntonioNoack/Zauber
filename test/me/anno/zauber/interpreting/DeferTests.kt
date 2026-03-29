@@ -72,7 +72,7 @@ class DeferTests {
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
-        LogManager.getLogger("Runtime").isDebugEnabled = true
+        LogManager.enableDebug("Runtime")
         val code = """
             fun run(): String {
                 errdefer println("World")

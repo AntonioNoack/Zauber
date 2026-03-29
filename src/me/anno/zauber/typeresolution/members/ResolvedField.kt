@@ -151,7 +151,7 @@ class ResolvedField(
         check(field.typeParameters.size == callTypes.size)
     }
 
-    override fun getScopeOfResolved(): Scope = resolved.codeScope
+    override fun getScopeOfResolved(): Scope = resolved.scope
 
     fun getValueType(): Type {
         LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}, selfType: $selfType")
@@ -211,7 +211,7 @@ class ResolvedField(
         TODO("Resolve type parameters for $baseType call on a function interface")
     }
 
-    val ownerScope get() = resolved.codeScope
+    val ownerScope get() = resolved.scope
 
     fun resolveOwnerWithoutLeftSide(origin: Int): Expression {
         return ThisExpression(ownerScope, codeScope, origin)
