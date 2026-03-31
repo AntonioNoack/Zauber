@@ -39,7 +39,8 @@ object RuntimeCast {
     @Suppress("UnusedReceiverParameter")
     fun Runtime.castToInt(value: Instance): Int {
         checkType(value, IntType)
-        return value.rawValue as Int
+        return value.rawValue as? Int
+            ?: throw IllegalStateException("Found illegal Int-instance without raw value: $value")
     }
 
     @Suppress("UnusedReceiverParameter", "unused")

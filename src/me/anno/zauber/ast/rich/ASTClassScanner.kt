@@ -42,7 +42,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         private val classPrefixes = arrayOf("data", "enum", "value", "inner")
         private val notValueKeywords = arrayOf(
             "fun", "val", "var", "lateinit",
-            "public", "private", "protected", "class", "interface",
+            "public", "private", "protected", "interface",
             "package", "import", "companion",
             "open", "abstract", "override", "operator",
             "get", "set", "typealias", "external"
@@ -542,9 +542,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     tokens.equals(j0, *notValueKeywords) -> return j0
                     tokens.equals(j0, "object") && !tokens.equals(j0, ":") -> return j0
                     // enum class, data class, private class... these depend on the work after them...
-                    tokens.equals(j0 + 1, "class") && tokens.equals(j0, *classPrefixes) -> {
-                        return j0
-                    }
+                    tokens.equals(j0 + 1, "class") && tokens.equals(j0, *classPrefixes) -> return j0
+                    tokens.equals(j0, "class") && !tokens.equals(j0 - 1, "::") -> return j0
                 }
             }
         }

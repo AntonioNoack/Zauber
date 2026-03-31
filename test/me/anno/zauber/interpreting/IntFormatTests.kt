@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -18,6 +19,8 @@ class IntFormatTests {
 
     @Test
     fun testNegativeIntField() {
+        LogManager.disableLoggers("ResolvedMethod,FieldExpression,FieldResolver," +
+                "MemberResolver,TypeResolution,Inheritance,FieldResolver")
         val code = """
             val tested = -17
             

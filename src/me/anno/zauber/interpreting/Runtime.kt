@@ -68,6 +68,7 @@ class Runtime {
 
     private fun getSelf(field: SimpleField, selfScope: Scope, hint: SimpleInstruction?): Instance {
         val self = thisStack.last()
+        var selfScope = selfScope
         if (selfScope.selfAsMethod?.explicitSelfType == true) {
             // "this" inside methods with self-type is ambiguous :(
             //  could actually be one of two things:
@@ -76,10 +77,11 @@ class Runtime {
             // not: outer type (has diff scope)
 
             check(self.scope == selfScope) { "Expected scope to match..., ${self.scope} vs $selfScope" }
-            println("fieldType for self: ${field.type} (${field.type.javaClass.simpleName})")
+            println("fieldType for self: ${field.type} (${field.type.javaClass.simpleName}, ${(field.type as? ClassType)?.clazz?.scopeType})")
+
             val fieldBelongsToMethod = if (field.type is ClassType) {
-                if (field.type.clazz.isMethodType()) false
-                else if (field.type.clazz.isClassLike()) true
+                if (field.type.clazz.isMethodType()) true
+                else if (field.type.clazz.isClassLike()) false
                 else TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
             } else when (hint) {
                 // check if field belongs to a method...
@@ -91,12 +93,12 @@ class Runtime {
                     TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
                 }
             }
-            val selfScopeI = if (fieldBelongsToMethod) {
+            selfScope = if (fieldBelongsToMethod) {
                 selfScope
             } else {
                 typeToScope(selfScope.selfAsMethod!!.selfType!!)!!
             }
-            return getSelfFromCallstack(selfScopeI)
+            println("fieldType for self -> $selfScope, self.scope: ${self.scope}, self.instance: ${self.instance}")
         }
         return when {
             self.scope == selfScope -> self.instance
@@ -107,6 +109,9 @@ class Runtime {
 
     private fun getSelfFromCallstack(selfScope: Scope): Instance {
         return callStack.last().scopes.getOrPut(selfScope) {
+            check(!selfScope.isClassLike()) {
+                "Creating instance for $selfScope, should be defined already! Options: ${callStack.last().scopes}"
+            }
             val type = selfScope.typeWithoutArgs
             getClass(type).createInstance()
         }

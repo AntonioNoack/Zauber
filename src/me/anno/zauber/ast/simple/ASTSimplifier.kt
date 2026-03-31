@@ -335,8 +335,8 @@ object ASTSimplifier {
         val method = expr.callable.resolved
         val specialization = expr.callable.specialization
         val call = SimpleCall(
-            tmp, method, left.use(),
-            specialization, listOf(right.use()),
+            tmp, method, left.use(), specialization,
+            emptyList(), listOf(right.use()), emptyList(),
             expr.scope, expr.origin
         )
 

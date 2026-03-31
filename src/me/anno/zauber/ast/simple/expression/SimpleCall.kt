@@ -33,9 +33,25 @@ class SimpleCall(
     val sample: MethodLike,
     val self: SimpleField,
     specialization: Specialization,
+    val typeParameters: List<SimpleField>,
     val valueParameters: List<SimpleField>,
+    val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Int
 ) : SimpleCallable(dst, specialization, scope, origin) {
+
+    constructor(
+        dst: SimpleField,
+        method: MethodLike,
+        self: SimpleField,
+        specialization: Specialization,
+        typeParameters: List<SimpleField>,
+        valueParameters: List<SimpleField>,
+        scopeBridgingParameters: List<SimpleField>,
+        scope: Scope, origin: Int
+    ) : this(
+        dst, (method as? Method)?.name ?: "?", FullMap(method), method, self,
+        specialization, typeParameters, valueParameters, scopeBridgingParameters, scope, origin
+    )
 
     constructor(
         dst: SimpleField,
@@ -45,8 +61,9 @@ class SimpleCall(
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Int
     ) : this(
-        dst, (method as? Method)?.name ?: "?", FullMap(method), method, self,
-        specialization, valueParameters, scope, origin
+        dst, method, self, specialization,
+        emptyList(), valueParameters, emptyList(),
+        scope, origin
     )
 
     init {
@@ -83,6 +100,8 @@ class SimpleCall(
     }
 
     override fun eval(runtime: Runtime): BlockReturn {
+        // todo we can have multiple selves... how do we handle that?
+        //  class A { fun B.call() {}; init { B().call() } }
         val self = runtime[self, this]
         if (runtime.isNull(self)) {
             // this should never happen
