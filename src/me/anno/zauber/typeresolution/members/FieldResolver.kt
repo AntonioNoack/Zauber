@@ -197,8 +197,9 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
         return resolveInCodeScope(context, codeScope) { candidateScope, selfType ->
             findMemberInScope(
-                candidateScope, origin, name, context.targetType,
-                selfType, typeParameters, emptyList(), context
+                candidateScope, origin, name,
+                typeParameters, emptyList(),
+                context.withSelfType(selfType)
             )
         } ?: resolveFieldByImports(
             context, codeScope,

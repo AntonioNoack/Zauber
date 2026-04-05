@@ -87,13 +87,13 @@ object EnumProperties {
         companionScope.hasTypeParameters = true
 
         val constructorScope = companionScope.getOrCreatePrimaryConstructorScope()
-        val listType = ClassType(Types.ListType.clazz, listOf(enumScope.typeWithoutArgs), origin)
+        val listType = ClassType(Types.ListType.clazz, listOf(enumScope.typeWithArgs), origin)
         val entryValues = enumScope.enumEntries.map { entryScope ->
             val field = entryScope.objectField!!
             FieldExpression(field, constructorScope, origin)
         }
         val context = ResolutionContext(null, false, null)
-        val initialValue = createArrayOfExpr(context, enumScope.typeWithoutArgs, entryValues, constructorScope, origin)
+        val initialValue = createArrayOfExpr(context, enumScope.typeWithArgs, entryValues, constructorScope, origin)
 
         val entriesField = constructorScope.addField(
             null, false, isMutable = false, null,

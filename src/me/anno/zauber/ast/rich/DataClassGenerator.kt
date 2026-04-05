@@ -73,7 +73,7 @@ object DataClassGenerator {
 
         val context = ResolutionContext.minimal /// todo better context?
         val hashCodeMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "hashCode", Types.IntType, classScope.typeWithoutArgs,
+            classScope, origin, "hashCode", Types.IntType, classScope.typeWithArgs,
             emptyList(), emptyList(), context
         )
         if (hashCodeMethod == null) {
@@ -81,7 +81,7 @@ object DataClassGenerator {
         }
 
         val toStringMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "toString", Types.StringType, classScope.typeWithoutArgs,
+            classScope, origin, "toString", Types.StringType, classScope.typeWithArgs,
             emptyList(), emptyList(), context
         )
         if (toStringMethod == null) {
@@ -89,7 +89,7 @@ object DataClassGenerator {
         }
 
         val equalsAnyMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "equals", Types.BooleanType, classScope.typeWithoutArgs,
+            classScope, origin, "equals", Types.BooleanType, classScope.typeWithArgs,
             emptyList(), listOf(ValueParameterImpl(null, Types.NullableAnyType, false)),
             context
         )

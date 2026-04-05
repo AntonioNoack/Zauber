@@ -112,7 +112,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
                 constructorScope.addKeywords(packFlags())
                 pushScope(constructorScope) {
-                    val selfType = classScope.typeWithoutArgs
+                    val selfType = classScope.typeWithArgs
                     var valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                         readParameterDeclarations(selfType)
                     } else emptyList()
@@ -178,7 +178,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     fun collectSuperNames(classScope: Scope) {
         do {
-            val type = readTypeNotNull(classScope.typeWithoutArgs, true)
+            val type = readTypeNotNull(classScope.typeWithArgs, true)
             val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 readValueParameters()
             } else null
@@ -433,12 +433,9 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         constrScope.flags = constrScope.flags or packFlags()
 
         pushScope(constrScope) {
-            val selfType = classScope.typeWithoutArgs
+            val selfType = classScope.typeWithArgs
             val valueParameters = readParameterDeclarations(selfType)
-
-            val superCall = if (consumeIf(":")) {
-                TODO("read inner super call")
-            } else null
+            val superCall = if (consumeIf(":")) readInnerSuperCall() else null
 
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) readLazyBody() else null
             constrScope.selfAsConstructor = Constructor(
@@ -447,6 +444,17 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 constrScope.flags, origin
             )
         }
+    }
+
+    private fun readInnerSuperCall(): InnerSuperCall {
+        val origin = origin(i)
+        val type = when {
+            consumeIf("this") -> InnerSuperCallTarget.THIS
+            consumeIf("super") -> InnerSuperCallTarget.SUPER
+            else -> throw IllegalStateException("Expected this() or super() at ${tokens.err(i)}")
+        }
+        val values = readValueParameters()
+        return InnerSuperCall(type, values, origin)
     }
 
     open fun readMethod() {

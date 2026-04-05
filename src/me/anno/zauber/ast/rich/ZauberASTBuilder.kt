@@ -104,7 +104,7 @@ class ZauberASTBuilder(
             if (endIndex < 0) endIndex = tokens.size
             push(endIndex) {
                 while (i < tokens.size) {
-                    classScope.superCalls.add(readSuperCall(classScope.typeWithoutArgs))
+                    classScope.superCalls.add(readSuperCall(classScope.typeWithArgs))
                     readComma()
                 }
             }
@@ -198,7 +198,7 @@ class ZauberASTBuilder(
         lateinit var parameters: List<Parameter>
         pushScope(methodScope) {
             parameters = pushCall {
-                val selfType = classScopeIfInClass?.typeWithoutArgs
+                val selfType = classScopeIfInClass?.typeWithArgs
                 readParameterDeclarations(selfType)
             }
         }

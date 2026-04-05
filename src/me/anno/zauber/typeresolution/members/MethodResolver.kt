@@ -16,6 +16,7 @@ import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
@@ -46,10 +47,14 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 getMethodReturnType(scopeSelfType, method)
             } else method.returnType // no resolution invoked (fast-path)
             val methodReturnType1 = methodReturnType0?.specialize(context.specialization)
-            if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType1")
+            val selfType = context.selfType?.specialize(context.specialization)
+            if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType1 -> $returnType, selfType: $selfType")
+            if (method.name == "copyOf" && selfType == Types.ArrayType) {
+                throw IllegalStateException("How can we copy something without knowing our own array type???")
+            }
             val match = findMemberMatch(
                 method, methodReturnType1, returnType,
-                context.selfType, typeParameters, valueParameters,
+                selfType, typeParameters, valueParameters,
                 /* todo is this fine??? */scope, origin
             )
             if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {

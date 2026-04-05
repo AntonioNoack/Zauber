@@ -249,7 +249,7 @@ class CppASTBuilder(
                     )
                     entryScope.objectField = classScope.addField(
                         null, false, isMutable = false, null,
-                        valueName, classScope.typeWithoutArgs, initialValue, keywords, origin
+                        valueName, classScope.typeWithArgs, initialValue, keywords, origin
                     )
 
                     readComma()

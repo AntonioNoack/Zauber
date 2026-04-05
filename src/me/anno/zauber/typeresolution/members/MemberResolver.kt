@@ -370,10 +370,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             candidateScope.scopeType == ScopeType.PACKAGE
         ) {
             // println("Found class: $candidateScope")
-            return candidateScope.typeWithoutArgs
+            return candidateScope.typeWithArgs
         }
         // println("Using scope blindly: $candidateScope")
-        return candidateScope.typeWithoutArgs
+        return candidateScope.typeWithArgs
     }
 
     private fun isScopeAvailable(scope: Scope, originalSelfScope: Int): Boolean {
