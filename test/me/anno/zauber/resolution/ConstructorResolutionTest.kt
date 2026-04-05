@@ -2,6 +2,7 @@ package me.anno.zauber.resolution
 
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -14,7 +15,8 @@ class ConstructorResolutionTest {
         val tested = X(0).x
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = scope.getField("tested")
+            .resolveValueType(ResolutionContext.minimal)
         assertEquals(Types.IntType, actualType)
     }
 
@@ -33,7 +35,8 @@ class ConstructorResolutionTest {
         class X(val x: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = scope.getField("tested")
+            .resolveValueType(ResolutionContext.minimal)
         assertEquals(Types.IntType, actualType)
     }
 
@@ -47,7 +50,8 @@ class ConstructorResolutionTest {
         class X(val x: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = scope.getField("tested")
+            .resolveValueType(ResolutionContext.minimal)
         assertEquals(Types.IntType, actualType)
     }
 
@@ -59,7 +63,8 @@ class ConstructorResolutionTest {
         val tested = Y(0).x
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = scope.getField("tested")
+            .resolveValueType(ResolutionContext.minimal)
         assertEquals(Types.IntType, actualType)
     }
 
@@ -74,7 +79,8 @@ class ConstructorResolutionTest {
         typealias Y = X
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val actualType = scope.getField("tested").valueType!!
+        val actualType = scope.getField("tested")
+            .resolveValueType(ResolutionContext.minimal)
         assertEquals(Types.IntType, actualType)
     }
 

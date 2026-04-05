@@ -111,7 +111,8 @@ class FieldResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        val tested0 = findField(scope).resolveValueType(ResolutionContext.minimal)
+        val tested0 = findField(scope)
+            .resolveValueType(ResolutionContext.minimal)
         assertEquals(Types.IntType, tested0)
     }
 
