@@ -19,4 +19,8 @@ class PairArrayList<A, B>(capacity: Int = 16) {
 
     fun firstAOrNull() = getAOrNull(0)
     fun firstBOrNull() = getB(0)
+
+    override fun toString(): String {
+        return "[${indices.joinToString(", ") { "[${getA(it)}, ${getB(it)}]" }}]"
+    }
 }
