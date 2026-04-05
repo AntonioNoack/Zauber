@@ -225,7 +225,7 @@ object CallWithNames {
         val typeParameters =
             if (instanceType != null && isUnknownGenericType(instanceType)) listOf(instanceType) else null
 
-        println("createArrayOfExpr($values, $typeParameters by $instanceType), spec: ${Specializations.specialization}")
+        LOGGER.info("createArrayOfExpr($values, $typeParameters by $instanceType), spec: ${Specializations.specialization}")
         if (instanceType is GenericType) LOGGER.warn(
             "Unknown instance type: $instanceType, ${
                 isUnknownGenericType(

@@ -2,6 +2,8 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -10,11 +12,10 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.utils.PairArrayList
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
@@ -233,8 +234,10 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${contextSelfScope}, ${contextSelfType})")
 
         if (contextSelfScope != null && contextSelfType != null) {
-            if (print) LOGGER.info("Checking[0] $contextSelfScope with ${contextSelfType}, " +
-                    "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods.map { it.name }}")
+            if (print) LOGGER.info(
+                "Checking[0] $contextSelfScope with ${contextSelfType}, " +
+                        "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods.map { it.name }}"
+            )
             val result = callback(contextSelfScope, contextSelfType)
             if (result != null) return result
 
@@ -248,25 +251,27 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             }
         }
 
-        val scopes = ArrayList<Scope>()
-        val selfTypes = ArrayList<Type?>()
-        listScopeTypeCandidates(context, codeScope, scopes, selfTypes)
+        val scopes = PairArrayList<Scope, Type?>()
+        listScopeTypeCandidates(context, codeScope, scopes)
 
-        if (print) LOGGER.info("Scopes: $scopes, selfTypes: $selfTypes")
+        if (print) LOGGER.info("Scopes/selfTypes: $scopes")
 
-        val selfType0 = selfTypes.firstOrNull() ?: UnitType
+        val selfType0 = scopes.firstBOrNull() ?: UnitType
+        val selfTypeZ = context.selfType ?: selfType0
+        var handledLangScope = false
 
         // selfType goes over all scopes below it...
         for (scopeIndex in scopes.indices) {
-            val scope = scopes[scopeIndex] // should be unique by itself
+            val scope = scopes.getA(scopeIndex) // should be unique by itself
             var lastType: Type? = null // to avoid duplicate checking
             var hadLastType = false
             var hadUnit = false
             for (typeIndex in 0..scopeIndex) {
-                val type = selfTypes[typeIndex]
-                if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue
+                val type = scopes.getB(typeIndex)
+                if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue // already done
                 val selfType = context.selfType ?: type ?: selfType0
                 if (print) LOGGER.info("Checking[i] $scope with $type -> $selfType")
+                if (scope == langScope && selfType == selfTypeZ) handledLangScope = true
                 val result = callback(scope, selfType)
                 if (result != null) return result
                 lastType = type
@@ -275,31 +280,36 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             }
         }
 
-        if (print) LOGGER.info("Checking[z] $langScope with ${context.selfType ?: selfType0}")
-        val result = callback(langScope, context.selfType ?: selfType0)
-        if (result != null) return result
+        // we're missing the self-case... process it now
+        if (contextSelfScope == null && selfTypeZ is ClassType) {
+            val result = callback(selfTypeZ.clazz, selfTypeZ)
+            if (result != null) return result
+        }
+
+        if (!handledLangScope) {
+            if (print) LOGGER.info("Checking[z] $langScope with $selfTypeZ")
+            val result = callback(langScope, selfTypeZ)
+            if (result != null) return result
+        }
 
         return null
     }
 
     private fun listScopeTypeCandidates(
         context: ResolutionContext, codeScope: Scope,
-        scopes: ArrayList<Scope>,
-        selfTypes: ArrayList<Type?>,
+        result: PairArrayList<Scope, Type?>
     ) {
         listScopeTypeCandidates(context, codeScope) { scope, selfType ->
-            scopes.add(scope)
             val selfType = // replace useless package types with Unit s.t. we need to check fewer cases
                 if (selfType is ClassType && !selfType.clazz.isClassType())
                     null else selfType
-            selfTypes.add(selfType)
+            result.add(scope, selfType)
 
             // if scope has a companion object, list that, too
             // unless we're already inside it...
             val companionObject = scope.companionObject
-            if (companionObject != null && companionObject != scopes.getOrNull(scopes.size - 2)) {
-                scopes.add(companionObject)
-                selfTypes.add(companionObject.typeWithArgs)
+            if (companionObject != null && companionObject != result.getAOrNull(result.size - 2)) {
+                result.add(companionObject, companionObject.typeWithArgs)
             }
         }
     }

@@ -134,8 +134,8 @@ class StringTests {
     @Test
     fun testStringTrimUsingArrays() {
         LogManager.disableLoggers(
-            "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
-                    "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
+            "Inheritance,Runtime,CallExpression,ConstructorResolver," +
+                    "FieldExpression,AssignmentExpression,MethodResolver," +
                     "Stdlib,ASTSimplifier,ResolvedMethod"
         )
         val code = """
