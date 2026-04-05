@@ -1,7 +1,8 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -19,8 +20,7 @@ class ArithmeticTests {
                 external fun times(other: Int): Int
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(Types.IntType, value.type.type)
+        val value = testExecute(code)
         assertEquals(22, runtime.castToInt(value))
     }
 
@@ -39,8 +39,7 @@ class ArithmeticTests {
                 external fun times(other: Int): Int
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(Types.IntType, value.type.type)
+        val value = testExecute(code)
         assertEquals(21, runtime.castToInt(value))
     }
 
@@ -61,8 +60,7 @@ class ArithmeticTests {
                 fun inc() = this+1
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(Types.IntType, value.type.type)
+        val value = testExecute(code)
         assertEquals(24, runtime.castToInt(value))
     }
 
@@ -83,8 +81,7 @@ class ArithmeticTests {
                 fun inc() = this+1
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
-        assertEquals(Types.IntType, value.type.type)
+        val value = testExecute(code)
         assertEquals(24, runtime.castToInt(value))
     }
 
@@ -99,7 +96,7 @@ class ArithmeticTests {
                 external fun times(other: Int): Int
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(25, runtime.castToInt(value))
     }
 

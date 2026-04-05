@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
@@ -15,36 +16,34 @@ class BasicRuntimeTests {
 
     companion object {
 
-        fun createTestRuntime(): Runtime {
-            val runtime = Runtime()
-            Stdlib.registerIntMethods(runtime)
-            Stdlib.registerFloatMethods(runtime)
-            Stdlib.registerStringMethods(runtime)
-            Stdlib.registerPrintln(runtime)
-            Stdlib.registerArrayAccess(runtime)
-            return runtime
+        fun createTestRuntime() {
+            Stdlib.registerIntMethods()
+            Stdlib.registerFloatMethods()
+            Stdlib.registerStringMethods()
+            Stdlib.registerPrintln()
+            Stdlib.registerArrayAccess()
         }
 
-        fun testExecute(code: String): Pair<Runtime, Instance> {
-            val (runtime, value) = testExecuteCatch(code)
+        fun testExecute(code: String): Instance {
+            val value = testExecuteCatch(code)
             check(value.type == ReturnType.RETURN) {
                 "Expected function to return, got $value"
             }
-            return runtime to value.value
+            return value.value
         }
 
-        fun testExecuteCatch(code: String): Pair<Runtime, BlockReturn> {
+        fun testExecuteCatch(code: String): BlockReturn {
             val scope = typeResolveScope(code)
             val field = scope.fields.firstOrNull { it.name == "tested" }
                 ?: throw IllegalStateException("Missing 'tested' field in scope ${scope.pathStr}")
             val getter = field.getter
                 ?: throw IllegalStateException("Missing getter for $field")
 
-            val runtime = createTestRuntime()
+            createTestRuntime()
             val getter1 = MethodSpecialization(getter, noSpecialization)
             val self = runtime.getObjectInstance(scope.typeWithArgs)
             val value = runtime.executeCall(self, getter1, emptyList())
-            return runtime to value
+            return value
         }
     }
 
@@ -69,7 +68,7 @@ class BasicRuntimeTests {
             class String
             external fun println(str: String)
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(listOf("Hello World!"), runtime.printed)
         assertEquals(0, runtime.castToInt(value))
     }
@@ -87,10 +86,10 @@ class BasicRuntimeTests {
             }
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
-        val (runtimeT, valueT) = testExecute("val tested = true\n$stdlib")
-        assertEquals(true, runtimeT.castToBool(valueT))
-        val (runtimeF, valueF) = testExecute("val tested = false\n$stdlib")
-        assertEquals(false, runtimeF.castToBool(valueF))
+        val valueT = testExecute("val tested = true\n$stdlib")
+        assertEquals(true, runtime.castToBool(valueT))
+        val valueF = testExecute("val tested = false\n$stdlib")
+        assertEquals(false, runtime.castToBool(valueF))
     }
 
     @Test
@@ -99,7 +98,7 @@ class BasicRuntimeTests {
             class Test(val a: Int)
             val tested = Test(5)
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", (value.type.type as ClassType).clazz.name)
         check(value.properties.isNotEmpty()) {
             "${value.type} somehow has no properties"

@@ -47,7 +47,7 @@ class YieldTests {
                 open fun equals(other: Any?): Boolean = other === this
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
     }
 
 }

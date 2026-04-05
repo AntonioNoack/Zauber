@@ -42,7 +42,7 @@ class SimpleMerge(
         return if (field == ifField) elseField else ifField
     }
 
-    override fun execute(runtime: Runtime): BlockReturn? = null
+    override fun execute(): BlockReturn? = null
 
     override fun toString(): String = "$dst = Merge($ifField,$elseField)"
 }

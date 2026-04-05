@@ -22,11 +22,14 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 class Runtime {
 
     companion object {
         private val LOGGER = LogManager.getLogger(Runtime::class)
+
+        val runtime by threadLocal { Runtime() }
     }
 
     private var instanceCounter = 0
@@ -196,9 +199,7 @@ class Runtime {
     fun getNull(): Instance = nullInstance
 
     fun getClass(selfType: Type): ZClass {
-        return classes.getOrPut(selfType) {
-            ZClass(selfType, this)
-        }
+        return classes.getOrPut(selfType) { ZClass(selfType) }
     }
 
     fun executeCall(
@@ -222,7 +223,7 @@ class Runtime {
             val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]
                 ?: throw IllegalStateException("Missing external method $key")
-            val value = method.process(this, self, valueParameters)
+            val value = method.process(self, valueParameters)
             return BlockReturn(ReturnType.RETURN, value)
         }
 
@@ -283,7 +284,7 @@ class Runtime {
         check(type.clazz.isObjectLike() || type.clazz.scopeType == null) {
             "Only objects have an object instance, not ${type.clazz.pathStr})"
         }
-        return getClass(type).getOrCreateObjectInstance(this)
+        return getClass(type).getOrCreateObjectInstance()
     }
 
     fun executeBlock(block0: SimpleNode): BlockReturn? {
@@ -303,7 +304,7 @@ class Runtime {
                 for (i in instructions.indices) {
                     val instr = instructions[i]
                     if (LOGGER.isDebugEnabled) LOGGER.debug("Executing $instr")
-                    lastValue = instr.execute(this)
+                    lastValue = instr.execute()
                     if (lastValue != null) {
                         if (lastValue.type == ReturnType.THROW && instr is SimpleCallable) {
                             val handler = instr.onThrown

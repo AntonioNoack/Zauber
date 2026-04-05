@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,7 +14,7 @@ class IntFormatTests {
         val code = """
             val tested = 17
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(17, runtime.castToInt(value))
     }
 
@@ -30,7 +31,7 @@ class IntFormatTests {
                 fun unaryMinus() = 0 - this
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(-17, runtime.castToInt(value))
     }
 
@@ -39,7 +40,7 @@ class IntFormatTests {
         val code = """
             val tested = 0x17
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(23, runtime.castToInt(value))
     }
 
@@ -48,7 +49,7 @@ class IntFormatTests {
         val code = """
             val tested = 0b10101
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(21, runtime.castToInt(value))
     }
 

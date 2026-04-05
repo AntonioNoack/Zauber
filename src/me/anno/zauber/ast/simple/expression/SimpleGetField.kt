@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
 class SimpleGetField(
@@ -18,7 +18,8 @@ class SimpleGetField(
         return "$dst = $self?[${field.selfType}].${field.name}"
     }
 
-    override fun eval(runtime: Runtime): BlockReturn {
+    override fun eval(): BlockReturn {
+        val runtime = runtime
         val self = runtime[self, this]
         println("[SELF] ${this.self} -> $self")
         if (runtime.isNull(self)) {

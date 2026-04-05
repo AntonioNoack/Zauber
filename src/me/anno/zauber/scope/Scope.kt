@@ -490,8 +490,13 @@ class Scope(val name: String, val parent: Scope? = null) {
     override fun toString(): String = pathStr
 
     override fun equals(other: Any?): Boolean {
-        return other is Scope && path == other.path
+        if (other is Scope) {
+            check(root === other.root) { "Root mismatch :(" }
+        }
+        return other is Scope && pathStr == other.pathStr
     }
+
+    val root get() = parent ?: this
 
     override fun hashCode(): Int {
         var hash = 1

@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -92,8 +93,8 @@ class StringTests {
     @Test
     fun testStringField() {
         val code = "val tested = \"Some String\""
-        val (rt, value) = testExecute(code)
-        assertEquals("Some String", rt.castToString(value))
+        val value = testExecute(code)
+        assertEquals("Some String", runtime.castToString(value))
     }
 
     @Test
@@ -106,8 +107,8 @@ class StringTests {
                 external operator fun plus(other: String) : String
             }
         """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals("Some String", rt.castToString(value))
+        val value = testExecute(code)
+        assertEquals("Some String", runtime.castToString(value))
     }
 
     @Test
@@ -123,8 +124,8 @@ class StringTests {
             package zauber
             $smallStdlib
         """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals("Some String", rt.castToString(value))
+        val value = testExecute(code)
+        assertEquals("Some String", runtime.castToString(value))
     }
 
     @Test
@@ -164,7 +165,7 @@ class StringTests {
                 return clone
             }
         """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals("Hello", rt.castToString(value))
+        val value = testExecute(code)
+        assertEquals("Hello", runtime.castToString(value))
     }
 }

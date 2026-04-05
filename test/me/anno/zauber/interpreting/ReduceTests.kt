@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -39,7 +40,7 @@ class ReduceTests {
                 val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }
                 $stdlib
             """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(6, runtime.castToInt(value))
     }
 
@@ -50,7 +51,7 @@ class ReduceTests {
                 val tested = arrayOf(1, 2, 3).reduce(Int::plus)
                 $stdlib
             """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(6, runtime.castToInt(value))
     }
 }

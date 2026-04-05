@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
 class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope, origin: Int) :
@@ -14,7 +14,8 @@ class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope,
         return "$dst = $type"
     }
 
-    override fun eval(runtime: Runtime): BlockReturn {
+    override fun eval(): BlockReturn {
+        val runtime = runtime
         val value = when (type) {
             SpecialValue.SUPER -> runtime.getThis()
             SpecialValue.NULL -> runtime.getNull()

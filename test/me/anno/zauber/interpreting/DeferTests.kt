@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -27,7 +28,7 @@ class DeferTests {
             class String
             external fun println(str: String)
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", runtime.castToString(value))
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
@@ -61,7 +62,7 @@ class DeferTests {
                 external operator fun set(index: Int, value: V)
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", runtime.castToString(value))
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
@@ -86,7 +87,7 @@ class DeferTests {
             class Exception: Throwable
             external fun println(str: String)
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", runtime.castToString(value))
         assertEquals(listOf("Hello!"), runtime.printed)
     }

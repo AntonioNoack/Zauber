@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.scope.Scope
 
@@ -19,7 +19,8 @@ class SimpleCompare(
         return "$dst = $left ${type.symbol} $right"
     }
 
-    override fun eval(runtime: Runtime): BlockReturn {
+    override fun eval(): BlockReturn {
+        val runtime = runtime
         val rawValue = runtime[tmp, this]
         val asInt = runtime.castToInt(rawValue)
         val asBool = type.eval(asInt)

@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,7 +14,7 @@ class ThisTests {
             class A(val x: Int)
             val tested = A(1).x
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(1, runtime.castToInt(value))
     }
 
@@ -25,7 +26,7 @@ class ThisTests {
             }
             val tested = A(1).x()
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(1, runtime.castToInt(value))
     }
 
@@ -43,7 +44,7 @@ class ThisTests {
                 return runnable()
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(2, runtime.castToInt(value))
     }
 
@@ -63,7 +64,7 @@ class ThisTests {
                 return runnable()
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(2, runtime.castToInt(value))
     }
 
@@ -83,7 +84,7 @@ class ThisTests {
                 return runnable()
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(3, runtime.castToInt(value))
     }
 
@@ -104,7 +105,7 @@ class ThisTests {
                 return runnable()
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(3, runtime.castToInt(value))
     }
 
@@ -127,7 +128,7 @@ class ThisTests {
                 fun call(p0: P0): R
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(3, runtime.castToInt(value))
     }
 
@@ -148,7 +149,7 @@ class ThisTests {
                 return runnable()
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(3, runtime.castToInt(value))
     }
 

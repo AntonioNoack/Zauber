@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.interpreting.RuntimeCast.castToByte
 import me.anno.zauber.interpreting.RuntimeCast.castToDouble
@@ -26,29 +27,31 @@ object Stdlib {
     private val LOGGER = LogManager.getLogger(Stdlib::class)
 
     fun Runtime.registerBinaryMethod(type: ClassType, name: String, calc: (Instance, Instance) -> Instance) {
-        register(type.clazz, name, listOf(type)) { _, self, params ->
+        register(type.clazz, name, listOf(type)) { self, params ->
             calc(self, params[0])
         }
     }
 
-    fun registerPrintln(runtime: Runtime) {
-        runtime.register(langScope, "println", listOf(Types.StringType)) { rt, _, params ->
-            runPrintln(rt, rt.castToString(params[0]))
+    fun registerPrintln() {
+        runtime.register(langScope, "println", listOf(Types.StringType)) { _, params ->
+            runPrintln(runtime.castToString(params[0]))
         }
-        runtime.register(langScope, "println", listOf(Types.IntType)) { rt, _, params ->
-            runPrintln(rt, rt.castToInt(params[0]).toString())
+        runtime.register(langScope, "println", listOf(Types.IntType)) { _, params ->
+            runPrintln(runtime.castToInt(params[0]).toString())
         }
     }
 
-    private fun runPrintln(rt: Runtime, content: String): Instance {
+    private fun runPrintln( content: String): Instance {
+        val rt = runtime
         rt.printed += content
         println(content)
         return rt.getUnit()
     }
 
-    fun registerArrayAccess(runtime: Runtime) {
-        runtime.register(Types.ArrayType.clazz, "get", listOf(Types.IntType)) { rt, self, params ->
-            val index = rt.castToInt(params[0])
+    fun registerArrayAccess() {
+        runtime.register(Types.ArrayType.clazz, "get", listOf(Types.IntType)) { self, params ->
+            val index = runtime.castToInt(params[0])
+            val rt = runtime
             when (val content = self.rawValue) {
                 is Array<*> -> content[index] as Instance
                 is BooleanArray -> rt.getBool(content[index])
@@ -66,19 +69,20 @@ object Stdlib {
             Types.ArrayType.clazz,
             "set",
             listOf(Types.IntType, GenericType(Types.ArrayType.clazz, "V"))
-        ) { rt, self, params ->
-            val index = rt.castToInt(params[0])
+        ) { self, params ->
+            val index = runtime.castToInt(params[0])
             val value = params[1]
+            val rt = runtime
             @Suppress("UNCHECKED_CAST")
             when (val content = self.rawValue) {
                 is Array<*> -> (content as Array<Instance>)[index] = value
-                is BooleanArray -> content[index] = rt.castToBool(value)
-                is ByteArray -> content[index] = rt.castToByte(value)
-                is ShortArray -> content[index] = rt.castToShort(value)
-                is IntArray -> content[index] = rt.castToInt(value)
-                is LongArray -> content[index] = rt.castToLong(value)
-                is FloatArray -> content[index] = rt.castToFloat(value)
-                is DoubleArray -> content[index] = rt.castToDouble(value)
+                is BooleanArray -> content[index] = runtime.castToBool(value)
+                is ByteArray -> content[index] = runtime.castToByte(value)
+                is ShortArray -> content[index] = runtime.castToShort(value)
+                is IntArray -> content[index] = runtime.castToInt(value)
+                is LongArray -> content[index] = runtime.castToLong(value)
+                is FloatArray -> content[index] = runtime.castToFloat(value)
+                is DoubleArray -> content[index] = runtime.castToDouble(value)
                 null -> throw IllegalStateException("Missing array content")
                 else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
             }
@@ -86,7 +90,8 @@ object Stdlib {
         }
     }
 
-    fun registerIntMethods(rt: Runtime) {
+    fun registerIntMethods() {
+        val rt = runtime
         rt.registerBinaryIntMethod("plus", Int::plus)
         rt.registerBinaryIntMethod("minus", Int::minus)
         rt.registerBinaryIntMethod("times", Int::times)
@@ -94,7 +99,8 @@ object Stdlib {
         rt.registerBinaryIntMethod("compareTo", Int::compareTo)
     }
 
-    fun registerFloatMethods(rt: Runtime) {
+    fun registerFloatMethods() {
+        val rt = runtime
         rt.registerBinaryFloatMethod("plus", Float::plus)
         rt.registerBinaryFloatMethod("minus", Float::minus)
         rt.registerBinaryFloatMethod("times", Float::times)
@@ -106,7 +112,8 @@ object Stdlib {
         }
     }
 
-    fun registerStringMethods(rt: Runtime) {
+    fun registerStringMethods() {
+        val rt = runtime
         rt.registerBinaryMethod(Types.StringType, "plus") { a, b ->
             val a = rt.castToString(a)
             val b = rt.castToString(b)

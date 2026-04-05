@@ -14,7 +14,7 @@ class SimpleDeclaration(val type: Type, val name: String, scope: Scope, origin: 
         return "$type $name;"
     }
 
-    override fun execute(runtime: Runtime): BlockReturn? {
+    override fun execute(): BlockReturn? {
         // shall we do anything?
         return null
     }

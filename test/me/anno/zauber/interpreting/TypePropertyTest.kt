@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -16,10 +17,8 @@ class TypePropertyTest {
 
     @Test
     fun testTypeName() {
-        val code = """
-            val tested = Int.name
-        """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals("Int", rt.castToString(value))
+        val code = "val tested = Int.name"
+        val value = testExecute(code)
+        assertEquals("Int", runtime.castToString(value))
     }
 }

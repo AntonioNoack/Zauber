@@ -1,21 +1,21 @@
 package me.anno.zauber.ast.simple.controlflow
 
-import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
 abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Int) : SimpleInstruction(scope, origin) {
 
-    abstract val returnType : ReturnType
+    abstract val returnType: ReturnType
 
     override fun toString(): String {
         return "${returnType.symbol} $field"
     }
 
-    override fun execute(runtime: Runtime): BlockReturn {
+    override fun execute(): BlockReturn {
         val value = runtime[field, this]
         return BlockReturn(returnType, value)
     }

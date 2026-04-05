@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,7 +14,7 @@ class ConstTests {
 
     @Test
     fun testConst() {
-        val (rt, value) = testExecute(
+        val value = testExecute(
             """
             object A {
                 const v0: Int = 17
@@ -33,6 +34,6 @@ class ConstTests {
             }
         """.trimIndent()
         )
-        assertEquals(17 + 1 + 2 + 3 + 4 + 5, rt.castToInt(value))
+        assertEquals(17 + 1 + 2 + 3 + 4 + 5, runtime.castToInt(value))
     }
 }

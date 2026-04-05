@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,7 +12,7 @@ class UnderdefinedCallTests {
 
     @Test
     fun testArrayOf() {
-        val (rt, valueT) = testExecute(
+        val valueT = testExecute(
             """
             val tested = arrayOf(1, 2, 3)
             
@@ -22,7 +23,7 @@ class UnderdefinedCallTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         )
-        val expectedType = rt.getClass(Types.ArrayType.withTypeParameter(Types.IntType))
+        val expectedType = runtime.getClass(Types.ArrayType.withTypeParameter(Types.IntType))
         assertEquals(expectedType, valueT.type)
         val contents = valueT.rawValue
         assertInstanceOf<IntArray>(contents)
@@ -34,7 +35,7 @@ class UnderdefinedCallTests {
 
     @Test
     fun testListOf() {
-        val (rt, value) = testExecute(
+        val value = testExecute(
             """
             val tested = listOf(1, 2, 3)
             
@@ -57,7 +58,7 @@ class UnderdefinedCallTests {
             }
             is Array<*> -> {
                 assertEquals(Types.ArrayType, value.type.type)
-                assertEquals(listOf(1, 2, 3), contents.map { value -> rt.castToInt(value as Instance) })
+                assertEquals(listOf(1, 2, 3), contents.map { value -> runtime.castToInt(value as Instance) })
             }
             else -> throw IllegalStateException("$value is incorrect")
         }

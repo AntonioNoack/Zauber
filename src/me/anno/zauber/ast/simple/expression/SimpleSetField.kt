@@ -1,10 +1,10 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
 class SimpleSetField(
@@ -17,7 +17,8 @@ class SimpleSetField(
         return "$self?[${field.selfType}].${field.name} = $value"
     }
 
-    override fun execute(runtime: Runtime): BlockReturn? {
+    override fun execute(): BlockReturn? {
+        val runtime = runtime
         val selfInstance = runtime[self, this]
         val value = runtime[value, this]
         println("[SET] $selfInstance.${field.name} = $value")

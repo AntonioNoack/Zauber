@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.Inheritance
@@ -13,7 +14,7 @@ import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
-class ZClass(val type: Type, val runtime: Runtime) {
+class ZClass(val type: Type) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ZClass::class)
@@ -43,7 +44,7 @@ class ZClass(val type: Type, val runtime: Runtime) {
     // todo bug: this is currently used inside methods,
     //  so if a recursive function called itself,
     //  we would have only one instance
-    fun getOrCreateObjectInstance(runtime: Runtime): Instance {
+    fun getOrCreateObjectInstance(): Instance {
         var objectInstance = objectInstance
         if (objectInstance != null) return objectInstance
 

@@ -4,6 +4,7 @@ import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,7 +25,7 @@ class TryCatchTests {
                 2
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(1, runtime.castToInt(value))
     }
 
@@ -47,7 +48,7 @@ class TryCatchTests {
                 external fun set(index: Int, value: V)
             }
         """.trimIndent()
-        val (_, value) = testExecuteCatch(code)
+        val value = testExecuteCatch(code)
         check(value.type == ReturnType.THROW)
         val type = value.value.type.type as ClassType
         check(type.clazz.name == "IllegalArgumentException")
@@ -71,7 +72,7 @@ class TryCatchTests {
                 external fun set(index: Int, value: V)
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(2, runtime.castToInt(value))
     }
 
@@ -97,8 +98,8 @@ class TryCatchTests {
                 external fun set(index: Int, value: V)
             }
         """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals(2, rt.castToInt(value))
+        val value = testExecute(code)
+        assertEquals(2, runtime.castToInt(value))
     }
 
     @Test
@@ -124,8 +125,8 @@ class TryCatchTests {
                fun equals(other: Any?) = other is Int
             }
         """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals(2, rt.castToInt(value))
+        val value = testExecute(code)
+        assertEquals(2, runtime.castToInt(value))
     }
 
     @Test
@@ -154,8 +155,8 @@ class TryCatchTests {
                fun equals(other: Any?) = other is Int
             }
         """.trimIndent()
-        val (rt, value) = testExecute(code)
-        assertEquals(2, rt.castToInt(value))
+        val value = testExecute(code)
+        assertEquals(2, runtime.castToInt(value))
     }
 
     @Test
@@ -171,7 +172,7 @@ class TryCatchTests {
             class String
             external fun println(str: String)
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", runtime.castToString(value))
         assertEquals(listOf("Hello World"), runtime.printed)
     }
@@ -197,7 +198,7 @@ class TryCatchTests {
             class String
             external fun println(str: String)
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", runtime.castToString(value))
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
@@ -253,7 +254,7 @@ class TryCatchTests {
                 external operator fun set(i: Int, value: V)
             }
         """.trimIndent()
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals("Test", runtime.castToString(value))
         assertEquals(listOf("0", "1", "2", "3"), runtime.printed)
     }

@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.impl.ClassType
 
@@ -22,7 +22,7 @@ class SimpleAllocateInstance(
         return "$dst = new $selfType"
     }
 
-    override fun eval(runtime: Runtime): BlockReturn {
+    override fun eval(): BlockReturn {
         val newInstance = runtime.getClass(selfType).createInstance()
         return BlockReturn(ReturnType.VALUE, newInstance)
     }

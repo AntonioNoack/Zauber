@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.members.ResolvedMethod
@@ -21,7 +21,8 @@ class SimpleCheckEquals(
         return "$dst = $left ${if (negated) "!=" else "=="} $right"
     }
 
-    override fun eval(runtime: Runtime): BlockReturn {
+    override fun eval(): BlockReturn {
+        val runtime = runtime
         val va = runtime[left, this]
         val vb = runtime[right, this]
         if (va == vb) return BlockReturn(ReturnType.VALUE, runtime.getBool(!negated))

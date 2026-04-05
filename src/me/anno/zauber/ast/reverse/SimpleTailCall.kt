@@ -12,7 +12,7 @@ import me.anno.zauber.interpreting.Runtime
 class SimpleTailCall(val toBeCalled: SimpleNode) :
     SimpleInstruction(root, -1) {
 
-    override fun execute(runtime: Runtime): BlockReturn? {
+    override fun execute(): BlockReturn? {
         TODO("Not yet implemented")
     }
 }

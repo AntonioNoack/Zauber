@@ -11,7 +11,7 @@ import me.anno.zauber.expansion.OverriddenMethods.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
@@ -136,9 +136,10 @@ class SimpleCall(
         return builder.toString()
     }
 
-    override fun eval(runtime: Runtime): BlockReturn {
+    override fun eval(): BlockReturn {
         // todo we can have multiple selves... how do we handle that?
         //  class A { fun B.call() {}; init { B().call() } }
+        val runtime = runtime
         val self = runtime[self, this]
         if (runtime.isNull(self)) {
             // this should never happen
@@ -147,7 +148,7 @@ class SimpleCall(
 
         val method = methods[self.type.type as ClassType] ?: sample
 
-        initializeArrayIfNeeded(self, method, runtime)
+        initializeArrayIfNeeded(self, method)
 
         val method1 = MethodSpecialization(method, specialization)
         val result = runtime.executeCall(self, method1, valueParameters, this)
@@ -156,7 +157,7 @@ class SimpleCall(
         } else result
     }
 
-    fun initializeArrayIfNeeded(self: Instance, method: MethodLike, runtime: Runtime) {
+    fun initializeArrayIfNeeded(self: Instance, method: MethodLike) {
         val selfType = self.type.type.resolvedName
         if (selfType is ClassType && selfType.clazz.pathStr == "zauber.Array" &&
             method is Constructor && valueParameters.size == 1 &&

@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -64,7 +65,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(21, runtime.castToInt(value))
     }
 
@@ -87,7 +88,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(21, runtime.castToInt(value))
     }
 
@@ -102,7 +103,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(8, runtime.castToInt(value))
     }
 
@@ -117,7 +118,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
 
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(8, runtime.castToInt(value))
     }
 
@@ -132,7 +133,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
 
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(8, runtime.castToInt(value))
     }
 
@@ -150,7 +151,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
 
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(8, runtime.castToInt(value))
     }
 
@@ -173,7 +174,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
 
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(8, runtime.castToInt(value))
     }
 
@@ -191,7 +192,7 @@ class FibonacciTests {
         $stdlib
         """.trimIndent()
 
-        val (runtime, value) = testExecute(code)
+        val value = testExecute(code)
         assertEquals(8, runtime.castToInt(value))
     }
 
