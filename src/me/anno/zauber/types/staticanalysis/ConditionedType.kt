@@ -24,7 +24,10 @@ class ConditionedType(val base: Type, val conditions: List<Condition>): Type() {
         CONTAINS,
         NOT_CONTAINS,
 
-        PREDICATE_FUNCTION
+        MOD_K_EQUALS,
+        MOD_K_NOT_EQUALS,
+
+        PREDICATE_FUNCTION,
     }
 
     override fun toStringImpl(depth: Int): String {

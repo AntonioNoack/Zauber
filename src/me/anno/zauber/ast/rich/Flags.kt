@@ -1,9 +1,9 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import kotlin.math.max
 
-object Keywords {
+object Flags {
     const val NONE = 0
     const val SYNTHETIC = 1
     const val PUBLIC = 2
@@ -46,23 +46,23 @@ object Keywords {
 
     const val CPP_STRUCT = 1024 * 1024
 
-    fun KeywordSet.hasFlag(flag: KeywordSet): Boolean {
+    fun FlagSet.hasFlag(flag: FlagSet): Boolean {
         return (this and flag) == flag
     }
 
-    fun KeywordSet.hasAnyFlag(flags: KeywordSet): Boolean {
+    fun FlagSet.hasAnyFlag(flags: FlagSet): Boolean {
         return (this and flags) != 0
     }
 
-    fun KeywordSet.withFlag(flag: KeywordSet): KeywordSet {
+    fun FlagSet.withFlag(flag: FlagSet): FlagSet {
         return this or flag
     }
 
-    fun KeywordSet.withoutFlag(flag: KeywordSet): KeywordSet {
+    fun FlagSet.withoutFlag(flag: FlagSet): FlagSet {
         return this and flag.inv()
     }
 
-    fun toString(flags: KeywordSet): String {
+    fun toString(flags: FlagSet): String {
         val builder = StringBuilder()
         if (flags.hasFlag(SYNTHETIC)) builder.append("synthetic ")
         if (flags.hasFlag(PUBLIC)) builder.append("public ")

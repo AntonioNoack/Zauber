@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
@@ -11,19 +11,19 @@ import me.anno.zauber.types.impl.GenericType
 
 open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
-    var keywords = 0
+    var flags = 0
 
     var currPackage = root
     var i = 0
 
-    fun packKeywords(): KeywordSet {
-        val result = keywords
-        keywords = 0
+    fun packFlags(): FlagSet {
+        val result = flags
+        flags = 0
         return result
     }
 
-    fun addKeyword(keyword: KeywordSet) {
-        keywords = keywords or keyword
+    fun addFlag(flag: FlagSet) {
+        flags = flags or flag
     }
 
     inline fun <R> pushScope(scopeType: ScopeType, prefix: String, callback: (Scope) -> R): R {

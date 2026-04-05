@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
@@ -65,7 +65,7 @@ class LambdaExpression(
                             val field = bodyScope.fields.firstOrNull { it.name == autoParamName } ?: bodyScope.addField(
                                 null, false, isMutable = false, param0,
                                 autoParamName, type, null,
-                                Keywords.NONE, origin
+                                Flags.NONE, origin
                             )
                             listOf(LambdaVariable(type, field))
                         }
@@ -161,7 +161,7 @@ class LambdaExpression(
         val methodParameter = Parameter(0, "self", selfMethodType, classConstructor, origin)
         val methodField = classScope.addField(
             null, false, false, methodParameter, "self", selfMethodType,
-            null, Keywords.SYNTHETIC, 0,
+            null, Flags.SYNTHETIC, 0,
         )
 
         val constructorBody = ArrayList<Expression>()
@@ -171,13 +171,13 @@ class LambdaExpression(
                     ThisExpression(classScope, scope, origin), emptyList(),
                     FieldExpression(methodField, scope, origin), scope, origin
                 ),
-                FieldExpression(methodParameter.getOrCreateField(null, Keywords.SYNTHETIC), scope, origin)
+                FieldExpression(methodParameter.getOrCreateField(null, Flags.SYNTHETIC), scope, origin)
             )
         )
         classConstructor.selfAsConstructor = Constructor(
             listOf(methodParameter),
             classConstructor, null,
-            ExpressionList(constructorBody, scope, origin), Keywords.SYNTHETIC, origin
+            ExpressionList(constructorBody, scope, origin), Flags.SYNTHETIC, origin
         )
 
         val selfMethod = ThisExpression(typeToScope(selfMethodType)!!, scope, origin)

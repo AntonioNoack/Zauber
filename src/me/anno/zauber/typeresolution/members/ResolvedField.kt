@@ -1,8 +1,8 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Keywords
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -132,7 +132,7 @@ class ResolvedField(
 
         // todo we should also support multiple interfaces, and choose the best match
         fun resolveFunInterfaceType(scope: Scope): Scope? {
-            if (scope.keywords.hasFlag(Keywords.FUN_INTERFACE)) {
+            if (scope.flags.hasFlag(Flags.FUN_INTERFACE)) {
                 return scope
             }
             for (superCall in scope.superCalls) {

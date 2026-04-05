@@ -475,7 +475,7 @@ object ASTSimplifier {
         val ifFlow = FlowResult(Flow(UnitInstance, ifBlock), null, null)
         val methodType = catch.param.scope.typeWithoutArgs
         val selfField = ifBlock.field(methodType, catch.param.scope)
-        val thrownField = catch.param.getOrCreateField(null, Keywords.NONE)
+        val thrownField = catch.param.getOrCreateField(null, Flags.NONE)
         ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, expr.scope, expr.origin))
         return simplifyImpl(context, catch.body, ifBlock, ifFlow, graph, needsValue)
     }
@@ -859,7 +859,7 @@ object ASTSimplifier {
             val unusedTmp = block0.field(UnitType)
             val specialization = method0.specialization
             val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)
-            println("finding throw type for $method0")
+            LOGGER.info("Finding throw type for $method0")
             handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
         }
     }

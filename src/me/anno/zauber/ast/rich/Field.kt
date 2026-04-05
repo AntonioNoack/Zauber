@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
@@ -26,7 +26,7 @@ class Field(
     name: String,
     var valueType: Type?,
     val initialValue: Expression?,
-    keywords: KeywordSet,
+    keywords: FlagSet,
     origin: Int
 ) : Member(
     selfType, explicitSelfType,
@@ -53,13 +53,13 @@ class Field(
 
     fun isBackingField(methodScope: Scope): Boolean {
         return name == "field" &&
-                keywords.hasFlag(Keywords.SYNTHETIC) &&
+                flags.hasFlag(Flags.SYNTHETIC) &&
                 scope == methodScope
     }
 
     fun getBackedField(): Field? {
         if (name != "field") return null
-        if (!keywords.hasFlag(Keywords.SYNTHETIC)) return null
+        if (!flags.hasFlag(Flags.SYNTHETIC)) return null
         val scope = scope
         if (scope.scopeType != ScopeType.FIELD_GETTER &&
             scope.scopeType != ScopeType.FIELD_SETTER
@@ -80,10 +80,6 @@ class Field(
         selfTypeToTypeParams(selfType, givenSelfType)
 
     var typeParameters: List<Parameter> = emptyList()
-
-    // due to multi-interface, there may be many of them
-    var overriddenFields: List<Field> = emptyList()
-    var overriddenBy: List<Field> = emptyList()
 
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
@@ -148,7 +144,7 @@ class Field(
         newScope.addField(this)
     }
 
-    fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
-    fun isLateinit(): Boolean = keywords.hasFlag(Keywords.LATEINIT)
+    fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
+    fun isLateinit(): Boolean = flags.hasFlag(Flags.LATEINIT)
 
 }

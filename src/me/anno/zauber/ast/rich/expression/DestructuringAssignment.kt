@@ -2,7 +2,7 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.FieldDeclaration
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
@@ -29,7 +29,7 @@ fun ASTBuilderBase.createDestructuringAssignment(
         )
         val newField = fieldScope.addField(
             null, false, isMutable = isMutable, null,
-            name.name, name.type, newValue, Keywords.NONE, origin
+            name.name, name.type, newValue, Flags.NONE, origin
         )
         val newFieldExpr = FieldExpression(newField, scope, origin)
         result.add(AssignmentExpression(newFieldExpr, newValue))

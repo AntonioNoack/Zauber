@@ -3,14 +3,14 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.FieldGetterSetter.createBackingField
 import me.anno.zauber.ast.rich.FieldGetterSetter.createGetterMethod
 import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod
 import me.anno.zauber.ast.rich.FieldGetterSetter.createValueField
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.FieldGetterSetter.needsGetter
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
@@ -70,7 +70,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val parentScope = currPackage
 
         val classScope = parentScope.getOrPut(name, scopeType)
-        classScope.addKeywords(listenType or packKeywords())
+        classScope.addKeywords(listenType or packFlags())
         classScope.fileName = tokens.fileName
         classScope.initParts += {
 
@@ -95,7 +95,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         readLazily(classScope, false)
     }
 
-    open fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
+    open fun foundNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
         val origin = origin(i - 1)
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
             val typeParameters = readTypeParameterDeclarations(classScope)
@@ -103,17 +103,17 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             classScope.hasTypeParameters = true
 
             if (consumeIf("private")) {
-                addKeyword(Keywords.PRIVATE)
+                addFlag(Flags.PRIVATE)
                 consume("constructor")
             } else if (consumeIf("protected")) {
-                addKeyword(Keywords.PROTECTED)
+                addFlag(Flags.PROTECTED)
                 consume("constructor")
             } else consumeIf("constructor")
 
             if (readBody) {
                 val constrOrigin = origin(i)
                 val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
-                constructorScope.addKeywords(packKeywords())
+                constructorScope.addKeywords(packFlags())
                 pushScope(constructorScope) {
                     val selfType = classScope.typeWithoutArgs
                     var valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -123,8 +123,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     if (scopeType == ScopeType.ENUM_CLASS) {
                         val param0 = Parameter(0, "ordinal", IntType, constructorScope, constrOrigin)
                         val param1 = Parameter(1, "name", StringType, constructorScope, constrOrigin)
-                        param0.getOrCreateField(null, Keywords.SYNTHETIC)
-                        param1.getOrCreateField(null, Keywords.SYNTHETIC)
+                        param0.getOrCreateField(null, Flags.SYNTHETIC)
+                        param1.getOrCreateField(null, Flags.SYNTHETIC)
                         valueParameters = listOf(param0, param1) + valueParameters.map { it.shift(2) }
                     }
 
@@ -136,7 +136,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                             val classField = classScope.addField(
                                 null, false, param.isVar,
                                 null, param.name, param.type, initialValue,
-                                paramField.keywords, param.origin
+                                paramField.flags, param.origin
                             )
                             finishField(classField)
 
@@ -152,13 +152,13 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
                     constructorScope.selfAsConstructor = Constructor(
                         valueParameters, constructorScope,
-                        null, ExpressionList(instr, constructorScope, constrOrigin), keywords, constrOrigin
+                        null, ExpressionList(instr, constructorScope, constrOrigin), flags, constrOrigin
                     )
                 }
             } else if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 // skip constructor params
                 skipCall()
-                packKeywords()
+                packFlags()
             }
 
             if (consumeIf(":")) {
@@ -250,29 +250,29 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("fun") -> {
                 if (consumeIf("interface")) {
                     val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
-                    foundNamedScope(name, Keywords.FUN_INTERFACE, ScopeType.INTERFACE)
+                    foundNamedScope(name, Flags.FUN_INTERFACE, ScopeType.INTERFACE)
                 } else readMethod()
             }
             consumeIf("constructor") -> readConstructor()
-            consumeIf("external") -> addKeyword(Keywords.EXTERNAL)
-            consumeIf("override") -> addKeyword(Keywords.OVERRIDE)
-            consumeIf("public") -> addKeyword(Keywords.PUBLIC)
-            consumeIf("protected") -> addKeyword(Keywords.PROTECTED)
-            consumeIf("private") -> addKeyword(Keywords.PRIVATE)
-            consumeIf("abstract") -> addKeyword(Keywords.ABSTRACT)
-            consumeIf("operator") -> addKeyword(Keywords.OPERATOR)
-            consumeIf("open") -> addKeyword(Keywords.OPEN)
-            consumeIf("sealed") -> addKeyword(Keywords.SEALED)
+            consumeIf("external") -> addFlag(Flags.EXTERNAL)
+            consumeIf("override") -> addFlag(Flags.OVERRIDE)
+            consumeIf("public") -> addFlag(Flags.PUBLIC)
+            consumeIf("protected") -> addFlag(Flags.PROTECTED)
+            consumeIf("private") -> addFlag(Flags.PRIVATE)
+            consumeIf("abstract") -> addFlag(Flags.ABSTRACT)
+            consumeIf("operator") -> addFlag(Flags.OPERATOR)
+            consumeIf("open") -> addFlag(Flags.OPEN)
+            consumeIf("sealed") -> addFlag(Flags.SEALED)
             consumeIf("tailrec") -> {}// addKeyword(Keywords.TAILREC)
-            consumeIf("lateinit") -> addKeyword(Keywords.LATEINIT)
-            consumeIf("inline") -> addKeyword(Keywords.INLINE)
-            consumeIf("crossinline") -> addKeyword(Keywords.CROSS_INLINE)
+            consumeIf("lateinit") -> addFlag(Flags.LATEINIT)
+            consumeIf("inline") -> addFlag(Flags.INLINE)
+            consumeIf("crossinline") -> addFlag(Flags.CROSS_INLINE)
             consumeIf("const") -> {
-                addKeyword(Keywords.CONSTEXPR)
+                addFlag(Flags.CONSTEXPR)
                 readField()
             }
-            consumeIf("infix") -> addKeyword(Keywords.INFIX)
-            consumeIf("external") -> addKeyword(Keywords.EXTERNAL)
+            consumeIf("infix") -> addFlag(Flags.INFIX)
+            consumeIf("external") -> addFlag(Flags.EXTERNAL)
             consumeIf(";") -> {}
             consumeIf("init") -> {
                 currPackage.primaryConstructorScope!!
@@ -299,7 +299,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
         val ownerScope = currPackage
         val fieldScope = ownerScope.generate(name, origin, ScopeType.FIELD)
-        fieldScope.addKeywords(packKeywords())
+        fieldScope.addKeywords(packFlags())
         pushScope(fieldScope) {
             val typeParameters = readTypeParameterDeclarations(fieldScope)
             fieldScope.typeParameters = typeParameters
@@ -315,7 +315,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val initialValue =
                 if (consumeIf("=")) {
                     readLazyValue()
-                } else if (fieldScope.keywords.hasFlag(Keywords.LATEINIT)) {
+                } else if (fieldScope.flags.hasFlag(Flags.LATEINIT)) {
                     SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
                 } else null
 
@@ -350,7 +350,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             val field = ownerScope.addField(
                 selfType0, selfType0 != null, isMutable, null,
-                name, valueType, initialValue, fieldScope.keywords, origin
+                name, valueType, initialValue, fieldScope.flags, origin
             )
             field.typeParameters = typeParameters
             fieldScope.selfAsField = field
@@ -396,8 +396,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         while (i < tokens.size) {
             when {
                 consumeIf("public") -> {}
-                consumeIf("private") -> flags = flags or Keywords.PRIVATE
-                consumeIf("protected") -> flags = flags or Keywords.PROTECTED
+                consumeIf("private") -> flags = flags or Flags.PRIVATE
+                consumeIf("protected") -> flags = flags or Flags.PROTECTED
                 else -> return flags
             }
         }
@@ -433,7 +433,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val origin = origin(i - 1)
         val classScope = currPackage
         val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
-        constrScope.keywords = constrScope.keywords or packKeywords()
+        constrScope.flags = constrScope.flags or packFlags()
 
         pushScope(constrScope) {
             val selfType = classScope.typeWithoutArgs
@@ -447,7 +447,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             constrScope.selfAsConstructor = Constructor(
                 valueParameters,
                 constrScope, superCall, body,
-                constrScope.keywords, origin
+                constrScope.flags, origin
             )
         }
     }
@@ -459,7 +459,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val name = tokens.toString(end - 1)
         val ownerScope = currPackage
         val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
-        methodScope.keywords = methodScope.keywords or packKeywords()
+        methodScope.flags = methodScope.flags or packFlags()
 
         pushScope(methodScope) {
             val typeParameters = readTypeParameterDeclarations(methodScope)
@@ -478,7 +478,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val returnType = if (consumeIf(":")) {
                 readTypeNotNull(selfType, true)
             } else if (tokens.equals(i, "{") ||
-                methodScope.keywords.hasFlag(Keywords.EXTERNAL)
+                methodScope.flags.hasFlag(Flags.EXTERNAL)
             ) { // type is implicitly Unit
                 UnitType
             } else null
@@ -493,10 +493,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
 
             methodScope.selfAsMethod = Method(
-                selfType, selfType != null, name,
+                selfType, selfType0 != null, name,
                 typeParameters, valueParameters,
                 methodScope, returnType, whereConditions, body,
-                methodScope.keywords, origin
+                methodScope.flags, origin
             )
 
             popGenericParams()
@@ -596,33 +596,33 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("enum") -> {
                 consume("class")
                 val name = consumeName(VSCodeType.ENUM, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.NONE, ScopeType.ENUM_CLASS)
+                foundNamedScope(name, Flags.NONE, ScopeType.ENUM_CLASS)
             }
 
             consumeIf("inner") -> {
                 consume("class")
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.NONE, ScopeType.INNER_CLASS)
+                foundNamedScope(name, Flags.NONE, ScopeType.INNER_CLASS)
             }
 
             consumeIf("data") -> {
                 consume("class")
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.DATA_CLASS, ScopeType.NORMAL_CLASS)
+                foundNamedScope(name, Flags.DATA_CLASS, ScopeType.NORMAL_CLASS)
             }
 
             consumeIf("value") -> {
                 when {
                     consumeIf("class") -> {
                         val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                        foundNamedScope(name, Keywords.VALUE, ScopeType.NORMAL_CLASS)
+                        foundNamedScope(name, Flags.VALUE, ScopeType.NORMAL_CLASS)
                     }
                     consumeIf("val") -> {
-                        addKeyword(Keywords.VALUE)
+                        addFlag(Flags.VALUE)
                         readField()
                     }
                     consumeIf("var") -> {
-                        addKeyword(Keywords.VALUE)
+                        addFlag(Flags.VALUE)
                         readField()
                     }
                     else -> throw IllegalStateException("Expected class, val or var after 'value' at ${tokens.err(i)}")
@@ -632,14 +632,14 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("class") -> {
                 check(!tokens.equals(i - 2, "::"))
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.NONE, ScopeType.NORMAL_CLASS)
+                foundNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
             }
 
             tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
                     && !tokens.equals(i + 1, ":") -> {
                 i++ // skip 'object'
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.NONE, ScopeType.OBJECT)
+                foundNamedScope(name, Flags.NONE, ScopeType.OBJECT)
             }
 
             consumeIf("companion") -> {
@@ -647,18 +647,18 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 val name = if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
                     consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 } else "Companion"
-                foundNamedScope(name, Keywords.NONE, ScopeType.COMPANION_OBJECT)
+                foundNamedScope(name, Flags.NONE, ScopeType.COMPANION_OBJECT)
             }
 
             consumeIf("interface") -> {
                 val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
-                val keywords = if (tokens.equals(i - 2, "fun")) Keywords.FUN_INTERFACE else Keywords.NONE
+                val keywords = if (tokens.equals(i - 2, "fun")) Flags.FUN_INTERFACE else Flags.NONE
                 foundNamedScope(name, keywords, ScopeType.INTERFACE)
             }
 
             consumeIf("typealias") -> {
                 val name = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Keywords.NONE, ScopeType.TYPE_ALIAS)
+                foundNamedScope(name, Flags.NONE, ScopeType.TYPE_ALIAS)
             }
 
             else -> throw IllegalStateException("Unknown token ${tokens.toString(i)}")
@@ -684,15 +684,15 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         pushCall {
             while (i < tokens.size) {
                 // todo comptime name: type
-                var keywords = Keywords.NONE
+                var flags = Flags.NONE
 
                 while (true) {
-                    keywords = keywords or when {
-                        consumeIf("public") -> Keywords.PUBLIC
-                        consumeIf("protected") -> Keywords.PROTECTED
-                        consumeIf("private") -> Keywords.PRIVATE
-                        consumeIf("open") -> Keywords.OPEN
-                        consumeIf("override") -> Keywords.OVERRIDE
+                    flags = flags or when {
+                        consumeIf("public") -> Flags.PUBLIC
+                        consumeIf("protected") -> Flags.PROTECTED
+                        consumeIf("private") -> Flags.PRIVATE
+                        consumeIf("open") -> Flags.OPEN
+                        consumeIf("override") -> Flags.OVERRIDE
                         else -> break
                     }
                 }
@@ -718,7 +718,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 parameters.add(parameter)
 
                 val size = tokens.size
-                parameter.getOrCreateField(null, keywords)
+                parameter.getOrCreateField(null, flags)
                 check(size == tokens.size) { "Token size changed" }
 
                 readComma()

@@ -143,7 +143,7 @@ abstract class CallExpressionBase(
                             val field = subscope.addField(
                                 null, false, false, null,
                                 "it", parameterType.parameters[i].type, null,
-                                Keywords.NONE, origin
+                                Flags.NONE, origin
                             )
                             listOf(LambdaVariable(null, field))
                         }

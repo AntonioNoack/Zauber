@@ -7,10 +7,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 // todo most relevant topics:
-//  lambda-capturing fields, var vs val
+//  lambda-capturing fields, var->Wrapper vs val->ConstructorParam
 //  yielding
 //  Java code gen for good real performance
 //  Python parser
+//  inheritance
 
 class InheritanceClassTests {
 

@@ -34,7 +34,7 @@ class CSharpASTClassScanner(tokens: TokenList) : JavaASTClassScanner(tokens) {
         val hasName = tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD)
         if (hasName && consumeIf("struct")) {
             val name = consumeName(VSCodeType.TYPE, 0)
-            foundNamedScope(name, keywords, ScopeType.NORMAL_CLASS)
+            foundNamedScope(name, flags, ScopeType.NORMAL_CLASS)
         } else super.checkForTypes()
     }
 }

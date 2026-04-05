@@ -30,7 +30,7 @@ object DataClassGenerator {
     val i1 = NumberExpression("1", root, -1)
     val iTrue = SpecialValueExpression(SpecialValue.TRUE, root, -1)
 
-    private const val KEYWORDS = Keywords.SYNTHETIC or Keywords.OVERRIDE
+    private const val KEYWORDS = Flags.SYNTHETIC or Flags.OVERRIDE
 
     class ExpressionBuilder(var scope: Scope, val origin: Int, val type: Type) {
         var expr: Expression? = null
@@ -168,7 +168,7 @@ object DataClassGenerator {
         lateinit var parameter: Parameter
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
             parameter = Parameter(0, "other", NullableAnyType, scope, origin)
-            val otherField = parameter.getOrCreateField(null, Keywords.NONE)
+            val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
             val builder = ExpressionBuilder(scope, origin, BooleanType)
             val otherInstanceExpr0 = FieldExpression(otherField, scope, origin)
@@ -204,7 +204,7 @@ object DataClassGenerator {
         lateinit var parameter: Parameter
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
             parameter = Parameter(0, "other", classScope.typeWithArgs, scope, origin)
-            val otherField = parameter.getOrCreateField(null, Keywords.NONE)
+            val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
             val builder = ExpressionBuilder(scope, origin, BooleanType)
             for (field in primaryFields) {

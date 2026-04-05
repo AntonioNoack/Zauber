@@ -1,10 +1,10 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.expansion.OverriddenMethods.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
@@ -22,6 +22,7 @@ import me.anno.zauber.types.Types.ShortType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.utils.LazyMap
 
 class SimpleCall(
     dst: SimpleField,
@@ -29,7 +30,7 @@ class SimpleCall(
     val methodName: String,
     // todo key should also contain specialization, or should it?
     //  method then could be the specialized one...
-    val methods: Map<Type, MethodLike>,
+    val methods: Map<ClassType, MethodLike>,
     val sample: MethodLike,
     val self: SimpleField,
     specialization: Specialization,
@@ -38,6 +39,40 @@ class SimpleCall(
     val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Int
 ) : SimpleCallable(dst, specialization, scope, origin) {
+
+    companion object {
+
+        fun selfTypeIsOpen(method: Method): Boolean {
+            val selfType = method.scope.parent?.scope ?: return false
+            if (!selfType.isClassType()) return false // non-class-likes cannot be open
+            if (selfType.isObjectLike()) return false // objects cannot be open
+            if (selfType.isInterface()) return true // interfaces are always open
+
+            // anything else needs the open flag to be open
+            return selfType.flags.hasFlag(Flags.OPEN)
+        }
+
+        fun createObjectMap(method: MethodLike): Map<ClassType, MethodLike> {
+            val dynamicDispatch = method is Method &&
+                    (method.flags.hasFlag(Flags.OPEN) || method.flags.hasFlag(Flags.OVERRIDE)) &&
+                    selfTypeIsOpen(method)
+            if (!dynamicDispatch) return FullMap(method)
+
+            return LazyMap { invokedType ->
+                val selfScope = invokedType.clazz
+                val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
+                val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
+                val choices = invokedType.clazz.scope.methods.filter { option ->
+                    option.name == method.name &&
+                            sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
+                            sameParameters(selfScope, option.valueParameters, methodValueParameters)
+                }
+                check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
+                check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
+                choices.first()
+            }
+        }
+    }
 
     constructor(
         dst: SimpleField,
@@ -49,7 +84,7 @@ class SimpleCall(
         scopeBridgingParameters: List<SimpleField>,
         scope: Scope, origin: Int
     ) : this(
-        dst, (method as? Method)?.name ?: "?", FullMap(method), method, self,
+        dst, (method as? Method)?.name ?: "?", createObjectMap(method), method, self,
         specialization, typeParameters, valueParameters, scopeBridgingParameters, scope, origin
     )
 
@@ -108,7 +143,7 @@ class SimpleCall(
             throw IllegalStateException("Unexpected NPE: $this")
         }
 
-        val method = methods[self.type.type] ?: sample
+        val method = methods[self.type.type as ClassType] ?: sample
 
         initializeArrayIfNeeded(self, method, runtime)
 

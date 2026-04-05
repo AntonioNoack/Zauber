@@ -156,7 +156,7 @@ class CppASTBuilder(
 
         val field = currPackage.addField(
             null, false, isMutable = true, null,
-            name, type, initialValue, packKeywords(), origin
+            name, type, initialValue, packFlags(), origin
         )
 
         if (skipEnd) check(tokens.equals(i++, ";", ",", ")"))
@@ -193,7 +193,7 @@ class CppASTBuilder(
         val (returnType, name) = readTypeAndName(typeNameEnd)
         val genName = if (language == LanguageKind.C) name else currPackage.generateName("f:$name")
         val methodScope = currPackage.getOrPut(genName, ScopeType.METHOD)
-        val keywords = packKeywords()
+        val keywords = packFlags()
         val arguments = pushScope(methodScope) {
             pushCall { readParameters() }
         }
@@ -233,7 +233,7 @@ class CppASTBuilder(
                         readExpression()
                     } else null
 
-                    val keywords = packKeywords()
+                    val keywords = packFlags()
                     val entryScope = classScope.getOrPut(valueName, ScopeType.ENUM_ENTRY_CLASS)
                     entryScope.hasTypeParameters = true
 
@@ -260,12 +260,12 @@ class CppASTBuilder(
     }
 
     fun readStructOrClass(isStruct: Boolean) {
-        if (isStruct) addKeyword(Keywords.CPP_STRUCT)
+        if (isStruct) addFlag(Flags.CPP_STRUCT)
         check(tokens.equals(i, TokenType.NAME)) { "Expected class name at ${tokens.err(i)}" }
         val name = tokens.toString(i++)
         val classScope = currPackage.getOrPut(name, ScopeType.NORMAL_CLASS)
         classScope.hasTypeParameters = true
-        classScope.addKeywords(packKeywords())
+        classScope.addKeywords(packFlags())
         pushBlock(classScope) {
             readFileLevel()
         }

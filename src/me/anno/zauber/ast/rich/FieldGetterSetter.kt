@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
@@ -93,14 +93,14 @@ object FieldGetterSetter {
         return scope.addField(
             null, false, isMutable = false, /* todo we actually have a parameter */null,
             fieldName, field.valueType, field.initialValue ?: field.getterExpr,
-            Keywords.NONE, origin
+            Flags.NONE, origin
         )
     }
 
     fun createBackingField(field: Field, scope: Scope, origin: Int): Field = scope.addField(
         field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
         "field", field.valueType, field.initialValue ?: field.getterExpr,
-        Keywords.SYNTHETIC, origin
+        Flags.SYNTHETIC, origin
     )
 
     fun ZauberASTBuilder.finishLastField() {
@@ -112,7 +112,7 @@ object FieldGetterSetter {
     }
 
     fun ZauberASTBuilderBase.finishField(field: Field) {
-        keywords = 0
+        flags = 0
         val origin = field.origin
         if (field.getter == null) {
             pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
@@ -147,7 +147,7 @@ object FieldGetterSetter {
         val expr = expr0 ?: if (needsGetter(field)) {
             if (!isInterface) {
                 val fieldExpr = FieldExpression(backingField, getterScope, origin)
-                val valueExpr = if (field.keywords.hasFlag(Keywords.LATEINIT)) {
+                val valueExpr = if (field.flags.hasFlag(Flags.LATEINIT)) {
                     val nullExpr = SpecialValueExpression(SpecialValue.NULL, getterScope, origin)
                     val condition = CheckEqualsOp(
                         fieldExpr, nullExpr, byPointer = true, negated = false, null,
@@ -170,7 +170,7 @@ object FieldGetterSetter {
         val method = Method(
             field.selfType, false, methodName, emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
-            expr, packKeywords() or field.keywords, origin
+            expr, packFlags() or field.flags, origin
         )
         method.backedField = field
         method.backingField = backingField
@@ -200,7 +200,7 @@ object FieldGetterSetter {
             field.selfType, false, methodName, emptyList(),
             listOf(parameter), setterScope,
             UnitType, emptyList(),
-            expr, packKeywords() or field.keywords, origin
+            expr, packFlags() or field.flags, origin
         )
         method.backedField = field
         method.backingField = backingField

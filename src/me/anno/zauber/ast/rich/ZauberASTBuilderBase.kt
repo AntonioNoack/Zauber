@@ -11,11 +11,11 @@ import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -77,7 +77,7 @@ abstract class ZauberASTBuilderBase(
         }
     }
 
-    fun readClassBody(name: String, keywords: KeywordSet, scopeType: ScopeType): Scope {
+    fun readClassBody(name: String, keywords: FlagSet, scopeType: ScopeType): Scope {
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
         classScope.addKeywords(keywords)
 
@@ -96,8 +96,8 @@ abstract class ZauberASTBuilderBase(
             }
         }
 
-        val keywords = classScope.keywords
-        if (keywords.hasFlag(Keywords.DATA_CLASS) || keywords.hasFlag(Keywords.VALUE)) {
+        val keywords = classScope.flags
+        if (keywords.hasFlag(Flags.DATA_CLASS) || keywords.hasFlag(Flags.VALUE)) {
             pushScope(classScope) {
                 finishDataClass(classScope)
             }
@@ -198,7 +198,7 @@ abstract class ZauberASTBuilderBase(
         // to do we neither know type nor initial value :/, both come from the called function/set variable
         val field = currPackage.addField( // this is more of a parameter...
             null, false, isMutable = false, null,
-            name, null, null, Keywords.NONE, origin
+            name, null, null, Flags.NONE, origin
         )
         val variable = LambdaVariable(type, field)
         field.byParameter = variable
@@ -244,7 +244,7 @@ abstract class ZauberASTBuilderBase(
                 val dstField = scopeForField.addField(
                     null, false, false, null,
                     instanceName, instanceTest.type,
-                    null, Keywords.NONE, origin
+                    null, Flags.NONE, origin
                 )
                 val dstFieldExpr = FieldExpression(dstField, scopeForField, origin)
                 val assignment = AssignmentExpression(dstFieldExpr, instanceTest.value)
@@ -712,7 +712,7 @@ abstract class ZauberASTBuilderBase(
 
         val name = consumeName(vsCodeType, VSCodeModifier.DECLARATION.flag)
 
-        val keywords = packKeywords()
+        val keywords = packFlags()
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
 
         val typeParameters = readTypeParameterDeclarations(classScope)
@@ -740,7 +740,7 @@ abstract class ZauberASTBuilderBase(
             primConstructorScope, if (primarySuperCall != null) {
                 InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
             } else null, constructorBody,
-            if (privatePrimaryConstructor) Keywords.PRIVATE else Keywords.NONE,
+            if (privatePrimaryConstructor) Flags.PRIVATE else Flags.NONE,
             constructorOrigin
         )
         primConstructorScope.selfAsConstructor = primaryConstructor
@@ -779,7 +779,7 @@ abstract class ZauberASTBuilderBase(
     fun readInterface() {
         val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
-        val keywords = packKeywords()
+        val keywords = packFlags()
         clazz.typeParameters = readTypeParameterDeclarations(clazz)
         clazz.hasTypeParameters = true
 
@@ -837,7 +837,7 @@ abstract class ZauberASTBuilderBase(
 
     fun collectKeywords() {
         if (!tokens.equals(i, TokenType.STRING)) {
-            addKeyword(consumeKeyword())
+            addFlag(consumeKeyword())
             if (this is ZauberASTBuilder) {
                 setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }

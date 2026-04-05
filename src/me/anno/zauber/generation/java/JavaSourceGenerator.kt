@@ -1,9 +1,9 @@
 package me.anno.zauber.generation.java
 
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
@@ -332,7 +332,7 @@ object JavaSourceGenerator : Generator() {
         val javaType = when (scope.scopeType) {
             ScopeType.ENUM_CLASS -> "final class"
             ScopeType.NORMAL_CLASS -> {
-                val isFinal = isFinal(scope.keywords)
+                val isFinal = isFinal(scope.flags)
                 if (isFinal) "final class" else "class"
             }
             ScopeType.INTERFACE -> "interface"
@@ -341,7 +341,7 @@ object JavaSourceGenerator : Generator() {
             ScopeType.PACKAGE -> "final class"
             else -> scope.scopeType.toString()
         }
-        if (scope.keywords.hasFlag(Keywords.ABSTRACT)) builder.append("abstract ")
+        if (scope.flags.hasFlag(Flags.ABSTRACT)) builder.append("abstract ")
         builder.append(javaType).append(' ').append(className)
 
         if (specialization.isEmpty()) {
@@ -435,11 +435,11 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun isFinal(keywords: KeywordSet): Boolean {
-        return keywords.hasFlag(Keywords.FINAL) || (
-                !keywords.hasFlag(Keywords.OPEN) &&
-                        !keywords.hasFlag(Keywords.OVERRIDE) &&
-                        !keywords.hasFlag(Keywords.ABSTRACT)
+    private fun isFinal(keywords: FlagSet): Boolean {
+        return keywords.hasFlag(Flags.FINAL) || (
+                !keywords.hasFlag(Flags.OPEN) &&
+                        !keywords.hasFlag(Flags.OVERRIDE) &&
+                        !keywords.hasFlag(Flags.ABSTRACT)
                 )
     }
 
@@ -450,21 +450,21 @@ object JavaSourceGenerator : Generator() {
 
         val selfType = method.selfType
         val isBySelf = selfType == classScope.typeWithArgs ||
-                method.keywords.hasFlag(Keywords.OVERRIDE) ||
-                method.keywords.hasFlag(Keywords.ABSTRACT)
+                method.flags.hasFlag(Flags.OVERRIDE) ||
+                method.flags.hasFlag(Flags.ABSTRACT)
 
-        if (method.keywords.hasFlag(Keywords.OVERRIDE)) {
+        if (method.flags.hasFlag(Flags.OVERRIDE)) {
             builder.append("@Override")
             nextLine()
         }
 
-        if (method.keywords.hasFlag(Keywords.ABSTRACT) && classScope.scopeType != ScopeType.INTERFACE) {
+        if (method.flags.hasFlag(Flags.ABSTRACT) && classScope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
         }
 
         if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
-        if (method.keywords.hasFlag(Keywords.EXTERNAL)) builder.append("native ")
-        if (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.keywords)) builder.append("final ")
+        if (method.flags.hasFlag(Flags.EXTERNAL)) builder.append("native ")
+        if (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.flags)) builder.append("final ")
         if (classScope.scopeType == ScopeType.INTERFACE && method.body != null) builder.append("default ")
         // if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
 

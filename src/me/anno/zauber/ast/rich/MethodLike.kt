@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
@@ -23,12 +23,12 @@ open class MethodLike(
     var returnType: Type?,
     scope: Scope, name: String,
     var body: Expression?,
-    keywords: KeywordSet,
+    keywords: FlagSet,
     origin: Int
 ) : Member(selfType, explicitSelfType, name, scope, keywords, origin) {
 
-    fun addKeywords(keywords: KeywordSet) {
-        this.keywords = this.keywords or keywords
+    fun addKeywords(keywords: FlagSet) {
+        this.flags = this.flags or keywords
     }
 
     fun isRecursive(specialization: Specialization): Boolean {
@@ -101,9 +101,9 @@ open class MethodLike(
         }
     }
 
-    fun isPrivate(): Boolean = keywords.hasFlag(Keywords.PRIVATE)
-    fun isProtected(): Boolean = keywords.hasFlag(Keywords.PROTECTED)
-    fun isExternal(): Boolean = keywords.hasFlag(Keywords.EXTERNAL)
+    fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
+    fun isProtected(): Boolean = flags.hasFlag(Flags.PROTECTED)
+    fun isExternal(): Boolean = flags.hasFlag(Flags.EXTERNAL)
 
     var selfTypeIfNecessary: Type? = null
 

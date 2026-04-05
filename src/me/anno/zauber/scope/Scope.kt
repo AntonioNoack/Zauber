@@ -1,8 +1,8 @@
 package me.anno.zauber.scope
 
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.tokenizer.TokenList
@@ -25,7 +25,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     var fileName: String? = parent?.fileName
 
-    var keywords: KeywordSet = 0
+    var flags: FlagSet = 0
     val children = ArrayList<Scope>()
     val sources = ArrayList<TokenList>()
 
@@ -132,7 +132,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (objectField == null) objectField = addField(
             null, false, isMutable = false, null, name,
             ClassType(this, emptyList(), origin),
-            /* todo should we set initialValue? */ null, Keywords.NONE, origin
+            /* todo should we set initialValue? */ null, Flags.NONE, origin
         )
         return objectField!!
     }
@@ -156,7 +156,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             scope.selfAsConstructor = Constructor(
                 emptyList(), scope,
                 null, ExpressionList(ArrayList(), scope, -1),
-                Keywords.SYNTHETIC, -1
+                Flags.SYNTHETIC, -1
             )
             scope
         }
@@ -172,7 +172,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         name: String,
         valueType: Type?,
         initialValue: Expression?,
-        keywords: KeywordSet,
+        keywords: FlagSet,
         origin: Int
     ): Field {
         check((selfType != null) == explicitSelfType)
@@ -489,7 +489,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         val name = generateName("tmpField")
         return addField(
             null, false, isMutable = false, null,
-            name, null, initialValue, Keywords.NONE, initialValue.origin
+            name, null, initialValue, Flags.NONE, initialValue.origin
         )
     }
 
@@ -514,7 +514,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isObject(): Boolean = scopeType?.isObject() == true
     fun isObjectLike(): Boolean = isObject() || scopeType == ScopeType.PACKAGE
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
-    fun isValueType(): Boolean = keywords.hasFlag(Keywords.VALUE)
+    fun isValueType(): Boolean = flags.hasFlag(Flags.VALUE)
 
     fun clear() {
         // todo it would be nice to clear everything, but to do that,
@@ -532,7 +532,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         objectField = null
         superCalls.clear()
         fileName = null
-        keywords = 0
+        flags = 0
         selfAsMethod = null
         selfAsConstructor = null
         selfAsTypeAlias = null
@@ -540,8 +540,8 @@ class Scope(val name: String, val parent: Scope? = null) {
         // typeWithArgs
     }
 
-    fun addKeywords(keywords: KeywordSet) {
-        this.keywords = this.keywords or keywords
+    fun addKeywords(keywords: FlagSet) {
+        this.flags = this.flags or keywords
     }
 
     fun forEachScopeLazy(callback: (Scope) -> Unit) {

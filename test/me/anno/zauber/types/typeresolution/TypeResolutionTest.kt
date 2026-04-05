@@ -2,14 +2,13 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -259,6 +258,6 @@ class TypeResolutionTest {
             testTypeResolutionGetField(
                 "value val tested = \"\""
             )
-        check(field.keywords.hasFlag(Keywords.VALUE))
+        check(field.flags.hasFlag(Flags.VALUE))
     }
 }

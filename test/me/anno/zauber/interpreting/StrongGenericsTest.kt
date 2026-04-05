@@ -6,6 +6,13 @@ import me.anno.zauber.interpreting.RuntimeCast.castToString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
+// todo do we want to use need-to-use ::class???
+//  benefits:
+//  - class is clearly visible as such
+//  - object vs class is clear
+//  negatives:
+//  - often extra writing for what...
+
 class StrongGenericsTest {
     @Test
     fun testGenericsHaveNameNativeType() {

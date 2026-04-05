@@ -3,7 +3,7 @@ package me.anno.support.cpp.ast.rich
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.java.ast.NamedDestructuringExpression
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
@@ -50,11 +50,11 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
         val noPrevBranch = scope.addField(
             null, false, isMutable = true, null,
-            "__hadPrevBranch", BooleanType, trueExpr, Keywords.SYNTHETIC, origin
+            "__hadPrevBranch", BooleanType, trueExpr, Flags.SYNTHETIC, origin
         )
         val prevBranchContinues = scope.addField(
             null, false, isMutable = true, null,
-            "__prevBranchContinues", BooleanType, falseExpr, Keywords.SYNTHETIC, origin
+            "__prevBranchContinues", BooleanType, falseExpr, Flags.SYNTHETIC, origin
         )
 
         val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)
@@ -123,7 +123,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                                                 val field = scope.addField(
                                                     null, false, isMutable = false, null,
                                                     name, type, initialValue,
-                                                    Keywords.NONE, origin
+                                                    Flags.NONE, origin
                                                 )
                                                 names += LambdaVariable(type, field)
                                             }

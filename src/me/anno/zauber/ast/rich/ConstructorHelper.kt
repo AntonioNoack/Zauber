@@ -20,10 +20,10 @@ object ConstructorHelper {
                 if (!(parameter.isVal || parameter.isVar)) continue
 
                 val origin = parameter.origin
-                val parameterField = parameter.getOrCreateField(null, Keywords.NONE)
+                val parameterField = parameter.getOrCreateField(null, Flags.NONE)
                 val classField = classScope.addField(
                     null, false, isMutable = parameter.isVar,
-                    parameter, parameter.name, parameter.type, null, Keywords.SYNTHETIC, origin
+                    parameter, parameter.name, parameter.type, null, Flags.SYNTHETIC, origin
                 )
                 val dstExpr = DotExpression(
                     ThisExpression(classScope, scope, origin), null,

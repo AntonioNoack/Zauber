@@ -58,7 +58,7 @@ class Runtime {
     operator fun get(field: SimpleField, hint: SimpleInstruction? = null): Instance {
         val field = getMergedField(field)
         val selfScope = field.scopeIfIsThis
-        println("getting $field, selfScope: $selfScope")
+        LOGGER.info("Getting SimpleField $field, selfScope: $selfScope")
         return if (selfScope != null) getSelf(field, selfScope, hint) else {
             val currCall = callStack.last()
             currCall.simpleFields[field]
@@ -346,13 +346,13 @@ class Runtime {
             block = if (condition != null) {
                 val conditionI = this[condition]
                 val conditionJ = castToBool(conditionI)
-                println("Finished $block, condition: $conditionJ -> ${(if (conditionJ) block.ifBranch else block.elseBranch)?.blockId}")
+                LOGGER.info("Finished $block, condition: $conditionJ -> ${(if (conditionJ) block.ifBranch else block.elseBranch)?.blockId}")
                 if (conditionJ) block.ifBranch else block.elseBranch
             } else {
-                println("Finished $block, next: ${block.nextBranch?.blockId}")
+                LOGGER.info("Finished $block, next: ${block.nextBranch?.blockId}")
                 block.nextBranch
             } ?: run {
-                println("Exited without return from ${block0.graph.method}")
+                LOGGER.info("Exited without return from ${block0.graph.method}")
                 return null
             }
         }

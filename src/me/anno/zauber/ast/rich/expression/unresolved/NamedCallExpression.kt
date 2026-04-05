@@ -78,7 +78,7 @@ class NamedCallExpression(
         val valueParameters = resolveValueParameters(context, valueParameters)
         val constructor = null
         val contextI = context.withSelfType(baseType)
-        println("Resolving callable with baseType $baseType")
+        // println("Resolving callable with baseType $baseType")
         if (baseType is ClassType && baseType.clazz.typeParameters.isNotEmpty() && baseType.typeParameters == null) {
             println("self: $self (${self.javaClass.simpleName})")
             if (self is FieldExpression) {
@@ -89,6 +89,7 @@ class NamedCallExpression(
             }
             throw IllegalStateException("Missing type parameters for $baseType in $this, $context")
         }
+
         return MethodResolver.resolveCallable(
             contextI, scope, name, nameAsImport, constructor,
             typeParameters, valueParameters, origin

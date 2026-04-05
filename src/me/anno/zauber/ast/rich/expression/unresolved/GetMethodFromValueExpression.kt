@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
@@ -69,7 +69,7 @@ class GetMethodFromValueExpression(
                 val name = ('a' + it).toString()
                 val field = tmpScope.addField(
                     null, false, isMutable = false, null,
-                    name, type, null, Keywords.NONE, origin
+                    name, type, null, Flags.NONE, origin
                 )
                 LambdaVariable(type, field)
             }
@@ -94,7 +94,7 @@ class GetMethodFromValueExpression(
                 println("specialized ${targetType.parameters[it].type} -> $type for $this, $context")
                 val field = tmpScope.addField(
                     null, false, isMutable = false, null,
-                    name, type, null, Keywords.NONE, origin
+                    name, type, null, Flags.NONE, origin
                 )
                 LambdaVariable(type, field)
             }

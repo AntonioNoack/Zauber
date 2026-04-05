@@ -2,7 +2,7 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
@@ -52,7 +52,7 @@ fun storeSubject(
     val value = if (subject is AssignmentExpression) subject.src else subject
     val field = scope.addField(
         null, false, isMutable = false, null,
-        subjectName, null, value, Keywords.NONE, origin
+        subjectName, null, value, Flags.NONE, origin
     )
     return FieldExpression(field, scope, origin)
 }
@@ -89,7 +89,7 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
                 // todo this is also only valid, if no other thread/function could write to the field
                 caseScope.addField(
                     null, false, isMutable = false, null,
-                    fieldName, jointType, null, Keywords.NONE, origin
+                    fieldName, jointType, null, Flags.NONE, origin
                 )
             }
         }

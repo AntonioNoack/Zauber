@@ -56,7 +56,7 @@ object DefaultParameterExpansion {
             scope.typeParameters = self.typeParameters
 
             val subValueParameters = self.valueParameters.subList(0, i).map { it.clone(scope) }
-            subValueParameters.forEach { param -> param.getOrCreateField(null, Keywords.NONE) }
+            subValueParameters.forEach { param -> param.getOrCreateField(null, Flags.NONE) }
 
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->
@@ -83,7 +83,7 @@ object DefaultParameterExpansion {
                 self.typeParameters, subValueParameters,
                 scope, self.returnType, self.extraConditions,
                 ReturnExpression(newBody, null, scope, origin),
-                self.keywords,
+                self.flags,
                 origin
             )
             scope.selfAsMethod = newMethod
@@ -133,7 +133,7 @@ object DefaultParameterExpansion {
             val newConstructor = Constructor(
                 self.valueParameters.subList(0, i),
                 scope, superCall, ExpressionList(emptyList(), scope, origin),
-                self.keywords, origin
+                self.flags, origin
             )
             scope.selfAsConstructor = newConstructor
             LOGGER.info("Created $newConstructor")

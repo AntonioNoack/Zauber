@@ -1,9 +1,9 @@
 package me.anno.support.java.ast
 
 import me.anno.langserver.VSCodeType
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ASTClassScanner
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -19,7 +19,7 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
         }
     }
 
-    override fun foundNamedScope(name: String, listenType: KeywordSet, scopeType: ScopeType) {
+    override fun foundNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
             val genericParams = readTypeParameterDeclarations(classScope)
 
@@ -52,11 +52,11 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
         val hasName = tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD)
         if (!hasName) return
 
-        var keywords = 0
+        var flags = 0
         val scopeType = when {
             consumeIf("enum") -> ScopeType.ENUM_CLASS
             consumeIf("record") -> {
-                keywords = Keywords.VALUE
+                flags = Flags.VALUE
                 ScopeType.NORMAL_CLASS
             }
             consumeIf("class") -> ScopeType.NORMAL_CLASS
@@ -65,6 +65,6 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
         }
 
         val name = consumeName(VSCodeType.TYPE, 0)
-        foundNamedScope(name, keywords, scopeType)
+        foundNamedScope(name, flags, scopeType)
     }
 }

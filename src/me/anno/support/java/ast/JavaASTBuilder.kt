@@ -6,7 +6,7 @@ import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.readSwitch
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
@@ -111,15 +111,15 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
     override fun consumeKeyword(): Int {
         return when {
-            consumeIf("public") -> Keywords.PUBLIC
-            consumeIf("private") -> Keywords.PRIVATE
-            consumeIf("protected") -> Keywords.PROTECTED
-            consumeIf("native") -> Keywords.EXTERNAL
-            consumeIf("override") -> Keywords.OVERRIDE
-            consumeIf("abstract") -> Keywords.ABSTRACT
-            consumeIf("annotation") -> Keywords.ANNOTATION
-            consumeIf("final") -> Keywords.FINAL
-            consumeIf("sealed") -> Keywords.SEALED
+            consumeIf("public") -> Flags.PUBLIC
+            consumeIf("private") -> Flags.PRIVATE
+            consumeIf("protected") -> Flags.PROTECTED
+            consumeIf("native") -> Flags.EXTERNAL
+            consumeIf("override") -> Flags.OVERRIDE
+            consumeIf("abstract") -> Flags.ABSTRACT
+            consumeIf("annotation") -> Flags.ANNOTATION
+            consumeIf("final") -> Flags.FINAL
+            consumeIf("sealed") -> Flags.SEALED
             consumeIf("volatile") -> 0 // Keywords.VOLATILE -> todo do we need to support them?
             // todo make it synchronized: pack the body into a try-finally with lock & unlock
             consumeIf("synchronized") -> 0
@@ -190,7 +190,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                 }
                 consumeIf("interface") -> readInterface()
                 consumeIf("record") -> {
-                    addKeyword(Keywords.VALUE)
+                    addFlag(Flags.VALUE)
                     readClass(ScopeType.NORMAL_CLASS)
                 }
 
@@ -264,7 +264,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
     fun readConstructor() {
         val origin = origin(i)
         val scopeName = currPackage.generateName("constructor", origin)
-        val keywords = packKeywords()
+        val keywords = packFlags()
         pushScope(scopeName, ScopeType.CONSTRUCTOR) { scope ->
             val valueParameters =
                 if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -305,7 +305,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
     fun readMethodInClass(returnType: Type, name: String, typeParameters: List<Parameter>) {
         val origin = origin(i)
         val scopeName = currPackage.generateName(name, origin)
-        val keywords = packKeywords()
+        val keywords = packFlags()
         pushScope(scopeName, ScopeType.METHOD) { scope ->
             val valueParameters = pushCall { readParameterDeclarations(null) }
             skipThrowList()
@@ -343,7 +343,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
         if (tokens.equals(i, "Override") && !tokens.equals(i + 1, TokenType.OPEN_CALL)) {
             i++ // skip 'Override'
-            addKeyword(Keywords.OVERRIDE)
+            addFlag(Flags.OVERRIDE)
             val type = langScope.getOrPut("Override", ScopeType.INTERFACE).typeWithArgs
             return Annotation(type, emptyList())
         }
@@ -369,13 +369,13 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                 !tokens.equals(i + 1, ":")
             ) {
                 val keyword = when {
-                    consumeIf("final") -> Keywords.FINAL
+                    consumeIf("final") -> Flags.FINAL
                     else -> break
                 }
-                addKeyword(keyword)
+                addFlag(keyword)
             }
 
-            val isVal = keywords.hasFlag(Keywords.FINAL)
+            val isVal = flags.hasFlag(Flags.FINAL)
             check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
                 "Expected name, but got ${tokens.err(i)}"
             }
@@ -389,7 +389,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
-            val keywords = packKeywords()
+            val keywords = packFlags()
             val parameter = Parameter(
                 parameters.size, !isVal, isVal, isVararg, name, type,
                 null, currPackage, origin
@@ -600,7 +600,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             }
             // apparently, inline record classes are allowed
             consumeIf("record") -> {
-                addKeyword(Keywords.VALUE)
+                addFlag(Flags.VALUE)
                 readClass(ScopeType.NORMAL_CLASS)
                 unitInstance
             }
@@ -635,7 +635,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         classScope.hasTypeParameters = true
         classScope.superCalls.add(SuperCall(type as ClassType, null, null))
 
-        readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
+        readClassBody(name, Flags.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(
             classScope, emptyList(), emptyList(),
             null, currPackage, origin
@@ -708,7 +708,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                 if (tn != null && tokens.equals(i, ":")) {
                     field = scope.addField(
                         null, false, !fieldIsFinal, null,
-                        tn.second, tn.first, null, Keywords.NONE, origin
+                        tn.second, tn.first, null, Flags.NONE, origin
                     )
                     consume(":")
                     initial = readExpression()
@@ -1163,9 +1163,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
         val i0 = i
         val origin = origin(i0)
-        val isMutable = !keywords.hasFlag(Keywords.FINAL)
+        val isMutable = !flags.hasFlag(Flags.FINAL)
 
-        val keywords = packKeywords()
+        val keywords = packFlags()
 
         if (LOGGER.isDebugEnabled) LOGGER.debug("reading var/val $name")
 

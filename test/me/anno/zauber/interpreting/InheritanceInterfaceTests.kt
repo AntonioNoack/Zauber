@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -10,6 +11,11 @@ class InheritanceInterfaceTests {
 
     @Test
     fun testCallInterfaceDefaultMethod() {
+        LogManager.disableLoggers("CallExpression,ZClass,MemberResolver,ConstructorResolver," +
+                "TypeResolution,Inheritance," +
+                "MethodResolver,ResolvedMethod," +
+                "FieldExpression,FieldResolver,ResolvedField," +
+                "Runtime,ASTSimplifier")
         val code = """
             interface Parent {
                 open fun x() = 0

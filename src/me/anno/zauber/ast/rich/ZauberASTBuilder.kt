@@ -3,10 +3,6 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ZauberLanguage
-import me.anno.zauber.ast.rich.FieldGetterSetter.finishLastField
-import me.anno.zauber.ast.rich.FieldGetterSetter.readGetter
-import me.anno.zauber.ast.rich.FieldGetterSetter.readSetter
-import me.anno.zauber.ast.rich.Keywords.hasFlag
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
@@ -31,8 +27,6 @@ import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types.AnyType
 import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.Types.ThrowableType
 import me.anno.zauber.types.Types.UnitType
 import me.anno.zauber.types.impl.ClassType
@@ -182,7 +176,7 @@ class ZauberASTBuilder(
     private fun readMethod(): Method {
         val origin = origin(i - 1) // on 'fun'
 
-        val keywords = packKeywords()
+        val keywords = packFlags()
 
         // parse optional <T, U>
         val classScopeIfInClass = if (currPackage.isClassType()) currPackage else null
@@ -265,22 +259,22 @@ class ZauberASTBuilder(
 
     override fun consumeKeyword(): Int {
         return when {
-            consumeIf("public") -> Keywords.PUBLIC
-            consumeIf("private") -> Keywords.PRIVATE
-            consumeIf("external") -> Keywords.EXTERNAL
-            consumeIf("open") -> Keywords.OPEN
-            consumeIf("override") -> Keywords.OVERRIDE
-            consumeIf("abstract") -> Keywords.ABSTRACT
-            consumeIf("operator") -> Keywords.OPERATOR
-            consumeIf("inline") -> Keywords.INLINE
-            consumeIf("infix") -> Keywords.INFIX
-            consumeIf("data") -> Keywords.DATA_CLASS
-            consumeIf("value") -> Keywords.VALUE
-            consumeIf("annotation") -> Keywords.ANNOTATION
-            consumeIf("sealed") -> Keywords.SEALED
-            consumeIf("const") -> Keywords.CONSTEXPR
-            consumeIf("final") -> Keywords.FINAL
-            consumeIf("lateinit") -> Keywords.LATEINIT
+            consumeIf("public") -> Flags.PUBLIC
+            consumeIf("private") -> Flags.PRIVATE
+            consumeIf("external") -> Flags.EXTERNAL
+            consumeIf("open") -> Flags.OPEN
+            consumeIf("override") -> Flags.OVERRIDE
+            consumeIf("abstract") -> Flags.ABSTRACT
+            consumeIf("operator") -> Flags.OPERATOR
+            consumeIf("inline") -> Flags.INLINE
+            consumeIf("infix") -> Flags.INFIX
+            consumeIf("data") -> Flags.DATA_CLASS
+            consumeIf("value") -> Flags.VALUE
+            consumeIf("annotation") -> Flags.ANNOTATION
+            consumeIf("sealed") -> Flags.SEALED
+            consumeIf("const") -> Flags.CONSTEXPR
+            consumeIf("final") -> Flags.FINAL
+            consumeIf("lateinit") -> Flags.LATEINIT
             consumeIf("tailrec") -> 0 // just a compiler hint...
             else -> super.consumeKeyword()
         }
@@ -296,16 +290,16 @@ class ZauberASTBuilder(
                 !tokens.equals(i + 1, ":")
             ) {
                 val keyword = when {
-                    consumeIf("private") -> Keywords.PRIVATE
-                    consumeIf("public") -> Keywords.PUBLIC
-                    consumeIf("protected") -> Keywords.PROTECTED
-                    consumeIf("override") -> Keywords.OVERRIDE
-                    consumeIf("open") -> Keywords.OPEN
-                    consumeIf("value") -> Keywords.VALUE
-                    consumeIf("crossinline") -> Keywords.CROSS_INLINE
+                    consumeIf("private") -> Flags.PRIVATE
+                    consumeIf("public") -> Flags.PUBLIC
+                    consumeIf("protected") -> Flags.PROTECTED
+                    consumeIf("override") -> Flags.OVERRIDE
+                    consumeIf("open") -> Flags.OPEN
+                    consumeIf("value") -> Flags.VALUE
+                    consumeIf("crossinline") -> Flags.CROSS_INLINE
                     else -> break
                 }
-                addKeyword(keyword)
+                addFlag(keyword)
                 setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }
 
@@ -324,7 +318,7 @@ class ZauberASTBuilder(
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
-            val keywords = packKeywords()
+            val keywords = packFlags()
             val parameter = Parameter(
                 parameters.size, isVar, isVal, isVararg, name, type,
                 initialValue, currPackage, origin
@@ -545,7 +539,7 @@ class ZauberASTBuilder(
 
         // println("Inline class has the following type-params: ${classScope.typeParameters}")
 
-        readClassBody(name, Keywords.NONE, ScopeType.INLINE_CLASS)
+        readClassBody(name, Flags.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(
             classScope, emptyList(), emptyList(),
             null, currPackage, origin
@@ -594,7 +588,7 @@ class ZauberASTBuilder(
             val pseudoInitial = iterableToNextExpr(iterable)
             val variableField = body.scope.addField(
                 null, false, isMutable = true, false,
-                name, variableType, pseudoInitial, Keywords.NONE, origin
+                name, variableType, pseudoInitial, Flags.NONE, origin
             )
             return forLoop(variableField, iterable, body, label)
         }
@@ -984,7 +978,7 @@ class ZauberASTBuilder(
                     val name = "__ld${variables.size}"
                     val field = currPackage.addField( // this is more of a parameter...
                         null, false, isMutable = false, null,
-                        name, null, null, Keywords.SYNTHETIC, origin0
+                        name, null, null, Flags.SYNTHETIC, origin0
                     )
                     val variable = LambdaDestructuring(names, field)
                     field.byParameter = variable
@@ -1130,7 +1124,7 @@ class ZauberASTBuilder(
             result.clear()
 
             val parameter = Parameter(0, "e", ThrowableType, errCatch, origin)
-            val exceptionField = parameter.getOrCreateField(null, Keywords.NONE)
+            val exceptionField = parameter.getOrCreateField(null, Flags.NONE)
             val throwImpl = ThrowExpression(FieldExpression(exceptionField, errCatch, origin), errCatch, origin)
 
             result.add(
@@ -1198,7 +1192,7 @@ class ZauberASTBuilder(
         } else null
 
         val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
-        val keywords = packKeywords()
+        val keywords = packFlags()
 
         if (LOGGER.isDebugEnabled) LOGGER.debug("reading var/val $name")
 

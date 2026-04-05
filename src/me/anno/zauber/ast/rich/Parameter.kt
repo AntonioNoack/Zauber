@@ -1,11 +1,9 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.impl.ClassType
 
 /**
  * type or value parameter
@@ -22,7 +20,7 @@ class Parameter(
     val origin: Int
 ) {
 
-    fun getOrCreateField(selfType: Type?, keywords: KeywordSet): Field {
+    fun getOrCreateField(selfType: Type?, keywords: FlagSet): Field {
         // automatically gets added to fieldScope
         val field = field ?: scope.addField(
             selfType, selfType != null, isMutable = isVar, this,

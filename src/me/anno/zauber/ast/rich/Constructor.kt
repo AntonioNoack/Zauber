@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.KeywordSet
+import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Types.UnitType
@@ -11,7 +11,7 @@ class Constructor(
     scope: Scope,
     val superCall: InnerSuperCall?,
     body: Expression?,
-    keywords: KeywordSet,
+    keywords: FlagSet,
     origin: Int
 ) : MethodLike(
     scope.parent!!.typeWithoutArgs, false,

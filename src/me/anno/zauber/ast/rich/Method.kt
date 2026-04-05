@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.zauber.ast.KeywordSet
-import me.anno.zauber.ast.rich.Keywords.hasFlag
+import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
@@ -20,7 +20,7 @@ class Method(
     returnType: Type?,
     val extraConditions: List<TypeCondition>,
     body: Expression?,
-    keywords: KeywordSet,
+    keywords: FlagSet,
     origin: Int
 ) : MethodLike(
     selfType, explicitSelfType,
@@ -38,11 +38,8 @@ class Method(
      * */
     var backedField: Field? = null
 
-    // due to multi-interface, there may be many of them
-    var overriddenMethods: List<Method> = emptyList()
-    var overriddenBy: List<Method> = emptyList()
-
-    fun isInline(): Boolean = keywords.hasFlag(Keywords.INLINE) && overriddenBy.isEmpty() && body != null
+    // todo can inline methods open? explicit inheritance-tree would need to be inlined...
+    fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {
         val returnType = returnType
@@ -74,5 +71,10 @@ class Method(
         builder.append(valueParameters.joinToString(", "))
         builder.append(')')
         return builder.toString()
+    }
+
+    init {
+        if (explicitSelfType && name == "x")
+            throw IllegalStateException("Testing: Explicit self-type??? $this")
     }
 }

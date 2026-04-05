@@ -2,7 +2,7 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.FieldDeclaration
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
@@ -19,14 +19,14 @@ fun ASTBuilderBase.destructuringForLoop(
     val fullVariable = scope.addField(
         null, false, isMutable = false, null,
         fullName, null, null,
-        Keywords.NONE, origin
+        Flags.NONE, origin
     )
     val fields = variableNames.map { fieldDeclaration ->
         // todo if _, don't create a field
         if (fieldDeclaration.name != "_") scope.addField(
             null, false, isMutable = false, null,
             fieldDeclaration.name, fieldDeclaration.type, null,
-            Keywords.NONE, origin
+            Flags.NONE, origin
         ) else null
     }
     val fullExpr = FieldExpression(fullVariable, scope, origin)

@@ -29,7 +29,7 @@ object EnumProperties {
         primaryConstructorScope.selfAsConstructor = Constructor(
             emptyList(), primaryConstructorScope,
             null, ExpressionList(ArrayList(), primaryConstructorScope, origin0),
-            Keywords.NONE, origin0
+            Flags.NONE, origin0
         )
 
         push(endIndex) {
@@ -46,8 +46,8 @@ object EnumProperties {
                     readValueParameters()
                 } else emptyList()
 
-                val keywords = packKeywords()
-                val entryScope = readClassBody(name, Keywords.NONE, ScopeType.ENUM_ENTRY_CLASS)
+                val keywords = packFlags()
+                val entryScope = readClassBody(name, Flags.NONE, ScopeType.ENUM_ENTRY_CLASS)
                 val integerValue = if (consumeIf("=")) readExpression() else null
 
                 // todo add name and id as parameters
@@ -98,7 +98,7 @@ object EnumProperties {
         val entriesField = constructorScope.addField(
             null, false, isMutable = false, null,
             "entries", listType,
-            initialValue, Keywords.SYNTHETIC, origin
+            initialValue, Flags.SYNTHETIC, origin
         )
 
         val entriesFieldExpr = FieldExpression(entriesField, constructorScope, origin)

@@ -4,7 +4,7 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.zauber.ast.rich.Annotation
-import me.anno.zauber.ast.rich.Keywords
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -65,11 +65,11 @@ class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, 
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
                 consumeIf("interface") -> readInterface()
                 consumeIf("struct") -> {
-                    addKeyword(Keywords.VALUE)
+                    addFlag(Flags.VALUE)
                     readClass(ScopeType.NORMAL_CLASS)
                 }
                 consumeIf("record") -> {
-                    addKeyword(Keywords.VALUE)
+                    addFlag(Flags.VALUE)
                     readClass(ScopeType.NORMAL_CLASS)
                 }
 
@@ -109,8 +109,8 @@ class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, 
 
     override fun consumeKeyword(): Int {
         return when {
-            consumeIf("public") -> Keywords.PUBLIC
-            consumeIf("private") -> Keywords.PRIVATE
+            consumeIf("public") -> Flags.PUBLIC
+            consumeIf("private") -> Flags.PRIVATE
             consumeIf("internal") -> 0 // todo = not exported -> support that somehow? should exports be explicit or implicit?
             else -> super.consumeKeyword()
         }

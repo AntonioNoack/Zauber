@@ -1,3 +1,3 @@
 package me.anno.zauber.ast
 
-typealias KeywordSet = Int
+typealias FlagSet = Int
