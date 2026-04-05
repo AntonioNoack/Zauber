@@ -47,7 +47,7 @@ class ConstructorExpression(
         val valueParameters = resolveValueParameters(context, valueParameters)
         return ConstructorResolver.findMemberInScope(
             clazz.scope, origin, clazz.name, context.targetType,
-            null, typeParameters, valueParameters
+            null, typeParameters, valueParameters, context
         ) ?: throw IllegalStateException("Missing constructor $clazz(${valueParameters.joinToString(", ")})")
     }
 

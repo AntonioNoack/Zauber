@@ -21,25 +21,21 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
     override fun findMemberInScope(
         scope: Scope?, origin: Int, name: String,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
+        context: ResolutionContext
     ): ResolvedConstructor? {
         LOGGER.info("Checking scope '$scope' for constructor '$name'")
         scope ?: return null
         if (scope.name == name) {
-            val constructor = findMemberInScopeImpl(scope, name, returnType, selfType, typeParameters, valueParameters)
+            val constructor = findMemberInScopeImpl(scope, name, typeParameters, valueParameters, context)
             if (constructor != null) return constructor
         }
         LOGGER.info("  children: ${scope.children.map { it.name }}")
         for (child in scope.children) {
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
                 LOGGER.info("Found constructor-name pre-match: $child")
-                val constructor =
-                    findMemberInScopeImpl(child.scope, name, returnType, selfType, typeParameters, valueParameters)
+                val constructor = findMemberInScopeImpl(child.scope, name, typeParameters, valueParameters, context)
                 if (constructor != null) return constructor
             }
         }
@@ -48,16 +44,14 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
     fun findMemberInScopeImpl(
         scope: Scope, name: String,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        context: ResolutionContext
     ): ResolvedConstructor? {
+
         check(scope.name == name)
         if (scope.scopeType == ScopeType.TYPE_ALIAS) {
-            return getByTypeAlias(scope, returnType, selfType, typeParameters, valueParameters)
+            return getByTypeAlias(scope, typeParameters, valueParameters, context)
         }
 
         val children = scope.children
@@ -66,8 +60,9 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             val constructor = children[i].scope.selfAsConstructor ?: continue
             // if (method.name != name) continue
             if (constructor.typeParameters.isNotEmpty()) {
-                LOGGER.info("Given $constructor on $selfType, with target $returnType, can we deduct any generics from that?")
+                LOGGER.info("Given $constructor in $context, can we deduct any generics from that?")
             }
+            val returnType = context.targetType
             val match = findMemberMatch(
                 constructor, constructor.selfType, returnType,
                 typeParameters, valueParameters,
@@ -83,12 +78,9 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
     private fun getByTypeAlias(
         scope: Scope,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        context: ResolutionContext
     ): ResolvedConstructor? {
 
         // this can still happen during type-resolution,
@@ -100,6 +92,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         val typeParameters0 = typeParameters
             ?.toParameterList(scope.typeParameters)
 
+        val selfType = context.selfType
         val newType2 = typeParameters0.resolveGenerics(selfType, newType)
 
         val typeParameters2 = typeParameters?.map { typeParam ->
@@ -108,8 +101,9 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
 
         val scope = typeToScope(newType2)!!
         return findMemberInScopeImpl(
-            scope, scope.name, returnType, selfType,
-            typeParameters2, valueParameters
+            scope, scope.name,
+            typeParameters2, valueParameters,
+            context
         )
     }
 

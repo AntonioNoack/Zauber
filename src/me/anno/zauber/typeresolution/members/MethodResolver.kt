@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
@@ -14,7 +15,6 @@ import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeCallPart
 import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
@@ -24,11 +24,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     override fun findMemberInScope(
         scope: Scope?, origin: Int, name: String,
 
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
+        context: ResolutionContext
     ): ResolvedMethod? {
         scope ?: return null
         val scopeSelfType = getSelfType(scope)
@@ -37,16 +35,21 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         for (i in children.indices) {
             val method = children[i].scope.selfAsMethod ?: continue
             if (method.name != name) continue
+
             if (LOGGER.isInfoEnabled && method.typeParameters.isNotEmpty()) {
-                LOGGER.info("Given $method on $selfType, with target $returnType, can we deduct any generics from that?")
+                LOGGER.info("Given $method in $context, can we deduct any generics from that?")
             }
-            val methodReturnType = if (returnType != null) {
+
+            val returnType = context.targetType
+
+            val methodReturnType0 = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)
             } else method.returnType // no resolution invoked (fast-path)
-            if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType")
+            val methodReturnType1 = methodReturnType0?.specialize(context.specialization)
+            if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType1")
             val match = findMemberMatch(
-                method, methodReturnType, returnType,
-                selfType, typeParameters, valueParameters,
+                method, methodReturnType1, returnType,
+                context.selfType, typeParameters, valueParameters,
                 /* todo is this fine??? */scope, origin
             )
             if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {
@@ -112,9 +115,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 method.valueParameters, actualValueParameters, matchScore
             ) ?: return null
 
-            val selfType = selfType ?: method.selfType.resolvedName
-            val context = ResolutionContext(selfType, false, returnType, emptyMap())
-            // println("selfType: $selfType, generics: $generics")
+            val selfType1 = selfType ?: method.selfType.resolvedName
+            val context = ResolutionContext(selfType1, false, returnType, emptyMap())
+            println("selfType: $selfType1, generics: $generics for $method")
             ResolvedMethod(
                 generics.subList(0, methodSelfParams.size), method,
                 generics.subList(methodSelfParams.size, generics.size),
@@ -170,7 +173,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         return resolveInCodeScope(context, codeScope) { scope, selfType ->
             findMemberInScope(
                 scope, origin, name, context.targetType,
-                selfType, typeParameters, valueParameters
+                selfType, typeParameters, valueParameters, context
             )
         } ?: resolveByImports(
             context, name, nameAsImport,
@@ -210,7 +213,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 methodOwner.typeWithArgs else context.selfType
             val importedMethod = findMemberInScope(
                 methodOwner, origin, nameAsImport.name, context.targetType, methodSelfType,
-                typeParameters, valueParameters
+                typeParameters, valueParameters, context
             )
             if (importedMethod != null) return importedMethod
 
@@ -219,17 +222,16 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 val companionSelfType = ownerCompanion.typeWithArgs
                 val importedCompanionMethod = findMemberInScope(
                     ownerCompanion, origin, nameAsImport.name, context.targetType, companionSelfType,
-                    typeParameters, valueParameters
+                    typeParameters, valueParameters, context
                 )
                 if (importedCompanionMethod != null) return importedCompanionMethod
             }
         }
 
-        val importedConstructor = ConstructorResolver
-            .findMemberInScopeImpl(
-                nameAsImport, nameAsImport.name, context.targetType, context.selfType,
-                typeParameters, valueParameters
-            )
+        val importedConstructor = ConstructorResolver.findMemberInScopeImpl(
+            nameAsImport, nameAsImport.name,
+            typeParameters, valueParameters, context
+        )
         if (importedConstructor != null) return importedConstructor
 
         return null

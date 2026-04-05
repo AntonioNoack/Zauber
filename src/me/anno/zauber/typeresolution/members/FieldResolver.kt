@@ -22,16 +22,16 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
     override fun findMemberInScope(
         scope: Scope?, origin: Int, name: String,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
+        context: ResolutionContext
     ): ResolvedField? {
         scope ?: return null
 
         // println("Searching for '$name' in $scope")
+
+        val selfType = context.selfType
+        val returnType = context.targetType
 
         val scopeSelfType = getSelfType(scope)
         var bestMatch: ResolvedField? = null
@@ -65,7 +65,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             }
             val match = findMemberInScope(
                 companion, origin, name, returnType, selfType,
-                typeParameters, valueParameters,
+                typeParameters, valueParameters, context,
             )
             bestMatch = joinMatches(bestMatch, match)
         }
@@ -198,7 +198,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         return resolveInCodeScope(context, codeScope) { candidateScope, selfType ->
             findMemberInScope(
                 candidateScope, origin, name, context.targetType,
-                selfType, typeParameters, emptyList()
+                selfType, typeParameters, emptyList(), context
             )
         } ?: resolveFieldByImports(
             context, codeScope,
@@ -233,7 +233,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             for (selfType in selfTypes) {
                 val field = findMemberInScope(
                     scope, origin, originalName, returnType, selfType,
-                    typeParameters, emptyList()
+                    typeParameters, emptyList(), context
                 )
                 if (field != null) return field
             }

@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -14,7 +15,6 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 /**
@@ -79,11 +79,10 @@ class CallExpression(
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
                 check(baseScope.hasTypeParameters)
 
-                val constructor = ConstructorResolver
-                    .findMemberInScopeImpl(
-                        baseScope, baseScope.name, context.targetType, context.selfType,
-                        typeParameters, valueParameters
-                    )
+                val constructor = ConstructorResolver.findMemberInScopeImpl(
+                    baseScope, baseScope.name,
+                    typeParameters, valueParameters, context
+                )
 
                 constructor ?: throw IllegalStateException("Missing constructor for $baseType")
             }
@@ -108,8 +107,8 @@ class CallExpression(
         //  or are they immediately covered by being detected as constructors?
         val returnType = context.targetType
         val constructor = MethodResolver.null1() // do we need this constructor-stuff? yes, we do, why ever
-            ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters)
-            ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters)
+            ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters, context)
+            ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters, context)
 
         LOGGER.info("TypeParameters for call: $typeParameters")
         val byMethodCall = MethodResolver.resolveCallable(

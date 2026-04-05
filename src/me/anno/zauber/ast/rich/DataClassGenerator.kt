@@ -16,6 +16,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.types.Type
@@ -70,9 +71,10 @@ object DataClassGenerator {
             .valueParameters
             .mapNotNull { it.field }
 
+        val context = ResolutionContext.minimal /// todo better context?
         val hashCodeMethod = MethodResolver.findMemberInScope(
             classScope, origin, "hashCode", Types.IntType, classScope.typeWithoutArgs,
-            emptyList(), emptyList()
+            emptyList(), emptyList(), context
         )
         if (hashCodeMethod == null) {
             generateHashCodeMethod(classScope, origin, primaryFields)
@@ -80,7 +82,7 @@ object DataClassGenerator {
 
         val toStringMethod = MethodResolver.findMemberInScope(
             classScope, origin, "toString", Types.StringType, classScope.typeWithoutArgs,
-            emptyList(), emptyList()
+            emptyList(), emptyList(), context
         )
         if (toStringMethod == null) {
             generateToStringMethod(classScope, origin, primaryFields)
@@ -88,7 +90,8 @@ object DataClassGenerator {
 
         val equalsAnyMethod = MethodResolver.findMemberInScope(
             classScope, origin, "equals", Types.BooleanType, classScope.typeWithoutArgs,
-            emptyList(), listOf(ValueParameterImpl(null, Types.NullableAnyType, false))
+            emptyList(), listOf(ValueParameterImpl(null, Types.NullableAnyType, false)),
+            context
         )
         if (equalsAnyMethod == null) {
             generateEqualsAnyMethod(classScope, origin, primaryFields)
@@ -96,7 +99,8 @@ object DataClassGenerator {
             // this is an optimization:
             val hasEqualsSelfMethod = MethodResolver.findMemberInScope(
                 classScope, origin, "equals", Types.BooleanType, classScope.typeWithoutArgs,
-                emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithoutArgs, false))
+                emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithoutArgs, false)),
+                context
             ) != null
             if (!hasEqualsSelfMethod) {
                 // saves type-check and cast, and therefore should be much faster,

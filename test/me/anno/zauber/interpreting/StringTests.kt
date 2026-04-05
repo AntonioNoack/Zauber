@@ -115,7 +115,7 @@ class StringTests {
     fun testStringConcatUsingArrays() {
         LogManager.disableLoggers(
             "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
-                    "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression,MethodResolver," +
+                    "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression," +
                     "Stdlib,ASTSimplifier,ResolvedMethod"
         )
         val code = """

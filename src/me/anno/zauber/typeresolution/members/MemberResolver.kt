@@ -172,7 +172,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>
+        valueParameters: List<ValueParameter>,
+        context: ResolutionContext,
     ): Resolved? {
         var scope = scope ?: return null
         while (true) {
@@ -180,6 +181,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
                 scope, origin, name,
                 returnType, selfType,
                 typeParameters, valueParameters,
+                context
             )
             if (method != null) return method
 
@@ -187,15 +189,28 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         }
     }
 
-    abstract fun findMemberInScope(
-        scope: Scope?, origin: Int,
-        name: String,
+    fun findMemberInScope(
+        scope: Scope?, origin: Int, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
+        context: ResolutionContext
+    ): Resolved? = findMemberInScope(
+        scope, origin, name,
+        typeParameters, valueParameters,
+        context.withSelfType(selfType)
+            .withTargetType(returnType),
+    )
+
+    abstract fun findMemberInScope(
+        scope: Scope?, origin: Int,
+        name: String,
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+        context: ResolutionContext
     ): Resolved?
 
     private fun getOuterClassDepth(scope: Scope?): Int {
@@ -256,7 +271,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         if (print) LOGGER.info("Scopes/selfTypes: $scopes")
 
-        val selfType0 = scopes.firstBOrNull() ?:Types. UnitType
+        val selfType0 = scopes.firstBOrNull() ?: Types.UnitType
         val selfTypeZ = context.selfType ?: selfType0
         var handledLangScope = false
 

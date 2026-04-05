@@ -7,7 +7,6 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -144,6 +143,7 @@ abstract class Type {
             is LambdaType -> (selfType?.isFullySpecialized() ?: true) &&
                     parameters.all { it.type.isFullySpecialized() } &&
                     returnType.isFullySpecialized()
+            is UnresolvedType -> false
             else -> throw IllegalStateException("Is ${javaClass.simpleName} fully specialized?")
         }
     }
@@ -161,6 +161,7 @@ abstract class Type {
                     LambdaParameter(it.name, it.type.specialize(spec))
                 }, returnType.specialize(spec))
             }
+            is UnresolvedType -> resolvedName.specialize(spec)
             else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
         }
     }
