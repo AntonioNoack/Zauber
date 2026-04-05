@@ -1,7 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -27,7 +26,7 @@ class InheritanceClassTests {
             val tested = runTest(Child())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 
     @Test
@@ -43,7 +42,7 @@ class InheritanceClassTests {
             val tested = runTest(Child())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 
     @Test
@@ -59,7 +58,7 @@ class InheritanceClassTests {
             val tested = runTest(Parent())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(0, runtime.castToInt(value))
+        assertEquals(0, castToInt(value))
     }
 
     @Test
@@ -75,6 +74,6 @@ class InheritanceClassTests {
             val tested = runTest(Parent())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(0, runtime.castToInt(value))
+        assertEquals(0, castToInt(value))
     }
 }

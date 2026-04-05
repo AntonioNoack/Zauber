@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.Compile
+import me.anno.zauber.Compile.STDLIB_NAME
+import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
@@ -14,6 +15,7 @@ import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.utils.NumberUtils.f1
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 /**
@@ -35,7 +37,8 @@ object TypeResolution {
         )
     }
 
-    val langScope by lazy { Compile.root.getOrPut("zauber", null) }
+    val langScope by threadLocal { root.getOrPut(STDLIB_NAME, null) }
+
     var numSuccesses = 0
     var numFailures = 0
 

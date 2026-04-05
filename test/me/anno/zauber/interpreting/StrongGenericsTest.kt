@@ -22,7 +22,7 @@ class StrongGenericsTest {
             val tested = call(0)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Int", runtime.castToString(value))
+        assertEquals("Int", castToString(value))
     }
 
     @Test
@@ -32,7 +32,7 @@ class StrongGenericsTest {
             val tested = call("Hello")
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("String", runtime.castToString(value))
+        assertEquals("String", castToString(value))
     }
 
     @Test
@@ -42,12 +42,12 @@ class StrongGenericsTest {
             val tested = call(0)
         """.trimIndent()
         val valueT = testExecute(trueCode)
-        assertEquals(true, runtime.castToBool(valueT))
+        assertEquals(true, castToBool(valueT))
         val falseCode = """
             fun <V> call(v: V): Boolean = V.isSubTypeOf(Int)
             val tested = call(0f)
         """.trimIndent()
         val valueF = testExecute(falseCode)
-        assertEquals(false, runtime.castToBool(valueF))
+        assertEquals(false, castToBool(valueF))
     }
 }

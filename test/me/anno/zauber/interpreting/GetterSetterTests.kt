@@ -16,7 +16,7 @@ class GetterSetterTests {
             val tested get() = x
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(17f, runtime.castToFloat(value))
+        assertEquals(17f, castToFloat(value))
     }
 
     @Test
@@ -35,7 +35,7 @@ class GetterSetterTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(12, runtime.castToInt(value))
+        assertEquals(12, castToInt(value))
     }
 
     @Test
@@ -59,7 +59,7 @@ class GetterSetterTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(12, runtime.castToInt(value))
+        assertEquals(12, castToInt(value))
     }
 
     @Test
@@ -83,7 +83,7 @@ class GetterSetterTests {
             object Unit
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(12, runtime.castToInt(value))
+        assertEquals(12, castToInt(value))
     }
 
 }

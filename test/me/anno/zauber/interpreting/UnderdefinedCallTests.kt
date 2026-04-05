@@ -58,7 +58,7 @@ class UnderdefinedCallTests {
             }
             is Array<*> -> {
                 assertEquals(Types.ArrayType, value.type.type)
-                assertEquals(listOf(1, 2, 3), contents.map { value -> runtime.castToInt(value as Instance) })
+                assertEquals(listOf(1, 2, 3), contents.map { value -> castToInt(value as Instance) })
             }
             else -> throw IllegalStateException("$value is incorrect")
         }

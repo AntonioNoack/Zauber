@@ -94,7 +94,7 @@ class StringTests {
     fun testStringField() {
         val code = "val tested = \"Some String\""
         val value = testExecute(code)
-        assertEquals("Some String", runtime.castToString(value))
+        assertEquals("Some String", castToString(value))
     }
 
     @Test
@@ -108,7 +108,7 @@ class StringTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Some String", runtime.castToString(value))
+        assertEquals("Some String", castToString(value))
     }
 
     @Test
@@ -125,7 +125,7 @@ class StringTests {
             $smallStdlib
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Some String", runtime.castToString(value))
+        assertEquals("Some String", castToString(value))
     }
 
     @Test
@@ -166,6 +166,6 @@ class StringTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Hello", runtime.castToString(value))
+        assertEquals("Hello", castToString(value))
     }
 }

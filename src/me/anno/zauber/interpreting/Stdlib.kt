@@ -34,14 +34,14 @@ object Stdlib {
 
     fun registerPrintln() {
         runtime.register(langScope, "println", listOf(Types.StringType)) { _, params ->
-            runPrintln(runtime.castToString(params[0]))
+            runPrintln(castToString(params[0]))
         }
         runtime.register(langScope, "println", listOf(Types.IntType)) { _, params ->
-            runPrintln(runtime.castToInt(params[0]).toString())
+            runPrintln(castToInt(params[0]).toString())
         }
     }
 
-    private fun runPrintln( content: String): Instance {
+    private fun runPrintln(content: String): Instance {
         val rt = runtime
         rt.printed += content
         println(content)
@@ -50,7 +50,7 @@ object Stdlib {
 
     fun registerArrayAccess() {
         runtime.register(Types.ArrayType.clazz, "get", listOf(Types.IntType)) { self, params ->
-            val index = runtime.castToInt(params[0])
+            val index = castToInt(params[0])
             val rt = runtime
             when (val content = self.rawValue) {
                 is Array<*> -> content[index] as Instance
@@ -70,19 +70,19 @@ object Stdlib {
             "set",
             listOf(Types.IntType, GenericType(Types.ArrayType.clazz, "V"))
         ) { self, params ->
-            val index = runtime.castToInt(params[0])
+            val index = castToInt(params[0])
             val value = params[1]
             val rt = runtime
             @Suppress("UNCHECKED_CAST")
             when (val content = self.rawValue) {
                 is Array<*> -> (content as Array<Instance>)[index] = value
-                is BooleanArray -> content[index] = runtime.castToBool(value)
-                is ByteArray -> content[index] = runtime.castToByte(value)
-                is ShortArray -> content[index] = runtime.castToShort(value)
-                is IntArray -> content[index] = runtime.castToInt(value)
-                is LongArray -> content[index] = runtime.castToLong(value)
-                is FloatArray -> content[index] = runtime.castToFloat(value)
-                is DoubleArray -> content[index] = runtime.castToDouble(value)
+                is BooleanArray -> content[index] = castToBool(value)
+                is ByteArray -> content[index] = castToByte(value)
+                is ShortArray -> content[index] = castToShort(value)
+                is IntArray -> content[index] = castToInt(value)
+                is LongArray -> content[index] = castToLong(value)
+                is FloatArray -> content[index] = castToFloat(value)
+                is DoubleArray -> content[index] = castToDouble(value)
                 null -> throw IllegalStateException("Missing array content")
                 else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
             }
@@ -106,8 +106,8 @@ object Stdlib {
         rt.registerBinaryFloatMethod("times", Float::times)
         rt.registerBinaryFloatMethod("div", Float::div)
         rt.registerBinaryMethod(Types.FloatType, "compareTo") { a, b ->
-            val a = rt.castToFloat(a)
-            val b = rt.castToFloat(b)
+            val a = castToFloat(a)
+            val b = castToFloat(b)
             rt.createInt(a.compareTo(b))
         }
     }
@@ -115,8 +115,8 @@ object Stdlib {
     fun registerStringMethods() {
         val rt = runtime
         rt.registerBinaryMethod(Types.StringType, "plus") { a, b ->
-            val a = rt.castToString(a)
-            val b = rt.castToString(b)
+            val a = castToString(a)
+            val b = castToString(b)
             rt.createString(a + b)
         }
     }

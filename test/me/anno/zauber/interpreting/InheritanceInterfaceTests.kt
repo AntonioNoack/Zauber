@@ -29,7 +29,7 @@ class InheritanceInterfaceTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(Types.IntType, value.type.type)
-        assertEquals(0, runtime.castToInt(value))
+        assertEquals(0, castToInt(value))
     }
 
     @Test
@@ -43,7 +43,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(0, runtime.castToInt(value))
+        assertEquals(0, castToInt(value))
     }
 
     @Test
@@ -59,7 +59,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 
     @Test
@@ -82,6 +82,6 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 }

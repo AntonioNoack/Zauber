@@ -15,7 +15,7 @@ class ThisTests {
             val tested = A(1).x
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 
     @Test
@@ -27,7 +27,7 @@ class ThisTests {
             val tested = A(1).x()
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 
     @Test
@@ -45,7 +45,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
+        assertEquals(2, castToInt(value))
     }
 
     @Test
@@ -65,7 +65,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
+        assertEquals(2, castToInt(value))
     }
 
     @Test
@@ -85,7 +85,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, runtime.castToInt(value))
+        assertEquals(3, castToInt(value))
     }
 
     @Test
@@ -106,7 +106,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, runtime.castToInt(value))
+        assertEquals(3, castToInt(value))
     }
 
     @Test
@@ -129,7 +129,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, runtime.castToInt(value))
+        assertEquals(3, castToInt(value))
     }
 
     @Test
@@ -150,7 +150,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, runtime.castToInt(value))
+        assertEquals(3, castToInt(value))
     }
 
 }

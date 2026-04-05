@@ -70,7 +70,7 @@ class BasicRuntimeTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(listOf("Hello World!"), runtime.printed)
-        assertEquals(0, runtime.castToInt(value))
+        assertEquals(0, castToInt(value))
     }
 
     @Test
@@ -87,9 +87,9 @@ class BasicRuntimeTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val valueT = testExecute("val tested = true\n$stdlib")
-        assertEquals(true, runtime.castToBool(valueT))
+        assertEquals(true, castToBool(valueT))
         val valueF = testExecute("val tested = false\n$stdlib")
-        assertEquals(false, runtime.castToBool(valueF))
+        assertEquals(false, castToBool(valueF))
     }
 
     @Test
@@ -104,7 +104,7 @@ class BasicRuntimeTests {
             "${value.type} somehow has no properties"
         }
         val a = value.properties[0]!!
-        assertEquals(5, runtime.castToInt(a))
+        assertEquals(5, castToInt(a))
     }
 
     // todo implement and test destructors...

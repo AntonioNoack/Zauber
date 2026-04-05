@@ -491,12 +491,21 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     override fun equals(other: Any?): Boolean {
         if (other is Scope) {
-            check(root === other.root) { "Root mismatch :(" }
+            val root = root
+            val otherRoot = other.root
+            check(root.atomic >= 0) { "Invalid root '$name', atomic is negative" }
+            check(otherRoot.atomic >= 0) { "Invalid root '${otherRoot.atomic}', atomic is negative" }
+            check(root === otherRoot) {
+                "Root mismatch :(, " +
+                        "#${root.atomic} vs " +
+                        "#${otherRoot.atomic}"
+            }
         }
         return other is Scope && pathStr == other.pathStr
     }
 
-    val root get() = parent ?: this
+    val atomic = if (parent == null) rootIndex.incrementAndGet() else -1
+    val root: Scope get() = parent?.root ?: this
 
     override fun hashCode(): Int {
         var hash = 1
@@ -545,6 +554,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     companion object {
         private val nextAnonymousName = AtomicInteger(0)
+        private val rootIndex = AtomicInteger(0)
     }
 
 }

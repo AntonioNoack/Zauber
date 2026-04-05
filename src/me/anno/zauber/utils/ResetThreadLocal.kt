@@ -3,12 +3,14 @@ package me.anno.zauber.utils
 import java.util.*
 import kotlin.reflect.KProperty
 
-class ResetThreadLocal<V>(val generator: () -> V) {
+class ResetThreadLocal<V : Any>(val generator: () -> V) {
 
     private val values = WeakHashMap<Thread, V>()
 
     operator fun getValue(thisRef: Any?, property: KProperty<*>): V {
-        return values.getOrPut(Thread.currentThread(), generator)
+        return synchronized(values) {
+            values.getOrPut(Thread.currentThread(), generator)
+        }
     }
 
     init {
@@ -18,14 +20,16 @@ class ResetThreadLocal<V>(val generator: () -> V) {
     }
 
     fun reset(thread: Thread) {
-        values.remove(thread)
+        synchronized(values) {
+            values.remove(thread)
+        }
     }
 
     companion object {
 
         val registered = ArrayList<ResetThreadLocal<*>>()
 
-        fun <V> threadLocal(generator: () -> V): ResetThreadLocal<V> {
+        fun <V : Any> threadLocal(generator: () -> V): ResetThreadLocal<V> {
             return ResetThreadLocal(generator)
         }
 

@@ -48,7 +48,7 @@ object ASTSimplifier {
     val voidResult = FlowResult(null, null, null)
     val booleanOwnership = Ownership.COMPTIME
 
-    private val cache = HashMap<MethodSpecialization, SimpleGraph>()
+    private val cache by threadLocal { HashMap<MethodSpecialization, SimpleGraph>() }
 
     // todo inline functions
     // todo calculate what errors a function throws,

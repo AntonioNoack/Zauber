@@ -66,7 +66,7 @@ class FibonacciTests {
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
-        assertEquals(21, runtime.castToInt(value))
+        assertEquals(21, castToInt(value))
     }
 
     @Test
@@ -89,7 +89,7 @@ class FibonacciTests {
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
-        assertEquals(21, runtime.castToInt(value))
+        assertEquals(21, castToInt(value))
     }
 
     @Test
@@ -104,7 +104,7 @@ class FibonacciTests {
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8
         val value = testExecute(code)
-        assertEquals(8, runtime.castToInt(value))
+        assertEquals(8, castToInt(value))
     }
 
     @Test
@@ -119,7 +119,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, runtime.castToInt(value))
+        assertEquals(8, castToInt(value))
     }
 
     @Test
@@ -134,7 +134,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, runtime.castToInt(value))
+        assertEquals(8, castToInt(value))
     }
 
     @Test
@@ -152,7 +152,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, runtime.castToInt(value))
+        assertEquals(8, castToInt(value))
     }
 
     @Test
@@ -175,7 +175,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, runtime.castToInt(value))
+        assertEquals(8, castToInt(value))
     }
 
     @Test
@@ -193,7 +193,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, runtime.castToInt(value))
+        assertEquals(8, castToInt(value))
     }
 
 

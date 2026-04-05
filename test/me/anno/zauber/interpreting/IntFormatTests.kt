@@ -15,7 +15,7 @@ class IntFormatTests {
             val tested = 17
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(17, runtime.castToInt(value))
+        assertEquals(17, castToInt(value))
     }
 
     @Test
@@ -32,7 +32,7 @@ class IntFormatTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(-17, runtime.castToInt(value))
+        assertEquals(-17, castToInt(value))
     }
 
     @Test
@@ -41,7 +41,7 @@ class IntFormatTests {
             val tested = 0x17
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(23, runtime.castToInt(value))
+        assertEquals(23, castToInt(value))
     }
 
     @Test
@@ -50,7 +50,7 @@ class IntFormatTests {
             val tested = 0b10101
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(21, runtime.castToInt(value))
+        assertEquals(21, castToInt(value))
     }
 
 }

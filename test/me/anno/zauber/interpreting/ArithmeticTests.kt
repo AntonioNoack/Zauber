@@ -21,7 +21,7 @@ class ArithmeticTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(22, runtime.castToInt(value))
+        assertEquals(22, castToInt(value))
     }
 
     @Test
@@ -40,7 +40,7 @@ class ArithmeticTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(21, runtime.castToInt(value))
+        assertEquals(21, castToInt(value))
     }
 
     @Test
@@ -61,7 +61,7 @@ class ArithmeticTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(24, runtime.castToInt(value))
+        assertEquals(24, castToInt(value))
     }
 
     @Test
@@ -82,7 +82,7 @@ class ArithmeticTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(24, runtime.castToInt(value))
+        assertEquals(24, castToInt(value))
     }
 
     @Test
@@ -97,7 +97,7 @@ class ArithmeticTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(25, runtime.castToInt(value))
+        assertEquals(25, castToInt(value))
     }
 
 }

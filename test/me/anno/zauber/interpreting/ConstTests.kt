@@ -34,6 +34,6 @@ class ConstTests {
             }
         """.trimIndent()
         )
-        assertEquals(17 + 1 + 2 + 3 + 4 + 5, runtime.castToInt(value))
+        assertEquals(17 + 1 + 2 + 3 + 4 + 5, castToInt(value))
     }
 }

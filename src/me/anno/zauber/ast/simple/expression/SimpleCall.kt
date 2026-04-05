@@ -164,7 +164,7 @@ class SimpleCall(
             method.valueParameters[0].type.resolvedName == Types.IntType
         ) {
             val sizeParam = valueParameters[0]
-            val size = runtime.castToInt(runtime[sizeParam])
+            val size = castToInt(runtime[sizeParam])
             self.rawValue = createArray(selfType.typeParameters?.get(0)?.resolvedName, size)
         }
     }

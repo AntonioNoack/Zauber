@@ -38,7 +38,7 @@ class FactorialTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(5 * 4 * 3 * 2, runtime.castToInt(value))
+        assertEquals(5 * 4 * 3 * 2, castToInt(value))
     }
 
     @Test
@@ -76,7 +76,7 @@ class FactorialTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, runtime.castToInt(value))
+        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, castToInt(value))
     }
 
     @Test
@@ -132,7 +132,7 @@ class FactorialTests {
             val tested = fac(10)
         """.trimIndent() + stdlib
         val value = testExecute(code)
-        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, runtime.castToInt(value))
+        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, castToInt(value))
     }
 
 }

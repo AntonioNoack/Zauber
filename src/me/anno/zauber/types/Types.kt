@@ -22,6 +22,7 @@ private fun getScope0(i: String): Scope {
     for (part in parts) {
         scope = scope.getOrPut(part, null)
     }
+    println("Created ${scope.pathStr} from root #${root.atomic}")
     return scope
 }
 

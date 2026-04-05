@@ -19,6 +19,6 @@ class TypePropertyTest {
     fun testTypeName() {
         val code = "val tested = Int.name"
         val value = testExecute(code)
-        assertEquals("Int", runtime.castToString(value))
+        assertEquals("Int", castToString(value))
     }
 }

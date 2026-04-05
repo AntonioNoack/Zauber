@@ -41,7 +41,7 @@ class ReduceTests {
                 $stdlib
             """.trimIndent()
         val value = testExecute(code)
-        assertEquals(6, runtime.castToInt(value))
+        assertEquals(6, castToInt(value))
     }
 
     @Test
@@ -52,6 +52,6 @@ class ReduceTests {
                 $stdlib
             """.trimIndent()
         val value = testExecute(code)
-        assertEquals(6, runtime.castToInt(value))
+        assertEquals(6, castToInt(value))
     }
 }

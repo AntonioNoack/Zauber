@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -11,51 +12,46 @@ object RuntimeCast {
         }
     }
 
-    fun Runtime.castToBool(instance: Instance): Boolean {
-        val isTrue = instance == getBool(true)
-        val isFalse = instance == getBool(false)
+    fun castToBool(instance: Instance): Boolean {
+        val rt = runtime
+        val isTrue = instance == rt.getBool(true)
+        val isFalse = instance == rt.getBool(false)
         check(isTrue || isFalse) { "Expected value to be either true or false, got $instance" }
         return isTrue
     }
 
-    @Suppress("UnusedReceiverParameter")
-    fun Runtime.castToByte(value: Instance): Byte {
+    fun castToByte(value: Instance): Byte {
         checkType(value, Types.ByteType)
         return value.rawValue as Byte
     }
 
-    @Suppress("UnusedReceiverParameter")
-    fun Runtime.castToShort(value: Instance): Short {
+    fun castToShort(value: Instance): Short {
         checkType(value, Types.ShortType)
         return value.rawValue as Short
     }
 
-    @Suppress("UnusedReceiverParameter")
-    fun Runtime.castToInt(value: Instance): Int {
+    fun castToInt(value: Instance): Int {
         checkType(value, Types.IntType)
         return value.rawValue as? Int
             ?: throw IllegalStateException("Found illegal Int-instance without raw value: $value")
     }
 
-    @Suppress("UnusedReceiverParameter", "unused")
-    fun Runtime.castToLong(value: Instance): Long {
+    fun castToLong(value: Instance): Long {
         checkType(value, Types.LongType)
         return value.rawValue as Long
     }
 
-    @Suppress("UnusedReceiverParameter")
-    fun Runtime.castToFloat(value: Instance): Float {
+    fun castToFloat(value: Instance): Float {
         checkType(value, Types.FloatType)
         return value.rawValue as Float
     }
 
-    @Suppress("UnusedReceiverParameter")
-    fun Runtime.castToDouble(value: Instance): Double {
+    fun castToDouble(value: Instance): Double {
         checkType(value, Types.DoubleType)
         return value.rawValue as Double
     }
 
-    fun Runtime.castToString(value: Instance): String {
+    fun castToString(value: Instance): String {
         checkType(value, Types.StringType)
         if (value.rawValue == null) {
             // a byte array

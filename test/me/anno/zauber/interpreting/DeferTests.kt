@@ -29,7 +29,7 @@ class DeferTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", runtime.castToString(value))
+        assertEquals("Test", castToString(value))
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
 
@@ -63,7 +63,7 @@ class DeferTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", runtime.castToString(value))
+        assertEquals("Test", castToString(value))
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
 
@@ -88,7 +88,7 @@ class DeferTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", runtime.castToString(value))
+        assertEquals("Test", castToString(value))
         assertEquals(listOf("Hello!"), runtime.printed)
     }
 

@@ -26,7 +26,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, runtime.castToInt(value))
+        assertEquals(1, castToInt(value))
     }
 
     @Test
@@ -73,7 +73,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
+        assertEquals(2, castToInt(value))
     }
 
     @Test
@@ -99,7 +99,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
+        assertEquals(2, castToInt(value))
     }
 
     @Test
@@ -126,7 +126,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
+        assertEquals(2, castToInt(value))
     }
 
     @Test
@@ -156,7 +156,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, runtime.castToInt(value))
+        assertEquals(2, castToInt(value))
     }
 
     @Test
@@ -173,7 +173,7 @@ class TryCatchTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", runtime.castToString(value))
+        assertEquals("Test", castToString(value))
         assertEquals(listOf("Hello World"), runtime.printed)
     }
 
@@ -199,7 +199,7 @@ class TryCatchTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", runtime.castToString(value))
+        assertEquals("Test", castToString(value))
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
 
@@ -255,7 +255,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", runtime.castToString(value))
+        assertEquals("Test", castToString(value))
         assertEquals(listOf("0", "1", "2", "3"), runtime.printed)
     }
 

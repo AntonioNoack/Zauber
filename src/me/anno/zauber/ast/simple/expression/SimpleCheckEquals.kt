@@ -39,7 +39,7 @@ class SimpleCheckEquals(
         return when (result.type) {
             ReturnType.THROW -> result
             ReturnType.RETURN, ReturnType.VALUE -> {
-                val value = runtime.castToBool(result.value)
+                val value = castToBool(result.value)
                 BlockReturn(ReturnType.VALUE, runtime.getBool(!value))
             }
             else -> throw NotImplementedError("$result in SimpleCheckEquals")
