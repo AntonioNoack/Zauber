@@ -15,13 +15,7 @@ import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.ShortType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
@@ -166,7 +160,7 @@ class SimpleCall(
         val selfType = self.type.type.resolvedName
         if (selfType is ClassType && selfType.clazz.pathStr == "zauber.Array" &&
             method is Constructor && valueParameters.size == 1 &&
-            method.valueParameters[0].type.resolvedName == IntType
+            method.valueParameters[0].type.resolvedName == Types.IntType
         ) {
             val sizeParam = valueParameters[0]
             val size = runtime.castToInt(runtime[sizeParam])
@@ -176,13 +170,13 @@ class SimpleCall(
 
     fun createArray(type: Type?, size: Int): Any {
         return when (type) {
-            BooleanType -> BooleanArray(size)
-            ByteType -> ByteArray(size)
-            ShortType -> ShortArray(size)
-            IntType -> IntArray(size)
-            LongType -> LongArray(size)
-            FloatType -> FloatArray(size)
-            DoubleType -> DoubleArray(size)
+            Types.BooleanType -> BooleanArray(size)
+            Types.ByteType -> ByteArray(size)
+            Types.ShortType -> ShortArray(size)
+            Types.IntType -> IntArray(size)
+            Types.LongType -> LongArray(size)
+            Types.FloatType -> FloatArray(size)
+            Types.DoubleType -> DoubleArray(size)
             else -> arrayOfNulls<Instance>(size)
         }
     }

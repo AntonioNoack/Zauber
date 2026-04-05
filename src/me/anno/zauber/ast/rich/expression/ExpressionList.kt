@@ -4,7 +4,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Expression(scope, origin) {
 
@@ -21,7 +21,7 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
                 context.withAllowTypeless(context.allowTypeless || i + 1 < list.size),
                 list[i]
             )
-            if (type == NothingType) return NothingType
+            if (type == Types.NothingType) return type
         }
         return type
     }

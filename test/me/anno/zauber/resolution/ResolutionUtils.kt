@@ -8,15 +8,14 @@ import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
+import me.anno.zauber.utils.ResetThreadLocal
 
 object ResolutionUtils {
     fun typeResolveScope(code: String): Scope {
 
-        root.clear()
-        Types.register()
+        ResetThreadLocal.reset()
 
         val testScopeName = "test${ctr++}"
 

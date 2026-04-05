@@ -12,7 +12,7 @@ import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Import
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class NamedCallExpression(
@@ -83,7 +83,7 @@ class NamedCallExpression(
             println("self: $self (${self.javaClass.simpleName})")
             if (self is FieldExpression) {
                 println("self-type: ${self.field.valueType}")
-                if (self.field.name == "content" && self.field.valueType == ArrayType) {
+                if (self.field.name == "content" && self.field.valueType == Types.ArrayType) {
                     throw IllegalStateException("Expected ${self.field}: ${self.field.valueType} to have type parameters")
                 }
             }

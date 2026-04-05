@@ -3,7 +3,7 @@ package me.anno.zauber.ast.rich
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class Constructor(
@@ -16,7 +16,7 @@ class Constructor(
 ) : MethodLike(
     scope.parent!!.typeWithoutArgs, false,
     scope.typeParameters, valueParameters,
-    UnitType, scope, "?", body, keywords, origin
+    Types.UnitType, scope, "?", body, keywords, origin
 ) {
 
     override val selfType: ClassType

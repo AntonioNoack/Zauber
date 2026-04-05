@@ -14,15 +14,12 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
-import me.anno.zauber.typeresolution.ValueParameterImpl
-import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ValueParameterImpl
+import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.NullableAnyType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 
 object DataClassGenerator {
 
@@ -47,13 +44,13 @@ object DataClassGenerator {
 
         fun shortcutAnd(getCondition: (Scope) -> Expression): Scope {
             val expr = expr!!
-            expr.resolvedType = BooleanType
+            expr.resolvedType = Types.BooleanType
 
             val trueScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.METHOD_BODY)
             val falseScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.METHOD_BODY)
 
             val condition = getCondition(trueScope)
-            condition.resolvedType = BooleanType
+            condition.resolvedType = Types.BooleanType
             this.scope = trueScope
             this.expr = shortcutExpressionI(
                 expr, ShortcutOperator.AND, condition,
@@ -74,7 +71,7 @@ object DataClassGenerator {
             .mapNotNull { it.field }
 
         val hashCodeMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "hashCode", IntType, classScope.typeWithoutArgs,
+            classScope, origin, "hashCode", Types.IntType, classScope.typeWithoutArgs,
             emptyList(), emptyList()
         )
         if (hashCodeMethod == null) {
@@ -82,7 +79,7 @@ object DataClassGenerator {
         }
 
         val toStringMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "toString", StringType, classScope.typeWithoutArgs,
+            classScope, origin, "toString", Types.StringType, classScope.typeWithoutArgs,
             emptyList(), emptyList()
         )
         if (toStringMethod == null) {
@@ -90,15 +87,15 @@ object DataClassGenerator {
         }
 
         val equalsAnyMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "equals", BooleanType, classScope.typeWithoutArgs,
-            emptyList(), listOf(ValueParameterImpl(null, NullableAnyType, false))
+            classScope, origin, "equals", Types.BooleanType, classScope.typeWithoutArgs,
+            emptyList(), listOf(ValueParameterImpl(null, Types.NullableAnyType, false))
         )
         if (equalsAnyMethod == null) {
             generateEqualsAnyMethod(classScope, origin, primaryFields)
 
             // this is an optimization:
             val hasEqualsSelfMethod = MethodResolver.findMemberInScope(
-                classScope, origin, "equals", BooleanType, classScope.typeWithoutArgs,
+                classScope, origin, "equals", Types.BooleanType, classScope.typeWithoutArgs,
                 emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithoutArgs, false))
             ) != null
             if (!hasEqualsSelfMethod) {
@@ -115,7 +112,7 @@ object DataClassGenerator {
     ) {
         lateinit var body: Expression
         val methodScope = pushScope("hashCode", ScopeType.METHOD) { scope ->
-            val builder = ExpressionBuilder(scope, origin, IntType)
+            val builder = ExpressionBuilder(scope, origin, Types.IntType)
             for (field in primaryFields) {
                 val fieldExpr = FieldExpression(field, scope, origin)
                 val hashExpr = NamedCallExpression(fieldExpr, "hashCode", scope, origin)
@@ -131,7 +128,7 @@ object DataClassGenerator {
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "hashCode", emptyList(), emptyList(),
-            methodScope, IntType, emptyList(), body, KEYWORDS, origin
+            methodScope, Types.IntType, emptyList(), body, KEYWORDS, origin
         )
     }
 
@@ -141,7 +138,7 @@ object DataClassGenerator {
     ) {
         lateinit var body: Expression
         val methodScope = pushScope("toString", ScopeType.METHOD) { scope ->
-            val builder = ExpressionBuilder(scope, origin, StringType)
+            val builder = ExpressionBuilder(scope, origin, Types.StringType)
             builder.expr = StringExpression("${classScope.name}(", scope, origin)
             for ((i, field) in primaryFields.withIndex()) {
                 val fieldExpr = FieldExpression(field, scope, origin)
@@ -156,7 +153,7 @@ object DataClassGenerator {
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "toString", emptyList(), emptyList(),
-            methodScope, StringType, emptyList(), body, KEYWORDS, origin
+            methodScope, Types.StringType, emptyList(), body, KEYWORDS, origin
         )
     }
 
@@ -167,10 +164,10 @@ object DataClassGenerator {
         lateinit var body: Expression
         lateinit var parameter: Parameter
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
-            parameter = Parameter(0, "other", NullableAnyType, scope, origin)
+            parameter = Parameter(0, "other", Types.NullableAnyType, scope, origin)
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
-            val builder = ExpressionBuilder(scope, origin, BooleanType)
+            val builder = ExpressionBuilder(scope, origin, Types.BooleanType)
             val otherInstanceExpr0 = FieldExpression(otherField, scope, origin)
             builder.expr = IsInstanceOfExpr(otherInstanceExpr0, classScope.typeWithArgs, scope, origin)
 
@@ -192,7 +189,7 @@ object DataClassGenerator {
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "equals", emptyList(), listOf(parameter),
-            methodScope, BooleanType, emptyList(), body, KEYWORDS, origin
+            methodScope, Types.BooleanType, emptyList(), body, KEYWORDS, origin
         )
     }
 
@@ -206,7 +203,7 @@ object DataClassGenerator {
             parameter = Parameter(0, "other", classScope.typeWithArgs, scope, origin)
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
-            val builder = ExpressionBuilder(scope, origin, BooleanType)
+            val builder = ExpressionBuilder(scope, origin, Types.BooleanType)
             for (field in primaryFields) {
                 builder.shortcutAnd { subScope ->
                     val fieldExpr = FieldExpression(field, subScope, origin)
@@ -225,7 +222,7 @@ object DataClassGenerator {
         }
         methodScope.selfAsMethod = Method(
             classScope.typeWithArgs, false, "equals", emptyList(), listOf(parameter),
-            methodScope, BooleanType, emptyList(), body, KEYWORDS, origin
+            methodScope, Types.BooleanType, emptyList(), body, KEYWORDS, origin
         )
     }
 

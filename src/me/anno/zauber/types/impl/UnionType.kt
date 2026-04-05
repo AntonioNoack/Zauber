@@ -1,7 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
 
@@ -14,8 +14,8 @@ class UnionType(val types: List<Type>) : Type() {
 
         fun unionTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
-            if (typeA == NothingType) return typeB
-            if (typeB == NothingType) return typeA
+            if (typeA == Types.NothingType) return typeB
+            if (typeB == Types.NothingType) return typeA
             if (typeA == UnknownType || typeB == UnknownType) return UnknownType
             return reduceUnionTypes(getTypes(typeA) + getTypes(typeB))
         }
@@ -26,7 +26,7 @@ class UnionType(val types: List<Type>) : Type() {
         }
 
         fun unionTypes(types: List<Type>): Type {
-            if (types.isEmpty()) return NothingType
+            if (types.isEmpty()) return Types.NothingType
             return reduceUnionTypes(types.flatMap { typeI -> getTypes(typeI) })
         }
 
@@ -35,8 +35,8 @@ class UnionType(val types: List<Type>) : Type() {
         }
 
         fun reduceUnionTypes(types: List<Type>): Type {
-            val types = types.distinct().filter { it != NothingType }
-            if (types.isEmpty()) return NothingType
+            val types = types.distinct().filter { it != Types.NothingType }
+            if (types.isEmpty()) return Types.NothingType
             if (types.size == 1) return types[0]
             if (UnknownType in types) return UnknownType
 
@@ -55,7 +55,7 @@ class UnionType(val types: List<Type>) : Type() {
 
             val nonClassTypes = types.filter { it !is ClassType }
             val jointTypes = classTypes + nonClassTypes
-            if (jointTypes.isEmpty()) return NothingType
+            if (jointTypes.isEmpty()) return Types.NothingType
             if (jointTypes.size == 1) return jointTypes[0]
             return UnionType(jointTypes)
         }

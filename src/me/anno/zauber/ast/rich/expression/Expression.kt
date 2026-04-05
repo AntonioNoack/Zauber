@@ -5,9 +5,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ThrowableType
-import me.anno.zauber.types.Types.UnitType
-import me.anno.zauber.types.Types.YieldedType
+import me.anno.zauber.types.Types
 
 abstract class Expression(val scope: Scope, val origin: Int) {
 
@@ -19,12 +17,12 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     abstract fun resolveReturnType(context: ResolutionContext): Type
     open fun resolveThrownType(context: ResolutionContext): Type {
         LOGGER.warn("Implement resolveThrownType for ${javaClass.simpleName}")
-        return ThrowableType // just assume all
+        return Types.ThrowableType // just assume all
     }
 
     open fun resolveYieldedType(context: ResolutionContext): Type {
         LOGGER.warn("Implement resolveYieldedType for ${javaClass.simpleName}")
-        return YieldedType
+        return Types.YieldedType
     }
 
     fun resolve(context: ResolutionContext): Expression {
@@ -52,7 +50,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
         if (!context.allowTypeless) throw IllegalStateException(
             "Expected type, but found $this (${javaClass.simpleName}) in ${resolveOrigin(origin)}"
         )
-        return UnitType
+        return Types.UnitType
     }
 
     init {

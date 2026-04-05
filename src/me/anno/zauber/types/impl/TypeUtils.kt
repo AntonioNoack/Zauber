@@ -3,7 +3,7 @@ package me.anno.zauber.types.impl
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 object TypeUtils {
 
@@ -56,7 +56,7 @@ object TypeUtils {
         if (t1 is UnresolvedType || t2 is UnresolvedType)
             return canInstanceBeBoth(t1.resolvedName, t2.resolvedName)
 
-        if (t1 == NothingType || t2 == NothingType) return false
+        if (t1 == Types.NothingType || t2 == Types.NothingType) return false
         if (t1 == t2) return true
         if (t1 is UnionType) return t1.types.any { t1i -> canInstanceBeBoth(t1i, t2) }
         if (t2 is UnionType) return t2.types.any { t2i -> canInstanceBeBoth(t1, t2i) }

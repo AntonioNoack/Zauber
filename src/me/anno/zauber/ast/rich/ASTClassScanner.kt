@@ -27,10 +27,7 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import kotlin.math.max
 
 /**
@@ -121,8 +118,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     } else emptyList()
 
                     if (scopeType == ScopeType.ENUM_CLASS) {
-                        val param0 = Parameter(0, "ordinal", IntType, constructorScope, constrOrigin)
-                        val param1 = Parameter(1, "name", StringType, constructorScope, constrOrigin)
+                        val param0 = Parameter(0, "ordinal", Types.IntType, constructorScope, constrOrigin)
+                        val param1 = Parameter(1, "name", Types.StringType, constructorScope, constrOrigin)
                         param0.getOrCreateField(null, Flags.SYNTHETIC)
                         param1.getOrCreateField(null, Flags.SYNTHETIC)
                         valueParameters = listOf(param0, param1) + valueParameters.map { it.shift(2) }
@@ -480,7 +477,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             } else if (tokens.equals(i, "{") ||
                 methodScope.flags.hasFlag(Flags.EXTERNAL)
             ) { // type is implicitly Unit
-                UnitType
+                Types.UnitType
             } else null
 
             val body = when {
@@ -709,7 +706,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
                 val defaultValue = if (consumeIf("=")) readLazyValue() else null
 
-                if (isVararg) type = ArrayType.withTypeParameter(type)
+                if (isVararg) type = Types.ArrayType.withTypeParameter(type)
                 val parameter = Parameter(
                     parameters.size, isVar, isVal, isVararg,
                     name, type, defaultValue,

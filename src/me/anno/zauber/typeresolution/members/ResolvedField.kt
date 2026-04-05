@@ -22,7 +22,8 @@ import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.getScope
+import me.anno.zauber.types.Types
+import me.anno.zauber.types.getScope
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
@@ -192,7 +193,9 @@ class ResolvedField(
             val numArguments = (if (baseType.selfType != null) 1 else 0) + baseType.parameters.size
             val className = "Function$numArguments"
             val genericNames = String(CharArray(numArguments + 1) { 'A' + it })
-            val lambdaClassScope = getScope(className, genericNames)
+
+            val nat = Types.NullableAnyType
+            val lambdaClassScope = getScope(className, genericNames, nat)
 
             val method = lambdaClassScope.methods.firstOrNull { it.name == "call" }
                 ?: throw IllegalStateException("Class $className is missing .call() method")

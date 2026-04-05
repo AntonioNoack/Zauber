@@ -2,14 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.parseHexFloat
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 object RuntimeCreate {
@@ -29,57 +22,57 @@ object RuntimeCreate {
             else -> 10
         }
         return when (type) {
-            ByteType -> createByte(value.toByte(basis))
-            ShortType -> createShort(value.toShort(basis))
-            IntType -> createInt(value.toInt(basis))
-            LongType -> createLong(value.toLong(basis))
-            FloatType -> createFloat(if (basis == 10) value.toFloat() else parseHexFloat(value).toFloat())
-            DoubleType -> createDouble(if (basis == 10) value.toDouble() else parseHexFloat(value))
+            Types.ByteType -> createByte(value.toByte(basis))
+            Types.ShortType -> createShort(value.toShort(basis))
+            Types.IntType -> createInt(value.toInt(basis))
+            Types.LongType -> createLong(value.toLong(basis))
+            Types.FloatType -> createFloat(if (basis == 10) value.toFloat() else parseHexFloat(value).toFloat())
+            Types.DoubleType -> createDouble(if (basis == 10) value.toDouble() else parseHexFloat(value))
             else -> throw NotImplementedError("Create instance of type $type")
         }
     }
 
     fun Runtime.createByte(value: Byte): Instance {
-        val instance = getClass(ByteType).createInstance()
+        val instance = getClass(Types.ByteType).createInstance()
         instance.rawValue = value
         return instance
     }
 
     fun Runtime.createShort(value: Short): Instance {
-        val instance = getClass(ShortType).createInstance()
+        val instance = getClass(Types.ShortType).createInstance()
         instance.rawValue = value
         return instance
     }
 
     fun Runtime.createInt(value: Int): Instance {
-        val instance = getClass(IntType).createInstance()
+        val instance = getClass(Types.IntType).createInstance()
         instance.rawValue = value
         return instance
     }
 
     fun Runtime.createLong(value: Long): Instance {
-        val instance = getClass(LongType).createInstance()
+        val instance = getClass(Types.LongType).createInstance()
         instance.rawValue = value
         return instance
     }
 
     fun Runtime.createFloat(value: Float): Instance {
-        val instance = getClass(FloatType).createInstance()
+        val instance = getClass(Types.FloatType).createInstance()
         instance.rawValue = value
         return instance
     }
 
     fun Runtime.createDouble(value: Double): Instance {
-        val instance = getClass(DoubleType).createInstance()
+        val instance = getClass(Types.DoubleType).createInstance()
         instance.rawValue = value
         return instance
     }
 
     fun Runtime.createString(value: String): Instance {
-        val type = getClass(StringType)
+        val type = getClass(Types.StringType)
         val instance = type.createInstance()
         if (type.properties.isNotEmpty()) {
-            val arrayType = ClassType(ArrayType.clazz, listOf(ByteType), -1)
+            val arrayType = ClassType(Types.ArrayType.clazz, listOf(Types.ByteType), -1)
             val content = getClass(arrayType).createInstance()
             val bytes = value.encodeToByteArray()
             content.properties[0] = createInt(bytes.size)

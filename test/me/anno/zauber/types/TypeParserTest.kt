@@ -1,10 +1,5 @@
 package me.anno.zauber.types
 
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -22,14 +17,14 @@ class TypeParserTest {
 
     @Test
     fun testSimpleType() {
-        assertEquals(FloatType, "Float".parseType())
-        assertEquals(StringType, "String".parseType())
+        assertEquals(Types.FloatType, "Float".parseType())
+        assertEquals(Types.StringType, "String".parseType())
     }
 
     @Test
     fun testNullableType() {
-        assertEquals(unionTypes(StringType, NullType), "String?".parseType())
-        assertEquals(unionTypes(FloatType, NullType), "Float?".parseType())
+        assertEquals(unionTypes(Types.StringType, NullType), "String?".parseType())
+        assertEquals(unionTypes(Types.FloatType, NullType), "Float?".parseType())
     }
 
     @Test
@@ -39,18 +34,18 @@ class TypeParserTest {
 
     @Test
     fun testUnionType() {
-        assertEquals(unionTypes(FloatType, StringType), "Float|String".parseType())
+        assertEquals(unionTypes(Types.FloatType, Types.StringType), "Float|String".parseType())
     }
 
     @Test
     fun testAndType() {
         // todo this is effectively Nothing, because a type cannot be both sub-branches of a parent with class-inheritance
-        assertEquals(andTypes(FloatType, StringType), "Float&String".parseType())
+        assertEquals(andTypes(Types.FloatType, Types.StringType), "Float&String".parseType())
     }
 
     @Test
     fun testNotType() {
-        assertEquals(FloatType.not(), "!Float".parseType())
+        assertEquals(Types.FloatType.not(), "!Float".parseType())
     }
 
     @Test
@@ -59,8 +54,8 @@ class TypeParserTest {
         // & must be stronger than |
         assertEquals(
             unionTypes(
-                andTypes(FloatType.not(), DoubleType.not()),
-                andTypes(IntType, LongType)
+                andTypes(Types.FloatType.not(), Types.DoubleType.not()),
+                andTypes(Types.IntType, Types.LongType)
             ), "!Float&!Double|Int&Long".parseType()
         )
     }

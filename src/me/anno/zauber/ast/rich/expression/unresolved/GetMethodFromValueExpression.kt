@@ -9,7 +9,7 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 
@@ -88,10 +88,11 @@ class GetMethodFromValueExpression(
                 "Expected at least one parameter to generate $this for $targetType"
             }
 
+            println("lambda-targetType: $targetType, spec: ${context.specialization}")
             val tmpScope = scope.generate("lambda", ScopeType.LAMBDA)
             val variables = List(targetType.parameters.size) {
-                val type = targetType.parameters[it].type.specialize(context.spec)
-                println("specialized ${targetType.parameters[it].type} -> $type for $this, $context")
+                val type = targetType.parameters[it].type.specialize(context.specialization)
+                println("lambda-specialized ${targetType.parameters[it].type} -> $type for $this, $context")
                 val field = tmpScope.addField(
                     null, false, isMutable = false, null,
                     name, type, null, Flags.NONE, origin
@@ -109,8 +110,8 @@ class GetMethodFromValueExpression(
         }
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     // todo or if the resolved method has some...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {

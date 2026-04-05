@@ -11,20 +11,15 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.BooleanUtils.not
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 class CppASTBuilder(
     tokens: TokenList,
@@ -35,15 +30,19 @@ class CppASTBuilder(
     companion object {
         private val LOGGER = LogManager.getLogger(CppASTBuilder::class)
 
-        private val builtInTypes = mapOf(
-            "int" to IntType,
-            "long" to LongType,
-            "float" to FloatType,
-            "double" to DoubleType,
-            "bool" to BooleanType,
-            "char" to ByteType,
-            "void" to UnitType,
-        )
+        private val builtInTypes by threadLocal {
+            Types.run {
+                mapOf(
+                    "int" to IntType,
+                    "long" to LongType,
+                    "float" to FloatType,
+                    "double" to DoubleType,
+                    "bool" to BooleanType,
+                    "char" to ByteType,
+                    "void" to UnitType,
+                )
+            }
+        }
     }
 
     val language = standard.kind()

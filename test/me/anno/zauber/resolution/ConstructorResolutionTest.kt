@@ -2,7 +2,7 @@ package me.anno.zauber.resolution
 
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
-import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -15,7 +15,7 @@ class ConstructorResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested").valueType!!
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -34,7 +34,7 @@ class ConstructorResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested").valueType!!
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -48,7 +48,7 @@ class ConstructorResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested").valueType!!
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -60,7 +60,7 @@ class ConstructorResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested").valueType!!
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -75,7 +75,7 @@ class ConstructorResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested").valueType!!
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     // todo test resolver prefers methods over fields when calling

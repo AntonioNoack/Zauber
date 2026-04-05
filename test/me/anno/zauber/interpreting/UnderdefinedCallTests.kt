@@ -1,11 +1,8 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
@@ -25,7 +22,7 @@ class UnderdefinedCallTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         )
-        val expectedType = rt.getClass(ClassType(ArrayType.clazz, listOf(IntType), -1))
+        val expectedType = rt.getClass(Types.ArrayType.withTypeParameter(Types.IntType))
         assertEquals(expectedType, valueT.type)
         val contents = valueT.rawValue
         assertInstanceOf<IntArray>(contents)
@@ -55,13 +52,11 @@ class UnderdefinedCallTests {
         when (val contents = value.rawValue) {
             is IntArray -> {
                 // todo it should be this one..., but it's the other one
-                val intParam = ParameterList(ArrayType.clazz.typeParameters, listOf(IntType))
-                val arrayOfInts = ClassType(ArrayType.clazz, intParam)
-                assertEquals(arrayOfInts, value.type.type)
+                assertEquals(Types.ArrayType.withTypeParameter(Types.IntType), value.type.type)
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
             is Array<*> -> {
-                assertEquals(ArrayType, value.type.type)
+                assertEquals(Types.ArrayType, value.type.type)
                 assertEquals(listOf(1, 2, 3), contents.map { value -> rt.castToInt(value as Instance) })
             }
             else -> throw IllegalStateException("$value is incorrect")

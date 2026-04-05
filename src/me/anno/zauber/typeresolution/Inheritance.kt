@@ -7,9 +7,9 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.AnyType
-import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 /**
  * Check if one type inherits from another, incl. generic checks.
@@ -143,7 +143,7 @@ object Inheritance {
     ): Boolean {
 
         if (expectedType == actualType) return true
-        if (expectedType == NullableAnyType) return true
+        if (expectedType == Types.NullableAnyType) return true
         if (expectedType == UnknownType) return true
         if (actualType is UnresolvedType || expectedType is UnresolvedType ||
             actualType is NonObjectClassType || expectedType is NonObjectClassType
@@ -157,7 +157,7 @@ object Inheritance {
         if (actualType == UnknownType) {
             // todo use the bounds of the generics instead, not 'Any?'
             return isSubTypeOf(
-                expectedType, NullableAnyType,
+                expectedType, Types.NullableAnyType,
                 expectedTypeParams, actualTypeParameters, insertMode,
                 matchScore,
             )
@@ -411,11 +411,11 @@ object Inheritance {
     }
 
     fun getSuperCalls(scope: Scope): List<SuperCall> {
-        if (scope == AnyType.clazz) return emptyList()
+        if (scope == Types.AnyType.clazz) return emptyList()
         if (scope.superCalls.isEmpty()) return listOf(superCallAny)
         return scope.superCalls
     }
 
-    private val superCallAny = SuperCall(AnyType, emptyList(), null)
+    private val superCallAny by threadLocal { SuperCall(Types.AnyType, emptyList(), null) }
 
 }

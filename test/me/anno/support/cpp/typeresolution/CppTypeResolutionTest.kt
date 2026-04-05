@@ -12,7 +12,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -45,17 +45,20 @@ class CppTypeResolutionTest {
 
     @Test
     fun testSimpleVariable() {
-        assertEquals(IntType, testCppTypeResolution("int tested;"))
+        val actual = testCppTypeResolution("int tested;")
+        assertEquals(Types.IntType, actual)
     }
 
     @Test
     fun testPointerLeft() {
-        assertEquals(IntType.ptr(), testCppTypeResolution("int* tested;"))
+        val actual = testCppTypeResolution("int* tested;")
+        assertEquals(Types.IntType.ptr(), actual)
     }
 
     @Test
     fun testPointerRight() {
-        assertEquals(IntType.ptr(), testCppTypeResolution("int *tested;"))
+        val actual = testCppTypeResolution("int *tested;")
+        assertEquals(Types.IntType.ptr(), actual)
     }
 
     @Test
@@ -67,9 +70,9 @@ class CppTypeResolutionTest {
         """.trimIndent()
         )
         val context = ResolutionContext(null, false, null)
-        assertEquals(IntType.ptr(), scope.getField("ptr").resolveValueType(context))
-        assertEquals(IntType, scope.getField("single").resolveValueType(context))
-        assertEquals(IntType.ptr(), scope.getField("singlePtr").resolveValueType(context))
-        assertEquals(IntType.ptr().ptr().ptr(), scope.getField("ptr3").resolveValueType(context))
+        assertEquals(Types.IntType.ptr(), scope.getField("ptr").resolveValueType(context))
+        assertEquals(Types.IntType, scope.getField("single").resolveValueType(context))
+        assertEquals(Types.IntType.ptr(), scope.getField("singlePtr").resolveValueType(context))
+        assertEquals(Types.IntType.ptr().ptr().ptr(), scope.getField("ptr3").resolveValueType(context))
     }
 }

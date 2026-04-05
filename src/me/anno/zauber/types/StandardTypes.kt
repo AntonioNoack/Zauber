@@ -1,129 +1,133 @@
 package me.anno.zauber.types
 
+import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.Compile.root
-import me.anno.zauber.Compile.stdlibName
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 /**
  * types, that are automatically imported into every file
  * */
 object StandardTypes {
 
-    init {
+    val standardClasses: Map<String, Scope>
+            by threadLocal { createStandardTypeScopes() }
+
+    private fun createStandardTypeScopes(): Map<String, Scope> {
+
         // stdlib must be a package to be searched for children automatically
-        root.getOrPut(stdlibName, ScopeType.PACKAGE)
-    }
+        root.getOrPut(STDLIB_NAME, ScopeType.PACKAGE)
 
-    val standardClasses = mapOf(
-        // strings
-        "String" to stdlibName,
-        "StringBuilder" to stdlibName,
-        "CharSequence" to stdlibName,
+        val standardClasses = mapOf(
+            // strings
+            "String" to STDLIB_NAME,
+            "StringBuilder" to STDLIB_NAME,
+            "CharSequence" to STDLIB_NAME,
 
-        // special types
-        "Any" to stdlibName,
-        "Nothing" to stdlibName,
-        "Unit" to stdlibName,
-        "Array" to stdlibName,
+            // special types
+            "Any" to STDLIB_NAME,
+            "Nothing" to STDLIB_NAME,
+            "Unit" to STDLIB_NAME,
+            "Array" to STDLIB_NAME,
 
-        // util
-        "Class" to stdlibName,
-        "Enum" to stdlibName,
-        "IntRange" to stdlibName,
-        "ClosedFloatingPointRange" to stdlibName,
-        "Lazy" to stdlibName,
+            // util
+            "Class" to STDLIB_NAME,
+            "Enum" to STDLIB_NAME,
+            "IntRange" to STDLIB_NAME,
+            "ClosedFloatingPointRange" to STDLIB_NAME,
+            "Lazy" to STDLIB_NAME,
 
-        "Comparable" to stdlibName,
-        "Comparator" to stdlibName,
+            "Comparable" to STDLIB_NAME,
+            "Comparator" to STDLIB_NAME,
 
-        "Iterator" to stdlibName,
-        "ListIterator" to stdlibName,
-        "MutableIterator" to stdlibName,
-        "MutableListIterator" to stdlibName,
-        "Iterable" to stdlibName,
-        "Collection" to stdlibName,
-        "MutableCollection" to stdlibName,
+            "Iterator" to STDLIB_NAME,
+            "ListIterator" to STDLIB_NAME,
+            "MutableIterator" to STDLIB_NAME,
+            "MutableListIterator" to STDLIB_NAME,
+            "Iterable" to STDLIB_NAME,
+            "Collection" to STDLIB_NAME,
+            "MutableCollection" to STDLIB_NAME,
 
-        "List" to stdlibName,
-        "ArrayList" to stdlibName,
-        "MutableList" to stdlibName,
+            "List" to STDLIB_NAME,
+            "ArrayList" to STDLIB_NAME,
+            "MutableList" to STDLIB_NAME,
 
-        "IndexedValue" to stdlibName,
+            "IndexedValue" to STDLIB_NAME,
 
-        "Set" to stdlibName,
-        "HashSet" to stdlibName,
-        "MutableSet" to stdlibName,
+            "Set" to STDLIB_NAME,
+            "HashSet" to STDLIB_NAME,
+            "MutableSet" to STDLIB_NAME,
 
-        "Map" to stdlibName,
-        "HashMap" to stdlibName,
-        "MutableMap" to stdlibName,
+            "Map" to STDLIB_NAME,
+            "HashMap" to STDLIB_NAME,
+            "MutableMap" to STDLIB_NAME,
 
-        "Annotation" to stdlibName,
-        "Suppress" to stdlibName,
-        "Deprecated" to stdlibName,
+            "Annotation" to STDLIB_NAME,
+            "Suppress" to STDLIB_NAME,
+            "Deprecated" to STDLIB_NAME,
 
-        "Throwable" to stdlibName,
-        "Exception" to stdlibName,
-        "RuntimeException" to stdlibName,
-        "InterruptedException" to stdlibName,
-        "InstantiationException" to stdlibName,
-        "NoSuchMethodException" to stdlibName,
-        "IllegalArgumentException" to stdlibName,
-        "IllegalStateException" to stdlibName,
-        "ClassCastException" to stdlibName,
-        "Error" to stdlibName,
-        "NoClassDefFoundError" to stdlibName,
-        "ClassNotFoundException" to stdlibName,
-        "NoSuchFieldException" to stdlibName,
-        "NoSuchMethodException" to stdlibName,
-        "OutOfMemoryError" to stdlibName,
-        "IndexOutOfBoundsException" to stdlibName,
+            "Throwable" to STDLIB_NAME,
+            "Exception" to STDLIB_NAME,
+            "RuntimeException" to STDLIB_NAME,
+            "InterruptedException" to STDLIB_NAME,
+            "InstantiationException" to STDLIB_NAME,
+            "NoSuchMethodException" to STDLIB_NAME,
+            "IllegalArgumentException" to STDLIB_NAME,
+            "IllegalStateException" to STDLIB_NAME,
+            "ClassCastException" to STDLIB_NAME,
+            "Error" to STDLIB_NAME,
+            "NoClassDefFoundError" to STDLIB_NAME,
+            "ClassNotFoundException" to STDLIB_NAME,
+            "NoSuchFieldException" to STDLIB_NAME,
+            "NoSuchMethodException" to STDLIB_NAME,
+            "OutOfMemoryError" to STDLIB_NAME,
+            "IndexOutOfBoundsException" to STDLIB_NAME,
 
-        "Pair" to stdlibName,
-        "Triple" to stdlibName,
-        "Number" to stdlibName,
+            "Pair" to STDLIB_NAME,
+            "Triple" to STDLIB_NAME,
+            "Number" to STDLIB_NAME,
 
-        // util²
-        "JvmField" to "kotlin.jvm",
-        "JvmStatic" to "kotlin.jvm",
-        "JvmOverloads" to "kotlin.jvm",
-        "Throws" to "kotlin.jvm",
-        "Thread" to "java.lang",
-        "ThreadLocal" to "java.lang",
-        "Process" to "java.lang",
-        "ClassLoader" to "java.lang",
-        "AbstractList" to "java.util",
-        "RandomAccess" to "java.util",
+            // util²
+            "JvmField" to "kotlin.jvm",
+            "JvmStatic" to "kotlin.jvm",
+            "JvmOverloads" to "kotlin.jvm",
+            "Throws" to "kotlin.jvm",
+            "Thread" to "java.lang",
+            "ThreadLocal" to "java.lang",
+            "Process" to "java.lang",
+            "ClassLoader" to "java.lang",
+            "AbstractList" to "java.util",
+            "RandomAccess" to "java.util",
 
-        // natives
-        "Boolean" to stdlibName,
-        "Byte" to stdlibName,
-        "Short" to stdlibName,
-        "Char" to stdlibName,
-        "Int" to stdlibName,
-        "Long" to stdlibName,
-        "Float" to stdlibName,
-        "Double" to stdlibName,
+            // natives
+            "Boolean" to STDLIB_NAME,
+            "Byte" to STDLIB_NAME,
+            "Short" to STDLIB_NAME,
+            "Char" to STDLIB_NAME,
+            "Int" to STDLIB_NAME,
+            "Long" to STDLIB_NAME,
+            "Float" to STDLIB_NAME,
+            "Double" to STDLIB_NAME,
 
-        // native arrays
-        "BooleanArray" to stdlibName,
-        "ByteArray" to stdlibName,
-        "ShortArray" to stdlibName,
-        "CharArray" to stdlibName,
-        "IntArray" to stdlibName,
-        "LongArray" to stdlibName,
-        "FloatArray" to stdlibName,
-        "DoubleArray" to stdlibName,
-    ).mapValues { (name, packageName) ->
-        val parts = packageName.split('.')
-        var currPackage = root
-        for (i in parts.indices) {
-            currPackage = currPackage.getOrPut(parts[i], null)
+            // native arrays
+            "BooleanArray" to STDLIB_NAME,
+            "ByteArray" to STDLIB_NAME,
+            "ShortArray" to STDLIB_NAME,
+            "CharArray" to STDLIB_NAME,
+            "IntArray" to STDLIB_NAME,
+            "LongArray" to STDLIB_NAME,
+            "FloatArray" to STDLIB_NAME,
+            "DoubleArray" to STDLIB_NAME,
+        ).mapValues { (name, packageName) ->
+            val parts = packageName.split('.')
+            var currPackage = root
+            for (i in parts.indices) {
+                currPackage = currPackage.getOrPut(parts[i], null)
+            }
+            currPackage.getOrPut(name, null)
         }
-        currPackage.getOrPut(name, null)
-    }
 
-    init {
         // mark these types as not having a generic parameter
         val nonGenericTypes = listOf(
             // strings
@@ -196,5 +200,7 @@ object StandardTypes {
             val type = standardClasses[name]!!
             type.hasTypeParameters = true
         }
+
+        return standardClasses
     }
 }

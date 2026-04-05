@@ -2,11 +2,10 @@ package me.anno.support.java.ast
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 /**
  * if (value instanceof T newName) {
@@ -16,9 +15,9 @@ import me.anno.zauber.types.Types.NothingType
 class NamedCastExpression(val instanceTest: IsInstanceOfExpr, val newName: String) :
     Expression(instanceTest.scope, instanceTest.origin) {
 
-    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun clone(scope: Scope): Expression = NamedCastExpression(instanceTest.clone(scope), newName)
 

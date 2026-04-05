@@ -1,15 +1,14 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class VarargTest {
 
-    private val arrayOfFloatType = ClassType(ArrayType.clazz, listOf(FloatType), -1)
+    private val arrayOfFloatType
+        get() = Types.ArrayType.withTypeParameter(Types.FloatType)
 
     @Test
     fun testVarargWithNoParameters() {

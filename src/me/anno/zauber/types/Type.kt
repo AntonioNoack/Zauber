@@ -7,7 +7,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -134,7 +134,7 @@ abstract class Type {
 
     fun isFullySpecialized(): Boolean {
         return when (this) {
-            NullType, NothingType,
+            NullType, Types.NothingType,
             is UnknownType -> true
             is GenericType, is ThisType, is SelfType -> false
             is ClassType -> typeParameters?.all { member -> member.isFullySpecialized() } ?: true

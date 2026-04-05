@@ -25,13 +25,11 @@ import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.AnyType
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.ThrowableType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.SelfType
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 // I want macros... how could we implement them? learn about Rust macros
@@ -68,8 +66,8 @@ class ZauberASTBuilder(
 
         var debug = false
 
-        val unitInstance by lazy {
-            val scope = UnitType.clazz
+        val unitInstance by threadLocal {
+            val scope = Types.UnitType.clazz
             val field = scope.getOrCreateObjectField(-1)
             FieldExpression(field, scope, -1)
         }
@@ -112,9 +110,9 @@ class ZauberASTBuilder(
             }
             i = endIndex // index of {
         }
-        val addAnyIfEmpty = classScope != AnyType.clazz
+        val addAnyIfEmpty = classScope != Types.AnyType.clazz
         if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
-            classScope.superCalls.add(SuperCall(AnyType, emptyList(), null))
+            classScope.superCalls.add(SuperCall(Types.AnyType, emptyList(), null))
         }
     }
 
@@ -207,7 +205,7 @@ class ZauberASTBuilder(
 
         // optional return type
         var returnType =
-            if (!tokens.equals(i, "=", ":")) UnitType // todo if there is a where, we first need to skip it
+            if (!tokens.equals(i, "=", ":")) Types.UnitType // todo if there is a where, we first need to skip it
             else readTypeOrNull(selfType)
 
         val extraConditions = readWhereConditions()
@@ -224,10 +222,10 @@ class ZauberASTBuilder(
                 val origin = origin(i++) // skip =
                 ReturnExpression(readExpression(), null, methodScope, origin)
             } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                if (returnType == null) returnType = UnitType
+                if (returnType == null) returnType = Types.UnitType
                 pushBlock(methodScope) { readMethodBody() }
             } else {
-                if (returnType == null) returnType = UnitType
+                if (returnType == null) returnType = Types.UnitType
                 null
             }
         }
@@ -312,7 +310,7 @@ class ZauberASTBuilder(
             consume(":")
 
             var type = readTypeNotNull(null, true) // <-- handles generics now
-            if (isVararg) type = ClassType(ArrayType.clazz, listOf(type), origin)
+            if (isVararg) type = ClassType(Types.ArrayType.clazz, listOf(type), origin)
 
             val initialValue = if (consumeIf("=")) readExpression() else null
 
@@ -1123,7 +1121,7 @@ class ZauberASTBuilder(
             forTryBody.addAll(remainder.list)
             result.clear()
 
-            val parameter = Parameter(0, "e", ThrowableType, errCatch, origin)
+            val parameter = Parameter(0, "e", Types.ThrowableType, errCatch, origin)
             val exceptionField = parameter.getOrCreateField(null, Flags.NONE)
             val throwImpl = ThrowExpression(FieldExpression(exceptionField, errCatch, origin), errCatch, origin)
 

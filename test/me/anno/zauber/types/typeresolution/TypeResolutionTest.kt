@@ -1,32 +1,25 @@
 package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
-import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.CharType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.ListType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.StringType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.utils.ResetThreadLocal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -38,8 +31,7 @@ class TypeResolutionTest {
         fun testTypeResolution0(code: String): Scope {
 
             // clean slate
-            root.clear()
-            Types.register()
+            ResetThreadLocal.reset()
 
             val testScopeName = "test${ctr++}"
             val tokens = ZauberTokenizer(
@@ -92,46 +84,58 @@ class TypeResolutionTest {
         }
 
         fun defineListParameters() {
-            ListType.clazz
+            Types.ListType.clazz
         }
     }
 
     @Test
     fun testConstants() {
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = true")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = false")
         )
-        assertEquals(NullType,
+        assertEquals(
+            NullType,
             testTypeResolution("val tested = null")
         )
-        assertEquals(IntType,
+        assertEquals(
+            Types.IntType,
             testTypeResolution("val tested = 0")
         )
-        assertEquals(LongType,
+        assertEquals(
+            Types.LongType,
             testTypeResolution("val tested = 0L")
         )
-        assertEquals(FloatType,
+        assertEquals(
+            Types.FloatType,
             testTypeResolution("val tested = 0f")
         )
-        assertEquals(FloatType,
+        assertEquals(
+            Types.FloatType,
             testTypeResolution("val tested = 0.0f")
         )
-        assertEquals(DoubleType,
+        assertEquals(
+            Types.DoubleType,
             testTypeResolution("val tested = 0d")
         )
-        assertEquals(DoubleType,
+        assertEquals(
+            Types.DoubleType,
             testTypeResolution("val tested = 0.0")
         )
-        assertEquals(DoubleType,
+        assertEquals(
+            Types.DoubleType,
             testTypeResolution("val tested = 1e3")
         )
-        assertEquals(CharType,
+        assertEquals(
+            Types.CharType,
             testTypeResolution("val tested = ' '")
         )
-        assertEquals(StringType,
+        assertEquals(
+            Types.StringType,
             testTypeResolution("val tested = \"Test 123\"")
         )
     }
@@ -139,7 +143,7 @@ class TypeResolutionTest {
     @Test
     fun testNullableTypes() {
         assertEquals(
-            UnionType(listOf(ClassType(BooleanType.clazz, null), NullType)),
+            UnionType(listOf(ClassType(Types.BooleanType.clazz, null), NullType)),
             testTypeResolution("val tested: Boolean?")
         )
     }
@@ -153,11 +157,12 @@ class TypeResolutionTest {
             class Array<V>(val size: Int)
             typealias IntArray = Array<Int>
         """.trimIndent()
-        assertEquals(ArrayType.withTypeParameter(IntType),
+        assertEquals(
+            Types.ArrayType.withTypeParameter(Types.IntType),
             testTypeResolution(code)
         )
     }
-    
+
     @Test
     fun testGetOperator() {
         val type =
@@ -168,7 +173,7 @@ class TypeResolutionTest {
             val tested = x.value
         """.trimIndent()
             )
-        assertEquals(IntType, type)
+        assertEquals(Types.IntType, type)
     }
 
     @Test
@@ -180,7 +185,7 @@ class TypeResolutionTest {
             val tested = x ?: 0f
         """.trimIndent()
             )
-        assertEquals(unionTypes(IntType, FloatType), type)
+        assertEquals(unionTypes(Types.IntType, Types.FloatType), type)
     }
 
     @Test
@@ -193,61 +198,77 @@ class TypeResolutionTest {
             val tested = x?.parent?.value
         """.trimIndent()
             )
-        assertEquals(unionTypes(IntType, NullType), type)
+        assertEquals(unionTypes(Types.IntType, NullType), type)
     }
 
     @Test
     fun testCompareOperators() {
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 < 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 <= 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 > 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 >= 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 == 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 != 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 === 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0 !== 1")
         )
     }
 
     @Test
     fun testCompareOperatorsMixed() {
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f < 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f <= 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f > 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f >= 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f == 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f != 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f === 1")
         )
-        assertEquals(BooleanType,
+        assertEquals(
+            Types.BooleanType,
             testTypeResolution("val tested = 0f !== 1")
         )
     }

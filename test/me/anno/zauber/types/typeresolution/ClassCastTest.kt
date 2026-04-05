@@ -1,7 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
@@ -12,7 +11,7 @@ class ClassCastTest {
     @Test
     fun testTypeIsCastInBranch() {
         assertEquals(
-            unionTypes(FloatType, StringType),
+            unionTypes(Types.FloatType, Types.StringType),
             testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
@@ -34,7 +33,7 @@ class ClassCastTest {
     fun testTypeIsCastAfterReturningBranch() {
         // todo can we somehow test this?? we need to resolve the x+1f inside the getter...
         assertEquals(
-            unionTypes(FloatType, NullType),
+            unionTypes(Types.FloatType, NullType),
             testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float

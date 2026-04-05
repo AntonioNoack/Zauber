@@ -2,20 +2,10 @@ package me.anno.zauber.ast.rich.expression.constants
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.CharType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.HalfType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.UIntType
-import me.anno.zauber.types.Types.ULongType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import kotlin.math.pow
 
@@ -82,13 +72,13 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
     // based on the string content, decide what type this is
     val resolvedType0 = typeBySuffix() ?: when {
-        value.startsWith("'") -> CharType
+        value.startsWith("'") -> Types.CharType
         value.startsWith("0x", true) ||
                 value.startsWith("-0x", true) -> resolveHexIntType()
         value.startsWith("0b", true) ||
                 value.startsWith("-0b", true) -> resolveBinIntType()
         // does Kotlin have numbers with binary exponent? -> no, but it might be useful...
-        value.contains('.') || value.contains('e', true) -> DoubleType
+        value.contains('.') || value.contains('e', true) -> Types.DoubleType
         else -> resolveIntType()
     }
 
@@ -97,7 +87,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         return if (value.length <= 9 + extraLength &&
             value.replace("_", "")
                 .toIntOrNull() != null
-        ) IntType else LongType
+        ) Types.IntType else Types.LongType
     }
 
     private fun resolveHexIntType(): ClassType {
@@ -106,7 +96,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             value.substring(2)
                 .replace("_", "")
                 .toIntOrNull(16) != null
-        ) IntType else LongType
+        ) Types.IntType else Types.LongType
     }
 
     private fun resolveBinIntType(): ClassType {
@@ -115,20 +105,20 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             value.substring(2)
                 .replace("_", "")
                 .toIntOrNull(2) != null
-        ) IntType else LongType
+        ) Types.IntType else Types.LongType
     }
 
     private fun typeBySuffix(): ClassType? {
         val maybeIsFloat = !value.startsWith("0x", true) || value.contains("p", true)
         return when {
-            value.endsWith("ul", true) -> ULongType
-            value.endsWith("u", true) -> UIntType
-            value.endsWith("l", true) -> LongType
-            value.endsWith("h", true) -> HalfType
-            maybeIsFloat && value.endsWith("f", true) -> FloatType
-            maybeIsFloat && value.endsWith("d", true) -> DoubleType
+            value.endsWith("ul", true) -> Types.ULongType
+            value.endsWith("u", true) -> Types.UIntType
+            value.endsWith("l", true) -> Types.LongType
+            value.endsWith("h", true) -> Types.HalfType
+            maybeIsFloat && value.endsWith("f", true) -> Types.FloatType
+            maybeIsFloat && value.endsWith("d", true) -> Types.DoubleType
             value.startsWith("0x", true) &&
-                    ('.' in value || value.contains("pP", true)) -> DoubleType
+                    ('.' in value || value.contains("pP", true)) -> Types.DoubleType
             else -> null
         }
     }
@@ -142,22 +132,22 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         val targetType = context.targetType ?: return dataType
         if (targetType == dataType) return targetType
         // todo if targetType is nullable, remove that type
-        if (dataType == IntType && when (targetType) {
-                LongType -> true
-                ByteType -> checkLoss { it.toInt().toByte() }
-                ShortType -> checkLoss { it.toInt().toShort() }
-                HalfType, // todo check for loss
-                FloatType -> checkLoss { it.toDouble().toFloat() }
-                DoubleType -> true
+        if (dataType == Types.IntType && when (targetType) {
+                Types.LongType -> true
+                Types.ByteType -> checkLoss { it.toInt().toByte() }
+                Types.ShortType -> checkLoss { it.toInt().toShort() }
+                Types.HalfType, // todo check for loss
+                Types.FloatType -> checkLoss { it.toDouble().toFloat() }
+                Types.DoubleType -> true
                 else -> false
             }
         ) return targetType
-        if (dataType == HalfType && targetType == DoubleType) {
+        if (dataType == Types.HalfType && targetType == Types.DoubleType) {
             // todo toHalf()
             checkLoss { it.toDouble().toFloat() }
             return targetType
         }
-        if (dataType == FloatType && targetType == DoubleType) {
+        if (dataType == Types.FloatType && targetType == Types.DoubleType) {
             checkLoss { it.toDouble().toFloat() }
             return targetType
         }
@@ -192,8 +182,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
     override fun clone(scope: Scope) = NumberExpression(value, scope, origin)
 
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false

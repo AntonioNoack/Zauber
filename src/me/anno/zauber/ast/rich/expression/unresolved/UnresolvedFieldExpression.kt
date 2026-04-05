@@ -8,7 +8,7 @@ import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 class UnresolvedFieldExpression(
     val name: String,
@@ -36,8 +36,8 @@ class UnresolvedFieldExpression(
     }
 
     // todo this would be a getter by default... resolve its type...
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun resolveImpl(context: ResolutionContext): ResolvedGetFieldExpression {
         val field = resolveField(context)

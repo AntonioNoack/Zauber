@@ -1,10 +1,10 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
@@ -14,7 +14,7 @@ class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
         return "throw ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.NothingType
     override fun resolveThrownType(context: ResolutionContext): Type {
         // if value returns or throws, we throw
         return unionTypes(value.resolveReturnType(context), value.resolveThrownType(context))

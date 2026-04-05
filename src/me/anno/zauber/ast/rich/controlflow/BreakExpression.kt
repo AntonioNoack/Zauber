@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 class BreakExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
 
@@ -13,8 +13,8 @@ class BreakExpression(val label: Scope, scope: Scope, origin: Int) : Expression(
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun clone(scope: Scope): Expression = BreakExpression(label, scope, origin)
 

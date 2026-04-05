@@ -17,7 +17,7 @@ data class ResolutionContext(
      * any generic value should be defined in this specialization
      * for code generation and runtime; for IDEs, this may be incomplete
      * */
-    val spec: Specialization,
+    val specialization: Specialization,
     /**
      * Whether something without type, like while(true){}, is supported;
      * This is meant to prevent assignments and while-loops in call arguments: AssignmentExpr will throw if !allowTypeless
@@ -43,27 +43,32 @@ data class ResolutionContext(
 
     fun withTargetType(newTargetType: Type?): ResolutionContext {
         if (newTargetType == targetType) return this
-        return ResolutionContext(selfType, spec, allowTypeless, newTargetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, newTargetType, knownLambdas)
     }
 
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
-        return ResolutionContext(newSelfType, spec, allowTypeless, targetType, knownLambdas)
+        return ResolutionContext(newSelfType, specialization, allowTypeless, targetType, knownLambdas)
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
         if (allowTypeless == newAllowTypeless) return this
-        return ResolutionContext(selfType, spec, newAllowTypeless, targetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, newAllowTypeless, targetType, knownLambdas)
     }
 
     fun withKnownLambdas(newKnownLambdas: Map<Field, Expression>): ResolutionContext {
         if (knownLambdas == newKnownLambdas) return this
-        return ResolutionContext(selfType, spec, allowTypeless, targetType, newKnownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, targetType, newKnownLambdas)
+    }
+
+    fun withSpec(specialization: Specialization): ResolutionContext {
+        if (this.specialization == specialization) return this
+        return ResolutionContext(selfType, specialization, allowTypeless, targetType, knownLambdas)
     }
 
     override fun toString(): String {
         return "ResolutionContext(selfType=$selfType, " +
-                "spec=$spec, " +
+                "spec=$specialization, " +
                 "allowTypeless=$allowTypeless, " +
                 "targetType=$targetType, " +
                 "knownLambdas=$knownLambdas)"

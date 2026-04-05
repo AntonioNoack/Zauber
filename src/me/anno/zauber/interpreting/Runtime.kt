@@ -17,9 +17,7 @@ import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
@@ -135,7 +133,7 @@ class Runtime {
         if (fieldIndex >= instance.properties.size)
             throw IllegalStateException("Outdated instance? $instance")
         if (instance.properties[fieldIndex] == null &&
-            clazz.type == StringType &&
+            clazz.type == Types.StringType &&
             field.name == "content"
         ) {
             createStringContentArray(instance, fieldIndex)
@@ -185,7 +183,7 @@ class Runtime {
     fun isNull(va: Instance) = va == getNull()
 
     fun getBool(bool: Boolean): Instance {
-        val boolCompanion = BooleanType.clazz.companionObject
+        val boolCompanion = Types.BooleanType.clazz.companionObject
             ?: throw IllegalStateException("Missing definition for enum class Boolean")
         val boolInstance = getObjectInstance(boolCompanion.typeWithoutArgs)
         val fields = boolInstance.type.properties
@@ -278,7 +276,7 @@ class Runtime {
     }
 
     fun getUnit(): Instance {
-        return getObjectInstance(UnitType)
+        return getObjectInstance(Types.UnitType)
     }
 
     fun getObjectInstance(type: ClassType): Instance {

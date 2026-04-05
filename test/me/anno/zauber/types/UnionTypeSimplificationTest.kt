@@ -2,8 +2,6 @@ package me.anno.zauber.types
 
 import me.anno.zauber.types.IsSubTypeOfTest.Companion.get
 import me.anno.zauber.types.IsSubTypeOfTest.Companion.testInheritance
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.UnionType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.impl.UnknownType
@@ -14,19 +12,19 @@ class UnionTypeSimplificationTest {
 
     @Test
     fun testUnionSelf() {
-        val classA = IntType
+        val classA = Types.IntType
         assertEquals(classA, unionTypes(classA, classA))
     }
 
     @Test
     fun testUnionNothing() {
-        val classA = IntType
-        assertEquals(classA, unionTypes(classA, NothingType))
+        val classA = Types.IntType
+        assertEquals(classA, unionTypes(classA, Types.NothingType))
     }
 
     @Test
     fun testUnionUnknown() {
-        val classA = IntType
+        val classA = Types.IntType
         assertEquals(UnknownType, unionTypes(classA, UnknownType))
     }
 
@@ -42,7 +40,8 @@ class UnionTypeSimplificationTest {
         val classC = scope["C"]
 
         assertEquals(UnionType(listOf(classA, classB)), unionTypes(classA, classB))
-        assertEquals(UnionType(listOf(classA, classB, classC)),
+        assertEquals(
+            UnionType(listOf(classA, classB, classC)),
             IsSubTypeOfTest.unionTypes(classA, classB, classC)
         )
     }

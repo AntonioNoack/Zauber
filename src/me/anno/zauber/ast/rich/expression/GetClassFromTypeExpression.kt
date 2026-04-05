@@ -1,9 +1,10 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.getScope
+import me.anno.zauber.types.Types
+import me.anno.zauber.types.getScope
 import me.anno.zauber.types.impl.ClassType
 
 class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Expression(scope, origin) {
@@ -13,7 +14,8 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Ex
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type {
-        return ClassType(getScope("KClass", "T"), listOf(type), origin)
+        val nat = Types.NullableAnyType
+        return ClassType(getScope("KClass", "T", nat), listOf(type), origin)
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

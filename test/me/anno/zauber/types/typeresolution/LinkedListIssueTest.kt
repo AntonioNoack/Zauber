@@ -1,17 +1,15 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.getType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class LinkedListIssueTest {
     @Test
     fun testInnerCallResolution() {
-        val type =
-            testTypeResolution(
-                """
+        val type = testTypeResolution(
+            """
         val tested = LinkedList<Int>(1)
         
         package zauber
@@ -81,7 +79,7 @@ class LinkedListIssueTest {
             external fun minus(other: Int): Int
         }
             """.trimIndent()
-            )
-        assertEquals(getType("LinkedList", "V").withTypeParameter(IntType), type)
+        )
+        assertEquals(Types.LinkedList.withTypeParameter(Types.IntType), type)
     }
 }

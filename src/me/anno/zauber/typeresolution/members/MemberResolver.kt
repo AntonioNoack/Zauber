@@ -13,7 +13,7 @@ import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.utils.PairArrayList
 
@@ -256,7 +256,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         if (print) LOGGER.info("Scopes/selfTypes: $scopes")
 
-        val selfType0 = scopes.firstBOrNull() ?: UnitType
+        val selfType0 = scopes.firstBOrNull() ?:Types. UnitType
         val selfTypeZ = context.selfType ?: selfType0
         var handledLangScope = false
 

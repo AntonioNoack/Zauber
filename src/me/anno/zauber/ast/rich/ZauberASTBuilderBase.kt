@@ -29,11 +29,7 @@ import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.NullableAnyType
-import me.anno.zauber.types.Types.NumberType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType.typeOrNull
@@ -138,12 +134,12 @@ abstract class ZauberASTBuilderBase(
                 genericParams.last()[name] = GenericType(classScope, name)
 
                 val type = if (this is ZauberASTBuilder || this is ZauberASTClassScanner) {
-                    readTypeOrNull(classScope.typeWithoutArgs) ?: NullableAnyType
+                    readTypeOrNull(classScope.typeWithoutArgs) ?: Types.NullableAnyType
                     // if you print type here, typeParameters may not be available yet, and cause an NPE
                 } else if (tokens.equals(i, "extends", "super")) {
                     i++ // skip extends
                     readTypeNotNull(null, true)
-                } else NullableAnyType
+                } else Types.NullableAnyType
 
                 parameters.add(Parameter(parameters.size, name, type, classScope, origin))
                 readComma()
@@ -365,7 +361,7 @@ abstract class ZauberASTBuilderBase(
         ) {
             while (consumeIf(TokenType.OPEN_ARRAY)) {
                 if (consumeIf(TokenType.CLOSE_ARRAY)) {
-                    base = ClassType(ArrayType.clazz, listOf(base), origin(i))
+                    base = ClassType(Types.ArrayType.clazz, listOf(base), origin(i))
                 } else {
                     i-- // go one back for pushArray
                     val size = pushArray { readExpression() }
@@ -442,7 +438,7 @@ abstract class ZauberASTBuilderBase(
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
-                return ComptimeValue(NumberType, listOf(value))
+                return ComptimeValue(Types.NumberType, listOf(value))
             }
 
             if (tokens.equals(i, TokenType.STRING)) {
@@ -450,7 +446,7 @@ abstract class ZauberASTBuilderBase(
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
-                return ComptimeValue(StringType, listOf(value))
+                return ComptimeValue(Types.StringType, listOf(value))
             }
         }
 
@@ -518,7 +514,7 @@ abstract class ZauberASTBuilderBase(
                 if (tokens.equals(i, "super", "extends")) {
                     i++ // skip super/extends, I'm not sure about their difference...
                     readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
-                } else NullableAnyType
+                } else Types.NullableAnyType
             } else readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
 
             val type = type0
@@ -761,16 +757,16 @@ abstract class ZauberASTBuilderBase(
             }
             if (scopeType == ScopeType.ENUM_CLASS) {
                 parameters = listOf(
-                    Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
-                    Parameter(1, "name", StringType, constructorScope, constructorOrigin)
+                    Parameter(0, "ordinal", Types.IntType, constructorScope, constructorOrigin),
+                    Parameter(1, "name", Types.StringType, constructorScope, constructorOrigin)
                 ) + parameters.map { it.shift(2) }
             }
             parameters
         } else if (scopeType == ScopeType.ENUM_CLASS) {
             val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
             val parameters = listOf(
-                Parameter(0, "ordinal", IntType, constructorScope, constructorOrigin),
-                Parameter(1, "name", StringType, constructorScope, constructorOrigin)
+                Parameter(0, "ordinal", Types.IntType, constructorScope, constructorOrigin),
+                Parameter(1, "name", Types.StringType, constructorScope, constructorOrigin)
             )
             parameters
         } else null

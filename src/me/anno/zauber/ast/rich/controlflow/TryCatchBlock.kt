@@ -5,7 +5,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
@@ -26,7 +26,7 @@ class TryCatchBlock(
     override fun resolveThrownType(context: ResolutionContext): Type {
         val base = tryBody.resolveThrownType(context)
         val fallthrough = andTypes(listOf(base) + catches.map { it.param.type.not() })
-        return unionTypes(fallthrough, finally?.resolveThrownType(context) ?: NothingType)
+        return unionTypes(fallthrough, finally?.resolveThrownType(context) ?: Types.NothingType)
     }
 
     override fun resolveYieldedType(context: ResolutionContext): Type =
@@ -34,7 +34,7 @@ class TryCatchBlock(
             tryBody.resolveYieldedType(context),
             unionTypes(
                 unionTypes(catches.map { it.body.resolveYieldedType(context) }),
-                finally?.resolveYieldedType(context) ?: NothingType,
+                finally?.resolveYieldedType(context) ?: Types.NothingType,
             )
         )
 

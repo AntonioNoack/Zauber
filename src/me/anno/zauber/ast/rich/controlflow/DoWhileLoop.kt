@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 /**
  * cannot easily be converted to a while-loop, because continue needs to run the evaluation!
@@ -17,8 +17,8 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
     override fun needsBackingField(methodScope: Scope): Boolean = condition.needsBackingField(methodScope) ||

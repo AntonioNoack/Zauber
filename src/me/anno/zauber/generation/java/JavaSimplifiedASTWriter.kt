@@ -6,10 +6,10 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.SimpleDeclaration
-import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
@@ -18,16 +18,7 @@ import me.anno.zauber.generation.java.JavaSourceGenerator.comment
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.CharType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 
 object JavaSimplifiedASTWriter {
@@ -122,7 +113,7 @@ object JavaSimplifiedASTWriter {
             val instr = instructions[i]
             appendSimplifiedAST(method, instr /*loop*/)
             if (instr is SimpleAssignment &&
-                instr.dst.type == NothingType
+                instr.dst.type == Types.NothingType
             ) break
         }
         if (expr.branchCondition == null) {
@@ -141,7 +132,7 @@ object JavaSimplifiedASTWriter {
         method: MethodLike, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
-        if (expr is SimpleAssignment && expr.dst.type != NothingType) {
+        if (expr is SimpleAssignment && expr.dst.type != Types.NothingType) {
             val notNeeded = expr.dst.numReads == 0
             if (notNeeded) comment { appendAssign(expr) }
             else appendAssign(expr)
@@ -181,11 +172,11 @@ object JavaSimplifiedASTWriter {
                 if (false) {
                     builder.append(" = ")
                     when (expr.type) {
-                        IntType, LongType,
-                        FloatType, DoubleType,
-                        ByteType, ShortType -> builder.append("0")
-                        CharType -> builder.append("(char) 0")
-                        BooleanType -> builder.append("false")
+                        Types.IntType, Types.LongType,
+                        Types.FloatType, Types.DoubleType,
+                        Types.ByteType, Types.ShortType -> builder.append("0")
+                        Types.CharType -> builder.append("(char) 0")
+                        Types.BooleanType -> builder.append("false")
                         else -> builder.append("null")
                     }
                 }
@@ -306,14 +297,14 @@ object JavaSimplifiedASTWriter {
                             if (castSymbol != null && expr.self.type in nativeNumbers) {
                                 builder.append(castSymbol).append1(expr.self)
                                 true
-                            } else if (expr.self.type == BooleanType && methodName == "not") {
+                            } else if (expr.self.type == Types.BooleanType && methodName == "not") {
                                 builder.append('!').append1(expr.self)
                                 true
                             } else false
                         }
                         1 -> {
                             val supportsType = when (expr.self.type) {
-                                StringType, in nativeTypes -> true
+                                Types.StringType, in nativeTypes -> true
                                 else -> false
                             }
                             val symbol = when (methodName) {
@@ -382,7 +373,7 @@ object JavaSimplifiedASTWriter {
         }
         if (expr is SimpleAssignment) builder.append(';')
         if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
-        if (expr is SimpleAssignment && expr.dst.type == NothingType) {
+        if (expr is SimpleAssignment && expr.dst.type == Types.NothingType) {
             builder.append("throw new AssertionError(\"Unreachable\");")
             nextLine()
         }

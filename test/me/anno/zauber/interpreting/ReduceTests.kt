@@ -28,6 +28,9 @@ class ReduceTests {
         external operator fun set(index: Int, value: V)
     }
     fun <V> arrayOf(vararg values: V): Array<V> = values
+    fun interface Function2<P0, P1, R> {
+        fun call(p0: P0, p1: P1): R
+    }
     """.trimIndent()
 
     @Test
@@ -42,6 +45,7 @@ class ReduceTests {
 
     @Test
     fun testArrayReduceWithTypeMethod() {
+        // todo why is the baseType Any instead of Int???
         val code = """
                 val tested = arrayOf(1, 2, 3).reduce(Int::plus)
                 $stdlib

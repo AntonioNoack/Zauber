@@ -15,27 +15,17 @@ import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.generation.Specializations.specializations
 import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
 import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
-import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.AnyType
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.CharType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.NullableAnyType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 import java.io.File
 
 /**
@@ -52,21 +42,25 @@ object JavaSourceGenerator : Generator() {
     @Suppress("MayBeConstant")
     val enforceSpecialization = true
 
-    val protectedTypes = mapOf(
-        StringType to BoxedType("java.lang.String", "java.lang.String"),
-        BooleanType to BoxedType("Boolean", "boolean"),
-        ByteType to BoxedType("Byte", "byte"),
-        ShortType to BoxedType("Short", "short"),
-        IntType to BoxedType("Integer", "int"),
-        LongType to BoxedType("Long", "long"),
-        CharType to BoxedType("Character", "char"),
-        FloatType to BoxedType("Float", "float"),
-        DoubleType to BoxedType("Double", "double"),
-        AnyType to BoxedType("Object", "Object")
-    )
+    val protectedTypes by threadLocal {
+        Types.run {
+            mapOf(
+                StringType to BoxedType("java.lang.String", "java.lang.String"),
+                BooleanType to BoxedType("Boolean", "boolean"),
+                ByteType to BoxedType("Byte", "byte"),
+                ShortType to BoxedType("Short", "short"),
+                IntType to BoxedType("Integer", "int"),
+                LongType to BoxedType("Long", "long"),
+                CharType to BoxedType("Character", "char"),
+                FloatType to BoxedType("Float", "float"),
+                DoubleType to BoxedType("Double", "double"),
+                AnyType to BoxedType("Object", "Object")
+            )
+        }
+    }
 
-    val nativeTypes = protectedTypes.filter { (_, it) -> it.boxed != it.native }
-    val nativeNumbers = nativeTypes - BooleanType
+    val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
+    val nativeNumbers by threadLocal { nativeTypes - Types.BooleanType }
 
     // todo we need to add these for every constructor and super call,
     //  we need specialized methods for every generic method (incl. getters and setters)
@@ -135,7 +129,7 @@ object JavaSourceGenerator : Generator() {
                 builder.append("Object ")
                 comment { builder.append("null") }
             }
-            NothingType -> {
+            Types.NothingType -> {
                 builder.append("Object ")
                 comment { builder.append("Nothing") }
             }
@@ -404,7 +398,7 @@ object JavaSourceGenerator : Generator() {
         builder.append("public ")
         if (field == classScope.objectField) builder.append("static ")
         if (!field.isMutable) builder.append("final ")
-        val valueType = (field.valueType ?: NullableAnyType).resolve(classScope)
+        val valueType = (field.valueType ?: Types.NullableAnyType).resolve(classScope)
         appendType(valueType, classScope, false)
         builder.append(' ').append(field.name).append(';')
         nextLine()
@@ -469,7 +463,7 @@ object JavaSourceGenerator : Generator() {
         // if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
-        appendType(method.returnType ?: NullableAnyType, classScope, false)
+        appendType(method.returnType ?: Types.NullableAnyType, classScope, false)
         builder.append(' ').append(method.name)
 
         if (specForName.isNotEmpty()) {
@@ -529,7 +523,7 @@ object JavaSourceGenerator : Generator() {
         for (param in valueParameters) {
             if (!builder.endsWith("<")) builder.append(", ")
             builder.append(param.name)
-            if (param.type != AnyType && param.type != NullableAnyType) {
+            if (param.type != Types.AnyType && param.type != Types.NullableAnyType) {
                 builder.append(" extends ")
                 appendType(param.type, scope, false)
             }
@@ -558,7 +552,7 @@ object JavaSourceGenerator : Generator() {
     private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
         writeBlock {
             try {
-                val method1 = MethodSpecialization(method, context.spec)
+                val method1 = MethodSpecialization(method, context.specialization)
                 val simplified = ASTSimplifier.simplify(method1)
                 CodeReconstruction.createCodeFromGraph(simplified)
                 // todo simplify all entry points as methods...
@@ -584,7 +578,7 @@ object JavaSourceGenerator : Generator() {
             for ((i, param) in typeParams.withIndex()) {
                 if (i > 0) builder.append(", ")
                 builder.append(param.name)
-                if (param.type != NullableAnyType) {
+                if (param.type != Types.NullableAnyType) {
                     builder.append(" extends ")
                     appendType(param.type, scope, true)
                 }
@@ -598,7 +592,7 @@ object JavaSourceGenerator : Generator() {
             val superCall0 = scope.superCalls.firstOrNull()
             if (superCall0 != null &&
                 superCall0.valueParameters != null &&
-                superCall0.type != AnyType
+                superCall0.type != Types.AnyType
             ) {
                 val type = superCall0.type
                 builder.append(" extends ")

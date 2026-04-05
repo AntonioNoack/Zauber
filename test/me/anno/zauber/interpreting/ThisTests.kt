@@ -1,8 +1,7 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -15,7 +14,6 @@ class ThisTests {
             val tested = A(1).x
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
         assertEquals(1, runtime.castToInt(value))
     }
 
@@ -28,7 +26,6 @@ class ThisTests {
             val tested = A(1).x()
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
         assertEquals(1, runtime.castToInt(value))
     }
 

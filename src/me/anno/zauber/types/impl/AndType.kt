@@ -1,12 +1,10 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.TypeUtils.canInstanceBeBoth
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
-import me.anno.zauber.types.impl.TypeUtils.isDistinctFrom
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class AndType(val types: List<Type>) : Type() {
@@ -16,8 +14,8 @@ class AndType(val types: List<Type>) : Type() {
         fun andTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
             if (typeA == NullType || typeB == NullType ||
-                typeA == NothingType || typeB == NothingType
-            ) return NothingType
+                typeA == Types.NothingType || typeB == Types.NothingType
+            ) return Types.NothingType
             if (typeA == UnknownType) return typeB
             if (typeB == UnknownType) return typeA
 
@@ -31,14 +29,14 @@ class AndType(val types: List<Type>) : Type() {
 
             val joint = reduceAndTypes(getTypes(typeA) + getTypes(typeB))
             return when (joint.size) {
-                0 -> NothingType
+                0 -> Types.NothingType
                 1 -> joint.first()
                 else -> AndType(joint)
             }
         }
 
         fun andTypes(types: List<Type>): Type {
-            if (types.isEmpty()) return NothingType
+            if (types.isEmpty()) return Types.NothingType
             val uniqueTypes = reduceAndTypes(types)
             if (uniqueTypes.size == 1) return uniqueTypes[0]
             return AndType(uniqueTypes)
@@ -51,13 +49,13 @@ class AndType(val types: List<Type>) : Type() {
         private fun reduceAndTypes(types: List<Type>): List<Type> {
             val types = types.distinct()
             val notTypes = types.filterIsInstance<NotType>()
-            val yesTypes = types.filter { it !is NotType && it != NullableAnyType }
+            val yesTypes = types.filter { it !is NotType && it != Types.NullableAnyType }
 
             for (i in 1 until yesTypes.size) {
                 for (j in 0 until i) {
                     if (!canInstanceBeBoth(yesTypes[i], yesTypes[j])) {
                         // or return empty list?
-                        return listOf(NothingType)
+                        return listOf(Types.NothingType)
                     }
                 }
             }

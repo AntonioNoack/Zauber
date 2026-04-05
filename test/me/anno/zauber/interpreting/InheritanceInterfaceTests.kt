@@ -3,7 +3,7 @@ package me.anno.zauber.interpreting
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -27,7 +27,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
+        assertEquals(Types.IntType, value.type.type)
         assertEquals(0, runtime.castToInt(value))
     }
 
@@ -42,7 +42,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
+        assertEquals(Types.IntType, value.type.type)
         assertEquals(0, runtime.castToInt(value))
     }
 
@@ -59,7 +59,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
+        assertEquals(Types.IntType, value.type.type)
         assertEquals(1, runtime.castToInt(value))
     }
 
@@ -83,7 +83,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val (runtime, value) = testExecute(code)
-        assertEquals(IntType, value.type.type)
+        assertEquals(Types.IntType, value.type.type)
         assertEquals(1, runtime.castToInt(value))
     }
 }

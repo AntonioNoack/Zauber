@@ -3,7 +3,7 @@ package me.anno.zauber.types.impl
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types
 
 /**
  * Generic type, named 'name', defined in 'scope';
@@ -19,7 +19,7 @@ class GenericType(val scope: Scope, val name: String) : Type() {
         get() = byTypeParameter.type
 
     override fun toStringImpl(depth: Int): String {
-        return if (superBounds == NullableAnyType) {
+        return if (superBounds == Types.NullableAnyType) {
             "${scope.name}.$name"
         } else {
             "(${scope.name}.$name: ${superBounds.toString(depth)})"

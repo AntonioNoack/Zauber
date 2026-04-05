@@ -7,12 +7,12 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.types.Types.ListType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 object EnumProperties {
@@ -87,7 +87,7 @@ object EnumProperties {
         companionScope.hasTypeParameters = true
 
         val constructorScope = companionScope.getOrCreatePrimaryConstructorScope()
-        val listType = ClassType(ListType.clazz, listOf(enumScope.typeWithoutArgs), origin)
+        val listType = ClassType(Types.ListType.clazz, listOf(enumScope.typeWithoutArgs), origin)
         val entryValues = enumScope.enumEntries.map { entryScope ->
             val field = entryScope.objectField!!
             FieldExpression(field, constructorScope, origin)

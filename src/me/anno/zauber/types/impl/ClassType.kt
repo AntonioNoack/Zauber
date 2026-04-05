@@ -8,7 +8,7 @@ import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NullableAnyType
+import me.anno.zauber.types.Types
 
 /**
  * A scope, but also with optional type arguments,
@@ -34,6 +34,11 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     ) emptyParameterList() else typeParameters
 
     fun withTypeParameters(typeParameters: List<Type>): ClassType {
+        val clazz = clazz.scope
+        check(clazz.hasTypeParameters) { "Class $clazz is missing type parameters" }
+        check(clazz.typeParameters.size == typeParameters.size) {
+            "Cannot create ClassType($clazz, |${clazz.typeParameters}| != |$typeParameters|)"
+        }
         return ClassType(clazz, ParameterList(clazz.typeParameters, typeParameters))
     }
 
@@ -78,7 +83,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
                 val fallbackGenerics = List(typeParams.size) {
                     Parameter(
                         it, ('A' + it).toString(),
-                        NullableAnyType, clazz, -1
+                        Types.NullableAnyType, clazz, -1
                     )
                 }
                 val result = ParameterList(fallbackGenerics)

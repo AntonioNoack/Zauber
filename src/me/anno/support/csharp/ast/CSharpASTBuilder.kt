@@ -10,37 +10,32 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.UByteType
-import me.anno.zauber.types.Types.UIntType
-import me.anno.zauber.types.Types.UShortType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, root) {
     companion object {
         private val LOGGER = LogManager.getLogger(CSharpASTBuilder::class)
 
         @Suppress("SpellCheckingInspection")
-        val nativeCSharpTypes = mapOf(
-            "sbyte" to ByteType, "SByte" to ByteType,
-            "byte" to UByteType, "Byte" to UByteType,
-            "short" to ShortType, "Short" to ShortType,
-            "ushort" to UShortType, "UShort" to UShortType,
-            "int" to IntType, "Integer" to IntType,
-            "uint" to UIntType, "UInteger" to UIntType,
-            "long" to LongType, "Long" to LongType, "nint" to LongType,
-            "ulong" to LongType, "ULong" to LongType, "nuint" to LongType,
-            "float" to FloatType, "Float" to FloatType,
-            "double" to DoubleType, "Double" to DoubleType,
-            "bool" to BooleanType, "Bool" to BooleanType,
-            "void" to UnitType, "Void" to UnitType
-        )
+        val nativeCSharpTypes by threadLocal {
+            Types.run {
+                mapOf(
+                    "sbyte" to ByteType, "SByte" to ByteType,
+                    "byte" to UByteType, "Byte" to UByteType,
+                    "short" to ShortType, "Short" to ShortType,
+                    "ushort" to UShortType, "UShort" to UShortType,
+                    "int" to IntType, "Integer" to IntType,
+                    "uint" to UIntType, "UInteger" to UIntType,
+                    "long" to LongType, "Long" to LongType, "nint" to LongType,
+                    "ulong" to LongType, "ULong" to LongType, "nuint" to LongType,
+                    "float" to FloatType, "Float" to FloatType,
+                    "double" to DoubleType, "Double" to DoubleType,
+                    "bool" to BooleanType, "Bool" to BooleanType,
+                    "void" to UnitType, "Void" to UnitType
+                )
+            }
+        }
     }
 
     override fun readFileLevel() {

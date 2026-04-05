@@ -18,10 +18,10 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaVariable
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
-import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.types.Types
 
 fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
@@ -50,11 +50,11 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
         val noPrevBranch = scope.addField(
             null, false, isMutable = true, null,
-            "__hadPrevBranch", BooleanType, trueExpr, Flags.SYNTHETIC, origin
+            "__hadPrevBranch", Types.BooleanType, trueExpr, Flags.SYNTHETIC, origin
         )
         val prevBranchContinues = scope.addField(
             null, false, isMutable = true, null,
-            "__prevBranchContinues", BooleanType, falseExpr, Flags.SYNTHETIC, origin
+            "__prevBranchContinues", Types.BooleanType, falseExpr, Flags.SYNTHETIC, origin
         )
 
         val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)
@@ -216,12 +216,12 @@ fun ZauberASTBuilderBase.findCaseEnd(): Int {
 
 private fun Expression.and(other: Expression): Expression {
     return NamedCallExpression(this, "and", other, scope, origin)
-        .apply { resolvedType = BooleanType }
+        .apply { resolvedType = Types.BooleanType }
 }
 
 private fun Expression.or(other: Expression): Expression {
     return NamedCallExpression(this, "or", other, scope, origin)
-        .apply { resolvedType = BooleanType }
+        .apply { resolvedType = Types.BooleanType }
 }
 
 private fun ZauberASTBuilderBase.readCaseBody(): ArrayList<Expression> {

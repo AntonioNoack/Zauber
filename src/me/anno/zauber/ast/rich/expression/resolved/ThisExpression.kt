@@ -5,7 +5,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveThisType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 // todo label may depend on aliases (imports) -> resolve label to a scope
 class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
@@ -15,8 +15,8 @@ class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(s
         return resolveThisType(label)
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun clone(scope: Scope) = ThisExpression(label, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // should not have any

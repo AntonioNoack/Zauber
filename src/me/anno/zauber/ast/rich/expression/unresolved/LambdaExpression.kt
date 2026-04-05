@@ -119,14 +119,14 @@ class LambdaExpression(
     private fun findSelfType(context: ResolutionContext): Type {
         var selfMethodScope = scope.scope
         while (true) {
-            if (selfMethodScope.isMethodType()) break
+            if (selfMethodScope.isMethodType() || selfMethodScope.isClassLike()) {
+                return selfMethodScope.typeWithArgs
+            }
 
             selfMethodScope = selfMethodScope.parentIfSameFile?.scope
                 ?: return context.selfType
                     ?: throw IllegalStateException("Missing method scope for $this by $scope in ${resolveOrigin(origin)}, context: $context")
         }
-
-        return selfMethodScope.typeWithArgs
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {

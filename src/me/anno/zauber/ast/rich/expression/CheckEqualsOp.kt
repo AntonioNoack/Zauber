@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class CheckEqualsOp(
@@ -27,7 +27,7 @@ class CheckEqualsOp(
         return "(${left.toString(depth)})$symbol(${right.toString(depth)})"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
     override fun resolveThrownType(context: ResolutionContext): Type {
         val context1 = context.withTargetType(null)
         if (byPointer) return unionTypes(left.resolveThrownType(context1), right.resolveThrownType(context1))

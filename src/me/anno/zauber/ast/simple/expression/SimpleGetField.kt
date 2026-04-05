@@ -6,8 +6,6 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.impl.ThisType
 
 class SimpleGetField(
     dst: SimpleField,

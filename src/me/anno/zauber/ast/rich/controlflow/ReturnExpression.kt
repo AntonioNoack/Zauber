@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 class ReturnExpression(value: Expression, label: String?, scope: Scope, origin: Int) :
     ExitExpression(value, label, scope, origin) {
@@ -14,7 +14,7 @@ class ReturnExpression(value: Expression, label: String?, scope: Scope, origin: 
         else "return@$label ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.NothingType
     override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
     override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
 

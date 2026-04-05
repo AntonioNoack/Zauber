@@ -1,25 +1,16 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
-import me.anno.zauber.types.StandardTypes
-import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class InheritanceMethodTest {
 
-    @BeforeEach
-    fun init() {
-        // ensure std types are loaded for testing
-        StandardTypes.standardClasses
-        check(IntType.classHasNoTypeParams())
-    }
-
     @Test
     fun testDirectCall() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
                 class A {
@@ -35,7 +26,7 @@ class InheritanceMethodTest {
     @Test
     fun testDirectCallWithGenerics() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
                 class A<V> {
@@ -51,7 +42,7 @@ class InheritanceMethodTest {
     @Test
     fun testSuperCallX1() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
                 open class A {
@@ -68,7 +59,7 @@ class InheritanceMethodTest {
     @Test
     fun testSuperCallX1WithGenerics() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
                 open class A<V> {
@@ -85,7 +76,7 @@ class InheritanceMethodTest {
     @Test
     fun testSuperCallX2() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
                 open class A {
@@ -103,7 +94,7 @@ class InheritanceMethodTest {
     @Test
     fun testSuperCallX2WithGenerics() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
                 open class A<I> {

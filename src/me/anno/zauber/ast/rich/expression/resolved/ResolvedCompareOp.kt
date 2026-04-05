@@ -1,12 +1,12 @@
 package me.anno.zauber.ast.rich.expression.resolved
 
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.CompareType
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types
 
 class ResolvedCompareOp(
     val left: Expression,
@@ -19,7 +19,7 @@ class ResolvedCompareOp(
         return "(${left.toString(depth)} ${type.symbol} ${right.toString(depth)})"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
 
     /** return type is always Boolean*/
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

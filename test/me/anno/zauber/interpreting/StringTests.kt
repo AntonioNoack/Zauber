@@ -1,9 +1,8 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Types.StringType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -94,7 +93,6 @@ class StringTests {
     fun testStringField() {
         val code = "val tested = \"Some String\""
         val (rt, value) = testExecute(code)
-        assertEquals(StringType, value.type.type)
         assertEquals("Some String", rt.castToString(value))
     }
 
@@ -109,7 +107,6 @@ class StringTests {
             }
         """.trimIndent()
         val (rt, value) = testExecute(code)
-        assertEquals(StringType, value.type.type)
         assertEquals("Some String", rt.castToString(value))
     }
 
@@ -127,7 +124,6 @@ class StringTests {
             $smallStdlib
         """.trimIndent()
         val (rt, value) = testExecute(code)
-        assertEquals(StringType, value.type.type)
         assertEquals("Some String", rt.castToString(value))
     }
 
@@ -169,7 +165,6 @@ class StringTests {
             }
         """.trimIndent()
         val (rt, value) = testExecute(code)
-        assertEquals(StringType, value.type.type)
         assertEquals("Hello", rt.castToString(value))
     }
 }

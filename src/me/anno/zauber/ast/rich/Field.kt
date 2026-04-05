@@ -12,7 +12,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ArrayType
+import me.anno.zauber.types.Types
 
 class Field(
     scope: Scope,
@@ -38,7 +38,7 @@ class Field(
     }
 
     init {
-        if (name == "content" && valueType == ArrayType) {
+        if (name == "content" && valueType == Types.ArrayType) {
             throw IllegalStateException("Testing: field should know array type, $valueType -> ${valueType?.resolvedName}")
         }
     }

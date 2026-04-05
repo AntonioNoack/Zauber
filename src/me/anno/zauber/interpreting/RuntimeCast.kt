@@ -1,13 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 
 object RuntimeCast {
 
@@ -26,43 +20,43 @@ object RuntimeCast {
 
     @Suppress("UnusedReceiverParameter")
     fun Runtime.castToByte(value: Instance): Byte {
-        checkType(value, ByteType)
+        checkType(value, Types.ByteType)
         return value.rawValue as Byte
     }
 
     @Suppress("UnusedReceiverParameter")
     fun Runtime.castToShort(value: Instance): Short {
-        checkType(value, ShortType)
+        checkType(value, Types.ShortType)
         return value.rawValue as Short
     }
 
     @Suppress("UnusedReceiverParameter")
     fun Runtime.castToInt(value: Instance): Int {
-        checkType(value, IntType)
+        checkType(value, Types.IntType)
         return value.rawValue as? Int
             ?: throw IllegalStateException("Found illegal Int-instance without raw value: $value")
     }
 
     @Suppress("UnusedReceiverParameter", "unused")
     fun Runtime.castToLong(value: Instance): Long {
-        checkType(value, LongType)
+        checkType(value, Types.LongType)
         return value.rawValue as Long
     }
 
     @Suppress("UnusedReceiverParameter")
     fun Runtime.castToFloat(value: Instance): Float {
-        checkType(value, FloatType)
+        checkType(value, Types.FloatType)
         return value.rawValue as Float
     }
 
     @Suppress("UnusedReceiverParameter")
     fun Runtime.castToDouble(value: Instance): Double {
-        checkType(value, DoubleType)
+        checkType(value, Types.DoubleType)
         return value.rawValue as Double
     }
 
     fun Runtime.castToString(value: Instance): String {
-        checkType(value, StringType)
+        checkType(value, Types.StringType)
         if (value.rawValue == null) {
             // a byte array
             val content = value.properties[0]!!

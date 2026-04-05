@@ -2,10 +2,6 @@ package me.anno.zauber.types
 
 import me.anno.zauber.types.IsSubTypeOfTest.Companion.get
 import me.anno.zauber.types.IsSubTypeOfTest.Companion.testInheritance
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.NothingType
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnknownType
@@ -16,30 +12,30 @@ class AndTypeSimplificationTest {
 
     @Test
     fun testAndUnknownType() {
-        val classA = IntType
+        val classA = Types.IntType
         assertEquals(classA, andTypes(classA, UnknownType))
     }
 
     @Test
     fun testAndNothingType() {
-        val classA = IntType
-        assertEquals(NothingType, andTypes(classA, NothingType))
+        val classA = Types.IntType
+        assertEquals(Types.NothingType, andTypes(classA, Types.NothingType))
     }
 
     @Test
     fun testAndNullType() {
-        val classA = IntType
-        assertEquals(NothingType, andTypes(classA, NullType))
+        val classA = Types.IntType
+        assertEquals(Types.NothingType, andTypes(classA, NullType))
     }
 
     @Test
     fun testDisjointAndTypes() {
-        val classA = IntType
-        val classB = LongType
-        val classC = FloatType
+        val classA = Types.IntType
+        val classB = Types.LongType
+        val classC = Types.FloatType
 
-        assertEquals(NothingType, andTypes(classA, classB))
-        assertEquals(NothingType, IsSubTypeOfTest.Companion.andTypes(classA, classB, classC))
+        assertEquals(Types.NothingType, andTypes(classA, classB))
+        assertEquals(Types.NothingType, IsSubTypeOfTest.Companion.andTypes(classA, classB, classC))
     }
 
     @Test

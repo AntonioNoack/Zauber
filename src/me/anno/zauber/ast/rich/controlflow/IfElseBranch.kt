@@ -8,7 +8,7 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class IfElseBranch(
@@ -54,11 +54,11 @@ class IfElseBranch(
     }
 
     override fun resolveThrownType(context: ResolutionContext): Type {
-        return unionTypes(ifBranch.resolveThrownType(context), elseBranch?.resolveThrownType(context) ?: NothingType)
+        return unionTypes(ifBranch.resolveThrownType(context), elseBranch?.resolveThrownType(context) ?: Types.NothingType)
     }
 
     override fun resolveYieldedType(context: ResolutionContext): Type {
-        return unionTypes(ifBranch.resolveYieldedType(context), elseBranch?.resolveYieldedType(context) ?: NothingType)
+        return unionTypes(ifBranch.resolveYieldedType(context), elseBranch?.resolveYieldedType(context) ?: Types.NothingType)
     }
 
     override fun clone(scope: Scope): Expression = IfElseBranch(

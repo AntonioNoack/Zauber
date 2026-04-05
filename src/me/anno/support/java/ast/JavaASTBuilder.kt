@@ -31,18 +31,9 @@ import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.AnyType
-import me.anno.zauber.types.Types.ArrayType
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.ByteType
-import me.anno.zauber.types.Types.CharType
-import me.anno.zauber.types.Types.DoubleType
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.LongType
-import me.anno.zauber.types.Types.ShortType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)
@@ -72,17 +63,21 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             ">>>" to Operator(">>>", 10, Assoc.LEFT),
         )
 
-        val nativeJavaTypes = mapOf(
-            "byte" to ByteType, "Byte" to ByteType,
-            "short" to ShortType, "Short" to ShortType,
-            "char" to CharType, "Character" to CharType,
-            "int" to IntType, "Integer" to IntType,
-            "long" to LongType, "Long" to LongType,
-            "float" to FloatType, "Float" to FloatType,
-            "double" to DoubleType, "Double" to DoubleType,
-            "boolean" to BooleanType, "Boolean" to BooleanType,
-            "void" to UnitType, "Void" to UnitType
-        )
+        val nativeJavaTypes by threadLocal {
+            Types.run {
+                mapOf(
+                    "byte" to ByteType, "Byte" to ByteType,
+                    "short" to ShortType, "Short" to ShortType,
+                    "char" to CharType, "Character" to CharType,
+                    "int" to IntType, "Integer" to IntType,
+                    "long" to LongType, "Long" to LongType,
+                    "float" to FloatType, "Float" to FloatType,
+                    "double" to DoubleType, "Double" to DoubleType,
+                    "boolean" to BooleanType, "Boolean" to BooleanType,
+                    "void" to UnitType, "Void" to UnitType
+                )
+            }
+        }
     }
 
     val lsTypes = IntArray(tokens.size).apply { fill(-1) }
@@ -156,9 +151,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             } while (consumeIf(","))
         }
 
-        val addAnyIfEmpty = classScope != AnyType.clazz
+        val addAnyIfEmpty = classScope != Types.AnyType.clazz
         if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
-            classScope.superCalls.add(SuperCall(AnyType, emptyList(), null))
+            classScope.superCalls.add(SuperCall(Types.AnyType, emptyList(), null))
         }
     }
 
@@ -383,7 +378,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             val origin = origin(i)
             var type = readTypeNotNull(null, true)
             val isVararg = consumeIf("...")
-            if (isVararg) type = ClassType(ArrayType.clazz, listOf(type), origin)
+            if (isVararg) type = ClassType(Types.ArrayType.clazz, listOf(type), origin)
 
             val name = consumeName(VSCodeType.PARAMETER, 0)
 
@@ -526,7 +521,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                             currPackage, origin
                         )
                         is ArrayType -> ConstructorExpression(
-                            ArrayType.clazz, listOf(type.baseType),
+                            Types.ArrayType.clazz, listOf(type.baseType),
                             listOf(NamedParameter(null, type.size)), null,
                             currPackage, origin
                         )

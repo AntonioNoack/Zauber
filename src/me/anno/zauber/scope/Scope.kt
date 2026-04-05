@@ -339,12 +339,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         return null
     }
 
-    private inline fun forEachSuperType(callback: (Type) -> Unit) {
-        for (superCall in superCalls) {
-            callback(superCall.type)
-        }
-    }
-
     private fun extractScope(type: Type): Scope {
         return when (type) {
             is ClassType -> type.clazz
@@ -515,30 +509,6 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isObjectLike(): Boolean = isObject() || scopeType == ScopeType.PACKAGE
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
     fun isValueType(): Boolean = flags.hasFlag(Flags.VALUE)
-
-    fun clear() {
-        // todo it would be nice to clear everything, but to do that,
-        //  we need to store IntType etc on an instance level, or re-register them
-        // children.clear()
-        initParts.clear()
-        for (child in children) {
-            child.clear()
-        }
-        fields.clear()
-        // scopeType = null
-        // hasTypeParameters = false
-        // typeParameters = emptyList()
-        imports = emptyList()
-        objectField = null
-        superCalls.clear()
-        fileName = null
-        flags = 0
-        selfAsMethod = null
-        selfAsConstructor = null
-        selfAsTypeAlias = null
-        // todo somehow clear typeWithArgs
-        // typeWithArgs
-    }
 
     fun addKeywords(keywords: FlagSet) {
         this.flags = this.flags or keywords

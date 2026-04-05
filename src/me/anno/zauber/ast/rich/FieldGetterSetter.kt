@@ -16,7 +16,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 
 object FieldGetterSetter {
 
@@ -199,7 +199,7 @@ object FieldGetterSetter {
         val method = Method(
             field.selfType, false, methodName, emptyList(),
             listOf(parameter), setterScope,
-            UnitType, emptyList(),
+            Types.UnitType, emptyList(),
             expr, packFlags() or field.flags, origin
         )
         method.backedField = field

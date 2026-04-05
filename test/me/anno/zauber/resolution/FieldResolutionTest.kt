@@ -6,8 +6,7 @@ import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.FloatType
-import me.anno.zauber.types.Types.IntType
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -44,7 +43,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -59,7 +58,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -74,7 +73,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -92,7 +91,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -113,7 +112,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findField(scope).resolveValueType(ResolutionContext.minimal)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -136,7 +135,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -157,7 +156,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
-        assertEquals(IntType, tested0)
+        assertEquals(Types.IntType, tested0)
     }
 
     @Test
@@ -180,8 +179,8 @@ class FieldResolutionTest {
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
-        assertEquals(IntType, tested0)
-        assertEquals(IntType, tested1)
+        assertEquals(Types.IntType, tested0)
+        assertEquals(Types.IntType, tested1)
     }
 
     @Test
@@ -206,8 +205,8 @@ class FieldResolutionTest {
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
-        assertEquals(IntType, tested0)
-        assertEquals(IntType, tested1)
+        assertEquals(Types.IntType, tested0)
+        assertEquals(Types.IntType, tested1)
     }
 
     @Test
@@ -234,8 +233,8 @@ class FieldResolutionTest {
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
-        assertEquals(IntType, tested0)
-        assertEquals(IntType, tested1)
+        assertEquals(Types.IntType, tested0)
+        assertEquals(Types.IntType, tested1)
     }
 
     @Test
@@ -252,7 +251,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -270,7 +269,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -288,7 +287,7 @@ class FieldResolutionTest {
                 """.trimIndent()
             )
             val actualType = findFieldType(scope).resolvedName
-            assertEquals(IntType, actualType)
+            assertEquals(Types.IntType, actualType)
         }
     }
 
@@ -306,7 +305,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -379,7 +378,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -397,7 +396,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -415,7 +414,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -430,7 +429,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -450,7 +449,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -470,7 +469,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -488,7 +487,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(FloatType, actualType)
+        assertEquals(Types.FloatType, actualType)
     }
 
     @Test
@@ -508,7 +507,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(FloatType, actualType)
+        assertEquals(Types.FloatType, actualType)
     }
 
     @Test
@@ -530,7 +529,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(FloatType, actualType)
+        assertEquals(Types.FloatType, actualType)
     }
 
     @Test
@@ -541,7 +540,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -552,7 +551,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -566,7 +565,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 
     @Test
@@ -582,6 +581,6 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        assertEquals(IntType, actualType)
+        assertEquals(Types.IntType, actualType)
     }
 }

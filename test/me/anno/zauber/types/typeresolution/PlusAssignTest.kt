@@ -1,6 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -11,7 +11,7 @@ class PlusAssignTest {
 
     private fun runTest(code: String) {
         assertEquals(
-            listOf(UnitType, UnitType),
+            listOf(Types.UnitType, Types.UnitType),
             TypeResolutionTest.testMethodBodyResolution(code)
         )
     }

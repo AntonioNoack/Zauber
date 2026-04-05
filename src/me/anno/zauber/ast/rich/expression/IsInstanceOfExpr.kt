@@ -3,7 +3,7 @@ package me.anno.zauber.ast.rich.expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
+import me.anno.zauber.types.Types
 
 class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, origin: Int) :
     Expression(scope, origin) {
@@ -14,7 +14,7 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
         return "(${value.toString(depth)})is($type)"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
     override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
     override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
 

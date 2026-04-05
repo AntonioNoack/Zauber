@@ -44,6 +44,7 @@ object TokenListIndex {
     }
 
     fun resolveOrigin(i: Int): String {
+        if (i < 0) return i.toString()
         val tl = findTokenList(i)
         return tl.err(i - tl.tliIndex)
     }

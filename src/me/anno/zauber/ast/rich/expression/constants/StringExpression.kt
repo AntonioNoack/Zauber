@@ -1,23 +1,22 @@
 package me.anno.zauber.ast.rich.expression.constants
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.StringType
+import me.anno.zauber.types.Types
 
 class StringExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     init {
-        resolvedType = StringType
+        resolvedType = Types.StringType
     }
 
     override fun toStringImpl(depth: Int): String = "\"$value\""
 
-    override fun resolveReturnType(context: ResolutionContext): Type = StringType
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.StringType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     override fun clone(scope: Scope) = StringExpression(value, scope, origin)
 

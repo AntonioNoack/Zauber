@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.NothingType
+import me.anno.zauber.types.Types
 
 class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scope, origin: Int) :
     Expression(scope, origin) {
@@ -18,8 +18,8 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
         TODO("Not yet implemented")
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
 
     // todo if the base has some...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = base.typeParameters.isNotEmpty()

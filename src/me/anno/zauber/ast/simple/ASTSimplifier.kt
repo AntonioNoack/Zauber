@@ -33,21 +33,18 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types.BooleanType
-import me.anno.zauber.types.Types.IntType
-import me.anno.zauber.types.Types.NothingType
-import me.anno.zauber.types.Types.StringType
-import me.anno.zauber.types.Types.UnitType
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnknownType
 import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 object ASTSimplifier {
 
     private val LOGGER = LogManager.getLogger(ASTSimplifier::class)
 
-    val UnitInstance = SimpleField(UnitType, Ownership.COMPTIME, -1, UnitType.clazz)
+    val UnitInstance by threadLocal { SimpleField(Types.UnitType, Ownership.COMPTIME, -1, Types.UnitType.clazz) }
     val voidResult = FlowResult(null, null, null)
     val booleanOwnership = Ownership.COMPTIME
 
@@ -128,7 +125,7 @@ object ASTSimplifier {
             is SpecialValueExpression -> {
                 val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
-                    SpecialValue.TRUE, SpecialValue.FALSE -> BooleanType
+                    SpecialValue.TRUE, SpecialValue.FALSE -> Types.BooleanType
                     SpecialValue.SUPER -> throw IllegalStateException("Cannot store super in a field")
                 }
                 val dst = block0.field(type)
@@ -154,7 +151,7 @@ object ASTSimplifier {
             }
 
             is StringExpression -> {
-                val dst = block0.field(StringType, Ownership.COMPTIME)
+                val dst = block0.field(Types.StringType, Ownership.COMPTIME)
                 block0.add(SimpleString(dst, expr))
                 return flow0.withValue(dst, block0)
             }
@@ -162,7 +159,7 @@ object ASTSimplifier {
             is IsInstanceOfExpr -> {
                 val block1 = simplifyImpl(context, expr.value, block0, flow0, graph, true)
                 val block1v = block1.value ?: return block1
-                val dst = block1v.block.field(BooleanType, booleanOwnership)
+                val dst = block1v.block.field(Types.BooleanType, booleanOwnership)
                 block1v.block.add(createSimpleInstanceOf(dst, block1v.value.use(), expr.type, expr.scope, expr.origin))
                 return block1.withValue(dst, block1v.block)
             }
@@ -256,7 +253,7 @@ object ASTSimplifier {
         val useGetter =
             !expr.field.isBackingField && (
                     field.hasCustomGetter || field.isLateinit() ||
-                    !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+                            !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
 
         // println("use getter for $field: $useGetter")
 
@@ -334,7 +331,7 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val right = block2v.value
 
-        val tmp = block2v.block.field(IntType)
+        val tmp = block2v.block.field(Types.IntType)
         val method = expr.callable.resolved
         val specialization = expr.callable.specialization
         val call = SimpleCall(
@@ -349,7 +346,7 @@ object ASTSimplifier {
         )
         val block3v = block3.value ?: return block3
 
-        val dst = block3v.block.field(BooleanType, booleanOwnership)
+        val dst = block3v.block.field(Types.BooleanType, booleanOwnership)
         val instr = SimpleCompare(
             dst, left.use(), right.use(), expr.type,
             tmp.use(), expr.scope, expr.origin
@@ -371,7 +368,7 @@ object ASTSimplifier {
         val block2 = simplifyImpl(context, expr.right, block1, graph, true)
         val block2v = block2.value ?: return block2
 
-        val dst = block2v.block.field(BooleanType, booleanOwnership)
+        val dst = block2v.block.field(Types.BooleanType, booleanOwnership)
         val left = block1v.value
         val right = block2v.value
         val call = if (expr.byPointer) {
@@ -440,7 +437,7 @@ object ASTSimplifier {
         val block0b = block0.block
 
         val thrownType = catch.param.type
-        val instanceOfField = block0b.field(BooleanType, booleanOwnership)
+        val instanceOfField = block0b.field(Types.BooleanType, booleanOwnership)
         val instanceCheck = createSimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
 
         val alwaysHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.TRUE
@@ -859,7 +856,7 @@ object ASTSimplifier {
             }
             // todo allocation could fail, too...
             block0.add(SimpleAllocateInstance(dst, selfType, scope, origin))
-            val unusedTmp = block0.field(UnitType)
+            val unusedTmp = block0.field(Types.UnitType)
             val specialization = method0.specialization
             val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)
             LOGGER.info("Finding throw type for $method0")
@@ -875,7 +872,7 @@ object ASTSimplifier {
         block0.add(callable)
 
         val flow1 = flow0.withValue(result, block0)
-        if (thrownType == NothingType) return flow1
+        if (thrownType == Types.NothingType) return flow1
 
         val throwBlock = graph.addNode()
         val throwField = throwBlock.field(thrownType)

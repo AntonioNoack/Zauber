@@ -1,7 +1,7 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
-import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -9,7 +9,7 @@ class TypeAliasExtensionTest {
     @Test
     fun testSimpleTypeAlias() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
             class A
@@ -24,7 +24,7 @@ class TypeAliasExtensionTest {
     @Test
     fun testSimpleTypeAliasRev() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
             val B.next get() = 0
@@ -39,7 +39,7 @@ class TypeAliasExtensionTest {
     @Test
     fun testTypeRecursive() {
         assertEquals(
-            IntType,
+            Types.IntType,
             testTypeResolution(
                 """
             val C.next get() = 0
