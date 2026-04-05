@@ -131,12 +131,16 @@ class Field(
     }
 
     fun toString(depth: Int): String {
+        val self = selfType ?: classScope.pathStr
         return if (initialValue == null) {
-            "Field($selfType.$name)"
+            "Field($self.$name)"
         } else {
-            "Field($selfType.$name=${initialValue.toString(depth)})"
+            "Field($self.$name=${initialValue.toString(depth)})"
         }
     }
+
+    val classScope get() = scope
+    val fieldScope: Scope get() = throw IllegalStateException("Fields don't have their own scope")
 
     fun moveToScope(newScope: Scope) {
         check(scope.fields.remove(this)) { "Failed to remove field from scope" }

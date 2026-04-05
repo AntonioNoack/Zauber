@@ -11,11 +11,13 @@ class InheritanceInterfaceTests {
 
     @Test
     fun testCallInterfaceDefaultMethod() {
-        LogManager.disableLoggers("CallExpression,ZClass,MemberResolver,ConstructorResolver," +
-                "TypeResolution,Inheritance," +
-                "MethodResolver,ResolvedMethod," +
-                "FieldExpression,FieldResolver,ResolvedField," +
-                "Runtime,ASTSimplifier")
+        LogManager.disableLoggers(
+            "CallExpression,ZClass,MemberResolver,ConstructorResolver," +
+                    "TypeResolution,Inheritance," +
+                    "MethodResolver,ResolvedMethod," +
+                    "FieldExpression,FieldResolver,ResolvedField," +
+                    "Runtime,ASTSimplifier"
+        )
         val code = """
             interface Parent {
                 open fun x() = 0
@@ -63,6 +65,13 @@ class InheritanceInterfaceTests {
 
     @Test
     fun testCallInterfaceField() {
+        LogManager.disableLoggers(
+            "ZClass,TypeResolution,CallExpression,MemberResolver,ConstructorResolver," +
+                    "MemberResolver,Inheritance," +
+                    "MethodResolver,ResolvedMethod," +
+                    "FieldExpression,FieldResolver,ResolvedField,Field," +
+                    "Runtime,ASTSimplifier"
+        )
         val code = """
             interface Parent {
                 val x get() = 0

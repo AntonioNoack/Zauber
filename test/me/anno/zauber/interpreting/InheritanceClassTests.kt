@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.RuntimeCast.castToInt
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types.IntType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.Test
 //  yielding
 //  Java code gen for good real performance
 //  Python parser
-//  inheritance
 
 class InheritanceClassTests {
 

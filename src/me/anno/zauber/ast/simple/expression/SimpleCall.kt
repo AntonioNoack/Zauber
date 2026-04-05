@@ -1,7 +1,10 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasAnyFlag
+import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.expansion.OverriddenMethods.sameParameters
@@ -49,27 +52,32 @@ class SimpleCall(
             if (selfType.isInterface()) return true // interfaces are always open
 
             // anything else needs the open flag to be open
-            return selfType.flags.hasFlag(Flags.OPEN)
+            return selfType.flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
         }
 
         fun createObjectMap(method: MethodLike): Map<ClassType, MethodLike> {
-            val dynamicDispatch = method is Method &&
-                    (method.flags.hasFlag(Flags.OPEN) || method.flags.hasFlag(Flags.OVERRIDE)) &&
-                    selfTypeIsOpen(method)
+            // constructors aren't dynamic
+            val dynamicDispatch = method is Method && selfTypeIsOpen(method)
             if (!dynamicDispatch) return FullMap(method)
 
             return LazyMap { invokedType ->
                 val selfScope = invokedType.clazz
-                val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
-                val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
-                val choices = invokedType.clazz.scope.methods.filter { option ->
-                    option.name == method.name &&
-                            sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
-                            sameParameters(selfScope, option.valueParameters, methodValueParameters)
+                if (selfScope == method.scope.parent) {
+                    // fast-path
+                    method
+                } else {
+                    val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
+                    val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
+                    val choices = invokedType.clazz.scope.methods.filter { option ->
+                        option.name == method.name &&
+                                sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
+                                sameParameters(selfScope, option.valueParameters, methodValueParameters)
+                    }
+                    check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
+                    check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
+                    println("Selected ${choices.first()} for $invokedType.$method")
+                    choices.first()
                 }
-                check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
-                check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
-                choices.first()
             }
         }
     }

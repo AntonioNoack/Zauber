@@ -257,6 +257,9 @@ object ASTSimplifier {
             !expr.field.isBackingField && (
                     field.hasCustomGetter || field.isLateinit() ||
                     !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+
+        // println("use getter for $field: $useGetter")
+
         if (useGetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?

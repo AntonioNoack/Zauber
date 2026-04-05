@@ -326,7 +326,7 @@ class Runtime {
                                 }
                                 // handlers inside the function all were processed already :3
                                 ReturnType.RETURN, ReturnType.THROW -> {
-                                    println("Exited with $lastValue (${instr.javaClass.simpleName}) from ${block0.graph.method}")
+                                    LOGGER.info("Exited with $lastValue (${instr.javaClass.simpleName}) from ${block0.graph.method}")
                                     return lastValue
                                 }
                                 else -> throw NotImplementedError("Unknown exit type")
