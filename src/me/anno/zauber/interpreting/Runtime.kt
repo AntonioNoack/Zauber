@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
@@ -158,16 +159,20 @@ class Runtime {
 
     private fun initializeConstant(instance: Instance, field: Field, fieldIndex: Int) {
         val value = field.initialValue!!
+        instance.properties[fieldIndex] = evaluateExpression(instance, value, field.flags, field.valueType)
+    }
+
+    fun evaluateExpression(instance: Instance, value: Expression, flags: Int, valueType: Type?): Instance {
         val method = Method(
             null, false, null,
-            emptyList(), emptyList(), value.scope, field.valueType,
+            emptyList(), emptyList(), value.scope, valueType,
             emptyList(), ReturnExpression(value, null, value.scope, value.origin),
-            field.flags, field.origin
+            flags, value.origin
         )
         val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
         val constValue = executeCall(instance, methodSpec, emptyList(), null)
-        check(constValue.type == ReturnType.RETURN) { "Executing $field returned $constValue" }
-        instance.properties[fieldIndex] = constValue.value
+        check(constValue.type == ReturnType.RETURN) { "Executing $value returned $constValue" }
+        return constValue.value
     }
 
     private fun createStringContentArray(instance: Instance, fieldIndex: Int) {

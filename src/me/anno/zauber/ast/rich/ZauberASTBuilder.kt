@@ -463,15 +463,17 @@ class ZauberASTBuilder(
                     VSCodeType.METHOD else VSCodeType.VARIABLE
 
                 val namePath = consumeName(vsCodeType, 0)
-                val typeArgs = readTypeParameters(null)
+                val typeParameters = readTypeParameters(null)
 
                 if (tokens.equals(i, TokenType.OPEN_CALL) && tokens.isSameLine(i - 1, i)) {
                     // call or implicit macro
-                    readNamedCall(namePath, typeArgs, origin)
+                    readNamedCall(namePath, typeParameters, origin)
                 } else if (tokens.equals(i, "!") && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
                     // explicit macro
+                    val i0 = i - 1 // on macro-name
                     consume("!")
-                    evaluateMacro(namePath, typeArgs, origin)
+                    val valueParameters = readValueParameters()
+                    evaluateMacro(namePath, typeParameters, valueParameters, origin, i0)
                 } else if (
                 // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
@@ -492,7 +494,7 @@ class ZauberASTBuilder(
                         GetClassFromValueExpression(type, currPackage, origin)
                     }
                 } else {
-                    check(typeArgs == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
+                    check(typeParameters == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
                     nameExpression(namePath, origin, currPackage)
                 }
             }
@@ -762,6 +764,7 @@ class ZauberASTBuilder(
     override fun readExpression(minPrecedence: Int): Expression {
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
+        println("expr from prefix[$i < ${tokens.size}]: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
@@ -794,6 +797,7 @@ class ZauberASTBuilder(
             if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
 
             val op = operators[symbol]
+            println("lhs: $expr, symbol: $symbol, op: $op")
             if (op == null) {
                 // postfix
                 expr = tryReadPostfix(expr) ?: break@loop
@@ -900,7 +904,8 @@ class ZauberASTBuilder(
             }
             tokens.equals(i, "!") && tokens.equals(i + 1, TokenType.OPEN_CALL) -> {
                 consume("!")
-                evaluateMacro(expr, null, origin(i))
+                val valueParameters = pushCall { readValueParameters() }
+                evaluateMacro(expr, null, valueParameters, origin(i))
             }
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 val origin = origin(i)

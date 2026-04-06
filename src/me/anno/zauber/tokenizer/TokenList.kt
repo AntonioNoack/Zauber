@@ -138,6 +138,13 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return "$fileName:$lineNumber, ${i0}-${i1}, ${getTypeUnsafe(i)}, '${toStringUnsafe(i)}'\n$posStr"
     }
 
+    fun errShort(i: Int): String {
+        val i = max(i, 0)
+        val before = source.substring(0, getI0(i))
+        val lineNumber = before.count { it == '\n' } + 1
+        return "$fileName:$lineNumber"
+    }
+
     fun getLinePosString(i0: Int, i1: Int, before: String, lineNumber: Int, lastLineBreak: Int): String {
         var start = before.lastIndexOf('\n', max(lastLineBreak - 1, 0)) + 1
         val isSingleLine = before.substring(start, max(lastLineBreak, 0)).all { it.isWhitespace() }
