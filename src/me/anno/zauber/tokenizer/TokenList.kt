@@ -299,6 +299,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
                     '"' -> tmp.append('"')
                     '\\' -> tmp.append('\\')
                     '\'' -> tmp.append('\'')
+                    '$' -> tmp.append('$')
                     'u', 'U' -> {
                         val number = tmp.substring(i - 1, i + 3).toInt(16)
                         tmp.append(number.toChar())

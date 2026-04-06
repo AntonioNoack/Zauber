@@ -17,6 +17,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
+import me.anno.zauber.expansion.Macro.evaluateMacro
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -463,7 +464,12 @@ class ZauberASTBuilder(
                 val typeArgs = readTypeParameters(null)
 
                 if (tokens.equals(i, TokenType.OPEN_CALL) && tokens.isSameLine(i - 1, i)) {
+                    // call or implicit macro
                     readNamedCall(namePath, typeArgs, origin)
+                } else if (tokens.equals(i, "!") && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
+                    // explicit macro
+                    consume("!")
+                    evaluateMacro(namePath, typeArgs, origin)
                 } else if (
                 // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {

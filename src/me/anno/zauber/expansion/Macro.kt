@@ -81,9 +81,8 @@ object Macro {
         val callForFields = Call(runtime.getNull())
         runtime.callStack.add(callForFields)
 
-        val tokenInfoInstance = runtime.getObjectInstance(macroContextParam)
         runtime[field0] = runtime.createString(content)
-        runtime[field1] = tokenInfoInstance
+        runtime[field1] = runtime.getObjectInstance(macroContextParam)
 
         val valueParameters = listOf(field0, field1)
         val result = runtime.executeCall(owner, method1, valueParameters, null)
