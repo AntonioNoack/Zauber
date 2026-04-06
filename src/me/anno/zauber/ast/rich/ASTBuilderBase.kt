@@ -2,11 +2,11 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.impl.GenericType
 
 open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
@@ -61,6 +61,14 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         // println("pushCall, $i vs $size0 vs ${tokens.size}")
         consume(TokenType.CLOSE_CALL)
         return result
+    }
+
+    fun skipCall() {
+        // val size0 = tokens.size
+        val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
+        consume(TokenType.OPEN_CALL)
+        i = end
+        consume(TokenType.CLOSE_CALL)
     }
 
     inline fun <R> pushArray(readImpl: () -> R): R {

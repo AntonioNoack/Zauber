@@ -4,6 +4,7 @@ import me.anno.zauber.ast.FlagSet
 import kotlin.math.max
 
 object Flags {
+
     const val NONE = 0
     const val SYNTHETIC = 1
     const val PUBLIC = 2
@@ -21,30 +22,31 @@ object Flags {
     const val INLINE = 8 * 1024
     const val CROSS_INLINE = 16 * 1024
     const val INFIX = 32 * 1024
+    const val MACRO = 64 * 1024
 
     /**
      * class used for annotations;
      * is a pure value class, aka all members must be values and their properties must be, too
      * */
-    const val ANNOTATION = 64 * 1024
+    const val ANNOTATION = 128 * 1024
 
     /**
      * class cannot be extended by classes from other packages/modules
      * */
-    const val SEALED = 128 * 1024
+    const val SEALED = 256 * 1024
 
     /**
      * evaluated at compile time
      * */
-    const val CONSTEXPR = 256 * 1024
+    const val CONSTEXPR = 512 * 1024
 
     /**
      * guaranteed to be initialized when accessed, but not before;
      * cannot be applied to nullable types in Kotlin, I'm not sure about Zauber
      * */
-    const val LATEINIT = 512 * 1024
+    const val LATEINIT = 1024 * 1024
 
-    const val CPP_STRUCT = 1024 * 1024
+    const val CPP_STRUCT = 2048 * 1024
 
     fun FlagSet.hasFlag(flag: FlagSet): Boolean {
         return (this and flag) == flag
@@ -52,14 +54,6 @@ object Flags {
 
     fun FlagSet.hasAnyFlag(flags: FlagSet): Boolean {
         return (this and flags) != 0
-    }
-
-    fun FlagSet.withFlag(flag: FlagSet): FlagSet {
-        return this or flag
-    }
-
-    fun FlagSet.withoutFlag(flag: FlagSet): FlagSet {
-        return this and flag.inv()
     }
 
     fun toString(flags: FlagSet): String {

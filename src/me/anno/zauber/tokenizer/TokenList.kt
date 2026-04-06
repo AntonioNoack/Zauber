@@ -46,7 +46,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val oldSize = size
         try {
             size = newSize
-           return readImpl()
+            return readImpl()
         } finally {
             size = oldSize
         }
@@ -272,6 +272,46 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return source.substring(getI0(i), getI1(i))
     }
 
+    fun unescapeString(i: Int): String {
+        if (i >= size) throw IndexOutOfBoundsException("$i >= $size, ${TokenType.entries[tokenTypes[i].toInt()]}")
+        val i0 = getI0(i)
+        val i1 = getI1(i)
+        for (i in i0 until i1) {
+            if (source[i] == '\\') {
+                // found first violation
+                val tmp = StringBuilder(i1 - i0)
+                tmp.append(source, i0, i)
+                return unescapeStringImpl(i, i1, tmp)
+            }
+        }
+        return source.substring(i0, i1)
+    }
+
+    fun unescapeStringImpl(i0: Int, i1: Int, tmp: StringBuilder): String {
+        var i = i0
+        while (i < i1) {
+            val c = source[i++]
+            if (c == '\\') {
+                when (val ci = source[i++]) {
+                    'n', 'N', '\n' -> tmp.append('\n')
+                    'r', 'R', '\r' -> tmp.append('\r')
+                    'f', 'F', '\u000c' -> tmp.append('\u000c')
+                    '"' -> tmp.append('"')
+                    '\\' -> tmp.append('\\')
+                    '\'' -> tmp.append('\'')
+                    'u', 'U' -> {
+                        val number = tmp.substring(i - 1, i + 3).toInt(16)
+                        tmp.append(number.toChar())
+                    }
+                    else -> throw IllegalStateException("Unknown escape sequence \\$ci")
+                }
+            } else {
+                tmp.append(c)
+            }
+        }
+        return tmp.toString()
+    }
+
     fun endsWith(i: Int, ch: Char): Boolean {
         return source[getI1(i) - 1] == ch
     }
@@ -345,4 +385,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
         (0 until size).joinToString(" ") {
             toString(it)
         }
+
+    fun extractString(i0x: Int, i1x: Int): String {
+        val i0 = getI0(i0x)
+        val i1 = getI1(i1x)
+        return source.substring(i0, i1)
+    }
 }

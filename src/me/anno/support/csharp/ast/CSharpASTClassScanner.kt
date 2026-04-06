@@ -2,9 +2,9 @@ package me.anno.support.csharp.ast
 
 import me.anno.langserver.VSCodeType
 import me.anno.support.java.ast.JavaASTClassScanner
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.scope.ScopeType
 
 /**
  * to make type-resolution immediately available/resolvable
@@ -30,11 +30,11 @@ class CSharpASTClassScanner(tokens: TokenList) : JavaASTClassScanner(tokens) {
         } else return false
     }
 
-    override fun checkForTypes() {
+    override fun readNamed() {
         val hasName = tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD)
         if (hasName && consumeIf("struct")) {
             val name = consumeName(VSCodeType.TYPE, 0)
             foundNamedScope(name, flags, ScopeType.NORMAL_CLASS)
-        } else super.checkForTypes()
+        } else super.readNamed()
     }
 }

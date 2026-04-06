@@ -69,27 +69,35 @@ The following is a rough outline, if what this project wants to achieve ultimate
 
 ```mermaid
 flowchart TD
-    Kotlin --> Intermediate[Kotlin AST]
+    Zauber --> Intermediate[Zauber AST]
+    Kotlin --> Intermediate
     Java --> Intermediate
     Rust --> Intermediate
     Cpp[C/C++] --> Intermediate
     Python --> Intermediate
-    Intermediate --> Simple0[Simple AST with Generics]
-    Simple0 --> Simple[Simple AST without Generics]
-    JVM[JVM Bytecode] --> Simple0
+    JVM[JVM Bytecode] --> Intermediate
+    Intermediate --> Simple[Flow Graph with Generics]
     Simple --> C2[C/C++ or LLVM IR]
     Simple --> WASM[WASM or JavaScript]
     Simple --> GLSL
     Simple --> Java2[Java or JVM Bytecode]
 ```
 
-The Simple AST is just an AST, where all types, fields and methods have been resolved, and which is very stack-like,
-and with flat expressions.
+The Zauber AST is a typical AST:
+- Kotlin-inspired
+- most members aren't resolved or parsed yet
+- deeply nested
+- lazy evaluation (for faster compilation)
+- single flow
+- high-level flow-control, e.g. while, try-catch, defer, ...
+- generic
 
-### Flat expressions example:
-
-`(1+2)*3` is split into two assignments:
-`tmp1 = 1+2` and `tmp2 = tmp1 * 3`.
+The Flow Graph is a special AST:
+- all types, fields and methods have been resolved
+- flattened expressions with temporary (nameless) fields
+- low-level flow-control: only branches and calls
+- splits flow into value (normal execution), returned (passing finally/defer) and thrown (passing catches/errdefer)
+- generics are (partially) specialized (resolved)
 
 ## Budget
 
@@ -114,13 +122,13 @@ typealias SeriComp = Serializable&Comparable<*>
 typealias NotFloat = Number&!FloatLike
 ```
 
-Static analysis can also be really helpful and powerful,
+Static analysis (not yet implemented) can also be really helpful and powerful,
 so it would be nice to have comptime-restricted types, e.g.
 
 ```kotlin
-val x: Int[in 0 until 100] = 45
-val somePrime: Int[isPrime(it)] = 17
-val cheapEnum: String["a","b","c"] = "a"
+val x: Int { it in 0 until 100 } = 45
+val somePrime: Int { isPrime(it) } = 17
+val cheapEnum: String { it in listOf("a", "b", "c") } = "a"
 ```
 
 ## Allocation Styles
@@ -134,12 +142,22 @@ value val array = Array(10) { Vec2i(it,it*it) } // all entries will share one GC
 val floatArray = arrayOf(0f, 1f, 2f) // 4 bytes per entry, because type can be shared, and floats is marked as a value class
 ```
 
-floatArrayOf() etc will become obsolete and will be marked as deprecated, because arrayOf() has the same meaning.
+floatArrayOf() will only be available in Kotlin files. Zauber uses arrayOf() for all types.
 
 ### Reflection
 
 I'd like the reflection API to be completely comptime like in Zig,
 so if you don't use it, you don't need the (space)overhead.
+
+### Standard Library
+
+Java has application specific classes/packages like AWT, Swing, java.sql, and idk why...
+These should be implemented in libraries.
+
+Kotlin libraries are weird, they ship compiled JVM Bytecode with special byte-encoded annotations.
+Java libraries are good w.r.t. that they can be loaded at runtime, but that also makes them less secure.
+Therefore, I'd like Zauber libraries to be plain Zauber code packages as a zip- or tar-file.
+If you need obfuscation, obfuscate all library-internal logic.
 
 ### Progress Estimation
 
@@ -175,8 +193,8 @@ Total Progress: 2.3 %
 - CompileTime Interpreter: 10% of 5%
 - VisualStudioCode Extension for syntax checking: 70% of 3%
 - VisualStudioCode Extension for semantic checking: 3% of 5%
-- Intellij Idea Extension for syntax checking: 0% of 3%
-- Intellij Idea Extension for semantic checking: 0% of 5%
+- IntelliJ Idea Extension for syntax checking: 0% of 3%
+- IntelliJ Idea Extension for semantic checking: 0% of 5%
 - Custom Code Editor (Necromicon?, Grimoire): 0% of 5%
 ...
 # yes, these probably don't add up to 100%

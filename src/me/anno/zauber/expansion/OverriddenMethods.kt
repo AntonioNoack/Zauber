@@ -3,9 +3,9 @@ package me.anno.zauber.expansion
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 
 // todo also implement/support overridden fields, getters/setters
@@ -89,6 +89,8 @@ object OverriddenMethods {
             if (selfMethod == null) {
                 // somehow create a new method linking to the old one
                 val newScope = scope.generate("f:${method.name}", ScopeType.METHOD)
+                newScope.typeParameters = method.typeParameters
+                newScope.hasTypeParameters = true
                 newScope.selfAsMethod = method
             } else {
                 foundMethods.add(selfMethod)

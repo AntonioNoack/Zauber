@@ -1,6 +1,6 @@
 package me.anno.zauber.tokenizer
 
-abstract class Tokenizer(val src: String, fileName: String) {
+abstract class Tokenizer(val src: CharSequence, fileName: String) {
 
     var i = 0
     var n = src.length

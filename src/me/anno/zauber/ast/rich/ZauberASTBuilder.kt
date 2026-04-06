@@ -393,7 +393,7 @@ class ZauberASTBuilder(
             consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin)
             consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
-            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
+            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.unescapeString(i++), currPackage, origin)
             consumeIf("!") -> {
                 val base = readExpression()
                 NamedCallExpression(base, "not", currPackage, origin)
@@ -456,31 +456,14 @@ class ZauberASTBuilder(
             }
 
             tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
-                val vsCodeType =
-                    if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
-                        VSCodeType.METHOD
-                    } else VSCodeType.VARIABLE
+                val vsCodeType = if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK))
+                    VSCodeType.METHOD else VSCodeType.VARIABLE
 
                 val namePath = consumeName(vsCodeType, 0)
                 val typeArgs = readTypeParameters(null)
 
-                if (
-                    tokens.equals(i, TokenType.OPEN_CALL) &&
-                    tokens.isSameLine(i - 1, i)
-                ) {
-                    // constructor or function call with type args
-                    val start = i
-                    val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-                    if (LOGGER.isDebugEnabled) LOGGER.debug(
-                        "tokens for params: ${
-                            (start..end).map { idx ->
-                                "${tokens.getType(idx)}(${tokens.toString(idx)})"
-                            }
-                        }"
-                    )
-                    val args = readValueParameters()
-                    val base = nameExpression(namePath, origin, currPackage)
-                    CallExpression(base, typeArgs, args, origin + 1)
+                if (tokens.equals(i, TokenType.OPEN_CALL) && tokens.isSameLine(i - 1, i)) {
+                    readNamedCall(namePath, typeArgs, origin)
                 } else if (
                 // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
@@ -492,6 +475,7 @@ class ZauberASTBuilder(
                     check(i == i0)
                     GetClassFromTypeExpression(type, currPackage, origin)
                 } else {
+                    check(typeArgs == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
                     nameExpression(namePath, origin, currPackage)
                 }
             }
@@ -499,9 +483,9 @@ class ZauberASTBuilder(
                 // just something in brackets
                 pushCall { readExpression() }
             }
-            tokens.equals(i, TokenType.OPEN_BLOCK) ->
+            tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
-
+            }
             else -> {
                 tokens.printTokensInBlocks(max(i - 5, 0))
                 throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
@@ -888,7 +872,8 @@ class ZauberASTBuilder(
     private fun tryReadPostfix(expr: Expression): Expression? {
         return when {
             i >= tokens.size || !tokens.isSameLine(i - 1, i) -> null
-            tokens.equals(i, TokenType.OPEN_CALL) -> {
+            tokens.equals(i, TokenType.OPEN_CALL) && tokens.equals(i, "(") -> {
+                // OPEN_CALL without ( must be ignored, that's not a valid function call
                 val origin = origin(i)
                 val params = readValueParameters()
                 if (tokens.equals(i, TokenType.OPEN_BLOCK)) {

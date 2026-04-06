@@ -264,7 +264,7 @@ class CppASTBuilder(
         val name = tokens.toString(i++)
         val classScope = currPackage.getOrPut(name, ScopeType.NORMAL_CLASS)
         classScope.hasTypeParameters = true
-        classScope.addKeywords(packFlags())
+        classScope.addFlags(packFlags())
         pushBlock(classScope) {
             readFileLevel()
         }
@@ -417,7 +417,7 @@ class CppASTBuilder(
                 NumberExpression(tokens.toString(i++), currPackage, origin)
 
             tokens.equals(i, TokenType.STRING) ->
-                StringExpression(tokens.toString(i++), currPackage, origin)
+                StringExpression(tokens.unescapeString(i++), currPackage, origin)
 
             consumeIf("return") -> readReturn(label)
 

@@ -1,7 +1,7 @@
 package me.anno.zauber.tokenizer
 
 abstract class ZauberTokenizerBase(
-    src: String, fileName: String,
+    src: CharSequence, fileName: String,
     val keywords: Set<String>,
     val supportedNumberSuffixes: String
 ) : Tokenizer(src, fileName) {

@@ -4,7 +4,7 @@ class ZauberTokenizer(src: String, fileName: String) :
     ZauberTokenizerBase(src, fileName, KEYWORDS, "lLuUfFdDhH") {
 
     companion object {
-        private val KEYWORDS = setOf(
+        val KEYWORDS = setOf(
             "true", "false", "null",
             "class", "interface", "object",
             "package", "import",

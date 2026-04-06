@@ -33,7 +33,7 @@ class ZClass(val type: Type) {
 
         fun Field.needsBackingFieldImpl(type0: Type): Boolean {
             val type = scope.typeWithoutArgs
-            LOGGER.info("[$type0] $this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
+            // LOGGER.info("[$type0] $this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
             return (!explicitSelfType || selfType == type) &&
                     needsBackingField()
         }

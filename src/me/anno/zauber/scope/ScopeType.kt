@@ -39,8 +39,9 @@ enum class ScopeType {
 
     // inside expressions
     METHOD_BODY,
+    MACRO,
     WHEN_CASES,
-    WHEN_ELSE;
+    WHEN_ELSE, ;
 
     fun isClassType(): Boolean {
         return when (this) {
@@ -65,7 +66,8 @@ enum class ScopeType {
             LAMBDA,
             METHOD_BODY,
             WHEN_CASES,
-            WHEN_ELSE -> true
+            WHEN_ELSE,
+            MACRO -> true
             else -> false
         }
     }

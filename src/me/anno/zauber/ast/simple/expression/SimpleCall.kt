@@ -177,7 +177,10 @@ class SimpleCall(
             Types.LongType -> LongArray(size)
             Types.FloatType -> FloatArray(size)
             Types.DoubleType -> DoubleArray(size)
-            else -> arrayOfNulls<Instance>(size)
+            else -> {
+                val nullValue = runtime.getNull()
+                Array(size) { nullValue }
+            }
         }
     }
 }

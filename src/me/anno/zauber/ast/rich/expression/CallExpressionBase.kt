@@ -8,14 +8,14 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.LambdaType
 

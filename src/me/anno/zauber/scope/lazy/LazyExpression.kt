@@ -5,6 +5,7 @@ import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
@@ -18,17 +19,31 @@ class LazyExpression(
     val generics: HashMap<String, GenericType>
 ) : Expression(scope, origin) {
 
-    val value by lazy {
-        val tmp = ZauberASTBuilder(tokens.tokens, root, ZauberLanguage.ZAUBER)
-        tmp.imports.addAll(imports)
-        tmp.genericParams.add(generics)
+    companion object {
+        fun eval(
+            tokens: TokenList,
+            i0: Int, i1: Int,
+            isBody: Boolean,
+            scope: Scope,
+            imports: List<Import>,
+            generics: HashMap<String, GenericType>
+        ): Expression {
+            val tmp = ZauberASTBuilder(tokens, root, ZauberLanguage.ZAUBER)
+            tmp.imports.addAll(imports)
+            tmp.genericParams.add(generics)
 
-        tmp.i = tokens.i0
-        tmp.currPackage = scope
-        tmp.push(tokens.i1) {
-            if (isBody) tmp.readMethodBody()
-            else tmp.readExpression()
+            tmp.i = i0
+            tmp.currPackage = scope
+            return tmp.push(i1) {
+                if (isBody) tmp.readMethodBody()
+                else tmp.readExpression()
+            }
         }
+    }
+
+    val value by lazy {
+        val tokens = tokens
+        eval(tokens.tokens, tokens.i0, tokens.i1, isBody, scope, imports, generics)
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)

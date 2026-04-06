@@ -16,6 +16,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.utils.PairArrayList
+import java.lang.reflect.Member
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 

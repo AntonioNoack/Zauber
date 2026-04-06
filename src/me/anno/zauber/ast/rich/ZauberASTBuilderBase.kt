@@ -21,6 +21,8 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.binaryOp
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
+import me.anno.zauber.expansion.Macro.evaluateMacro
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -75,7 +77,7 @@ abstract class ZauberASTBuilderBase(
 
     fun readClassBody(name: String, keywords: FlagSet, scopeType: ScopeType): Scope {
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
-        classScope.addKeywords(keywords)
+        classScope.addFlags(keywords)
 
         readClassBody(classScope)
         return classScope
@@ -851,7 +853,22 @@ abstract class ZauberASTBuilderBase(
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
 
+    fun readNamedCall(namePath: String, typeParameters: List<Type>?, origin: Int): Expression {
+        // constructor or function call with type args
+        val isTrueCall = tokens.equals(i, "(")
+        val scope = currPackage
+        if (isTrueCall) {
+            val args = readValueParameters()
+            val base = nameExpression(namePath, origin, scope)
+            return CallExpression(base, typeParameters, args, origin + 1)
+        } else {
+            // todo parser bug: we don't support specifying the macro name with dots yet
+            return evaluateMacro(namePath, typeParameters, origin)
+        }
+    }
+
     open fun consumeKeyword(): Int {
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
+
 }

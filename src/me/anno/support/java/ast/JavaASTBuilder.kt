@@ -302,6 +302,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         val scopeName = currPackage.generateName(name, origin)
         val keywords = packFlags()
         pushScope(scopeName, ScopeType.METHOD) { scope ->
+            scope.typeParameters = typeParameters
+            scope.hasTypeParameters = true
+
             val valueParameters = pushCall { readParameterDeclarations(null) }
             skipThrowList()
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
@@ -544,18 +547,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                     // println("reading a call, $namePath, $typeArgs")
                     if (tokens.equals(i, TokenType.OPEN_CALL)) {
                         // constructor or function call with type args
-                        val start = i
-                        val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-                        if (LOGGER.isDebugEnabled) LOGGER.debug(
-                            "tokens for params: ${
-                                (start..end).map { idx ->
-                                    "${tokens.getType(idx)}(${tokens.toString(idx)})"
-                                }
-                            }"
-                        )
-                        val args = readValueParameters()
-                        val base = nameExpression(namePath, origin, currPackage)
-                        CallExpression(base, typeArgs, args, origin + 1)
+                        readNamedCall(namePath, typeArgs, origin)
                     } else {
                         nameExpression(namePath, origin, currPackage)
                     }

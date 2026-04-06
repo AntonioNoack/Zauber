@@ -88,4 +88,6 @@ class TypesImpl {
     val YieldableType = getType("Yieldable", "RTY", NullableAnyType)
     val LinkedList = getType("LinkedList", "V", NullableAnyType)
 
+    val MacroContextType = getType("MacroContext")
+
 }

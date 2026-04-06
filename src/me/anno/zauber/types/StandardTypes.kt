@@ -39,6 +39,7 @@ object StandardTypes {
             "IntRange",
             "ClosedFloatingPointRange",
             "Lazy",
+            "TokenInfo",
 
             "Comparable",
             "Comparator",
@@ -153,6 +154,7 @@ object StandardTypes {
             // util
             "IntRange",
             "ClosedFloatingPointRange",
+            "TokenInfo",
 
             "Annotation",
             "Suppress",

@@ -48,7 +48,7 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
         super.readImport()
     }
 
-    override fun checkForTypes() {
+    override fun readNamed() {
         val hasName = tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD)
         if (!hasName) return
 

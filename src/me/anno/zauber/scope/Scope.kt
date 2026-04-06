@@ -113,7 +113,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             typeParameters = emptyList()
             hasTypeParameters = true
         }
-        check(hasTypeParameters) { "Missing type-params for $this to take typeWithArgs" }
+        check(hasTypeParameters) { "Missing type-params for $this ($scopeType) to take typeWithArgs" }
         ClassType(
             this, ParameterList(
                 typeParameters,
@@ -225,6 +225,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             ScopeType.INLINE_CLASS,
             ScopeType.METHOD,
             ScopeType.METHOD_BODY,
+            ScopeType.MACRO,
             ScopeType.LAMBDA,
             ScopeType.WHEN_CASES,
             ScopeType.WHEN_ELSE -> 6
@@ -537,8 +538,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
     fun isValueType(): Boolean = flags.hasFlag(Flags.VALUE)
 
-    fun addKeywords(keywords: FlagSet) {
-        this.flags = this.flags or keywords
+    fun addFlags(flags: FlagSet) {
+        this.flags = this.flags or flags
     }
 
     fun forEachScopeLazy(callback: (Scope) -> Unit) {

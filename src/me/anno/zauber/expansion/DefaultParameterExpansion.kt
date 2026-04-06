@@ -54,6 +54,7 @@ object DefaultParameterExpansion {
 
             val scope = scopeParent.generate("f:${self.name}", ScopeType.METHOD)
             scope.typeParameters = self.typeParameters
+            scope.hasTypeParameters = true
 
             val subValueParameters = self.valueParameters.subList(0, i).map { it.clone(scope) }
             subValueParameters.forEach { param -> param.getOrCreateField(null, Flags.NONE) }
@@ -68,13 +69,13 @@ object DefaultParameterExpansion {
 
             val newBody = if (self.selfType == null) {
                 CallExpression(
-                    UnresolvedFieldExpression(self.name!!, emptyList(), scope, origin),
+                    UnresolvedFieldExpression(self.name, emptyList(), scope, origin),
                     newTypeParameters, newValueParameters, origin
                 )
             } else {
                 NamedCallExpression(
                     ThisExpression(scopeParent, scope, origin),
-                    self.name!!, emptyList(),
+                    self.name, emptyList(),
                     newTypeParameters, newValueParameters, scope, origin
                 )
             }
