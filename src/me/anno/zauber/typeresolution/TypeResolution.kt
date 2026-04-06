@@ -130,7 +130,7 @@ object TypeResolution {
         var scope = scope
         while (true) {
             if (scope.isClassType()) {
-                return scope.typeWithoutArgs
+                return scope.typeWithArgs
             }
 
             // if inside method, we need to check method.selfType
@@ -201,7 +201,7 @@ object TypeResolution {
             LOGGER.info("Checking ${scopeI.pathStr}/${scopeI.scopeType} for 'this'")
             when {
                 scopeI.isClassType() || scopeI.scopeType == ScopeType.PACKAGE -> {
-                    val base = scopeI.typeWithoutArgs
+                    val base = scopeI.typeWithArgs
                     return if (scopeI.isObjectLike()) base else NonObjectClassType(base)
                 }
                 scopeI.isMethodType() -> {

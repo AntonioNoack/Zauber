@@ -473,7 +473,7 @@ object ASTSimplifier {
         ifBlock: SimpleNode,
     ): FlowResult {
         val ifFlow = FlowResult(Flow(UnitInstance, ifBlock), null, null)
-        val methodType = catch.param.scope.typeWithoutArgs
+        val methodType = catch.param.scope.typeWithArgs
         val selfField = ifBlock.field(methodType, catch.param.scope)
         val thrownField = catch.param.getOrCreateField(null, Flags.NONE)
         ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, expr.scope, expr.origin))

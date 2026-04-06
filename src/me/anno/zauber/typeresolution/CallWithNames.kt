@@ -190,7 +190,7 @@ object CallWithNames {
     ): Expression {
         val arrayType = ev.type
         check(arrayType is ClassType && arrayType.clazz.pathStr == "zauber.Array")
-        val instanceType = ev.type.typeParameters?.first()
+        val instanceType = arrayType.typeParameters?.first()
         return createArrayOfExpr(context, instanceType, values.map { it.value }, scope, origin)
     }
 

@@ -103,7 +103,7 @@ class Runtime {
         }
         return when {
             self.scope == selfScope -> self.instance
-            selfScope.isObjectLike() -> getObjectInstance(selfScope.typeWithoutArgs)
+            selfScope.isObjectLike() -> getObjectInstance(selfScope.typeWithArgs)
             else -> getSelfFromCallstack(selfScope)
         }
     }
@@ -188,7 +188,7 @@ class Runtime {
     fun getBool(bool: Boolean): Instance {
         val boolCompanion = Types.BooleanType.clazz.companionObject
             ?: throw IllegalStateException("Missing definition for enum class Boolean")
-        val boolInstance = getObjectInstance(boolCompanion.typeWithoutArgs)
+        val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
         val fields = boolInstance.type.properties
         val name = if (bool) "TRUE" else "FALSE"
         val field = fields.firstOrNull { it.name == name }

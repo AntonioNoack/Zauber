@@ -23,7 +23,11 @@ object EnumProperties {
         var endIndex = tokens.findToken(i, ";")
         if (endIndex < 0) endIndex = tokens.size
         val enumScope = currPackage
+
         val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+        companionScope.typeParameters = emptyList()
+        companionScope.hasTypeParameters = true
+
         // val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
         val primaryConstructorScope = companionScope.getOrCreatePrimaryConstructorScope()
         primaryConstructorScope.selfAsConstructor = Constructor(

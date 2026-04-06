@@ -123,7 +123,7 @@ class CppASTBuilder(
             ?: throw IllegalStateException("Missing type '$name0'")
 
         while (tokens.equals(i, "::") && tokens.equals(i + 1, TokenType.NAME)) {
-            path = (path as ClassType).clazz.getOrPut(tokens.toString(i + 1), null).typeWithoutArgs
+            path = (path as ClassType).clazz.getOrPut(tokens.toString(i + 1), null).typeWithArgs
             i += 2 // skip period and name
         }
         return path

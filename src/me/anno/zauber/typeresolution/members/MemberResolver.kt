@@ -243,7 +243,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     ): R? {
 
         val contextSelfScope = context.selfScope?.scope
-        val contextSelfType = context.selfType
+        val contextSelfType = context.selfType?.specialize(context)
 
         val print = !catchFailures && LOGGER.isInfoEnabled
         if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${contextSelfScope}, ${contextSelfType})")
@@ -256,6 +256,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             val result = callback(contextSelfScope, contextSelfType)
             if (result != null) return result
 
+            // doesn't need specialization, because only one instance can exist
             val selfCompanion = contextSelfScope.companionObject
             if (selfCompanion != null) {
                 if (print) LOGGER.info("Checking[1] $selfCompanion")
@@ -333,18 +334,18 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         context: ResolutionContext, codeScope: Scope,
         callback: (scope: Scope, selfType: Type) -> Unit
     ) {
-        var scope: Scope? = codeScope
+        var scope = codeScope
         val outerClassDepth = getOuterClassDepth(scope)
         // println("Outer class depth: $outerClassDepth")
-        while (scope != null) {
+        while (true) {
             if (isScopeAvailable(scope, outerClassDepth)) {
-                // println("Checking for field '$name' in $maybeSelfScope")
-                val selfType = resolveTypeFromScoping(scope, context)
+                val selfType = resolveTypeFromScoping(scope, context).specialize(context)
+                println("SelfType[$scope]: $selfType")
                 callback(scope, selfType)
             } else {
                 // println("Skipping scope '$scope'")
             }
-            scope = scope.parentIfSameFile
+            scope = scope.parentIfSameFile ?: return
         }
     }
 
@@ -354,7 +355,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             candidateScope = candidateScope.parentIfSameFile ?: break
         }
         if (candidateScope == context.selfType) {
-            // println("Found context.selfType: $candidateScope")
+            println("Found context.selfType: $candidateScope")
             return context.selfType
         }
         // if candidateScope is method & has self type, use that instead
@@ -362,7 +363,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         if (selfAsMethod != null) {
             val selfType = selfAsMethod.selfType
             if (selfType != null) {
-                // println("Found method.selfType: $selfType")
+                println("Found method.selfType: $selfType")
                 return selfType
             }
         }

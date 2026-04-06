@@ -104,6 +104,7 @@ abstract class ZauberASTBuilderBase(
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val aliasScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
         aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope)
+        aliasScope.hasTypeParameters = true
 
         consume("=")
 
@@ -120,6 +121,7 @@ abstract class ZauberASTBuilderBase(
     fun readTypeParameterDeclarations(classScope: Scope): List<Parameter> {
         pushGenericParams()
         if (!tokens.equals(i, "<")) return emptyList()
+        val tmpSelf = classScope.typeWithoutArgs
         val parameters = ArrayList<Parameter>()
         tokens.push(i++, "<", ">") {
             while (i < tokens.size) {
@@ -134,7 +136,7 @@ abstract class ZauberASTBuilderBase(
                 genericParams.last()[name] = GenericType(classScope, name)
 
                 val type = if (this is ZauberASTBuilder || this is ZauberASTClassScanner) {
-                    readTypeOrNull(classScope.typeWithoutArgs) ?: Types.NullableAnyType
+                    readTypeOrNull(tmpSelf) ?: Types.NullableAnyType
                     // if you print type here, typeParameters may not be available yet, and cause an NPE
                 } else if (tokens.equals(i, "extends", "super")) {
                     i++ // skip extends
@@ -148,6 +150,13 @@ abstract class ZauberASTBuilderBase(
         consume(">")
         classScope.typeParameters = parameters
         classScope.hasTypeParameters = true
+
+        // replace classScope.typeWithoutArgs with classScope.typeWithArgs
+        val properSelf = classScope.typeWithArgs
+        for (param in parameters) {
+            param.type = param.type.replace(tmpSelf, properSelf)
+        }
+
         return parameters
     }
 
@@ -614,7 +623,7 @@ abstract class ZauberASTBuilderBase(
                 scope = scope.parent
                     ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
             }
-            return scope.typeWithoutArgs
+            return scope.typeWithArgs
         }
     }
 
@@ -655,7 +664,7 @@ abstract class ZauberASTBuilderBase(
                 ?: if (tokens.equals(i, ".")) {
                     // get package under root
                     val scope = root.children.firstOrNull { it.name == name }
-                    scope?.scope?.typeWithoutArgs
+                    scope?.scope?.typeWithArgs
                 } else null
         }
 
@@ -674,7 +683,7 @@ abstract class ZauberASTBuilderBase(
             i++ // skip period
             val name = consumeName(VSCodeType.TYPE, 0)
             path = if (path is ClassType && !path.clazz.isTypeAlias()) {
-                path.clazz.getOrPut(name, null).typeWithoutArgs
+                path.clazz.getOrPut(name, null).typeWithArgs
             } else {
                 UnresolvedSubType(path!!, name, currPackage, imports)
             }

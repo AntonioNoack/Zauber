@@ -111,7 +111,11 @@ abstract class Type {
                     ?: throw IllegalStateException("Could not resolve $this in $scope")
                 if (!typeParameters.isNullOrEmpty()) {
                     baseType as ClassType
-                    check(baseType.typeParameters == null)
+                    check(
+                        baseType.typeParameters == null ||
+                                baseType.typeParameters.all { it is GenericType && it.scope == baseType.clazz }) {
+                        "Expected $baseType to not have type parameters, because we have $typeParameters"
+                    }
                     baseType.withTypeParameters(typeParameters)
                 } else baseType
             }
@@ -119,11 +123,33 @@ abstract class Type {
         }
     }
 
+    fun replace(oldType: ClassType, newType: ClassType): Type {
+        return when (this) {
+            oldType -> newType
+            is UnionType -> unionTypes(types.map { it.replace(oldType, newType) })
+            is AndType -> andTypes(types.map { it.replace(oldType, newType) })
+            is NotType -> type.replace(oldType, newType).not()
+            is GenericType, NullType -> this
+            is UnresolvedType -> {
+                if (typeParameters.isNullOrEmpty()) this
+                else UnresolvedType(
+                    className, typeParameters.map { it.replace(oldType, newType) },
+                    scope, imports
+                )
+            }
+            is ClassType -> {
+                if (typeParameters.isNullOrEmpty()) this
+                else ClassType(clazz, typeParameters.map { it.replace(oldType, newType) })
+            }
+            else -> throw NotImplementedError("Replace type ${javaClass.simpleName}, $this")
+        }
+    }
+
     private fun findSelfType(scope: Scope): Type? {
         var scope = scope
         while (true) {
             if (scope.isClassLike()) {
-                return scope.typeWithoutArgs
+                return scope.typeWithArgs
             }
 
             scope = scope.parentIfSameFile
@@ -147,6 +173,8 @@ abstract class Type {
             else -> throw IllegalStateException("Is ${javaClass.simpleName} fully specialized?")
         }
     }
+
+    fun specialize(context: ResolutionContext): Type = specialize(context.specialization)
 
     fun specialize(spec: Specialization = specialization): Type {
         if (isFullySpecialized()) return this

@@ -46,8 +46,8 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val methodReturnType0 = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)
             } else method.returnType // no resolution invoked (fast-path)
-            val methodReturnType1 = methodReturnType0?.specialize(context.specialization)
-            val selfType = context.selfType?.specialize(context.specialization)
+            val methodReturnType1 = methodReturnType0?.specialize(context)
+            val selfType = context.selfType?.specialize(context)
             if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType1 -> $returnType, selfType: $selfType")
             if (method.name == "copyOf" && selfType == Types.ArrayType) {
                 throw IllegalStateException("How can we copy something without knowing our own array type???")

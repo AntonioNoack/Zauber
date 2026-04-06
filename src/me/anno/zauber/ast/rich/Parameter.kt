@@ -14,7 +14,7 @@ class Parameter(
     val isVal: Boolean,
     val isVararg: Boolean,
     val name: String,
-    val type: Type,
+    var type: Type,
     val defaultValue: Expression?,
     val scope: Scope,
     val origin: Int

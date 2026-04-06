@@ -32,7 +32,7 @@ class DotExpression(
             if (self is NonObjectClassType) {
                 val companion = self.type.clazz.companionObject
                     ?: throw IllegalStateException("Expected $self to have companion object")
-                return companion.typeWithoutArgs
+                return companion.typeWithArgs
             }
             return self
         }

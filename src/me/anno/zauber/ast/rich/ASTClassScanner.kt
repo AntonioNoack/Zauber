@@ -42,7 +42,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             "public", "private", "protected", "interface",
             "package", "import", "companion",
             "open", "abstract", "override", "operator",
-            "get", "set", "typealias", "external"
+            "get", "set", "typealias", "external",
+            "constructor"
         )
     }
 

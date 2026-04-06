@@ -14,7 +14,7 @@ class Constructor(
     keywords: FlagSet,
     origin: Int
 ) : MethodLike(
-    scope.parent!!.typeWithoutArgs, false,
+    scope.parent!!.typeWithArgs, false,
     scope.typeParameters, valueParameters,
     Types.UnitType, scope, "?", body, keywords, origin
 ) {

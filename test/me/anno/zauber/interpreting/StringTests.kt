@@ -35,13 +35,21 @@ class StringTests {
         
         typealias ByteArray = Array<Byte>
         
-        class Byte {}
-        class Char {}
+        class Byte {
+            external fun toChar(): Char
+        }
+        class Char {
+            external operator fun compareTo(other: Char): Int
+            operator fun equals(other: Char): Boolean = this >= other && this <= other
+        }
+        
         class Int {
             external operator fun plus(other: Int): Int
             external operator fun minus(other: Int): Int
             external operator fun compareTo(other: Int): Int
             operator fun until(other: Int): IntRange = IntRange(this, other)
+            operator fun equals(other: Int): Boolean = this >= other && this <= other
+            operator fun unaryMinus(): Int = 0 - this
             fun inc() = this+1
             fun dec() = this-1
         }
@@ -86,6 +94,14 @@ class StringTests {
             operator fun plus(other: String): String {
                 return String(content + other.content)
             }
+            
+            fun contains(char: Char): Boolean = indexOf(char) >= 0
+            fun indexOf(char: Char, startIndex: Int = 0): Int {
+                for (i in startIndex until length) {
+                    if (this[i] == char) return i
+                }
+                return -1
+            }
         }
     """.trimIndent()
 
@@ -114,7 +130,7 @@ class StringTests {
     fun testStringConcatUsingArrays() {
         LogManager.disableLoggers(
             "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
-                    "TypeResolution,ResolvedField,FieldResolver,FieldExpression,AssignmentExpression," +
+                    "ResolvedField,FieldResolver,FieldExpression,AssignmentExpression," +
                     "Stdlib,ASTSimplifier,ResolvedMethod"
         )
         val code = """

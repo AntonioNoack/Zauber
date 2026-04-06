@@ -1,5 +1,6 @@
 package me.anno.zauber.scope
 
+import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -104,7 +105,9 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     var hasTypeParameters = false
 
+    @Deprecated("There is few cases, where we don't need or don't have generic parameters")
     val typeWithoutArgs = ClassType(this, null)
+
     val typeWithArgs by lazy {
         check(hasTypeParameters) { "Missing type-params for $this to take typeWithArgs" }
         ClassType(
@@ -379,12 +382,12 @@ class Scope(val name: String, val parent: Scope? = null) {
 
         val parentI = parentIfSameFile
         if (parentI != null && parentI.name == name) {
-            return parentI.typeWithoutArgs
+            return parentI.scope.typeWithArgs
         }
 
         if (searchInside) {
             val insideThisFile = resolveTypeInner(name)
-            if (insideThisFile != null) return insideThisFile.typeWithoutArgs
+            if (insideThisFile != null) return insideThisFile.scope.typeWithArgs
         }
 
         val genericType = resolveGenericType(name)
@@ -396,32 +399,39 @@ class Scope(val name: String, val parent: Scope? = null) {
                 // scan all of that scope
                 for (child in path.children) {
                     if (child.name == name) {
-                        return child.scope.typeWithoutArgs
+                        return child.scope.typeWithArgs
                     }
                 }
             } else if (import.name == name) {
-                return path.typeWithoutArgs
+                return path.scope.typeWithArgs
             }
         }
 
-        val sameFolder = resolveTypeSameFolder(name)
-        if (sameFolder != null) return sameFolder.typeWithoutArgs
+        if (pathStr != STDLIB_NAME) {
+            val sameFolder = resolveTypeSameFolder(name)
+            if (sameFolder != null) return sameFolder.scope.typeWithArgs
+        }
 
         // helper at startup / for tests
         val standardType = StandardTypes.standardClasses[name]
-        if (standardType != null) return standardType.typeWithoutArgs
+        if (standardType != null) return standardType.scope.typeWithArgs
+
+        if (pathStr == STDLIB_NAME) {
+            val sameFolder = resolveTypeSameFolder(name)
+            if (sameFolder != null) return sameFolder.scope.typeWithArgs
+        }
 
         // check siblings
         if (parent != null) {
             for (child in parent.children) {
-                if (child.name == name) return child.scope.typeWithoutArgs
+                if (child.name == name) return child.scope.typeWithArgs
             }
         }
 
         // we must also check langScope for any valid paths...
         for (child in langScope.children) {
             if (child.name == name) {
-                return child.scope.typeWithoutArgs
+                return child.scope.typeWithArgs
             }
         }
 

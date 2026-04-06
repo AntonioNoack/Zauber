@@ -54,7 +54,7 @@ abstract class CallExpressionBase(
             }
         } catch (e: IllegalStateException) {
             // this can fail, because some values may still be unknown
-            // e.printStackTrace()
+            e.printStackTrace()
             LOGGER.warn("Failed in hasLambdaOrUnknownGenericsType: ${e.message}")
             // we cannot be sure, better be safe
             return true

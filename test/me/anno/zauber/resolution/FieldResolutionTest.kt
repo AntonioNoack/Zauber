@@ -360,7 +360,7 @@ class FieldResolutionTest {
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
-        val colorType = scope["Inner"]["Color"].typeWithoutArgs
+        val colorType = scope["Inner"]["Color"].typeWithArgs
         assertEquals(colorType, actualType)
     }
 

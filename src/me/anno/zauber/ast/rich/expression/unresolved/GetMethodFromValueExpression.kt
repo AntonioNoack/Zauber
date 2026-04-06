@@ -91,7 +91,7 @@ class GetMethodFromValueExpression(
             println("lambda-targetType: $targetType, spec: ${context.specialization}")
             val tmpScope = scope.generate("lambda", ScopeType.LAMBDA)
             val variables = List(targetType.parameters.size) {
-                val type = targetType.parameters[it].type.specialize(context.specialization)
+                val type = targetType.parameters[it].type.specialize(context)
                 println("lambda-specialized ${targetType.parameters[it].type} -> $type for $this, $context")
                 val field = tmpScope.addField(
                     null, false, isMutable = false, null,

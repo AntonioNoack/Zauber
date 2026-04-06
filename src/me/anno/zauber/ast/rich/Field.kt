@@ -37,12 +37,6 @@ class Field(
         private val LOGGER = LogManager.getLogger(Field::class)
     }
 
-    init {
-        if (name == "content" && valueType == Types.ArrayType) {
-            throw IllegalStateException("Testing: field should know array type, $valueType -> ${valueType?.resolvedName}")
-        }
-    }
-
     fun needsBackingField(): Boolean {
         val getterBody = getter?.body ?: return true
         if (getterBody.needsBackingField(getterBody.scope)) return true

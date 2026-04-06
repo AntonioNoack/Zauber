@@ -4,6 +4,7 @@ import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.Compile.root
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 /**
@@ -19,74 +20,100 @@ object StandardTypes {
         // stdlib must be a package to be searched for children automatically
         root.getOrPut(STDLIB_NAME, ScopeType.PACKAGE)
 
-        val standardClasses = mapOf(
+        val zauber = langScope
+        val standardClasses0 = listOf(
             // strings
-            "String" to STDLIB_NAME,
-            "StringBuilder" to STDLIB_NAME,
-            "CharSequence" to STDLIB_NAME,
+            "String",
+            "StringBuilder",
+            "CharSequence",
 
             // special types
-            "Any" to STDLIB_NAME,
-            "Nothing" to STDLIB_NAME,
-            "Unit" to STDLIB_NAME,
-            "Array" to STDLIB_NAME,
+            "Any",
+            "Nothing",
+            "Unit",
+            "Array",
 
             // util
-            "Class" to STDLIB_NAME,
-            "Enum" to STDLIB_NAME,
-            "IntRange" to STDLIB_NAME,
-            "ClosedFloatingPointRange" to STDLIB_NAME,
-            "Lazy" to STDLIB_NAME,
+            "Class",
+            "Enum",
+            "IntRange",
+            "ClosedFloatingPointRange",
+            "Lazy",
 
-            "Comparable" to STDLIB_NAME,
-            "Comparator" to STDLIB_NAME,
+            "Comparable",
+            "Comparator",
 
-            "Iterator" to STDLIB_NAME,
-            "ListIterator" to STDLIB_NAME,
-            "MutableIterator" to STDLIB_NAME,
-            "MutableListIterator" to STDLIB_NAME,
-            "Iterable" to STDLIB_NAME,
-            "Collection" to STDLIB_NAME,
-            "MutableCollection" to STDLIB_NAME,
+            "Iterator",
+            "ListIterator",
+            "MutableIterator",
+            "MutableListIterator",
+            "Iterable",
+            "Collection",
+            "MutableCollection",
 
-            "List" to STDLIB_NAME,
-            "ArrayList" to STDLIB_NAME,
-            "MutableList" to STDLIB_NAME,
+            "List",
+            "ArrayList",
+            "MutableList",
 
-            "IndexedValue" to STDLIB_NAME,
+            "IndexedValue",
 
-            "Set" to STDLIB_NAME,
-            "HashSet" to STDLIB_NAME,
-            "MutableSet" to STDLIB_NAME,
+            "Set",
+            "HashSet",
+            "MutableSet",
 
-            "Map" to STDLIB_NAME,
-            "HashMap" to STDLIB_NAME,
-            "MutableMap" to STDLIB_NAME,
+            "Map",
+            "HashMap",
+            "MutableMap",
 
-            "Annotation" to STDLIB_NAME,
-            "Suppress" to STDLIB_NAME,
-            "Deprecated" to STDLIB_NAME,
+            "Annotation",
+            "Suppress",
+            "Deprecated",
 
-            "Throwable" to STDLIB_NAME,
-            "Exception" to STDLIB_NAME,
-            "RuntimeException" to STDLIB_NAME,
-            "InterruptedException" to STDLIB_NAME,
-            "InstantiationException" to STDLIB_NAME,
-            "NoSuchMethodException" to STDLIB_NAME,
-            "IllegalArgumentException" to STDLIB_NAME,
-            "IllegalStateException" to STDLIB_NAME,
-            "ClassCastException" to STDLIB_NAME,
-            "Error" to STDLIB_NAME,
-            "NoClassDefFoundError" to STDLIB_NAME,
-            "ClassNotFoundException" to STDLIB_NAME,
-            "NoSuchFieldException" to STDLIB_NAME,
-            "NoSuchMethodException" to STDLIB_NAME,
-            "OutOfMemoryError" to STDLIB_NAME,
-            "IndexOutOfBoundsException" to STDLIB_NAME,
+            "Throwable",
+            "Exception",
+            "RuntimeException",
+            "InterruptedException",
+            "InstantiationException",
+            "NoSuchMethodException",
+            "IllegalArgumentException",
+            "IllegalStateException",
+            "ClassCastException",
+            "Error",
+            "NoClassDefFoundError",
+            "ClassNotFoundException",
+            "NoSuchFieldException",
+            "NoSuchMethodException",
+            "OutOfMemoryError",
+            "IndexOutOfBoundsException",
 
-            "Pair" to STDLIB_NAME,
-            "Triple" to STDLIB_NAME,
-            "Number" to STDLIB_NAME,
+            "Pair",
+            "Triple",
+            "Number",
+
+            // natives
+            "Boolean",
+            "Byte",
+            "Short",
+            "Char",
+            "Int",
+            "Long",
+            "Float",
+            "Double",
+
+            // native arrays
+            "BooleanArray",
+            "ByteArray",
+            "ShortArray",
+            "CharArray",
+            "IntArray",
+            "LongArray",
+            "FloatArray",
+            "DoubleArray",
+        ).associateWith { name ->
+            zauber.getOrPut(name, null)
+        }
+
+        val standardClasses1 = mapOf(
 
             // util²
             "JvmField" to "kotlin.jvm",
@@ -98,27 +125,8 @@ object StandardTypes {
             "Process" to "java.lang",
             "ClassLoader" to "java.lang",
             "AbstractList" to "java.util",
-            "RandomAccess" to "java.util",
+            "RandomAccess" to "java.util"
 
-            // natives
-            "Boolean" to STDLIB_NAME,
-            "Byte" to STDLIB_NAME,
-            "Short" to STDLIB_NAME,
-            "Char" to STDLIB_NAME,
-            "Int" to STDLIB_NAME,
-            "Long" to STDLIB_NAME,
-            "Float" to STDLIB_NAME,
-            "Double" to STDLIB_NAME,
-
-            // native arrays
-            "BooleanArray" to STDLIB_NAME,
-            "ByteArray" to STDLIB_NAME,
-            "ShortArray" to STDLIB_NAME,
-            "CharArray" to STDLIB_NAME,
-            "IntArray" to STDLIB_NAME,
-            "LongArray" to STDLIB_NAME,
-            "FloatArray" to STDLIB_NAME,
-            "DoubleArray" to STDLIB_NAME,
         ).mapValues { (name, packageName) ->
             val parts = packageName.split('.')
             var currPackage = root
@@ -127,6 +135,8 @@ object StandardTypes {
             }
             currPackage.getOrPut(name, null)
         }
+
+        val standardClasses = standardClasses0 + standardClasses1
 
         // mark these types as not having a generic parameter
         val nonGenericTypes = listOf(
@@ -196,6 +206,7 @@ object StandardTypes {
             "FloatArray",
             "DoubleArray",
         )
+
         for (name in nonGenericTypes) {
             val type = standardClasses[name]!!
             type.hasTypeParameters = true

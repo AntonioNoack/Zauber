@@ -98,8 +98,8 @@ object DataClassGenerator {
 
             // this is an optimization:
             val hasEqualsSelfMethod = MethodResolver.findMemberInScope(
-                classScope, origin, "equals", Types.BooleanType, classScope.typeWithoutArgs,
-                emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithoutArgs, false)),
+                classScope, origin, "equals", Types.BooleanType, classScope.typeWithArgs,
+                emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithArgs, false)),
                 context
             ) != null
             if (!hasEqualsSelfMethod) {
