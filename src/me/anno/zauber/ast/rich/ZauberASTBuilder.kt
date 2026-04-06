@@ -181,6 +181,8 @@ class ZauberASTBuilder(
         val classScopeIfInClass = if (currPackage.isClassType()) currPackage else null
         val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin)
         val typeParameters = readTypeParameterDeclarations(methodScope)
+        methodScope.typeParameters = typeParameters
+        methodScope.hasTypeParameters = true
 
         check(tokens.equals(i, TokenType.NAME))
         val selfType0 = readFieldOrMethodSelfType(typeParameters, methodScope)

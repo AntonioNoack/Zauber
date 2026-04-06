@@ -129,7 +129,7 @@ class MacroTest {
             }
             
             class Field(val name: String, val type: Type)
-            class ClassType(val fields: List<Field>)
+            class ClassType<T>(val fields: List<Field>)
             
         """.trimIndent()
         )
