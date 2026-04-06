@@ -431,6 +431,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val origin = origin(i - 1)
         val classScope = currPackage
         val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
+        constrScope.typeParameters = emptyList()
+        constrScope.hasTypeParameters = true
         constrScope.flags = constrScope.flags or packFlags()
 
         pushScope(constrScope) {

@@ -109,6 +109,10 @@ class Scope(val name: String, val parent: Scope? = null) {
     val typeWithoutArgs = ClassType(this, null)
 
     val typeWithArgs by lazy {
+        if (!hasTypeParameters && scopeType?.isInsideExpression() == true) {
+            typeParameters = emptyList()
+            hasTypeParameters = true
+        }
         check(hasTypeParameters) { "Missing type-params for $this to take typeWithArgs" }
         ClassType(
             this, ParameterList(
@@ -151,6 +155,9 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun getOrCreatePrimaryConstructorScope(): Scope {
         return primaryConstructorScope ?: run {
             val scope = getOrPut("prim", ScopeType.CONSTRUCTOR)
+            scope.typeParameters = emptyList()
+            scope.hasTypeParameters = true
+
             primaryConstructorScope = scope
             scope.selfAsConstructor = Constructor(
                 emptyList(), scope,

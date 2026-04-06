@@ -207,7 +207,7 @@ class DotExpression(
         when {
             isFieldType() -> {
                 val field = resolveField(context, baseType)
-                    ?: throw IllegalStateException("Unresolved field for field type: (${right.javaClass.simpleName}) $baseType dot $right")
+                    ?: throw IllegalStateException("Unresolved field for field type: (${right.javaClass.simpleName}) $baseType dot $right in $scope")
                 return ResolvedGetFieldExpression(base, field, scope, origin)
             }
             isMethodType() -> {

@@ -186,7 +186,7 @@ class Runtime {
     fun isNull(va: Instance) = va == getNull()
 
     fun getBool(bool: Boolean): Instance {
-        val boolCompanion = Types.BooleanType.clazz.companionObject
+        val boolCompanion = Types.BooleanType.clazz.scope.companionObject
             ?: throw IllegalStateException("Missing definition for enum class Boolean")
         val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
         val fields = boolInstance.type.properties
