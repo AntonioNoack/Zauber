@@ -64,7 +64,7 @@ class FieldGetSetTest {
         assertThrows<IllegalStateException>({ e ->
             val message = e.message!!
             check("Expected Field(" in message)
-            check(".v) to be mutable" in message)
+            check(".v).x to be mutable" in message)
         }) {
             val code = """
             class Vector(val x: Int, val y: Int)

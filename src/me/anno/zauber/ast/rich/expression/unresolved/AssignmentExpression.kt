@@ -59,7 +59,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
                 val ownerType = owner.resolveReturnType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
                 check(field.resolved.isMutable || dstExpr.left.field.isMutableEx) {
-                    "Expected ${dstExpr.left.field} to be mutable @${resolveOrigin(origin)}"
+                    "Expected ${dstExpr.left.field}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
                 }
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
