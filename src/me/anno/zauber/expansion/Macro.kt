@@ -8,12 +8,14 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.ast.simple.Ownership
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.generation.Specializations
-import me.anno.zauber.interpreting.*
+import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.Call
+import me.anno.zauber.interpreting.ReturnType
+import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.scope.lazy.LazyExpression
-import me.anno.zauber.scope.lazy.TokenSubList
 import me.anno.zauber.tokenizer.TokenList
-import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
@@ -100,27 +102,11 @@ object Macro {
         val value = result.value.properties.getOrNull(resultIndex)
             ?: throw IllegalStateException("Missing first property of TokenResult")
 
-        val rawTokens = value.rawValue
-        check(rawTokens is Array<*>) { "Expected TokenResult[0] to be Array<String>" }
-
-        val tokenSource = StringBuilder()
+        // todo allow special character codes to encode where something came from...
+        val tokenSource = value.castToString()
         val pseudoFilename = "${method.name}@${tokens.err(i0)}"
-        val tokenList = TokenList(tokenSource, pseudoFilename)
-        for (i in rawTokens.indices) {
-            val asString = (rawTokens[i] as Instance).castToString()
-            if (asString.isBlank()) continue
-
-            val type = TokenType.findTokenType(asString)
-            val i0 = tokenSource.length
-            tokenSource.append(asString).append(' ') // space is not strictly necessary
-            if (asString.first() in "\"'") {
-                tokenList.add(type, i0 + 1, i0 + asString.length - 1)
-            } else {
-                tokenList.add(type, i0, i0 + asString.length)
-            }
-        }
-
-        return tokenList
+        return ZauberTokenizer(tokenSource, pseudoFilename)
+            .tokenize()
     }
 
 }

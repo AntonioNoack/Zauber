@@ -31,10 +31,10 @@ class MacroTest {
             }
             
             macro XML(input: String, ctx: MacroContext): XMLNode {
-                return ctx.parse<XMLNode>(listOf(
-                    "XMLNode", "(", "\"h1\"", ")",
-                        ".", "addContent", "(", "\"Hello World!\"", ")"
-                ))
+                return ctx.parse<XMLNode>(
+                    "XMLNode(\"h1\")\n" +
+                        ".addContent(\"FakeTestMessage!\")"
+                )
             }
             
             val xmlNode = XML"<h1>Hello World!</h1>"
@@ -47,9 +47,9 @@ class MacroTest {
             
             class Throwable(val message: String)
             object MacroContext: Throwable("") {
-                lateinit var result: List<String>
+                lateinit var result: String
                 external fun mark(i0: Int, i1: Int, type: String)
-                fun <R> parse(tokens: List<String>): R {
+                fun <R> parse(tokens: String): R {
                     result = tokens
                     throw this
                 }
@@ -66,6 +66,6 @@ class MacroTest {
             }
         """.trimIndent()
         )
-        assertEquals("<h1>Hello World!</h1>", value.castToString())
+        assertEquals("<h1>FakeTestMessage!</h1>", value.castToString())
     }
 }
