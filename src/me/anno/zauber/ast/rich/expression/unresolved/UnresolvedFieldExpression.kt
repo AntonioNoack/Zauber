@@ -36,8 +36,8 @@ class UnresolvedFieldExpression(
     }
 
     // todo this would be a getter by default... resolve its type...
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun resolveImpl(context: ResolutionContext): ResolvedGetFieldExpression {
         val field = resolveField(context)

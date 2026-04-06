@@ -68,7 +68,7 @@ class ZauberASTBuilder(
         var debug = false
 
         val unitInstance by threadLocal {
-            val scope = Types.UnitType.clazz
+            val scope = Types.Unit.clazz
             val field = scope.getOrCreateObjectField(-1)
             FieldExpression(field, scope, -1)
         }
@@ -111,9 +111,9 @@ class ZauberASTBuilder(
             }
             i = endIndex // index of {
         }
-        val addAnyIfEmpty = classScope != Types.AnyType.clazz
+        val addAnyIfEmpty = classScope != Types.Any.clazz
         if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
-            classScope.superCalls.add(SuperCall(Types.AnyType, emptyList(), null))
+            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null))
         }
     }
 
@@ -206,7 +206,7 @@ class ZauberASTBuilder(
 
         // optional return type
         var returnType =
-            if (!tokens.equals(i, "=", ":")) Types.UnitType // todo if there is a where, we first need to skip it
+            if (!tokens.equals(i, "=", ":")) Types.Unit // todo if there is a where, we first need to skip it
             else readTypeOrNull(selfType)
 
         val extraConditions = readWhereConditions()
@@ -223,10 +223,10 @@ class ZauberASTBuilder(
                 val origin = origin(i++) // skip =
                 ReturnExpression(readExpression(), null, methodScope, origin)
             } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                if (returnType == null) returnType = Types.UnitType
+                if (returnType == null) returnType = Types.Unit
                 pushBlock(methodScope) { readMethodBody() }
             } else {
-                if (returnType == null) returnType = Types.UnitType
+                if (returnType == null) returnType = Types.Unit
                 null
             }
         }
@@ -311,7 +311,7 @@ class ZauberASTBuilder(
             consume(":")
 
             var type = readTypeNotNull(null, true) // <-- handles generics now
-            if (isVararg) type = ClassType(Types.ArrayType.clazz, listOf(type), origin)
+            if (isVararg) type = ClassType(Types.Array.clazz, listOf(type), origin)
 
             val initialValue = if (consumeIf("=")) readExpression() else null
 
@@ -475,11 +475,20 @@ class ZauberASTBuilder(
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
                     val i0 = i + 2
                     i-- // skipping over name
-                    val type = readTypeNotNull(null, false)
-                    check(tokens.equals(i++, "::"))
-                    check(tokens.equals(i++, "class"))
-                    check(i == i0)
-                    GetClassFromTypeExpression(type, currPackage, origin)
+                    val type = readType(null, false)
+                    if (type != null) {
+                        consume("::")
+                        consume("class")
+                        check(i == i0)
+                        GetClassFromTypeExpression(type, currPackage, origin)
+                    } else {
+                        val type = nameExpression(namePath, origin, currPackage)
+                        i++ // skip name
+                        consume("::")
+                        consume("class")
+                        check(i == i0)
+                        GetClassFromValueExpression(type, currPackage, origin)
+                    }
                 } else {
                     check(typeArgs == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
                     nameExpression(namePath, origin, currPackage)
@@ -887,6 +896,10 @@ class ZauberASTBuilder(
                 }
                 CallExpression(expr, null, params, origin)
             }
+            tokens.equals(i, "!") && tokens.equals(i + 1, TokenType.OPEN_CALL) -> {
+                consume("!")
+                evaluateMacro(expr, null, origin(i))
+            }
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 val origin = origin(i)
                 val params = pushArray { readValueParametersImpl() }
@@ -1112,7 +1125,7 @@ class ZauberASTBuilder(
             forTryBody.addAll(remainder.list)
             result.clear()
 
-            val parameter = Parameter(0, "e", Types.ThrowableType, errCatch, origin)
+            val parameter = Parameter(0, "e", Types.Throwable, errCatch, origin)
             val exceptionField = parameter.getOrCreateField(null, Flags.NONE)
             val throwImpl = ThrowExpression(FieldExpression(exceptionField, errCatch, origin), errCatch, origin)
 

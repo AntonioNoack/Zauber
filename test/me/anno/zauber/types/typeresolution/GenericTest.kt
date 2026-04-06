@@ -12,7 +12,7 @@ class GenericTest {
     @Test
     fun testTypeWithGenerics() {
         val actual = testTypeResolution("val tested: ArrayList<Int>")
-        val expected = Types.ArrayListType.withTypeParameter(Types.IntType)
+        val expected = Types.ArrayList.withTypeParameter(Types.Int)
         assertEquals(expected, actual)
     }
 
@@ -26,14 +26,14 @@ class GenericTest {
                 class ArrayList<Int>(initialCapacity: Int)
             """.trimIndent()
         )
-        val expected = Types.ArrayListType.withTypeParameter(Types.IntType)
+        val expected = Types.ArrayList.withTypeParameter(Types.Int)
         assertEquals(expected, actual)
     }
 
     @Test
     fun testSimpleInferredGenerics() {
         assertEquals(
-            Types.ListType.withTypeParameter(Types.IntType),
+            Types.List.withTypeParameter(Types.Int),
             testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
@@ -42,7 +42,7 @@ class GenericTest {
             )
         )
         assertEquals(
-            Types.ListType.withTypeParameter(Types.StringType),
+            Types.List.withTypeParameter(Types.String),
             testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
@@ -55,7 +55,7 @@ class GenericTest {
     @Test
     fun testInferredMapGenerics() {
         assertEquals(
-            Types.MapType.withTypeParameters(listOf(Types.StringType, Types.IntType)),
+            Types.Map.withTypeParameters(listOf(Types.String, Types.Int)),
             testTypeResolution(
                 """
                 fun <K, V> mapOf(entry: Pair<K,V>): Map<K,V>
@@ -69,7 +69,7 @@ class GenericTest {
     @Test
     fun testGenericFunction() {
         assertEquals(
-            Types.ListType.withTypeParameter(Types.IntType),
+            Types.List.withTypeParameter(Types.Int),
             testTypeResolution(
                 """
                 fun <V> emptyList(): List<V> = ArrayList<V>(0)
@@ -82,7 +82,7 @@ class GenericTest {
     @Test
     fun testGenericsMap() {
         assertEquals(
-            Types.ListType.withTypeParameter(Types.FloatType),
+            Types.List.withTypeParameter(Types.Float),
             testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
@@ -105,7 +105,7 @@ class GenericTest {
     @Test
     fun testEmptyListAsParameter() {
         assertEquals(
-            Types.LongType,
+            Types.Long,
             testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
@@ -126,7 +126,7 @@ class GenericTest {
                 val tested = mapOf(1 to 2f)   
             """.trimIndent()
         )
-        assertEquals(Types.MapType.withTypeParameters(listOf(Types.IntType, Types.FloatType)), type)
+        assertEquals(Types.Map.withTypeParameters(listOf(Types.Int, Types.Float)), type)
     }
 
     @Test
@@ -153,13 +153,13 @@ class GenericTest {
                 }
             """.trimIndent()
         )
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     @Test
     fun testListReduceWithTypeMethod() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 fun <V> emptyList(): List<V>
@@ -187,7 +187,7 @@ class GenericTest {
     @Test
     fun testListsAreNotConfused() {
         assertEquals(
-            Types.ListType.withTypeParameter(Types.FloatType),
+            Types.List.withTypeParameter(Types.Float),
             testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
@@ -198,7 +198,7 @@ class GenericTest {
             )
         )
         assertEquals(
-            Types.ListType.withTypeParameter(Types.FloatType),
+            Types.List.withTypeParameter(Types.Float),
             testTypeResolution(
                 """
                 fun listOf(v: Int): List<Int>
@@ -214,9 +214,9 @@ class GenericTest {
     fun testLambdaInsideLambda() {
         // what about listOf("1,2,3").map{it.split(',').map{it.toInt()}}?
         //  can we somehow hide lambdas? I don't think so...
-        val listOfInt = Types.ListType.withTypeParameters(listOf(Types.IntType))
+        val listOfInt = Types.List.withTypeParameters(listOf(Types.Int))
         assertEquals(
-            Types.ListType.withTypeParameter(listOfInt),
+            Types.List.withTypeParameter(listOfInt),
             testTypeResolution(
                 """
                 fun <V> listOf(v: V): List<V>
@@ -239,9 +239,9 @@ class GenericTest {
 
     @Test
     fun testMixedList() {
-        val mixedType = unionTypes(listOf(Types.StringType, Types.IntType, Types.FloatType))
+        val mixedType = unionTypes(listOf(Types.String, Types.Int, Types.Float))
         assertEquals(
-            Types.ListType.withTypeParameter(mixedType),
+            Types.List.withTypeParameter(mixedType),
             testTypeResolution(
                 """
                 fun <V> listOf(vararg values: V): List<V>
@@ -262,7 +262,7 @@ class GenericTest {
     @Test
     fun testGenericField() {
         assertEquals(
-            Types.StringType,
+            Types.String,
             testTypeResolution(
                 """
                 class A<V>(val a: V)
@@ -276,7 +276,7 @@ class GenericTest {
     @Test
     fun testGenericFieldInSuperClass() {
         assertEquals(
-            Types.StringType,
+            Types.String,
             testTypeResolution(
                 """
                 class A<V>(val a: V)

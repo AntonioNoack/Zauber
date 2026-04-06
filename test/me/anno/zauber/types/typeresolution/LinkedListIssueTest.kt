@@ -80,6 +80,6 @@ class LinkedListIssueTest {
         }
             """.trimIndent()
         )
-        assertEquals(Types.LinkedList.withTypeParameter(Types.IntType), type)
+        assertEquals(Types.LinkedList.withTypeParameter(Types.Int), type)
     }
 }

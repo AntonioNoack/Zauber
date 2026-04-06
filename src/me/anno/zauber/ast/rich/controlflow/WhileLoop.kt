@@ -14,8 +14,8 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
     override fun needsBackingField(methodScope: Scope): Boolean = condition.needsBackingField(methodScope) ||

@@ -83,7 +83,7 @@ class NamedCallExpression(
             println("self: $self (${self.javaClass.simpleName})")
             if (self is FieldExpression) {
                 println("self-type: ${self.field.valueType}")
-                if (self.field.name == "content" && self.field.valueType == Types.ArrayType) {
+                if (self.field.name == "content" && self.field.valueType == Types.Array) {
                     throw IllegalStateException("Expected ${self.field}: ${self.field.valueType} to have type parameters")
                 }
             }

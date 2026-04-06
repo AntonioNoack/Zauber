@@ -27,7 +27,7 @@ class CheckEqualsOp(
         return "(${left.toString(depth)})$symbol(${right.toString(depth)})"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.Boolean
     override fun resolveThrownType(context: ResolutionContext): Type {
         val context1 = context.withTargetType(null)
         if (byPointer) return unionTypes(left.resolveThrownType(context1), right.resolveThrownType(context1))

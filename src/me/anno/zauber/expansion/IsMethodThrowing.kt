@@ -11,7 +11,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 object IsMethodThrowing : MethodColoring<Type>() {
 
     override fun getSelfColor(method: MethodSpecialization): Type {
-        val body = method.method.getSpecializedBody(method.specialization) ?: return Types.NothingType
+        val body = method.method.getSpecializedBody(method.specialization) ?: return Types.Nothing
         val thrownTypes = ArrayList<Type>()
         val context = ResolutionContext(method.method.selfType, method.specialization, false, null)
         body.forEachExpressionRecursively { expr ->

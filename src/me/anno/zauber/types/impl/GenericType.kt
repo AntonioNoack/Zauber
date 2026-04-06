@@ -19,7 +19,7 @@ class GenericType(val scope: Scope, val name: String) : Type() {
         get() = byTypeParameter.type
 
     override fun toStringImpl(depth: Int): String {
-        return if (superBounds == Types.NullableAnyType) {
+        return if (superBounds == Types.NullableAny) {
             "${scope.name}.$name"
         } else {
             "(${scope.name}.$name: ${superBounds.toString(depth)})"

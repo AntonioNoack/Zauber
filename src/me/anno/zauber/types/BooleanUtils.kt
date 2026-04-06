@@ -9,7 +9,7 @@ object BooleanUtils {
         // undo a not
         if (this is NamedCallExpression &&
             name == "not" &&
-            self.resolvedType == Types.BooleanType
+            self.resolvedType == Types.Boolean
         ) {
             return self
         }
@@ -18,21 +18,21 @@ object BooleanUtils {
             return CheckEqualsOp(left, right, byPointer, !negated, null, scope, origin)
         }
 
-        resolvedType = Types.BooleanType
+        resolvedType = Types.Boolean
         return NamedCallExpression(
             this, "not", scope, origin
         )
     }
 
     fun Expression.and(other: Expression): Expression {
-        resolvedType = Types.BooleanType
-        other.resolvedType = Types.BooleanType
+        resolvedType = Types.Boolean
+        other.resolvedType = Types.Boolean
         return NamedCallExpression(
             this, "and", emptyList(), emptyList(),
             listOf(NamedParameter(null, other)),
             scope, origin
         ).apply {
-            resolvedType = Types.BooleanType
+            resolvedType = Types.Boolean
         }
     }
 }

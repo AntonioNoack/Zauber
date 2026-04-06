@@ -43,6 +43,7 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
     }
 }
 
+@Suppress("PropertyName")
 class TypesImpl {
 
     private fun getType(i: String): ClassType {
@@ -60,34 +61,43 @@ class TypesImpl {
         )
     }
 
-    val AnyType = getType("Any")
-    val NullableAnyType = UnionType(listOf(AnyType, NullType))
-    val UnitType = getType("Unit")
-    val CharType = getType("Char")
-    val ByteType = getType("Byte")
-    val ShortType = getType("Short")
-    val IntType = getType("Int")
-    val LongType = getType("Long")
-    val FloatType = getType("Float")
-    val DoubleType = getType("Double")
-    val UByteType = getType("UByte")
-    val UShortType = getType("UShort")
-    val UIntType = getType("UInt")
-    val ULongType = getType("ULong")
-    val HalfType = getType("Half")
-    val StringType = getType("String")
-    val NumberType = getType("Number")
-    val ThrowableType = getType("Throwable")
-    val YieldedType = getType("Yielded", "RTY", NullableAnyType)
-    val NothingType = getType("Nothing")
-    val BooleanType = getType("Boolean")
-    val ArrayType = getType("Array", "V", NullableAnyType)
-    val ListType = getType("List", "V", NullableAnyType)
-    val ArrayListType = getType("ArrayList", "V", NullableAnyType)
-    val MapType = getType("Map", "KV", NullableAnyType)
-    val YieldableType = getType("Yieldable", "RTY", NullableAnyType)
-    val LinkedList = getType("LinkedList", "V", NullableAnyType)
+    val Any = getType("Any")
+    val NullableAny = UnionType(listOf(Any, NullType))
+    val Unit = getType("Unit")
+    val Boolean = getType("Boolean")
 
-    val MacroContextType = getType("MacroContext")
+    val Char = getType("Char")
+    val Number = getType("Number")
+    val Byte = getType("Byte")
+    val Short = getType("Short")
+    val Int = getType("Int")
+    val Long = getType("Long")
+    val Float = getType("Float")
+    val Double = getType("Double")
+    val UByte = getType("UByte")
+    val UShort = getType("UShort")
+    val UInt = getType("UInt")
+    val ULong = getType("ULong")
+    val Half = getType("Half")
+
+    val String = getType("String")
+    val Throwable = getType("Throwable")
+    val Nothing = getType("Nothing")
+
+    val Array = getType("Array", "V", NullableAny)
+    val List = getType("List", "V", NullableAny)
+    val ArrayList = getType("ArrayList", "V", NullableAny)
+    val LinkedList = getType("LinkedList", "V", NullableAny)
+    val Map = getType("Map", "KV", NullableAny)
+
+    val Yielded = getType("Yielded", "RTY", NullableAny)
+    val Yieldable = getType("Yieldable", "RTY", NullableAny)
+
+    val MacroContext = getType("MacroContext")
+
+    val TypeT = getType("Type")
+    val UnionType = getType("UnionType")
+    val ClassType = getType("ClassType", "V", NullableAny)
+    val GenericType = getType("GenericType")
 
 }

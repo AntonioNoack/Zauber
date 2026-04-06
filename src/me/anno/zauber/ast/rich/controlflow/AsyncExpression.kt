@@ -21,11 +21,11 @@ class AsyncExpression(val value: Expression, scope: Scope, origin: Int) : Expres
         val returnType = resolvedValue.resolveReturnType(context)
         val thrownType = resolvedValue.resolveThrownType(context)
         val yieldedType = resolvedValue.resolveYieldedType(context)
-        return Types.YieldableType.withTypeParameters(listOf(returnType, thrownType, yieldedType))
+        return Types.Yieldable.withTypeParameters(listOf(returnType, thrownType, yieldedType))
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // todo maybe it has...
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)

@@ -13,8 +13,8 @@ class BreakExpression(val label: Scope, scope: Scope, origin: Int) : Expression(
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun clone(scope: Scope): Expression = BreakExpression(label, scope, origin)
 

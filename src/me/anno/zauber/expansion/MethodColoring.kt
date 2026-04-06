@@ -3,6 +3,9 @@ package me.anno.zauber.expansion
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.GetClassFromTypeExpression
+import me.anno.zauber.ast.rich.expression.GetClassFromValueExpression
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -59,6 +62,8 @@ abstract class MethodColoring<Color : Any> {
                     is YieldExpression, is ReturnExpression, is ThrowExpression,
                     is ThisExpression, is NumberExpression, is StringExpression,
                     is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock,
+                    is GetClassFromTypeExpression, is GetClassFromValueExpression,
+                    is IsInstanceOfExpr,
                     is CheckEqualsOp, is SpecialValueExpression, is LazyExpression -> {
                         // no direct call
                     }

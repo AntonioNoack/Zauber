@@ -136,10 +136,17 @@ val cheapEnum: String { it in listOf("a", "b", "c") } = "a"
 
 ```kotlin
 data class Vec2i(val x: Int, val y: Int)
-value var x = Vec2i(0,0) // will be stored on the stack
-val y = Vec2i(0,0) // will be ref-counted or GCed
-value val array = Array(10) { Vec2i(it,it*it) } // all entries will share one GC/type-overhead; constant size -> could be stored on the stack
-val floatArray = arrayOf(0f, 1f, 2f) // 4 bytes per entry, because type can be shared, and floats is marked as a value class
+
+value var x = Vec2i(0, 0) // will be stored on the stack
+val y = Vec2i(0, 0) // will be ref-counted or GCed
+value val array = Array(10) {
+    Vec2i(
+        it,
+        it * it
+    )
+} // all entries will share one GC/type-overhead; constant size -> could be stored on the stack
+val floatArray =
+    arrayOf(0f, 1f, 2f) // 4 bytes per entry, because type can be shared, and floats is marked as a value class
 ```
 
 floatArrayOf() will only be available in Kotlin files. Zauber uses arrayOf() for all types.

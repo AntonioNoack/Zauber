@@ -10,7 +10,7 @@ class DefaultParameterTest {
     @Test
     fun testDefaultParameterWithoutSelf() {
         assertEquals(
-            Types.FloatType,
+            Types.Float,
             testTypeResolution(
                 """
                 fun call(x: Int = 0): Float
@@ -24,7 +24,7 @@ class DefaultParameterTest {
     @Test
     fun testDefaultParameterWithSelf() {
         assertEquals(
-            Types.FloatType,
+            Types.Float,
             testTypeResolution(
                 """
                 class X {
@@ -40,7 +40,7 @@ class DefaultParameterTest {
     @Test
     fun testDefaultParameterWithSelfExtension() {
         assertEquals(
-            Types.FloatType,
+            Types.Float,
             testTypeResolution(
                 """
                 class X
@@ -55,7 +55,7 @@ class DefaultParameterTest {
     @Test
     fun testDefaultConstructorParam() {
         assertEquals(
-            Types.FloatType,
+            Types.Float,
             testTypeResolution(
                 """
                 class X(val x: Int = 0) {

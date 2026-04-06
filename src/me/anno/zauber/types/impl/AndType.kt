@@ -14,8 +14,8 @@ class AndType(val types: List<Type>) : Type() {
         fun andTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
             if (typeA == NullType || typeB == NullType ||
-                typeA == Types.NothingType || typeB == Types.NothingType
-            ) return Types.NothingType
+                typeA == Types.Nothing || typeB == Types.Nothing
+            ) return Types.Nothing
             if (typeA == UnknownType) return typeB
             if (typeB == UnknownType) return typeA
 
@@ -29,14 +29,14 @@ class AndType(val types: List<Type>) : Type() {
 
             val joint = reduceAndTypes(getTypes(typeA) + getTypes(typeB))
             return when (joint.size) {
-                0 -> Types.NothingType
+                0 -> Types.Nothing
                 1 -> joint.first()
                 else -> AndType(joint)
             }
         }
 
         fun andTypes(types: List<Type>): Type {
-            if (types.isEmpty()) return Types.NothingType
+            if (types.isEmpty()) return Types.Nothing
             val uniqueTypes = reduceAndTypes(types)
             if (uniqueTypes.size == 1) return uniqueTypes[0]
             return AndType(uniqueTypes)
@@ -49,13 +49,13 @@ class AndType(val types: List<Type>) : Type() {
         private fun reduceAndTypes(types: List<Type>): List<Type> {
             val types = types.distinct()
             val notTypes = types.filterIsInstance<NotType>()
-            val yesTypes = types.filter { it !is NotType && it != Types.NullableAnyType }
+            val yesTypes = types.filter { it !is NotType && it != Types.NullableAny }
 
             for (i in 1 until yesTypes.size) {
                 for (j in 0 until i) {
                     if (!canInstanceBeBoth(yesTypes[i], yesTypes[j])) {
                         // or return empty list?
-                        return listOf(Types.NothingType)
+                        return listOf(Types.Nothing)
                     }
                 }
             }

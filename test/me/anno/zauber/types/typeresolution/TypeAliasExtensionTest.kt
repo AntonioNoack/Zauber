@@ -9,7 +9,7 @@ class TypeAliasExtensionTest {
     @Test
     fun testSimpleTypeAlias() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
             class A
@@ -24,7 +24,7 @@ class TypeAliasExtensionTest {
     @Test
     fun testSimpleTypeAliasRev() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
             val B.next get() = 0
@@ -39,7 +39,7 @@ class TypeAliasExtensionTest {
     @Test
     fun testTypeRecursive() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
             val C.next get() = 0

@@ -10,7 +10,7 @@ class InheritanceFieldTest {
     @Test
     fun testDirectField() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class A {
@@ -26,7 +26,7 @@ class InheritanceFieldTest {
     @Test
     fun testDirectFieldWithGenerics() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class A<V> {
@@ -42,7 +42,7 @@ class InheritanceFieldTest {
     @Test
     fun testSuperFieldX1() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 open class A {
@@ -59,7 +59,7 @@ class InheritanceFieldTest {
     @Test
     fun testSuperFieldX1WithGenerics() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 open class A<V> {
@@ -76,7 +76,7 @@ class InheritanceFieldTest {
     @Test
     fun testSuperFieldX2() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 open class A {
@@ -94,7 +94,7 @@ class InheritanceFieldTest {
     @Test
     fun testSuperFieldX2WithGenerics() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 open class A<I> {

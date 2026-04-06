@@ -99,7 +99,7 @@ object CallWithNames {
                 val ev = expectedParameters[index]
                 if (!ev.isVararg) return null
                 // check(ev.isVararg) { "Expected vararg in last place" }
-                val arrayOfUnknown = ClassType(Types.ArrayType.clazz, null)
+                val arrayOfUnknown = ClassType(Types.Array.clazz, null)
                 result[index] = ValueParameterImpl(null, arrayOfUnknown, true)
             }
 
@@ -241,7 +241,7 @@ object CallWithNames {
         val createArrayInstructions = ArrayList<Expression>(values.size + 2)
         val sizeExpr = NumberExpression("${values.size}", scope, origin)
         val arrayInitExpr = ConstructorExpression(
-            Types.ArrayType.clazz, typeParameters,
+            Types.Array.clazz, typeParameters,
             listOf(NamedParameter(null, sizeExpr)), null, scope, origin
         )
 

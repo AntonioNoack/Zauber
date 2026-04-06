@@ -21,7 +21,7 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Ex
                 context.withAllowTypeless(context.allowTypeless || i + 1 < list.size),
                 list[i]
             )
-            if (type == Types.NothingType) return type
+            if (type == Types.Nothing) return type
         }
         return type
     }

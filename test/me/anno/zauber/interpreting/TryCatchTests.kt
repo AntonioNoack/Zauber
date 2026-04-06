@@ -48,7 +48,7 @@ class TryCatchTests {
         """.trimIndent()
         val value = testExecuteCatch(code)
         check(value.type == ReturnType.THROW)
-        val type = value.value.type.type as ClassType
+        val type = value.value.clazz.type as ClassType
         check(type.clazz.name == "IllegalArgumentException")
     }
 

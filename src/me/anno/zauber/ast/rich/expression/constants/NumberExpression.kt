@@ -72,13 +72,13 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
     // based on the string content, decide what type this is
     val resolvedType0 = typeBySuffix() ?: when {
-        value.startsWith("'") -> Types.CharType
+        value.startsWith("'") -> Types.Char
         value.startsWith("0x", true) ||
                 value.startsWith("-0x", true) -> resolveHexIntType()
         value.startsWith("0b", true) ||
                 value.startsWith("-0b", true) -> resolveBinIntType()
         // does Kotlin have numbers with binary exponent? -> no, but it might be useful...
-        value.contains('.') || value.contains('e', true) -> Types.DoubleType
+        value.contains('.') || value.contains('e', true) -> Types.Double
         else -> resolveIntType()
     }
 
@@ -87,7 +87,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         return if (value.length <= 9 + extraLength &&
             value.replace("_", "")
                 .toIntOrNull() != null
-        ) Types.IntType else Types.LongType
+        ) Types.Int else Types.Long
     }
 
     private fun resolveHexIntType(): ClassType {
@@ -96,7 +96,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             value.substring(2)
                 .replace("_", "")
                 .toIntOrNull(16) != null
-        ) Types.IntType else Types.LongType
+        ) Types.Int else Types.Long
     }
 
     private fun resolveBinIntType(): ClassType {
@@ -105,20 +105,20 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             value.substring(2)
                 .replace("_", "")
                 .toIntOrNull(2) != null
-        ) Types.IntType else Types.LongType
+        ) Types.Int else Types.Long
     }
 
     private fun typeBySuffix(): ClassType? {
         val maybeIsFloat = !value.startsWith("0x", true) || value.contains("p", true)
         return when {
-            value.endsWith("ul", true) -> Types.ULongType
-            value.endsWith("u", true) -> Types.UIntType
-            value.endsWith("l", true) -> Types.LongType
-            value.endsWith("h", true) -> Types.HalfType
-            maybeIsFloat && value.endsWith("f", true) -> Types.FloatType
-            maybeIsFloat && value.endsWith("d", true) -> Types.DoubleType
+            value.endsWith("ul", true) -> Types.ULong
+            value.endsWith("u", true) -> Types.UInt
+            value.endsWith("l", true) -> Types.Long
+            value.endsWith("h", true) -> Types.Half
+            maybeIsFloat && value.endsWith("f", true) -> Types.Float
+            maybeIsFloat && value.endsWith("d", true) -> Types.Double
             value.startsWith("0x", true) &&
-                    ('.' in value || value.contains("pP", true)) -> Types.DoubleType
+                    ('.' in value || value.contains("pP", true)) -> Types.Double
             else -> null
         }
     }
@@ -132,22 +132,22 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         val targetType = context.targetType ?: return dataType
         if (targetType == dataType) return targetType
         // todo if targetType is nullable, remove that type
-        if (dataType == Types.IntType && when (targetType) {
-                Types.LongType -> true
-                Types.ByteType -> checkLoss { it.toInt().toByte() }
-                Types.ShortType -> checkLoss { it.toInt().toShort() }
-                Types.HalfType, // todo check for loss
-                Types.FloatType -> checkLoss { it.toDouble().toFloat() }
-                Types.DoubleType -> true
+        if (dataType == Types.Int && when (targetType) {
+                Types.Long -> true
+                Types.Byte -> checkLoss { it.toInt().toByte() }
+                Types.Short -> checkLoss { it.toInt().toShort() }
+                Types.Half, // todo check for loss
+                Types.Float -> checkLoss { it.toDouble().toFloat() }
+                Types.Double -> true
                 else -> false
             }
         ) return targetType
-        if (dataType == Types.HalfType && targetType == Types.DoubleType) {
+        if (dataType == Types.Half && targetType == Types.Double) {
             // todo toHalf()
             checkLoss { it.toDouble().toFloat() }
             return targetType
         }
-        if (dataType == Types.FloatType && targetType == Types.DoubleType) {
+        if (dataType == Types.Float && targetType == Types.Double) {
             checkLoss { it.toDouble().toFloat() }
             return targetType
         }
@@ -182,8 +182,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
     override fun clone(scope: Scope) = NumberExpression(value, scope, origin)
 
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false

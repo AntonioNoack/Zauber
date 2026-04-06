@@ -1,12 +1,13 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class Instance(
-    val type: ZClass,
+    val clazz: ZClass,
     val properties: Array<Instance?>,
     val id: Int
 ) {
@@ -15,7 +16,7 @@ class Instance(
 
     override fun toString(): String {
         val rawValue = rawValue
-        val prefix = "Instance@$id($type,${properties.toList()}"
+        val prefix = "Instance@$id($clazz,${properties.toList()}"
         return when (rawValue) {
             null -> "$prefix)"
             is Array<*> -> "$prefix,${rawValue.toList()})"
@@ -32,8 +33,8 @@ class Instance(
     }
 
     fun checkType(type1: Type) {
-        check(type.type == type1) {
-            "Casting $this to $type1 failed, type mismatch, ${type.type}"
+        check(clazz.type == type1) {
+            "Casting $this to $type1 failed, type mismatch, ${clazz.type}"
         }
     }
 
@@ -46,43 +47,43 @@ class Instance(
     }
 
     fun castToByte(): Byte {
-        checkType(Types.ByteType)
+        checkType(Types.Byte)
         return rawValue as? Byte
             ?: throw IllegalStateException("Found illegal Byte-instance without raw value: $this")
     }
 
     fun castToShort(): Short {
-        checkType(Types.ShortType)
+        checkType(Types.Short)
         return rawValue as? Short
             ?: throw IllegalStateException("Found illegal Short-instance without raw value: $this")
     }
 
     fun castToInt(): Int {
-        checkType(Types.IntType)
+        checkType(Types.Int)
         return rawValue as? Int
             ?: throw IllegalStateException("Found illegal Int-instance without raw value: $this")
     }
 
     fun castToLong(): Long {
-        checkType(Types.LongType)
+        checkType(Types.Long)
         return rawValue as? Long
             ?: throw IllegalStateException("Found illegal Long-instance without raw value: $this")
     }
 
     fun castToFloat(): Float {
-        checkType(Types.FloatType)
+        checkType(Types.Float)
         return rawValue as? Float
             ?: throw IllegalStateException("Found illegal Float-instance without raw value: $this")
     }
 
     fun castToDouble(): Double {
-        checkType(Types.DoubleType)
+        checkType(Types.Double)
         return rawValue as? Double
             ?: throw IllegalStateException("Found illegal Double-instance without raw value: $this")
     }
 
     fun castToString(): String {
-        checkType(Types.StringType)
+        checkType(Types.String)
         if (rawValue == null) {
             // a byte array
             val content = properties[0]!!
@@ -97,16 +98,31 @@ class Instance(
         return rawValue as String
     }
 
+    fun castToType(): Type {
+        val ct = clazz.type
+        check(
+            ct == Types.ClassType || ct == Types.TypeT ||
+                    ct == Types.UnionType || ct == Types.GenericType
+        )
+        return rawValue as Type
+    }
+
     fun cloneIfValue(): Instance {
-        return if (type.isValueClass) clone() else this
+        return if (clazz.isValueClass) clone() else this
     }
 
     fun clone(): Instance {
-        check(type.type is ClassType)
+        check(clazz.type is ClassType)
         val newId = runtime.nextInstanceId()
         val newProperties = Array(properties.size) {
             properties[it]?.cloneIfValue()
         }
-        return Instance(type, newProperties, newId)
+        return Instance(clazz, newProperties, newId)
+    }
+
+    fun set(fieldName: String, value: String) {
+        val fieldIndex = clazz.properties.indexOfFirst { it.name == fieldName }
+        if (fieldIndex < 0) return
+        properties[fieldIndex] = runtime.createString(value)
     }
 }

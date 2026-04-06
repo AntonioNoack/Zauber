@@ -12,7 +12,7 @@ class ExprOrNullTest {
     @Test
     fun testExprOrNull() {
         assertEquals(
-            unionTypes(Types.FloatType, NullType),
+            unionTypes(Types.Float, NullType),
             testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
@@ -31,7 +31,7 @@ class ExprOrNullTest {
     @Test
     fun testExprOrOther() {
         assertEquals(
-            unionTypes(Types.FloatType, Types.DoubleType),
+            unionTypes(Types.Float, Types.Double),
             testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float

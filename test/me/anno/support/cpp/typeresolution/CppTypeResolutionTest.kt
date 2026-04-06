@@ -46,19 +46,19 @@ class CppTypeResolutionTest {
     @Test
     fun testSimpleVariable() {
         val actual = testCppTypeResolution("int tested;")
-        assertEquals(Types.IntType, actual)
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testPointerLeft() {
         val actual = testCppTypeResolution("int* tested;")
-        assertEquals(Types.IntType.ptr(), actual)
+        assertEquals(Types.Int.ptr(), actual)
     }
 
     @Test
     fun testPointerRight() {
         val actual = testCppTypeResolution("int *tested;")
-        assertEquals(Types.IntType.ptr(), actual)
+        assertEquals(Types.Int.ptr(), actual)
     }
 
     @Test
@@ -70,9 +70,9 @@ class CppTypeResolutionTest {
         """.trimIndent()
         )
         val context = ResolutionContext(null, false, null)
-        assertEquals(Types.IntType.ptr(), scope.getField("ptr").resolveValueType(context))
-        assertEquals(Types.IntType, scope.getField("single").resolveValueType(context))
-        assertEquals(Types.IntType.ptr(), scope.getField("singlePtr").resolveValueType(context))
-        assertEquals(Types.IntType.ptr().ptr().ptr(), scope.getField("ptr3").resolveValueType(context))
+        assertEquals(Types.Int.ptr(), scope.getField("ptr").resolveValueType(context))
+        assertEquals(Types.Int, scope.getField("single").resolveValueType(context))
+        assertEquals(Types.Int.ptr(), scope.getField("singlePtr").resolveValueType(context))
+        assertEquals(Types.Int.ptr().ptr().ptr(), scope.getField("ptr3").resolveValueType(context))
     }
 }

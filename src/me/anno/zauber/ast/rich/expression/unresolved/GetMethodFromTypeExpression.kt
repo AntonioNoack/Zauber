@@ -18,8 +18,8 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
         TODO("Not yet implemented")
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     // todo if the base has some...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = base.typeParameters.isNotEmpty()

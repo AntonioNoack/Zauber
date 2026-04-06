@@ -14,7 +14,7 @@ class PackageScopeTest {
                 val tested = value
             """.trimIndent()
         )
-        assertEquals(Types.IntType, actual)
+        assertEquals(Types.Int, actual)
     }
 
     @Test
@@ -25,7 +25,7 @@ class PackageScopeTest {
                 val tested = method()
             """.trimIndent()
         )
-        assertEquals(Types.IntType, actual)
+        assertEquals(Types.Int, actual)
     }
 
 }

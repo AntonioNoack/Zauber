@@ -27,6 +27,6 @@ class ShadowTest {
                 class Float
             """.trimIndent()
         )
-        assertEquals(Types.FloatType, actualType)
+        assertEquals(Types.Float, actualType)
     }
 }

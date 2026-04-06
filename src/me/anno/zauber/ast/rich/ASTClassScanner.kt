@@ -120,8 +120,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     } else emptyList()
 
                     if (scopeType == ScopeType.ENUM_CLASS) {
-                        val param0 = Parameter(0, "ordinal", Types.IntType, constructorScope, constrOrigin)
-                        val param1 = Parameter(1, "name", Types.StringType, constructorScope, constrOrigin)
+                        val param0 = Parameter(0, "ordinal", Types.Int, constructorScope, constrOrigin)
+                        val param1 = Parameter(1, "name", Types.String, constructorScope, constrOrigin)
                         param0.getOrCreateField(null, Flags.SYNTHETIC)
                         param1.getOrCreateField(null, Flags.SYNTHETIC)
                         valueParameters = listOf(param0, param1) + valueParameters.map { it.shift(2) }
@@ -575,7 +575,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             } else if (tokens.equals(i, "{") ||
                 methodScope.flags.hasFlag(Flags.EXTERNAL)
             ) { // type is implicitly Unit
-                Types.UnitType
+                Types.Unit
             } else null
 
             val body = when {
@@ -609,6 +609,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     private fun readLazyValue(): Expression {
+        check(i < tokens.size) { "Cannot read lazy-value at the end, ${tokens.err(i)}" }
         val end = findLazyValueEnd()
         check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
         return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
@@ -633,7 +634,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 }
                 TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0
                 else -> if (depth == 0) when {
-                    tokens.equals(j0, ".", "+", "&&", "||", "-") -> end++ // skip another one
+                    tokens.equals(j0, ".", "+", "-", "*", "/", "%", "&&", "||") &&
+                            tokens.equals(j0, TokenType.NAME, TokenType.KEYWORD) -> end++ // skip another one
                     tokens.equals(j0, *notValueKeywords) -> return j0
                     tokens.equals(j0, "object") && !tokens.equals(j0, ":") -> return j0
                     // enum class, data class, private class... these depend on the work after them...
@@ -730,7 +732,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
                 val defaultValue = if (consumeIf("=")) readLazyValue() else null
 
-                if (isVararg) type = Types.ArrayType.withTypeParameter(type)
+                if (isVararg) type = Types.Array.withTypeParameter(type)
                 val parameter = Parameter(
                     parameters.size, isVar, isVal, isVararg,
                     name, type, defaultValue,

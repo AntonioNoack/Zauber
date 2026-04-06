@@ -159,7 +159,7 @@ abstract class Type {
 
     fun isFullySpecialized(): Boolean {
         return when (this) {
-            NullType, Types.NothingType,
+            NullType, Types.Nothing,
             is UnknownType -> true
             is GenericType, is ThisType, is SelfType -> false
             is ClassType -> typeParameters?.all { member -> member.isFullySpecialized() } ?: true

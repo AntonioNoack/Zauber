@@ -143,7 +143,7 @@ object Inheritance {
     ): Boolean {
 
         if (expectedType == actualType) return true
-        if (expectedType == Types.NullableAnyType) return true
+        if (expectedType == Types.NullableAny) return true
         if (expectedType == UnknownType) return true
         if (actualType is UnresolvedType || expectedType is UnresolvedType ||
             actualType is NonObjectClassType || expectedType is NonObjectClassType
@@ -157,7 +157,7 @@ object Inheritance {
         if (actualType == UnknownType) {
             // todo use the bounds of the generics instead, not 'Any?'
             return isSubTypeOf(
-                expectedType, Types.NullableAnyType,
+                expectedType, Types.NullableAny,
                 expectedTypeParams, actualTypeParameters, insertMode,
                 matchScore,
             )
@@ -411,11 +411,11 @@ object Inheritance {
     }
 
     fun getSuperCalls(scope: Scope): List<SuperCall> {
-        if (scope == Types.AnyType.clazz) return emptyList()
+        if (scope == Types.Any.clazz) return emptyList()
         if (scope.superCalls.isEmpty()) return listOf(superCallAny)
         return scope.superCalls
     }
 
-    private val superCallAny by threadLocal { SuperCall(Types.AnyType, emptyList(), null) }
+    private val superCallAny by threadLocal { SuperCall(Types.Any, emptyList(), null) }
 
 }

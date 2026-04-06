@@ -50,11 +50,11 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
 
         val noPrevBranch = scope.addField(
             null, false, isMutable = true, null,
-            "__hadPrevBranch", Types.BooleanType, trueExpr, Flags.SYNTHETIC, origin
+            "__hadPrevBranch", Types.Boolean, trueExpr, Flags.SYNTHETIC, origin
         )
         val prevBranchContinues = scope.addField(
             null, false, isMutable = true, null,
-            "__prevBranchContinues", Types.BooleanType, falseExpr, Flags.SYNTHETIC, origin
+            "__prevBranchContinues", Types.Boolean, falseExpr, Flags.SYNTHETIC, origin
         )
 
         val noPrevBranchExpr = FieldExpression(noPrevBranch, scope, origin)
@@ -216,12 +216,12 @@ fun ZauberASTBuilderBase.findCaseEnd(): Int {
 
 private fun Expression.and(other: Expression): Expression {
     return NamedCallExpression(this, "and", other, scope, origin)
-        .apply { resolvedType = Types.BooleanType }
+        .apply { resolvedType = Types.Boolean }
 }
 
 private fun Expression.or(other: Expression): Expression {
     return NamedCallExpression(this, "or", other, scope, origin)
-        .apply { resolvedType = Types.BooleanType }
+        .apply { resolvedType = Types.Boolean }
 }
 
 private fun ZauberASTBuilderBase.readCaseBody(): ArrayList<Expression> {

@@ -45,22 +45,22 @@ object JavaSourceGenerator : Generator() {
     val protectedTypes by threadLocal {
         Types.run {
             mapOf(
-                StringType to BoxedType("java.lang.String", "java.lang.String"),
-                BooleanType to BoxedType("Boolean", "boolean"),
-                ByteType to BoxedType("Byte", "byte"),
-                ShortType to BoxedType("Short", "short"),
-                IntType to BoxedType("Integer", "int"),
-                LongType to BoxedType("Long", "long"),
-                CharType to BoxedType("Character", "char"),
-                FloatType to BoxedType("Float", "float"),
-                DoubleType to BoxedType("Double", "double"),
-                AnyType to BoxedType("Object", "Object")
+                String to BoxedType("java.lang.String", "java.lang.String"),
+                Boolean to BoxedType("Boolean", "boolean"),
+                Byte to BoxedType("Byte", "byte"),
+                Short to BoxedType("Short", "short"),
+                Int to BoxedType("Integer", "int"),
+                Long to BoxedType("Long", "long"),
+                Char to BoxedType("Character", "char"),
+                Float to BoxedType("Float", "float"),
+                Double to BoxedType("Double", "double"),
+                Any to BoxedType("Object", "Object")
             )
         }
     }
 
     val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
-    val nativeNumbers by threadLocal { nativeTypes - Types.BooleanType }
+    val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
 
     // todo we need to add these for every constructor and super call,
     //  we need specialized methods for every generic method (incl. getters and setters)
@@ -129,7 +129,7 @@ object JavaSourceGenerator : Generator() {
                 builder.append("Object ")
                 comment { builder.append("null") }
             }
-            Types.NothingType -> {
+            Types.Nothing -> {
                 builder.append("Object ")
                 comment { builder.append("Nothing") }
             }
@@ -398,7 +398,7 @@ object JavaSourceGenerator : Generator() {
         builder.append("public ")
         if (field == classScope.objectField) builder.append("static ")
         if (!field.isMutable) builder.append("final ")
-        val valueType = (field.valueType ?: Types.NullableAnyType).resolve(classScope)
+        val valueType = (field.valueType ?: Types.NullableAny).resolve(classScope)
         appendType(valueType, classScope, false)
         builder.append(' ').append(field.name).append(';')
         nextLine()
@@ -463,7 +463,7 @@ object JavaSourceGenerator : Generator() {
         // if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
-        appendType(method.returnType ?: Types.NullableAnyType, classScope, false)
+        appendType(method.returnType ?: Types.NullableAny, classScope, false)
         builder.append(' ').append(method.name)
 
         if (specForName.isNotEmpty()) {
@@ -523,7 +523,7 @@ object JavaSourceGenerator : Generator() {
         for (param in valueParameters) {
             if (!builder.endsWith("<")) builder.append(", ")
             builder.append(param.name)
-            if (param.type != Types.AnyType && param.type != Types.NullableAnyType) {
+            if (param.type != Types.Any && param.type != Types.NullableAny) {
                 builder.append(" extends ")
                 appendType(param.type, scope, false)
             }
@@ -578,7 +578,7 @@ object JavaSourceGenerator : Generator() {
             for ((i, param) in typeParams.withIndex()) {
                 if (i > 0) builder.append(", ")
                 builder.append(param.name)
-                if (param.type != Types.NullableAnyType) {
+                if (param.type != Types.NullableAny) {
                     builder.append(" extends ")
                     appendType(param.type, scope, true)
                 }
@@ -592,7 +592,7 @@ object JavaSourceGenerator : Generator() {
             val superCall0 = scope.superCalls.firstOrNull()
             if (superCall0 != null &&
                 superCall0.valueParameters != null &&
-                superCall0.type != Types.AnyType
+                superCall0.type != Types.Any
             ) {
                 val type = superCall0.type
                 builder.append(" extends ")

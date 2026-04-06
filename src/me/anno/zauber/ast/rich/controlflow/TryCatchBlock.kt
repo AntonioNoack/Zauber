@@ -26,7 +26,7 @@ class TryCatchBlock(
     override fun resolveThrownType(context: ResolutionContext): Type {
         val base = tryBody.resolveThrownType(context)
         val fallthrough = andTypes(listOf(base) + catches.map { it.param.type.not() })
-        return unionTypes(fallthrough, finally?.resolveThrownType(context) ?: Types.NothingType)
+        return unionTypes(fallthrough, finally?.resolveThrownType(context) ?: Types.Nothing)
     }
 
     override fun resolveYieldedType(context: ResolutionContext): Type =
@@ -34,7 +34,7 @@ class TryCatchBlock(
             tryBody.resolveYieldedType(context),
             unionTypes(
                 unionTypes(catches.map { it.body.resolveYieldedType(context) }),
-                finally?.resolveYieldedType(context) ?: Types.NothingType,
+                finally?.resolveYieldedType(context) ?: Types.Nothing,
             )
         )
 

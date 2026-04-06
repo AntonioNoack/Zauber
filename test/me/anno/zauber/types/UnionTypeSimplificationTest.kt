@@ -12,19 +12,19 @@ class UnionTypeSimplificationTest {
 
     @Test
     fun testUnionSelf() {
-        val classA = Types.IntType
+        val classA = Types.Int
         assertEquals(classA, unionTypes(classA, classA))
     }
 
     @Test
     fun testUnionNothing() {
-        val classA = Types.IntType
-        assertEquals(classA, unionTypes(classA, Types.NothingType))
+        val classA = Types.Int
+        assertEquals(classA, unionTypes(classA, Types.Nothing))
     }
 
     @Test
     fun testUnionUnknown() {
-        val classA = Types.IntType
+        val classA = Types.Int
         assertEquals(UnknownType, unionTypes(classA, UnknownType))
     }
 

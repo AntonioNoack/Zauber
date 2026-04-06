@@ -16,7 +16,7 @@ class TypeEqualsTest {
 
     @Test
     fun testUnionType() {
-        fun gen() = UnionType(listOf(Types.BooleanType, NullType))
+        fun gen() = UnionType(listOf(Types.Boolean, NullType))
         assertEquals(gen(), gen())
     }
 }

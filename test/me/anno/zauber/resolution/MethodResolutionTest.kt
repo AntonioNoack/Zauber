@@ -21,7 +21,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -35,7 +35,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -52,7 +52,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -72,7 +72,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -90,7 +90,7 @@ class MethodResolutionTest {
         fun x(): Int = 0
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -110,7 +110,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -130,7 +130,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -153,8 +153,8 @@ class MethodResolutionTest {
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
-        assertEquals(Types.IntType, tested0)
-        assertEquals(Types.IntType, tested1)
+        assertEquals(Types.Int, tested0)
+        assertEquals(Types.Int, tested1)
     }
 
     @Test
@@ -179,8 +179,8 @@ class MethodResolutionTest {
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
-        assertEquals(Types.IntType, tested0)
-        assertEquals(Types.IntType, tested1)
+        assertEquals(Types.Int, tested0)
+        assertEquals(Types.Int, tested1)
     }
 
     @Test
@@ -207,8 +207,8 @@ class MethodResolutionTest {
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
-        assertEquals(Types.IntType, tested0)
-        assertEquals(Types.IntType, tested1)
+        assertEquals(Types.Int, tested0)
+        assertEquals(Types.Int, tested1)
     }
 
     @Test
@@ -226,7 +226,7 @@ class MethodResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -245,7 +245,7 @@ class MethodResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -262,7 +262,7 @@ class MethodResolutionTest {
                 }
                 """.trimIndent()
             )
-            assertEquals(Types.IntType, findFieldType(scope))
+            assertEquals(Types.Int, findFieldType(scope))
         }
     }
 
@@ -281,7 +281,7 @@ class MethodResolutionTest {
         class Array<V>(val size: Int)
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -298,7 +298,7 @@ class MethodResolutionTest {
         class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.FloatType, findFieldType(scope))
+        assertEquals(Types.Float, findFieldType(scope))
     }
 
     @Test
@@ -318,7 +318,7 @@ class MethodResolutionTest {
         class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.FloatType, findFieldType(scope))
+        assertEquals(Types.Float, findFieldType(scope))
     }
 
     @Test
@@ -335,7 +335,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -349,7 +349,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -368,7 +368,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -387,7 +387,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -406,7 +406,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -425,7 +425,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -439,7 +439,7 @@ class MethodResolutionTest {
         }
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -465,7 +465,7 @@ class MethodResolutionTest {
         val tested = target(A())
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
     @Test
@@ -482,7 +482,7 @@ class MethodResolutionTest {
         val tested = method(C())
         """.trimIndent()
         val scope = typeResolveScope(code)
-        assertEquals(Types.IntType, findFieldType(scope))
+        assertEquals(Types.Int, findFieldType(scope))
     }
 
 }

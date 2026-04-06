@@ -15,8 +15,8 @@ class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(s
         return resolveThisType(label)
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun clone(scope: Scope) = ThisExpression(label, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // should not have any

@@ -22,8 +22,8 @@ class UnderdefinedCallTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         )
-        val expectedType = runtime.getClass(Types.ArrayType.withTypeParameter(Types.IntType))
-        assertEquals(expectedType, valueT.type)
+        val expectedType = runtime.getClass(Types.Array.withTypeParameter(Types.Int))
+        assertEquals(expectedType, valueT.clazz)
         val contents = valueT.rawValue
         assertInstanceOf<IntArray>(contents)
         assertEquals(listOf(1, 2, 3), contents.toList())
@@ -52,11 +52,11 @@ class UnderdefinedCallTests {
         when (val contents = value.rawValue) {
             is IntArray -> {
                 // todo it should be this one..., but it's the other one
-                assertEquals(Types.ArrayType.withTypeParameter(Types.IntType), value.type.type)
+                assertEquals(Types.Array.withTypeParameter(Types.Int), value.clazz.type)
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
             is Array<*> -> {
-                assertEquals(Types.ArrayType, value.type.type)
+                assertEquals(Types.Array, value.clazz.type)
                 assertEquals(listOf(1, 2, 3), contents.map { value -> (value as Instance).castToInt() })
             }
             else -> throw IllegalStateException("$value is incorrect")

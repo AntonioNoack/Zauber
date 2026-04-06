@@ -14,7 +14,7 @@ class ExtensionTest {
     @Test
     fun testExtensionMethods() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl()
@@ -29,7 +29,7 @@ class ExtensionTest {
     @Test
     fun testExtensionFields() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl()
@@ -44,7 +44,7 @@ class ExtensionTest {
     @Test
     fun testExtensionMethodsOnSuperClass() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Super()
@@ -60,7 +60,7 @@ class ExtensionTest {
     @Test
     fun testExtensionFieldsOnSuperClass() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Super()
@@ -76,7 +76,7 @@ class ExtensionTest {
     @Test
     fun testExtensionMethodsOnInterfaces() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 interface Func
@@ -92,7 +92,7 @@ class ExtensionTest {
     @Test
     fun testExtensionFieldOnInterfaces() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 interface Func
@@ -110,7 +110,7 @@ class ExtensionTest {
         defineListParameters()
 
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl()
@@ -129,7 +129,7 @@ class ExtensionTest {
         defineListParameters()
 
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl()
@@ -148,7 +148,7 @@ class ExtensionTest {
         defineListParameters()
 
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl<V>()
@@ -171,7 +171,7 @@ class ExtensionTest {
         defineListParameters()
 
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl()
@@ -194,7 +194,7 @@ class ExtensionTest {
         defineListParameters()
 
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl<V>()
@@ -215,7 +215,7 @@ class ExtensionTest {
     @Test
     fun testExtensionMethodToMethod() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl() {
@@ -232,7 +232,7 @@ class ExtensionTest {
     @Test
     fun testExtensionMethodToField() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl {
@@ -249,7 +249,7 @@ class ExtensionTest {
     @Test
     fun testExtensionFieldToMethod() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl {
@@ -266,7 +266,7 @@ class ExtensionTest {
     @Test
     fun testExtensionFieldToField() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Impl {

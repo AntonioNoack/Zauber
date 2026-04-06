@@ -14,7 +14,7 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
         return "(${value.toString(depth)})is($type)"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.Boolean
     override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
     override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
 

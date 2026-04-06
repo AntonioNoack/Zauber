@@ -14,8 +14,8 @@ class UnionType(val types: List<Type>) : Type() {
 
         fun unionTypes(typeA: Type, typeB: Type): Type {
             if (typeA == typeB) return typeA
-            if (typeA == Types.NothingType) return typeB
-            if (typeB == Types.NothingType) return typeA
+            if (typeA == Types.Nothing) return typeB
+            if (typeB == Types.Nothing) return typeA
             if (typeA == UnknownType || typeB == UnknownType) return UnknownType
             return reduceUnionTypes(getTypes(typeA) + getTypes(typeB))
         }
@@ -26,7 +26,7 @@ class UnionType(val types: List<Type>) : Type() {
         }
 
         fun unionTypes(types: List<Type>): Type {
-            if (types.isEmpty()) return Types.NothingType
+            if (types.isEmpty()) return Types.Nothing
             return reduceUnionTypes(types.flatMap { typeI -> getTypes(typeI) })
         }
 
@@ -35,8 +35,8 @@ class UnionType(val types: List<Type>) : Type() {
         }
 
         fun reduceUnionTypes(types: List<Type>): Type {
-            val types = types.distinct().filter { it != Types.NothingType }
-            if (types.isEmpty()) return Types.NothingType
+            val types = types.distinct().filter { it != Types.Nothing }
+            if (types.isEmpty()) return Types.Nothing
             if (types.size == 1) return types[0]
             if (UnknownType in types) return UnknownType
 
@@ -55,7 +55,7 @@ class UnionType(val types: List<Type>) : Type() {
 
             val nonClassTypes = types.filter { it !is ClassType }
             val jointTypes = classTypes + nonClassTypes
-            if (jointTypes.isEmpty()) return Types.NothingType
+            if (jointTypes.isEmpty()) return Types.Nothing
             if (jointTypes.size == 1) return jointTypes[0]
             return UnionType(jointTypes)
         }

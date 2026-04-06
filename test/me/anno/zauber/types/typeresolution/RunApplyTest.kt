@@ -19,7 +19,7 @@ class RunApplyTest {
                 val tested = Impl(1).run { x }
             """.trimIndent()
         )
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     @Test
@@ -41,7 +41,7 @@ class RunApplyTest {
                 }
             """.trimIndent()
         )
-        assertEquals(Types.StringType, actualType)
+        assertEquals(Types.String, actualType)
     }
 
 }

@@ -9,18 +9,18 @@ class FieldTest {
 
     @Test
     fun testTypeByAssignment() {
-        assertEquals(Types.IntType, testTypeResolution("val tested = 0"))
+        assertEquals(Types.Int, testTypeResolution("val tested = 0"))
     }
 
     @Test
     fun testTypeByDeclaration() {
-        assertEquals(Types.IntType, testTypeResolution("val tested: Int"))
+        assertEquals(Types.Int, testTypeResolution("val tested: Int"))
     }
 
     @Test
     fun testTypeByGetter() {
         assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 val tested

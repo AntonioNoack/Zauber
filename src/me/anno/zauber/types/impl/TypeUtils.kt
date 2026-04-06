@@ -56,7 +56,7 @@ object TypeUtils {
         if (t1 is UnresolvedType || t2 is UnresolvedType)
             return canInstanceBeBoth(t1.resolvedName, t2.resolvedName)
 
-        if (t1 == Types.NothingType || t2 == Types.NothingType) return false
+        if (t1 == Types.Nothing || t2 == Types.Nothing) return false
         if (t1 == t2) return true
         if (t1 is UnionType) return t1.types.any { t1i -> canInstanceBeBoth(t1i, t2) }
         if (t2 is UnionType) return t2.types.any { t2i -> canInstanceBeBoth(t1, t2i) }

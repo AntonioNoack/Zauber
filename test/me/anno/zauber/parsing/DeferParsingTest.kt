@@ -12,7 +12,7 @@ class DeferParsingTest {
     @Test
     fun testDeferParsing() {
         Assertions.assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Action {
@@ -32,7 +32,7 @@ class DeferParsingTest {
     @Test
     fun testErrdeferParsing() {
         Assertions.assertEquals(
-            Types.IntType,
+            Types.Int,
             testTypeResolution(
                 """
                 class Action {

@@ -138,12 +138,12 @@ abstract class ZauberASTBuilderBase(
                 genericParams.last()[name] = GenericType(classScope, name)
 
                 val type = if (this is ZauberASTBuilder || this is ZauberASTClassScanner) {
-                    readTypeOrNull(tmpSelf) ?: Types.NullableAnyType
+                    readTypeOrNull(tmpSelf) ?: Types.NullableAny
                     // if you print type here, typeParameters may not be available yet, and cause an NPE
                 } else if (tokens.equals(i, "extends", "super")) {
                     i++ // skip extends
                     readTypeNotNull(null, true)
-                } else Types.NullableAnyType
+                } else Types.NullableAny
 
                 parameters.add(Parameter(parameters.size, name, type, classScope, origin))
                 readComma()
@@ -372,7 +372,7 @@ abstract class ZauberASTBuilderBase(
         ) {
             while (consumeIf(TokenType.OPEN_ARRAY)) {
                 if (consumeIf(TokenType.CLOSE_ARRAY)) {
-                    base = ClassType(Types.ArrayType.clazz, listOf(base), origin(i))
+                    base = ClassType(Types.Array.clazz, listOf(base), origin(i))
                 } else {
                     i-- // go one back for pushArray
                     val size = pushArray { readExpression() }
@@ -449,7 +449,7 @@ abstract class ZauberASTBuilderBase(
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
-                return ComptimeValue(Types.NumberType, listOf(value))
+                return ComptimeValue(Types.Number, listOf(value))
             }
 
             if (tokens.equals(i, TokenType.STRING)) {
@@ -457,7 +457,7 @@ abstract class ZauberASTBuilderBase(
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
-                return ComptimeValue(Types.StringType, listOf(value))
+                return ComptimeValue(Types.String, listOf(value))
             }
         }
 
@@ -525,7 +525,7 @@ abstract class ZauberASTBuilderBase(
                 if (tokens.equals(i, "super", "extends")) {
                     i++ // skip super/extends, I'm not sure about their difference...
                     readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
-                } else Types.NullableAnyType
+                } else Types.NullableAny
             } else readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
 
             val type = type0
@@ -768,16 +768,16 @@ abstract class ZauberASTBuilderBase(
             }
             if (scopeType == ScopeType.ENUM_CLASS) {
                 parameters = listOf(
-                    Parameter(0, "ordinal", Types.IntType, constructorScope, constructorOrigin),
-                    Parameter(1, "name", Types.StringType, constructorScope, constructorOrigin)
+                    Parameter(0, "ordinal", Types.Int, constructorScope, constructorOrigin),
+                    Parameter(1, "name", Types.String, constructorScope, constructorOrigin)
                 ) + parameters.map { it.shift(2) }
             }
             parameters
         } else if (scopeType == ScopeType.ENUM_CLASS) {
             val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
             val parameters = listOf(
-                Parameter(0, "ordinal", Types.IntType, constructorScope, constructorOrigin),
-                Parameter(1, "name", Types.StringType, constructorScope, constructorOrigin)
+                Parameter(0, "ordinal", Types.Int, constructorScope, constructorOrigin),
+                Parameter(1, "name", Types.String, constructorScope, constructorOrigin)
             )
             parameters
         } else null

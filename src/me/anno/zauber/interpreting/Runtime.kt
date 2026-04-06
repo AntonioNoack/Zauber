@@ -21,11 +21,13 @@ import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import javax.lang.model.type.UnionType
 
 class Runtime {
 
@@ -122,7 +124,7 @@ class Runtime {
     }
 
     operator fun get(instance: Instance, field: Field): Instance {
-        val clazz = instance.type
+        val clazz = instance.clazz
         val fieldIndex = clazz.properties.indexOf(field)
         // println("Getting $instance.$field, $fieldIndex")
         /*if (fieldIndex == -1) {
@@ -142,7 +144,7 @@ class Runtime {
             throw IllegalStateException("Outdated instance? $instance")
 
         if (instance.properties[fieldIndex] == null &&
-            clazz.type == Types.StringType &&
+            clazz.type == Types.String &&
             field.name == "content"
         ) createStringContentArray(instance, fieldIndex)
 
@@ -183,7 +185,7 @@ class Runtime {
         //  it might belong to one of the scopes before us
         val valueHasValidType = isSubTypeOf(
             field.type,
-            value.type.type,
+            value.clazz.type,
             emptyList(),
             ParameterList.emptyParameterList(),
             InsertMode.READ_ONLY
@@ -196,7 +198,7 @@ class Runtime {
     }
 
     operator fun set(instance: Instance, field: Field, value: Instance) {
-        val clazz = instance.type
+        val clazz = instance.clazz
         val fieldIndex = clazz.properties.indexOf(field)
         check(fieldIndex != -1) {
             "Instance $clazz does not have field $field, " +
@@ -209,10 +211,10 @@ class Runtime {
     fun isNull(va: Instance) = va == getNull()
 
     fun getBool(bool: Boolean): Instance {
-        val boolCompanion = Types.BooleanType.clazz.scope.companionObject
+        val boolCompanion = Types.Boolean.clazz.scope.companionObject
             ?: throw IllegalStateException("Missing definition for enum class Boolean")
         val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
-        val fields = boolInstance.type.properties
+        val fields = boolInstance.clazz.properties
         val name = if (bool) "TRUE" else "FALSE"
         val field = fields.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Missing enum Boolean.$name")
@@ -266,12 +268,12 @@ class Runtime {
         call.scopes[method.scope] = methodScopeInstance
         for (i in valueParameters.indices) {
             val parameter = valueParameters[i]
-            val field = methodScopeInstance.type.properties.getOrNull(i)
+            val field = methodScopeInstance.clazz.properties.getOrNull(i)
                 ?: throw IllegalStateException(
                     "Method needs at least as many fields as parameters, " +
                             "$method, " +
-                            "fields: ${(methodScopeInstance.type.type as ClassType).clazz.fields} -> " +
-                            "properties: ${methodScopeInstance.type.properties}"
+                            "fields: ${(methodScopeInstance.clazz.type as ClassType).clazz.fields} -> " +
+                            "properties: ${methodScopeInstance.clazz.properties}"
                 )
             check(field.name == method.valueParameters[i].name) {
                 "Field order not as expected, expected parameters to come first"
@@ -303,7 +305,7 @@ class Runtime {
     }
 
     fun getUnit(): Instance {
-        return getObjectInstance(Types.UnitType)
+        return getObjectInstance(Types.Unit)
     }
 
     fun getObjectInstance(type: ClassType): Instance {
@@ -379,6 +381,31 @@ class Runtime {
                 LOGGER.info("Exited without return from ${block0.graph.method}")
                 return null
             }
+        }
+    }
+
+    private val typeInstances = HashMap<Type, Instance>()
+    fun getTypeInstance(type: Type): Instance {
+        return typeInstances.getOrPut(type) {
+            val clazz0 = when (type) {
+                is ClassType -> Types.ClassType
+                is UnionType -> Types.UnionType
+                is GenericType -> Types.GenericType
+                else -> Types.TypeT
+            }
+            val clazz = getClass(clazz0)
+            val instance = clazz.createInstance()
+            instance.rawValue = type
+            when (type) {
+                is ClassType -> {
+                    instance.set("name", type.clazz.name)
+                    // todo set fields, methods, child classes and more...
+                }
+                is UnionType -> {
+                    // todo set members
+                }
+            }
+            instance
         }
     }
 

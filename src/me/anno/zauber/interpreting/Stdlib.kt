@@ -9,6 +9,7 @@ import me.anno.zauber.interpreting.RuntimeCreate.createLong
 import me.anno.zauber.interpreting.RuntimeCreate.createShort
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -25,10 +26,10 @@ object Stdlib {
     }
 
     fun registerPrintln() {
-        runtime.register(langScope, "println", listOf(Types.StringType)) { _, params ->
+        runtime.register(langScope, "println", listOf(Types.String)) { _, params ->
             runPrintln(params[0].castToString())
         }
-        runtime.register(langScope, "println", listOf(Types.IntType)) { _, params ->
+        runtime.register(langScope, "println", listOf(Types.Int)) { _, params ->
             runPrintln(params[0].castToInt().toString())
         }
     }
@@ -41,7 +42,7 @@ object Stdlib {
     }
 
     fun registerArrayAccess() {
-        runtime.register(Types.ArrayType.clazz, "get", listOf(Types.IntType)) { self, params ->
+        runtime.register(Types.Array.clazz, "get", listOf(Types.Int)) { self, params ->
             val index = params[0].castToInt()
             val rt = runtime
             when (val content = self.rawValue) {
@@ -58,9 +59,9 @@ object Stdlib {
             }
         }
         runtime.register(
-            Types.ArrayType.clazz,
+            Types.Array.clazz,
             "set",
-            listOf(Types.IntType, GenericType(Types.ArrayType.clazz, "V"))
+            listOf(Types.Int, GenericType(Types.Array.clazz, "V"))
         ) { self, params ->
             val index = params[0].castToInt()
             val value = params[1]
@@ -97,20 +98,27 @@ object Stdlib {
         rt.registerBinaryFloatMethod("minus", Float::minus)
         rt.registerBinaryFloatMethod("times", Float::times)
         rt.registerBinaryFloatMethod("div", Float::div)
-        rt.registerBinaryMethod(Types.FloatType, "compareTo") { a, b ->
+        rt.registerBinaryMethod(Types.Float, "compareTo") { a, b ->
             rt.createInt(a.castToFloat().compareTo(b.castToFloat()))
         }
     }
 
     fun registerStringMethods() {
         val rt = runtime
-        rt.registerBinaryMethod(Types.StringType, "plus") { a, b ->
+        rt.registerBinaryMethod(Types.String, "plus") { a, b ->
             rt.createString(a.castToString() + b.castToString())
         }
     }
 
+    fun registerTypeMethods() {
+        val rt = runtime
+        rt.register(Types.TypeT.clazz, "isSubTypeOf", listOf(Types.TypeT)) { type, (otherType) ->
+            rt.getBool(Inheritance.isSubTypeOf(expectedType = otherType.castToType(), actualType = type.castToType()))
+        }
+    }
+
     fun Runtime.registerBinaryIntMethod(name: String, calc: (Int, Int) -> Int) {
-        registerBinaryMethod(Types.IntType, name) { a, b ->
+        registerBinaryMethod(Types.Int, name) { a, b ->
             LOGGER.info("Executing Int.$name ($a, $b)")
             val result = calc(a.castToInt(), b.castToInt())
             createInt(result)
@@ -118,7 +126,7 @@ object Stdlib {
     }
 
     fun Runtime.registerBinaryFloatMethod(name: String, calc: (Float, Float) -> Float) {
-        registerBinaryMethod(Types.FloatType, name) { a, b ->
+        registerBinaryMethod(Types.Float, name) { a, b ->
             LOGGER.info("Executing Float.$name ($a, $b)")
             val result = calc(a.castToFloat(), b.castToFloat())
             createFloat(result)

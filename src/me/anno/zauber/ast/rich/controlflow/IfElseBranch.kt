@@ -54,11 +54,11 @@ class IfElseBranch(
     }
 
     override fun resolveThrownType(context: ResolutionContext): Type {
-        return unionTypes(ifBranch.resolveThrownType(context), elseBranch?.resolveThrownType(context) ?: Types.NothingType)
+        return unionTypes(ifBranch.resolveThrownType(context), elseBranch?.resolveThrownType(context) ?: Types.Nothing)
     }
 
     override fun resolveYieldedType(context: ResolutionContext): Type {
-        return unionTypes(ifBranch.resolveYieldedType(context), elseBranch?.resolveYieldedType(context) ?: Types.NothingType)
+        return unionTypes(ifBranch.resolveYieldedType(context), elseBranch?.resolveYieldedType(context) ?: Types.Nothing)
     }
 
     override fun clone(scope: Scope): Expression = IfElseBranch(

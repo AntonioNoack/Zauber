@@ -57,8 +57,8 @@ class IsSubTypeOfTest {
     @Test
     fun testIdentity() {
         assertTrue(isSubTypeOf(NullType, NullType))
-        assertTrue(isSubTypeOf(Types.AnyType, Types.AnyType))
-        assertTrue(isSubTypeOf(Types.IntType, Types.IntType))
+        assertTrue(isSubTypeOf(Types.Any, Types.Any))
+        assertTrue(isSubTypeOf(Types.Int, Types.Int))
     }
 
     @Test
@@ -113,7 +113,7 @@ class IsSubTypeOfTest {
 
     @Test
     fun testTypeParameters() {
-        val listType = Types.ArrayListType.clazz
+        val listType = Types.ArrayList.clazz
         assertEquals(1, listType.typeParameters.size)
 
         val scope = """
@@ -128,7 +128,7 @@ class IsSubTypeOfTest {
         assertFalse(isSubTypeOf(listOfB, listOfA))
     }
 
-    private val list = ParameterList(listOf(Types.ListType.clazz.typeParameters[0]))
+    private val list = ParameterList(listOf(Types.List.clazz.typeParameters[0]))
 
     fun getClearedList(): ParameterList {
         list.clear()
@@ -142,7 +142,7 @@ class IsSubTypeOfTest {
 
         // first check without bounds
         val anyOrNullGeneric = GenericType(scope, "V")
-        val anyOrNullParameter = Parameter(0, "V", Types.NullableAnyType, scope, -1)
+        val anyOrNullParameter = Parameter(0, "V", Types.NullableAny, scope, -1)
         scope.hasTypeParameters = false // this is a hack!
         scope.typeParameters = listOf(anyOrNullParameter)
         scope.hasTypeParameters = true
@@ -168,7 +168,7 @@ class IsSubTypeOfTest {
         // using the same list, a weak Int is not fine
         assertFalse(
             isSubTypeOf(
-                map(anyOrNullGeneric), map(Types.IntType),
+                map(anyOrNullGeneric), map(Types.Int),
                 listOf(anyOrNullParameter), list, InsertMode.WEAK
             )
         )
@@ -177,21 +177,21 @@ class IsSubTypeOfTest {
         // but a strong Int is fine
         assertTrue(
             isSubTypeOf(
-                map(anyOrNullGeneric), map(Types.IntType),
+                map(anyOrNullGeneric), map(Types.Int),
                 listOf(anyOrNullParameter), list, InsertMode.STRONG
             )
         )
-        assertEquals(UnionType(listOf(classA, Types.IntType)), list[0])
+        assertEquals(UnionType(listOf(classA, Types.Int)), list[0])
 
         // now check generics with bounds
         val floatGeneric = GenericType(scope, "F")
-        val floatParameter = Parameter(0, "F", Types.FloatType, scope, -1)
+        val floatParameter = Parameter(0, "F", Types.Float, scope, -1)
         scope.typeParameters = listOf(floatParameter)
 
         // even the strong mode must respect type bounds
         assertFalse(
             isSubTypeOf(
-                map(floatGeneric), map(Types.IntType),
+                map(floatGeneric), map(Types.Int),
                 listOf(floatParameter), getClearedList(), InsertMode.STRONG
             )
         )
@@ -200,13 +200,13 @@ class IsSubTypeOfTest {
         // inserting Floats is ofc fine, both strong and weak
         assertTrue(
             isSubTypeOf(
-                map(floatGeneric), map(Types.FloatType),
+                map(floatGeneric), map(Types.Float),
                 listOf(floatParameter), getClearedList(), InsertMode.WEAK
             )
         )
         assertTrue(
             isSubTypeOf(
-                map(floatGeneric), map(Types.FloatType),
+                map(floatGeneric), map(Types.Float),
                 listOf(floatParameter), getClearedList(), InsertMode.STRONG
             )
         )
@@ -219,7 +219,7 @@ class IsSubTypeOfTest {
 
     @Test
     fun testInferredAsParameterType() {
-        val listType = Types.ArrayListType.clazz
+        val listType = Types.ArrayList.clazz
         testInferred { ClassType(listType, listOf(it), -1) }
     }
 
@@ -251,7 +251,7 @@ class IsSubTypeOfTest {
 
     @Test
     fun testNotTypes() {
-        val classA = Types.IntType
+        val classA = Types.Int
         assertTrue(isSubTypeOf(classA, classA))
         assertFalse(isSubTypeOf(classA.not(), classA))
         assertFalse(isSubTypeOf(classA, classA.not()))
@@ -260,11 +260,11 @@ class IsSubTypeOfTest {
 
     @Test
     fun testNotWithUnions() {
-        val directType = Types.IntType
+        val directType = Types.Int
         val indirectType = andTypes(unionTypes(directType, NullType), NullType.not())
         assertTrue(isSubTypeOf(indirectType, directType))
         assertTrue(isSubTypeOf(directType, indirectType))
-        assertFalse(isSubTypeOf(directType, unionTypes(Types.IntType, NullType)))
+        assertFalse(isSubTypeOf(directType, unionTypes(Types.Int, NullType)))
     }
 
 }

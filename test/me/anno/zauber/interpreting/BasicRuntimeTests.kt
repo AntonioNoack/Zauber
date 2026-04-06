@@ -21,6 +21,7 @@ class BasicRuntimeTests {
             Stdlib.registerStringMethods()
             Stdlib.registerPrintln()
             Stdlib.registerArrayAccess()
+            Stdlib.registerTypeMethods()
         }
 
         fun testExecute(code: String): Instance {
@@ -120,9 +121,9 @@ class BasicRuntimeTests {
             val tested = Test(5)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", (value.type.type as ClassType).clazz.name)
+        assertEquals("Test", (value.clazz.type as ClassType).clazz.name)
         check(value.properties.isNotEmpty()) {
-            "${value.type} somehow has no properties"
+            "${value.clazz} somehow has no properties"
         }
         val a = value.properties[0]!!
         assertEquals(5, a.castToInt())

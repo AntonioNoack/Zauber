@@ -17,7 +17,7 @@ class ConstructorResolutionTest {
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested")
             .resolveValueType(ResolutionContext.minimal)
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     @Test
@@ -37,7 +37,7 @@ class ConstructorResolutionTest {
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested")
             .resolveValueType(ResolutionContext.minimal)
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     @Test
@@ -52,7 +52,7 @@ class ConstructorResolutionTest {
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested")
             .resolveValueType(ResolutionContext.minimal)
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     @Test
@@ -65,7 +65,7 @@ class ConstructorResolutionTest {
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested")
             .resolveValueType(ResolutionContext.minimal)
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     @Test
@@ -81,7 +81,7 @@ class ConstructorResolutionTest {
         val scope = typeResolveScope(code)
         val actualType = scope.getField("tested")
             .resolveValueType(ResolutionContext.minimal)
-        assertEquals(Types.IntType, actualType)
+        assertEquals(Types.Int, actualType)
     }
 
     // todo test resolver prefers methods over fields when calling

@@ -21,8 +21,8 @@ class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, o
         TODO("Not yet implemented")
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = true
     override fun needsBackingField(methodScope: Scope): Boolean = false

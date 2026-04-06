@@ -26,8 +26,12 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 
 object Macro {
 
-    val macroContentParam = Types.StringType
-    val macroContextParam = Types.MacroContextType
+    val macroContentParam = Types.String
+    val macroContextParam = Types.MacroContext
+
+    fun ZauberASTBuilderBase.evaluateMacro(namePath: Expression, typeParameters: List<Type>?, origin: Int): Expression {
+        TODO("Resolve macro $namePath")
+    }
 
     fun ZauberASTBuilderBase.evaluateMacro(namePath: String, typeParameters: List<Type>?, origin: Int): Expression {
 
@@ -95,9 +99,9 @@ object Macro {
     fun ZauberASTBuilderBase.extractTokensFromRuntime(result: BlockReturn, method: Method, i0: Int): TokenList {
         val runtime = Runtime.runtime
         check(result.type == ReturnType.THROW) { "Failed calling $method at ${tokens.err(i0)}" }
-        check(result.value.type == runtime.getClass(Types.MacroContextType))
+        check(result.value.clazz == runtime.getClass(Types.MacroContext))
 
-        val resultIndex = result.value.type.properties.indexOfFirst { it.name == "result" }
+        val resultIndex = result.value.clazz.properties.indexOfFirst { it.name == "result" }
         val value = result.value.properties.getOrNull(resultIndex)
             ?: throw IllegalStateException("Missing first property of TokenResult")
 

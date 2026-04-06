@@ -33,13 +33,13 @@ class CppASTBuilder(
         private val builtInTypes by threadLocal {
             Types.run {
                 mapOf(
-                    "int" to IntType,
-                    "long" to LongType,
-                    "float" to FloatType,
-                    "double" to DoubleType,
-                    "bool" to BooleanType,
-                    "char" to ByteType,
-                    "void" to UnitType,
+                    "int" to Int,
+                    "long" to Long,
+                    "float" to Float,
+                    "double" to Double,
+                    "bool" to Boolean,
+                    "char" to Byte,
+                    "void" to Unit,
                 )
             }
         }

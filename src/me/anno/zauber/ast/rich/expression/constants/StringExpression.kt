@@ -9,14 +9,14 @@ import me.anno.zauber.types.Types
 class StringExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     init {
-        resolvedType = Types.StringType
+        resolvedType = Types.String
     }
 
     override fun toStringImpl(depth: Int): String = "\"$value\""
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.StringType
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.String
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun clone(scope: Scope) = StringExpression(value, scope, origin)
 

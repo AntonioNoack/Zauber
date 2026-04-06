@@ -12,30 +12,30 @@ class AndTypeSimplificationTest {
 
     @Test
     fun testAndUnknownType() {
-        val classA = Types.IntType
+        val classA = Types.Int
         assertEquals(classA, andTypes(classA, UnknownType))
     }
 
     @Test
     fun testAndNothingType() {
-        val classA = Types.IntType
-        assertEquals(Types.NothingType, andTypes(classA, Types.NothingType))
+        val classA = Types.Int
+        assertEquals(Types.Nothing, andTypes(classA, Types.Nothing))
     }
 
     @Test
     fun testAndNullType() {
-        val classA = Types.IntType
-        assertEquals(Types.NothingType, andTypes(classA, NullType))
+        val classA = Types.Int
+        assertEquals(Types.Nothing, andTypes(classA, NullType))
     }
 
     @Test
     fun testDisjointAndTypes() {
-        val classA = Types.IntType
-        val classB = Types.LongType
-        val classC = Types.FloatType
+        val classA = Types.Int
+        val classB = Types.Long
+        val classC = Types.Float
 
-        assertEquals(Types.NothingType, andTypes(classA, classB))
-        assertEquals(Types.NothingType, IsSubTypeOfTest.Companion.andTypes(classA, classB, classC))
+        assertEquals(Types.Nothing, andTypes(classA, classB))
+        assertEquals(Types.Nothing, IsSubTypeOfTest.Companion.andTypes(classA, classB, classC))
     }
 
     @Test

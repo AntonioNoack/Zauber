@@ -145,7 +145,7 @@ class SimpleCall(
             throw IllegalStateException("Unexpected NPE: $this")
         }
 
-        val method = methods[self.type.type as ClassType] ?: sample
+        val method = methods[self.clazz.type as ClassType] ?: sample
 
         initializeArrayIfNeeded(self, method)
 
@@ -157,10 +157,10 @@ class SimpleCall(
     }
 
     fun initializeArrayIfNeeded(self: Instance, method: MethodLike) {
-        val selfType = self.type.type.resolvedName
+        val selfType = self.clazz.type.resolvedName
         if (selfType is ClassType && selfType.clazz.pathStr == "zauber.Array" &&
             method is Constructor && valueParameters.size == 1 &&
-            method.valueParameters[0].type.resolvedName == Types.IntType
+            method.valueParameters[0].type.resolvedName == Types.Int
         ) {
             val sizeParam = valueParameters[0]
             val size = runtime[sizeParam].castToInt()
@@ -170,13 +170,13 @@ class SimpleCall(
 
     fun createArray(type: Type?, size: Int): Any {
         return when (type) {
-            Types.BooleanType -> BooleanArray(size)
-            Types.ByteType -> ByteArray(size)
-            Types.ShortType -> ShortArray(size)
-            Types.IntType -> IntArray(size)
-            Types.LongType -> LongArray(size)
-            Types.FloatType -> FloatArray(size)
-            Types.DoubleType -> DoubleArray(size)
+            Types.Boolean -> BooleanArray(size)
+            Types.Byte -> ByteArray(size)
+            Types.Short -> ShortArray(size)
+            Types.Int -> IntArray(size)
+            Types.Long -> LongArray(size)
+            Types.Float -> FloatArray(size)
+            Types.Double -> DoubleArray(size)
             else -> {
                 val nullValue = runtime.getNull()
                 Array(size) { nullValue }

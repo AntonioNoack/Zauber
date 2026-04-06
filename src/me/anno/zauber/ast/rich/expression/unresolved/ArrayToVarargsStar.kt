@@ -15,7 +15,7 @@ class ArrayToVarargsStar(val value: Expression) : Expression(value.scope, value.
     override fun splitsScope(): Boolean = value.splitsScope()
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
         val tt = context.targetType
-        val newTT = if (tt is ClassType && tt.clazz == Types.ArrayType.clazz && tt.typeParameters != null) {
+        val newTT = if (tt is ClassType && tt.clazz == Types.Array.clazz && tt.typeParameters != null) {
             tt.typeParameters[0]
         } else null
         return value.hasLambdaOrUnknownGenericsType(context.withTargetType(newTT))

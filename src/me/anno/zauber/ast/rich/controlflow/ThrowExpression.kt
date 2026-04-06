@@ -14,7 +14,7 @@ class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
         return "throw ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveThrownType(context: ResolutionContext): Type {
         // if value returns or throws, we throw
         return unionTypes(value.resolveReturnType(context), value.resolveThrownType(context))

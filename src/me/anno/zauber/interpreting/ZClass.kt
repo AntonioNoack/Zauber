@@ -70,7 +70,7 @@ class ZClass(val type: Type) {
     }
 
     fun createInstance(): Instance {
-        if (type == NullType || type == Types.NothingType) {
+        if (type == NullType || type == Types.Nothing) {
             throw IllegalStateException("Cannot create instance of $type")
         }
         if (type !is ClassType) {

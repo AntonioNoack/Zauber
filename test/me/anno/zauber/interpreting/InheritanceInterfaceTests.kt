@@ -26,7 +26,7 @@ class InheritanceInterfaceTests {
             val tested = runTest(Child())
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(Types.IntType, value.type.type)
+        assertEquals(Types.Int, value.clazz.type)
         assertEquals(0, value.castToInt())
     }
 

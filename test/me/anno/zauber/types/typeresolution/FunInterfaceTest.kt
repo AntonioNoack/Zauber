@@ -8,7 +8,7 @@ class FunInterfaceTest {
     @Test
     fun testFunInterfaceCall() {
         assertEquals(
-            Types.BooleanType,
+            Types.Boolean,
             // todo somehow check that the inside of the functions work, too
             //  (I know they don't because we haven't implemented calls on fun-interfaces yet)
             TypeResolutionTest.testTypeResolution(

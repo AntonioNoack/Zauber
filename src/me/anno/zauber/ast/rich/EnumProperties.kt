@@ -91,7 +91,7 @@ object EnumProperties {
         companionScope.hasTypeParameters = true
 
         val constructorScope = companionScope.getOrCreatePrimaryConstructorScope()
-        val listType = ClassType(Types.ListType.clazz, listOf(enumScope.typeWithArgs), origin)
+        val listType = ClassType(Types.List.clazz, listOf(enumScope.typeWithArgs), origin)
         val entryValues = enumScope.enumEntries.map { entryScope ->
             val field = entryScope.objectField!!
             FieldExpression(field, constructorScope, origin)

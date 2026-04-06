@@ -83,7 +83,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
                 val fallbackGenerics = List(typeParams.size) {
                     Parameter(
                         it, ('A' + it).toString(),
-                        Types.NullableAnyType, clazz, -1
+                        Types.NullableAny, clazz, -1
                     )
                 }
                 val result = ParameterList(fallbackGenerics)

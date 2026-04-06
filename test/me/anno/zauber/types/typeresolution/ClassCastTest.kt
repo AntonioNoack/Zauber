@@ -11,7 +11,7 @@ class ClassCastTest {
     @Test
     fun testTypeIsCastInBranch() {
         assertEquals(
-            unionTypes(Types.FloatType, Types.StringType),
+            unionTypes(Types.Float, Types.String),
             testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float
@@ -33,7 +33,7 @@ class ClassCastTest {
     fun testTypeIsCastAfterReturningBranch() {
         // todo can we somehow test this?? we need to resolve the x+1f inside the getter...
         assertEquals(
-            unionTypes(Types.FloatType, NullType),
+            unionTypes(Types.Float, NullType),
             testTypeResolution(
                 """
                 fun Int.plus(other: Float): Float

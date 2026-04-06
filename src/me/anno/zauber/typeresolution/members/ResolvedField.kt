@@ -194,7 +194,7 @@ class ResolvedField(
             val className = "Function$numArguments"
             val genericNames = String(CharArray(numArguments + 1) { 'A' + it })
 
-            val nat = Types.NullableAnyType
+            val nat = Types.NullableAny
             val lambdaClassScope = getScope(className, genericNames, nat)
 
             val method = lambdaClassScope.methods.firstOrNull { it.name == "call" }

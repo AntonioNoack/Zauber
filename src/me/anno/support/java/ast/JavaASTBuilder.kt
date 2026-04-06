@@ -66,15 +66,15 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         val nativeJavaTypes by threadLocal {
             Types.run {
                 mapOf(
-                    "byte" to ByteType, "Byte" to ByteType,
-                    "short" to ShortType, "Short" to ShortType,
-                    "char" to CharType, "Character" to CharType,
-                    "int" to IntType, "Integer" to IntType,
-                    "long" to LongType, "Long" to LongType,
-                    "float" to FloatType, "Float" to FloatType,
-                    "double" to DoubleType, "Double" to DoubleType,
-                    "boolean" to BooleanType, "Boolean" to BooleanType,
-                    "void" to UnitType, "Void" to UnitType
+                    "byte" to Byte, "Byte" to Byte,
+                    "short" to Short, "Short" to Short,
+                    "char" to Char, "Character" to Char,
+                    "int" to Int, "Integer" to Int,
+                    "long" to Long, "Long" to Long,
+                    "float" to Float, "Float" to Float,
+                    "double" to Double, "Double" to Double,
+                    "boolean" to Boolean, "Boolean" to Boolean,
+                    "void" to Unit, "Void" to Unit
                 )
             }
         }
@@ -151,9 +151,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             } while (consumeIf(","))
         }
 
-        val addAnyIfEmpty = classScope != Types.AnyType.clazz
+        val addAnyIfEmpty = classScope != Types.Any.clazz
         if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
-            classScope.superCalls.add(SuperCall(Types.AnyType, emptyList(), null))
+            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null))
         }
     }
 
@@ -381,7 +381,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             val origin = origin(i)
             var type = readTypeNotNull(null, true)
             val isVararg = consumeIf("...")
-            if (isVararg) type = ClassType(Types.ArrayType.clazz, listOf(type), origin)
+            if (isVararg) type = ClassType(Types.Array.clazz, listOf(type), origin)
 
             val name = consumeName(VSCodeType.PARAMETER, 0)
 
@@ -524,7 +524,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                             currPackage, origin
                         )
                         is ArrayType -> ConstructorExpression(
-                            Types.ArrayType.clazz, listOf(type.baseType),
+                            Types.Array.clazz, listOf(type.baseType),
                             listOf(NamedParameter(null, type.size)), null,
                             currPackage, origin
                         )

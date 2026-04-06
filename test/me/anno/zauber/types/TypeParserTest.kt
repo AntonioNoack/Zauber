@@ -17,14 +17,14 @@ class TypeParserTest {
 
     @Test
     fun testSimpleType() {
-        assertEquals(Types.FloatType, "Float".parseType())
-        assertEquals(Types.StringType, "String".parseType())
+        assertEquals(Types.Float, "Float".parseType())
+        assertEquals(Types.String, "String".parseType())
     }
 
     @Test
     fun testNullableType() {
-        assertEquals(unionTypes(Types.StringType, NullType), "String?".parseType())
-        assertEquals(unionTypes(Types.FloatType, NullType), "Float?".parseType())
+        assertEquals(unionTypes(Types.String, NullType), "String?".parseType())
+        assertEquals(unionTypes(Types.Float, NullType), "Float?".parseType())
     }
 
     @Test
@@ -34,18 +34,18 @@ class TypeParserTest {
 
     @Test
     fun testUnionType() {
-        assertEquals(unionTypes(Types.FloatType, Types.StringType), "Float|String".parseType())
+        assertEquals(unionTypes(Types.Float, Types.String), "Float|String".parseType())
     }
 
     @Test
     fun testAndType() {
         // todo this is effectively Nothing, because a type cannot be both sub-branches of a parent with class-inheritance
-        assertEquals(andTypes(Types.FloatType, Types.StringType), "Float&String".parseType())
+        assertEquals(andTypes(Types.Float, Types.String), "Float&String".parseType())
     }
 
     @Test
     fun testNotType() {
-        assertEquals(Types.FloatType.not(), "!Float".parseType())
+        assertEquals(Types.Float.not(), "!Float".parseType())
     }
 
     @Test
@@ -54,8 +54,8 @@ class TypeParserTest {
         // & must be stronger than |
         assertEquals(
             unionTypes(
-                andTypes(Types.FloatType.not(), Types.DoubleType.not()),
-                andTypes(Types.IntType, Types.LongType)
+                andTypes(Types.Float.not(), Types.Double.not()),
+                andTypes(Types.Int, Types.Long)
             ), "!Float&!Double|Int&Long".parseType()
         )
     }

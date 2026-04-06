@@ -10,9 +10,9 @@ import me.anno.zauber.types.Types
 class NamedDestructuringExpression(val type: Type, val names: List<LambdaVariable?>, scope: Scope, origin: Int) :
     Expression(scope, origin) {
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.BooleanType
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveReturnType(context: ResolutionContext): Type = Types.Boolean
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     override fun clone(scope: Scope): Expression = this
 

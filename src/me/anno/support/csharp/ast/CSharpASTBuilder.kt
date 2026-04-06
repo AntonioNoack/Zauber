@@ -21,18 +21,18 @@ class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, 
         val nativeCSharpTypes by threadLocal {
             Types.run {
                 mapOf(
-                    "sbyte" to ByteType, "SByte" to ByteType,
-                    "byte" to UByteType, "Byte" to UByteType,
-                    "short" to ShortType, "Short" to ShortType,
-                    "ushort" to UShortType, "UShort" to UShortType,
-                    "int" to IntType, "Integer" to IntType,
-                    "uint" to UIntType, "UInteger" to UIntType,
-                    "long" to LongType, "Long" to LongType, "nint" to LongType,
-                    "ulong" to LongType, "ULong" to LongType, "nuint" to LongType,
-                    "float" to FloatType, "Float" to FloatType,
-                    "double" to DoubleType, "Double" to DoubleType,
-                    "bool" to BooleanType, "Bool" to BooleanType,
-                    "void" to UnitType, "Void" to UnitType
+                    "sbyte" to Byte, "SByte" to Byte,
+                    "byte" to UByte, "Byte" to UByte,
+                    "short" to Short, "Short" to Short,
+                    "ushort" to UShort, "UShort" to UShort,
+                    "int" to Int, "Integer" to Int,
+                    "uint" to UInt, "UInteger" to UInt,
+                    "long" to Long, "Long" to Long, "nint" to Long,
+                    "ulong" to Long, "ULong" to Long, "nuint" to Long,
+                    "float" to Float, "Float" to Float,
+                    "double" to Double, "Double" to Double,
+                    "bool" to Boolean, "Bool" to Boolean,
+                    "void" to Unit, "Void" to Unit
                 )
             }
         }

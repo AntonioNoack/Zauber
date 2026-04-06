@@ -16,7 +16,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.utils.PairArrayList
-import java.lang.reflect.Member
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
@@ -273,7 +272,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         if (print) LOGGER.info("Scopes/selfTypes: $scopes")
 
-        val selfType0 = scopes.firstBOrNull() ?: Types.UnitType
+        val selfType0 = scopes.firstBOrNull() ?: Types.Unit
         val selfTypeZ = context.selfType ?: selfType0
         var handledLangScope = false
 

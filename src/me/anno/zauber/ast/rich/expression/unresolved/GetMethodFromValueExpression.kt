@@ -110,8 +110,8 @@ class GetMethodFromValueExpression(
         }
     }
 
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.NothingType
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.NothingType
+    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
     // todo or if the resolved method has some...
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {

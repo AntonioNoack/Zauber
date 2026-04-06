@@ -17,12 +17,12 @@ abstract class Expression(val scope: Scope, val origin: Int) {
     abstract fun resolveReturnType(context: ResolutionContext): Type
     open fun resolveThrownType(context: ResolutionContext): Type {
         LOGGER.warn("Implement resolveThrownType for ${javaClass.simpleName}")
-        return Types.ThrowableType // just assume all
+        return Types.Throwable // just assume all
     }
 
     open fun resolveYieldedType(context: ResolutionContext): Type {
         LOGGER.warn("Implement resolveYieldedType for ${javaClass.simpleName}")
-        return Types.YieldedType
+        return Types.Yielded
     }
 
     fun resolve(context: ResolutionContext): Expression {
@@ -50,7 +50,7 @@ abstract class Expression(val scope: Scope, val origin: Int) {
         if (!context.allowTypeless) throw IllegalStateException(
             "Expected type, but found $this (${javaClass.simpleName}) in ${resolveOrigin(origin)}"
         )
-        return Types.UnitType
+        return Types.Unit
     }
 
     init {
