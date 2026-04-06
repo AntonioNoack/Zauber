@@ -2,7 +2,6 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -58,7 +57,7 @@ class UnderdefinedCallTests {
             }
             is Array<*> -> {
                 assertEquals(Types.ArrayType, value.type.type)
-                assertEquals(listOf(1, 2, 3), contents.map { value -> castToInt(value as Instance) })
+                assertEquals(listOf(1, 2, 3), contents.map { value -> (value as Instance).castToInt() })
             }
             else -> throw IllegalStateException("$value is incorrect")
         }

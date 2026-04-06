@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
@@ -29,7 +28,7 @@ class DeferTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", castToString(value))
+        assertEquals("Test", value.castToString())
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
 
@@ -63,7 +62,7 @@ class DeferTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", castToString(value))
+        assertEquals("Test", value.castToString())
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
 
@@ -88,7 +87,7 @@ class DeferTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", castToString(value))
+        assertEquals("Test", value.castToString())
         assertEquals(listOf("Hello!"), runtime.printed)
     }
 

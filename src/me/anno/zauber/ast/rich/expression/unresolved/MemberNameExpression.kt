@@ -4,11 +4,12 @@ import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Import
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 /**
@@ -18,7 +19,7 @@ class MemberNameExpression(
     val name: String,
     val nameAsImport: List<Import>,
     scope: Scope, origin: Int
-) : Expression(scope, origin) {
+) : Expression(scope, origin), FieldResolvable {
 
     companion object {
         fun ASTBuilderBase.nameExpression(name: String, origin: Int, scope: Scope): Expression {
@@ -72,15 +73,14 @@ class MemberNameExpression(
     override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
-        val field = FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
-        if (field != null) return field.getValueType()
-
-        throw IllegalStateException(
-            "Missing field/type '${name}' in ${context.selfType}, $scope, " +
-                    TokenListIndex.resolveOrigin(origin)
-        )
+    override fun resolveField(context: ResolutionContext): ResolvedField {
+        return FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
+            ?: throw IllegalStateException(
+                "Missing field/type '${name}' in ${context.selfType}, $scope, " +
+                        TokenListIndex.resolveOrigin(origin)
+            )
     }
 
+    override fun resolveReturnType(context: ResolutionContext): Type = resolveField(context).getValueType()
     override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

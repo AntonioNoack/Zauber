@@ -1,7 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
-import me.anno.zauber.interpreting.RuntimeCast.castToString
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -26,7 +24,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, castToInt(value))
+        assertEquals(1, value.castToInt())
     }
 
     @Test
@@ -73,7 +71,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, castToInt(value))
+        assertEquals(2, value.castToInt())
     }
 
     @Test
@@ -99,7 +97,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, castToInt(value))
+        assertEquals(2, value.castToInt())
     }
 
     @Test
@@ -126,7 +124,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, castToInt(value))
+        assertEquals(2, value.castToInt())
     }
 
     @Test
@@ -156,7 +154,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, castToInt(value))
+        assertEquals(2, value.castToInt())
     }
 
     @Test
@@ -173,7 +171,7 @@ class TryCatchTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", castToString(value))
+        assertEquals("Test", value.castToString())
         assertEquals(listOf("Hello World"), runtime.printed)
     }
 
@@ -199,7 +197,7 @@ class TryCatchTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", castToString(value))
+        assertEquals("Test", value.castToString())
         assertEquals(listOf("Hello ", "World"), runtime.printed)
     }
 
@@ -255,7 +253,7 @@ class TryCatchTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Test", castToString(value))
+        assertEquals("Test", value.castToString())
         assertEquals(listOf("0", "1", "2", "3"), runtime.printed)
     }
 

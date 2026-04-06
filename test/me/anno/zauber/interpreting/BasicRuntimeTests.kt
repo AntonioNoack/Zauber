@@ -1,8 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToBool
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
 import me.anno.zauber.types.impl.ClassType
@@ -70,7 +68,7 @@ class BasicRuntimeTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(listOf("Hello World!"), runtime.printed)
-        assertEquals(0, castToInt(value))
+        assertEquals(0, value.castToInt())
     }
 
     @Test
@@ -87,9 +85,9 @@ class BasicRuntimeTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val valueT = testExecute("val tested = true\n$stdlib")
-        assertEquals(true, castToBool(valueT))
+        assertEquals(true, valueT.castToBool())
         val valueF = testExecute("val tested = false\n$stdlib")
-        assertEquals(false, castToBool(valueF))
+        assertEquals(false, valueF.castToBool())
     }
 
     @Test
@@ -104,7 +102,7 @@ class BasicRuntimeTests {
             "${value.type} somehow has no properties"
         }
         val a = value.properties[0]!!
-        assertEquals(5, castToInt(a))
+        assertEquals(5, a.castToInt())
     }
 
     // todo implement and test destructors...

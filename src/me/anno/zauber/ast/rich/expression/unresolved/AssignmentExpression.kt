@@ -1,10 +1,11 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
 /**
@@ -52,6 +53,22 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
                 val field = dstExpr.right.resolveField(context)
                 val owner = dstExpr.left
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
+            }
+            is DotExpression if dstExpr.left is FieldExpression && dstExpr.right is FieldResolvable -> {
+                val owner = dstExpr.left.resolve(context)
+                val ownerType = owner.resolveReturnType(context)
+                val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
+                check(field.resolved.isMutable || dstExpr.left.field.isMutableEx) {
+                    "Expected ${dstExpr.left.field} to be mutable @${resolveOrigin(origin)}"
+                }
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
+            }
+            is DotExpression -> {
+                throw NotImplementedError(
+                    "Implement assignment to DotExpression (" +
+                            "${dstExpr.left.javaClass.simpleName} . " +
+                            "${dstExpr.right.javaClass.simpleName})"
+                )
             }
             else -> throw NotImplementedError("Implement assignment to $dst (${dst.javaClass.simpleName})")
         }

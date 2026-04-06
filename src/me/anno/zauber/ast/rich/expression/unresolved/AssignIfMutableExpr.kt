@@ -70,7 +70,8 @@ class AssignIfMutableExpr(
             is FieldExpression -> expr.resolveField(context)
             is UnresolvedFieldExpression -> expr.resolveField(context)
             is ResolvedGetFieldExpression -> expr.field
-            else -> throw NotImplementedError("Is ${expr.javaClass.simpleName} a mutable left side?")
+            is DotExpression -> expr.resolveField(context)
+            else -> throw NotImplementedError("Resolve field in ${expr.javaClass.simpleName}")
         }
     }
 

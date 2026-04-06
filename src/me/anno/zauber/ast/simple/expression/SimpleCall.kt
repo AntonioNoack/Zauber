@@ -12,7 +12,6 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -164,7 +163,7 @@ class SimpleCall(
             method.valueParameters[0].type.resolvedName == Types.IntType
         ) {
             val sizeParam = valueParameters[0]
-            val size = castToInt(runtime[sizeParam])
+            val size = runtime[sizeParam].castToInt()
             self.rawValue = createArray(selfType.typeParameters?.get(0)?.resolvedName, size)
         }
     }

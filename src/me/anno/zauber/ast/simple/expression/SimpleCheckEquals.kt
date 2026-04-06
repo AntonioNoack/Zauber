@@ -4,7 +4,6 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.specialization.MethodSpecialization
@@ -39,7 +38,7 @@ class SimpleCheckEquals(
         return when (result.type) {
             ReturnType.THROW -> result
             ReturnType.RETURN, ReturnType.VALUE -> {
-                val value = castToBool(result.value)
+                val value = result.value.castToBool()
                 BlockReturn(ReturnType.VALUE, runtime.getBool(!value))
             }
             else -> throw NotImplementedError("$result in SimpleCheckEquals")

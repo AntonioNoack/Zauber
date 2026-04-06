@@ -1,8 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -15,7 +13,7 @@ class ThisTests {
             val tested = A(1).x
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, castToInt(value))
+        assertEquals(1, value.castToInt())
     }
 
     @Test
@@ -27,7 +25,7 @@ class ThisTests {
             val tested = A(1).x()
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(1, castToInt(value))
+        assertEquals(1, value.castToInt())
     }
 
     @Test
@@ -45,7 +43,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, castToInt(value))
+        assertEquals(2, value.castToInt())
     }
 
     @Test
@@ -65,7 +63,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, castToInt(value))
+        assertEquals(2, value.castToInt())
     }
 
     @Test
@@ -85,7 +83,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, castToInt(value))
+        assertEquals(3, value.castToInt())
     }
 
     @Test
@@ -106,7 +104,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, castToInt(value))
+        assertEquals(3, value.castToInt())
     }
 
     @Test
@@ -129,7 +127,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, castToInt(value))
+        assertEquals(3, value.castToInt())
     }
 
     @Test
@@ -150,7 +148,7 @@ class ThisTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(3, castToInt(value))
+        assertEquals(3, value.castToInt())
     }
 
 }

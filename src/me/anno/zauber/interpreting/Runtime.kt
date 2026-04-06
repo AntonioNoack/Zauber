@@ -9,7 +9,6 @@ import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.expression.SimpleGetField
-import me.anno.zauber.interpreting.RuntimeCast.castToBool
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -212,7 +211,10 @@ class Runtime {
             throw IllegalArgumentException("Cannot execute $method1 on null instance")
         }
 
-        val valueParameters = valueParameters.map { this[it, hint] }
+        val valueParameters = valueParameters.map { valueField ->
+            this[valueField, hint].cloneIfValue()
+        }
+
         val method = method1.method
         if (method.isExternal()) {
             val name = (method as Method).name
@@ -343,10 +345,9 @@ class Runtime {
             // find the next block to execute
             val condition = block.branchCondition
             block = if (condition != null) {
-                val conditionI = this[condition]
-                val conditionJ = castToBool(conditionI)
-                LOGGER.info("Finished $block, condition: $conditionJ -> ${(if (conditionJ) block.ifBranch else block.elseBranch)?.blockId}")
-                if (conditionJ) block.ifBranch else block.elseBranch
+                val conditionI = this[condition].castToBool()
+                LOGGER.info("Finished $block, condition: $conditionI -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.blockId}")
+                if (conditionI) block.ifBranch else block.elseBranch
             } else {
                 LOGGER.info("Finished $block, next: ${block.nextBranch?.blockId}")
                 block.nextBranch

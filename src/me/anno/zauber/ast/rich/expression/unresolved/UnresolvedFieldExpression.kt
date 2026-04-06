@@ -14,7 +14,7 @@ class UnresolvedFieldExpression(
     val name: String,
     val nameAsImport: List<Import>,
     scope: Scope, origin: Int
-) : Expression(scope, origin) {
+) : Expression(scope, origin), FieldResolvable {
 
     override fun toStringImpl(depth: Int): String = name
     override fun clone(scope: Scope) = UnresolvedFieldExpression(name, nameAsImport, scope, origin)
@@ -23,7 +23,7 @@ class UnresolvedFieldExpression(
     // todo what if 'field' is shadowed?
     override fun needsBackingField(methodScope: Scope): Boolean = name == "field"
 
-    fun resolveField(context: ResolutionContext): ResolvedField {
+    override fun resolveField(context: ResolutionContext): ResolvedField {
         return FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
             ?: throw IllegalStateException("Failed to resolve field $name in $scope")
     }

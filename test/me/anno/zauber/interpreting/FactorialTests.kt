@@ -1,8 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -38,7 +36,7 @@ class FactorialTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(5 * 4 * 3 * 2, castToInt(value))
+        assertEquals(5 * 4 * 3 * 2, value.castToInt())
     }
 
     @Test
@@ -76,7 +74,7 @@ class FactorialTests {
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, castToInt(value))
+        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, value.castToInt())
     }
 
     @Test
@@ -132,7 +130,7 @@ class FactorialTests {
             val tested = fac(10)
         """.trimIndent() + stdlib
         val value = testExecute(code)
-        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, castToInt(value))
+        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, value.castToInt())
     }
 
 }

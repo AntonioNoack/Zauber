@@ -1,6 +1,8 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeType
@@ -84,6 +86,9 @@ class ZClass(val type: Type) {
             InsertMode.READ_ONLY
         )
     }
+
+    val isValueClass: Boolean =
+        type is ClassType && type.clazz.flags.hasFlag(Flags.VALUE)
 
     override fun toString(): String {
         return "ZClass($type,${properties.map { it.name }})"

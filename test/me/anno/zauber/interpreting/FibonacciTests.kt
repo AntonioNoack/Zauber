@@ -1,7 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -65,7 +64,7 @@ class FibonacciTests {
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
-        assertEquals(21, castToInt(value))
+        assertEquals(21, value.castToInt())
     }
 
     @Test
@@ -88,7 +87,7 @@ class FibonacciTests {
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
-        assertEquals(21, castToInt(value))
+        assertEquals(21, value.castToInt())
     }
 
     @Test
@@ -103,7 +102,7 @@ class FibonacciTests {
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8
         val value = testExecute(code)
-        assertEquals(8, castToInt(value))
+        assertEquals(8, value.castToInt())
     }
 
     @Test
@@ -118,7 +117,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, castToInt(value))
+        assertEquals(8, value.castToInt())
     }
 
     @Test
@@ -133,7 +132,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, castToInt(value))
+        assertEquals(8, value.castToInt())
     }
 
     @Test
@@ -151,7 +150,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, castToInt(value))
+        assertEquals(8, value.castToInt())
     }
 
     @Test
@@ -174,7 +173,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, castToInt(value))
+        assertEquals(8, value.castToInt())
     }
 
     @Test
@@ -192,7 +191,7 @@ class FibonacciTests {
         """.trimIndent()
 
         val value = testExecute(code)
-        assertEquals(8, castToInt(value))
+        assertEquals(8, value.castToInt())
     }
 
 

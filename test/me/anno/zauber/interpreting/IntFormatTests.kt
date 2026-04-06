@@ -1,8 +1,6 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -15,13 +13,15 @@ class IntFormatTests {
             val tested = 17
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(17, castToInt(value))
+        assertEquals(17, value.castToInt())
     }
 
     @Test
     fun testNegativeIntField() {
-        LogManager.disableLoggers("ResolvedMethod,FieldExpression,FieldResolver," +
-                "MemberResolver,TypeResolution,Inheritance,FieldResolver")
+        LogManager.disableLoggers(
+            "ResolvedMethod,FieldExpression,FieldResolver," +
+                    "MemberResolver,TypeResolution,Inheritance,FieldResolver"
+        )
         val code = """
             val tested = -17
             
@@ -32,7 +32,7 @@ class IntFormatTests {
             }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(-17, castToInt(value))
+        assertEquals(-17, value.castToInt())
     }
 
     @Test
@@ -41,7 +41,7 @@ class IntFormatTests {
             val tested = 0x17
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(23, castToInt(value))
+        assertEquals(23, value.castToInt())
     }
 
     @Test
@@ -50,7 +50,7 @@ class IntFormatTests {
             val tested = 0b10101
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(21, castToInt(value))
+        assertEquals(21, value.castToInt())
     }
 
 }

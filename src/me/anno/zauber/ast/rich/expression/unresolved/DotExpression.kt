@@ -102,7 +102,7 @@ class DotExpression(
         return right is CallExpression
     }
 
-    fun resolveField(context: ResolutionContext, baseType: Type): ResolvedField? {
+    fun resolveField(context: ResolutionContext, baseType: Type = getBaseType(context)): ResolvedField? {
         // println("resolveField(): LHS: $baseType, RHS: ${right.javaClass.simpleName}")
         when (right) {
             is MemberNameExpression -> {

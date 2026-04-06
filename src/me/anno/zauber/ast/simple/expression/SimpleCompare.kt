@@ -5,7 +5,6 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToInt
 import me.anno.zauber.scope.Scope
 
 class SimpleCompare(
@@ -21,8 +20,7 @@ class SimpleCompare(
 
     override fun eval(): BlockReturn {
         val runtime = runtime
-        val rawValue = runtime[tmp, this]
-        val asInt = castToInt(rawValue)
+        val asInt = runtime[tmp, this].castToInt()
         val asBool = type.eval(asInt)
         return BlockReturn(ReturnType.VALUE, runtime.getBool(asBool))
     }

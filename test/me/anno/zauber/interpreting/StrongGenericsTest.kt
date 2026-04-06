@@ -1,9 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCast.castToBool
-import me.anno.zauber.interpreting.RuntimeCast.castToString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -22,7 +19,7 @@ class StrongGenericsTest {
             val tested = call(0)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("Int", castToString(value))
+        assertEquals("Int", value.castToString())
     }
 
     @Test
@@ -32,7 +29,7 @@ class StrongGenericsTest {
             val tested = call("Hello")
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals("String", castToString(value))
+        assertEquals("String", value.castToString())
     }
 
     @Test
@@ -42,12 +39,12 @@ class StrongGenericsTest {
             val tested = call(0)
         """.trimIndent()
         val valueT = testExecute(trueCode)
-        assertEquals(true, castToBool(valueT))
+        assertEquals(true, valueT.castToBool())
         val falseCode = """
             fun <V> call(v: V): Boolean = V.isSubTypeOf(Int)
             val tested = call(0f)
         """.trimIndent()
         val valueF = testExecute(falseCode)
-        assertEquals(false, castToBool(valueF))
+        assertEquals(false, valueF.castToBool())
     }
 }

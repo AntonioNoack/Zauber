@@ -22,7 +22,7 @@ class SimpleSetField(
         val selfInstance = runtime[self, this]
         val value = runtime[value, this]
         println("[SET] $selfInstance.${field.name} = $value")
-        runtime[selfInstance, field] = value
+        runtime[selfInstance, field] = value.cloneIfValue()
         return null
     }
 }
