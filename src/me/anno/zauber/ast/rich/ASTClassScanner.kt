@@ -601,7 +601,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     private fun readLazyBody(): Expression {
         return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, tokens.size)
-            val expr = LazyExpression(tokens1, true, scope, origin(i), imports, genericParams.last())
+            val expr = LazyExpression(tokens1, true, scope, origin(i), imports, generics)
             scope.initParts += { expr.value } // load expression contents, if we need them
             i = tokens.size
             expr
@@ -614,7 +614,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
         return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, end)
-            val expr = LazyExpression(tokens1, false, scope, origin(i), imports, genericParams.last())
+            val expr = LazyExpression(tokens1, false, scope, origin(i), imports, generics)
             scope.initParts += { expr.value } // load expression contents, if we need them
             i = end
             expr

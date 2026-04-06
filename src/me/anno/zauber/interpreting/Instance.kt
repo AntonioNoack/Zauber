@@ -125,4 +125,10 @@ class Instance(
         if (fieldIndex < 0) return
         properties[fieldIndex] = runtime.createString(value)
     }
+
+    fun set(fieldName: String, value: Instance) {
+        val fieldIndex = clazz.properties.indexOfFirst { it.name == fieldName }
+        if (fieldIndex < 0) return
+        properties[fieldIndex] = value
+    }
 }

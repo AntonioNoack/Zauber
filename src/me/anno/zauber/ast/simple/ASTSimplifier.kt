@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.GetClassFromTypeExpression
@@ -123,6 +124,7 @@ object ASTSimplifier {
 
             is ResolvedCompareOp -> return simplifyCompareOp(context, expr, block0, flow0, graph)
             is ResolvedCallExpression -> return simplifyCall(context, expr, block0, flow0, graph)
+            is DynamicMacroExpression -> return simplifyDynamicMacro(context, expr, block0, flow0, graph)
 
             is SpecialValueExpression -> {
                 val type = when (expr.type) {
@@ -221,6 +223,37 @@ object ASTSimplifier {
             blockI = simplifyImpl(context, expr, blockIv.block, blockI, graph, needsValue)
         }
         return blockI
+    }
+
+    private fun simplifyDynamicMacro(
+        context: ResolutionContext,
+        expr: DynamicMacroExpression,
+        block0: SimpleNode,
+        flow0: FlowResult,
+        graph: SimpleGraph
+    ): FlowResult {
+        // (base, block1)
+        val block1 = simplifyImpl(context, expr.self, block0, flow0, graph, true)
+        val base = block1.value ?: return block1
+
+        // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
+        var blockI = block1
+        val valueParameters = expr.valueParameters.map { param ->
+            blockI = simplifyImpl(context, param, blockI.value!!.block, blockI, graph, false)
+            blockI.value?.value ?: return blockI
+        }
+
+        valueParameters.forEach { it.use() }
+
+        val method0 = expr.method
+        val method = method0.resolved
+        val block0 = blockI.value!!.block
+        val selfExpr = base.value.use()
+        // then execute it
+        val dst = block0.field(method0.getTypeFromCall())
+        val specialization = method0.specialization
+        val call = SimpleDynamicMacro(dst, expr, selfExpr.use(), valueParameters, expr.scope, expr.origin)
+        return handleThrown(block0, flow0, graph, dst, call, method.getThrownType(specialization))
     }
 
     private fun simplifyCall(

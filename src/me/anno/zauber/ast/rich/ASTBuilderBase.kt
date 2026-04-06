@@ -126,6 +126,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     val imports = ArrayList<Import>()
 
     val genericParams = ArrayList<HashMap<String, GenericType>>()
+    val generics get() = genericParams.last()
 
     init {
         genericParams.add(HashMap())

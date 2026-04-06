@@ -16,6 +16,8 @@ class ResolvedMethod(
     matchScore: MatchScore, // selfType, then all parameters
 ) : ResolvedMember<Method>(ownerTypes, callTypes, method, context, codeScope, matchScore) {
 
+    val returnType get() = resolved.returnType?.specialize(specialization)
+
     override fun getScopeOfResolved(): Scope = resolved.scope
 
     private val typeFromCallImpl = lazy {

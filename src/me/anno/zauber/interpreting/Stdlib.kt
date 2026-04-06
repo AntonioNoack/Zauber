@@ -108,6 +108,16 @@ object Stdlib {
         rt.registerBinaryMethod(Types.String, "plus") { a, b ->
             rt.createString(a.castToString() + b.castToString())
         }
+        rt.registerBinaryMethod(Types.String, "split") { content, separator ->
+            val content = content.castToString()
+            val separator = separator.castToString()
+            val parts = content.split(separator)
+            val clazz = rt.getClass(Types.Array.withTypeParameter(Types.String))
+            val partsInstance = clazz.createInstance()
+            partsInstance.set("size", rt.createInt(parts.size))
+            partsInstance.rawValue = Array(parts.size) { rt.createString(parts[it]) }
+            partsInstance
+        }
     }
 
     fun registerTypeMethods() {

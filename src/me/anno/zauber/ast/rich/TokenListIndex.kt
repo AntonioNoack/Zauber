@@ -48,4 +48,10 @@ object TokenListIndex {
         val tl = findTokenList(i)
         return tl.err(i - tl.tliIndex)
     }
+
+    fun resolveOriginShort(i: Int): String {
+        if (i < 0) return i.toString()
+        val tl = findTokenList(i)
+        return tl.errShort(i - tl.tliIndex)
+    }
 }

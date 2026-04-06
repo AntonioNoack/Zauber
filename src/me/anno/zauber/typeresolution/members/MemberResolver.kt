@@ -249,6 +249,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${contextSelfScope}, ${contextSelfType})")
 
         if (contextSelfScope != null && contextSelfType != null) {
+            contextSelfScope.scope
+
             if (print) LOGGER.info(
                 "Checking[0] $contextSelfScope with ${contextSelfType}, " +
                         "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods.map { it.name }}"
@@ -297,9 +299,12 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         }
 
         // we're missing the self-case... process it now
-        if (contextSelfScope == null && selfTypeZ is ClassType) {
+        if ((contextSelfScope == null || contextSelfType == null) && selfTypeZ is ClassType) {
+            if (print) LOGGER.info("Checking[y] ${selfTypeZ.clazz} with $selfTypeZ")
             val result = callback(selfTypeZ.clazz, selfTypeZ)
             if (result != null) return result
+        } else if (print) {
+            LOGGER.info("Not-Checking[y]: ($contextSelfScope == null && $contextSelfType == null) || $selfTypeZ !is ClassType")
         }
 
         if (!handledLangScope) {

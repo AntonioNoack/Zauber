@@ -470,10 +470,9 @@ class ZauberASTBuilder(
                     readNamedCall(namePath, typeParameters, origin)
                 } else if (tokens.equals(i, "!") && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
                     // explicit macro
-                    val i0 = i - 1 // on macro-name
                     consume("!")
                     val valueParameters = readValueParameters()
-                    evaluateMacro(namePath, typeParameters, valueParameters, origin, i0)
+                    evaluateMacro(namePath, typeParameters, valueParameters, origin)
                 } else if (
                 // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {

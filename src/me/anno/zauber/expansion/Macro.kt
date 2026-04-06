@@ -4,9 +4,12 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOriginShort
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.ast.simple.Ownership
@@ -18,18 +21,20 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.ZauberTokenizer
+import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.specialization.MethodSpecialization
 
 object Macro {
 
-    val macroContentParam = Types.String
     val macroContextParam = Types.MacroContext
 
     fun ZauberASTBuilderBase.evaluateMacro(
@@ -45,9 +50,8 @@ object Macro {
         skipCall() // 'i' is now after call
 
         val content = tokens.extractString(i0 + 2, i - 1)
-        println("Evaluating macro '$content' using $namePath")
         val valueParameters = listOf(Runtime.runtime.createString(content))
-        return evaluateMacroNow(namePath, typeParameters, valueParameters, origin, i0)
+        return evaluateMacroNow(namePath, typeParameters, valueParameters, origin)
     }
 
     private fun createContext(): ResolutionContext {
@@ -59,12 +63,12 @@ object Macro {
 
     private fun ZauberASTBuilderBase.resolveMacroByName(
         namePath: String, typeParameters: List<Type>?,
-        valueParametersTypes: List<Type>, origin: Int
+        valueParameterTypes: List<Type>, origin: Int
     ): ResolvedMethod {
         val scope = currPackage
         val context = createContext()
 
-        val valueParameters1 = valueParametersTypes.map { type ->
+        val valueParameters1 = valueParameterTypes.map { type ->
             ValueParameterImpl(null, type, false)
         } + ValueParameterImpl(null, macroContextParam, false)
 
@@ -116,20 +120,31 @@ object Macro {
         namePath: String,
         typeParameters: List<Type>?,
         valueParameters: List<NamedParameter>,
-        origin: Int, i0: Int
+        origin: Int
     ): Expression {
+        val scope = currPackage
         val context = createContext()
         val valueParameterTypes = valueParameters.map { it.value.resolveReturnType(context) }
-        if (codeIsInsideAMacro(currPackage)) {
+        if (codeIsInsideAMacro(scope)) {
             val macro = resolveMacroByName(namePath, typeParameters, valueParameterTypes, origin)
-            return DynamicMacroExpression(macro, valueParameters, currPackage, origin)
+            // todo how is self found inside CallExpression/NamedCallExpression???
+            val self = ThisExpression(macro.resolved.scope.parent!!, scope, origin)
+            val expected = macro.resolved.valueParameters
+                // ignore last, which is the context
+                .run { subList(0, size - 1) }
+            val valueParameters1 = resolveNamedParameters(expected, valueParameters, scope, origin)
+                ?: throw IllegalStateException(
+                    "Unable to properly reorder parameters for $macro at ${resolveOrigin(origin)}, " +
+                            "${expected.map { it.name }} vs ${valueParameters.map { it.name }}"
+                )
+            return DynamicMacroExpression(self, macro, valueParameters1, imports, generics, scope, origin)
         } else {
             val runtime = Runtime.runtime
-            val instance = runtime.getObjectInstance(getObjectScope(currPackage).typeWithArgs)
+            val instance = runtime.getObjectInstance(getObjectScope(scope).typeWithArgs)
             val valueParameters = valueParameters.mapIndexed { index, parameter ->
                 runtime.evaluateExpression(instance, parameter.value, Flags.NONE, valueParameterTypes[index])
             }
-            return evaluateMacroNow(namePath, typeParameters, valueParameters, origin, i0)
+            return evaluateMacroNow(namePath, typeParameters, valueParameters, origin)
         }
     }
 
@@ -137,22 +152,34 @@ object Macro {
         namePath: String,
         typeParameters: List<Type>?,
         valueParameters: List<Instance>,
-        origin: Int, i0: Int
+        origin: Int
     ): Expression {
-        check(namePath != "GetType") {
-            "GetType is called with proper quotes, so how???"
-        }
-
         val valueParameterTypes = valueParameters.map { it.clazz.type }
         val macro = resolveMacroByName(namePath, typeParameters, valueParameterTypes, origin)
+        return evaluateMacroNow(macro, valueParameters, origin)
+    }
+
+    fun ZauberASTBuilderBase.evaluateMacroNow(
+        macro: ResolvedMethod,
+        valueParameters: List<Instance>, origin: Int,
+    ): Expression = evaluateMacroNow(macro, valueParameters, imports, generics, origin)
+
+    fun evaluateMacroNow(
+        macro: ResolvedMethod,
+        valueParameters: List<Instance>,
+        imports: List<Import>, generics: HashMap<String, GenericType>,
+        origin: Int,
+    ): Expression {
+
+        println("Evaluating macro '$macro' using $valueParameters")
 
         val method = macro.resolved
         val result = executeMacroInRuntime(method, macro, valueParameters)
-        val tokenList = extractTokensFromRuntime(result, method, i0)
+        val tokenList = extractTokensFromRuntime(result, method, origin)
 
         return LazyExpression.eval(
-            tokenList, 0, tokenList.size, isBody = true, currPackage,
-            imports, genericParams.last()
+            tokenList, 0, tokenList.size, isBody = true, macro.codeScope,
+            imports, generics
         )
     }
 
@@ -186,9 +213,9 @@ object Macro {
         return result
     }
 
-    fun ZauberASTBuilderBase.extractTokensFromRuntime(result: BlockReturn, method: Method, i0: Int): TokenList {
+    fun extractTokensFromRuntime(result: BlockReturn, method: Method, origin: Int): TokenList {
         val runtime = Runtime.runtime
-        check(result.type == ReturnType.THROW) { "Failed calling $method at ${tokens.err(i0)}" }
+        check(result.type == ReturnType.THROW) { "Failed calling $method at ${resolveOrigin(origin)}" }
         check(result.value.clazz == runtime.getClass(Types.MacroContext))
 
         val resultIndex = result.value.clazz.properties.indexOfFirst { it.name == "result" }
@@ -197,7 +224,7 @@ object Macro {
 
         // todo allow special character codes to encode where something came from...
         val tokenSource = value.castToString()
-        val pseudoFilename = "${method.name}@${tokens.errShort(i0)}"
+        val pseudoFilename = "${method.name}@${resolveOriginShort(origin)}"
         return ZauberTokenizer(tokenSource, pseudoFilename)
             .tokenize()
     }

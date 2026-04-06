@@ -163,6 +163,12 @@ class Runtime {
     }
 
     fun evaluateExpression(instance: Instance, value: Expression, flags: Int, valueType: Type?): Instance {
+        val constValue = evaluateExpressionUnsafe(instance, value, flags, valueType)
+        check(constValue.type == ReturnType.RETURN) { "Executing $value returned $constValue" }
+        return constValue.value
+    }
+
+    fun evaluateExpressionUnsafe(instance: Instance, value: Expression, flags: Int, valueType: Type?): BlockReturn {
         val method = Method(
             null, false, null,
             emptyList(), emptyList(), value.scope, valueType,
@@ -170,9 +176,7 @@ class Runtime {
             flags, value.origin
         )
         val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
-        val constValue = executeCall(instance, methodSpec, emptyList(), null)
-        check(constValue.type == ReturnType.RETURN) { "Executing $value returned $constValue" }
-        return constValue.value
+        return executeCall(instance, methodSpec, emptyList(), null)
     }
 
     private fun createStringContentArray(instance: Instance, fieldIndex: Int) {

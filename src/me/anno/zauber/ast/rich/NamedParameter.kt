@@ -18,4 +18,5 @@ class NamedParameter(val name: String?, val value: Expression) {
 
     fun clone(scope: Scope): NamedParameter =
         NamedParameter(name, value.clone(scope))
+
 }
