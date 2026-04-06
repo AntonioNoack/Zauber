@@ -20,12 +20,12 @@ class Method(
     returnType: Type?,
     val extraConditions: List<TypeCondition>,
     body: Expression?,
-    keywords: FlagSet,
+    flags: FlagSet,
     origin: Int
 ) : MethodLike(
     selfType, explicitSelfType,
     typeParameters, valueParameters, returnType,
-    scope, name ?: "?", body, keywords, origin
+    scope, name ?: "?", body, flags, origin
 ) {
 
     /**
@@ -39,7 +39,7 @@ class Method(
     var backedField: Field? = null
 
     // todo can inline methods open? explicit inheritance-tree would need to be inlined...
-    fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
+    fun isInline(): Boolean = this@Method.flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {
         val returnType = returnType

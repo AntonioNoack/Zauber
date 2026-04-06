@@ -8,12 +8,17 @@ import org.junit.jupiter.api.fail
 class FieldGetSetTest {
 
     companion object {
-        inline fun <reified V : Throwable> assertThrows(validateMessage: (v: V) -> Unit, run: () -> Unit) {
+
+        fun assertContains(content: String, full: String) {
+            assert(content in full) { "Expected '$content' in '$full'" }
+        }
+
+        inline fun <reified V : Throwable> assertThrowsCheck(validateMessage: (String) -> Unit, run: () -> Unit) {
             try {
                 run()
             } catch (e: Throwable) {
                 check(e is V) { "Incorrect exception type was thrown: $e" }
-                validateMessage(e)
+                validateMessage(e.message ?: "")
                 return
             }
             fail { "Expected an exception to be thrown" }
@@ -61,10 +66,9 @@ class FieldGetSetTest {
 
     @Test
     fun testTrySetImmutableField() {
-        assertThrows<IllegalStateException>({ e ->
-            val message = e.message!!
-            check("Expected Field(" in message)
-            check(".v).x to be mutable" in message)
+        assertThrowsCheck<IllegalStateException>({ message ->
+            assertContains("Expected Field(", message)
+            assertContains(".v).x to be mutable", message)
         }) {
             val code = """
             class Vector(val x: Int, val y: Int)

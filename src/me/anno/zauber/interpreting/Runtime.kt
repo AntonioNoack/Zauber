@@ -1,7 +1,10 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
@@ -21,6 +24,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 class Runtime {
@@ -131,17 +135,37 @@ class Runtime {
                 return vp[parameter.index]
             }
         }*/
+
         check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.scope})" }
+
         if (fieldIndex >= instance.properties.size)
             throw IllegalStateException("Outdated instance? $instance")
+
         if (instance.properties[fieldIndex] == null &&
             clazz.type == Types.StringType &&
             field.name == "content"
-        ) {
-            createStringContentArray(instance, fieldIndex)
-        }
+        ) createStringContentArray(instance, fieldIndex)
+
+        if (instance.properties[fieldIndex] == null &&
+            field.flags.hasFlag(Flags.CONSTEXPR)
+        ) initializeConstant(instance, field, fieldIndex)
+
         return instance.properties[fieldIndex]
             ?: throw IllegalStateException("$instance.$field[$fieldIndex] accessed before initialization")
+    }
+
+    private fun initializeConstant(instance: Instance, field: Field, fieldIndex: Int) {
+        val value = field.initialValue!!
+        val method = Method(
+            null, false, null,
+            emptyList(), emptyList(), value.scope, field.valueType,
+            emptyList(), ReturnExpression(value, null, value.scope, value.origin),
+            field.flags, field.origin
+        )
+        val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
+        val constValue = executeCall(instance, methodSpec, emptyList(), null)
+        check(constValue.type == ReturnType.RETURN) { "Executing $field returned $constValue" }
+        instance.properties[fieldIndex] = constValue.value
     }
 
     private fun createStringContentArray(instance: Instance, fieldIndex: Int) {

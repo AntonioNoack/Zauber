@@ -23,9 +23,9 @@ open class MethodLike(
     var returnType: Type?,
     scope: Scope, name: String,
     var body: Expression?,
-    keywords: FlagSet,
+    flags: FlagSet,
     origin: Int
-) : Member(selfType, explicitSelfType, name, scope, keywords, origin) {
+) : Member(selfType, explicitSelfType, name, scope, flags, origin) {
 
     fun addKeywords(keywords: FlagSet) {
         this.flags = this.flags or keywords
@@ -101,9 +101,9 @@ open class MethodLike(
         }
     }
 
-    fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
-    fun isProtected(): Boolean = flags.hasFlag(Flags.PROTECTED)
-    fun isExternal(): Boolean = flags.hasFlag(Flags.EXTERNAL)
+    fun isPrivate(): Boolean = this@MethodLike.flags.hasFlag(Flags.PRIVATE)
+    fun isProtected(): Boolean = this@MethodLike.flags.hasFlag(Flags.PROTECTED)
+    fun isExternal(): Boolean = this@MethodLike.flags.hasFlag(Flags.EXTERNAL)
 
     var selfTypeIfNecessary: Type? = null
 

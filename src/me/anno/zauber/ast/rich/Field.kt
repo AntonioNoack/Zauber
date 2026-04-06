@@ -12,7 +12,6 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types
 
 class Field(
     scope: Scope,
@@ -128,10 +127,10 @@ class Field(
 
     fun toString(depth: Int): String {
         val self = selfType ?: classScope.pathStr
-        return if (initialValue == null) {
+        return if (initialValue == null || depth < 0) {
             "Field($self.$name)"
         } else {
-            "Field($self.$name=${initialValue.toString(depth)})"
+            "Field($self.$name=${initialValue.toString(depth - 1)})"
         }
     }
 

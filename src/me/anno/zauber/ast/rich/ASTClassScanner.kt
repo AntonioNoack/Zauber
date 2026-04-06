@@ -11,6 +11,7 @@ import me.anno.zauber.ast.rich.FieldGetterSetter.createValueField
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.FieldGetterSetter.needsGetter
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
@@ -38,7 +39,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     companion object {
         private val classPrefixes = arrayOf("data", "enum", "value", "inner")
         private val notValueKeywords = arrayOf(
-            "fun", "val", "var", "lateinit",
+            "fun", "val", "var", "lateinit", "const",
             "public", "private", "protected", "interface",
             "package", "import", "companion",
             "open", "abstract", "override", "operator",
@@ -244,7 +245,9 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             consumeIf("package") -> readPackage()
             consumeIf("import") -> readImport()
             consumeIf("typealias") -> readTypeAlias()
-            consumeIf("var") || consumeIf("val") -> readField()
+            consumeIf("var") ||
+                    consumeIf("val") ||
+                    consumeIf("const") -> readField()
             consumeIf("fun") -> {
                 if (consumeIf("interface")) {
                     val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
@@ -292,6 +295,14 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     open fun readField() {
         val origin = origin(i - 1)
         val isMutable = tokens.equals(i - 1, "var")
+        val isConst = tokens.equals(i - 1, "const")
+        if (isConst) {
+            addFlag(Flags.CONSTEXPR)
+            check(currPackage.isObjectLike()) {
+                "Const fields are only supported in object-likes (object, companion object, package) at ${tokens.err(i - 1)}"
+            }
+        }
+
         val end = findFieldNameEnd()
         val name = tokens.toString(end - 1)
 
@@ -316,6 +327,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 } else if (fieldScope.flags.hasFlag(Flags.LATEINIT)) {
                     SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
                 } else null
+
+            if (isConst) {
+                check(initialValue != null) {
+                    "Const field ${ownerScope.pathStr}.$name must have initial value at ${resolveOrigin(origin)}"
+                }
+            }
 
             val getterVisibility = readVisibility()
             var setterVisibility = getterVisibility

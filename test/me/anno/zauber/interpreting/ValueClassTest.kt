@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrows
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsCheck
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -35,8 +35,7 @@ class ValueClassTest {
      * */
     @Test
     fun testTrySetImmutableField() {
-        assertThrows<IllegalStateException>({ e ->
-            val message = e.message!!
+        assertThrowsCheck<IllegalStateException>({ message ->
             check("Expected Field(" in message)
             check(".v).x to be mutable" in message)
         }) {
