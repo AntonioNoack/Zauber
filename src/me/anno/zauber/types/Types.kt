@@ -4,10 +4,7 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
-import me.anno.zauber.types.impl.UnknownType
+import me.anno.zauber.types.impl.*
 import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 
 val Types by threadLocal { TypesImpl() }
@@ -53,12 +50,14 @@ class TypesImpl {
     }
 
     private fun getType(i: String, genericNames: String, nat: Type): ClassType {
-        val type = ClassType(
-            getScope(i, genericNames, nat),
-            if (genericNames.isEmpty()) emptyList() else null,
-            -1
+        val scope = getScope(i, genericNames, nat)
+        return ClassType(
+            scope,
+            genericNames.indices.map {
+                val param = scope.typeParameters[it]
+                GenericType(scope, param.name)
+            }, -1
         )
-        return type
     }
 
     val AnyType = getType("Any")

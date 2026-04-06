@@ -49,9 +49,6 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val methodReturnType1 = methodReturnType0?.specialize(context)
             val selfType = context.selfType?.specialize(context)
             if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType1 -> $returnType, selfType: $selfType")
-            if (method.name == "copyOf" && selfType == Types.ArrayType) {
-                throw IllegalStateException("How can we copy something without knowing our own array type???")
-            }
             val match = findMemberMatch(
                 method, methodReturnType1, returnType,
                 selfType, typeParameters, valueParameters,
