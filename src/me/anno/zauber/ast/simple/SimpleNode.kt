@@ -87,9 +87,9 @@ class SimpleNode(val graph: SimpleGraph) {
     }
 
     fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
-        SimpleField(type, ownership, graph.numFields++)
+        graph.field(type, ownership)
 
-    fun field(type: Type, scopeIfThis: Scope, scope: Scope, origin: Int): SimpleField {
+    fun thisField(type: Type, scopeIfThis: Scope, scope: Scope, origin: Int): SimpleField {
         if (scopeIfThis.scope.isObjectLike()) {
             // todo are objects comptime?
             val dst = field(scopeIfThis.typeWithArgs, Ownership.COMPTIME)
@@ -136,7 +136,7 @@ class SimpleNode(val graph: SimpleGraph) {
                 instructions.isEmpty()
     }
 
-    fun nextOrSelfIfEmpty(graph: SimpleGraph): SimpleNode {
+    fun nextOrSelfIfEmpty(): SimpleNode {
         if (isEmpty()) return this
         val next = graph.addNode()
         nextBranch = next

@@ -16,7 +16,7 @@ abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Int) : S
     }
 
     override fun execute(): BlockReturn {
-        val value = runtime[field, this]
+        val value = runtime[field]
         return BlockReturn(returnType, value)
     }
 }

@@ -5,6 +5,7 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 
 class SimpleGetField(
@@ -13,6 +14,10 @@ class SimpleGetField(
     val field: Field,
     scope: Scope, origin: Int
 ) : SimpleAssignment(dst, scope, origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(SimpleGetField::class)
+    }
 
     init {
         if (field.classScope.isInterface()) {
@@ -26,14 +31,14 @@ class SimpleGetField(
 
     override fun eval(): BlockReturn {
         val runtime = runtime
-        val self = runtime[self, this]
-        println("[SELF] ${this.self} -> $self")
+        val self = runtime[self]
+        LOGGER.info("[SELF] ${this.self} -> $self")
         if (runtime.isNull(self)) {
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")
         }
-        println("[GET] $self.${field.name}")
-        val value = runtime[self, field]
+        LOGGER.info("[GET] $self.${field.name}")
+        val value = self[field]
         return BlockReturn(ReturnType.VALUE, value)
     }
 }

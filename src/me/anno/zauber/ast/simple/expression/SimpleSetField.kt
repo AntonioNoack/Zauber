@@ -5,6 +5,7 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 
 class SimpleSetField(
@@ -13,6 +14,10 @@ class SimpleSetField(
     val value: SimpleField,
     scope: Scope, origin: Int
 ) : SimpleInstruction(scope, origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(SimpleSetField::class)
+    }
 
     init {
         if (field.classScope.isInterface()) {
@@ -26,9 +31,9 @@ class SimpleSetField(
 
     override fun execute(): BlockReturn? {
         val runtime = runtime
-        val selfInstance = runtime[self, this]
-        val value = runtime[value, this]
-        println("[SET] $selfInstance.${field.name} = $value")
+        val selfInstance = runtime[self]
+        val value = runtime[value]
+        LOGGER.info("[SET] $selfInstance.${field.name} = $value")
         runtime[selfInstance, field] = value.cloneIfValue()
         return null
     }

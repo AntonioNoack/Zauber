@@ -141,7 +141,7 @@ object Macro {
             val runtime = Runtime.runtime
             val instance = runtime.getObjectInstance(getObjectScope(scope).typeWithArgs)
             val valueParameters = valueParameters.mapIndexed { index, parameter ->
-                runtime.evaluateExpression(instance, parameter.value, Flags.NONE, valueParameterTypes[index])
+                instance.evaluateExpression(parameter.value, Flags.NONE, valueParameterTypes[index])
             }
             return evaluateMacroNow(namePath, typeParameters, valueParameters, origin)
         }
@@ -199,7 +199,7 @@ object Macro {
         val owner = runtime.getObjectInstance(ownerScope.typeWithArgs)
         val method1 = MethodSpecialization(method, byMethodCall.specialization)
 
-        val callForFields = Call(runtime.getNull())
+        val callForFields = Call(method)
         runtime.callStack.add(callForFields)
 
         val valueParameters1 = valueParameters + runtime.getObjectInstance(macroContextParam)
@@ -211,7 +211,7 @@ object Macro {
             runtime[valueParameters2[i]] = valueParameters1[i]
         }
 
-        val result = runtime.executeCall(owner, method1, valueParameters2, null)
+        val result = runtime.executeCall(owner, method1, valueParameters2)
 
         @Suppress("Since15")
         check(callForFields == runtime.callStack.removeLast())

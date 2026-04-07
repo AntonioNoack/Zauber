@@ -42,17 +42,14 @@ class SimpleDynamicMacro(
 
     override fun eval(): BlockReturn {
         val runtime = runtime
-        val self = runtime[self, this]
+        val self = runtime[self]
         if (runtime.isNull(self)) {
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")
         }
 
         val expression = evaluateMacroNow(method, valueParameters.map { runtime[it] }, imports, generics, origin)
-        return runtime.evaluateExpressionUnsafe(
-            self, expression, Flags.NONE,
-            method.returnType
-        )
+        return self.evaluateExpressionUnsafe(expression, Flags.NONE, method.returnType)
     }
 
 }

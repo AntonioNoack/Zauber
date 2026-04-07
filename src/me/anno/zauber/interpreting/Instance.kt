@@ -1,10 +1,18 @@
 package me.anno.zauber.interpreting
 
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization
 
 class Instance(
     val clazz: ZClass,
@@ -124,6 +132,52 @@ class Instance(
         val fieldIndex = clazz.properties.indexOfFirst { it.name == fieldName }
         if (fieldIndex < 0) return
         properties[fieldIndex] = runtime.createString(value)
+    }
+
+    operator fun get(field: Field): Instance {
+        val fieldIndex = clazz.properties.indexOf(field)
+        check(fieldIndex != -1) { "Instance $this does not have field $field (${field.scope})" }
+
+        if (fieldIndex >= properties.size)
+            throw IllegalStateException("Outdated instance? $this")
+
+        if (properties[fieldIndex] == null &&
+            clazz.type == Types.String &&
+            field.name == "content"
+        ) createStringContentArray(fieldIndex)
+
+        if (properties[fieldIndex] == null &&
+            field.flags.hasFlag(Flags.CONSTEXPR)
+        ) initializeConstant(field, fieldIndex)
+
+        return properties[fieldIndex]
+            ?: throw IllegalStateException("$this.$field[$fieldIndex] accessed before initialization")
+    }
+
+    private fun initializeConstant(field: Field, fieldIndex: Int) {
+        val value = field.initialValue!!
+        properties[fieldIndex] = evaluateExpression(value, field.flags, field.valueType)
+    }
+
+    fun evaluateExpression(value: Expression, flags: Int, valueType: Type?): Instance {
+        val constValue = evaluateExpressionUnsafe(value, flags, valueType)
+        check(constValue.type == ReturnType.RETURN) { "Executing $value returned $constValue" }
+        return constValue.value
+    }
+
+    private fun createStringContentArray(fieldIndex: Int) {
+        TODO("Create string content array for $this")
+    }
+
+    fun evaluateExpressionUnsafe(value: Expression, flags: Int, valueType: Type?): BlockReturn {
+        val method = Method(
+            null, false, null,
+            emptyList(), emptyList(), value.scope, valueType,
+            emptyList(), ReturnExpression(value, null, value.scope, value.origin),
+            flags, value.origin
+        )
+        val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
+        return runtime.executeCall(this, methodSpec, emptyList())
     }
 
     fun set(fieldName: String, value: Instance) {

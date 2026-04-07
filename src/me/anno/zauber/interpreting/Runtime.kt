@@ -1,15 +1,12 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
@@ -25,7 +22,6 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.utils.CollectionUtils.getOrPutRecursive
 import me.anno.zauber.utils.CollectionUtils.mapArray
 import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
@@ -62,71 +58,16 @@ class Runtime {
         }
     }
 
-    operator fun get(field: SimpleField, hint: SimpleInstruction? = null): Instance {
+    operator fun get(field: SimpleField): Instance {
+        val currCall = callStack.last()
+        return this[currCall, field]
+    }
+
+    operator fun get(call: Call, field: SimpleField): Instance {
         val field = getMergedField(field)
         LOGGER.info("Getting SimpleField $field")
-        val currCall = callStack.last()
-        return currCall.simpleFields[field]
-            ?: throw IllegalStateException("Missing field $field, fields: ${currCall.simpleFields}")
-    }
-
-    operator fun get(instance: Instance, field: Field): Instance {
-        val clazz = instance.clazz
-        val fieldIndex = clazz.properties.indexOf(field)
-        // println("Getting $instance.$field, $fieldIndex")
-        /*if (fieldIndex == -1) {
-            val parameter = field.byParameter
-            if (parameter is Parameter) {
-                val vp = callStack.last().valueParameters
-                check(parameter.index in vp.indices) {
-                    "Expected parameter #${parameter.index} but got only ${vp.size} total"
-                }
-                return vp[parameter.index]
-            }
-        }*/
-
-        check(fieldIndex != -1) { "Instance $instance does not have field $field (${field.scope})" }
-
-        if (fieldIndex >= instance.properties.size)
-            throw IllegalStateException("Outdated instance? $instance")
-
-        if (instance.properties[fieldIndex] == null &&
-            clazz.type == Types.String &&
-            field.name == "content"
-        ) createStringContentArray(instance, fieldIndex)
-
-        if (instance.properties[fieldIndex] == null &&
-            field.flags.hasFlag(Flags.CONSTEXPR)
-        ) initializeConstant(instance, field, fieldIndex)
-
-        return instance.properties[fieldIndex]
-            ?: throw IllegalStateException("$instance.$field[$fieldIndex] accessed before initialization")
-    }
-
-    private fun initializeConstant(instance: Instance, field: Field, fieldIndex: Int) {
-        val value = field.initialValue!!
-        instance.properties[fieldIndex] = evaluateExpression(instance, value, field.flags, field.valueType)
-    }
-
-    fun evaluateExpression(instance: Instance, value: Expression, flags: Int, valueType: Type?): Instance {
-        val constValue = evaluateExpressionUnsafe(instance, value, flags, valueType)
-        check(constValue.type == ReturnType.RETURN) { "Executing $value returned $constValue" }
-        return constValue.value
-    }
-
-    fun evaluateExpressionUnsafe(instance: Instance, value: Expression, flags: Int, valueType: Type?): BlockReturn {
-        val method = Method(
-            null, false, null,
-            emptyList(), emptyList(), value.scope, valueType,
-            emptyList(), ReturnExpression(value, null, value.scope, value.origin),
-            flags, value.origin
-        )
-        val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
-        return executeCall(instance, methodSpec, emptyList(), null)
-    }
-
-    private fun createStringContentArray(instance: Instance, fieldIndex: Int) {
-        TODO("Create string content array for $instance")
+        return call.simpleFields[field]
+            ?: throw IllegalStateException("Missing field $field, fields: ${call.simpleFields}")
     }
 
     operator fun set(field: SimpleField, value: Instance) {
@@ -173,7 +114,7 @@ class Runtime {
         val name = if (bool) "TRUE" else "FALSE"
         val field = fields.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Missing enum Boolean.$name")
-        return this[boolInstance, field]
+        return boolInstance[field]
     }
 
     fun getNull(): Instance = nullInstance
@@ -183,20 +124,20 @@ class Runtime {
     }
 
     fun executeCall(
-        self: Instance, method1: MethodSpecialization,
-        valueParameters: List<SimpleField>,
-        hint: SimpleInstruction? = null
+        self: Instance,
+        methodSpec: MethodSpecialization,
+        valueParameters: List<SimpleField>
     ): BlockReturn {
 
         if (isNull(self)) {
-            throw IllegalArgumentException("Cannot execute $method1 on null instance")
+            throw IllegalArgumentException("Cannot execute $methodSpec on null instance")
         }
 
         val valueParameters = valueParameters.map { valueField ->
-            this[valueField, hint].cloneIfValue()
+            this[valueField].cloneIfValue()
         }
 
-        val method = method1.method
+        val method = methodSpec.method
         if (method.isExternal()) {
             val name = (method as Method).name
             val parameterTypes = method.valueParameters.map { parameter ->
@@ -214,9 +155,10 @@ class Runtime {
             throw IllegalStateException("Missing body for method $method")
         }
 
-        val simpleBody = ASTSimplifier.simplify(method1)
+        val graph = ASTSimplifier.simplify(methodSpec)
 
-        val call = Call(self)
+        val call = Call(method)
+        call.graph = graph
         callStack.add(call)
 
         val class0 = getClass(method.scope.typeWithArgs)
@@ -237,9 +179,9 @@ class Runtime {
             methodScopeInstance.properties[i] = parameter
         }
 
-        for ((selfI, field) in simpleBody.thisFields) {
+        for ((selfI, dst) in graph.thisFields) {
             val (scope, isExplicitSelf) = selfI
-            call.simpleFields[field] = when {
+            call.simpleFields[dst] = when {
                 isExplicitSelf -> {
                     check(scope == method.scope)
                     self
@@ -253,7 +195,16 @@ class Runtime {
             }
         }
 
-        val result = executeBlock(simpleBody.startBlock)
+        for ((capture, dstField) in graph.capturedFields) {
+            val (owner, capturedField) = capture
+            val prevCall = findPrevCall(owner)
+            val prevCallInstanceRef = prevCall.graph.thisFields[SimpleThis(capturedField.classScope, false)]
+                ?: throw IllegalStateException("Missing thisField in $owner")
+            val prevCallInstance = this[prevCall, prevCallInstanceRef]
+            call.simpleFields[dstField] = prevCallInstance[capturedField]
+        }
+
+        val result = executeBlock(graph.startBlock)
 
         @Suppress("Since15")
         check(callStack.removeLast() === call)
@@ -261,8 +212,12 @@ class Runtime {
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 
-    fun getThis(): Instance {
-        return callStack.last().self
+    fun findPrevCall(owner: MethodLike): Call {
+        for (i in callStack.lastIndex downTo 0) {
+            val call = callStack[i]
+            if (call.method == owner) return call
+        }
+        throw IllegalStateException("Missing $owner in callStack")
     }
 
     fun getUnit(): Instance {

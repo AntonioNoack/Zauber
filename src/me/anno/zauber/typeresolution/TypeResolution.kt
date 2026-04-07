@@ -152,16 +152,10 @@ object TypeResolution {
      * */
     fun resolveType(context: ResolutionContext, expr: Expression): Type {
         // if already resolved, just use that type
-        val alreadyResolved = expr.resolvedType
-        if (alreadyResolved != null) {
-            return alreadyResolved
-        } else {
-            LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
-            val type = expr.resolveReturnType(context).resolvedName
-            LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
-            expr.resolvedType = type
-            return type
-        }
+        LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
+        val type = expr.resolveReturnType(context).resolvedName
+        LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
+        return type
     }
 
     fun resolveValueParameters(
@@ -210,7 +204,9 @@ object TypeResolution {
                     if (self != null) {
                         val selfScope = typeToScope(self)!!
                         LOGGER.info("Method-SelfType[${scopeI.pathStr}]: $self -> $selfScope")
-                        return resolveThisScope(selfScope).typeWithoutArgs
+                        return resolveThisScope(selfScope).typeWithArgs
+                    } else if (func != null) {
+                        return scopeI.typeWithArgs
                     }
                 }
                 else -> {}

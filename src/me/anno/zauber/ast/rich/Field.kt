@@ -38,6 +38,7 @@ class Field(
     }
 
     val isMutableEx get() = isMutable || scope.scope.flags.hasFlag(Flags.VALUE)
+    var isCaptured = false
 
     fun needsBackingField(): Boolean {
         val getterBody = getter?.body ?: return true

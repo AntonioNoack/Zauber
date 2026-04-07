@@ -17,10 +17,10 @@ class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope,
     override fun eval(): BlockReturn {
         val runtime = runtime
         val value = when (type) {
-            SpecialValue.SUPER -> runtime.getThis()
             SpecialValue.NULL -> runtime.getNull()
             SpecialValue.TRUE -> runtime.getBool(true)
             SpecialValue.FALSE -> runtime.getBool(false)
+            SpecialValue.SUPER -> throw NotImplementedError("Cannot get just 'super'")
         }
         return BlockReturn(ReturnType.VALUE, value)
     }

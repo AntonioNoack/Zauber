@@ -139,7 +139,7 @@ class SimpleCall(
         // todo we can have multiple selves... how do we handle that?
         //  class A { fun B.call() {}; init { B().call() } }
         val runtime = runtime
-        val self = runtime[self, this]
+        val self = runtime[self]
         if (runtime.isNull(self)) {
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")
@@ -150,7 +150,7 @@ class SimpleCall(
         initializeArrayIfNeeded(self, method)
 
         val method1 = MethodSpecialization(method, specialization)
-        val result = runtime.executeCall(self, method1, valueParameters, this)
+        val result = runtime.executeCall(self, method1, valueParameters)
         return if (result.type == ReturnType.RETURN) {
             BlockReturn(ReturnType.VALUE, result.value)
         } else result

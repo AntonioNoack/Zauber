@@ -65,7 +65,7 @@ Ideally much faster.
 
 ## General Plan
 
-The following is a rough outline, if what this project wants to achieve ultimately:
+The following is a rough outline, what this project wants to achieve ultimately:
 
 ```mermaid
 flowchart TD

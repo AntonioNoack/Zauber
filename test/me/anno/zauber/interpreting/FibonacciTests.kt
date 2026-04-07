@@ -1,12 +1,13 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class FibonacciTests {
 
-    private val stdlib = """
+    private val stdlib = "\n" + """
         package zauber
         object Unit
         class Int {
@@ -60,8 +61,7 @@ class FibonacciTests {
             return b
         }
         val tested = fib(7)
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
         assertEquals(21, value.castToInt())
@@ -83,8 +83,7 @@ class FibonacciTests {
             return b
         }
         val tested = fib(7)
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
         assertEquals(21, value.castToInt())
@@ -113,8 +112,7 @@ class FibonacciTests {
             return fib(i - 1, b, a + b)
         }
         val tested = fib(5)
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -128,8 +126,7 @@ class FibonacciTests {
             else -> fib(i - 1) + fib(i - 2)
         }
         val tested = fib(5)
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -146,8 +143,7 @@ class FibonacciTests {
             return go(i)
         }
         val tested = fib(5)
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -155,6 +151,17 @@ class FibonacciTests {
 
     @Test
     fun testMemoizedFibonacci() {
+        LogManager.disableLoggers(
+            "TypeResolution,CallExpression," +
+                    "ConstructorResolver,MemberResolver," +
+                    "FieldExpression,FieldResolver,ResolvedField,Field," +
+                    "MethodResolver,ResolvedMethod," +
+                    "Inheritance,ASTSimplifier,Runtime," +
+                    "SimpleGetField,SimpleSetField"
+        )
+
+        // todo try to implement property capture on this sample...
+
         val code = """
         fun fib(i: Int): Int {
             val memory = IntArray(i + 1)
@@ -169,8 +176,7 @@ class FibonacciTests {
         val tested = fib(5)
         package zauber
         typealias IntArray = Array<Int>
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -187,8 +193,7 @@ class FibonacciTests {
                 }
         }
         val tested = Fib(5).value
-        $stdlib
-        """.trimIndent()
+        """.trimIndent() + stdlib
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
