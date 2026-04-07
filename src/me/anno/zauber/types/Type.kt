@@ -108,7 +108,7 @@ abstract class Type {
             is NotType -> type.resolve(selfScope).not()
             is UnresolvedType -> {
                 val baseType = resolveTypeByName(findSelfType(scope), className, scope, imports)
-                    ?: throw IllegalStateException("Could not resolve $this in $scope")
+                    ?: throw IllegalStateException("Could not resolve $this in '$scope'")
                 if (!typeParameters.isNullOrEmpty()) {
                     baseType as ClassType
                     check(

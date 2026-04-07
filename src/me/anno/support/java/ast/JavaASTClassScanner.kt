@@ -4,6 +4,7 @@ import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ASTClassScanner
 import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -37,8 +38,21 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
                 collectSuperNames(classScope)
             }
 
+            if (consumeIf("permits")) {
+                skipSuperNames(classScope)
+            }
+
             readClassBody(classScope, readBody)
             popGenericParams()
+        }
+    }
+
+    fun skipSuperNames(classScope: Scope) {
+        val name0 = classScope.superCalls.size
+        collectSuperNames(classScope)
+        while (classScope.superCalls.size > name0) {
+            @Suppress("Since15")
+            classScope.superCalls.removeLast()
         }
     }
 
