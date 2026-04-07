@@ -287,7 +287,7 @@ object ASTSimplifier {
         flow0: FlowResult
     ): FlowResult {
         val field = expr.field.resolved
-        val valueType = expr.run { resolvedType ?: resolveReturnType(context) }
+        val valueType = expr.resolveReturnType(context)
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
         val block1v = block1.value ?: return block1
@@ -303,8 +303,6 @@ object ASTSimplifier {
 
         val selfMethod = getMethod(self.type)
         val valueMethod = block0.graph.method
-
-        println("selfMethod[${self.type}/${valueMethod.name}] '${field.name}': $selfMethod")
 
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
@@ -368,11 +366,23 @@ object ASTSimplifier {
                     (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
         }
 
+        val selfMethod = getMethod(self.type)
+        val valueMethod = block0.graph.method
+
+        // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
+
+        if (selfMethod != null && selfMethod != valueMethod) {
+            field.isCaptured = true
+            /* val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
+             return block1.withValue(dst, block1v.block)
+             */
+            TODO("Create setter for field in another scope")
+        }
+
         if (useSetter) {
-            // todo we may need to resolve owner types, don't we?
-            // todo is context correct?
+            val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val method0 = ResolvedMethod(
-                ParameterList.emptyParameterList(), field.setter!!,
+                ownerTypes, field.setter!!,
                 ParameterList.emptyParameterList(),
                 context, expr.scope, MatchScore(0)
             )
@@ -887,7 +897,7 @@ object ASTSimplifier {
                 block0, flow0, method, valueParameters,
                 method0, selfIfInsideConstructor, scope, origin
             )
-            else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
+            else -> throw NotImplementedError("Simplify call $method at ${resolveOrigin(origin)}")
         }
     }
 
@@ -973,7 +983,7 @@ object ASTSimplifier {
         scope: Scope, origin: Int
     ): List<Expression> {
         return resolveNamedParameters(dst, src, scope, origin)
-            ?: throw IllegalStateException("Failed to fill in call parameters")
+            ?: throw IllegalStateException("Failed to fill in call parameters at ${resolveOrigin(origin)}")
     }
 
 }

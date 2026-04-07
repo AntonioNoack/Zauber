@@ -22,5 +22,9 @@ enum class TokenType {
     CLOSE_CALL,
     CLOSE_BLOCK,
     CLOSE_ARRAY,
+
+    // python-exclusive:
+    INDENT,
+    DEDENT,
     ;
 }

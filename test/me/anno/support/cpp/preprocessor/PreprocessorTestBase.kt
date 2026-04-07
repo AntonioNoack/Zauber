@@ -1,6 +1,5 @@
 package me.anno.support.cpp.preprocessor
 
-import me.anno.support.cpp.preprocessor.Preprocessor
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.tokenizer.TokenList
 import org.junit.jupiter.api.Assertions
