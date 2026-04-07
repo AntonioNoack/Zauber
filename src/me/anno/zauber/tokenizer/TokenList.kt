@@ -303,6 +303,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
                 when (val ci = source[i++]) {
                     'n', 'N', '\n' -> tmp.append('\n')
                     'r', 'R', '\r' -> tmp.append('\r')
+                    't', 'T', '\t' -> tmp.append('\t')
                     'f', 'F', '\u000c' -> tmp.append('\u000c')
                     '"' -> tmp.append('"')
                     '\\' -> tmp.append('\\')
@@ -397,7 +398,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     fun extractString(i0x: Int, i1x: Int): String {
         val i0 = max(getI0(i0x), 0)
-        val i1 = min(getI1(i1x), source.length)
+        val i1 = min(getI1(min(i1x, size - 1)), source.length)
         if (i1 <= i0) return ""
         return source.substring(i0, i1)
     }

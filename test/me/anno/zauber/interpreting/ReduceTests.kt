@@ -52,4 +52,21 @@ class ReduceTests {
         val value = testExecute(code)
         assertEquals(6, value.castToInt())
     }
+
+    @Test
+    fun testSavingMethodReferenceInField() {
+        val code = """
+            val tested: Int get() {
+                val f = Int::plus
+                return f(1, 2)
+            }
+            
+            package zauber
+            class Int {
+                external operator fun plus(other: Int): Int
+            }
+        """.trimIndent()
+        val value = testExecute(code)
+        assertEquals(3, value.castToInt())
+    }
 }

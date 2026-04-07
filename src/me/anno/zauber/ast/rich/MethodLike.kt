@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.generation.Specializations
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -27,8 +28,8 @@ open class MethodLike(
     origin: Int
 ) : Member(selfType, explicitSelfType, name, scope, flags, origin) {
 
-    fun addKeywords(keywords: FlagSet) {
-        this.flags = this.flags or keywords
+    companion object {
+        private val LOGGER = LogManager.getLogger(MethodLike::class)
     }
 
     fun isRecursive(specialization: Specialization): Boolean {
@@ -65,8 +66,9 @@ open class MethodLike(
         // todo check that the specialization contains exactly what we require
         val actualGenerics = specialization.typeParameters.generics
         val expectedGenerics = collectGenerics()
-        check(actualGenerics.toSet() == expectedGenerics.toSet()) {
-            "Mismatched generics for $this: got $specialization, expected $expectedGenerics"
+        val matchesGenerics = actualGenerics.toSet() == expectedGenerics.toSet()
+        if (!matchesGenerics) {
+            LOGGER.warn("Mismatched generics for $this: got $specialization, expected $expectedGenerics")
         }
     }
 
@@ -101,9 +103,9 @@ open class MethodLike(
         }
     }
 
-    fun isPrivate(): Boolean = this@MethodLike.flags.hasFlag(Flags.PRIVATE)
-    fun isProtected(): Boolean = this@MethodLike.flags.hasFlag(Flags.PROTECTED)
-    fun isExternal(): Boolean = this@MethodLike.flags.hasFlag(Flags.EXTERNAL)
+    fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
+    fun isProtected(): Boolean = flags.hasFlag(Flags.PROTECTED)
+    fun isExternal(): Boolean = flags.hasFlag(Flags.EXTERNAL)
 
     var selfTypeIfNecessary: Type? = null
 

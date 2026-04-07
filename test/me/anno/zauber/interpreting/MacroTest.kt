@@ -17,6 +17,7 @@ class MacroTest {
     //  @Macro!() or @Macro""
     //  -
     //  class/type info is then put into MacroContext?
+    //  macros may add types and functions, so we can only put partial types in there...
 
     @Test
     fun testParsingXMLAtCompileTime() {
@@ -83,7 +84,9 @@ class String {
                     "FieldResolver,FieldExpression,Field,ResolvedField," +
                     ""
         )
-        // todo why is it called recursively???
+
+        // todo why can't 'sample' not be resolved??? shouldn't the scope have been copied?
+
         val sourceCode = $$"""
 class Sample(var a: Int, var b: Float)
 
@@ -96,12 +99,12 @@ macro Serialize(input: String, ctx: MacroContext): String {
     val fieldName = input.split(": ")[0]
     val typeName = input.split(": ")[1]
     
-    var result = "var r = \"{\"\n"
+    var result = "var str = \"{\"\n"
     val type = GetType!(typeName)
     for (field in type.fields) {
-        result += "r += \"${field.name}\": \${$fieldName.${field.name}},\n"
+        result += "str += \"\\\"${field.name}\\\": \${$fieldName.${field.name}},\"\n"
     }
-    result += "r += \"}\"; r"
+    result += "str += \"}\"\nstr"
     return ctx.parse<String>(result)
 }
 
@@ -125,13 +128,12 @@ interface Iterable<V> {
 interface List<V>: Iterable<V> {
     val size: Int
     operator fun get(index: Int): V
-    override fun iterator(): Iterator<V> = ListIterator<V>(this)
     
     operator fun component1(): V = get(0)
     operator fun component2(): V = get(1)
 }
 
-class ListIterator<V>(val list: List<V>): Iterator<V> {
+class ArrayIterator<V>(val list: Array<V>): Iterator<V> {
     var index = 0
     fun hasNext() = index < list.size
     fun next(): V = list[index++]
@@ -151,12 +153,13 @@ fun <V> listOf(vararg v: V) = v
 class Array<V>(override val size: Int): List<V> {
     external override operator fun get(index: Int): V
     external operator fun set(index: Int, value: V)
-    override fun iterator(): Iterator<V> = ListIterator<V>(this)
+    override fun iterator() = ArrayIterator<V>(this)
 }
 
 class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
+    operator fun inc() = this + 1
 }
 
 class String {
@@ -165,7 +168,9 @@ class String {
 }
 
 class Field(val name: String, val type: Type)
-class ClassType<V>(val fields: List<Field>)
+class ClassType<V>(val fields: Array<Field>)
+
+enum class Boolean { TRUE, FALSE }
         """.trimIndent()
         val value = testExecute(sourceCode)
         val expectedResult = """

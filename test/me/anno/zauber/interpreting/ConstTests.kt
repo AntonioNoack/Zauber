@@ -1,8 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertContains
-import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsCheck
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -12,18 +11,20 @@ class ConstTests {
     // out of order evaluation: anything const can be calculated at comptime
     // -> we allow criss-cross references
 
+    /**
+     * order doesn't matter for const variables
+     * */
     @Test
     fun testConstWithCrissCrossReferences() {
+        // todo why does this fail when executed together with other tests?
         val value = testExecute(
             """
             object A {
-                // order doesn't matter
                 const v2: Int = B.v1 + 2
                 const v0: Int = 17
                 const v1: Int = B.v0 + 1
             }
             object B {
-                // order doesn't matter
                 const v1: Int = A.v1 + 4
                 const v0: Int = A.v0 + 3
                 const v2: Int = A.v2 + 5
@@ -64,10 +65,7 @@ class ConstTests {
 
     @Test
     fun testCannotWriteConstValue() {
-        assertThrowsCheck<IllegalStateException>({ message ->
-            assertContains("Expected Field(", message)
-            assertContains(".x to be mutable", message)
-        }) {
+        assertThrowsContains<IllegalStateException>(listOf("Expected Field(", ".x to be mutable")) {
             testExecute(
                 """
             value class Vector(val x: Int, val y: Int)
@@ -91,10 +89,7 @@ class ConstTests {
 
     @Test
     fun testConstMustHaveInitialValue() {
-        assertThrowsCheck<IllegalStateException>({ message ->
-            assertContains("Const field ", message)
-            assertContains(".v0 must have initial value", message)
-        }) {
+        assertThrowsContains<IllegalStateException>(listOf("Const field ", ".v0 must have initial value")) {
             testExecute(
                 """
             const v0: Int
@@ -109,9 +104,7 @@ class ConstTests {
      * */
     @Test
     fun testConstMustBeInObjectLike() {
-        assertThrowsCheck<IllegalStateException>({ message ->
-            assertContains("Const fields are only supported in object-likes", message)
-        }) {
+        assertThrowsContains<IllegalStateException>("Const fields are only supported in object-likes") {
             testExecute(
                 """
             class A {

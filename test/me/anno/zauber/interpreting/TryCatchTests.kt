@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
@@ -255,6 +256,23 @@ class TryCatchTests {
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
         assertEquals(listOf("0", "1", "2", "3"), runtime.printed)
+    }
+
+    @Test
+    fun testReturnInsideFinally() {
+        assertThrowsContains<IllegalStateException>("Finally-block for return must not return itself") {
+            val code = """
+        fun test(): Int {
+            try {
+                return 1
+            } finally {
+                return 2
+            }
+        }
+        val tested = test()
+        """.trimIndent()
+            testExecute(code)
+        }
     }
 
 }

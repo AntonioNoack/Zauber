@@ -13,7 +13,7 @@ class FieldGetSetTest {
             assert(content in full) { "Expected '$content' in '$full'" }
         }
 
-        inline fun <reified V : Throwable> assertThrowsCheck(validateMessage: (String) -> Unit, run: () -> Unit) {
+        inline fun <reified V : Throwable> assertThrowsMessage(validateMessage: (String) -> Unit, run: () -> Unit) {
             try {
                 run()
             } catch (e: Throwable) {
@@ -22,6 +22,24 @@ class FieldGetSetTest {
                 return
             }
             fail { "Expected an exception to be thrown" }
+        }
+
+        inline fun <reified V : Throwable> assertThrowsContains(listOf: List<String>, run: () -> Unit) {
+            try {
+                run()
+            } catch (e: Throwable) {
+                check(e is V) { "Incorrect exception type was thrown: $e" }
+                val message = e.message ?: ""
+                for (part in listOf) {
+                    assertContains(part, message)
+                }
+                return
+            }
+            fail { "Expected an exception to be thrown" }
+        }
+
+        inline fun <reified V : Throwable> assertThrowsContains(part: String, run: () -> Unit) {
+            assertThrowsContains<V>(listOf(part), run)
         }
     }
 
@@ -66,7 +84,7 @@ class FieldGetSetTest {
 
     @Test
     fun testTrySetImmutableField() {
-        assertThrowsCheck<IllegalStateException>({ message ->
+        assertThrowsMessage<IllegalStateException>({ message ->
             assertContains("Expected Field(", message)
             assertContains(".v).x to be mutable", message)
         }) {
