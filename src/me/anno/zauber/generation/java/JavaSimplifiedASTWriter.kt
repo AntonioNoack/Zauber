@@ -14,9 +14,7 @@ import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.java.JavaSourceGenerator.appendType
-import me.anno.zauber.generation.java.JavaSourceGenerator.comment
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
@@ -48,17 +46,6 @@ object JavaSimplifiedASTWriter {
     }
 
     fun noThis(field: SimpleField): Boolean {
-        var field = field
-        while (true) {
-            field = field.mergeInfo?.dst ?: break
-        }
-        val thisScope = field.scopeIfIsThis
-        if (thisScope != null) {
-            val scopeType = thisScope.scopeType
-            if (scopeType != null && (scopeType.isMethodType() || scopeType.isInsideExpression())) {
-                return true
-            }
-        }
         return false
     }
 
@@ -67,28 +54,7 @@ object JavaSimplifiedASTWriter {
         while (true) {
             field = field.mergeInfo?.dst ?: break
         }
-        val thisScope = field.scopeIfIsThis
-        if (thisScope != null) {
-            val scopeType = thisScope.scopeType
-            if (scopeType == ScopeType.METHOD || scopeType == ScopeType.CONSTRUCTOR ||
-                (scopeType != null && scopeType.isInsideExpression())
-            ) {
-                // parameter level -> no prefix needed
-                comment { append(thisScope.pathStr) }
-            } else {
-                val isUnique = scopeType == null || scopeType == ScopeType.PACKAGE || scopeType.isObject()
-                if (isUnique) {
-                    // todo get object/package name with specialization...
-                    appendType(field.type, thisScope /* not ideal */, true)
-                } else {
-                    // todo find 'this' of correct level in scope
-                    append("this")
-                    comment { append(thisScope.pathStr) }
-                }
-            }
-        } else {
-            append("tmp").append(field.id)
-        }
+        append("tmp").append(field.id)
         return this
     }
 
@@ -381,7 +347,7 @@ object JavaSimplifiedASTWriter {
 
     fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
         if (self != null) {
-            val needsCast = self.type != field.selfType && self.scopeIfIsThis == null
+            val needsCast = self.type != field.selfType
             if (needsCast && field.selfType != null) {
                 builder.append("((")
                 appendType(field.selfType, exprScope, true)

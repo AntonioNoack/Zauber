@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.generation.c.CSourceGenerator.isValueType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
@@ -81,11 +82,27 @@ class SimpleNode(val graph: SimpleGraph) {
         instructions.add(expr)
     }
 
+    fun add0(expr: SimpleInstruction) {
+        instructions.add(0, expr)
+    }
+
     fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
         SimpleField(type, ownership, graph.numFields++)
 
-    fun field(type: Type, scopeIfThis: Scope): SimpleField =
-        SimpleField(type, getOwnership(type), graph.numFields++, scopeIfThis)
+    fun field(type: Type, scopeIfThis: Scope, scope: Scope, origin: Int): SimpleField {
+        if (scopeIfThis.scope.isObjectLike()) {
+            // todo are objects comptime?
+            val dst = field(scopeIfThis.typeWithArgs, Ownership.COMPTIME)
+            add(SimpleGetObject(dst, scopeIfThis, scope, origin))
+            return dst
+        } else {
+            val isExplicitSelf = false
+            val isAmbiguous = scopeIfThis.selfAsMethod?.explicitSelfType == true
+            check(!isAmbiguous) { "$scopeIfThis is ambiguous" }
+
+            return graph.thisFields.getOrPut(SimpleThis(scopeIfThis, isExplicitSelf)) { field(type) }
+        }
+    }
 
     override fun toString(): String {
         val builder = StringBuilder()

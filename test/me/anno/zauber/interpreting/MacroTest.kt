@@ -171,6 +171,7 @@ class Field(val name: String, val type: Type)
 class ClassType<V>(val fields: Array<Field>)
 
 enum class Boolean { TRUE, FALSE }
+object Unit
         """.trimIndent()
         val value = testExecute(sourceCode)
         val expectedResult = """

@@ -10,9 +10,7 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleNode
-import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
-import me.anno.zauber.ast.simple.expression.SimpleGetField
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -20,7 +18,6 @@ import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -49,7 +46,6 @@ class Runtime {
     private val nullInstance = Instance(getClass(NullType), emptyArray(), nextInstanceId())
 
     val callStack = ArrayList<Call>()
-    val thisStack = ArrayList<This>()
     val externalMethods = HashMap<ExternalKey, ExternalMethod>()
     val printed = ArrayList<String>()
 
@@ -68,64 +64,10 @@ class Runtime {
 
     operator fun get(field: SimpleField, hint: SimpleInstruction? = null): Instance {
         val field = getMergedField(field)
-        val selfScope = field.scopeIfIsThis
-        LOGGER.info("Getting SimpleField $field, selfScope: $selfScope")
-        return if (selfScope != null) getSelf(field, selfScope, hint) else {
-            val currCall = callStack.last()
-            currCall.simpleFields[field]
-                ?: throw IllegalStateException("Missing field $field, fields: ${currCall.simpleFields}")
-        }
-    }
-
-    private fun getSelf(field: SimpleField, selfScope: Scope, hint: SimpleInstruction?): Instance {
-        val self = thisStack.last()
-        var selfScope = selfScope
-        if (selfScope.selfAsMethod?.explicitSelfType == true) {
-            // "this" inside methods with self-type is ambiguous :(
-            //  could actually be one of two things:
-            //  - method scope
-            //  - receiver type
-            // not: outer type (has diff scope)
-
-            check(self.scope == selfScope) { "Expected scope to match..., ${self.scope} vs $selfScope" }
-            println("fieldType for self: ${field.type} (${field.type.javaClass.simpleName}, ${(field.type as? ClassType)?.clazz?.scopeType})")
-
-            val fieldBelongsToMethod = if (field.type is ClassType) {
-                if (field.type.clazz.isMethodType()) true
-                else if (field.type.clazz.isClassLike()) false
-                else TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
-            } else when (hint) {
-                // check if field belongs to a method...
-                is SimpleGetField -> hint.field.scope.isMethodType()
-                is SimpleCall -> {
-                    TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
-                }
-                else -> {
-                    TODO("self[$selfScope] is unclear: is it the method, or the receiver type? ${selfScope.selfAsMethod!!.selfType}, hint: $hint")
-                }
-            }
-            selfScope = if (fieldBelongsToMethod) {
-                selfScope
-            } else {
-                typeToScope(selfScope.selfAsMethod!!.selfType!!)!!
-            }
-            println("fieldType for self -> $selfScope, self.scope: ${self.scope}, self.instance: ${self.instance}")
-        }
-        return when {
-            self.scope == selfScope -> self.instance
-            selfScope.isObjectLike() -> getObjectInstance(selfScope.typeWithArgs)
-            else -> getSelfFromCallstack(selfScope)
-        }
-    }
-
-    private fun getSelfFromCallstack(selfScope: Scope): Instance {
-        return callStack.last().scopes.getOrPut(selfScope) {
-            check(!selfScope.isClassLike()) {
-                "Creating instance for $selfScope, should be defined already! Options: ${callStack.last().scopes}"
-            }
-            val type = selfScope.typeWithoutArgs
-            getClass(type).createInstance()
-        }
+        LOGGER.info("Getting SimpleField $field")
+        val currCall = callStack.last()
+        return currCall.simpleFields[field]
+            ?: throw IllegalStateException("Missing field $field, fields: ${currCall.simpleFields}")
     }
 
     operator fun get(instance: Instance, field: Field): Instance {
@@ -277,7 +219,8 @@ class Runtime {
         val call = Call(self)
         callStack.add(call)
 
-        val methodScopeInstance = getClass(method.scope.typeWithoutArgs).createInstance()
+        val class0 = getClass(method.scope.typeWithArgs)
+        val methodScopeInstance = class0.createInstance()
         call.scopes[method.scope] = methodScopeInstance
         for (i in valueParameters.indices) {
             val parameter = valueParameters[i]
@@ -294,18 +237,23 @@ class Runtime {
             methodScopeInstance.properties[i] = parameter
         }
 
-        val oldThisStack = ArrayList(thisStack)
-        thisStack.clear()
-
-        val thisScope = if (method.explicitSelfType) method.scope else method.scope.parent!!
-        thisStack.add(This(self, thisScope))
-
-        val result = try {
-            executeBlock(simpleBody.startBlock)
-        } finally {
-            thisStack.clear()
-            thisStack.addAll(oldThisStack)
+        for ((selfI, field) in simpleBody.thisFields) {
+            val (scope, isExplicitSelf) = selfI
+            call.simpleFields[field] = when {
+                isExplicitSelf -> {
+                    check(scope == method.scope)
+                    self
+                }
+                scope.isClassLike() -> self
+                scope == method.scope -> methodScopeInstance
+                else -> {
+                    // just create a temporary scope...
+                    getClass(scope.typeWithArgs).createInstance()
+                }
+            }
         }
+
+        val result = executeBlock(simpleBody.startBlock)
 
         @Suppress("Since15")
         check(callStack.removeLast() === call)
@@ -332,7 +280,6 @@ class Runtime {
         var block = block0
         loop@ while (true) {
 
-            val tss = thisStack.size
             val instructions = block.instructions
 
             if (LOGGER.isDebugEnabled) for (i in instructions.indices) {
@@ -340,44 +287,37 @@ class Runtime {
                 LOGGER.debug("Block[$i] $instr")
             }
 
-            try {
-                var lastValue: BlockReturn?
-                for (i in instructions.indices) {
-                    val instr = instructions[i]
-                    if (LOGGER.isDebugEnabled) LOGGER.debug("Executing $instr")
-                    lastValue = instr.execute()
-                    if (lastValue != null) {
-                        if (lastValue.type == ReturnType.THROW && instr is SimpleCallable) {
-                            val handler = instr.onThrown
-                            if (handler != null) {
-                                this[handler.value] = lastValue.value
-                                block = handler.block
-                                continue@loop
-                            }
-                        }
-
-                        if (lastValue.type != ReturnType.VALUE) {
-                            when (lastValue.type) {
-                                ReturnType.YIELD -> {
-                                    TODO(
-                                        "yield: store all fields in a (new?) lambda instance, " +
-                                                "return without handlers"
-                                    )
-                                }
-                                // handlers inside the function all were processed already :3
-                                ReturnType.RETURN, ReturnType.THROW -> {
-                                    LOGGER.info("Exited with $lastValue (${instr.javaClass.simpleName}) from ${block0.graph.method}")
-                                    return lastValue
-                                }
-                                else -> throw NotImplementedError("Unknown exit type")
-                            }
+            var lastValue: BlockReturn?
+            for (i in instructions.indices) {
+                val instr = instructions[i]
+                if (LOGGER.isDebugEnabled) LOGGER.debug("Executing $instr")
+                lastValue = instr.execute()
+                if (lastValue != null) {
+                    if (lastValue.type == ReturnType.THROW && instr is SimpleCallable) {
+                        val handler = instr.onThrown
+                        if (handler != null) {
+                            this[handler.value] = lastValue.value
+                            block = handler.block
+                            continue@loop
                         }
                     }
-                }
-            } finally {
-                while (thisStack.size > tss) {
-                    @Suppress("Since15")
-                    thisStack.removeLast()
+
+                    if (lastValue.type != ReturnType.VALUE) {
+                        when (lastValue.type) {
+                            ReturnType.YIELD -> {
+                                TODO(
+                                    "yield: store all fields in a (new?) lambda instance, " +
+                                            "return without handlers"
+                                )
+                            }
+                            // handlers inside the function all were processed already :3
+                            ReturnType.RETURN, ReturnType.THROW -> {
+                                LOGGER.info("Exited with $lastValue (${instr.javaClass.simpleName}) from ${block0.graph.method}")
+                                return lastValue
+                            }
+                            else -> throw NotImplementedError("Unknown exit type")
+                        }
+                    }
                 }
             }
 

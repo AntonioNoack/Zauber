@@ -25,7 +25,7 @@ class TryCatchBlock(
 
     override fun resolveThrownType(context: ResolutionContext): Type {
         val base = tryBody.resolveThrownType(context)
-        val fallthrough = andTypes(listOf(base) + catches.map { it.param.type.not() })
+        val fallthrough = andTypes(listOf(base) + catches.map { it.parameter.type.not() })
         return unionTypes(fallthrough, finally?.resolveThrownType(context) ?: Types.Nothing)
     }
 
@@ -54,18 +54,18 @@ class TryCatchBlock(
 
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
         Catch(
-            it.param.clone(it.param.scope /* I don't think we should override this */),
+            it.parameter.clone(it.parameter.scope /* I don't think we should override this */),
             it.body.clone(scope), it.origin
         )
     }, finally?.clone(scope), scope, origin)
 
     override fun isResolved(): Boolean = tryBody.isResolved() &&
-            catches.all { it.param.type.isResolved() && it.body.isResolved() } &&
+            catches.all { it.parameter.type.isResolved() && it.body.isResolved() } &&
             (finally == null || finally.isResolved())
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         return TryCatchBlock(tryBody.resolve(context), catches.map {
-            Catch(it.param, it.body.resolve(context), it.origin)
+            Catch(it.parameter, it.body.resolve(context), it.origin)
         }, finally?.resolve(context), scope, origin)
     }
 
@@ -73,7 +73,7 @@ class TryCatchBlock(
         val builder = StringBuilder()
         builder.append("try { ").append(tryBody).append(" }")
         for (catch in catches) {
-            builder.append(" catch(${catch.param}) { ")
+            builder.append(" catch(${catch.parameter}) { ")
                 .append(catch.body)
                 .append(" }")
         }
