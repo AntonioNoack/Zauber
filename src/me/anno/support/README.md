@@ -9,10 +9,10 @@ The goal is to use libraries from other languages:
 
 If we can support Python for example,
 we get on equal footing to Nvidia's main libraries.
-
 If we can support Rust, we get all of Bevy.
-
 If we support C++, we might get Boost.
+
+If we don't support parsing them perfectly, we could still use this to auto-generate bindings for them.
 
 ## Planned Language Support
 - C
