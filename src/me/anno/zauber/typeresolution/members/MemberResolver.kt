@@ -360,7 +360,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
             candidateScope = candidateScope.parentIfSameFile ?: break
         }
         if (candidateScope == context.selfType) {
-            println("Found context.selfType: $candidateScope")
+            // println("Found context.selfType: $candidateScope")
             return context.selfType
         }
         // if candidateScope is method & has self type, use that instead
@@ -368,7 +368,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         if (selfAsMethod != null) {
             val selfType = selfAsMethod.selfType
             if (selfType != null) {
-                println("Found method.selfType: $selfType")
+                // println("Found method.selfType: $selfType")
                 return selfType
             }
         }

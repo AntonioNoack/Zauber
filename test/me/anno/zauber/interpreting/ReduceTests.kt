@@ -34,23 +34,21 @@ class ReduceTests {
 
     @Test
     fun testArrayReduceWithLambda() {
-        val code = """
-                val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }
-                $stdlib
-            """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(6, value.castToInt())
+        val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
+        assertEquals(6, testExecute(code).castToInt())
+    }
+
+    @Test
+    fun testSimpleArrayReduceWithLambda() {
+        val code = "val tested = arrayOf(1, 2, 3).reduce { a: Int, b: Int -> a + b }\n$stdlib"
+        assertEquals(6, testExecute(code).castToInt())
     }
 
     @Test
     fun testArrayReduceWithTypeMethod() {
         // todo why is the baseType Any instead of Int???
-        val code = """
-                val tested = arrayOf(1, 2, 3).reduce(Int::plus)
-                $stdlib
-            """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(6, value.castToInt())
+        val code = "val tested = arrayOf(1, 2, 3).reduce(Int::plus)\n$stdlib"
+        assertEquals(6, testExecute(code).castToInt())
     }
 
     @Test

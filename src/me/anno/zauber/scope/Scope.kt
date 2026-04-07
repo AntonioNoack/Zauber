@@ -110,7 +110,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     val typeWithoutArgs = ClassType(this, null)
 
     val typeWithArgs by lazy {
-        if (!hasTypeParameters && scopeType?.isInsideExpression() == true) {
+        if (!hasTypeParameters && scopeType?.needsTypeParams() != true) {
             typeParameters = emptyList()
             hasTypeParameters = true
         }

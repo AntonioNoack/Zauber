@@ -205,7 +205,7 @@ abstract class ZauberASTBuilderBase(
         // to do we neither know type nor initial value :/, both come from the called function/set variable
         val field = currPackage.addField( // this is more of a parameter...
             null, false, isMutable = false, null,
-            name, null, null, Flags.NONE, origin
+            name, type, null, Flags.NONE, origin
         )
         val variable = LambdaVariable(type, field)
         field.byParameter = variable

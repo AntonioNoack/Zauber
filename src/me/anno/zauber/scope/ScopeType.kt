@@ -72,6 +72,12 @@ enum class ScopeType {
         }
     }
 
+    fun needsTypeParams(): Boolean {
+        if (isInsideExpression()) return false
+        if (this == INLINE_CLASS) return false
+        return true
+    }
+
     fun isMethodType(): Boolean {
         return when (this) {
             METHOD, CONSTRUCTOR,
