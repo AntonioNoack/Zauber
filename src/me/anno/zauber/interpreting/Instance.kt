@@ -131,4 +131,8 @@ class Instance(
         if (fieldIndex < 0) return
         properties[fieldIndex] = value
     }
+
+    fun hasProperty(fieldName: String): Boolean {
+        return clazz.properties.any { it.name == fieldName }
+    }
 }

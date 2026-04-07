@@ -36,6 +36,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 object Macro {
 
     val macroContextParam = Types.MacroContext
+    var depth = 0
 
     fun ZauberASTBuilderBase.evaluateMacro(
         namePath: Expression, typeParameters: List<Type>?,
@@ -49,7 +50,7 @@ object Macro {
         val i0 = i - 1 // 'i0' is on name, 'i' is on virtual '('
         skipCall() // 'i' is now after call
 
-        val content = tokens.extractString(i0 + 2, i - 1)
+        val content = tokens.extractString(i0 + 2, i - 2)
         val valueParameters = listOf(Runtime.runtime.createString(content))
         return evaluateMacroNow(namePath, typeParameters, valueParameters, origin)
     }
@@ -117,10 +118,8 @@ object Macro {
     }
 
     fun ZauberASTBuilderBase.evaluateMacro(
-        namePath: String,
-        typeParameters: List<Type>?,
-        valueParameters: List<NamedParameter>,
-        origin: Int
+        namePath: String, typeParameters: List<Type>?,
+        valueParameters: List<NamedParameter>, origin: Int
     ): Expression {
         val scope = currPackage
         val context = createContext()
@@ -149,10 +148,8 @@ object Macro {
     }
 
     fun ZauberASTBuilderBase.evaluateMacroNow(
-        namePath: String,
-        typeParameters: List<Type>?,
-        valueParameters: List<Instance>,
-        origin: Int
+        namePath: String, typeParameters: List<Type>?,
+        valueParameters: List<Instance>, origin: Int
     ): Expression {
         val valueParameterTypes = valueParameters.map { it.clazz.type }
         val macro = resolveMacroByName(namePath, typeParameters, valueParameterTypes, origin)
@@ -165,13 +162,18 @@ object Macro {
     ): Expression = evaluateMacroNow(macro, valueParameters, imports, generics, origin)
 
     fun evaluateMacroNow(
-        macro: ResolvedMethod,
-        valueParameters: List<Instance>,
+        macro: ResolvedMethod, valueParameters: List<Instance>,
         imports: List<Import>, generics: HashMap<String, GenericType>,
         origin: Int,
     ): Expression {
 
-        println("Evaluating macro '$macro' using $valueParameters")
+        depth++
+        println("[$depth] Evaluating macro '${macro.resolved.name}' using $valueParameters")
+
+        if (depth >= 3) throw IllegalStateException("Macro-death-spiral")
+
+        // todo we should be able to cache valueParameters...
+        //  only if they're immutable though... maybe we can enforce all parameters to be values?
 
         val method = macro.resolved
         val result = executeMacroInRuntime(method, macro, valueParameters)
@@ -180,7 +182,10 @@ object Macro {
         return LazyExpression.eval(
             tokenList, 0, tokenList.size, isBody = true, macro.codeScope,
             imports, generics
-        )
+        ).apply {
+            println("[$depth] Finished macro '${macro.resolved.name}' using $valueParameters")
+            depth--
+        }
     }
 
     fun executeMacroInRuntime(

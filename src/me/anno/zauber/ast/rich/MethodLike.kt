@@ -66,7 +66,7 @@ open class MethodLike(
         val actualGenerics = specialization.typeParameters.generics
         val expectedGenerics = collectGenerics()
         check(actualGenerics.toSet() == expectedGenerics.toSet()) {
-            "Mismatched generics for $this: $specialization, expected $expectedGenerics"
+            "Mismatched generics for $this: got $specialization, expected $expectedGenerics"
         }
     }
 

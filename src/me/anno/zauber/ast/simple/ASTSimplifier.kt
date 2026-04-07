@@ -3,13 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.GetClassFromTypeExpression
-import me.anno.zauber.ast.rich.expression.GetClassFromValueExpression
-import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -298,11 +292,11 @@ object ASTSimplifier {
         val self = block1v.value
 
         val dst = block1v.block.field(valueType)
-        // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useGetter =
+        val useGetter = if (expr.field.resolved.isOpen()) true else {
             !expr.field.isBackingField && (
                     field.hasCustomGetter || field.isLateinit() ||
                             !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+        }
 
         // println("use getter for $field: $useGetter")
 
@@ -343,9 +337,11 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val value = block2v.value
 
-        // todo also, if the field is marked as open (and has children), or if the class is an interface
-        val useSetter = !expr.field.isBackingField &&
-                (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+        val useSetter = if (expr.field.resolved.isOpen()) true else {
+            !expr.field.isBackingField &&
+                    (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+        }
+
         if (useSetter) {
             // todo we may need to resolve owner types, don't we?
             // todo is context correct?
@@ -930,7 +926,7 @@ object ASTSimplifier {
 
         val flow2 = flow1.joinError(throwFlow)
             .withValue(result, block0)
-        println("joining: $flow1 x $throwFlow = $flow2")
+        // println("joining: $flow1 x $throwFlow = $flow2")
         return flow2
     }
 

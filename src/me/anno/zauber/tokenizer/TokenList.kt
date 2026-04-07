@@ -5,6 +5,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Import
 import kotlin.math.max
+import kotlin.math.min
 
 class TokenList(val source: CharSequence, val fileName: String) {
 
@@ -395,8 +396,9 @@ class TokenList(val source: CharSequence, val fileName: String) {
         }
 
     fun extractString(i0x: Int, i1x: Int): String {
-        val i0 = getI0(i0x)
-        val i1 = getI1(i1x)
+        val i0 = max(getI0(i0x), 0)
+        val i1 = min(getI1(i1x), source.length)
+        if (i1 <= i0) return ""
         return source.substring(i0, i1)
     }
 }

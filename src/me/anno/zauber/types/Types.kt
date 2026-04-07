@@ -99,5 +99,6 @@ class TypesImpl {
     val UnionType = getType("UnionType")
     val ClassType = getType("ClassType", "V", NullableAny)
     val GenericType = getType("GenericType")
+    val Field = getType("Field")
 
 }

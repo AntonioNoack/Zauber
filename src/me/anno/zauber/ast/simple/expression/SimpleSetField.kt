@@ -13,6 +13,13 @@ class SimpleSetField(
     val value: SimpleField,
     scope: Scope, origin: Int
 ) : SimpleInstruction(scope, origin) {
+
+    init {
+        if (field.classScope.isInterface()) {
+            throw IllegalStateException("Cannot just set field of an interface, must use getter, $field")
+        }
+    }
+
     override fun toString(): String {
         return "$self?[${field.selfType}].${field.name} = $value"
     }

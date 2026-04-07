@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.Inheritance
@@ -77,6 +78,15 @@ class ZClass(val type: Type) {
             throw IllegalStateException("Type to create must be concrete and fully specified ($type)")
         }
         return Instance(this, arrayOfNulls(properties.size), runtime.nextInstanceId())
+    }
+
+    fun createArray(items: Array<Instance>): Instance {
+        val rt = runtime
+        val clazz = rt.getClass(Types.Array.withTypeParameter(type))
+        val result = clazz.createInstance()
+        result.set("size", rt.createInt(items.size))
+        result.rawValue = items
+        return result
     }
 
     fun isSubTypeOf(expectedType: ZClass): Boolean {

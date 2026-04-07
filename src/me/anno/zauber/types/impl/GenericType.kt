@@ -13,7 +13,7 @@ class GenericType(val scope: Scope, val name: String) : Type() {
 
     val byTypeParameter: Parameter
         get() = scope.typeParameters.firstOrNull { it.name == name /*&& it.scope == scope -> automatically filtered for */ }
-            ?: throw IllegalStateException("Missing generic parameter '$name' in ${scope.pathStr}")
+            ?: throw IllegalStateException("Missing generic parameter '$name' in ${scope.pathStr}, options: ${scope.typeParameters.map { it.name }}")
 
     val superBounds: Type
         get() = byTypeParameter.type

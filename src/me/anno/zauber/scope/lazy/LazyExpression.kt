@@ -48,7 +48,8 @@ class LazyExpression(
 
     override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)
     override fun clone(scope: Scope): Expression = value.clone(scope)
-    override fun toStringImpl(depth: Int): String = value.toStringImpl(depth)
+    override fun toStringImpl(depth: Int): String = "LazyExpression(${tokens.extractString()})"
+
     override fun resolveImpl(context: ResolutionContext): Expression = value.resolveImpl(context)
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean =

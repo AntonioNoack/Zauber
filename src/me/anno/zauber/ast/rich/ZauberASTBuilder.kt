@@ -763,7 +763,7 @@ class ZauberASTBuilder(
     override fun readExpression(minPrecedence: Int): Expression {
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
-        println("expr from prefix[$i < ${tokens.size}]: $expr")
+        // println("expr from prefix[$i < ${tokens.size}]: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
@@ -796,7 +796,6 @@ class ZauberASTBuilder(
             if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
 
             val op = operators[symbol]
-            println("lhs: $expr, symbol: $symbol, op: $op")
             if (op == null) {
                 // postfix
                 expr = tryReadPostfix(expr) ?: break@loop

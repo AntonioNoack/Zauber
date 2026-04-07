@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
@@ -145,5 +146,11 @@ class Field(
 
     fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
     fun isLateinit(): Boolean = flags.hasFlag(Flags.LATEINIT)
+    fun isOpen(): Boolean {
+        if (classScope.isInterface()) return true
+        val isOpenField = flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
+        val isOpenClass = classScope.isOpen()
+        return isOpenField && isOpenClass
+    }
 
 }

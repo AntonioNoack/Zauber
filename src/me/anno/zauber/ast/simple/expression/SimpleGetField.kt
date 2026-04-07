@@ -14,6 +14,12 @@ class SimpleGetField(
     scope: Scope, origin: Int
 ) : SimpleAssignment(dst, scope, origin) {
 
+    init {
+        if (field.classScope.isInterface()) {
+            throw IllegalStateException("Cannot just get field of an interface, must use getter, $field")
+        }
+    }
+
     override fun toString(): String {
         return "$dst = $self?[${field.selfType}].${field.name}"
     }

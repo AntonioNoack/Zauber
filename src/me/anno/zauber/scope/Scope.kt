@@ -3,6 +3,7 @@ package me.anno.zauber.scope
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -564,6 +565,12 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isInsideExpression(): Boolean {
         val scopeType = scopeType ?: return false
         return scopeType.isInsideExpression()
+    }
+
+    fun isOpen(): Boolean {
+        if (isInterface()) return true
+        if (isObjectLike()) return false
+        return isClassType() && flags.hasAnyFlag(Flags.OPEN or Flags.ABSTRACT)
     }
 
     companion object {

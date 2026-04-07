@@ -345,7 +345,7 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         while (true) {
             if (isScopeAvailable(scope, outerClassDepth)) {
                 val selfType = resolveTypeFromScoping(scope, context).specialize(context)
-                println("SelfType[$scope]: $selfType")
+                // println("SelfType[$scope]: $selfType")
                 callback(scope, selfType)
             } else {
                 // println("Skipping scope '$scope'")

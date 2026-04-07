@@ -13,11 +13,13 @@ import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.expression.SimpleGetField
+import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -27,6 +29,8 @@ import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.utils.CollectionUtils.getOrPutRecursive
+import me.anno.zauber.utils.CollectionUtils.mapArray
 import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
 import javax.lang.model.type.UnionType
 
@@ -395,7 +399,7 @@ class Runtime {
 
     private val typeInstances = HashMap<Type, Instance>()
     fun getTypeInstance(type: Type): Instance {
-        return typeInstances.getOrPut(type) {
+        return typeInstances.getOrPutRecursive(type, { type ->
             val clazz0 = when (type) {
                 is ClassType -> Types.ClassType
                 is UnionType -> Types.UnionType
@@ -405,16 +409,32 @@ class Runtime {
             val clazz = getClass(clazz0)
             val instance = clazz.createInstance()
             instance.rawValue = type
+            instance
+        }) { type, instance ->
             when (type) {
                 is ClassType -> {
-                    instance.set("name", type.clazz.name)
-                    // todo set fields, methods, child classes and more...
+                    instance.set("name", type.clazz.scope.name)
+                    if (instance.hasProperty("fields")) {
+                        val zType = getClass(type)
+                        val fields0 = zType.properties
+                        val fieldClass = getClass(Types.Field)
+                        val fields1 = fields0.mapArray { field ->
+                            val instance = fieldClass.createInstance()
+                            instance.set("name", createString(field.name))
+                            if (false) {
+                                val fieldType = field.resolveValueType(ResolutionContext.minimal)
+                                instance.set("type", getTypeInstance(fieldType))
+                            }
+                            instance
+                        }
+                        instance.set("fields", fieldClass.createArray(fields1))
+                    }
+                    // todo set methods, child classes and more...
                 }
                 is UnionType -> {
                     // todo set members
                 }
             }
-            instance
         }
     }
 
