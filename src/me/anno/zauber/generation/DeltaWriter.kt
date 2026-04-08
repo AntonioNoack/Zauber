@@ -8,14 +8,14 @@ import java.io.File
  * and then writes all changed files at once ->
  * saves a lot of disk ops, if few files change
  * */
-class DeltaWriter(val root: File) {
+abstract class DeltaWriter<V>(val root: File) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(DeltaWriter::class)
     }
 
     private val oldContent = HashMap<File, String?>()
-    private val newContent = HashMap<File, String?>()
+    private val newContent = HashMap<File, V?>()
 
     init {
         index(root)
@@ -32,12 +32,12 @@ class DeltaWriter(val root: File) {
         }
     }
 
-    operator fun get(file: File): String {
+    operator fun get(file: File): V? {
         return newContent[file]
             ?: throw IllegalStateException("Missing $file")
     }
 
-    operator fun set(file: File, content: String) {
+    operator fun set(file: File, content: V) {
         newContent[file] = content
 
         // mark all parents as changed
@@ -47,6 +47,8 @@ class DeltaWriter(val root: File) {
             newContent.getOrPut(file) { null }
         }
     }
+
+    abstract fun finishContent(v: V): String
 
     fun finish() {
         var numDeleted = 0
@@ -58,10 +60,13 @@ class DeltaWriter(val root: File) {
             }
         }
         for ((file, content) in newContent) {
-            if (content != null && content != oldContent[file]) {
-                file.parentFile.mkdirs()
-                file.writeText(content)
-                numChanged++
+            if (content != null) {
+                val strContent = finishContent(content)
+                if (strContent != oldContent[file]) {
+                    file.parentFile.mkdirs()
+                    file.writeText(strContent)
+                    numChanged++
+                }
             }
         }
         LOGGER.info("Changed $numChanged and deleted $numDeleted files for ${newContent.size} files in total")

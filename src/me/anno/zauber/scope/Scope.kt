@@ -7,6 +7,7 @@ import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -91,6 +92,12 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     var selfAsField: Field?
         get() = selfAs as? Field
+        set(value) {
+            selfAs = value
+        }
+
+    var selfAsLambda: LambdaExpression?
+        get() = selfAs as? LambdaExpression
         set(value) {
             selfAs = value
         }
@@ -200,6 +207,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun addField(field: Field): Field {
         val other = fields.firstOrNull { it.name == field.name }
         if (other != null) {
+            if (other === field) return field
             throw IllegalStateException(
                 "Each field must only be declared once per scope [$pathStr], ${field.name} " +
                         "at ${TokenListIndex.resolveOrigin(field.origin)} " +

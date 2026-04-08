@@ -407,6 +407,9 @@ public final class Test {
             
             package zauber
             external fun println(a: Int)
+            fun interface Function1<P0, R> {
+                fun call(p0: P0): R
+            }
             class Int
         """.trimIndent()
         )

@@ -1,5 +1,6 @@
 package me.anno.zauber.generation.java
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.*
@@ -7,7 +8,6 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
-import me.anno.zauber.generation.DeltaWriter
 import me.anno.zauber.generation.Generator
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.generation.Specializations.foundTypeSpecialization
@@ -15,6 +15,7 @@ import me.anno.zauber.generation.Specializations.specialization
 import me.anno.zauber.generation.Specializations.specializations
 import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
 import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
+import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.imports
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -25,7 +26,6 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import java.io.File
 
 /**
@@ -68,7 +68,7 @@ object JavaSourceGenerator : Generator() {
     private val blacklistedPaths = listOf(listOf("java"))
 
     override fun generateCode(dst: File, root: Scope) {
-        val writer = DeltaWriter(dst)
+        val writer = JavaWriter(dst)
         try {
             defineNullableAnnotation(dst, writer)
             generate(root, dst, writer, noSpecialization)
@@ -80,25 +80,27 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun defineNullableAnnotation(dst: File, writer: DeltaWriter) {
-        writer[File(dst, "org/jetbrains/annotations/Nullable.java")] =
-            """
-                package org.jetbrains.annotations;
-                
-                import java.lang.annotation.*;
-                
+    private fun defineNullableAnnotation(dst: File, writer: JavaWriter) {
+        val file = File(dst, "org/jetbrains/annotations/Nullable.java")
+        writer[file] = JavaEntry("org.jetbrains.annotations")
+            .apply {
+                content.append(
+                    """
                 @Retention(RetentionPolicy.RUNTIME)
                 @Target(ElementType.TYPE)
                 public @interface Nullable {}
             """.trimIndent()
+                )
+                imports.add("java.lang.annotation.*")
+            }
     }
 
-    fun extendScope(spec: MethodSpecialization, dst: File, writer: DeltaWriter) {
+    fun extendScope(spec: MethodSpecialization, dst: File, writer: JavaWriter) {
         val method = spec.method as Method
         val classScope = method.scope.parent!!
         appendMethod(classScope, method, spec.specialization)
 
-        writer[dst] += finish()
+        writeInto(dst, writer)
     }
 
     // todo add line to imports where needed
@@ -238,7 +240,7 @@ object JavaSourceGenerator : Generator() {
         return scope.name.capitalize() + "Kt" + createSpecializationSuffix(specialization)
     }
 
-    fun generate(scope: Scope, dst: File, writer: DeltaWriter, specialization: Specialization) {
+    fun generate(scope: Scope, dst: File, writer: JavaWriter, specialization: Specialization) {
         val scopeType = scope.scopeType
         if (scope.isClassType()) {
             val name = createClassName(scope, specialization)
@@ -246,7 +248,7 @@ object JavaSourceGenerator : Generator() {
             appendPackage(scope.path.dropLast(1))
             generateInside(name, scope, specialization)
 
-            writer[createFile(scope.parent!!, name, dst)] = finish()
+            writeInto(createFile(scope.parent!!, name, dst), writer)
         } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
             if (scopeType == ScopeType.PACKAGE && (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())) {
                 // we need some package helper
@@ -255,7 +257,7 @@ object JavaSourceGenerator : Generator() {
                 appendPackage(scope.path)
                 generateInside(name, scope, specialization)
 
-                writer[createFile(scope, name, dst)] = finish()
+                writeInto(createFile(scope, name, dst), writer)
             }
 
             // todo child specialization may be needed in some cases
@@ -267,6 +269,14 @@ object JavaSourceGenerator : Generator() {
                 }
             }
         }
+    }
+
+    fun writeInto(file: File, writer: JavaWriter) {
+        val entry = writer[file] ?: JavaEntry("?")
+        entry.content.append(builder); builder.clear()
+        entry.imports.addAll(imports.map { it.pathStr })
+        imports.clear()
+        writer[file] = entry
     }
 
     fun writeBlock(run: () -> Unit) {

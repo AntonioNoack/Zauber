@@ -35,6 +35,12 @@ class LambdaExpression(
         private val LOGGER = LogManager.getLogger(LambdaExpression::class)
     }
 
+    init {
+        // may override the original -> a little unsafe...
+        check(bodyScope.scopeType == ScopeType.LAMBDA)
+        bodyScope.selfAsLambda = this
+    }
+
     override fun toStringImpl(depth: Int): String {
         return "LambdaExpr(${variables ?: "?"} -> ${body.toString(depth)})"
     }

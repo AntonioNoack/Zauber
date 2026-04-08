@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
+import me.anno.utils.PairArrayList
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -15,7 +16,6 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.utils.PairArrayList
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
@@ -358,6 +358,11 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
     private fun resolveTypeFromScoping(candidateScope: Scope, context: ResolutionContext): Type {
         var candidateScope: Scope = candidateScope
         while (candidateScope.isInsideExpression()) {
+            if (candidateScope.scopeType == ScopeType.LAMBDA) {
+                val candidateLambda = candidateScope.selfAsLambda!!
+                // candidateLambda.resolveCallable()
+                // TODO("We're a lambda @$candidateScope, so find our selfType, $candidateLambda")
+            }
             candidateScope = candidateScope.parentIfSameFile ?: break
         }
         if (candidateScope == context.selfType) {

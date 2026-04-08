@@ -22,6 +22,7 @@ import me.anno.zauber.types.impl.*
 object JavaSimplifiedASTWriter {
 
     private val builder = JavaSourceGenerator.builder
+    val imports = HashSet<Scope>()
 
     fun canBeNull(type: Type): Boolean {
         return when (type) {
@@ -239,6 +240,10 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.NULL -> builder.append("null")
                     SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
                 }
+            }
+            is SimpleGetObject -> {
+                imports.add(expr.objectScope)
+                builder.append(expr.objectScope.pathStr)
             }
             is SimpleCall -> {
                 if (expr.sample is Constructor) {
