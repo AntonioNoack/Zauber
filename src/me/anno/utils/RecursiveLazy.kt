@@ -1,4 +1,4 @@
-package me.anno.zauber.utils
+package me.anno.utils
 
 class RecursiveLazy<V>(val generator: () -> V) {
 

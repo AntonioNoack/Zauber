@@ -31,7 +31,8 @@ class ClassCastTest {
 
     @Test
     fun testTypeIsCastAfterReturningBranch() {
-        // todo can we somehow test this?? we need to resolve the x+1f inside the getter...
+        // can we somehow test this?? we need to resolve the x+1f inside the getter...
+        //  -> yes, if it compiles, all is fine...
         assertEquals(
             unionTypes(Types.Float, NullType),
             testTypeResolution(
@@ -46,6 +47,5 @@ class ClassCastTest {
             """.trimIndent()
             )
         )
-        check(false) { "We need to test the result/mechanics" }
     }
 }

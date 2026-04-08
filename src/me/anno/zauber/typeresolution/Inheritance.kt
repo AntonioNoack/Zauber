@@ -9,7 +9,7 @@ import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 /**
  * Check if one type inherits from another, incl. generic checks.

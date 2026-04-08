@@ -18,7 +18,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.utils.LazyMap
+import me.anno.utils.LazyMap
 
 class SimpleCall(
     dst: SimpleField,

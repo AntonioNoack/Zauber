@@ -1,5 +1,6 @@
 package me.anno.zauber.tokenizer
 
+import me.anno.utils.Maths.clamp
 import me.anno.zauber.Compile.root
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -128,7 +129,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun err(i: Int): String {
-        val i = max(i, 0)
+        val i = clamp(i, 0, size - 1)
         val before = source.substring(0, getI0(i))
         val lineNumber = before.count { it == '\n' } + 1
         val lastLineBreak = before.lastIndexOf('\n')
@@ -140,7 +141,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun errShort(i: Int): String {
-        val i = max(i, 0)
+        val i = clamp(i, 0, size - 1)
         val before = source.substring(0, getI0(i))
         val lineNumber = before.count { it == '\n' } + 1
         return "$fileName:$lineNumber"

@@ -22,9 +22,9 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.utils.CollectionUtils.getOrPutRecursive
-import me.anno.zauber.utils.CollectionUtils.mapArray
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.CollectionUtils.getOrPutRecursive
+import me.anno.utils.CollectionUtils.mapArray
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import javax.lang.model.type.UnionType
 
 class Runtime {

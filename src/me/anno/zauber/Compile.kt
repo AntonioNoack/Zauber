@@ -11,8 +11,8 @@ import me.anno.zauber.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.utils.NumberUtils.f3
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.NumberUtils.f3
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import java.io.File
 
 // todo convert JVM Bytecode AST into simplified AST...

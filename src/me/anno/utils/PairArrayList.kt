@@ -1,4 +1,4 @@
-package me.anno.zauber.utils
+package me.anno.utils
 
 class PairArrayList<A, B>(capacity: Int = 16) {
     val content = ArrayList<Any?>(capacity * 2)

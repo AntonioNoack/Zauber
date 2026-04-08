@@ -113,9 +113,8 @@ abstract class ResolvedMember<V>(
                     }
                     LambdaType(newSelfType, newParameters, newReturnType)
                 }
-                is SelfType, is ThisType -> selfType ?: run {
-                    throw IllegalStateException("ThisType/SelfType missing... $type")
-                }
+                is SelfType -> selfType ?: genericValues.resolveGenerics(selfType, type.scope.typeWithArgs)
+                is ThisType -> selfType ?: genericValues.resolveGenerics(selfType, type.type)
                 is TypeOfField -> {
                     val valueType = type.field.valueType
                     if (valueType != null) {

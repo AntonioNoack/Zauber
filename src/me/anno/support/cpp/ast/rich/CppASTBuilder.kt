@@ -19,7 +19,7 @@ import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 class CppASTBuilder(
     tokens: TokenList,

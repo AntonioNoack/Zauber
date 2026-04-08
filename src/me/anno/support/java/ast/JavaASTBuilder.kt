@@ -33,7 +33,7 @@ import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)

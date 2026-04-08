@@ -190,6 +190,9 @@ abstract class Type {
                 }, returnType.specialize(spec))
             }
             is UnresolvedType -> resolvedName.specialize(spec)
+            // todo we need selfType to properly resolve them...
+            is ThisType -> type.specialize(spec)
+            is SelfType -> scope.typeWithArgs.specialize(spec)
             else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
         }
     }

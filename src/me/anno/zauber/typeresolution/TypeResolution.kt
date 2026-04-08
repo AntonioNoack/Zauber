@@ -2,21 +2,15 @@ package me.anno.zauber.typeresolution
 
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
-import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
-import me.anno.zauber.utils.NumberUtils.f1
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
-import kotlin.math.max
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 /**
  * Resolve types step by step, might fail, but should be stable at least.
@@ -38,92 +32,6 @@ object TypeResolution {
     }
 
     val langScope by threadLocal { root.getOrPut(STDLIB_NAME, null) }
-
-    var numSuccesses = 0
-    var numFailures = 0
-
-    // todo only resolve them where necessary ->
-    //  do not call this method in the future...
-    fun resolveTypesAndNames(root: Scope) {
-        resetStats()
-        root.forEachScopeLazy(::resolveTypesAndNamesImpl)
-        if (LOGGER.isInfoEnabled) printStats()
-    }
-
-    private fun resetStats() {
-        numSuccesses = 0
-        numFailures = 0
-    }
-
-    private fun printStats() {
-        val successRate = (numSuccesses * 100f) / max(numSuccesses + numFailures, 1)
-        LOGGER.info("Resolved fields and methods, $numSuccesses successes (${successRate.f1()}%)")
-    }
-
-    private fun isInsideLambda(scope: Scope): Boolean {
-        var scope = scope
-        while (true) {
-            if (scope.scopeType == ScopeType.LAMBDA) return true
-            scope = scope.parent ?: return false
-        }
-    }
-
-    fun resolveTypesAndNamesImpl(scope: Scope) {
-        if (isInsideLambda(scope)) {
-            // todo parameters usually depend on the context
-            return
-        }
-
-        val scopeSelfType = getSelfType(scope)
-        val children = scope.children
-        for (i in children.indices) {
-            val method = children[i].scope.selfAsMethod ?: continue
-            resolveMethod(scope, scopeSelfType, method)
-        }
-        for (field in scope.fields) {
-            resolveField(scope, scopeSelfType, field)
-        }
-        if (false) LOGGER.info("${scope.fileName}: ${scope.pathStr}, ${scope.fields.size}f, ${scope.methods.size}m, ${scope.code.size}c")
-    }
-
-    private fun resolveMethod(scope: Scope, scopeSelfType: Type?, method: Method) {
-        if (method.scope != scope) return // just inherited
-        try {
-            getMethodReturnType(scopeSelfType, method)
-            numSuccesses++
-        } catch (e: Throwable) {
-            if (!catchFailures) throw e
-            // e.printStackTrace()
-            numFailures++
-            // continue anyway for now
-        }
-    }
-
-    private fun resolveField(scope: Scope, scopeSelfType: Type?, field: Field) {
-        if (field.scope != scope) return // just inherited
-        if (field.valueType != null) return // done already
-        if (field.initialValue == null && field.getterExpr == null) return // cannot be solved
-
-        if (LOGGER.isInfoEnabled) {
-            LOGGER.info("Resolving field $field in scope ${scope.pathStr}")
-            LOGGER.info("  fieldSelfType: ${field.selfType}, scopeSelfType: $scopeSelfType")
-        }
-        try {
-            val selfType = if (field.explicitSelfType) field.selfType else null
-            val context = ResolutionContext(
-                selfType, Specializations.specialization,
-                false, null, emptyMap()
-            )
-            field.valueType = field.resolveValueType(context)
-            if (LOGGER.isInfoEnabled) LOGGER.info("Resolved $field to ${field.valueType}")
-            numSuccesses++
-        } catch (e: Throwable) {
-            if (!catchFailures) throw e
-            // e.printStackTrace()
-            numFailures++
-            // continue anyway for now
-        }
-    }
 
     fun getSelfType(scope: Scope): Type? {
         // println("Searching selfType for $scope")

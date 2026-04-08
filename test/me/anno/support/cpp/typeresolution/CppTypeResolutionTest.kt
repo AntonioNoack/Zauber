@@ -9,7 +9,6 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -35,7 +34,6 @@ class CppTypeResolutionTest {
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }.scope
-            resolveTypesAndNames(testScope)
             val field = testScope.fields.first { it.name == "tested" }
             return field.valueType
                 ?: throw IllegalStateException("Could not resolve type for $field")

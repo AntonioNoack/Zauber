@@ -5,7 +5,7 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 /**
  * types, that are automatically imported into every file

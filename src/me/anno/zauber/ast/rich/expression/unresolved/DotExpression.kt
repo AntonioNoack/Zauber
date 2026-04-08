@@ -141,12 +141,13 @@ class DotExpression(
 
     fun resolveCallable(context: ResolutionContext, baseType: Type): ResolvedMember<*> {
         right as CallExpression
+        val baseTypeI = baseType.handleNOCTForCall()
         when (val base = right.self) {
             is MemberNameExpression -> {
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
-                val context = context.withSelfType(baseType.handleNOCTForCall())
+                val context = context.withSelfType(baseTypeI)
                 return MethodResolver.resolveCallable(
                     context, scope, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,
@@ -159,7 +160,7 @@ class DotExpression(
                 val constructor = null
                 // todo for lambdas, baseType must be known for their type to be resolved
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
-                val context = context.withSelfType(baseType.handleNOCTForCall())
+                val context = context.withSelfType(baseTypeI)
                 return MethodResolver.resolveCallable(
                     context, scope, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,

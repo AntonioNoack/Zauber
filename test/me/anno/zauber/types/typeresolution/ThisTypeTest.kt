@@ -6,6 +6,21 @@ import org.junit.jupiter.api.Test
 
 class ThisTypeTest {
     @Test
+    fun testSimpleThisType() {
+        val actualType = testTypeResolution(
+            """
+            class A {
+                fun setName(): This
+            }
+            val tested = A().setName()
+        """.trimIndent()
+        )
+        check(actualType is ClassType && actualType.clazz.name == "A") {
+            "Expected $actualType to be A"
+        }
+    }
+
+    @Test
     fun testThisType() {
         val actualType = testTypeResolution(
             """

@@ -67,4 +67,21 @@ class DefaultParameterTest {
             )
         )
     }
+
+    @Test
+    fun testInnerClassConstructor() {
+        // todo why does this test fail when used together with others???
+        val type = testTypeResolution(
+            """
+                class X {
+                    inner class I {
+                        fun call(): Float
+                    }
+                }
+                
+                val tested = X().I().call()
+            """.trimIndent(), reset = true
+        )
+        assertEquals(Types.Float, type)
+    }
 }

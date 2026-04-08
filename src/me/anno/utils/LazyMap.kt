@@ -1,4 +1,4 @@
-package me.anno.zauber.utils
+package me.anno.utils
 
 class LazyMap<K, V>(val generator: (K) -> V) : Map<K, V> {
 

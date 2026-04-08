@@ -640,7 +640,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                     tokens.equals(j0, ".", "+", "-", "*", "/", "%", "&&", "||") &&
                             tokens.equals(j0, TokenType.NAME, TokenType.KEYWORD) -> end++ // skip another one
                     tokens.equals(j0, *notValueKeywords) -> return j0
-                    forField && j0 > i && tokens.equals(j0, "get", "set") -> return j0
+                    forField && j0 > i && !tokens.equals(j0 - 1, ".") &&
+                            tokens.equals(j0, "get", "set") -> return j0
                     tokens.equals(j0, "object") && !tokens.equals(j0, ":") -> return j0
                     // enum class, data class, private class... these depend on the work after them...
                     tokens.equals(j0 + 1, "class") && tokens.equals(j0, *classPrefixes) -> return j0

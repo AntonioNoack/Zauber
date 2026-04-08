@@ -16,8 +16,8 @@ import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.utils.RecursiveException
-import me.anno.zauber.utils.RecursiveLazy
+import me.anno.utils.RecursiveException
+import me.anno.utils.RecursiveLazy
 
 abstract class MethodColoring<Color : Any> {
 

@@ -11,7 +11,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Types
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, root) {
     companion object {

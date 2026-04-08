@@ -18,11 +18,9 @@ object DefaultParameterExpansion {
 
     fun createDefaultParameterFunctions(scope: Scope) {
         scope.forEachScopeLazy { scopeI ->
-            when (scopeI.scopeType) {
-                ScopeType.METHOD ->
-                    createDefaultParameterMethod(scopeI)
-                ScopeType.CONSTRUCTOR ->
-                    createDefaultParameterConstructor(scopeI)
+            when (scopeI.scope.scopeType) {
+                ScopeType.METHOD -> createDefaultParameterMethod(scopeI)
+                ScopeType.CONSTRUCTOR -> createDefaultParameterConstructor(scopeI)
                 else -> {}
             }
         }

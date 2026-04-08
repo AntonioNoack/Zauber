@@ -3,7 +3,7 @@ package me.anno.support.csharp.ast
 import me.anno.support.csharp.tokenizer.CSharpTokenizer
 import me.anno.zauber.Compile
 import me.anno.zauber.tokenizer.TokenList
-import me.anno.zauber.utils.NumberUtils.f1
+import me.anno.utils.NumberUtils.f1
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.io.OutputStream

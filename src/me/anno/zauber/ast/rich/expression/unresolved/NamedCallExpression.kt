@@ -4,13 +4,15 @@ import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression.Companion.handleNOCTForCall
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.types.Import
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -76,9 +78,23 @@ class NamedCallExpression(
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val baseType = calculateBaseType(context).handleNOCTForCall()
         val valueParameters = resolveValueParameters(context, valueParameters)
-        val constructor = null
+
+        val constructor = if (baseType is ClassType) {
+            val innerClass = baseType.clazz.scope.children.firstOrNull { child ->
+                child.scopeType == ScopeType.INNER_CLASS && child.name == name
+            }
+            if (innerClass != null) {
+                ConstructorResolver.findMemberInScopeImpl(
+                    innerClass, name, typeParameters,
+                    valueParameters, context
+                )
+            } else null
+        } else null
+
         val contextI = context.withSelfType(baseType)
         // println("Resolving callable with baseType $baseType")
+
+        // check for missing type-parameters:
         if (baseType is ClassType && baseType.clazz.typeParameters.isNotEmpty() && baseType.typeParameters == null) {
             println("self: $self (${self.javaClass.simpleName})")
             if (self is FieldExpression) {

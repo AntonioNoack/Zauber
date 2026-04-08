@@ -2,9 +2,9 @@ package me.anno.zauber.expansion
 
 import me.anno.zauber.expansion.MethodColoring.Companion.getMethodDependencies
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.utils.RecursiveException
-import me.anno.zauber.utils.RecursiveLazy
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.RecursiveException
+import me.anno.utils.RecursiveLazy
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 abstract class BoolMethodColoring(val isRecursionColored: Boolean) {
     private val cache by threadLocal { HashMap<MethodSpecialization, RecursiveLazy<Boolean>>() }

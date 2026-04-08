@@ -15,7 +15,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.utils.PairArrayList
+import me.anno.utils.PairArrayList
 
 abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 

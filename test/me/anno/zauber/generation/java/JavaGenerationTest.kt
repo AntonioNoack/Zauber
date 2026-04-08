@@ -5,7 +5,6 @@ import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.typeresolution.TypeResolution.resolveTypesAndNames
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
@@ -29,7 +28,6 @@ class JavaGenerationTest {
             resolveOverrides(root)
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }.scope
-            resolveTypesAndNames(testScope)
             val testClassName = "Test"
             val testClass = testScope.children.first { it.name == testClassName }.scope
             val sourceCode = JavaSourceGenerator.run {

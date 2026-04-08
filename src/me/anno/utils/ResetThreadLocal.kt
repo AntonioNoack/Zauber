@@ -1,4 +1,4 @@
-package me.anno.zauber.utils
+package me.anno.utils
 
 import java.util.*
 import kotlin.reflect.KProperty

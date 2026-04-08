@@ -25,7 +25,7 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import java.io.File
 
 /**

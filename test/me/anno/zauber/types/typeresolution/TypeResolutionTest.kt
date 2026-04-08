@@ -19,7 +19,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
-import me.anno.zauber.utils.ResetThreadLocal
+import me.anno.utils.ResetThreadLocal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -28,10 +28,10 @@ class TypeResolutionTest {
     companion object {
         var ctr = 0
 
-        fun testTypeResolution0(code: String): Scope {
+        fun testTypeResolution0(code: String, reset: Boolean): Scope {
 
             // clean slate
-            ResetThreadLocal.reset()
+            if (reset) ResetThreadLocal.reset()
 
             val testScopeName = "test${ctr++}"
             val tokens = ZauberTokenizer(
@@ -45,22 +45,21 @@ class TypeResolutionTest {
             createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }.scope
             resolveOverrides(testScope)
-            // resolveTypesAndNames(testScope)
             return testScope
         }
 
-        fun testTypeResolutionGetField(code: String): Field {
-            return testTypeResolution0(code).fields.first { it.name == "tested" }
+        fun testTypeResolutionGetField(code: String, reset: Boolean): Field {
+            return testTypeResolution0(code, reset).fields.first { it.name == "tested" }
         }
 
-        fun testTypeResolution(code: String): Type {
-            val field = testTypeResolutionGetField(code)
+        fun testTypeResolution(code: String, reset: Boolean = false): Type {
+            val field = testTypeResolutionGetField(code, reset)
             val context = ResolutionContext(null, false, null)
             return field.resolveValueType(context)
         }
 
         fun testMethodBodyResolution(code: String): List<Type> {
-            val testScope = testTypeResolution0(code).scope
+            val testScope = testTypeResolution0(code, reset = true).scope
             val method = testScope.methods.first { it.name == "tested" }
             val types = ArrayList<Type>()
             fun scan(expr: Expression) {
@@ -275,10 +274,7 @@ class TypeResolutionTest {
 
     @Test
     fun testValueType() {
-        val field =
-            testTypeResolutionGetField(
-                "value val tested = \"\""
-            )
+        val field = testTypeResolutionGetField("value val tested = \"\"", true)
         check(field.flags.hasFlag(Flags.VALUE))
     }
 }

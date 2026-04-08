@@ -30,7 +30,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.SelfType
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 // I want macros... how could we implement them? learn about Rust macros

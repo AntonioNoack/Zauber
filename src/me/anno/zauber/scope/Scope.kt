@@ -15,6 +15,8 @@ import me.anno.zauber.types.StandardTypes
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.SelfType
+import me.anno.zauber.types.impl.ThisType
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -428,6 +430,14 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (pathStr == STDLIB_NAME) {
             val sameFolder = resolveTypeSameFolder(name)
             if (sameFolder != null) return sameFolder.scope.typeWithArgs
+        }
+
+        if (name == "This" && isClassLike()) {
+            return ThisType(typeWithArgs)
+        }
+
+        if (name == "Self" && isClassLike()) {
+            return SelfType(this)
         }
 
         // check siblings

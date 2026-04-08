@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.impl.*
-import me.anno.zauber.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 val Types by threadLocal { TypesImpl() }
 

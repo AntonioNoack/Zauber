@@ -1,3 +1,3 @@
-package me.anno.zauber.utils
+package me.anno.utils
 
 class RecursiveException: Exception("Recursive dependency")
