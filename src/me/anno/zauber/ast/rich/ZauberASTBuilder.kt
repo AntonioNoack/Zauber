@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
@@ -30,7 +31,6 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.SelfType
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 // I want macros... how could we implement them? learn about Rust macros
@@ -202,7 +202,7 @@ class ZauberASTBuilder(
         pushScope(methodScope) {
             parameters = pushCall {
                 val selfType = classScopeIfInClass?.typeWithArgs
-                readParameterDeclarations(selfType)
+                readParameterDeclarations(selfType, emptyList())
             }
         }
 
@@ -281,8 +281,8 @@ class ZauberASTBuilder(
         }
     }
 
-    override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
-        val parameters = ArrayList<Parameter>()
+    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+        val parameters = ArrayList<Parameter>(extra)
         loop@ while (i < tokens.size) {
 
             readAnnotations()

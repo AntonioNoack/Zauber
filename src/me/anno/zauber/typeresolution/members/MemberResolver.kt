@@ -228,7 +228,8 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
 
         var scopeJ = lowestMethodScope ?: scope
         while (true) {
-            if (scopeJ.isClassType()) {
+            if (scopeJ.isClassType() && scopeJ.scopeType != ScopeType.INNER_CLASS) {
+                // inner class continues one down
                 return scopeJ.path.size
             }
 

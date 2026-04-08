@@ -4,6 +4,7 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.readSwitch
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -33,7 +34,6 @@ import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import kotlin.math.max
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)
@@ -258,13 +258,15 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
     fun readConstructor() {
         val origin = origin(i)
-        val scopeName = currPackage.generateName("constructor", origin)
+        val classScope = currPackage
+        val scopeName = classScope.generateName("constructor", origin)
         val keywords = packFlags()
-        pushScope(scopeName, ScopeType.CONSTRUCTOR) { scope ->
+        pushScope(scopeName, ScopeType.CONSTRUCTOR) { constrScope ->
+            val extra = getSyntheticParameters(classScope, constrScope, origin)
             val valueParameters =
                 if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    pushCall { readParameterDeclarations(null) }
-                } else emptyList()
+                    pushCall { readParameterDeclarations(null, extra) }
+                } else extra
             skipThrowList()
             var superCall: InnerSuperCall? = null
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
@@ -289,9 +291,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                     // then the remainder
                     readMethodBody()
                 }
-            } else ExpressionList(ArrayList(), scope, origin(i))
-            scope.selfAsConstructor = Constructor(
-                valueParameters, scope, superCall,
+            } else ExpressionList(ArrayList(), constrScope, origin(i))
+            constrScope.selfAsConstructor = Constructor(
+                valueParameters, constrScope, superCall,
                 body, keywords, origin
             )
         }
@@ -305,7 +307,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             scope.typeParameters = typeParameters
             scope.hasTypeParameters = true
 
-            val valueParameters = pushCall { readParameterDeclarations(null) }
+            val valueParameters = pushCall { readParameterDeclarations(null, emptyList()) }
             skipThrowList()
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 readBodyOrExpression(null)
@@ -355,8 +357,8 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         return Annotation(path, params)
     }
 
-    override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
-        val parameters = ArrayList<Parameter>()
+    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+        val parameters = ArrayList<Parameter>(extra)
         loop@ while (i < tokens.size) {
 
             while (consumeIf("@")) {

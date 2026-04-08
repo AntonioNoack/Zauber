@@ -60,7 +60,10 @@ object CallWithNames {
             for (valueParam in actualParameters) {
                 val name = valueParam.name ?: continue
                 val index = expectedParameters.indexOfFirst { it.name == name }
-                if (index < 0) return null
+                if (index < 0) {
+                    LOGGER.info("Missing parameter: $name")
+                    return null
+                }
                 check(result[index] == null)
                 result[index] = valueParam
             }
@@ -95,9 +98,14 @@ object CallWithNames {
                 }
             }
 
+            while (index < result.size && result[index] != null) index++
+
             if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
-                if (!ev.isVararg) return null
+                if (!ev.isVararg) {
+                    LOGGER.info("Ptr on last, but last isn't varargs, $ev")
+                    return null
+                }
                 // check(ev.isVararg) { "Expected vararg in last place" }
                 val arrayOfUnknown = ClassType(Types.Array.clazz, null)
                 result[index] = ValueParameterImpl(null, arrayOfUnknown, true)
@@ -120,7 +128,10 @@ object CallWithNames {
         scope: Scope, origin: Int,
     ): List<Expression>? {
         val anyIsVararg = expectedParameters.any { it.isVararg }
-        if (hasTooFewParameters(anyIsVararg, expectedParameters.size, actualParameters.size)) return null
+        if (hasTooFewParameters(anyIsVararg, expectedParameters.size, actualParameters.size)) {
+            LOGGER.info("Too few parameters")
+            return null
+        }
 
         return if (actualParameters.any { it.name != null || it.value is ArrayToVarargsStar } ||
             actualParameters.size != expectedParameters.size ||
@@ -133,7 +144,10 @@ object CallWithNames {
             for (valueParam in actualParameters) {
                 val name = valueParam.name ?: continue
                 val index = expectedParameters.indexOfFirst { it.name == name }
-                if (index < 0) return null
+                if (index < 0) {
+                    LOGGER.info("Missing parameter: $name")
+                    return null
+                }
                 check(result[index] == null)
                 result[index] = valueParam.value
             }
@@ -166,6 +180,8 @@ object CallWithNames {
                     break
                 }
             }
+
+            while (index < result.size && result[index] != null) index++
 
             if (index == result.lastIndex) {
                 val ev = expectedParameters[index]

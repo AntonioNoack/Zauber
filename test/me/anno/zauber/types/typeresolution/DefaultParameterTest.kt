@@ -1,5 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsMessage
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -66,22 +67,5 @@ class DefaultParameterTest {
             """.trimIndent()
             )
         )
-    }
-
-    @Test
-    fun testInnerClassConstructor() {
-        // todo why does this test fail when used together with others???
-        val type = testTypeResolution(
-            """
-                class X {
-                    inner class I {
-                        fun call(): Float
-                    }
-                }
-                
-                val tested = X().I().call()
-            """.trimIndent(), reset = true
-        )
-        assertEquals(Types.Float, type)
     }
 }

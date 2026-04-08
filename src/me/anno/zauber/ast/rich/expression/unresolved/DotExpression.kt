@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.SpecialFieldNames
 import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
@@ -12,8 +14,10 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.*
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NonObjectClassType
 
 /**
@@ -157,15 +161,26 @@ class DotExpression(
                 )
             }
             is UnresolvedFieldExpression -> {
-                val constructor = null
-                // todo for lambdas, baseType must be known for their type to be resolved
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
-                val context = context.withSelfType(baseTypeI)
+                val context1 = context.withSelfType(baseTypeI)
+                val constructor = if (baseTypeI is ClassType) {
+                    val innerClass = baseTypeI.clazz.scope.children.firstOrNull {
+                        it.scopeType == ScopeType.INNER_CLASS && it.name == base.name
+                    }
+                    if (innerClass != null) {
+                        val valueParam0 = listOf(ValueParameterImpl(SpecialFieldNames.OUTER_NAME, baseTypeI, false))
+                        ConstructorResolver.findMemberInScopeImpl(
+                            innerClass, base.name,
+                            typeParameters, valueParam0 + valueParameters, context1
+                        )
+                    } else null
+                } else null
+                // todo for lambdas, baseType must be known for their type to be resolved
                 return MethodResolver.resolveCallable(
-                    context, scope, base.name, base.nameAsImport, constructor,
+                    context1, scope, base.name, base.nameAsImport, constructor,
                     right.typeParameters, valueParameters, origin,
                 ) ?: MethodResolver.printScopeForMissingMethod(
-                    context, this, base.name,
+                    context1, this, base.name,
                     typeParameters, valueParameters
                 )
             }
@@ -218,8 +233,15 @@ class DotExpression(
                     throw IllegalStateException("Implement DotExpression with methodType, but field: $this")
                 }
                 val targetParams = callable.resolved.valueParameters
-                val params = reorderResolveParameters(context, right.valueParameters, targetParams, scope, origin)
-                return ResolvedCallExpression(base, callable, params, scope, origin)
+                val isConstrForInnerClass = callable is ResolvedConstructor &&
+                        callable.resolved.scope.parent!!.scopeType == ScopeType.INNER_CLASS
+                val valueParameters =
+                    if (isConstrForInnerClass) {
+                        val outer = NamedParameter(SpecialFieldNames.OUTER_NAME, base)
+                        listOf(outer) + right.valueParameters
+                    } else right.valueParameters
+                val valueParametersI = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
+                return ResolvedCallExpression(base, callable, valueParametersI, scope, origin)
             }
             else -> throw NotImplementedError("Resolve DotExpression with type ${right.javaClass.simpleName}")
         }

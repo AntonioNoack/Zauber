@@ -115,22 +115,15 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 constructorScope.addFlags(packFlags())
                 pushScope(constructorScope) {
                     val selfType = classScope.typeWithArgs
-                    var valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        readParameterDeclarations(selfType)
-                    } else emptyList()
-
-                    if (scopeType == ScopeType.ENUM_CLASS) {
-                        val param0 = Parameter(0, "ordinal", Types.Int, constructorScope, constrOrigin)
-                        val param1 = Parameter(1, "name", Types.String, constructorScope, constrOrigin)
-                        param0.getOrCreateField(null, Flags.SYNTHETIC)
-                        param1.getOrCreateField(null, Flags.SYNTHETIC)
-                        valueParameters = listOf(param0, param1) + valueParameters.map { it.shift(2) }
-                    }
+                    val extra = getSyntheticParameters(classScope, constructorScope, constrOrigin)
+                    val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                        readParameterDeclarations(selfType, extra)
+                    } else extra
 
                     val instr = ArrayList<Expression>()
                     for (param in valueParameters) {
                         if (param.isVal || param.isVar) {
-                            val paramField = param.field!!
+                            val paramField = param.getOrCreateField(classScope.typeWithArgs, Flags.NONE)
                             val initialValue = FieldExpression(paramField, constructorScope, param.origin)
                             val classField = classScope.addField(
                                 null, false, param.isVar,
@@ -527,7 +520,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
         pushScope(constrScope) {
             val selfType = classScope.typeWithArgs
-            val valueParameters = readParameterDeclarations(selfType)
+            val extra = getSyntheticParameters(classScope, constrScope, origin)
+            val valueParameters = readParameterDeclarations(selfType, extra)
             val superCall = if (consumeIf(":")) readInnerSuperCall() else null
 
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) readLazyBody() else null
@@ -570,7 +564,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 
-            val valueParameters = readParameterDeclarations(selfType)
+            val valueParameters = readParameterDeclarations(selfType, emptyList())
             val whereConditions = readWhereConditions()
 
             val returnType = if (consumeIf(":")) {
@@ -707,8 +701,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         throw NotImplementedError()
     }
 
-    override fun readParameterDeclarations(selfType: Type?): List<Parameter> {
-        val parameters = ArrayList<Parameter>()
+    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+        val parameters = ArrayList<Parameter>(extra)
         pushCall {
             while (i < tokens.size) {
                 // todo comptime name: type

@@ -11,6 +11,9 @@ import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
+import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
+import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
@@ -289,7 +292,7 @@ abstract class ZauberASTBuilderBase(
         return DoWhileLoop(body = body, condition = condition, label)
     }
 
-    abstract fun readParameterDeclarations(selfType: Type?): List<Parameter>
+    abstract fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter>
 
     fun readTryCatch(): Expression {
         // try with resource
@@ -316,7 +319,7 @@ abstract class ZauberASTBuilderBase(
             check(tokens.equals(i, TokenType.OPEN_CALL))
             val catchName = currPackage.generateName("catch", origin)
             pushScope(catchName, ScopeType.METHOD_BODY) {
-                val params = pushCall { readParameterDeclarations(null) }
+                val params = pushCall { readParameterDeclarations(null, emptyList()) }
                 check(params.size == 1)
                 val handler = readBodyOrExpression(null)
                 catches.add(Catch(params[0], handler, origin))
@@ -762,25 +765,33 @@ abstract class ZauberASTBuilderBase(
         // println("reading primary constructor parameters at ${tokens.err(i)}")
         return if (tokens.equals(i, TokenType.OPEN_CALL)) {
             val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
-            var parameters = pushScope(constructorScope) {
+            pushScope(constructorScope) {
                 val selfType = ClassType(classScope, null)
-                pushCall { readParameterDeclarations(selfType) }
+                val extra = getSyntheticParameters(classScope, constructorScope, constructorOrigin)
+                pushCall { readParameterDeclarations(selfType, extra) }
             }
-            if (scopeType == ScopeType.ENUM_CLASS) {
-                parameters = listOf(
-                    Parameter(0, "ordinal", Types.Int, constructorScope, constructorOrigin),
-                    Parameter(1, "name", Types.String, constructorScope, constructorOrigin)
-                ) + parameters.map { it.shift(2) }
-            }
-            parameters
-        } else if (scopeType == ScopeType.ENUM_CLASS) {
+        } else if (scopeType == ScopeType.ENUM_CLASS || scopeType == ScopeType.INNER_CLASS) {
             val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
-            val parameters = listOf(
-                Parameter(0, "ordinal", Types.Int, constructorScope, constructorOrigin),
-                Parameter(1, "name", Types.String, constructorScope, constructorOrigin)
-            )
-            parameters
+            getSyntheticParameters(classScope, constructorScope, constructorOrigin)
         } else null
+    }
+
+    fun getSyntheticParameters(classScope: Scope, constructorScope: Scope, constructorOrigin: Int): List<Parameter> {
+        return when (classScope.scopeType) {
+            ScopeType.ENUM_CLASS -> {
+                // enums additionally store their ID and name
+                listOf(
+                    Parameter(0, ENUM_ORDINAL_NAME, Types.Int, constructorScope, constructorOrigin),
+                    Parameter(1, ENUM_NAME_NAME, Types.String, constructorScope, constructorOrigin)
+                )
+            }
+            ScopeType.INNER_CLASS -> {
+                // inner classes store a reference to their outer class
+                val outerType = classScope.parent!!.typeWithArgs
+                listOf(Parameter(0, OUTER_NAME, outerType, constructorScope, constructorOrigin))
+            }
+            else -> emptyList()
+        }
     }
 
     fun readInterface() {
@@ -863,6 +874,7 @@ abstract class ZauberASTBuilderBase(
             return CallExpression(base, typeParameters, args, origin + 1)
         } else {
             // todo parser bug: we don't support specifying the macro name with dots yet
+            //  e.g. mypackage.macro!() doesn't work
             return evaluateMacro(namePath, typeParameters, origin)
         }
     }
