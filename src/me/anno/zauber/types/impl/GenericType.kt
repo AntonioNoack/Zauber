@@ -18,8 +18,15 @@ class GenericType(val scope: Scope, val name: String) : Type() {
     val superBounds: Type
         get() = byTypeParameter.type
 
+    val byTypeParameterOrNull: Parameter?
+        get() = scope.typeParameters.firstOrNull { it.name == name /*&& it.scope == scope -> automatically filtered for */ }
+
+    val superBoundsOrNull: Type?
+        get() = byTypeParameterOrNull?.type
+
     override fun toStringImpl(depth: Int): String {
-        return if (superBounds == Types.NullableAny) {
+        val superBounds = superBoundsOrNull
+        return if (superBounds == Types.NullableAny || superBounds == null) {
             "${scope.name}.$name"
         } else {
             "(${scope.name}.$name: ${superBounds.toString(depth)})"

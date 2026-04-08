@@ -5,32 +5,44 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.impl.ClassType
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import java.io.IOException
 
-class JVMBytecodeReader : ClassVisitor(API_LEVEL) {
+class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
 
     companion object {
         const val API_LEVEL = ASM9
+        private val LOGGER = LogManager.getLogger(JVMClassReader::class)
 
         val scanned = HashMap<String, Scope>()
 
-        fun splitPackage(name: String) = name.split('/')
+        fun splitPackage(name: String) = name.split('/', '$')
         fun getScope(name: String, scopeType: ScopeType?): Scope {
             val parts = splitPackage(name)
             var scope = root
             for (pi in parts.indices) {
                 val part = parts[pi]
-                val type = if (pi == parts.lastIndex) scopeType else null
+                val type = if (scopeType != null &&
+                    pi == parts.lastIndex &&
+                    scope.getOrPut(part, null).scopeType == null
+                ) scopeType else null
                 scope = scope.getOrPut(part, type)
             }
             scanned.getOrPutRecursive(name, { scope }) { name, _ ->
-                ClassReader(name)
-                    .accept(JVMBytecodeReader(), 0)
+                try {
+                    ClassReader(name)
+                        .accept(JVMClassReader(scope), 0)
+                } catch (e: IOException) {
+                    LOGGER.warn("Missing class $e")
+                }
             }
             return scope
         }
@@ -95,14 +107,16 @@ class JVMBytecodeReader : ClassVisitor(API_LEVEL) {
 
         if (superName != null) {
             val superScope = getScope(superName, ScopeType.NORMAL_CLASS)
-            val typeWithArgs = superTypesWithGenerics.firstOrNull { it.clazz == superScope } ?: superScope.typeWithArgs
+            val typeWithArgs = superTypesWithGenerics.firstOrNull { it.clazz == superScope }
+                ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
             classScope.superCalls.add(SuperCall(typeWithArgs, emptyList(), null))
         }
         if (interfaces != null) {
             for (interfaceI in interfaces) {
                 val superScope = getScope(interfaceI, ScopeType.INTERFACE)
                 val typeWithArgs =
-                    superTypesWithGenerics.firstOrNull { it.clazz == superScope } ?: superScope.typeWithArgs
+                    superTypesWithGenerics.firstOrNull { it.clazz == superScope }
+                        ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
                 classScope.superCalls.add(SuperCall(typeWithArgs, null, null))
             }
         }
@@ -111,6 +125,63 @@ class JVMBytecodeReader : ClassVisitor(API_LEVEL) {
     override fun visitInnerClass(name: String, outerName: String?, innerName: String?, access: Int) {
         // outerName = className, innerName = subClassName, if not anonymous, else null
         println("Visiting inner class $name, outerName: $outerName, innerName: $innerName, access: $access")
+        val childType = when {
+            access.isInterface() -> ScopeType.INTERFACE
+            access.isEnum() -> ScopeType.ENUM_CLASS
+            access.isStatic() -> ScopeType.NORMAL_CLASS
+            else -> ScopeType.INNER_CLASS
+        }
+        getScope(name, childType)
+    }
+
+    override fun visitMethod(
+        access: Int,
+        name: String,
+        descriptor: String,
+        signature: String?,
+        exceptions: Array<String>?
+    ): MethodVisitor? {
+        println("Visiting method: $name, descriptor: $descriptor, signature: $signature, exceptions: ${exceptions?.toList()}, access: $access")
+        // todo should we lazy-read methods??? check performance...
+        //  individually, or all at once?
+
+        val origin = -1
+        val signature = signature ?: descriptor
+        val methodScope = scope.generate(name, ScopeType.METHOD)
+        val reader = SignatureReader(signature, methodScope)
+
+        val typeParameters = reader.readGenerics()
+        methodScope.typeParameters = typeParameters
+        methodScope.hasTypeParameters = true
+
+        reader.consume('(')
+        val valueParameters = ArrayList<Parameter>()
+        while (signature[reader.i] != ')') {
+            val type = reader.readType()
+            valueParameters.add(Parameter(valueParameters.size, name, type, methodScope, origin))
+        }
+        reader.consume(')')
+
+        val returnType = reader.readType()
+        // todo different method types:
+        //  <clinit> -> companion-object init block
+        //  <init> -> constructor
+        //  else -> method
+
+        return JVMMethodReader(methodScope)
+    }
+
+    override fun visitField(
+        access: Int,
+        name: String,
+        descriptor: String,
+        signature: String?,
+        value: Any?
+    ): FieldVisitor? {
+        // todo visit fields and annotations...
+        println("Visiting field: $name, descriptor: $descriptor, signature: $signature, value: $value, access: $access")
+
+        return JVMFieldReader()
     }
 
 }
