@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 /**
- * 1700 files, 570k lines, 20 MB, 2.5M tokens
+ * 1700 files, 570k lines, 20 MB, 2.5M tokens, 75 ns/t
  * */
 class RustTokenizerBench {
     @Test

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 /**
- * 2300 files, 1100k lines, 40 MB, 6.2M tokens
+ * 2300 files, 1100k lines, 40 MB, 6.2M tokens, 60 ns/t
  * */
 class PythonTokenizerBench {
     @Test

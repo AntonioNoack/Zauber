@@ -6,7 +6,7 @@ import java.io.File
 
 // todo instead of scanning tons of random files, we should use specific tests with baselines...
 /**
- * 31k files, 8.1M lines, 430 MB, 66.9M tokens
+ * 31k files, 8.1M lines, 430 MB, 66.9M tokens, 30 ns/t
  * */
 class CSharpTokenizerBench {
     @Test

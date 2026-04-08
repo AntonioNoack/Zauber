@@ -24,6 +24,8 @@ object TokenizerBench {
         var numTokens = 0
         var numBytes = 0
 
+        var dt = 0L
+
         fun executeOnFile(file: File) {
             if (file.isDirectory) {
                 for (child in file.listFiles()!!) {
@@ -31,7 +33,10 @@ object TokenizerBench {
                 }
             } else if (file.extension in extensions) {
                 val src = file.readText()
+                val t0i = System.nanoTime()
                 numTokens += tokenize(src, file.absolutePath)
+                val t1i = System.nanoTime()
+                dt += t1i - t0i
                 numBytes += src.length
                 numLines += src.count { it == '\n' } + 1
                 numFiles++
@@ -43,7 +48,7 @@ object TokenizerBench {
         val t1 = System.nanoTime()
         println(
             "Tokenized $numFiles files with $numLines lines in " +
-                    "${(t1 - t0) / 1e6f} ms, ${(t1 - t0) / max(numTokens, 1)} ns/t, " +
+                    "${(t1 - t0) / 1e6f} ms, ${dt / max(numTokens, 1)} ns/t, " +
                     "${(numBytes / 1e6f)} MB, $numTokens tokens"
         )
     }

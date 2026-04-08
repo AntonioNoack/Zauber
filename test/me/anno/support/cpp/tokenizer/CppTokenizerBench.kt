@@ -6,9 +6,9 @@ import java.io.File
 
 // todo instead of scanning tons of random files, we should use specific tests with baselines...
 /**
- * 37k files, 6056k lines, 242 MB, 41M tokens
+ * 37k files, 6056k lines, 242 MB, 41M tokens, 34 ns/t
  * */
-class CppTokenizerTest {
+class CppTokenizerBench {
 
     private val extensions = "cpp,hpp,c,h".split(',')
 
