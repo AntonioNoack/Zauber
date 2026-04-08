@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
@@ -148,7 +149,7 @@ class LambdaExpression(
             is LambdaType -> {
                 val n = superType.parameters.size
                 ClassType(
-                    langScope.getOrPut("Function$n", ScopeType.INTERFACE),
+                    langScope.getOrPut(getLambdaTypeName(n), ScopeType.INTERFACE),
                     superType.parameters.map { it.type } + superType.returnType, origin)
             }
             else -> throw NotImplementedError("Convert $superType to class type")

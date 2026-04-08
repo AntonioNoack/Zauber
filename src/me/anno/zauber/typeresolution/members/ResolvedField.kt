@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
+import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -191,7 +192,7 @@ class ResolvedField(
         if (baseType is LambdaType) {
             // check for self-type: it's another argument...
             val numArguments = (if (baseType.selfType != null) 1 else 0) + baseType.parameters.size
-            val className = "Function$numArguments"
+            val className = getLambdaTypeName(numArguments)
             val genericNames = String(CharArray(numArguments + 1) { 'A' + it })
 
             val nat = Types.NullableAny

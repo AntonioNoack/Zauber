@@ -66,9 +66,8 @@ class SelfTypeTest {
 
     @Test
     fun testInterlinkedTypes() {
-        val type =
-            testTypeResolution(
-                """
+        val type = testTypeResolution(
+            """
             open class Node<L: Link<Self>>
             open class Link<N: Node<Self>>(val from: N, val to: N)
             
@@ -81,9 +80,10 @@ class SelfTypeTest {
             
             val tested = link.from
         """.trimIndent()
-            )
+        )
+        // todo type is generally correct, but it should be resolved and specialized!
         assertTrue(type is ClassType && type.clazz.name == "IntNode") {
-            "Expected IntNode, but got $type"
+            "Expected IntNode, but got $type (${type.javaClass.simpleName})"
         }
     }
 

@@ -50,8 +50,9 @@ object ASTSimplifier {
         var field = graph.unitField
         if (field != null) return field
         val block = graph.startBlock
-        field = block.field(Types.Unit)
-        block.add0(SimpleGetObject(field, Types.Unit.clazz, scope, origin))
+        val type = Types.Unit
+        field = block.field(type)
+        block.add0(SimpleGetObject(field, type.clazz, scope, origin))
         graph.unitField = field
         return field.use()
     }
