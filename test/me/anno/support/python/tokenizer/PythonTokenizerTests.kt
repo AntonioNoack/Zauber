@@ -5,7 +5,7 @@ import me.anno.zauber.tokenizer.TokenType
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-class PythonTokenizerTest {
+class PythonTokenizerTests {
 
     private fun tokenize(src: String) = PythonTokenizer(src, "main.py").tokenize()
 

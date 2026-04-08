@@ -1,9 +1,7 @@
-package me.anno.support.csharp
+package me.anno.support.csharp.ast
 
-import me.anno.support.csharp.ast.CSharpASTBuilder
-import me.anno.support.csharp.ast.CSharpASTClassScanner.Companion.collectNamedCSharpClasses
 import me.anno.support.csharp.tokenizer.CSharpTokenizer
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Compile
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.utils.NumberUtils.f1
 import org.junit.jupiter.api.Test
@@ -43,7 +41,7 @@ class CSharpASTBuilderTest {
 
         for (source in sources) {
             // println("Collecting types in ${source.fileName}")
-            collectNamedCSharpClasses(source)
+            CSharpASTClassScanner.collectNamedCSharpClasses(source)
         }
 
         val oriOut = System.out
@@ -54,7 +52,7 @@ class CSharpASTBuilderTest {
         for (source in sources) {
             println("AST for ${source.fileName}")
             try {
-                CSharpASTBuilder(source, root)
+                CSharpASTBuilder(source, Compile.root)
                     .readFileLevel()
                 success++
             } catch (e: Throwable) {

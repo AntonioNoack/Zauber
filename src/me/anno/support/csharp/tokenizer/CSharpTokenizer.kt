@@ -32,13 +32,39 @@ class CSharpTokenizer(src: String, fileName: String) :
 
     override fun parseString() {
         // todo why is this called from inside a comment???
-        if (i + 2 < src.length && src[i + 1] == '"' && src[i + 2] == '"') {
+        check(src[i] == '"')
+        if (i > 0 && src[i - 1] == '@') {
+            // read "verbatim" string
+            // todo we somehow have $@-strings, whatever they are...
+            if (tokens.equals(tokens.size - 1, "@")) {
+                tokens.removeLast()
+            }
+
+            val i0 = i - 1 // true start
+            i++ // skip single-quote
+            while (i < n) {
+                when (src[i++]) {
+                    '"' -> {
+                        if (src[i] == '"') {
+                            i++ // skip it
+                        } else {
+                            // found valid end
+                            tokens.add(TokenType.STRING, i0, i)
+                            return
+                        }
+                    }
+                    // {{ and }} produce just { and }
+                    // any other escape sequence is ignored
+                }
+            }
+            throw IllegalStateException("Verbatim string without end at ${tokens.err(tokens.size - 1)}")
+        } else if (i + 2 < src.length && src[i + 1] == '"' && src[i + 2] == '"') {
             val eos = src.indexOf("\"\"\"", i + 3)
             if (eos < 0) {
                 tokens.add(TokenType.STRING, i, i)
                 throw IllegalStateException("Failed to find end of triple-string at ${tokens.err(tokens.size - 1)}")
             }
-            tokens.add(TokenType.STRING, i + 3, eos)
+            tokens.add(TokenType.STRING, i, eos + 3)
             i = eos + 3
         } else super.parseString()
     }

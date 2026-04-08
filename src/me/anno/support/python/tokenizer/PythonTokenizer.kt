@@ -27,6 +27,7 @@ class PythonTokenizer(val source: String, fileName: String) {
         while (i < n) {
 
             if (atLineStart) handleIndentation()
+            if (i >= n) break
 
             val c = source[i]
             when {
@@ -159,7 +160,7 @@ class PythonTokenizer(val source: String, fileName: String) {
         }
         if (i < n && source[i] in "eE") {
             i++
-            if (source[i] in "+-") i++
+            if (i < n && source[i] in "+-") i++
             while (i < n && (source[i].isDigit() || source[i] == '_')) i++
         }
     }

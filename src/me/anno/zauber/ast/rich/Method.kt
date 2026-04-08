@@ -39,7 +39,7 @@ class Method(
     var backedField: Field? = null
 
     // todo can inline methods open? explicit inheritance-tree would need to be inlined...
-    fun isInline(): Boolean = this@Method.flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
+    fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {
         val returnType = returnType
