@@ -1,9 +1,7 @@
-package me.anno.support.java
+package me.anno.support.java.ast
 
-import me.anno.support.java.ast.JavaASTBuilder
-import me.anno.support.java.ast.JavaASTClassScanner.Companion.collectNamedJavaClasses
 import me.anno.support.java.tokenizer.JavaTokenizer
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Compile
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.utils.NumberUtils.f1
 import org.junit.jupiter.api.Test
@@ -76,7 +74,7 @@ class JavaASTBuilderTest {
         )
 
         for (source in sources) {
-            collectNamedJavaClasses(source)
+            JavaASTClassScanner.collectNamedJavaClasses(source)
         }
 
         val oriOut = System.out
@@ -87,7 +85,7 @@ class JavaASTBuilderTest {
         for (source in sources) {
             println("AST for ${source.fileName}")
             try {
-                JavaASTBuilder(source, root)
+                JavaASTBuilder(source, Compile.root)
                     .readFileLevel()
                 success++
             } catch (e: Throwable) {

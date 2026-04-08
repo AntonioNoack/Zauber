@@ -1,11 +1,11 @@
-package me.anno.support.java
+package me.anno.support.java.tokenizer
 
 import me.anno.support.TokenizerBench
-import me.anno.support.java.tokenizer.JavaTokenizer
 import org.junit.jupiter.api.Test
 import java.io.File
 
 // todo instead of scanning tons of random files, we should use specific tests with baselines...
+
 /**
  * 14k files, 4200k lines, 169 MB, 15M tokens
  * */
