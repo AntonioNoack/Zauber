@@ -16,6 +16,12 @@ val tested = 0 // unused
 package zauber
 class Int {
     external operator fun plus(other: Int): Int
+    external operator fun compareTo(other: Int): Int
+}
+class Array<V>(val size: Int) {
+    external operator fun set(index: Int, value: V)
+    external operator fun set(index: Int, value: Any)
+    external operator fun get(index: Int): V
 }
     """.trimIndent())
 

@@ -43,7 +43,9 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
             scanned.getOrPutRecursive(name, { scope }) { name, _ ->
                 try {
                     ClassReader(name)
-                        .accept(JVMClassReader(scope), 0)
+                        .accept(JVMClassReader(scope),
+                            ClassReader.EXPAND_FRAMES // only needed when reading methods
+                        )
                 } catch (e: IOException) {
                     LOGGER.warn("Missing class $e")
                 }
@@ -194,7 +196,7 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
             )
         }
 
-        return JVMMethodReader(method, valueParameters)
+        return JVMMethodReader(method, access.isStatic(), valueParameters)
     }
 
     override fun visitField(
