@@ -2,12 +2,15 @@ package me.anno.support.jvm
 
 import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.SuperCall
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -16,12 +19,13 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import java.io.IOException
 
-class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
+class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
 
     companion object {
         const val API_LEVEL = ASM9
         private val LOGGER = LogManager.getLogger(JVMClassReader::class)
 
+        var ctr = 0
         val scanned = HashMap<String, Scope>()
 
         fun splitPackage(name: String) = name.split('/', '$')
@@ -90,6 +94,15 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
         }
     }
 
+    fun descToType(desc: String): Type {
+        return SignatureReader(desc, classScope).readType()
+    }
+
+    fun nameToType(desc: String): Type {
+        // todo can be optimized
+        return SignatureReader("L$desc;", classScope).readType()
+    }
+
     override fun visit(
         version: Int,
         access: Int,
@@ -98,9 +111,14 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
         superName: String?,
         interfaces: Array<out String>?
     ) {
-        println("Visiting $name, access $access, version $version, signature: $signature, superName: $superName, interfaces: ${interfaces?.toList()}")
+        val print = classScope.name == "ArrayList"
+        if (print) println("Visiting $name, access $access, version $version, signature: $signature, superName: $superName, interfaces: ${interfaces?.toList()}")
 
-        val classScope = getScope(name, getClassType(access)).scope
+        // val classScope = getScope(name, getClassType(access)).scope
+        if (classScope.scopeType == null) {
+            classScope.scopeType = getClassType(access)
+        }
+
         val (typeParameters, superTypesWithGenerics) = parseClassSignature(classScope, signature)
         classScope.typeParameters = typeParameters
         classScope.hasTypeParameters = true
@@ -111,6 +129,7 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
                 ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
             classScope.superCalls.add(SuperCall(typeWithArgs, emptyList(), null))
         }
+
         if (interfaces != null) {
             for (interfaceI in interfaces) {
                 val superScope = getScope(interfaceI, ScopeType.INTERFACE)
@@ -124,7 +143,7 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
 
     override fun visitInnerClass(name: String, outerName: String?, innerName: String?, access: Int) {
         // outerName = className, innerName = subClassName, if not anonymous, else null
-        println("Visiting inner class $name, outerName: $outerName, innerName: $innerName, access: $access")
+        // println("Visiting inner class $name, outerName: $outerName, innerName: $innerName, access: $access")
         val childType = when {
             access.isInterface() -> ScopeType.INTERFACE
             access.isEnum() -> ScopeType.ENUM_CLASS
@@ -141,13 +160,15 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor? {
+        if (classScope.name != "ArrayList" || name != "clear") return null
+
         println("Visiting method: $name, descriptor: $descriptor, signature: $signature, exceptions: ${exceptions?.toList()}, access: $access")
         // todo should we lazy-read methods??? check performance...
         //  individually, or all at once?
 
         val origin = -1
         val signature = signature ?: descriptor
-        val methodScope = scope.generate(name, ScopeType.METHOD)
+        val methodScope = classScope.generate(name, ScopeType.METHOD)
         val reader = SignatureReader(signature, methodScope)
 
         val typeParameters = reader.readGenerics()
@@ -163,12 +184,17 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
         reader.consume(')')
 
         val returnType = reader.readType()
-        // todo different method types:
-        //  <clinit> -> companion-object init block
-        //  <init> -> constructor
-        //  else -> method
+        val method = if (name == "<init>" || name == "<clinit>") {
+            // clinit is not really a constructor, but we have nothing better at the moment
+            Constructor(valueParameters, methodScope, null, null, Flags.NONE, origin)
+        } else {
+            Method(
+                null, false, name, typeParameters, valueParameters, methodScope, returnType,
+                emptyList(), null, Flags.NONE, origin
+            )
+        }
 
-        return JVMMethodReader(methodScope)
+        return JVMMethodReader(method, valueParameters)
     }
 
     override fun visitField(
@@ -179,9 +205,26 @@ class JVMClassReader(val scope: Scope) : ClassVisitor(API_LEVEL) {
         value: Any?
     ): FieldVisitor? {
         // todo visit fields and annotations...
-        println("Visiting field: $name, descriptor: $descriptor, signature: $signature, value: $value, access: $access")
+        // println("Visiting field ${classScope.name}.$name, descriptor: $descriptor, signature: $signature, value: $value, access: $access")
+        val valueType = nameToType(signature ?: descriptor)
+        val origin = -1
+        val initialValueForConst = when (value) {
+            null -> null
+            is Int -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Int }
+            is Long -> NumberExpression("${value}l", classScope, origin).apply { resolvedType = Types.Long }
+            is Float -> NumberExpression("${value}f", classScope, origin).apply { resolvedType = Types.Float }
+            is Double -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Double }
+            is String -> StringExpression(value, classScope, origin)
+            else -> TODO("Get initial from ${value.javaClass.simpleName}")
+        }
 
-        return JVMFieldReader()
+        classScope.addField(
+            null, false, true, null, name, valueType,
+            initialValueForConst, Flags.NONE, origin
+        )
+
+        return null
+        // return JVMFieldReader()
     }
 
 }
