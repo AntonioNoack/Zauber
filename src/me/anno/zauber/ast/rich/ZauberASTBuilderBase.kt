@@ -880,7 +880,7 @@ abstract class ZauberASTBuilderBase(
     }
 
     open fun consumeKeyword(): Int {
-        throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
+        throw IllegalStateException("Unknown keyword ${tokens.err(i)}")
     }
 
 }

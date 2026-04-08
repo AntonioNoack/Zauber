@@ -1,5 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.utils.ResetThreadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
@@ -10,6 +11,7 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -19,7 +21,6 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnionType
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
-import me.anno.utils.ResetThreadLocal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -63,19 +64,23 @@ class TypeResolutionTest {
             val method = testScope.methods.first { it.name == "tested" }
             val types = ArrayList<Type>()
             fun scan(expr: Expression) {
-                if (expr is ExpressionList) {
-                    for (exprI in expr.list) {
-                        scan(exprI)
+                when (expr) {
+                    is LazyExpression -> scan(expr.value)
+                    is ExpressionList -> {
+                        for (exprI in expr.list) {
+                            scan(exprI)
+                        }
                     }
-                } else {
-                    val context = ResolutionContext(
-                        method.selfType,
-                        true,
-                        null,
-                        emptyMap()
-                    )
-                    val type = TypeResolution.resolveType(context, expr)
-                    types.add(type)
+                    else -> {
+                        val context = ResolutionContext(
+                            method.selfType,
+                            true,
+                            null,
+                            emptyMap()
+                        )
+                        val type = TypeResolution.resolveType(context, expr)
+                        types.add(type)
+                    }
                 }
             }
             scan(method.body!!)

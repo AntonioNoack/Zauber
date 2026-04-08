@@ -10,9 +10,10 @@ class PlusAssignTest {
     // todo also test complex accessor chains...
 
     private fun runTest(code: String) {
+        val result = TypeResolutionTest.testMethodBodyResolution(code)
         assertEquals(
             listOf(Types.Unit, Types.Unit),
-            TypeResolutionTest.testMethodBodyResolution(code)
+            result
         )
     }
 
