@@ -2,6 +2,9 @@ package me.anno.support.jvm
 
 import java.lang.reflect.Modifier
 
+/**
+ * Copied from JVM2WASM
+ * */
 object OpCode {
 
     private val opcodeNames = arrayOfNulls<String>(256)

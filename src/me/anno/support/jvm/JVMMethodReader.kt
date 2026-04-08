@@ -34,6 +34,18 @@ class JVMMethodReader(val method: MethodLike, parameters: List<Parameter>) : Met
             val i2 = NumberExpression("2", scope, -1)
             val i3 = NumberExpression("3", scope, -1)
             val i4 = NumberExpression("4", scope, -1)
+            val i5 = NumberExpression("5", scope, -1)
+            val im1 = NumberExpression("-1", scope, -1)
+
+            val l0 = NumberExpression("0l", scope, -1)
+            val l1 = NumberExpression("1l", scope, -1)
+
+            val f0 = NumberExpression("0f", scope, -1)
+            val f1 = NumberExpression("1f", scope, -1)
+            val f2 = NumberExpression("2f", scope, -1)
+
+            val d0 = NumberExpression("0d", scope, -1)
+            val d1 = NumberExpression("1d", scope, -1)
         }
 
         val Constants by threadLocal { ConstantsImpl() }
@@ -68,14 +80,27 @@ class JVMMethodReader(val method: MethodLike, parameters: List<Parameter>) : Met
     override fun visitInsn(opcode: Int) {
         println(OpCode[opcode])
         when (opcode) {
+
+            // duplications
             DUP -> stack.add(stack.last())
 
+            // constants
             ICONST_0 -> pushConst(Constants.i0)
             ICONST_1 -> pushConst(Constants.i1)
             ICONST_2 -> pushConst(Constants.i2)
             ICONST_3 -> pushConst(Constants.i3)
             ICONST_4 -> pushConst(Constants.i4)
+            ICONST_5 -> pushConst(Constants.i5)
+            ICONST_M1 -> pushConst(Constants.im1)
+            LCONST_0 -> pushConst(Constants.l0)
+            LCONST_1 -> pushConst(Constants.l1)
+            FCONST_0 -> pushConst(Constants.f0)
+            FCONST_1 -> pushConst(Constants.f1)
+            FCONST_2 -> pushConst(Constants.f2)
+            DCONST_0 -> pushConst(Constants.d0)
+            DCONST_1 -> pushConst(Constants.d1)
 
+            // math
             IADD -> binaryCall(Types.Int, "plus")
             ISUB -> binaryCall(Types.Int, "minus")
             IMUL -> binaryCall(Types.Int, "times")
@@ -119,6 +144,7 @@ class JVMMethodReader(val method: MethodLike, parameters: List<Parameter>) : Met
             // todo choose the correct variant...
             DCMPL, DCMPG -> binaryCall(Types.Double, "compareTo")
 
+            // number conversions
             I2L -> convertCall(Types.Int, Types.Long, "toLong")
             I2F -> convertCall(Types.Int, Types.Float, "toFloat")
             I2D -> convertCall(Types.Int, Types.Double, "toDouble")
@@ -177,8 +203,10 @@ class JVMMethodReader(val method: MethodLike, parameters: List<Parameter>) : Met
     fun findMethod(clazz: Scope, name: String, vararg params: Type): MethodLike {
         return clazz.scope.methods.firstOrNull {
             it.name == name && equalsParams(params, it.valueParameters)
-        } ?: throw IllegalStateException("Missing $clazz.$name(${params.joinToString()}), " +
-                "candidates: ${clazz.methods}")
+        } ?: throw IllegalStateException(
+            "Missing $clazz.$name(${params.joinToString()}), " +
+                    "candidates: ${clazz.methods}"
+        )
     }
 
     fun pushConst(ne: NumberExpression, type: ClassType = Types.Int) {
@@ -228,6 +256,7 @@ class JVMMethodReader(val method: MethodLike, parameters: List<Parameter>) : Met
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
         // todo load or store a local variable...
+        //  first N indices are the parameters incl. self if not static
         println("visitVarInsn: ${OpCode[opcode]}, $varIndex")
         TODO("Handle")
     }
