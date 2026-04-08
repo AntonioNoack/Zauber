@@ -1,10 +1,16 @@
 package me.anno.support
 
 import java.io.File
+import kotlin.math.max
 
 object TokenizerBench {
     fun execute(
         source: File, extension: String,
+        tokenize: (src: String, fileName: String) -> Int
+    ) = execute(source, listOf(extension), tokenize)
+
+    fun execute(
+        source: File, extensions: List<String>,
         tokenize: (src: String, fileName: String) -> Int
     ) {
 
@@ -23,7 +29,7 @@ object TokenizerBench {
                 for (child in file.listFiles()!!) {
                     executeOnFile(child)
                 }
-            } else if (file.extension == extension) {
+            } else if (file.extension in extensions) {
                 val src = file.readText()
                 numTokens += tokenize(src, file.absolutePath)
                 numBytes += src.length
@@ -37,7 +43,7 @@ object TokenizerBench {
         val t1 = System.nanoTime()
         println(
             "Tokenized $numFiles files with $numLines lines in " +
-                    "${(t1 - t0) / 1e6f} ms, ${(t1 - t0) / numTokens} ns/t, " +
+                    "${(t1 - t0) / 1e6f} ms, ${(t1 - t0) / max(numTokens, 1)} ns/t, " +
                     "${(numBytes / 1e6f)} MB, $numTokens tokens"
         )
     }
