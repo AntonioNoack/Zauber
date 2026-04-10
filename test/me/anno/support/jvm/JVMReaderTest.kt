@@ -17,6 +17,7 @@ package zauber
 class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
+    external fun equals(other: Int): Boolean
 }
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)

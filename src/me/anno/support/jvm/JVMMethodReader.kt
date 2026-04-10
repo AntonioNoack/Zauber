@@ -1,13 +1,13 @@
 package me.anno.support.jvm
 
 import me.anno.support.jvm.JVMClassReader.Companion.API_LEVEL
+import me.anno.support.jvm.JVMClassReader.Companion.parseMethodSignature
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
@@ -16,6 +16,7 @@ import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.MatchScore
@@ -54,8 +55,6 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
 
             val d0 = NumberExpression("0d", scope, -1)
             val d1 = NumberExpression("1d", scope, -1)
-
-            val NULL = SpecialValueExpression(SpecialValue.NULL, scope, -1)
         }
 
         val Constants by threadLocal { ConstantsImpl() }
@@ -109,6 +108,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
         when (opcode) {
 
             // duplications
+            // no .use() required, because we haven't read them yet
             DUP -> stack.add(stack.last())
             DUP_X1 -> {
                 val v0 = stack.removeLast()
@@ -219,8 +219,8 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
                     CALOAD -> Types.Char
                     else -> throw IllegalStateException()
                 }
-                val index = stack.removeLast()
-                val array = stack.removeLast()
+                val index = stack.removeLast().use()
+                val array = stack.removeLast().use()
                 val dst = block.field(baseType)
                 val method = findMethod(Types.Array.clazz, "get", Types.Int)
                 block.add(SimpleCall(dst, method, array, noSpecialization, listOf(index), methodScope, origin))
@@ -241,16 +241,16 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
                     CASTORE -> Types.Char
                     else -> throw IllegalStateException()
                 }
-                val value = stack.removeLast()
-                val index = stack.removeLast()
-                val array = stack.removeLast()
+                val value = stack.removeLast().use()
+                val index = stack.removeLast().use()
+                val array = stack.removeLast().use()
                 val dst = block.field(Types.Unit)
                 val method = findMethod(Types.Array.clazz, "set", Types.Int, baseType)
                 block.add(SimpleCall(dst, method, array, noSpecialization, listOf(index, value), methodScope, origin))
             }
 
             ARETURN, IRETURN, LRETURN, FRETURN, DRETURN -> {
-                block.add(SimpleReturn(stack.removeLast(), methodScope, origin))
+                block.add(SimpleReturn(stack.removeLast().use(), methodScope, origin))
             }
 
             RETURN -> {
@@ -260,12 +260,23 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
                 block.add(SimpleReturn(tmp.use(), methodScope, origin))
             }
 
+            ARRAYLENGTH -> {
+                val dst = graph.field(Types.Int)
+                val array = stack.removeLast().use()
+                val field = findField(Types.Array.clazz, "size")
+                    ?: throw IllegalStateException("Missing field 'size' in zauber.Array")
+                val instr = SimpleGetField(dst, array, field, methodScope, origin)
+                block.add(instr)
+                stack.add(dst)
+            }
+
+
             else -> TODO("Handle ${OpCode[opcode]}")
         }
     }
 
     fun convertCall(fromType: ClassType, toType: ClassType, name: String) {
-        val p0 = stack.removeLast()
+        val p0 = stack.removeLast().use()
         val dst = graph.field(toType)
         val method = findMethod(fromType.clazz, name)
         block.add(SimpleCall(dst, method, p0, noSpecialization, emptyList(), methodScope, origin))
@@ -278,8 +289,8 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
 
     fun binaryCall(type: ClassType, name: String) {
         // todo check order
-        val p1 = stack.removeLast()
-        val p0 = stack.removeLast()
+        val p1 = stack.removeLast().use()
+        val p0 = stack.removeLast().use()
         val dst = graph.field(type)
         val method = findMethod(type.clazz, name, type)
         block.add(SimpleCall(dst, method, p0, noSpecialization, listOf(p1), methodScope, origin))
@@ -301,8 +312,8 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     fun identicalCall(negated: Boolean) {
-        val p1 = stack.removeLast()
-        val p0 = stack.removeLast()
+        val p1 = stack.removeLast().use()
+        val p0 = stack.removeLast().use()
         val dst = graph.field(Types.Boolean)
         block.add(SimpleCheckIdentical(dst, p0, p1, negated, methodScope, origin))
         stack.add(dst)
@@ -347,8 +358,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
             GETFIELD -> {
                 // todo check non-null
                 val dst = graph.field(fieldType)
-                val self = stack.removeLast()
-                // todo field can also be in parent class...
+                val self = stack.removeLast().use()
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
                 val instr = SimpleGetField(dst, self, field, methodScope, origin)
@@ -358,10 +368,9 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
             PUTFIELD -> {
                 // todo check non-null
                 // todo check order
-                val value = stack.removeLast()
-                val self = stack.removeLast()
+                val value = stack.removeLast().use()
+                val self = stack.removeLast().use()
                 println("$self.$name = $value")
-                // todo field can also be in parent class...
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
                 val instr = SimpleSetField(self, field, value, methodScope, origin)
@@ -407,7 +416,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
             }
             ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
                 val field = localFields[varIndex]
-                val value = stack.removeLast()
+                val value = stack.removeLast().use()
                 block.add(SimpleSetField(methodField.use(), field, value, methodScope, origin))
             }
             else -> throw IllegalStateException("Unsupported opcode ${OpCode[opcode]}")
@@ -479,7 +488,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
                 val p1 = stack[stack.size - 1]
                 val p0 = stack[stack.size - 2]
                 binaryCall(Types.Int, "compareTo")
-                val tmp = stack.removeLast()
+                val tmp = stack.removeLast().use()
                 val compareType = when (opcode) {
                     IF_ICMPLT -> CompareType.LESS
                     IF_ICMPGT -> CompareType.GREATER
@@ -532,14 +541,53 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     override fun visitMethodInsn(
-        opcode: Int,
-        owner: String?,
-        name: String?,
-        descriptor: String?,
-        isInterface: Boolean
+        opcode: Int, owner: String, name: String,
+        descriptor: String, isInterface: Boolean
     ) {
-        println("visitMethodInsn: ${OpCode[opcode]}, $owner.$name, descriptor: $descriptor, isInterface: $isInterface")
-        TODO("Handle")
+        // what does the isInterface flag say? if the method's owner class is an interface.
+        val (typeParameters, valueParameters, returnType) = parseMethodSignature(methodScope, descriptor, false)
+        println(
+            "visitMethodInsn: ${OpCode[opcode]}, " +
+                    "$owner.$name<${typeParameters.joinToString()}>(${valueParameters.joinToString()}): $returnType"
+        )
+
+        val valueParametersI = valueParameters.map { stack.removeLast() }.asReversed()
+
+        // todo resolve method...
+        val self: SimpleField
+        val method: ResolvedMethod
+
+        when (opcode) {
+            INVOKESPECIAL -> {
+                // constructor or super
+                TODO(name)
+            }
+            INVOKESTATIC -> {
+                // call on companion object
+                // todo resolve method
+                val objectScope = method.resolved.scope.parent!!
+                check(objectScope.scopeType == ScopeType.COMPANION_OBJECT)
+                self = block.field(objectScope.typeWithArgs).use()
+                block.add(SimpleGetObject(self, objectScope, methodScope, origin))
+            }
+            INVOKEVIRTUAL, // normal call on potentially open method
+            INVOKEINTERFACE -> {
+                // todo resolve method
+                // interface call
+                self = stack.removeLast().use()
+
+            }
+            else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
+        }
+        val dst = block.field(returnType)
+        block.add(
+            SimpleCall(
+                dst, method.resolved, self, method.specialization,
+                emptyList(), valueParametersI,
+                emptyList(), methodScope, origin
+            )
+        )
+        stack.add(dst)
     }
 
     override fun visitLookupSwitchInsn(dflt: Label, keys: IntArray, labels: Array<out Label>) {

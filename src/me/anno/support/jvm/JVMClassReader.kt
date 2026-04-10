@@ -43,7 +43,8 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
             scanned.getOrPutRecursive(name, { scope }) { name, _ ->
                 try {
                     ClassReader(name)
-                        .accept(JVMClassReader(scope),
+                        .accept(
+                            JVMClassReader(scope),
                             ClassReader.EXPAND_FRAMES // only needed when reading methods
                         )
                 } catch (e: IOException) {
@@ -93,6 +94,31 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
                 superClasses.add(reader.readType() as ClassType)
             }
             return generics to superClasses
+        }
+
+        fun parseMethodSignature(
+            scope: Scope,
+            signature: String,
+            addToScope: Boolean
+        ): MethodSignature {
+            val reader = SignatureReader(signature, scope)
+            val typeParameters = reader.readGenerics()
+            if (addToScope) {
+                scope.typeParameters = typeParameters
+                scope.hasTypeParameters = true
+            }
+
+            reader.consume('(')
+            val valueParameters = ArrayList<Parameter>()
+            var i = 0
+            while (signature[reader.i] != ')') {
+                val type = reader.readType()
+                valueParameters.add(Parameter(valueParameters.size, "arg${i++}", type, scope, origin = -1))
+            }
+            reader.consume(')')
+
+            val returnType = reader.readType()
+            return MethodSignature(typeParameters, valueParameters, returnType)
         }
     }
 
@@ -162,7 +188,7 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor? {
-        if (classScope.name != "ArrayList" || name != "clear") return null
+        if (classScope.name != "ArrayList" || (name != "clear" && name != "add")) return null
 
         println("Visiting method: $name, descriptor: $descriptor, signature: $signature, exceptions: ${exceptions?.toList()}, access: $access")
         // todo should we lazy-read methods??? check performance...
@@ -171,21 +197,8 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
         val origin = -1
         val signature = signature ?: descriptor
         val methodScope = classScope.generate(name, ScopeType.METHOD)
-        val reader = SignatureReader(signature, methodScope)
+        val (typeParameters, valueParameters, returnType) = parseMethodSignature(methodScope, signature, true)
 
-        val typeParameters = reader.readGenerics()
-        methodScope.typeParameters = typeParameters
-        methodScope.hasTypeParameters = true
-
-        reader.consume('(')
-        val valueParameters = ArrayList<Parameter>()
-        while (signature[reader.i] != ')') {
-            val type = reader.readType()
-            valueParameters.add(Parameter(valueParameters.size, name, type, methodScope, origin))
-        }
-        reader.consume(')')
-
-        val returnType = reader.readType()
         val method = if (name == "<init>" || name == "<clinit>") {
             // clinit is not really a constructor, but we have nothing better at the moment
             Constructor(valueParameters, methodScope, null, null, Flags.NONE, origin)
