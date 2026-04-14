@@ -2,7 +2,7 @@ package me.anno.support.jvm
 
 import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
-import me.anno.support.jvm.utils.LateSpecializationExpression
+import me.anno.support.jvm.expression.*
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
@@ -10,11 +10,7 @@ import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.SimpleThis
-import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
@@ -91,10 +87,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     val methodScope get() = method.scope
     val classScope = methodScope.parent!!
 
-    val graph = SimpleGraph(method)
-    val stack = ArrayList<SimpleField>()
-    var block = graph.startBlock
     val origin = -1
+    val graph = JVMGraph(methodScope, origin)
+    val stack = ArrayList<SimpleFieldExpr>()
+    var block = graph.startBlock
 
     val localFields = ArrayList<Field>()
     val methodField = graph.field(methodScope.typeWithArgs)
@@ -112,7 +108,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 Flags.NONE, origin
             )
             graph.thisFields[SimpleThis(classScope, false)] = selfField
-            block.add(SimpleSetField(methodField, tmpField, selfField, methodScope, origin))
+            block.add(JVMSimpleSetField(methodField, tmpField, selfField, methodScope, origin))
             localFields.add(tmpField)
         }
         for (i in parameters.indices) {
@@ -154,7 +150,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             ACONST_NULL -> {
                 val dst = graph.field(NullType)
-                block.add(SimpleSpecialValue(dst, SpecialValue.NULL, methodScope, origin))
+                block.add(JVMSimpleSpecialValue(dst, SpecialValue.NULL, methodScope, origin))
                 stack.add(dst)
             }
 
@@ -241,7 +237,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val array = stack.removeLast().use()
                 val dst = block.field(baseType)
                 val method = findMethod(Types.Array.clazz, "get", Types.Int)
-                block.add(SimpleCall(dst, method, array, noSpecialization, listOf(index), methodScope, origin))
+                block.add(JVMSimpleCall(dst, method, array, noSpecialization, listOf(index), methodScope, origin))
                 stack.add(dst)
             }
 
@@ -264,18 +260,28 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val array = stack.removeLast().use()
                 val dst = block.field(Types.Unit)
                 val method = findMethod(Types.Array.clazz, "set", Types.Int, baseType)
-                block.add(SimpleCall(dst, method, array, noSpecialization, listOf(index, value), methodScope, origin))
+                block.add(
+                    JVMSimpleCall(
+                        dst,
+                        method,
+                        array,
+                        noSpecialization,
+                        listOf(index, value),
+                        methodScope,
+                        origin
+                    )
+                )
             }
 
             ARETURN, IRETURN, LRETURN, FRETURN, DRETURN -> {
-                block.add(SimpleReturn(stack.removeLast().use(), methodScope, origin))
+                block.add(JVMSimpleReturn(stack.removeLast().use(), methodScope, origin))
             }
 
             RETURN -> {
                 // return unit
                 val tmp = graph.field(Types.Unit)
-                block.add(SimpleGetObject(tmp, Types.Unit.clazz, methodScope, origin))
-                block.add(SimpleReturn(tmp.use(), methodScope, origin))
+                block.add(JVMSimpleGetObject(tmp, Types.Unit.clazz, methodScope, origin))
+                block.add(JVMSimpleReturn(tmp.use(), methodScope, origin))
             }
 
             ARRAYLENGTH -> {
@@ -283,7 +289,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val array = stack.removeLast().use()
                 val field = findField(Types.Array.clazz, "size")
                     ?: throw IllegalStateException("Missing field 'size' in zauber.Array")
-                val instr = SimpleGetField(dst, array, field, methodScope, origin)
+                val instr = JVMSimpleGetField(dst, array, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
             }
@@ -297,7 +303,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p0 = stack.removeLast().use()
         val dst = graph.field(toType)
         val method = findMethod(fromType.clazz, name)
-        block.add(SimpleCall(dst, method, p0, noSpecialization, emptyList(), methodScope, origin))
+        block.add(JVMSimpleCall(dst, method, p0, noSpecialization, emptyList(), methodScope, origin))
         stack.add(dst)
     }
 
@@ -311,7 +317,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p0 = stack.removeLast().use()
         val dst = graph.field(type)
         val method = findMethod(type.clazz, name, type)
-        block.add(SimpleCall(dst, method, p0, noSpecialization, listOf(p1), methodScope, origin))
+        block.add(JVMSimpleCall(dst, method, p0, noSpecialization, listOf(p1), methodScope, origin))
         stack.add(dst)
     }
 
@@ -325,7 +331,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             ParameterList.emptyParameterList(), ResolutionContext.minimal,
             methodScope, MatchScore(0)
         )
-        block.add(SimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
+        block.add(JVMSimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
         stack.add(dst)
     }
 
@@ -333,7 +339,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p1 = stack.removeLast().use()
         val p0 = stack.removeLast().use()
         val dst = graph.field(Types.Boolean)
-        block.add(SimpleCheckIdentical(dst, p0, p1, negated, methodScope, origin))
+        block.add(JVMSimpleCheckIdentical(dst, p0, p1, negated, methodScope, origin))
         stack.add(dst)
     }
 
@@ -357,7 +363,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     fun pushConst(ne: NumberExpression, type: ClassType = Types.Int) {
         val dst = graph.field(type)
-        block.add(SimpleNumber(dst, ne))
+        block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
         stack.add(dst)
     }
 
@@ -380,10 +386,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             GETSTATIC -> {
                 val dst = graph.field(fieldType)
                 val self = graph.field(descToType(owner))
-                block.add(SimpleGetObject(self, ownerType.clazz, methodScope, origin))
+                block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
-                val instr = SimpleGetField(dst, self, field, methodScope, origin)
+                val instr = JVMSimpleGetField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
             }
@@ -393,17 +399,17 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val self = stack.removeLast().use()
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
-                val instr = SimpleGetField(dst, self, field, methodScope, origin)
+                val instr = JVMSimpleGetField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
             }
             PUTSTATIC -> {
                 val dst = graph.field(fieldType)
                 val self = graph.field(descToType(owner))
-                block.add(SimpleGetObject(self, ownerType.clazz, methodScope, origin))
+                block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
-                val instr = SimpleGetField(dst, self, field, methodScope, origin)
+                val instr = JVMSimpleGetField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
             }
@@ -415,7 +421,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 LOGGER.debug("$self.$name = $value")
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
-                val instr = SimpleSetField(self, field, value, methodScope, origin)
+                val instr = JVMSimpleSetField(self, field, value, methodScope, origin)
                 block.add(instr)
             }
             else -> throw IllegalStateException("Unknown instruction ${OpCode[opcode]}")
@@ -453,13 +459,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val field = localFields[varIndex]
                 val valueType = field.valueType!!
                 val dst = graph.field(valueType)
-                block.add(SimpleGetField(dst, methodField.use(), field, methodScope, origin))
+                block.add(JVMSimpleGetField(dst, methodField.use(), field, methodScope, origin))
                 stack.add(dst)
             }
             ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
                 val field = localFields[varIndex]
                 val value = stack.removeLast().use()
-                block.add(SimpleSetField(methodField.use(), field, value, methodScope, origin))
+                block.add(JVMSimpleSetField(methodField.use(), field, value, methodScope, origin))
             }
             else -> throw IllegalStateException("Unsupported opcode ${OpCode[opcode]}")
         }
@@ -501,8 +507,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
     }
 
-    val blocksByLabel = HashMap<Label, SimpleNode>()
-    fun getBlockByLabel(label: Label): SimpleNode {
+    val blocksByLabel = HashMap<Label, JVMBlockExpression>()
+    fun getBlockByLabel(label: Label): JVMBlockExpression {
         return blocksByLabel.getOrPut(label) { graph.addNode() }
     }
 
@@ -538,7 +544,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     IF_ICMPGE -> CompareType.GREATER_EQUALS
                     else -> throw IllegalStateException()
                 }
-                block.add(SimpleCompare(condition, p0, p1, compareType, tmp, methodScope, origin))
+                block.add(JVMSimpleCompare(condition, p0, p1, compareType, tmp, methodScope, origin))
             }
             IF_ACMPEQ, IF_ACMPNE -> {
                 TODO("Handle object-equals-branch")
@@ -593,10 +599,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     "$owner.$name<${typeParameters.joinToString()}>(${valueParameters.joinToString()}): $returnType"
         )
 
-        val valueParametersI = valueParameters.map { stack.removeLast() }.asReversed()
+        val valueParametersI = valueParameters
+            .map { stack.removeLast() }
+            .asReversed()
 
         // todo resolve method...
-        val self: SimpleField
+        val self: SimpleFieldExpr
         val method: ResolvedMethod
 
         when (opcode) {
@@ -610,7 +618,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val objectScope = method.resolved.scope.parent!!
                 check(objectScope.scopeType == ScopeType.COMPANION_OBJECT)
                 self = block.field(objectScope.typeWithArgs).use()
-                block.add(SimpleGetObject(self, objectScope, methodScope, origin))
+                block.add(JVMSimpleGetObject(self, objectScope, methodScope, origin))
             }
             INVOKEVIRTUAL, // normal call on potentially open method
             INVOKEINTERFACE -> {
@@ -621,15 +629,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
         }
 
-        /*val dst = block.field(returnType)
+        val dst = block.field(returnType)
         block.add(
-            SimpleCall(
+            JVMSimpleCall(
                 dst, method.resolved, self, method.specialization,
-                emptyList(), valueParametersI,
-                emptyList(), methodScope, origin
+                valueParametersI, methodScope, origin
             )
         )
-        stack.add(dst)*/
+        stack.add(dst)
     }
 
     fun resolveStaticMethod(
@@ -703,6 +710,6 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     override fun visitEnd() {
-        method.body = LateSpecializationExpression(graph, methodScope, origin)
+        method.body = graph
     }
 }

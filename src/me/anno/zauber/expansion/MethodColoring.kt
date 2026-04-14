@@ -1,23 +1,22 @@
 package me.anno.zauber.expansion
 
+import me.anno.support.jvm.expression.JVMSimpleCall
+import me.anno.support.jvm.expression.JVMSimpleExpr
+import me.anno.utils.RecursiveException
+import me.anno.utils.RecursiveLazy
 import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.GetClassFromTypeExpression
-import me.anno.zauber.ast.rich.expression.GetClassFromValueExpression
-import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
+import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.utils.RecursiveException
-import me.anno.utils.RecursiveLazy
 
 abstract class MethodColoring<Color : Any> {
 
@@ -78,6 +77,11 @@ abstract class MethodColoring<Color : Any> {
                             }
                         }
                     }
+                    is JVMSimpleCall -> {
+                        val method1 = expr.method
+                        result.add(MethodSpecialization(method1, Specializations.specialization))
+                    }
+                    is JVMSimpleExpr -> {}
                     is ResolvedCompareOp -> {
                         val method1 = expr.callable
                         result.add(MethodSpecialization(method1.resolved, method1.specialization))
