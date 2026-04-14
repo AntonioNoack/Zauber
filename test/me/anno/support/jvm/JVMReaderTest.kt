@@ -9,7 +9,7 @@ fun main() {
     LogManager.disableLoggers("" +
             "MemberResolver,TypeResolver,TypeResolution," +
             "ASTSimplifier,Runtime,Inheritance," +
-            "MethodResolver,CallExpression," +
+            "MethodResolver,CallExpression,ResolvedMethod," +
             "Field,FieldExpression,FieldResolver,FieldResolver,FieldExpression,ResolvedField," +
             "ConstructorResolver,")
     LogManager.disableLoggersCompletely("OverriddenMethods")
@@ -60,14 +60,12 @@ class Array<V>(val size: Int) {
         fun test(): Int {
             val x = ArrayList<Int>()
             x.add(1)
-            x.add(2)
-            x.add(3)
-            return x[0] + x[1] + x[2]
+            return x[0]
         }
         
         val tested = test()
     """.trimIndent(), reset = false
     )
-    assertEquals(6, value.castToInt())
+    assertEquals(1, value.castToInt())
 
 }

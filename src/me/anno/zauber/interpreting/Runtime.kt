@@ -138,6 +138,8 @@ class Runtime {
         }
 
         val method = methodSpec.method
+        method.scope.scope // load method
+
         if (method.isExternal()) {
             val name = (method as Method).name
             val parameterTypes = method.valueParameters.map { parameter ->

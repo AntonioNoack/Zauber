@@ -2,6 +2,7 @@ package me.anno.support.jvm
 
 import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
+import me.anno.support.jvm.utils.LateSpecializationExpression
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
@@ -699,5 +700,9 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     override fun visitTypeInsn(opcode: Int, type: String?) {
         LOGGER.debug("visitTypeInsn: ${OpCode[opcode]}, type: $type")
         TODO("Handle")
+    }
+
+    override fun visitEnd() {
+        method.body = LateSpecializationExpression(graph, methodScope, origin)
     }
 }

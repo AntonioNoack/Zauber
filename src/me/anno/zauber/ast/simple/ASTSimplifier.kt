@@ -73,6 +73,7 @@ object ASTSimplifier {
             val graph = SimpleGraph(method.method)
             val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
             val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
+            graph.endFlow = flow1
             val flow1r = flow1.returned
             flow1r?.block?.add(SimpleReturn(flow1r.value.use(), expr.scope, expr.origin))
             val flow1t = flow1.thrown

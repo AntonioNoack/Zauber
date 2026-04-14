@@ -22,6 +22,8 @@ class SimpleGraph(val method: MethodLike) {
 
     var unitField: SimpleField? = null
 
+    lateinit var endFlow: FlowResult
+
     init {
         startBlock.isEntryPoint = true
         nodes.add(startBlock)
