@@ -19,11 +19,11 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import java.io.IOException
 
-class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
+class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisitor(API_LEVEL) {
 
     companion object {
         const val API_LEVEL = ASM9
-        private val LOGGER = LogManager.getLogger(JVMClassReader::class)
+        private val LOGGER = LogManager.getLogger(FirstJVMClassReader::class)
 
         var ctr = 0
         val scanned = HashMap<String, Scope>()
@@ -43,10 +43,7 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
             scanned.getOrPutRecursive(name, { scope }) { name, _ ->
                 try {
                     ClassReader(name)
-                        .accept(
-                            JVMClassReader(scope),
-                            ClassReader.EXPAND_FRAMES // only needed when reading methods
-                        )
+                        .accept(FirstJVMClassReader(name, scope), 0)
                 } catch (e: IOException) {
                     LOGGER.warn("Missing class $e")
                 }
@@ -122,6 +119,17 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
         }
     }
 
+    private val methodSignatures = HashMap<JVMMethodSignature, Scope>()
+
+    var isFinished = false
+    val methodReader = lazy {
+        check(isFinished)
+        ClassReader(path).accept(
+            SecondJVMClassReader(classScope, methodSignatures),
+            ClassReader.EXPAND_FRAMES // only needed when reading methods
+        )
+    }
+
     fun descToType(desc: String): Type {
         return SignatureReader(desc, classScope).readType()
     }
@@ -129,6 +137,10 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
     fun nameToType(desc: String): Type {
         // todo can be optimized
         return SignatureReader("L$desc;", classScope).readType()
+    }
+
+    override fun visitEnd() {
+        isFinished = true
     }
 
     override fun visit(
@@ -188,28 +200,35 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor? {
-        if (classScope.name != "ArrayList" || (name != "clear" && name != "add")) return null
 
-        println("Visiting method: $name, descriptor: $descriptor, signature: $signature, exceptions: ${exceptions?.toList()}, access: $access")
+        if (name == "get") {
+            println("Visiting method: $path.$name, descriptor: $descriptor, signature: $signature, exceptions: ${exceptions?.toList()}, access: $access")
+        }
+
         // todo should we lazy-read methods??? check performance...
         //  individually, or all at once?
 
         val origin = -1
         val signature = signature ?: descriptor
+        val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
         val methodScope = classScope.generate(name, ScopeType.METHOD)
         val (typeParameters, valueParameters, returnType) = parseMethodSignature(methodScope, signature, true)
 
-        val method = if (name == "<init>" || name == "<clinit>") {
+        if (name == "<init>" || name == "<clinit>") {
             // clinit is not really a constructor, but we have nothing better at the moment
-            Constructor(valueParameters, methodScope, null, null, Flags.NONE, origin)
+            methodScope.selfAsConstructor = Constructor(valueParameters, methodScope, null, null, Flags.NONE, origin)
         } else {
-            Method(
+            methodScope.selfAsMethod = Method(
                 null, false, name, typeParameters, valueParameters, methodScope, returnType,
                 emptyList(), null, Flags.NONE, origin
             )
         }
 
-        return JVMMethodReader(method, access.isStatic(), valueParameters)
+        val s = JVMMethodSignature(name, descriptor)
+        methodSignatures[s] = methodScope
+        methodScope.initParts += { methodReader.value }
+
+        return null
     }
 
     override fun visitField(
@@ -233,6 +252,7 @@ class JVMClassReader(val classScope: Scope) : ClassVisitor(API_LEVEL) {
             else -> TODO("Get initial from ${value.javaClass.simpleName}")
         }
 
+        val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
         classScope.addField(
             null, false, true, null, name, valueType,
             initialValueForConst, Flags.NONE, origin

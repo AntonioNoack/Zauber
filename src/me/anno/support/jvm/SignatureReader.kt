@@ -1,10 +1,9 @@
 package me.anno.support.jvm
 
-import me.anno.support.jvm.JVMClassReader.Companion.getScope
+import me.anno.support.jvm.FirstJVMClassReader.Companion.getScope
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -76,6 +75,12 @@ class SignatureReader(val signature: String, val scope: Scope) {
         check(i1 > i0)
         val name = signature.substring(i0, i1)
         i = i1 + 1
+
+        var scope = scope
+        if (scope.isMethodType() &&
+            scope.typeParameters.none { it.name == name }
+        ) scope = scope.parent!!
+
         return GenericType(scope, name)
     }
 

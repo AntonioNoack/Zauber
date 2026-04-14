@@ -24,8 +24,8 @@ class BasicRuntimeTests {
             Stdlib.registerTypeMethods()
         }
 
-        fun testExecute(code: String): Instance {
-            val value = testExecuteCatch(code)
+        fun testExecute(code: String, reset: Boolean = true): Instance {
+            val value = testExecuteCatch(code, reset)
             check(value.type == ReturnType.RETURN) {
                 "Expected function to return, got $value"
             }
@@ -40,8 +40,8 @@ class BasicRuntimeTests {
             return value.value to scope
         }
 
-        fun testExecuteCatch(code: String): BlockReturn {
-            val scope = typeResolveScope(code)
+        fun testExecuteCatch(code: String, reset: Boolean = true): BlockReturn {
+            val scope = typeResolveScope(code, reset)
             val field = scope.fields.firstOrNull { it.name == "tested" }
                 ?: throw IllegalStateException("Missing 'tested' field in scope ${scope.pathStr}")
             val getter = field.getter

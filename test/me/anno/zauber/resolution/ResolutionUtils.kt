@@ -1,5 +1,6 @@
 package me.anno.zauber.resolution
 
+import me.anno.utils.ResetThreadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
@@ -9,12 +10,11 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
-import me.anno.utils.ResetThreadLocal
 
 object ResolutionUtils {
-    fun typeResolveScope(code: String): Scope {
+    fun typeResolveScope(code: String, reset: Boolean = true): Scope {
 
-        ResetThreadLocal.reset()
+        if (reset) ResetThreadLocal.reset()
 
         val testScopeName = "test${ctr++}"
 

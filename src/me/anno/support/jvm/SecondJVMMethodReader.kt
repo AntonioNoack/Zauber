@@ -1,7 +1,7 @@
 package me.anno.support.jvm
 
-import me.anno.support.jvm.JVMClassReader.Companion.API_LEVEL
-import me.anno.support.jvm.JVMClassReader.Companion.parseMethodSignature
+import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
+import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
@@ -15,6 +15,8 @@ import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.generation.Specializations
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
@@ -24,6 +26,7 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.objectweb.asm.Handle
@@ -31,35 +34,49 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
+
+/**
+ * This just reads the commands and structures.
+ * No specialization is applied yet.
+ * */
 @Suppress("Since15")
-class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters: List<Parameter>) :
+class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters: List<Parameter>) :
     MethodVisitor(API_LEVEL) {
 
     companion object {
+
+        private val LOGGER = LogManager.getLogger(SecondJVMMethodReader::class)
+
+        /**
+         * cache for often-used constants, don't want to have to recreate them
+         * */
         class ConstantsImpl {
             val scope = root
-            val i0 = NumberExpression("0", scope, -1)
-            val i1 = NumberExpression("1", scope, -1)
-            val i2 = NumberExpression("2", scope, -1)
-            val i3 = NumberExpression("3", scope, -1)
-            val i4 = NumberExpression("4", scope, -1)
-            val i5 = NumberExpression("5", scope, -1)
-            val im1 = NumberExpression("-1", scope, -1)
+            val i0 = NumberExpression("0", scope, -1).apply { resolvedType = Types.Int }
+            val i1 = NumberExpression("1", scope, -1).apply { resolvedType = Types.Int }
+            val i2 = NumberExpression("2", scope, -1).apply { resolvedType = Types.Int }
+            val i3 = NumberExpression("3", scope, -1).apply { resolvedType = Types.Int }
+            val i4 = NumberExpression("4", scope, -1).apply { resolvedType = Types.Int }
+            val i5 = NumberExpression("5", scope, -1).apply { resolvedType = Types.Int }
+            val im1 = NumberExpression("-1", scope, -1).apply { resolvedType = Types.Int }
 
-            val l0 = NumberExpression("0l", scope, -1)
-            val l1 = NumberExpression("1l", scope, -1)
+            val l0 = NumberExpression("0l", scope, -1).apply { resolvedType = Types.Long }
+            val l1 = NumberExpression("1l", scope, -1).apply { resolvedType = Types.Long }
 
-            val f0 = NumberExpression("0f", scope, -1)
-            val f1 = NumberExpression("1f", scope, -1)
-            val f2 = NumberExpression("2f", scope, -1)
+            val f0 = NumberExpression("0f", scope, -1).apply { resolvedType = Types.Float }
+            val f1 = NumberExpression("1f", scope, -1).apply { resolvedType = Types.Float }
+            val f2 = NumberExpression("2f", scope, -1).apply { resolvedType = Types.Float }
 
-            val d0 = NumberExpression("0d", scope, -1)
-            val d1 = NumberExpression("1d", scope, -1)
+            val d0 = NumberExpression("0d", scope, -1).apply { resolvedType = Types.Double }
+            val d1 = NumberExpression("1d", scope, -1).apply { resolvedType = Types.Double }
         }
 
         val Constants by threadLocal { ConstantsImpl() }
     }
 
+    init {
+        check(Specializations.specialization === noSpecialization)
+    }
 
     fun descToType(desc: String): Type {
         return SignatureReader(desc, methodScope).readType()
@@ -104,7 +121,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     override fun visitInsn(opcode: Int) {
-        println(OpCode[opcode])
+        LOGGER.debug(OpCode[opcode])
         when (opcode) {
 
             // duplications
@@ -344,21 +361,45 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     override fun visitIntInsn(opcode: Int, operand: Int) {
-        println("${OpCode[opcode]}($operand)")
+        LOGGER.debug("${OpCode[opcode]}($operand)")
         when (opcode) {
             else -> TODO("Handle ${OpCode[opcode]}")
         }
     }
 
     override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
-        println("${OpCode[opcode]}($owner.$name, $descriptor)")
+        LOGGER.debug("${OpCode[opcode]}($owner.$name, $descriptor)")
         val fieldType = descToType(descriptor)
-        val ownerType = nameToType(owner) as ClassType
+        var ownerType = nameToType(owner) as ClassType
+        if (opcode == GETSTATIC || opcode == PUTSTATIC) {
+            ownerType = ownerType.clazz
+                .getOrPutCompanion().typeWithArgs
+        }
         when (opcode) {
+            GETSTATIC -> {
+                val dst = graph.field(fieldType)
+                val self = graph.field(descToType(owner))
+                block.add(SimpleGetObject(self, ownerType.clazz, methodScope, origin))
+                val field = findField(ownerType.clazz, name)
+                    ?: throw IllegalStateException("Missing field '$name' in $ownerType")
+                val instr = SimpleGetField(dst, self, field, methodScope, origin)
+                block.add(instr)
+                stack.add(dst)
+            }
             GETFIELD -> {
                 // todo check non-null
                 val dst = graph.field(fieldType)
                 val self = stack.removeLast().use()
+                val field = findField(ownerType.clazz, name)
+                    ?: throw IllegalStateException("Missing field '$name' in $ownerType")
+                val instr = SimpleGetField(dst, self, field, methodScope, origin)
+                block.add(instr)
+                stack.add(dst)
+            }
+            PUTSTATIC -> {
+                val dst = graph.field(fieldType)
+                val self = graph.field(descToType(owner))
+                block.add(SimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
                 val instr = SimpleGetField(dst, self, field, methodScope, origin)
@@ -370,20 +411,20 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
                 // todo check order
                 val value = stack.removeLast().use()
                 val self = stack.removeLast().use()
-                println("$self.$name = $value")
+                LOGGER.debug("$self.$name = $value")
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
                 val instr = SimpleSetField(self, field, value, methodScope, origin)
                 block.add(instr)
             }
-            else -> TODO("Handle ${OpCode[opcode]}")
+            else -> throw IllegalStateException("Unknown instruction ${OpCode[opcode]}")
         }
     }
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
         // todo load or store a local variable...
         //  first N indices are the parameters incl. self if not static
-        println("visitVarInsn: ${OpCode[opcode]}, $varIndex")
+        LOGGER.debug("visitVarInsn: ${OpCode[opcode]}, $varIndex")
 
         if (localFields.getOrNull(varIndex) == null) {
             check(varIndex == localFields.size) { "Skipped field? $varIndex vs ${localFields.size}" }
@@ -444,7 +485,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
-        println("newMultiArray($descriptor, $numDimensions)")
+        LOGGER.debug("newMultiArray($descriptor, $numDimensions)")
         TODO("Handle")
     }
 
@@ -465,7 +506,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     override fun visitJumpInsn(opcode: Int, label: Label) {
-        println("jump(${OpCode[opcode]}) @$label")
+        LOGGER.debug("jump(${OpCode[opcode]}) @$label")
         val nextBlock = graph.addNode()
         if (opcode == GOTO) {
             block.nextBranch = nextBlock
@@ -516,7 +557,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
 
     override fun visitFrame(type: Int, numLocal: Int, local: Array<out Any?>, numStack: Int, stack: Array<out Any?>) {
         check(type == F_NEW)
-        println("visitFrame($type, $numLocal, ${local.asList()}, $numStack, ${stack.asList()})")
+        LOGGER.debug("visitFrame($type, $numLocal, ${local.asList()}, $numStack, ${stack.asList()})")
         // todo we probably have to adjust the stack, and connect any simple-fields...
     }
 
@@ -526,7 +567,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
         bootstrapMethodHandle: Handle?,
         vararg bootstrapMethodArguments: Any?
     ) {
-        println("visitInvokeDynamicInsn: $name, $descriptor, $bootstrapMethodHandle, ${bootstrapMethodArguments.asList()}")
+        LOGGER.debug("visitInvokeDynamicInsn: $name, $descriptor, $bootstrapMethodHandle, ${bootstrapMethodArguments.asList()}")
         TODO("Handle")
     }
 
@@ -537,7 +578,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     }
 
     override fun visitLineNumber(line: Int, start: Label) {
-        println("visitLineNumber: $line, start: $start")
+        LOGGER.debug("visitLineNumber: $line, start: $start")
     }
 
     override fun visitMethodInsn(
@@ -546,7 +587,7 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
     ) {
         // what does the isInterface flag say? if the method's owner class is an interface.
         val (typeParameters, valueParameters, returnType) = parseMethodSignature(methodScope, descriptor, false)
-        println(
+        LOGGER.debug(
             "visitMethodInsn: ${OpCode[opcode]}, " +
                     "$owner.$name<${typeParameters.joinToString()}>(${valueParameters.joinToString()}): $returnType"
         )
@@ -560,11 +601,11 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
         when (opcode) {
             INVOKESPECIAL -> {
                 // constructor or super
-                TODO(name)
+                method = TODO(name)
             }
             INVOKESTATIC -> {
                 // call on companion object
-                // todo resolve method
+                method = resolveStaticMethod(owner, name, descriptor, typeParameters, valueParameters)
                 val objectScope = method.resolved.scope.parent!!
                 check(objectScope.scopeType == ScopeType.COMPANION_OBJECT)
                 self = block.field(objectScope.typeWithArgs).use()
@@ -572,14 +613,14 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
             }
             INVOKEVIRTUAL, // normal call on potentially open method
             INVOKEINTERFACE -> {
-                // todo resolve method
                 // interface call
                 self = stack.removeLast().use()
-
+                method = resolveDynamicMethod(owner, name, descriptor, typeParameters, valueParameters)
             }
             else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
         }
-        val dst = block.field(returnType)
+
+        /*val dst = block.field(returnType)
         block.add(
             SimpleCall(
                 dst, method.resolved, self, method.specialization,
@@ -587,21 +628,76 @@ class JVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters:
                 emptyList(), methodScope, origin
             )
         )
-        stack.add(dst)
+        stack.add(dst)*/
+    }
+
+    fun resolveStaticMethod(
+        owner: String, name: String, descriptor: String,
+        typeParameters: List<Parameter>, valueParameters: List<Parameter>,
+    ): ResolvedMethod {
+        val scope = FirstJVMClassReader.getScope(owner, null).getOrPutCompanion()
+        return resolveMethod(scope, owner, name, descriptor, typeParameters, valueParameters)
+    }
+
+    fun resolveDynamicMethod(
+        owner: String, name: String, descriptor: String,
+        typeParameters: List<Parameter>, valueParameters: List<Parameter>,
+    ): ResolvedMethod {
+        val scope = FirstJVMClassReader.getScope(owner, null)
+        return resolveMethod(scope, owner, name, descriptor, typeParameters, valueParameters)
+    }
+
+    fun resolveMethod(
+        scope: Scope, owner: String, name: String, descriptor: String,
+        typeParameters: List<Parameter>, valueParameters: List<Parameter>,
+    ): ResolvedMethod {
+        val method = scope.methods.firstOrNull {
+            // equals(typeParameters, it.typeParameters) &&
+            equals(valueParameters, it.valueParameters)
+        } ?: throw IllegalStateException(
+            "Missing $owner.$name$descriptor -> " +
+                    "(${valueParameters.joinToString { it.type.toString() }}), " +
+                    "options: ${
+                        scope.methods.filter { it.name == name }
+                            .map { "(${valueParameters.joinToString { it.type.toString() }})" }
+                    }"
+        )
+        return ResolvedMethod(
+            ParameterList.emptyParameterList(), method,
+            ParameterList.emptyParameterList(),
+            ResolutionContext.minimal, scope,
+            MatchScore(0)
+        )
+    }
+
+    fun equals(expected: List<Parameter>, actual: List<Parameter>): Boolean {
+        if (expected.size != actual.size) return false
+        for (i in expected.indices) {
+            val expected = expected[i].type
+            var actual = actual[i].type
+            if (actual is GenericType) {
+                actual = actual.superBounds
+            }
+            if (expected != actual) {
+                LOGGER.debug("Mismatch@$i: $expected != $actual")
+                return false
+            }
+        }
+        return true
     }
 
     override fun visitLookupSwitchInsn(dflt: Label, keys: IntArray, labels: Array<out Label>) {
-        println("visitLookupSwitchInsn: $dflt, ${keys.asList()}, ${labels.asList()}")
+        LOGGER.debug("visitLookupSwitchInsn: $dflt, ${keys.asList()}, ${labels.asList()}")
         TODO("Handle")
     }
 
     override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label, vararg labels: Label) {
-        println("visitTableSwitchInsn: $min, $max, $dflt, ${labels.asList()}")
+        LOGGER.debug("visitTableSwitchInsn: $min, $max, $dflt, ${labels.asList()}")
         TODO("Handle")
     }
 
     override fun visitTypeInsn(opcode: Int, type: String?) {
-        println("visitTypeInsn: ${OpCode[opcode]}, type: $type")
+        LOGGER.debug("visitTypeInsn: ${OpCode[opcode]}, type: $type")
         TODO("Handle")
     }
 }

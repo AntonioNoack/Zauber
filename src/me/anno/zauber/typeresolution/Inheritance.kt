@@ -106,7 +106,8 @@ object Inheritance {
 
         if (typeParamIdx == -1) {
             if (insertMode != InsertMode.WEAK) {
-                LOGGER.warn("Missing generic parameter ${expectedType.name}, ignoring it")
+                LOGGER.warn("Missing generic parameter ${expectedType.name}, " +
+                        "ignoring it, expected: $expectedTypeParams")
             }// else can be safely ignored ;)
             return true
         }

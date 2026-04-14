@@ -150,6 +150,16 @@ class Scope(val name: String, val parent: Scope? = null) {
         return objectField!!
     }
 
+    fun getOrPutCompanion(): Scope {
+        val old = companionObject
+        if (old != null) return old
+
+        val scope = getOrPut("Companion", ScopeType.COMPANION_OBJECT)
+        scope.typeParameters = emptyList()
+        scope.hasTypeParameters = true
+        return scope
+    }
+
     /**
      * for each if/else-chain, these shall be filled in
      * */
@@ -249,9 +259,8 @@ class Scope(val name: String, val parent: Scope? = null) {
         if ((self == ScopeType.METHOD_BODY || self == ScopeType.METHOD) && child == ScopeType.NORMAL_CLASS) {
             return true // exception for named classes inside methods
         }
-        if (self == ScopeType.COMPANION_OBJECT &&
-            child == ScopeType.COMPANION_OBJECT
-        ) return false // only one is allowed
+        if (self == ScopeType.INNER_CLASS && child == ScopeType.COMPANION_OBJECT) return true
+        if (self == ScopeType.COMPANION_OBJECT && child == ScopeType.COMPANION_OBJECT) return false // only one is allowed
         return self.getClassHierarchy() <= child.getClassHierarchy()
     }
 

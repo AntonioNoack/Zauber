@@ -29,4 +29,13 @@ object LogManager {
             logger.isDebugEnabled = false
         }
     }
+
+    fun disableLoggersCompletely(loggers: String) {
+        for (name in loggers.split(',')) {
+            val logger = getLogger(name, false)
+            logger.isInfoEnabled = false
+            logger.isDebugEnabled = false
+            logger.isWarnEnabled = false
+        }
+    }
 }
