@@ -17,9 +17,11 @@ class RecursiveLazy<V>(val generator: () -> V) {
                 state = State.GENERATING
                 valueI = generator()
                 state = State.HAS_VALUE
+                @Suppress("UNCHECKED_CAST")
                 valueI as V
             }
             State.HAS_VALUE -> {
+                @Suppress("UNCHECKED_CAST")
                 valueI as V
             }
             State.GENERATING -> throw RecursiveException()

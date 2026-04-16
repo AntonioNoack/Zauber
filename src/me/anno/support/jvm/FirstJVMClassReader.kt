@@ -1,6 +1,7 @@
 package me.anno.support.jvm
 
 import me.anno.utils.CollectionUtils.getOrPutRecursive
+import me.anno.utils.RunOnceLazy
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -122,7 +123,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
     private val methodSignatures = HashMap<JVMMethodSignature, Scope>()
 
     var isFinished = false
-    val methodReader = lazy {
+    val methodReader = RunOnceLazy {
         check(isFinished)
         ClassReader(path).accept(
             SecondJVMClassReader(classScope, methodSignatures),

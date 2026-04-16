@@ -59,6 +59,10 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val initParts = ArrayList<() -> Unit>()
 
+    /**
+     * Shall be set to prevent loading part 2 when part 1 isn't finished yet.
+     * Anything within part 1 should not depend on part 2 anyway.
+     * */
     var isInitializing = false
 
     val scope: Scope
@@ -67,7 +71,9 @@ class Scope(val name: String, val parent: Scope? = null) {
             while (!isInitializing) {
                 val initializationPart = initParts.removeLastOrNull() ?: break
                 isInitializing = true
+                // println("starting $pathStr...")
                 initializationPart()
+                // println("...finished $pathStr")
                 isInitializing = false
             }
             return this
