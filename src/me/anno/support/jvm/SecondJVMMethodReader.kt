@@ -9,7 +9,6 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
@@ -124,6 +123,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             // duplications
             // no .use() required, because we haven't read them yet
+            POP -> stack.removeLast()
             DUP -> stack.add(stack.last())
             DUP_X1 -> {
                 val v0 = stack.removeLast()
@@ -540,14 +540,25 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     override fun visitLdcInsn(value: Any) {
-        when (value) {
-            is Int -> NumberExpression(value.toString(), methodScope, origin).apply { resolvedType = Types.Int }
-            is Long -> NumberExpression(value.toString(), methodScope, origin).apply { resolvedType = Types.Long }
-            is Float -> NumberExpression(value.toString(), methodScope, origin).apply { resolvedType = Types.Float }
-            is Double -> NumberExpression(value.toString(), methodScope, origin).apply { resolvedType = Types.Double }
-            is String -> StringExpression(value, methodScope, origin)
+        val type = when (value) {
+            is Int -> Types.Int
+            is Long -> Types.Long
+            is Float -> Types.Float
+            is Double -> Types.Double
+            is String -> {
+                val dst = graph.field(Types.String)
+                block.add(JVMSimpleString(dst, value, methodScope, origin))
+                stack.add(dst)
+                return
+            }
             else -> throw NotImplementedError("Load constant ${value.javaClass.simpleName}")
         }
+
+        val ne = NumberExpression(value.toString(), methodScope, origin)
+        ne.resolvedType = type
+        val dst = graph.field(type)
+        block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
+        stack.add(dst)
     }
 
     val blocksByLabel = HashMap<Label, JVMBlockExpression>()
@@ -679,6 +690,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
             INVOKESTATIC -> {
                 // call on companion object
+                println("Resolving static method $owner.$name$descriptor")
                 method = resolveStaticMethod(owner, name, descriptor, typeParameters, valueParameters)
                 val objectScope = method.resolved.scope.parent!!
                 check(objectScope.scopeType == ScopeType.COMPANION_OBJECT)
@@ -701,7 +713,9 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 valueParametersI, methodScope, origin
             )
         )
-        stack.add(dst)
+        if (returnType != Types.Unit) {
+            stack.add(dst)
+        }
     }
 
     fun resolveStaticMethod(
@@ -743,11 +757,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         ownerTypes: ParameterList,
         valueParameters: List<Type>,
     ): ResolvedConstructor {
+        println("Resolving constructor ${scope.pathStr}$descriptor")
         val method = scope.scope.constructors.firstOrNull {
             // equals(typeParameters, it.typeParameters) &&
             equals(valueParameters, it.valueParameters)
         } ?: throw IllegalStateException(
-            "Missing constructor ${scope.pathStr}$descriptor -> " +
+            "Missing constructor ${scope.pathStr}<$ownerTypes>$descriptor -> " +
                     "(${valueParameters.joinToString { it.toString() }}), " +
                     "options: ${
                         scope.constructors
@@ -802,15 +817,17 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun equals(expected: List<Type>, actual: List<Parameter>): Boolean {
-        if (expected.size != actual.size) return false
+        if (expected.size != actual.size) {
+            return false
+        }
         for (i in expected.indices) {
-            val expected = expected[i]
-            var actual = actual[i].type
+            val expected = expected[i].resolvedName
+            var actual = actual[i].type.resolvedName
             if (actual is GenericType) {
                 actual = actual.superBounds
             }
             if (expected != actual) {
-                LOGGER.debug("Mismatch@$i: $expected != $actual")
+                // LOGGER.debug("Mismatch@$i: $expected != $actual")
                 return false
             }
         }

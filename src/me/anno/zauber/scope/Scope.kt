@@ -59,12 +59,16 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val initParts = ArrayList<() -> Unit>()
 
+    var isInitializing = false
+
     val scope: Scope
         get() {
             parent?.scope
-            while (true) {
+            while (!isInitializing) {
                 val initializationPart = initParts.removeLastOrNull() ?: break
+                isInitializing = true
                 initializationPart()
+                isInitializing = false
             }
             return this
         }
