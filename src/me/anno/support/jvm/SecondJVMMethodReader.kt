@@ -11,7 +11,6 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleThis
-import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -19,6 +18,8 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.MatchScore
+import me.anno.zauber.typeresolution.members.ResolvedConstructor
+import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -148,11 +149,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             DCONST_0 -> pushConst(Constants.d0)
             DCONST_1 -> pushConst(Constants.d1)
 
-            ACONST_NULL -> {
-                val dst = graph.field(NullType)
-                block.add(JVMSimpleSpecialValue(dst, SpecialValue.NULL, methodScope, origin))
-                stack.add(dst)
-            }
+            ACONST_NULL -> pushNull()
 
             // math
             IADD -> binaryCall(Types.Int, "plus")
@@ -361,16 +358,62 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         )
     }
 
-    fun pushConst(ne: NumberExpression, type: ClassType = Types.Int) {
+    fun pushConst(ne: NumberExpression, type: Type = Types.Int) {
         val dst = graph.field(type)
         block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
+        stack.add(dst)
+    }
+
+    fun pushNull() {
+        val dst = graph.field(NullType)
+        block.add(JVMSimpleSpecialValue(dst, SpecialValue.NULL, methodScope, origin))
         stack.add(dst)
     }
 
     override fun visitIntInsn(opcode: Int, operand: Int) {
         LOGGER.debug("${OpCode[opcode]}($operand)")
         when (opcode) {
-            else -> TODO("Handle ${OpCode[opcode]}")
+            BIPUSH -> {
+                val ne = NumberExpression(operand.toString(), methodScope, origin)
+                    .apply { resolvedType = Types.Byte }
+                pushConst(ne, Types.Byte)
+            }
+            SIPUSH -> {
+                val ne = NumberExpression(operand.toString(), methodScope, origin)
+                    .apply { resolvedType = Types.Short }
+                pushConst(ne, Types.Short)
+            }
+            NEWARRAY -> {
+                val elementType = when (operand) {
+                    T_BOOLEAN -> Types.Boolean
+                    T_CHAR -> Types.Char
+                    T_FLOAT -> Types.Float
+                    T_DOUBLE -> Types.Double
+                    T_BYTE -> Types.Byte
+                    T_SHORT -> Types.Short
+                    T_INT -> Types.Int
+                    T_LONG -> Types.Long
+                    else -> throw IllegalStateException("Unexpected operand: $operand")
+                }
+                val arrayType = Types.Array.withTypeParameter(elementType)
+                val size = stack.removeLast().use()
+                val dst = block.field(arrayType)
+                val tmp = block.field(Types.Unit)
+                block.add(JVMSimpleAllocateInstance(dst, arrayType, methodScope, origin))
+                val constr = resolveConstructor(
+                    arrayType.clazz, "(Int)",
+                    ParameterList(arrayType),
+                    listOf(Types.Int)
+                )
+                block.add(
+                    JVMSimpleCall(
+                        tmp, constr.resolved, dst.use(), constr.specialization,
+                        listOf(size), methodScope, origin
+                    )
+                )
+                stack.add(dst)
+            }
+            else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
         }
     }
 
@@ -385,7 +428,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         when (opcode) {
             GETSTATIC -> {
                 val dst = graph.field(fieldType)
-                val self = graph.field(descToType(owner))
+                val self = graph.field(nameToType(owner))
                 block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
@@ -524,10 +567,19 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val condition = graph.field(Types.Boolean)
         when (opcode) {
             IFEQ, IFNE -> {
-                TODO("Handle compareTo-equals-branch")
+                pushConst(Constants.i0)
+                equalsCall(Types.Int, negated = opcode == IFNE)
             }
             IFLT, IFGE, IFGT, IFLE -> {
-                TODO("Handle compareTo-branch")
+                val tmp = stack.removeLast().use()
+                val compareType = when (opcode) {
+                    IFLT -> CompareType.LESS
+                    IFGT -> CompareType.GREATER
+                    IFLE -> CompareType.LESS_EQUALS
+                    IFGE -> CompareType.GREATER_EQUALS
+                    else -> throw IllegalStateException()
+                }
+                block.add(JVMSimpleCompare(condition, null, null, compareType, tmp, methodScope, origin))
             }
             IF_ICMPEQ, IF_ICMPNE -> {
                 equalsCall(Types.Int, negated = opcode == IF_ICMPNE)
@@ -547,11 +599,18 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 block.add(JVMSimpleCompare(condition, p0, p1, compareType, tmp, methodScope, origin))
             }
             IF_ACMPEQ, IF_ACMPNE -> {
-                TODO("Handle object-equals-branch")
+                val p1 = stack.removeLast().use()
+                val p0 = stack.removeLast().use()
+                val negate = opcode == IF_ACMPNE
+                block.add(JVMSimpleCheckIdentical(condition, p0, p1, negate, methodScope, origin))
             }
             IFNULL,
             IFNONNULL -> {
-                TODO("Handle object-null branch")
+                pushNull()
+                val p1 = stack.removeLast().use()
+                val p0 = stack.removeLast().use()
+                val negate = opcode == IFNONNULL
+                block.add(JVMSimpleCheckIdentical(condition, p0, p1, negate, methodScope, origin))
             }
             else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
         }
@@ -605,12 +664,18 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
         // todo resolve method...
         val self: SimpleFieldExpr
-        val method: ResolvedMethod
+        val method: ResolvedMember<*>
 
         when (opcode) {
             INVOKESPECIAL -> {
                 // constructor or super
-                method = TODO(name)
+                when (name) {
+                    "<init>" -> {
+                        self = stack.removeLast().use()
+                        method = resolveConstructor(owner, descriptor, valueParameters)
+                    }
+                    else -> throw NotImplementedError(name)
+                }
             }
             INVOKESTATIC -> {
                 // call on companion object
@@ -655,13 +720,55 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         return resolveMethod(scope, owner, name, descriptor, typeParameters, valueParameters)
     }
 
-    fun resolveMethod(
-        scope: Scope, owner: String, name: String, descriptor: String,
-        typeParameters: List<Parameter>, valueParameters: List<Parameter>,
-    ): ResolvedMethod {
-        val method = scope.methods.firstOrNull {
+    fun resolveConstructor(
+        owner: String, descriptor: String,
+        valueParameters: List<Parameter>,
+    ): ResolvedConstructor {
+        val scope = FirstJVMClassReader.getScope(owner, null)
+        return resolveConstructor1(scope, descriptor, valueParameters)
+    }
+
+    fun resolveConstructor1(
+        scope: Scope, descriptor: String,
+        valueParameters: List<Parameter>,
+    ): ResolvedConstructor {
+        return resolveConstructor(
+            scope, descriptor,
+            ParameterList.emptyParameterList(),
+            valueParameters.map { it.type })
+    }
+
+    fun resolveConstructor(
+        scope: Scope, descriptor: String,
+        ownerTypes: ParameterList,
+        valueParameters: List<Type>,
+    ): ResolvedConstructor {
+        val method = scope.scope.constructors.firstOrNull {
             // equals(typeParameters, it.typeParameters) &&
             equals(valueParameters, it.valueParameters)
+        } ?: throw IllegalStateException(
+            "Missing constructor ${scope.pathStr}$descriptor -> " +
+                    "(${valueParameters.joinToString { it.toString() }}), " +
+                    "options: ${
+                        scope.constructors
+                            .map { "(${valueParameters.joinToString { it.toString() }})" }
+                    }"
+        )
+        return ResolvedConstructor(
+            ownerTypes, method,
+            ResolutionContext.minimal, scope,
+            MatchScore(0)
+        )
+    }
+
+    fun resolveMethod(
+        scope: Scope, owner: String, name: String, descriptor: String,
+        typeParameters: List<Parameter>, valueParameters: List<Parameter>
+    ): ResolvedMethod {
+        val method = scope.methods.firstOrNull {
+            it.name == name &&
+                    // equals(typeParameters, it.typeParameters) &&
+                    equals1(valueParameters, it.valueParameters)
         } ?: throw IllegalStateException(
             "Missing $owner.$name$descriptor -> " +
                     "(${valueParameters.joinToString { it.type.toString() }}), " +
@@ -678,10 +785,26 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         )
     }
 
-    fun equals(expected: List<Parameter>, actual: List<Parameter>): Boolean {
+    fun equals1(expected: List<Parameter>, actual: List<Parameter>): Boolean {
         if (expected.size != actual.size) return false
         for (i in expected.indices) {
             val expected = expected[i].type
+            var actual = actual[i].type
+            if (actual is GenericType) {
+                actual = actual.superBounds
+            }
+            if (expected != actual) {
+                LOGGER.debug("Mismatch@$i: $expected != $actual")
+                return false
+            }
+        }
+        return true
+    }
+
+    fun equals(expected: List<Type>, actual: List<Parameter>): Boolean {
+        if (expected.size != actual.size) return false
+        for (i in expected.indices) {
+            val expected = expected[i]
             var actual = actual[i].type
             if (actual is GenericType) {
                 actual = actual.superBounds
@@ -704,9 +827,20 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         TODO("Handle")
     }
 
-    override fun visitTypeInsn(opcode: Int, type: String?) {
-        LOGGER.debug("visitTypeInsn: ${OpCode[opcode]}, type: $type")
-        TODO("Handle")
+    override fun visitTypeInsn(opcode: Int, type: String) {
+        val scope = FirstJVMClassReader.getScope(type, null)
+        LOGGER.debug("visitTypeInsn: ${OpCode[opcode]}, type: $type -> $scope")
+        when (opcode) {
+            NEW -> {
+                val type1 = scope.typeWithArgs
+                val dst = block.field(type1)
+                block.add(JVMSimpleAllocateInstance(dst, type1, methodScope, origin))
+                stack.add(dst)
+            }
+            ANEWARRAY -> TODO("Handle new $scope[]?")
+            CHECKCAST -> TODO("Handle checkCast $scope")
+            INSTANCEOF -> TODO("Handle instanceOf $scope")
+        }
     }
 
     override fun visitEnd() {

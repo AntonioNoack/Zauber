@@ -23,8 +23,6 @@ class SecondJVMClassReader(
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor? {
-        if (classScope.name != "ArrayList" || (name != "clear" && name != "add")) return null
-
         val methodScope = methodScopes[JVMMethodSignature(name, descriptor)] ?: return null
         val method = methodScope.selfAsMethod ?: methodScope.selfAsConstructor ?: return null
 

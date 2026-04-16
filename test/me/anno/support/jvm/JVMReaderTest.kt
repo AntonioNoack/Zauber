@@ -54,6 +54,10 @@ class Array<V>(val size: Int) {
 
     // then try to instantiate and use an instance...
     // todo we need to fix generics... ArrayList.add() must return E, not Object
+
+    // todo is there an interesting, non-generic class we can test?
+    //  -> we could use any class we create, and Kotlin/Java compiles for us...
+    
     val value = testExecute(
         """
         import java.util.ArrayList

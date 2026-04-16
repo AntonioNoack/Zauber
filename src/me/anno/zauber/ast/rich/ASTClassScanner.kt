@@ -344,7 +344,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 foundNamedScope(name, Flags.NONE, ScopeType.TYPE_ALIAS)
             }
 
-            else -> throw IllegalStateException("Unknown token ${tokens.toString(i)}")
+            else -> throw IllegalStateException("Unknown token ${tokens.err(i)}")
         }
     }
 

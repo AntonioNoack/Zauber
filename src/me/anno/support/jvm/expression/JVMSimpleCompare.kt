@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 
 class JVMSimpleCompare(
     val dst: SimpleFieldExpr,
-    val p0: SimpleFieldExpr, val p1: SimpleFieldExpr,
+    val p0: SimpleFieldExpr?, val p1: SimpleFieldExpr?,
     val type: CompareType,
     val tmp: SimpleFieldExpr,
     scope: Scope, origin: Int
