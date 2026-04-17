@@ -126,7 +126,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
     val methodReader = RunOnceLazy {
         check(isFinished)
         ClassReader(path).accept(
-            SecondJVMClassReader(classScope, methodSignatures),
+            SecondJVMClassReaderFull(classScope, methodSignatures),
             ClassReader.EXPAND_FRAMES // only needed when reading methods
         )
     }
@@ -137,7 +137,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
     fun nameToType(desc: String): Type {
         // todo can be optimized
-        return SignatureReader("L$desc;", classScope).readType()
+        return SignatureReader(desc, classScope).readClassType()
     }
 
     override fun visitEnd() {
@@ -169,6 +169,9 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             val typeWithArgs = superTypesWithGenerics.firstOrNull { it.clazz == superScope }
                 ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
             classScope.superCalls.add(SuperCall(typeWithArgs, emptyList(), null))
+        } else {
+            val superType = if (name == "java/lang/Object") Types.Any else nameToType("java/lang/Object")
+            classScope.superCalls.add(SuperCall(superType, emptyList(), null))
         }
 
         if (interfaces != null) {
@@ -227,7 +230,14 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
         val s = JVMMethodSignature(name, descriptor)
         methodSignatures[s] = methodScope
-        methodScope.initParts += { methodReader.value }
+        val lazy = RunOnceLazy {
+            val method = methodScope.selfAsMethod ?: methodScope.selfAsConstructor!!
+            ClassReader(path).accept(
+                SecondJVMClassReaderSingle(classScope, name, descriptor, method),
+                ClassReader.EXPAND_FRAMES // only needed when reading methods
+            )
+        }
+        methodScope.initParts += { lazy.value }
 
         return null
     }

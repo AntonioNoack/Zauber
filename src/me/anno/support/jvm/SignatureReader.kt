@@ -28,22 +28,22 @@ class SignatureReader(val signature: String, val scope: Scope) {
 
     fun readClassType(): Type {
         val i0 = i
-        while (signature[i] !in "<;") {
+        while (i < signature.length && signature[i] !in "<;") {
             i++
         } // 'i' is now on '>' or ';'
         var name = signature.substring(i0, i)
         var generics = readGenerics1()
-        while (signature[i] == '.') {
+        while (i < signature.length && signature[i] == '.') {
             // todo an inner class with generics in the parent...
             //  yes, we need that, but we have no way to represent it at the moment...
             val i0 = ++i
-            while (signature[i] !in "<;") {
+            while (i < signature.length && signature[i] !in "<;") {
                 i++
             }
             name += "/" + signature.substring(i0, i)
             generics = readGenerics1()
         }
-        consume(';')
+        if (i < signature.length) consume(';')
         val clazz = getScope(name, null)
         return if (clazz.hasTypeParameters && generics.size == clazz.typeParameters.size) {
             ClassType(clazz, generics, origin)
@@ -58,7 +58,7 @@ class SignatureReader(val signature: String, val scope: Scope) {
     }
 
     fun readGenerics1(): List<Type> {
-        if (signature[i] == '<') {
+        if (i < signature.length && signature[i] == '<') {
             val generics = ArrayList<Type>()
             consume('<')
             while (signature[i] != '>') {

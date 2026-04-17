@@ -43,6 +43,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     companion object {
 
         private val LOGGER = LogManager.getLogger(SecondJVMMethodReader::class)
+        private const val INVOKELAMBDA = 0
 
         /**
          * cache for often-used constants, don't want to have to recreate them
@@ -92,7 +93,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     val stack = ArrayList<SimpleFieldExpr>()
     var block = graph.startBlock
 
-    val localFields = ArrayList<Field>()
+    val localFields = ArrayList<Field?>()
     val methodField = graph.field(methodScope.typeWithArgs)
 
     init {
@@ -293,6 +294,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 stack.add(dst)
             }
 
+            MONITORENTER -> {
+                // todo add call...
+                stack.removeLast()
+            }
+            MONITOREXIT -> {
+                // todo add call...
+                stack.removeLast()
+            }
 
             else -> TODO("Handle ${OpCode[opcode]}")
         }
@@ -449,14 +458,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 stack.add(dst)
             }
             PUTSTATIC -> {
-                val dst = graph.field(fieldType)
-                val self = graph.field(descToType(owner))
+                val value = stack.removeLast().use()
+                val self = graph.field(nameToType(owner))
                 block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
                     ?: throw IllegalStateException("Missing field '$name' in $ownerType")
-                val instr = JVMSimpleGetField(dst, self, field, methodScope, origin)
+                val instr = JVMSimpleSetField(self, field, value, methodScope, origin)
                 block.add(instr)
-                stack.add(dst)
             }
             PUTFIELD -> {
                 // todo check non-null
@@ -479,8 +487,6 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         LOGGER.debug("visitVarInsn: ${OpCode[opcode]}, $varIndex")
 
         if (localFields.getOrNull(varIndex) == null) {
-            check(varIndex == localFields.size) { "Skipped field? $varIndex vs ${localFields.size}" }
-
             val valueType = when (opcode) {
                 ILOAD, ISTORE -> Types.Int
                 LLOAD, LSTORE -> Types.Long
@@ -496,19 +502,21 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 "__tmp${varIndex}__", valueType, null,
                 Flags.NONE, origin
             )
-            localFields.add(tmpField)
+
+            while (varIndex >= localFields.size) localFields.add(null)
+            localFields[varIndex] = tmpField
         }
 
         when (opcode) {
             ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
-                val field = localFields[varIndex]
+                val field = localFields[varIndex]!!
                 val valueType = field.valueType!!
                 val dst = graph.field(valueType)
                 block.add(JVMSimpleGetField(dst, methodField.use(), field, methodScope, origin))
                 stack.add(dst)
             }
             ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
-                val field = localFields[varIndex]
+                val field = localFields[varIndex]!!
                 val value = stack.removeLast().use()
                 block.add(JVMSimpleSetField(methodField.use(), field, value, methodScope, origin))
             }
@@ -553,7 +561,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 stack.add(dst)
                 return
             }
-            else -> throw NotImplementedError("Load constant ${value.javaClass.simpleName}")
+            is org.objectweb.asm.Type -> {
+                val type = nameToType(value.className) as ClassType
+                val dst = graph.field(Types.String)
+                block.add(JVMSimpleType(dst, type, methodScope, origin))
+                stack.add(dst)
+                return
+            }
+            else -> throw NotImplementedError("Load constant ${value.javaClass}")
         }
 
         val ne = NumberExpression(value.toString(), methodScope, origin)
@@ -640,14 +655,28 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         // todo we probably have to adjust the stack, and connect any simple-fields...
     }
 
-    override fun visitInvokeDynamicInsn(
-        name: String?,
-        descriptor: String?,
-        bootstrapMethodHandle: Handle?,
-        vararg bootstrapMethodArguments: Any?
-    ) {
-        LOGGER.debug("visitInvokeDynamicInsn: $name, $descriptor, $bootstrapMethodHandle, ${bootstrapMethodArguments.asList()}")
-        TODO("Handle")
+    override fun visitInvokeDynamicInsn(name: String, descriptor: String, method: Handle, vararg args: Any?) {
+        if (method.owner == "java/lang/invoke/LambdaMetafactory" && (method.name == "metafactory" || method.name == "altMetafactory") && args.size >= 3) {
+            LOGGER.debug("visitInvokeDynamicInsn: $name, $descriptor, $method, ${args.asList()}")
+
+            val (typeArgs, valueArgs, retType) = parseMethodSignature(methodScope, descriptor, false)
+            // val baseClass = "java/lang/Object" //(args[0] as Type).returnType.descriptor
+            // val interface1 = retType
+            val dst1 = args[1] as Handle
+            val ownerScope = nameToType(dst1.owner) as ClassType
+            val method = resolveMethod(
+                ownerScope.clazz, dst1.owner, dst1.name, dst1.desc,
+                emptyList(), valueArgs,
+            )
+
+            val valueArgs2 = valueArgs.map { stack.removeLast().use() }.asReversed()
+
+            val dst = block.field(retType)
+            block.add(JVMSimpleLambdaCall(dst, valueArgs2, method, retType, methodScope, origin))
+            stack.add(dst)
+        } else {
+            throw NotImplementedError("Unknown lambda type: $method, ${args.toList()}")
+        }
     }
 
     override fun visitLabel(label: Label) {
@@ -700,7 +729,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 block.add(JVMSimpleGetObject(self, objectScope, methodScope, origin))
             }
             INVOKEVIRTUAL, // normal call on potentially open method
-            INVOKEINTERFACE -> {
+            INVOKEINTERFACE,
+            INVOKELAMBDA -> {
                 // interface call
                 self = stack.removeLast().use()
                 method = resolveDynamicMethod(owner, name, descriptor, typeParameters, valueParameters)
@@ -782,11 +812,30 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         scope: Scope, owner: String, name: String, descriptor: String,
         typeParameters: List<Parameter>, valueParameters: List<Parameter>
     ): ResolvedMethod {
-        val method = scope.methods.firstOrNull {
-            it.name == name &&
-                    // equals(typeParameters, it.typeParameters) &&
-                    equals1(valueParameters, it.valueParameters)
-        } ?: throw IllegalStateException(
+        var scope = scope
+        while (true) {
+            val method = scope.scope.methods.firstOrNull {
+                it.name == name &&
+                        // equals(typeParameters, it.typeParameters) &&
+                        equals1(valueParameters, it.valueParameters)
+            }
+            if (method != null) {
+                return ResolvedMethod(
+                    ParameterList.emptyParameterList(), method,
+                    ParameterList.emptyParameterList(),
+                    ResolutionContext.minimal, scope,
+                    MatchScore(0)
+                )
+            }
+
+            // check super classes
+            scope = scope.superCalls
+                .firstOrNull { it.valueParameters != null }
+                ?.type?.clazz
+                ?: break
+        }
+
+        throw IllegalStateException(
             "Missing $owner.$name$descriptor -> " +
                     "(${valueParameters.joinToString { it.type.toString() }}), " +
                     "options: ${
@@ -794,24 +843,18 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                             .map { "(${valueParameters.joinToString { it.type.toString() }})" }
                     }"
         )
-        return ResolvedMethod(
-            ParameterList.emptyParameterList(), method,
-            ParameterList.emptyParameterList(),
-            ResolutionContext.minimal, scope,
-            MatchScore(0)
-        )
     }
 
     fun equals1(expected: List<Parameter>, actual: List<Parameter>): Boolean {
         if (expected.size != actual.size) return false
         for (i in expected.indices) {
-            val expected = expected[i].type
-            var actual = actual[i].type
+            val expected = expected[i].type.resolvedName
+            var actual = actual[i].type.resolvedName
             if (actual is GenericType) {
                 actual = actual.superBounds
             }
             if (expected != actual) {
-                LOGGER.debug("Mismatch@$i: $expected != $actual")
+                println("Mismatch@$i: $expected != $actual")
                 return false
             }
         }
@@ -857,8 +900,19 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 stack.add(dst)
             }
             ANEWARRAY -> TODO("Handle new $scope[]?")
-            CHECKCAST -> TODO("Handle checkCast $scope")
-            INSTANCEOF -> TODO("Handle instanceOf $scope")
+            CHECKCAST -> {
+                val value = stack.removeLast().use()
+                val type1 = scope.typeWithArgs
+                block.add(JVMSimpleCheckCast(value, type1, methodScope, origin))
+                stack.add(value)
+            }
+            INSTANCEOF -> {
+                val value = stack.removeLast().use()
+                val type1 = scope.typeWithArgs
+                val dst = block.field(Types.Boolean)
+                block.add(JVMSimpleInstanceOf(dst, value, type1, methodScope, origin))
+                stack.add(dst)
+            }
         }
     }
 
