@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.resolution.ResolutionUtils.firstChild
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.tokenizer.ZauberTokenizer
@@ -34,7 +35,7 @@ class TestInlineLambdaParameterIsImmediatelyFound {
         scanClasses(tokens)
         ZauberASTBuilder(tokens, root).readFileLevel()
         val testScope = root.children.first { it.name == testScopeName }
-        val method = testScope.scope.firstChild(ScopeType.METHOD)
+        val method = testScope[ScopeInitType.AFTER_DISCOVERY].firstChild(ScopeType.METHOD)
         val expr = findCallExpression(method.selfAsMethod!!.body!!)
         println("${expr.self}, ${expr.self.javaClass.simpleName}")
         val field = (expr.self as FieldExpression).field

@@ -10,7 +10,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
-import me.anno.zauber.generation.Specializations
+import me.anno.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.members.ResolvedConstructor

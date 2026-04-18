@@ -5,8 +5,9 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
+import me.anno.zauber.expansion.MethodOverrides.resolveOverrides
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
@@ -47,7 +48,7 @@ object ResolutionUtils {
         createDefaultParameterFunctions(root)
         resolveOverrides(root)
 
-        return root.children.first { it.name == testScopeName }.scope
+        return root.children.first { it.name == testScopeName }
     }
 
     fun String.formatLines(): String {
@@ -59,20 +60,18 @@ object ResolutionUtils {
     }
 
     operator fun Scope.get(name: String): Scope {
-        val child = scope.children.firstOrNull { it.name == name }
+        return this[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Tried finding '$name', but only found ${children.map { it.name }}")
-        return child.scope
     }
 
     fun Scope.getField(name: String): Field {
-        return scope.fields.firstOrNull { it.name == name && it.byParameter == null }
+        return this[ScopeInitType.AFTER_DISCOVERY].fields.firstOrNull { it.name == name && it.byParameter == null }
             ?: throw IllegalStateException("Tried finding '$name', but only found ${fields.map { it.name }}")
     }
 
     fun Scope.firstChild(scopeType: ScopeType): Scope {
-        val child = scope.children.firstOrNull { it.scopeType == scopeType }
+        return this[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { it.scopeType == scopeType }
             ?: throw IllegalStateException("Tried finding '$scopeType', but only found ${children.map { it.scopeType }}")
-        return child.scope
     }
 
 }

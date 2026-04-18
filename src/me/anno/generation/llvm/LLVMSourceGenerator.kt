@@ -1,6 +1,6 @@
-package me.anno.zauber.generation.llvm
+package me.anno.generation.llvm
 
-import me.anno.zauber.generation.Generator
+import me.anno.generation.Generator
 import me.anno.zauber.scope.Scope
 import java.io.File
 

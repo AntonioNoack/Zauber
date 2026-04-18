@@ -37,7 +37,7 @@ class Field(
         private val LOGGER = LogManager.getLogger(Field::class)
     }
 
-    val isMutableEx get() = isMutable || scope.scope.flags.hasFlag(Flags.VALUE)
+    val isMutableEx get() = isMutable || scope.flags.hasFlag(Flags.VALUE)
     var isCaptured = false
 
     fun needsBackingField(): Boolean {

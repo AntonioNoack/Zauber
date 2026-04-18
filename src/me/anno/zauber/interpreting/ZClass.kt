@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.InsertMode
@@ -27,7 +28,7 @@ class ZClass(val type: Type) {
                 if (type != NullType) LOGGER.warn("type $type is not a ClassType")
                 return emptyList()
             }
-            return type.clazz.scope.fields.filter { field ->
+            return type.clazz[ScopeInitType.AFTER_DISCOVERY].fields.filter { field ->
                 field.needsBackingFieldImpl(type)
             }
         }

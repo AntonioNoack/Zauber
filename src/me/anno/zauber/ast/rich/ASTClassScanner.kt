@@ -21,6 +21,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.scope.lazy.TokenSubList
@@ -71,25 +72,27 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val classScope = parentScope.getOrPut(name, scopeType)
         classScope.addFlags(listenType or packFlags())
         classScope.fileName = tokens.fileName
-        classScope.initParts += {
+        classScope.addInitPart(
+            ScopeInitType.DISCOVER_MEMBERS, {
 
-            // store old state
-            val prevPackage = currPackage
-            val prevSize = tokens.size
-            val prevI = i
+                // store old state
+                val prevPackage = currPackage
+                val prevSize = tokens.size
+                val prevI = i
 
-            // set original state
-            i = i0
-            tokens.size = i1
-            currPackage = parentScope
+                // set original state
+                i = i0
+                tokens.size = i1
+                currPackage = parentScope
 
-            readLazily(classScope, true)
+                readLazily(classScope, true)
 
-            // restore state
-            currPackage = prevPackage
-            tokens.size = prevSize
-            i = prevI
-        }
+                // restore state
+                currPackage = prevPackage
+                tokens.size = prevSize
+                i = prevI
+            }
+        )
 
         readLazily(classScope, false)
     }
@@ -599,7 +602,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, tokens.size)
             val expr = LazyExpression(tokens1, true, scope, origin(i), imports, generics)
-            scope.initParts += { expr.value } // load expression contents, if we need them
+            // load expression contents, if we need them
+            scope.addInitPart(ScopeInitType.RESOLVE_METHOD_BODY, { expr.value })
             i = tokens.size
             expr
         }
@@ -612,7 +616,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, end)
             val expr = LazyExpression(tokens1, false, scope, origin(i), imports, generics)
-            scope.initParts += { expr.value } // load expression contents, if we need them
+            // load expression contents, if we need them
+            scope.addInitPart(ScopeInitType.RESOLVE_METHOD_BODY, { expr.value })
             i = end
             expr
         }

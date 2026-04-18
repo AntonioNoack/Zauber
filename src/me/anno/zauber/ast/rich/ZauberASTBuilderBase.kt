@@ -28,6 +28,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.expansion.Macro.evaluateMacro
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
@@ -669,7 +670,9 @@ abstract class ZauberASTBuilderBase(
                 ?: if (tokens.equals(i, ".")) {
                     // get package under root
                     val scope = root.children.firstOrNull { it.name == name }
-                    scope?.scope?.typeWithArgs
+                    if(scope != null) {
+                        scope[ScopeInitType.RESOLVE_TYPES].typeWithArgs
+                    } else null
                 } else null
         }
 
@@ -846,7 +849,7 @@ abstract class ZauberASTBuilderBase(
         imports.add(import)
         if (import.allChildren) {
             for (child in import.path.children) {
-                currPackage.imports + Import2(child.name, child.scope, false)
+                currPackage.imports + Import2(child.name, child, false)
             }
         } else {
             currPackage.imports + Import2(import.name, import.path, true)

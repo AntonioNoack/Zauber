@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.resolution.ResolutionUtils.get
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -21,10 +22,11 @@ class FieldResolutionTest {
             findField(scope,name).resolveValueType(ResolutionContext.minimal)
 
         fun tryFindField(scope: Scope, name: String): Field? {
-            val field = scope.fields.firstOrNull { it.name == name }
+            val field = scope[ScopeInitType.AFTER_DISCOVERY]
+                .fields.firstOrNull { it.name == name }
             if (field != null) return field
             for (child in scope.children) {
-                val field = tryFindField(child.scope, name)
+                val field = tryFindField(child, name)
                 if (field != null) return field
             }
             return null

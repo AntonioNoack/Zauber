@@ -10,9 +10,10 @@ import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleThis
-import me.anno.zauber.generation.Specializations
+import me.anno.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -386,11 +387,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun findMethod(clazz: Scope, name: String, vararg params: Type): MethodLike {
-        return clazz.scope.methods.firstOrNull {
+        val candidates = clazz[ScopeInitType.AFTER_DISCOVERY].methods0
+        return candidates.firstOrNull {
             it.name == name && equalsParams(params, it.valueParameters)
         } ?: throw IllegalStateException(
             "Missing $clazz.$name(${params.joinToString()}), " +
-                    "candidates: ${clazz.methods}"
+                    "candidates: $candidates"
         )
     }
 
@@ -554,7 +556,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun findField(scope: Scope, name: String): Field? {
-        val field = scope.scope.fields.firstOrNull { it.name == name }
+        val field = scope[ScopeInitType.AFTER_DISCOVERY].fields
+            .firstOrNull { it.name == name }
         if (field != null) return field
 
         for (superCall in scope.superCalls) {
@@ -867,7 +870,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         valueParameters: List<Type>,
     ): ResolvedConstructor {
         println("Resolving constructor ${scope.pathStr}$descriptor")
-        val method = scope.scope.constructors0.firstOrNull {
+        val method = scope[ScopeInitType.AFTER_DISCOVERY].constructors0.firstOrNull {
             // equals(typeParameters, it.typeParameters) &&
             equals(valueParameters, it.valueParameters)
         } ?: throw IllegalStateException(
@@ -891,7 +894,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     ): ResolvedMethod {
         var scope = scope0
         while (true) {
-            val method = scope.scope.methods0.firstOrNull {
+            val method = scope[ScopeInitType.AFTER_DISCOVERY].methods0.firstOrNull {
                 it.name == name &&
                         // equals(typeParameters, it.typeParameters) &&
                         equals1(valueParameters, it.valueParameters)

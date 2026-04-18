@@ -1,7 +1,6 @@
 package me.anno.zauber.generation.java
 
 import me.anno.zauber.generation.java.JavaGenerationTest.Companion.testClassGenIsFine
-import me.anno.zauber.generation.java.JavaGenerationTest.Companion.testClassGeneration
 import org.junit.jupiter.api.Test
 
 class DataClassTest {

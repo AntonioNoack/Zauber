@@ -39,16 +39,19 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val constructors0: List<Constructor>
         get() = children.mapNotNull { it.selfAsConstructor }
-    val constructors: List<Constructor>
-        get() = children.mapNotNull { it.scope.selfAsConstructor }
+
+    fun getConstructors(scopeInitType: ScopeInitType): List<Constructor> {
+        return children.mapNotNull { it[scopeInitType].selfAsConstructor }
+    }
+
+    fun getMethods(scopeInitType: ScopeInitType): List<Method> {
+        return children.mapNotNull { it[scopeInitType].selfAsMethod }
+    }
+
     val methods0: List<Method>
         get() = children.mapNotNull { it.selfAsMethod }
-    val methods: List<Method>
-        get() = children.mapNotNull { it.scope.selfAsMethod }
     val companionObject: Scope?
-        get() = children
-            .firstOrNull { it.scopeType == ScopeType.COMPANION_OBJECT }
-            ?.scope
+        get() = children.firstOrNull { it.scopeType == ScopeType.COMPANION_OBJECT }
 
     val fields = ArrayList<Field>()
 
@@ -58,30 +61,23 @@ class Scope(val name: String, val parent: Scope? = null) {
     val enumEntries: List<Scope>
         get() = children
             .filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
-            .map { it.scope }
+            .map { it[ScopeInitType.AFTER_DISCOVERY] }
 
+    val initParts = ArrayList<ScopeInit>()
 
-    val initParts = ArrayList<() -> Unit>()
+    fun addInitPart(scopeInitType: ScopeInitType, runnable: () -> Unit) {
+        initParts.add(ScopeInit(scopeInitType, runnable))
+        initParts.sort()
+    }
 
-    /**
-     * Shall be set to prevent loading part 2 when part 1 isn't finished yet.
-     * Anything within part 1 should not depend on part 2 anyway.
-     * */
-    var isInitializing = false
-
-    val scope: Scope
-        get() {
-            parent?.scope
-            while (!isInitializing) {
-                val initializationPart = initParts.removeLastOrNull() ?: break
-                isInitializing = true
-                // println("starting $pathStr...")
-                initializationPart()
-                // println("...finished $pathStr")
-                isInitializing = false
-            }
-            return this
+    operator fun get(scopeInitType: ScopeInitType): Scope {
+        parent?.get(scopeInitType)
+        while (initParts.isNotEmpty() && initParts.last().type < scopeInitType) {
+            @Suppress("Since15")
+            initParts.removeLast().runnable()
         }
+        return this
+    }
 
     // only one can be true, so we can store just one field, and extract everything else
     private var selfAs: Any? = null
@@ -307,8 +303,9 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun getOrPut(name: String, scopeType: ScopeType?): Scope {
         val name = langAlias(name)
-        var child = children.firstOrNull { it.name == name }?.scope
+        var child = children.firstOrNull { it.name == name }
         if (child != null) {
+            child[ScopeInitType.DISCOVER_MEMBERS]
             // if (child.fileName == null) child.fileName = fileName
             child.mergeScopeTypes(scopeType)
             return child
@@ -361,7 +358,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun resolveTypeInner(name: String): Scope? {
         if (name == this.name) return this
         for (child in children) {
-            if (child.name == name) return child.scope
+            if (child.name == name) return child[ScopeInitType.RESOLVE_TYPES]
         }
 
         val parent = parent
@@ -398,7 +395,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         }
         // println("rtsf[$name,$this] -> $folderScope -> ${folderScope.children.map { it.name }}")
         for (child in folderScope.children) {
-            if (child.name == name) return child.scope
+            if (child.name == name) return child[ScopeInitType.RESOLVE_TYPES]
         }
         return null
     }
@@ -424,12 +421,12 @@ class Scope(val name: String, val parent: Scope? = null) {
 
         val parentI = parentIfSameFile
         if (parentI != null && parentI.name == name) {
-            return parentI.scope.typeWithArgs
+            return parentI[ScopeInitType.RESOLVE_TYPES].typeWithArgs
         }
 
         if (searchInside) {
             val insideThisFile = resolveTypeInner(name)
-            if (insideThisFile != null) return insideThisFile.scope.typeWithArgs
+            if (insideThisFile != null) return insideThisFile[ScopeInitType.RESOLVE_TYPES].typeWithArgs
         }
 
         val genericType = resolveGenericType(name)
@@ -441,26 +438,26 @@ class Scope(val name: String, val parent: Scope? = null) {
                 // scan all of that scope
                 for (child in path.children) {
                     if (child.name == name) {
-                        return child.scope.typeWithArgs
+                        return child[ScopeInitType.RESOLVE_TYPES].typeWithArgs
                     }
                 }
             } else if (import.name == name) {
-                return path.scope.typeWithArgs
+                return path[ScopeInitType.RESOLVE_TYPES].typeWithArgs
             }
         }
 
         if (pathStr != STDLIB_NAME) {
             val sameFolder = resolveTypeSameFolder(name)
-            if (sameFolder != null) return sameFolder.scope.typeWithArgs
+            if (sameFolder != null) return sameFolder[ScopeInitType.RESOLVE_TYPES].typeWithArgs
         }
 
         // helper at startup / for tests
         val standardType = StandardTypes.standardClasses[name]
-        if (standardType != null) return standardType.scope.typeWithArgs
+        if (standardType != null) return standardType[ScopeInitType.RESOLVE_TYPES].typeWithArgs
 
         if (pathStr == STDLIB_NAME) {
             val sameFolder = resolveTypeSameFolder(name)
-            if (sameFolder != null) return sameFolder.scope.typeWithArgs
+            if (sameFolder != null) return sameFolder[ScopeInitType.RESOLVE_TYPES].typeWithArgs
         }
 
         if (name == "This" && isClassLike()) {
@@ -474,14 +471,14 @@ class Scope(val name: String, val parent: Scope? = null) {
         // check siblings
         if (parent != null) {
             for (child in parent.children) {
-                if (child.name == name) return child.scope.typeWithArgs
+                if (child.name == name) return child[ScopeInitType.RESOLVE_TYPES].typeWithArgs
             }
         }
 
         // we must also check langScope for any valid paths...
         for (child in langScope.children) {
             if (child.name == name) {
-                return child.scope.typeWithArgs
+                return child[ScopeInitType.RESOLVE_TYPES].typeWithArgs
             }
         }
 
@@ -584,23 +581,14 @@ class Scope(val name: String, val parent: Scope? = null) {
         this.flags = this.flags or flags
     }
 
-    fun forEachScopeLazy(callback: (Scope) -> Unit) {
-        if (initParts.isEmpty()) {
-            // fully loaded already
+    fun forEachScopeLazy(scopeInitType: ScopeInitType, callback: (Scope) -> Unit) {
+        // execute it when we're ready
+        addInitPart(scopeInitType, {
             callback(this)
             for (i in children.indices) {
-                // children may not be loaded yet -> still lazy
-                children[i].forEachScopeLazy(callback)
+                children[i].forEachScopeLazy(scopeInitType, callback)
             }
-        } else {
-            // execute it when we're ready
-            initParts += {
-                callback(this)
-                for (i in children.indices) {
-                    children[i].forEachScopeLazy(callback)
-                }
-            }
-        }
+        })
     }
 
     fun isInsideExpression(): Boolean {

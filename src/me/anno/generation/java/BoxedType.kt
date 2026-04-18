@@ -1,4 +1,4 @@
-package me.anno.zauber.generation.java
+package me.anno.generation.java
 
 class BoxedType(val boxed: String, val native: String) {
 }

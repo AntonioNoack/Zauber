@@ -1,4 +1,4 @@
-package me.anno.zauber.generation
+package me.anno.generation
 
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.scope.Scope

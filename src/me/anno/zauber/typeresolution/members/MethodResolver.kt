@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
@@ -34,7 +35,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         val children = scope.children
         var bestMatch: ResolvedMethod? = null
         for (i in children.indices) {
-            val method = children[i].scope.selfAsMethod ?: continue
+            val method = children[i][ScopeInitType.AFTER_OVERRIDES].selfAsMethod ?: continue
             if (method.name != name) continue
 
             if (LOGGER.isInfoEnabled && method.typeParameters.isNotEmpty()) {
@@ -156,9 +157,9 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): Nothing {
         val selfScope = context.selfScope
         val codeScope = expr.scope
-        LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods?.filter { it.name == name }}")
-        LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods.filter { it.name == name }}")
-        LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods.filter { it.name == name }}")
+        LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods0?.filter { it.name == name }}")
+        LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods0.filter { it.name == name }}")
+        LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods0.filter { it.name == name }}")
         throw IllegalStateException(
             "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
                     "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"

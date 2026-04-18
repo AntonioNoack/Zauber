@@ -1,5 +1,6 @@
 package me.anno.zauber.expansion
 
+import me.anno.generation.Specializations
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
@@ -14,7 +15,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.ast.simple.Ownership
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.generation.Specializations
 import me.anno.zauber.interpreting.*
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.scope.Scope
@@ -35,7 +35,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 
 object Macro {
 
-    val macroContextParam = Types.MacroContext
+    val macroContextParam get() = Types.MacroContext
     var depth = 0
 
     fun ZauberASTBuilderBase.evaluateMacro(

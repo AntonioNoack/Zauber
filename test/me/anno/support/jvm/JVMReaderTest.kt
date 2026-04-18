@@ -40,17 +40,7 @@ class Array<V>(val size: Int) {
     """.trimIndent()
     )
 
-    FirstJVMClassReader.getScope("java/util/ArrayList", null)
-        .methods.first { it.name == "add" }
-        .scope.scope
-
     // todo ideally, we have some jars and can just lazy-load all contents
-
-    // try indexing some classes
-    FirstJVMClassReader.getScope("java/util/ArrayList", null)
-        .methods.forEach { it.scope.scope }
-    FirstJVMClassReader.getScope("java/util/HashMap", null)
-        .methods.forEach { it.scope.scope }
 
     // then try to instantiate and use an instance...
     // todo we need to fix generics... ArrayList.add() must return E, not Object

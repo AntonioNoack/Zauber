@@ -23,7 +23,7 @@ class CppParsingTest {
 
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
-            return root.children.first { it.name == testScopeName }.scope
+            return root.children.first { it.name == testScopeName }
         }
     }
 

@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -164,7 +165,7 @@ class DotExpression(
                 val valueParameters = resolveValueParameters(context, right.valueParameters)
                 val context1 = context.withSelfType(baseTypeI)
                 val constructor = if (baseTypeI is ClassType) {
-                    val innerClass = baseTypeI.clazz.scope.children.firstOrNull {
+                    val innerClass = baseTypeI.clazz[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull {
                         it.scopeType == ScopeType.INNER_CLASS && it.name == base.name
                     }
                     if (innerClass != null) {

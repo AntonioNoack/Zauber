@@ -5,6 +5,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 
 class SimpleGetObject(
     dst: SimpleField,
@@ -13,7 +14,7 @@ class SimpleGetObject(
 ) : SimpleAssignment(dst, scope, origin) {
 
     init {
-        objectScope.scope
+        objectScope[ScopeInitType.AFTER_DISCOVERY]
         if (!objectScope.isObjectLike() && objectScope.scopeType != null) {
             throw IllegalStateException("Cannot get object of $objectScope, ${objectScope.scopeType}")
         }

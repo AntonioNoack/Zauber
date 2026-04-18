@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
@@ -35,7 +36,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         for (child in scope.children) {
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
                 LOGGER.info("Found constructor-name pre-match: $child")
-                val constructor = findMemberInScopeImpl(child.scope, name, typeParameters, valueParameters, context)
+                val constructor = findMemberInScopeImpl(child[ScopeInitType.AFTER_OVERRIDES], name, typeParameters, valueParameters, context)
                 if (constructor != null) return constructor
             }
         }
@@ -57,7 +58,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         val children = scope.children
         var bestMatch: ResolvedConstructor? = null
         for (i in children.indices) {
-            val constructor = children[i].scope.selfAsConstructor ?: continue
+            val constructor = children[i][ScopeInitType.AFTER_OVERRIDES].selfAsConstructor ?: continue
             // if (method.name != name) continue
             if (constructor.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $constructor in $context, can we deduct any generics from that?")

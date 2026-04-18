@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.impl.GenericType
 
@@ -17,8 +18,8 @@ object DefaultParameterExpansion {
     private val LOGGER = LogManager.getLogger(DefaultParameterExpansion::class)
 
     fun createDefaultParameterFunctions(scope: Scope) {
-        scope.forEachScopeLazy { scopeI ->
-            when (scopeI.scope.scopeType) {
+        scope.forEachScopeLazy(ScopeInitType.DEFAULT_PARAMETERS) { scopeI ->
+            when (scopeI[ScopeInitType.DEFAULT_PARAMETERS].scopeType) {
                 ScopeType.METHOD -> createDefaultParameterMethod(scopeI)
                 ScopeType.CONSTRUCTOR -> createDefaultParameterConstructor(scopeI)
                 else -> {}
@@ -36,8 +37,8 @@ object DefaultParameterExpansion {
 
             // check if class has another function with that parameter defined
             val expectedParamsForMatch = self.valueParameters.subList(0, i).map { param -> param.type }
-            val match = scopeParent.children.firstOrNull {
-                val method = it.scope.selfAsMethod
+            val match = scopeParent.children.firstOrNull { scope ->
+                val method = scope[ScopeInitType.DEFAULT_PARAMETERS].selfAsMethod
                 method != null && method.name == self.name &&
                         method.selfType == self.selfType &&
                         method.valueParameters.map { param -> param.type } ==
@@ -101,7 +102,7 @@ object DefaultParameterExpansion {
             // check if class has another function with that parameter defined
             val expectedParamsForMatch = self.valueParameters.subList(0, i).map { param -> param.type }
             val match = classScope.children.firstOrNull {
-                val method = it.scope.selfAsConstructor
+                val method = it[ScopeInitType.DEFAULT_PARAMETERS].selfAsConstructor
                 method != null &&
                         method.selfType == self.selfType &&
                         method.valueParameters.map { param -> param.type } ==

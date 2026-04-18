@@ -1,4 +1,4 @@
-package me.anno.zauber.generation.c
+package me.anno.generation.c
 
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -7,16 +7,10 @@ import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
-import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.CompareOp
-import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
-import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
-import me.anno.zauber.generation.Generator
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -24,7 +18,7 @@ import java.io.File
 
 // todo this is the final boss:
 //  all allocations, shared references, GC, inheritance etc must be implemented by us
-object CSourceGenerator : Generator() {
+object CSourceGenerator : me.anno.generation.Generator() {
 
     private val LOGGER = LogManager.getLogger(CSourceGenerator::class)
 
@@ -70,7 +64,7 @@ object CSourceGenerator : Generator() {
                 }
             }
             for (child in scope.children) {
-                generateCode(child.scope)
+                generateCode(child[ScopeInitType.CODE_GENERATION])
             }
         }
 

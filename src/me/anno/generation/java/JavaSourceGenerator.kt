@@ -1,5 +1,11 @@
-package me.anno.zauber.generation.java
+package me.anno.generation.java
 
+import me.anno.generation.Specializations.foundTypeSpecialization
+import me.anno.generation.Specializations.specialization
+import me.anno.generation.Specializations.specializations
+import me.anno.generation.java.JavaExpressionWriter.appendSuperCall
+import me.anno.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
+import me.anno.generation.java.JavaSimplifiedASTWriter.imports
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
@@ -8,15 +14,8 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
-import me.anno.zauber.generation.Generator
-import me.anno.zauber.generation.Specializations
-import me.anno.zauber.generation.Specializations.foundTypeSpecialization
-import me.anno.zauber.generation.Specializations.specialization
-import me.anno.zauber.generation.Specializations.specializations
-import me.anno.zauber.generation.java.JavaExpressionWriter.appendSuperCall
-import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
-import me.anno.zauber.generation.java.JavaSimplifiedASTWriter.imports
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -37,7 +36,7 @@ import java.io.File
  *   - Java forbids duplicate field names in cascading method scopes [-> we must rename them]
  *   - fields into lambdas must be effectively final [-> must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
  * */
-object JavaSourceGenerator : Generator() {
+object JavaSourceGenerator : me.anno.generation.Generator() {
 
     @Suppress("MayBeConstant")
     val enforceSpecialization = true
@@ -72,7 +71,7 @@ object JavaSourceGenerator : Generator() {
         try {
             defineNullableAnnotation(dst, writer)
             generate(root, dst, writer, noSpecialization)
-            Specializations.generate(
+            _root_ide_package_.me.anno.generation.Specializations.generate(
                 { generate(it.scope, dst, writer, it.specialization) },
                 { extendScope(it, dst, writer) })
         } finally {
@@ -250,7 +249,9 @@ object JavaSourceGenerator : Generator() {
 
             writeInto(createFile(scope.parent!!, name, dst), writer)
         } else if ((scopeType == ScopeType.PACKAGE || scopeType == null) && scope.path !in blacklistedPaths) {
-            if (scopeType == ScopeType.PACKAGE && (scope.fields.isNotEmpty() || scope.methods.isNotEmpty())) {
+            if (scopeType == ScopeType.PACKAGE && (scope.fields.isNotEmpty() ||
+                        scope.getMethods(ScopeInitType.AFTER_DISCOVERY).isNotEmpty())
+            ) {
                 // we need some package helper
                 val name = createPackageName(scope, specialization)
 
@@ -265,7 +266,7 @@ object JavaSourceGenerator : Generator() {
             //  inner classes: yes
             if (specialization.isEmpty()) {
                 for (child in scope.children) {
-                    generate(child.scope, dst, writer, noSpecialization)
+                    generate(child[ScopeInitType.CODE_GENERATION], dst, writer, noSpecialization)
                 }
             }
         }
@@ -378,7 +379,7 @@ object JavaSourceGenerator : Generator() {
                     if (childType.isClassType()) {
                         // some spacing
                         nextLine()
-                        generateInside(child.name, child.scope, specialization)
+                        generateInside(child.name, child[ScopeInitType.CODE_GENERATION], specialization)
                     }
                 }
             }
@@ -415,7 +416,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendMethods(classScope: Scope) {
-        for (method in classScope.methods) {
+        for (method in classScope.getMethods(ScopeInitType.CODE_GENERATION)) {
             if (method.scope.parent != classScope) {
                 // an inherited method -> skip, because it's already defined in the parent
                 continue
@@ -434,7 +435,7 @@ object JavaSourceGenerator : Generator() {
     }
 
     private fun appendConstructors(classScope: Scope, name: String) {
-        for (constructor in classScope.constructors) {
+        for (constructor in classScope.getConstructors(ScopeInitType.CODE_GENERATION)) {
             appendConstructor(classScope, constructor, name)
         }
     }

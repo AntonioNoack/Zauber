@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression.Companion.handleNOCTForCall
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -80,7 +81,7 @@ class NamedCallExpression(
         val valueParameters = resolveValueParameters(context, valueParameters)
 
         val constructor = if (baseType is ClassType) {
-            val innerClass = baseType.clazz.scope.children.firstOrNull { child ->
+            val innerClass = baseType.clazz[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { child ->
                 child.scopeType == ScopeType.INNER_CLASS && child.name == name
             }
             if (innerClass != null) {

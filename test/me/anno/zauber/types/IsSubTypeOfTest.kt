@@ -4,6 +4,7 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
@@ -31,11 +32,12 @@ class IsSubTypeOfTest {
         """.trimIndent(), "Test.zbr"
             ).tokenize()
             scanClasses(tokens)
-            return root.children.first { it.name == testScopeName }.scope
+            return root.children.first { it.name == testScopeName }
         }
 
         operator fun Scope.get(name: String): ClassType {
-            return children.first { it.name == name }.scope.typeWithoutArgs
+            return this[ScopeInitType.AFTER_DISCOVERY]
+                .children.first { it.name == name }.typeWithoutArgs
         }
 
         fun isSubTypeOf(expected: Type, actual: Type): Boolean {

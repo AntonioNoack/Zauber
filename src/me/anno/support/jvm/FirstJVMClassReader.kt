@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -242,14 +243,16 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
                 ClassReader.EXPAND_FRAMES // only needed when reading methods
             )
         }
-        methodScope.initParts += {
-            try {
-                lazy.value
-            } catch (e: Exception) {
-                // todo mark body as having error...
-                LOGGER.warn("Failed to read class body for $path.$name$descriptor", e)
+        methodScope.addInitPart(
+            ScopeInitType.RESOLVE_METHOD_BODY, {
+                try {
+                    lazy.value
+                } catch (e: Exception) {
+                    // todo mark body as having error...
+                    LOGGER.warn("Failed to read class body for $path.$name$descriptor", e)
+                }
             }
-        }
+        )
         return null
     }
 

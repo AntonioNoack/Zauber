@@ -8,6 +8,7 @@ import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.resolution.ResolutionUtils.getField
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Type
@@ -33,8 +34,9 @@ class CppTypeResolutionTest {
 
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }.scope
-            val field = testScope.fields.first { it.name == "tested" }
+            val testScope = root.children.first { it.name == testScopeName }
+            val field = testScope[ScopeInitType.AFTER_DISCOVERY]
+                .fields.first { it.name == "tested" }
             return field.valueType
                 ?: throw IllegalStateException("Could not resolve type for $field")
         }

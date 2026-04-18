@@ -1,8 +1,9 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.ast.simple.expression.SimpleGetObject
-import me.anno.zauber.generation.c.CSourceGenerator.isValueType
+import me.anno.generation.c.CSourceGenerator.isValueType
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
 
 class SimpleNode(val graph: SimpleGraph) {
@@ -90,7 +91,8 @@ class SimpleNode(val graph: SimpleGraph) {
         graph.field(type, ownership)
 
     fun thisField(type: Type, scopeIfThis: Scope, scope: Scope, origin: Int): SimpleField {
-        if (scopeIfThis.scope.isObjectLike()) {
+        scopeIfThis[ScopeInitType.AFTER_DISCOVERY]
+        if (scopeIfThis.isObjectLike()) {
             // todo are objects comptime?
             val dst = field(scopeIfThis.typeWithArgs, Ownership.COMPTIME)
             add(SimpleGetObject(dst, scopeIfThis, scope, origin))

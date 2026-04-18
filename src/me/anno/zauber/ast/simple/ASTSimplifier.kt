@@ -318,7 +318,7 @@ object ASTSimplifier {
         if (useGetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val method0 = ResolvedMethod(
-                ownerTypes, field.getter!!,
+                ownerTypes, field.getter ?: throw IllegalStateException("Missing getter for $field"),
                 ParameterList.emptyParameterList(),
                 context, expr.scope, MatchScore(0)
             )
@@ -384,7 +384,7 @@ object ASTSimplifier {
         if (useSetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val method0 = ResolvedMethod(
-                ownerTypes, field.setter!!,
+                ownerTypes, field.setter ?: throw IllegalStateException("Missing setter for $field"),
                 ParameterList.emptyParameterList(),
                 context, expr.scope, MatchScore(0)
             )

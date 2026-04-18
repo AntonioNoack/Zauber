@@ -9,7 +9,7 @@ import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.OverriddenMethods.resolveOverrides
+import me.anno.zauber.expansion.MethodOverrides.resolveOverrides
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.tokenizer.ZauberTokenizer
@@ -44,7 +44,7 @@ class TypeResolutionTest {
             ).tokenize()
             scanClasses(tokens)
             createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }.scope
+            val testScope = root.children.first { it.name == testScopeName }
             resolveOverrides(testScope)
             return testScope
         }
@@ -60,8 +60,8 @@ class TypeResolutionTest {
         }
 
         fun testMethodBodyResolution(code: String): List<Type> {
-            val testScope = testTypeResolution0(code, reset = true).scope
-            val method = testScope.methods.first { it.name == "tested" }
+            val testScope = testTypeResolution0(code, reset = true)
+            val method = testScope.methods0.first { it.name == "tested" }
             val types = ArrayList<Type>()
             fun scan(expr: Expression) {
                 when (expr) {

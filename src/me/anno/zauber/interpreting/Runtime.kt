@@ -25,6 +25,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.CollectionUtils.mapArray
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.scope.ScopeInitType
 import javax.lang.model.type.UnionType
 
 class Runtime {
@@ -107,7 +108,7 @@ class Runtime {
     fun isNull(va: Instance) = va == getNull()
 
     fun getBool(bool: Boolean): Instance {
-        val boolCompanion = Types.Boolean.clazz.scope.companionObject
+        val boolCompanion = Types.Boolean.clazz[ScopeInitType.AFTER_DISCOVERY].companionObject
             ?: throw IllegalStateException("Missing definition for enum class Boolean")
         val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
         val fields = boolInstance.clazz.properties
@@ -138,7 +139,7 @@ class Runtime {
         }
 
         val method = methodSpec.method
-        method.scope.scope // load method
+        method.scope[ScopeInitType.CODE_GENERATION] // load method
 
         if (method.isExternal()) {
             val name = (method as Method).name
@@ -310,7 +311,8 @@ class Runtime {
         }) { type, instance ->
             when (type) {
                 is ClassType -> {
-                    instance.set("name", type.clazz.scope.name)
+                    val clazz = type.clazz[ScopeInitType.AFTER_DISCOVERY]
+                    instance.set("name", clazz.name)
                     if (instance.hasProperty("fields")) {
                         val zType = getClass(type)
                         val fields0 = zType.properties

@@ -4,6 +4,7 @@ import me.anno.utils.PairArrayList
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -243,18 +244,17 @@ abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
         callback: (scope: Scope, selfType: Type) -> R?
     ): R? {
 
-        val contextSelfScope = context.selfScope?.scope
+        val contextSelfScope = context.selfScope?.get(ScopeInitType.AFTER_OVERRIDES)
         val contextSelfType = context.selfType?.specialize(context)
 
         val print = !catchFailures && LOGGER.isInfoEnabled
         if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${contextSelfScope}, ${contextSelfType})")
 
         if (contextSelfScope != null && contextSelfType != null) {
-            contextSelfScope.scope
 
             if (print) LOGGER.info(
                 "Checking[0] $contextSelfScope with ${contextSelfType}, " +
-                        "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods.map { it.name }}"
+                        "fields: ${contextSelfScope.fields.map { it.name }}, methods: ${contextSelfScope.methods0.map { it.name }}"
             )
             val result = callback(contextSelfScope, contextSelfType)
             if (result != null) return result

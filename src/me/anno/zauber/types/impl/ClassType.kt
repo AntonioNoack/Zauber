@@ -3,6 +3,7 @@ package me.anno.zauber.types.impl
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
@@ -34,7 +35,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     ) emptyParameterList() else typeParameters
 
     fun withTypeParameters(typeParameters: List<Type>): ClassType {
-        val clazz = clazz.scope
+        val clazz = clazz[ScopeInitType.AFTER_DISCOVERY]
         check(clazz.hasTypeParameters) { "Class $clazz is missing type parameters" }
         check(clazz.typeParameters.size == typeParameters.size) {
             "Cannot create ClassType($clazz, |${clazz.typeParameters}| != |$typeParameters|)"
@@ -61,7 +62,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
         fun createParameterList(clazz: Scope, typeParams: List<Type>, origin: Int): ParameterList {
             if (strictMode) {
-                clazz.scope
+                clazz[ScopeInitType.AFTER_DISCOVERY]
                 check(clazz.hasTypeParameters) {
                     "$clazz is missing type parameter definition, at ${resolveOrigin(origin)}"
                 }

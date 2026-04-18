@@ -7,7 +7,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.expansion.OverriddenMethods.sameParameters
+import me.anno.zauber.expansion.MethodOverrides.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
@@ -19,6 +19,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import me.anno.utils.LazyMap
+import me.anno.zauber.scope.ScopeInitType
 
 class SimpleCall(
     dst: SimpleField,
@@ -39,7 +40,7 @@ class SimpleCall(
     companion object {
 
         fun selfTypeIsOpen(method: Method): Boolean {
-            val selfType = method.scope.parent?.scope ?: return false
+            val selfType = method.scope.parent?.get(ScopeInitType.AFTER_DISCOVERY) ?: return false
             if (!selfType.isClassType()) return false // non-class-likes cannot be open
             if (selfType.isObjectLike()) return false // objects cannot be open
             if (selfType.isInterface()) return true // interfaces are always open
@@ -61,7 +62,7 @@ class SimpleCall(
                 } else {
                     val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
                     val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
-                    val choices = invokedType.clazz.scope.methods.filter { option ->
+                    val choices = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY].methods0.filter { option ->
                         option.name == method.name &&
                                 sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
                                 sameParameters(selfScope, option.valueParameters, methodValueParameters)

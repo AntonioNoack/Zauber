@@ -1,4 +1,4 @@
-package me.anno.zauber.generation.java
+package me.anno.generation.java
 
 data class JavaEntry(val packagePath: String,) {
     val content = StringBuilder()

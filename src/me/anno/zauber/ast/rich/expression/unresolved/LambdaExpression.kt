@@ -12,6 +12,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -124,13 +125,13 @@ class LambdaExpression(
     }
 
     private fun findSelfType(context: ResolutionContext): Type {
-        var selfMethodScope = scope.scope
+        var selfMethodScope = scope[ScopeInitType.AFTER_DISCOVERY]
         while (true) {
             if (selfMethodScope.isMethodType() || selfMethodScope.isClassLike()) {
                 return selfMethodScope.typeWithArgs
             }
 
-            selfMethodScope = selfMethodScope.parentIfSameFile?.scope
+            selfMethodScope = selfMethodScope.parentIfSameFile
                 ?: return context.selfType
                     ?: throw IllegalStateException("Missing method scope for $this by $scope in ${resolveOrigin(origin)}, context: $context")
         }

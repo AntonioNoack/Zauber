@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.Type
@@ -13,24 +14,30 @@ import me.anno.zauber.types.Type
 //  and make each class complete, s.t. all methods are present for easier resolution
 
 // todo also check all sealed class, value class, open class, abstract class, etc having a valid type combination
-object OverriddenMethods {
+object MethodOverrides {
 
-    private val LOGGER = LogManager.getLogger(OverriddenMethods::class)
+    private val LOGGER = LogManager.getLogger(MethodOverrides::class)
 
     private val processedScopes = HashSet<Scope>()
 
     fun resolveOverrides(root: Scope) {
         processedScopes.clear()
-        root.forEachScopeLazy(::resolveOverridesImpl)
+        root.forEachScopeLazy(ScopeInitType.ADD_OVERRIDES, ::resolveOverridesImpl)
     }
 
     fun sameParameters(selfScope: Scope, options: List<Parameter>, expected: List<Type>): Boolean {
-        if (expected.size != options.size) return false
+        if (expected.size != options.size) {
+            println("size mismatch: ${expected.size} != ${options.size}")
+            return false
+        }
         for (index in options.indices) {
             // if (option.name != expected.name) return false // <- just a warning
             val optionType = options[index].type.resolve(selfScope)
             val expectedType = expected[index]
-            if (optionType != expectedType) return false
+            if (optionType != expectedType) {
+                println("type mismatch: $optionType != $expectedType")
+                return false
+            }
         }
         return true
     }
@@ -40,7 +47,7 @@ object OverriddenMethods {
         if (scope in processedScopes) return
 
         processedScopes += scope
-        for (superCall in scope.scope.superCalls) {
+        for (superCall in scope[ScopeInitType.ADD_OVERRIDES].superCalls) {
             val superScope = superCall.type.clazz
             resolveOverridesImpl(superScope)
             addAllMethodOverrides(scope, superCall, superScope)
@@ -49,11 +56,11 @@ object OverriddenMethods {
     }
 
     private fun addAllMethodOverrides(scope: Scope, superCall: SuperCall, superScope: Scope) {
-        val selfMethods0 = scope.scope.methods.filter { !it.explicitSelfType }
+        val selfMethods0 = scope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.explicitSelfType }
         val selfMethods = selfMethods0.groupBy { it.name }
         val foundMethods = HashSet<Method>()
         // todo check that all methods with override-flag have found their partner
-        val superMethods = superScope.methods.filter { !it.explicitSelfType }
+        val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.explicitSelfType }
         for (method in superMethods) {
             if (method.isPrivate()) continue
 
@@ -87,11 +94,15 @@ object OverriddenMethods {
 
             val selfMethod = selfMethods.firstOrNull()
             if (selfMethod == null) {
+
+                println("adding ${method.name} to $scope, options: ${scope.methods0.map { it.name }}")
+
                 // somehow create a new method linking to the old one
                 val newScope = scope.generate("f:${method.name}", ScopeType.METHOD)
                 newScope.typeParameters = method.typeParameters
                 newScope.hasTypeParameters = true
                 newScope.selfAsMethod = method
+
             } else {
                 foundMethods.add(selfMethod)
                 if (false) check(selfMethod.flags.hasFlag(Flags.OVERRIDE)) {

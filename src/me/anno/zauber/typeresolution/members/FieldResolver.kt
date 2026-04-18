@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
@@ -70,9 +71,9 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             bestMatch = joinMatches(bestMatch, match)
         }
 
-        for (child in scope.scope.children) {
+        for (child in scope[ScopeInitType.RESOLVE_TYPES].children) {
             if (child.name != name) continue
-            val field = child.scope.objectField ?: continue
+            val field = child[ScopeInitType.RESOLVE_TYPES].objectField ?: continue
             val valueType = getFieldReturnType(scopeSelfType, field, returnType)
             val match = findMemberMatch(
                 field, valueType,

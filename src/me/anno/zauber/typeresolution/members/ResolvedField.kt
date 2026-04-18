@@ -22,6 +22,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.getScope
@@ -173,11 +174,12 @@ class ResolvedField(
         }
 
         val funInterfaceType = resolveFunInterfaceType(baseType)
-        check(funInterfaceType.clazz.methods.size == 1) {
-            "Fun interfaces should only have one method, $funInterfaceType has ${funInterfaceType.clazz.methods}"
+        val methods = funInterfaceType.clazz.getMethods(ScopeInitType.AFTER_DISCOVERY)
+        check(methods.size == 1) {
+            "Fun interfaces should only have one method, $funInterfaceType has $methods"
         }
         // todo having the parameters here would be really helpful for resolving the type...
-        val method = funInterfaceType.clazz.methods.first()
+        val method = methods.first()
         return method.resolveReturnType(context)
         // this must be a fun-interface, and we need to get the return type of the call...
         //  luckily, there is only a single method, but unfortunately, we need the call parameters...
@@ -198,7 +200,8 @@ class ResolvedField(
             val nat = Types.NullableAny
             val lambdaClassScope = getScope(className, genericNames, nat)
 
-            val method = lambdaClassScope.methods.firstOrNull { it.name == "call" }
+            val method = lambdaClassScope.getMethods(ScopeInitType.AFTER_OVERRIDES)
+                .firstOrNull { it.name == "call" }
                 ?: throw IllegalStateException("Class $className is missing .call() method")
 
             val scopeSelfType = lambdaClassScope.typeWithArgs

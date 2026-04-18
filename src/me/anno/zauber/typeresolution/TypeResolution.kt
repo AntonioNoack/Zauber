@@ -11,6 +11,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.scope.ScopeInitType
 
 /**
  * Resolve types step by step, might fail, but should be stable at least.
@@ -157,9 +158,9 @@ object TypeResolution {
         var scope = scope ?: return null
         while (true) {
 
-            val selfMatch = scope.children.firstOrNull { it.name == name && it.scope.isClassType() }
+            val selfMatch = scope.children
+                .firstOrNull { it.name == name && it[ScopeInitType.AFTER_DISCOVERY].isClassType() }
             if (selfMatch != null) {
-                val selfMatch = selfMatch.scope
                 val typeParams: List<Type>? =
                     if (selfMatch.hasTypeParameters && selfMatch.typeParameters.isEmpty()) emptyList() else null
                 return ClassType(selfMatch, typeParams, -1)

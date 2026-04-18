@@ -6,6 +6,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import java.io.File
 
 object CompileSources {
@@ -78,7 +79,7 @@ object CompileSources {
     fun printPackages(root: Scope, depth: Int) {
         LOGGER.info("  ".repeat(depth) + root.name)
         for (child in root.children) {
-            printPackages(child.scope, depth + 1)
+            printPackages(child[ScopeInitType.AFTER_DISCOVERY], depth + 1)
         }
     }
 

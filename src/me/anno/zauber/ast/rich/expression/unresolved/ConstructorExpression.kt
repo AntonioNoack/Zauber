@@ -9,6 +9,7 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
 
 class ConstructorExpression(
@@ -46,7 +47,7 @@ class ConstructorExpression(
     fun resolveMethod(context: ResolutionContext): ResolvedConstructor {
         val valueParameters = resolveValueParameters(context, valueParameters)
         return ConstructorResolver.findMemberInScope(
-            clazz.scope, origin, clazz.name, context.targetType,
+            clazz[ScopeInitType.AFTER_DISCOVERY], origin, clazz.name, context.targetType,
             null, typeParameters, valueParameters, context
         ) ?: throw IllegalStateException("Missing constructor $clazz(${valueParameters.joinToString(", ")})")
     }

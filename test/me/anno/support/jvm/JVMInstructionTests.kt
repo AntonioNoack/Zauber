@@ -104,10 +104,6 @@ class Type {
         val sampleClass = sample.javaClass.name
             .replace('.', '/')
 
-        FirstJVMClassReader.getScope(sampleClass, null)
-            .methods.first { it.name == "call" }
-            .scope.scope
-
         return testExecute(
             """
         import java.util.ArrayList
