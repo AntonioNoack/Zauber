@@ -31,6 +31,11 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
         fun splitPackage(name: String) = name.split('/', '$')
         fun getScope(name: String, scopeType: ScopeType?): Scope {
+
+            if (name.isEmpty()) return root
+            check(!name.endsWith(';')) { "Name must not end with ';'" }
+            check(name[0] != '[') { "Name must not start with '['" }
+
             val parts = splitPackage(name)
             var scope = root
             for (pi in parts.indices) {
@@ -237,8 +242,14 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
                 ClassReader.EXPAND_FRAMES // only needed when reading methods
             )
         }
-        methodScope.initParts += { lazy.value }
-
+        methodScope.initParts += {
+            try {
+                lazy.value
+            } catch (e: Exception) {
+                // todo mark body as having error...
+                LOGGER.warn("Failed to read class body for $path.$name$descriptor", e)
+            }
+        }
         return null
     }
 
@@ -251,7 +262,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
     ): FieldVisitor? {
         // todo visit fields and annotations...
         // println("Visiting field ${classScope.name}.$name, descriptor: $descriptor, signature: $signature, value: $value, access: $access")
-        val valueType = nameToType(signature ?: descriptor)
+        val valueType = descToType(signature ?: descriptor)
         val origin = -1
         val initialValueForConst = when (value) {
             null -> null

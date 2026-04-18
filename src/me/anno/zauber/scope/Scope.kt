@@ -37,8 +37,12 @@ class Scope(val name: String, val parent: Scope? = null) {
     val code: ArrayList<Expression>
         get() = (selfAsConstructor!!.body as ExpressionList).list as ArrayList<Expression>
 
+    val constructors0: List<Constructor>
+        get() = children.mapNotNull { it.selfAsConstructor }
     val constructors: List<Constructor>
         get() = children.mapNotNull { it.scope.selfAsConstructor }
+    val methods0: List<Method>
+        get() = children.mapNotNull { it.selfAsMethod }
     val methods: List<Method>
         get() = children.mapNotNull { it.scope.selfAsMethod }
     val companionObject: Scope?

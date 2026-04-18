@@ -19,6 +19,8 @@ class JVMBlockExpression(val graph: JVMGraph, scope: Scope, origin: Int) : Expre
             ifBranch = value
         }
 
+    var endStack: List<SimpleFieldExpr>? = null
+
     val instructions = ArrayList<JVMSimpleExpr>()
     fun add(expr: JVMSimpleExpr) {
         instructions.add(expr)

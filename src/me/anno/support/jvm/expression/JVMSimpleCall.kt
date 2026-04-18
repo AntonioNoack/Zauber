@@ -12,6 +12,7 @@ class JVMSimpleCall(
     val self: SimpleFieldExpr,
     val specialization: Specialization,
     val valueParameters: List<SimpleFieldExpr>,
+    val enableInheritance: Boolean,
 
     scope: Scope, origin: Int,
 ) : JVMSimpleExpr(scope, origin) {

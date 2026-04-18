@@ -25,6 +25,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnknownType
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Label
@@ -237,7 +238,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val array = stack.removeLast().use()
                 val dst = block.field(baseType)
                 val method = findMethod(Types.Array.clazz, "get", Types.Int)
-                block.add(JVMSimpleCall(dst, method, array, noSpecialization, listOf(index), methodScope, origin))
+                block.add(
+                    JVMSimpleCall(
+                        dst, method, array, noSpecialization,
+                        listOf(index),
+                        enableInheritance = false,
+                        methodScope, origin
+                    )
+                )
                 stack.add(dst)
             }
 
@@ -267,14 +275,19 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                         array,
                         noSpecialization,
                         listOf(index, value),
-                        methodScope,
-                        origin
+                        enableInheritance = false,
+                        methodScope, origin
                     )
                 )
             }
 
             ARETURN, IRETURN, LRETURN, FRETURN, DRETURN -> {
                 block.add(JVMSimpleReturn(stack.removeLast().use(), methodScope, origin))
+            }
+
+            ATHROW -> {
+                val thrown = stack.removeLast().use()
+                block.add(JVMSimpleThrow(thrown, methodScope, origin))
             }
 
             RETURN -> {
@@ -311,7 +324,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p0 = stack.removeLast().use()
         val dst = graph.field(toType)
         val method = findMethod(fromType.clazz, name)
-        block.add(JVMSimpleCall(dst, method, p0, noSpecialization, emptyList(), methodScope, origin))
+        block.add(
+            JVMSimpleCall(
+                dst, method, p0, noSpecialization, emptyList(),
+                enableInheritance = false,
+                methodScope, origin
+            )
+        )
         stack.add(dst)
     }
 
@@ -325,7 +344,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p0 = stack.removeLast().use()
         val dst = graph.field(type)
         val method = findMethod(type.clazz, name, type)
-        block.add(JVMSimpleCall(dst, method, p0, noSpecialization, listOf(p1), methodScope, origin))
+        block.add(
+            JVMSimpleCall(
+                dst, method, p0, noSpecialization,
+                listOf(p1), enableInheritance = false,
+                methodScope, origin
+            )
+        )
         stack.add(dst)
     }
 
@@ -406,26 +431,30 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     T_LONG -> Types.Long
                     else -> throw IllegalStateException("Unexpected operand: $operand")
                 }
-                val arrayType = Types.Array.withTypeParameter(elementType)
-                val size = stack.removeLast().use()
-                val dst = block.field(arrayType)
-                val tmp = block.field(Types.Unit)
-                block.add(JVMSimpleAllocateInstance(dst, arrayType, methodScope, origin))
-                val constr = resolveConstructor(
-                    arrayType.clazz, "(Int)",
-                    ParameterList(arrayType),
-                    listOf(Types.Int)
-                )
-                block.add(
-                    JVMSimpleCall(
-                        tmp, constr.resolved, dst.use(), constr.specialization,
-                        listOf(size), methodScope, origin
-                    )
-                )
-                stack.add(dst)
+                createArray(elementType)
             }
             else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
         }
+    }
+
+    fun createArray(elementType: Type) {
+        val arrayType = Types.Array.withTypeParameter(elementType)
+        val size = stack.removeLast().use()
+        val dst = block.field(arrayType)
+        val tmp = block.field(Types.Unit)
+        block.add(JVMSimpleAllocateInstance(dst, arrayType, methodScope, origin))
+        val constr = resolveConstructor(
+            arrayType.clazz, "(Int)",
+            ParameterList(arrayType),
+            listOf(Types.Int)
+        )
+        block.add(
+            JVMSimpleCall(
+                tmp, constr.resolved, dst.use(), constr.specialization,
+                listOf(size), enableInheritance = false, methodScope, origin
+            )
+        )
+        stack.add(dst)
     }
 
     override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
@@ -545,8 +574,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
+        check(descriptor.startsWith('['))
         LOGGER.debug("newMultiArray($descriptor, $numDimensions)")
-        TODO("Handle")
+        val arrayType = descToType(descriptor) as ClassType
+        val dst = block.field(arrayType)
+        val dimensions = List(numDimensions) { stack.removeLast() }.asReversed()
+        block.add(JVMSimpleMultiArray(dst, arrayType, dimensions, methodScope, origin))
+        stack.add(dst)
     }
 
     override fun visitLdcInsn(value: Any) {
@@ -649,10 +683,37 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         block = nextBlock
     }
 
-    override fun visitFrame(type: Int, numLocal: Int, local: Array<out Any?>, numStack: Int, stack: Array<out Any?>) {
+    override fun visitFrame(type: Int, numLocal: Int, local: Array<out Any?>, numStack: Int, stack1: Array<out Any?>) {
         check(type == F_NEW)
-        LOGGER.debug("visitFrame($type, $numLocal, ${local.asList()}, $numStack, ${stack.asList()})")
+        LOGGER.debug("visitFrame($type, $numLocal, ${local.asList()}, $numStack, ${stack1.asList()})")
         // todo we probably have to adjust the stack, and connect any simple-fields...
+        check(block.endStack == null)
+        block.endStack = ArrayList(stack)
+        stack.clear()
+
+        val newBlock = graph.addNode()
+        block.nextBranch = newBlock
+        this.block = newBlock
+
+        for (i in stack1.indices.reversed()) {
+            val type = when (val type0 = stack1[i]) {
+                TOP -> UnknownType // todo what is that???
+                INTEGER -> Types.Int
+                FLOAT -> Types.Float
+                LONG -> Types.Long
+                DOUBLE -> Types.Double
+                NULL -> NullType
+                UNINITIALIZED_THIS -> UnknownType
+                null -> UnknownType
+                is String -> nameToType(type0)
+
+                // todo we can lookup this label to find out what object it is: it was allocated there
+                is Label -> UnknownType
+
+                else -> throw NotImplementedError("What type is $type0 (${type0.javaClass})?")
+            }
+            stack.add(newBlock.field(type))
+        }
     }
 
     override fun visitInvokeDynamicInsn(name: String, descriptor: String, method: Handle, vararg args: Any?) {
@@ -665,7 +726,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             val dst1 = args[1] as Handle
             val ownerScope = nameToType(dst1.owner) as ClassType
             val method = resolveMethod(
-                ownerScope.clazz, dst1.owner, dst1.name, dst1.desc,
+                ownerScope.clazz, dst1.name, dst1.desc,
                 emptyList(), valueArgs,
             )
 
@@ -716,7 +777,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                         self = stack.removeLast().use()
                         method = resolveConstructor(owner, descriptor, valueParameters)
                     }
-                    else -> throw NotImplementedError(name)
+                    else -> {
+                        self = stack.removeLast().use()
+                        val scope = FirstJVMClassReader.getScope(owner, null)
+                        method = resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
+                    }
                 }
             }
             INVOKESTATIC -> {
@@ -738,11 +803,18 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
         }
 
+        val enableInheritance = when (opcode) {
+            INVOKEVIRTUAL,
+            INVOKEINTERFACE,
+            INVOKELAMBDA -> true
+            else -> false
+        }
+
         val dst = block.field(returnType)
         block.add(
             JVMSimpleCall(
                 dst, method.resolved, self, method.specialization,
-                valueParametersI, methodScope, origin
+                valueParametersI, enableInheritance, methodScope, origin
             )
         )
         if (returnType != Types.Unit) {
@@ -755,15 +827,20 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         typeParameters: List<Parameter>, valueParameters: List<Parameter>,
     ): ResolvedMethod {
         val scope = FirstJVMClassReader.getScope(owner, null).getOrPutCompanion()
-        return resolveMethod(scope, owner, name, descriptor, typeParameters, valueParameters)
+        return resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
     }
 
     fun resolveDynamicMethod(
         owner: String, name: String, descriptor: String,
         typeParameters: List<Parameter>, valueParameters: List<Parameter>,
     ): ResolvedMethod {
-        val scope = FirstJVMClassReader.getScope(owner, null)
-        return resolveMethod(scope, owner, name, descriptor, typeParameters, valueParameters)
+        val ownerType = if (owner.startsWith('[') || owner.endsWith(';')) {
+            descToType(owner)
+        } else {
+            nameToType(owner)
+        }
+        val scope = (ownerType as ClassType).clazz
+        return resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
     }
 
     fun resolveConstructor(
@@ -790,14 +867,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         valueParameters: List<Type>,
     ): ResolvedConstructor {
         println("Resolving constructor ${scope.pathStr}$descriptor")
-        val method = scope.scope.constructors.firstOrNull {
+        val method = scope.scope.constructors0.firstOrNull {
             // equals(typeParameters, it.typeParameters) &&
             equals(valueParameters, it.valueParameters)
         } ?: throw IllegalStateException(
             "Missing constructor ${scope.pathStr}<$ownerTypes>$descriptor -> " +
                     "(${valueParameters.joinToString { it.toString() }}), " +
                     "options: ${
-                        scope.constructors
+                        scope.constructors0
                             .map { "(${valueParameters.joinToString { it.toString() }})" }
                     }"
         )
@@ -809,12 +886,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun resolveMethod(
-        scope: Scope, owner: String, name: String, descriptor: String,
+        scope0: Scope, name: String, descriptor: String,
         typeParameters: List<Parameter>, valueParameters: List<Parameter>
     ): ResolvedMethod {
-        var scope = scope
+        var scope = scope0
         while (true) {
-            val method = scope.scope.methods.firstOrNull {
+            val method = scope.scope.methods0.firstOrNull {
                 it.name == name &&
                         // equals(typeParameters, it.typeParameters) &&
                         equals1(valueParameters, it.valueParameters)
@@ -836,10 +913,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
 
         throw IllegalStateException(
-            "Missing $owner.$name$descriptor -> " +
+            "Missing $scope0.$name$descriptor -> " +
                     "(${valueParameters.joinToString { it.type.toString() }}), " +
                     "options: ${
-                        scope.methods.filter { it.name == name }
+                        scope0.methods0.filter { it.name == name }
                             .map { "(${valueParameters.joinToString { it.type.toString() }})" }
                     }"
         )
@@ -848,13 +925,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     fun equals1(expected: List<Parameter>, actual: List<Parameter>): Boolean {
         if (expected.size != actual.size) return false
         for (i in expected.indices) {
-            val expected = expected[i].type.resolvedName
+            var expected = expected[i].type.resolvedName
             var actual = actual[i].type.resolvedName
-            if (actual is GenericType) {
-                actual = actual.superBounds
-            }
+            if (actual is GenericType) actual = actual.superBounds
+            if (expected is ClassType && expected.typeParameters != null) expected = expected.withTypeParameters(null)
+            if (actual is ClassType && actual.typeParameters != null) actual = actual.withTypeParameters(null)
             if (expected != actual) {
-                println("Mismatch@$i: $expected != $actual")
+                println("Mismatch@$i: $expected != $actual (${expected.javaClass.simpleName} vs ${actual.javaClass.simpleName})")
                 return false
             }
         }
@@ -890,25 +967,30 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     override fun visitTypeInsn(opcode: Int, type: String) {
-        val scope = FirstJVMClassReader.getScope(type, null)
+        val type1 = if (type.startsWith('[') || type.endsWith(';')) {
+            descToType(type)
+        } else {
+            nameToType(type)
+        }
+
+        val scope = (type1 as ClassType).clazz
         LOGGER.debug("visitTypeInsn: ${OpCode[opcode]}, type: $type -> $scope")
         when (opcode) {
             NEW -> {
-                val type1 = scope.typeWithArgs
                 val dst = block.field(type1)
                 block.add(JVMSimpleAllocateInstance(dst, type1, methodScope, origin))
                 stack.add(dst)
             }
-            ANEWARRAY -> TODO("Handle new $scope[]?")
+            ANEWARRAY -> {
+                createArray(type1)
+            }
             CHECKCAST -> {
                 val value = stack.removeLast().use()
-                val type1 = scope.typeWithArgs
                 block.add(JVMSimpleCheckCast(value, type1, methodScope, origin))
                 stack.add(value)
             }
             INSTANCEOF -> {
                 val value = stack.removeLast().use()
-                val type1 = scope.typeWithArgs
                 val dst = block.field(Types.Boolean)
                 block.add(JVMSimpleInstanceOf(dst, value, type1, methodScope, origin))
                 stack.add(dst)

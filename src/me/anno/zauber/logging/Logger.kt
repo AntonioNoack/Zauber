@@ -1,6 +1,8 @@
 package me.anno.zauber.logging
 
 import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.util.*
 
 class Logger(val name: String, var isDebugEnabled: Boolean) {
@@ -30,6 +32,14 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
         if (isWarnEnabled && knownWarnings.add(message)) {
             infoImpl("ERR", message, System.err)
         }
+    }
+
+    fun warn(message: String, e: Throwable) {
+        val sb = StringWriter()
+        sb.append(message).append(": ")
+        val pr = PrintWriter(sb)
+        e.printStackTrace(pr)
+        warn(sb.toString())
     }
 
     fun debug(message: String) {
