@@ -482,7 +482,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
-        // todo load or store a local variable...
+        // load or store a local variable...
         //  first N indices are the parameters incl. self if not static
         LOGGER.debug("visitVarInsn: ${OpCode[opcode]}, $varIndex")
 

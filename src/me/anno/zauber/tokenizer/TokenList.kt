@@ -60,6 +60,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     ): R = push(findBlockEnd(i, openStr, closeStr), readImpl)
 
     fun findBlockEnd(i: Int, open: TokenType, close: TokenType): Int {
+        // todo we could easily pre-compute this in O(n)... does it matter??
         check(equals(i, open)) { "Expected $open, got ${err(i)}" }
         var depth = 1
         var j = i + 1
