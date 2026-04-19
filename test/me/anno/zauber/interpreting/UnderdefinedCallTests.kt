@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -11,6 +12,11 @@ class UnderdefinedCallTests {
 
     @Test
     fun testArrayOf() {
+        LogManager.disableLoggers("" +
+                "TypeResolution,CallExpression,ConstructorResolver,MemberResolver," +
+                "Inheritance,CallWithNames,FieldResolver,MethodResolver,FieldExpression," +
+                "ResolvedField,ResolvedMethod,Field,ASTSimplifier,Runtime," +
+                "SimpleGetField,SimpleSetField")
         val valueT = testExecute(
             """
             val tested = arrayOf(1, 2, 3)
