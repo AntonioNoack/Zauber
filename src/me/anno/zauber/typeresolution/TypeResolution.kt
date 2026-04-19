@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.NamedParameter
@@ -7,11 +8,10 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.scope.ScopeInitType
 
 /**
  * Resolve types step by step, might fail, but should be stable at least.
@@ -85,15 +85,16 @@ object TypeResolution {
         }
     }
 
-    fun resolveThisScope(scope: Scope): Scope {
-        var scope = scope
+    fun resolveThisScope(scope0: Scope): Scope {
+        var scope = scope0
         while (true) {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
             when {
                 scope.isClassType() || scope.isMethodType() -> return scope
                 else -> {}
             }
-            scope = scope.parent!!
+            scope = scope.parent
+                ?: throw IllegalStateException("Failed to resolve 'this' in $scope0")
         }
     }
 

@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.generation.c.CSourceGenerator.isValueType
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.simple.expression.SimpleGetObject
@@ -106,6 +107,7 @@ class SimpleNode(val graph: SimpleGraph) {
             val isAmbiguous = scopeIfThis.selfAsMethod?.explicitSelfType == true
             val isExplicitSelf = if (isAmbiguous) {
                 when (contextExpr) {
+                    is ReturnExpression -> true
                     is ResolvedCallExpression -> {
                         val methodOrField = contextExpr.callable.resolved
                         !methodOrField.scope.isInsideExpression()

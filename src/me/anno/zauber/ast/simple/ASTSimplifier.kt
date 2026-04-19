@@ -114,7 +114,7 @@ object ASTSimplifier {
             }
 
             is ReturnExpression -> {
-                val field = simplifyImpl(context, expr.value, block0, flow0, true)
+                val field = simplifyImpl(context, expr.value, block0, flow0, true, expr)
                 val field1v = field.value ?: return field
                 return field.joinReturnNoValue(field1v.value.use(), field1v.block)
             }
