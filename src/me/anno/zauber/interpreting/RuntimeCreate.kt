@@ -44,6 +44,12 @@ object RuntimeCreate {
         return instance
     }
 
+    fun Runtime.createChar(value: Char): Instance {
+        val instance = getClass(Types.Char).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
     fun Runtime.createInt(value: Int): Instance {
         val instance = getClass(Types.Int).createInstance()
         instance.rawValue = value

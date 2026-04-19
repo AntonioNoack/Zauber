@@ -170,11 +170,12 @@ class StringTests {
             }
             
             fun String.substring(startIndex: Int, endIndex: Int): String {
-                return String(content.copyOfRange(startIndex, endIndex))   
+                val content = content.copyOfRange(startIndex, endIndex)
+                return String(content)
             }
             
-            fun <V> Array<V>.copyOfRange(startIndex: Int, endIndex: Int) {
-                val clone = Array(endIndex-startIndex)
+            fun <V> Array<V>.copyOfRange(startIndex: Int, endIndex: Int): Array<V> {
+                val clone = Array<V>(endIndex-startIndex)
                 copyInto(clone, 0, startIndex, endIndex)
                 return clone
             }

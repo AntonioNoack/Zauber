@@ -42,7 +42,7 @@ enum class Ownership {
      * used for call arguments
      * no GC necessary
      * pointer-comparison always returns... true? false?
-     * todo if any member is not used, it can/could be dropped (e.g. class)
+     * todo if any member is not used (or always the same), it can/could be dropped (e.g. class)
      * */
     VALUE,
 }

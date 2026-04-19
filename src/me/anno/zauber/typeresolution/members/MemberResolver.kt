@@ -1,6 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.utils.PairArrayList
+import me.anno.zauber.ast.rich.Member
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -18,7 +19,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
-abstract class MemberResolver<Resource, Resolved : ResolvedMember<Resource>> {
+abstract class MemberResolver<Resource: Member, Resolved : ResolvedMember<Resource>> {
 
     companion object {
         private val LOGGER = LogManager.getLogger(MemberResolver::class)

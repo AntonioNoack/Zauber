@@ -16,6 +16,7 @@ class BasicRuntimeTests {
     companion object {
 
         fun createTestRuntime() {
+            Stdlib.registerSmallIntMethods()
             Stdlib.registerIntMethods()
             Stdlib.registerFloatMethods()
             Stdlib.registerStringMethods()

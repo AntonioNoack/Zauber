@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createByte
+import me.anno.zauber.interpreting.RuntimeCreate.createChar
 import me.anno.zauber.interpreting.RuntimeCreate.createDouble
 import me.anno.zauber.interpreting.RuntimeCreate.createFloat
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
@@ -50,6 +51,7 @@ object Stdlib {
                 is BooleanArray -> rt.getBool(content[index])
                 is ByteArray -> rt.createByte(content[index])
                 is ShortArray -> rt.createShort(content[index])
+                is CharArray -> rt.createChar(content[index])
                 is IntArray -> rt.createInt(content[index])
                 is LongArray -> rt.createLong(content[index])
                 is FloatArray -> rt.createFloat(content[index])
@@ -72,6 +74,7 @@ object Stdlib {
                 is BooleanArray -> content[index] = value.castToBool()
                 is ByteArray -> content[index] = value.castToByte()
                 is ShortArray -> content[index] = value.castToShort()
+                is CharArray -> content[index] = value.castToChar()
                 is IntArray -> content[index] = value.castToInt()
                 is LongArray -> content[index] = value.castToLong()
                 is FloatArray -> content[index] = value.castToFloat()
@@ -80,6 +83,13 @@ object Stdlib {
                 else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
             }
             rt.getUnit()
+        }
+    }
+
+    fun registerSmallIntMethods() {
+        val rt = runtime
+        rt.registerUnaryMethod(Types.Byte, "toChar") { self ->
+            rt.createChar(self.castToByte().toInt().and(0xff).toChar())
         }
     }
 
@@ -140,7 +150,7 @@ object Stdlib {
         }
     }
 
-    fun Runtime.registerBinaryIntMethod(name: String, calc: (Int, Int) -> Int) {
+    fun Runtime.registerBinaryIntMethod(name: String, calc: (a: Int, b: Int) -> Int) {
         registerBinaryMethod(Types.Int, name) { a, b ->
             LOGGER.info("Executing Int.$name ($a, $b)")
             val result = calc(a.castToInt(), b.castToInt())
@@ -148,11 +158,18 @@ object Stdlib {
         }
     }
 
-    fun Runtime.registerBinaryFloatMethod(name: String, calc: (Float, Float) -> Float) {
+    fun Runtime.registerBinaryFloatMethod(name: String, calc: (a: Float, b: Float) -> Float) {
         registerBinaryMethod(Types.Float, name) { a, b ->
             LOGGER.info("Executing Float.$name ($a, $b)")
             val result = calc(a.castToFloat(), b.castToFloat())
             createFloat(result)
+        }
+    }
+
+    fun Runtime.registerUnaryMethod(selfType: ClassType, name: String, calc: (self: Instance) -> Instance) {
+        register(selfType.clazz, name, emptyList()) { self, _ ->
+            LOGGER.info("Executing ${selfType.clazz.pathStr}.$name ($self)")
+            calc(self)
         }
     }
 

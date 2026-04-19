@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
+import me.anno.zauber.ast.rich.Member
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.expression.Expression
@@ -18,7 +19,7 @@ import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import me.anno.zauber.types.specialization.Specialization
 
-abstract class ResolvedMember<V>(
+abstract class ResolvedMember<V : Member>(
     val selfTypeParameters: ParameterList,
     val callTypeParameters: ParameterList,
     val resolved: V,

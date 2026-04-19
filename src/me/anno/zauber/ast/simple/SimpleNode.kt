@@ -1,7 +1,9 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.generation.c.CSourceGenerator.isValueType
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
@@ -90,17 +92,27 @@ class SimpleNode(val graph: SimpleGraph) {
     fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
         graph.field(type, ownership)
 
-    fun thisField(type: Type, scopeIfThis: Scope, scope: Scope, origin: Int): SimpleField {
+    fun thisField(
+        type: Type, scopeIfThis: Scope, scope: Scope, origin: Int,
+        contextExpr: Expression?
+    ): SimpleField {
         scopeIfThis[ScopeInitType.AFTER_DISCOVERY]
         if (scopeIfThis.isObjectLike()) {
-            // todo are objects comptime?
+            // are objects comptime? yes
             val dst = field(scopeIfThis.typeWithArgs, Ownership.COMPTIME)
             add(SimpleGetObject(dst, scopeIfThis, scope, origin))
             return dst
         } else {
-            val isExplicitSelf = false
             val isAmbiguous = scopeIfThis.selfAsMethod?.explicitSelfType == true
-            check(!isAmbiguous) { "$scopeIfThis is ambiguous" }
+            val isExplicitSelf = if (isAmbiguous) {
+                when (contextExpr) {
+                    is ResolvedCallExpression -> {
+                        val methodOrField = contextExpr.callable.resolved
+                        !methodOrField.scope.isInsideExpression()
+                    }
+                    else -> TODO("$scopeIfThis is ambiguous, what does $contextExpr ${contextExpr?.javaClass?.simpleName} indicate?")
+                }
+            } else false
 
             return graph.thisFields.getOrPut(SimpleThis(scopeIfThis, isExplicitSelf)) { field(type) }
         }

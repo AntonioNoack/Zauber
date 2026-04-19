@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
@@ -35,7 +36,6 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnknownType
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 object ASTSimplifier {
 
@@ -99,7 +99,8 @@ object ASTSimplifier {
 
     private fun simplifyImpl(
         context: ResolutionContext, expr: Expression,
-        block0: SimpleNode, flow0: FlowResult, needsValue: Boolean
+        block0: SimpleNode, flow0: FlowResult, needsValue: Boolean,
+        contextExpr: Expression? = null // for ThisExpression
     ): FlowResult {
         when (expr) {
             is ExpressionList -> return simplifyList(context, expr, block0, flow0, needsValue)
@@ -142,7 +143,7 @@ object ASTSimplifier {
 
             is ThisExpression -> {
                 val type = TypeResolution.resolveType(context, expr)
-                val dst = block0.thisField(type, expr.label, expr.scope, expr.origin)
+                val dst = block0.thisField(type, expr.label, expr.scope, expr.origin, contextExpr)
                 return flow0.withValue(dst, block0)
             }
 
@@ -264,7 +265,7 @@ object ASTSimplifier {
     ): FlowResult {
 
         // (base, block1)
-        val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
+        val block1 = simplifyImpl(context, expr.self, block0, flow0, true, contextExpr = expr)
         val base = block1.value ?: return block1
 
         // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
@@ -552,7 +553,7 @@ object ASTSimplifier {
     ): FlowResult {
         val ifFlow = FlowResult(Flow(unitInstance(ifBlock.graph, expr), ifBlock), null, null)
         val methodType = catch.parameter.scope.typeWithArgs
-        val selfField = ifBlock.thisField(methodType, catch.parameter.scope, expr.scope, expr.origin)
+        val selfField = ifBlock.thisField(methodType, catch.parameter.scope, expr.scope, expr.origin, null)
         val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
         ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, expr.scope, expr.origin))
         return simplifyImpl(context, catch.body, ifBlock, ifFlow, needsValue)
@@ -923,7 +924,7 @@ object ASTSimplifier {
                 val selfScope = graph.method.scope
                 val selfType = selfScope.typeWithArgs
                     .specialize(method0.specialization)
-                block0.thisField(selfType, selfScope, scope, origin)
+                block0.thisField(selfType, selfScope, scope, origin, null)
             }
             val constructor = SimpleSelfConstructor(
                 unit, selfIfInsideConstructor,
