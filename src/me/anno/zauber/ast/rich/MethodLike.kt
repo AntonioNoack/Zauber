@@ -1,13 +1,14 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.generation.Specializations
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
-import me.anno.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -106,6 +107,11 @@ open class MethodLike(
     fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
     fun isProtected(): Boolean = flags.hasFlag(Flags.PROTECTED)
     fun isExternal(): Boolean = flags.hasFlag(Flags.EXTERNAL)
+
+    fun isAbstract(): Boolean {
+        scope[ScopeInitType.AFTER_DISCOVERY]
+        return body == null
+    }
 
     var selfTypeIfNecessary: Type? = null
 

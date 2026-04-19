@@ -27,7 +27,6 @@ object Dependencies {
     private val reached by threadLocal { DependencyData() }
 
     fun addClass(type: ClassType) {
-        // todo shall we register objects? when they are used only...
         if (reached.createdClasses.add(type)) {
             markSuperTypesConstructable(type)
             markChildMethodsReachable(type)
@@ -54,6 +53,8 @@ object Dependencies {
 
     private fun markCalledMethodsReachable(method: MethodSpecialization) {
         // ASTSimplify method, and collect all called methods
+        if (method.method.isExternal() || method.method.isAbstract()) return
+
         val simplified = ASTSimplifier.simplify(method)
         for (node in simplified.nodes) {
             for (instr in node.instructions) {
@@ -64,7 +65,14 @@ object Dependencies {
                     is SimpleAllocateInstance -> addClass(instr.allocatedType)
                     is SimpleString -> addClass(Types.String)
                     is SimpleNumber -> addClass(instr.dst.type as ClassType)
-                    is SimpleGetObject -> addClass(instr.objectScope.typeWithArgs)
+                    is SimpleGetObject -> {
+                        val scope = instr.objectScope[ScopeInitType.AFTER_DISCOVERY]
+                        addClass(scope.typeWithArgs)
+                        val constr = scope.primaryConstructorScope?.selfAsConstructor
+                        if (constr != null) {
+                            addMethod(MethodSpecialization(constr, Specialization.noSpecialization))
+                        }
+                    }
                     is SimpleGetTypeInstance -> addClass(instr.dst.type as ClassType)
                     // how do we handle dynamic macros? can only be inside macros, so we're fine (?)
                 }

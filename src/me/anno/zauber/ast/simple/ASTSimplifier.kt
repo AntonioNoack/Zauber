@@ -68,7 +68,8 @@ object ASTSimplifier {
     fun simplify(method: MethodSpecialization): SimpleGraph {
         return cache.getOrPut(method) {
             val context = ResolutionContext(null, method.specialization, true, null)
-            val expr = method.method.getSpecializedBody(method.specialization)!!
+            val expr = method.method.getSpecializedBody(method.specialization)
+                ?: throw IllegalStateException("Specialized body is null? For $method")
             LOGGER.info("Simplifying $expr")
             val graph = SimpleGraph(method.method)
             val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
