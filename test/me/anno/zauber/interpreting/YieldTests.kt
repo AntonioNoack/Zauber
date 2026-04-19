@@ -6,17 +6,15 @@ import org.junit.jupiter.api.Test
 class YieldTests {
     @Test
     fun testSequenceUsingYield() {
-        // todo why can yielded not be resolved???
-        //  it should be found in collect-names pass
         val code = """
             fun <V> collectYielded(runnable: () -> Unit): List<V> {
                 var yielded = async runnable()
                 val result = ArrayList<V>()
-                while (yielded is Yielded<*, *, V>) {
-                    result.add(yielded.yieldedValue)
+                while (yielded is Yielded<*,*,V>) {
+                    result.add((yielded as Yielded<*,*,V>).yieldedValue)
                     yielded = async yielded.continueRunning()
                 }
-                if (yielded is Thrown<*, *, *>) {
+                if (yielded is Thrown) {
                     throw yielded.thrown;
                 }
                 return result
@@ -29,14 +27,16 @@ class YieldTests {
             }
             
             package zauber
-            // a little clusterfuck
+            
             sealed interface Yieldable<R, T: Throwable, Y> {}
+            
             value class Yielded<R, T: Throwable, Y>(
                 val yieldedValue: Y,
                 val continueRunning: () -> Yielded<R, T, Y>
             ) : Yieldable<R, T, Y> {}
-            value class Thrown<R, T: Throwable, Y>(val value: T) : Yieldable<R, T, Y> {}
-            value class Returned<R, T: Throwable, Y>(val value: R) : Yieldable<R, T, Y> {}
+            value class Thrown<T: Throwable>(val value: T) : Yieldable<Nothing, T, Nothing> {}
+            value class Returned<R>(val value: R) : Yieldable<Nothing, T, Nothing> {}
+            
             class ArrayList<V>
             interface Function0<R> {
                 fun call(): R

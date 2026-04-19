@@ -20,6 +20,9 @@ class CaptureTests {
             class Int {
                 external operator fun plus(other: Int): Int
             }
+            fun interface Function0<R> {
+                fun call(): R
+            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(3, value.castToInt())

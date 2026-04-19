@@ -84,7 +84,8 @@ class CallExpression(
                     typeParameters, valueParameters, context
                 )
 
-                constructor ?: throw IllegalStateException("Missing constructor for $baseType<$typeParameters>($valueParameters)")
+                constructor
+                    ?: throw IllegalStateException("Missing constructor for $baseType<$typeParameters>($valueParameters)")
             }
             else -> throw IllegalStateException(
                 "Resolve field/method in Callable for ${self.javaClass} ($self) " +

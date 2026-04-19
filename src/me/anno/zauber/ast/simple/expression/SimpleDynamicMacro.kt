@@ -48,7 +48,7 @@ class SimpleDynamicMacro(
             throw IllegalStateException("Unexpected NPE: $this")
         }
 
-        val expression = evaluateMacroNow(method, valueParameters.map { runtime[it] }, imports, generics, origin)
+        val expression = evaluateMacroNow(method, valueParameters.map { runtime[it] }, imports, generics, original.scope, origin)
         return self.evaluateExpressionUnsafe(expression, Flags.NONE, method.returnType)
     }
 

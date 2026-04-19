@@ -30,7 +30,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType.typeOrNull
-import me.anno.zauber.types.impl.SelfType
 import kotlin.math.max
 
 // I want macros... how could we implement them? learn about Rust macros
@@ -472,7 +471,7 @@ class ZauberASTBuilder(
                     // explicit macro
                     consume("!")
                     val valueParameters = readValueParameters()
-                    evaluateMacro(namePath, typeParameters, valueParameters, origin)
+                    evaluateMacro(namePath, typeParameters, valueParameters, currPackage, origin)
                 } else if (
                 // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
@@ -492,6 +491,14 @@ class ZauberASTBuilder(
                         check(i == i0)
                         GetClassFromValueExpression(type, currPackage, origin)
                     }
+                } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                    // e.g. run { ... }
+                    val lambda = readLambdaBlock(null)
+                    val nameExpr = nameExpression(namePath, origin, currPackage)
+                    CallExpression(
+                        nameExpr, typeParameters,
+                        listOf(NamedParameter(null, lambda)), origin
+                    )
                 } else {
                     check(typeParameters == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
                     nameExpression(namePath, origin, currPackage)
@@ -502,13 +509,17 @@ class ZauberASTBuilder(
                 pushCall { readExpression() }
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
+                readLambdaBlock(null)
             }
             else -> {
                 tokens.printTokensInBlocks(max(i - 5, 0))
                 throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
             }
         }
+    }
+
+    private fun readLambdaBlock(selfType: Type?): Expression {
+        return pushBlock(ScopeType.LAMBDA, null) { readLambda(selfType) }
     }
 
     private fun getNextOuterTypeParams(): List<Parameter> {
@@ -896,7 +907,7 @@ class ZauberASTBuilder(
                 val origin = origin(i)
                 val params = readValueParameters()
                 if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                    pushBlock(ScopeType.LAMBDA, null) { params += NamedParameter(null, readLambda(null)) }
+                    params += NamedParameter(null, readLambdaBlock(null))
                 }
                 CallExpression(expr, null, params, origin)
             }
@@ -939,8 +950,7 @@ class ZauberASTBuilder(
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 val origin = origin(i)
-                val lambda = pushBlock(ScopeType.LAMBDA, null) { readLambda(null) }
-                val lambdaParam = NamedParameter(null, lambda)
+                val lambdaParam = NamedParameter(null, readLambdaBlock(null))
                 CallExpression(expr, null, listOf(lambdaParam), origin)
             }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
@@ -1000,7 +1010,7 @@ class ZauberASTBuilder(
         return variables
     }
 
-    private fun readLambda(selfType: SelfType?): Expression {
+    private fun readLambda(selfType: Type?): Expression {
         val arrow = tokens.findToken(i, "->")
         val variables = if (arrow >= 0) {
             readLambdaVariables(selfType, arrow)

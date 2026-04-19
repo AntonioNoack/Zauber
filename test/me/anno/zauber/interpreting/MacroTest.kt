@@ -82,7 +82,7 @@ class String {
                     "Inheritance,ConstructorResolver,CallExpression," +
                     "MethodResolver,ResolvedMethod," +
                     "FieldResolver,FieldExpression,Field,ResolvedField," +
-                    ""
+                    "SimpleGetField,SimpleSetField,Stdlib"
         )
 
         // todo why can't 'sample' not be resolved??? shouldn't the scope have been copied?
@@ -95,14 +95,12 @@ macro GetType(typeName: String, ctx: MacroContext): ClassType {
 }
 
 macro Serialize(input: String, ctx: MacroContext): String {
-    // val (fieldName, typeName) = input.split(": ") // <- todo fix this
-    val fieldName = input.split(": ")[0]
-    val typeName = input.split(": ")[1]
+    val (fieldName, typeName) = input.split(": ")
     
-    var result = "var str = \"{\"\n"
+    var result = "var str = \"{\\n\"\n"
     val type = GetType!(typeName)
     for (field in type.fields) {
-        result += "str += \"\\\"${field.name}\\\": \${$fieldName.${field.name}},\"\n"
+        result += "str += \"    \\\"${field.name}\\\": \${$fieldName.${field.name}},\\n\"\n"
     }
     result += "str += \"}\"\nstr"
     return ctx.parse<String>(result)
@@ -115,6 +113,10 @@ fun serialize(sample: Sample) {
 val tested = serialize(Sample(1, 2f))
 
 package zauber
+
+class Any {
+    external open fun toString(): String
+}
 
 interface Iterator<V> {
     fun hasNext(): Boolean
@@ -164,6 +166,8 @@ class Int {
 
 class String {
     external operator fun plus(other: String): String
+    operator fun plus(other: Any?): String = this + (other?.toString() ?: "null")
+    
     external fun split(separator: String): List<String>
 }
 
@@ -176,7 +180,7 @@ object Unit
         val value = testExecute(sourceCode)
         val expectedResult = """
             {
-                "a": 0,
+                "a": 1,
                 "b": 2.0,
             }
         """.trimIndent()

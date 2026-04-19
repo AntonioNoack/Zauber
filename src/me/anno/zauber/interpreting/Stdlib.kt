@@ -115,6 +115,22 @@ object Stdlib {
             val parts1 = Array(parts0.size) { rt.createString(parts0[it]) }
             content.clazz.createArray(parts1)
         }
+        rt.register(Types.Any.clazz, "toString", emptyList()) { instance, _ ->
+            val str = when (instance.clazz.type) {
+                Types.Byte -> instance.castToByte().toString()
+                Types.Short -> instance.castToShort().toString()
+                Types.Char -> instance.castToChar().toString()
+                Types.Int -> instance.castToInt().toString()
+                Types.Long -> instance.castToLong().toString()
+                Types.Float -> instance.castToFloat().toString()
+                Types.Double -> instance.castToDouble().toString()
+                Types.Boolean -> instance.castToBool().toString()
+                Types.String -> instance.castToString()
+                Types.Unit -> "Unit"
+                else -> "${(instance.clazz.type)}@${instance.id}"
+            }
+            rt.createString(str)
+        }
     }
 
     fun registerTypeMethods() {

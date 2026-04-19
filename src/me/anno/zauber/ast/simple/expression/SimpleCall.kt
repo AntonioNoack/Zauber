@@ -69,7 +69,7 @@ class SimpleCall(
                     }
                     check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
                     check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
-                    println("Selected ${choices.first()} for $invokedType.$method")
+                    // println("Selected ${choices.first()} for $invokedType.$method")
                     choices.first()
                 }
             }

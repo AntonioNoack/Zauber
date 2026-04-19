@@ -95,7 +95,7 @@ object MethodOverrides {
             val selfMethod = selfMethods.firstOrNull()
             if (selfMethod == null) {
 
-                println("adding ${method.name} to $scope, options: ${scope.methods0.map { it.name }}")
+                // println("adding ${method.name} to $scope, options: ${scope.methods0.map { it.name }}")
 
                 // somehow create a new method linking to the old one
                 val newScope = scope.generate("f:${method.name}", ScopeType.METHOD)

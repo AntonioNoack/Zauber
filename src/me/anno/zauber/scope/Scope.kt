@@ -41,10 +41,12 @@ class Scope(val name: String, val parent: Scope? = null) {
         get() = children.mapNotNull { it.selfAsConstructor }
 
     fun getConstructors(scopeInitType: ScopeInitType): List<Constructor> {
+        this[scopeInitType]
         return children.mapNotNull { it[scopeInitType].selfAsConstructor }
     }
 
     fun getMethods(scopeInitType: ScopeInitType): List<Method> {
+        this[scopeInitType]
         return children.mapNotNull { it[scopeInitType].selfAsMethod }
     }
 
@@ -352,8 +354,8 @@ class Scope(val name: String, val parent: Scope? = null) {
             return path
         }
 
-    val pathStr: String
-        get() = path.joinToString(".")
+    val pathStr: String = path.joinToString(".")
+    val depth get() = path.size
 
     fun resolveTypeInner(name: String): Scope? {
         if (name == this.name) return this

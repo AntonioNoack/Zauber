@@ -36,7 +36,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 object Macro {
 
     val macroContextParam get() = Types.MacroContext
-    var depth = 0
+    var macroCallDepth = 0
 
     fun ZauberASTBuilderBase.evaluateMacro(
         namePath: Expression, typeParameters: List<Type>?,
@@ -119,9 +119,8 @@ object Macro {
 
     fun ZauberASTBuilderBase.evaluateMacro(
         namePath: String, typeParameters: List<Type>?,
-        valueParameters: List<NamedParameter>, origin: Int
+        valueParameters: List<NamedParameter>, scope: Scope, origin: Int
     ): Expression {
-        val scope = currPackage
         val context = createContext()
         val valueParameterTypes = valueParameters.map { it.value.resolveReturnType(context) }
         if (codeIsInsideAMacro(scope)) {
@@ -159,18 +158,18 @@ object Macro {
     fun ZauberASTBuilderBase.evaluateMacroNow(
         macro: ResolvedMethod,
         valueParameters: List<Instance>, origin: Int,
-    ): Expression = evaluateMacroNow(macro, valueParameters, imports, generics, origin)
+    ): Expression = evaluateMacroNow(macro, valueParameters, imports, generics, currPackage, origin)
 
     fun evaluateMacroNow(
         macro: ResolvedMethod, valueParameters: List<Instance>,
         imports: List<Import>, generics: HashMap<String, GenericType>,
-        origin: Int,
+        scope: Scope, origin: Int,
     ): Expression {
 
-        depth++
-        println("[$depth] Evaluating macro '${macro.resolved.name}' using $valueParameters")
+        macroCallDepth++
+        println("[$macroCallDepth] Evaluating macro '${macro.resolved.name}' using $valueParameters")
 
-        if (depth >= 3) throw IllegalStateException("Macro-death-spiral")
+        if (macroCallDepth >= 100) throw IllegalStateException("Macro-death-spiral")
 
         // todo we should be able to cache valueParameters...
         //  only if they're immutable though... maybe we can enforce all parameters to be values?
@@ -179,12 +178,10 @@ object Macro {
         val result = executeMacroInRuntime(method, macro, valueParameters)
         val tokenList = extractTokensFromRuntime(result, method, origin)
 
-        return LazyExpression.eval(
-            tokenList, 0, tokenList.size, isBody = true, macro.codeScope,
-            imports, generics
-        ).apply {
-            println("[$depth] Finished macro '${macro.resolved.name}' using $valueParameters")
-            depth--
+        return LazyExpression.eval(tokenList, 0, tokenList.size, isBody = true,
+            scope, imports, generics).apply {
+            println("[$macroCallDepth] Finished macro '${macro.resolved.name}' using $valueParameters")
+            macroCallDepth--
         }
     }
 

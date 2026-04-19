@@ -469,9 +469,9 @@ abstract class ZauberASTBuilderBase(
             ?: return null
 
         val typeArgs0 = readTypeParameters(selfType)
-        if (typeArgs0 != null && path is ClassType && path.typeParameters != null) {
-            throw IllegalStateException("Type-args collision/resolution needed: $path + <$typeArgs0>")
-        }
+        if (typeArgs0 != null && path is ClassType && path.typeParameters != null &&
+            path.typeParameters.any { it !is GenericType || it.scope != path.clazz }
+        ) TODO("Type-args collision/resolution needed: $path + <$typeArgs0>")
 
         val typeArgs = typeArgs0
             ?: (path as? ClassType)?.typeParameters
@@ -670,7 +670,7 @@ abstract class ZauberASTBuilderBase(
                 ?: if (tokens.equals(i, ".")) {
                     // get package under root
                     val scope = root.children.firstOrNull { it.name == name }
-                    if(scope != null) {
+                    if (scope != null) {
                         scope[ScopeInitType.RESOLVE_TYPES].typeWithArgs
                     } else null
                 } else null

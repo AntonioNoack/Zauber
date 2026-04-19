@@ -66,6 +66,12 @@ class Instance(
             ?: throw IllegalStateException("Found illegal Short-instance without raw value: $this")
     }
 
+    fun castToChar(): Char {
+        checkType(Types.Char)
+        return rawValue as? Char
+            ?: throw IllegalStateException("Found illegal Char-instance without raw value: $this")
+    }
+
     fun castToInt(): Int {
         checkType(Types.Int)
         return rawValue as? Int
