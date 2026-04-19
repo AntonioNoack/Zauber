@@ -155,7 +155,7 @@ class Runtime {
         }
 
         if (method.body == null) {
-            throw IllegalStateException("Missing body for method $method")
+            throw IllegalStateException("Missing body for method $method in ${method.scope.pathStr}")
         }
 
         val graph = ASTSimplifier.simplify(methodSpec)

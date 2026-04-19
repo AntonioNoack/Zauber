@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
@@ -9,7 +10,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.scope.Scope
 
 object ConstructorHelper {
-    fun createAssignmentInstructionsForPrimaryConstructor(
+    fun ZauberASTBuilderBase.createAssignmentInstructionsForPrimaryConstructor(
         classScope: Scope, constructorParams: List<Parameter>?,
         constructorOrigin: Int
     ): ExpressionList {
@@ -32,6 +33,8 @@ object ConstructorHelper {
                 )
                 val srcExpr = FieldExpression(parameterField, scope, origin)
                 result.add(AssignmentExpression(dstExpr, srcExpr))
+
+                finishField(classScope, classField)
             }
         }
         return ExpressionList(result, scope, constructorOrigin)

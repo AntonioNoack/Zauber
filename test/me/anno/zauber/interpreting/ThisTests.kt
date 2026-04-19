@@ -180,13 +180,8 @@ class ThisTests {
                     "Inheritance,ConstructorResolver,CallExpression," +
                     "MethodResolver,ResolvedMethod," +
                     "FieldResolver,FieldExpression,Field,ResolvedField," +
-                    ""
+                    "SimpleGetField,SimpleSetField"
         )
-
-        // todo next issue:
-        //  Array is only defined as 'Array' in runtime, but we access 'List'.size,
-        //  which causes a runtime error...
-        //  -> we probably should save which 'this' we have where...
 
         val sourceCode = """
 val tested: Int get() {
@@ -233,7 +228,10 @@ class Array<V>(override val size: Int): List<V> {
 class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
+    infix fun inc() = this + 1
 }
+
+enum class Boolean { TRUE, FALSE }
         """.trimIndent()
         assertEquals(6, testExecute(sourceCode).castToInt())
     }

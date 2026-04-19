@@ -90,7 +90,7 @@ object TypeResolution {
         while (true) {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
             when {
-                scope.isClassType() || scope.isMethodType() -> return scope
+                scope.isClassType() || scope.isMethodLike() -> return scope
                 else -> {}
             }
             scope = scope.parent
@@ -108,7 +108,7 @@ object TypeResolution {
                     val base = scopeI.typeWithArgs
                     return if (scopeI.isObjectLike()) base else NonObjectClassType(base)
                 }
-                scopeI.isMethodType() -> {
+                scopeI.isMethodLike() -> {
                     val func = scopeI.selfAsMethod
                     val self = func?.selfType
                     if (self != null) {

@@ -17,11 +17,6 @@ enum class ScopeType {
     OBJECT,
     COMPANION_OBJECT,
 
-    /**
-     * for lazy-eval
-     * */
-    FIELD,
-
     // methods
     /**
      * definition space for method arguments
@@ -78,9 +73,17 @@ enum class ScopeType {
         return true
     }
 
-    fun isMethodType(): Boolean {
+    fun isMethodLike(): Boolean {
         return when (this) {
             METHOD, CONSTRUCTOR,
+            FIELD_GETTER, FIELD_SETTER -> true
+            else -> false
+        }
+    }
+
+    fun isMethod(): Boolean {
+        return when (this) {
+            METHOD,
             FIELD_GETTER, FIELD_SETTER -> true
             else -> false
         }

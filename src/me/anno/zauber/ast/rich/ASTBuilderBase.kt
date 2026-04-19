@@ -40,10 +40,10 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         return value
     }
 
-    inline fun <R> pushScope(scope: Scope, callback: () -> R): R {
+    inline fun <R> pushScope(scope: Scope, callback: (Scope) -> R): R {
         val parent = currPackage
         currPackage = scope
-        val value = callback()
+        val value = callback(scope)
         currPackage = parent
         return value
     }

@@ -102,12 +102,6 @@ class Scope(val name: String, val parent: Scope? = null) {
             selfAs = value
         }
 
-    var selfAsField: Field?
-        get() = selfAs as? Field
-        set(value) {
-            selfAs = value
-        }
-
     var selfAsLambda: LambdaExpression?
         get() = selfAs as? LambdaExpression
         set(value) {
@@ -252,7 +246,6 @@ class Scope(val name: String, val parent: Scope? = null) {
             ScopeType.ENUM_ENTRY_CLASS -> 3
             ScopeType.INNER_CLASS -> 4
             ScopeType.CONSTRUCTOR,
-            ScopeType.FIELD,
             ScopeType.FIELD_GETTER,
             ScopeType.FIELD_SETTER,
             ScopeType.INLINE_CLASS,
@@ -572,7 +565,17 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun isClassType(): Boolean = scopeType?.isClassType() == true
     fun isClassLike(): Boolean = isClassType() || isObjectLike()
-    fun isMethodType(): Boolean = scopeType?.isMethodType() == true
+
+    /**
+     * method, getter, setter or constructor
+     * */
+    fun isMethodLike(): Boolean = scopeType?.isMethodLike() == true
+
+    /**
+     * method, getter or setter
+     * */
+    fun isMethod(): Boolean = scopeType?.isMethod() == true
+
     fun isTypeAlias(): Boolean = scopeType == ScopeType.TYPE_ALIAS
     fun isObject(): Boolean = scopeType?.isObject() == true
     fun isObjectLike(): Boolean = isObject() || scopeType == ScopeType.PACKAGE

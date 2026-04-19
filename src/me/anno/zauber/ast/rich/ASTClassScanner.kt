@@ -353,83 +353,81 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val name = tokens.toString(end - 1)
 
         val ownerScope = currPackage
-        val fieldScope = ownerScope.generate(name, origin, ScopeType.FIELD)
-        fieldScope.addFlags(packFlags())
-        pushScope(fieldScope) {
-            val typeParameters = readTypeParameterDeclarations(fieldScope)
-            fieldScope.typeParameters = typeParameters
-            fieldScope.hasTypeParameters = true
+        val flags = packFlags()
 
-            val selfType0 = readSelfTypeIfPresent(end)
-            val selfType = selfType0 ?: getSelfType(ownerScope)
-            // if (selfType != null) selfType = selfType.resolve()
+        val typeParameters = readTypeParameterDeclarations(ownerScope)
+        // fieldScope.typeParameters = typeParameters
+        // fieldScope.hasTypeParameters = true
 
-            val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        val selfType0 = readSelfTypeIfPresent(end)
+        val selfType = selfType0 ?: getSelfType(ownerScope)
+        // if (selfType != null) selfType = selfType.resolve()
 
-            var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
-            val initialValue =
-                if (consumeIf("=")) {
-                    readLazyValue(true)
-                } else if (fieldScope.flags.hasFlag(Flags.LATEINIT)) {
-                    SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
-                } else null
+        val name1 = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        check(name == name1)
 
-            if (isConst) {
-                check(initialValue != null) {
-                    "Const field ${ownerScope.pathStr}.$name must have initial value at ${resolveOrigin(origin)}"
-                }
-            }
-
-            val getterVisibility = readVisibility()
-            var setterVisibility = getterVisibility
-            var getterOrigin = origin
-            val getterBody: Expression? = if (consumeIf("get")) {
-                getterOrigin = origin(i - 1)
-                val body = if (consumeIf(TokenType.OPEN_CALL)) {
-                    consume(TokenType.CLOSE_CALL)
-                    tryReadBody(fieldScope, true)
-                } else null
-                setterVisibility = readVisibility()
-                body
+        var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
+        val initialValue =
+            if (consumeIf("=")) {
+                readLazyValue(true)
+            } else if (flags.hasFlag(Flags.LATEINIT)) {
+                SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
             } else null
 
-            lateinit var setterName: String
-            var setterOrigin = origin
-            val setterBody: Expression? = if (consumeIf("set")) {
-                setterOrigin = origin(i - 1)
-                if (consumeIf(TokenType.OPEN_CALL)) {
-                    setterName = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
-                    val setterType = if (consumeIf(":")) {
-                        readTypeNotNull(null, true)
-                    } else null
-                    if (valueType == null) valueType = setterType
-
-                    consume(TokenType.CLOSE_CALL)
-                    tryReadBody(fieldScope, true)
-                } else null
-            } else null
-
-            val field = ownerScope.addField(
-                selfType0, selfType0 != null, isMutable, null,
-                name, valueType, initialValue, fieldScope.flags, origin
-            )
-            field.typeParameters = typeParameters
-            fieldScope.selfAsField = field
-
-            if (initialValue != null) {
-                val constr = ownerScope.getOrCreatePrimaryConstructorScope()
-                val fieldExpr = FieldExpression(field, ownerScope, origin)
-                constr.code.add(AssignmentExpression(fieldExpr, initialValue))
+        if (isConst) {
+            check(initialValue != null) {
+                "Const field ${ownerScope.pathStr}.$name must have initial value at ${resolveOrigin(origin)}"
             }
-
-            if (getterBody != null) createGetterMethod0(field, getterBody, getterBody.scope, getterOrigin)
-            if (setterBody != null) createSetterMethod0(field, setterBody, setterName, setterBody.scope, setterOrigin)
-            finishField(field)
-
-            field.getter?.addFlags(getterVisibility)
-            field.setter?.addFlags(setterVisibility)
-            popGenericParams()
         }
+
+        val getterVisibility = readVisibility()
+        var setterVisibility = getterVisibility
+        var getterOrigin = origin
+        val getterBody: Expression? = if (consumeIf("get")) {
+            getterOrigin = origin(i - 1)
+            val body = if (consumeIf(TokenType.OPEN_CALL)) {
+                consume(TokenType.CLOSE_CALL)
+                tryReadBody(ownerScope, true)
+            } else null
+            setterVisibility = readVisibility()
+            body
+        } else null
+
+        lateinit var setterName: String
+        var setterOrigin = origin
+        val setterBody: Expression? = if (consumeIf("set")) {
+            setterOrigin = origin(i - 1)
+            if (consumeIf(TokenType.OPEN_CALL)) {
+                setterName = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
+                val setterType = if (consumeIf(":")) {
+                    readTypeNotNull(null, true)
+                } else null
+                if (valueType == null) valueType = setterType
+
+                consume(TokenType.CLOSE_CALL)
+                tryReadBody(ownerScope, true)
+            } else null
+        } else null
+
+        val field = ownerScope.addField(
+            selfType0, selfType0 != null, isMutable, null,
+            name, valueType, initialValue, flags, origin
+        )
+        field.typeParameters = typeParameters
+
+        if (initialValue != null) {
+            val constr = ownerScope.getOrCreatePrimaryConstructorScope()
+            val fieldExpr = FieldExpression(field, ownerScope, origin)
+            constr.code.add(AssignmentExpression(fieldExpr, initialValue))
+        }
+
+        if (getterBody != null) createGetterMethod0(field, getterBody, getterBody.scope, getterOrigin)
+        if (setterBody != null) createSetterMethod0(field, setterBody, setterName, setterBody.scope, setterOrigin)
+        finishField(ownerScope, field)
+
+        field.getter?.addFlags(getterVisibility)
+        field.setter?.addFlags(setterVisibility)
+        popGenericParams()
     }
 
     private fun tryReadBody(fieldScope: Scope, forField: Boolean): Expression {

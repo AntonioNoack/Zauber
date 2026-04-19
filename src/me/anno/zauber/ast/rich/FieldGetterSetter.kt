@@ -18,6 +18,14 @@ import me.anno.zauber.types.Types
 
 object FieldGetterSetter {
 
+    fun getterName(fieldName: String): String {
+        return "get${fieldName.capitalize()}"
+    }
+
+    fun setterName(fieldName: String): String {
+        return "set${fieldName.capitalize()}"
+    }
+
     fun createValueField(
         field: Field, fieldName: String,
         scope: Scope, origin: Int,
@@ -35,17 +43,22 @@ object FieldGetterSetter {
         Flags.SYNTHETIC, origin
     )
 
-    fun ZauberASTBuilderBase.finishField(field: Field) {
+    fun ZauberASTBuilderBase.finishField(ownerScope: Scope, field: Field) {
+        println("Finishing field $field")
         flags = 0
         val origin = field.origin
         if (field.getter == null) {
-            pushScope(ScopeType.FIELD_GETTER, "${field.name}:get") { getterScope ->
-                createGetterMethod0(field, null, getterScope, origin)
+            val getterScope = ownerScope.getOrPut(getterName(field.name), ScopeType.FIELD_GETTER)
+            pushScope(getterScope) {
+                val method = createGetterMethod0(field, null, getterScope, origin)
+                check(getterScope.selfAsMethod == method)
             }
         }
         if (field.isMutable && field.setter == null) {
-            pushScope(ScopeType.FIELD_SETTER, "${field.name}:set") { setterScope ->
-                createSetterMethod0(field, null, "value", setterScope, origin)
+            val setterScope = ownerScope.getOrPut(setterName(field.name), ScopeType.FIELD_SETTER)
+            pushScope(setterScope) {
+                val method = createSetterMethod0(field, null, "value", setterScope, origin)
+                check(setterScope.selfAsMethod == method)
             }
         }
     }
@@ -58,7 +71,7 @@ object FieldGetterSetter {
         return createGetterMethod1(field, expr0, backingField, getterScope, origin)
     }
 
-    fun ZauberASTBuilderBase.createGetterMethod1(
+    private fun ZauberASTBuilderBase.createGetterMethod1(
         field: Field, expr0: Expression?, backingField: Field,
         getterScope: Scope, origin: Int
     ): Method {
@@ -85,9 +98,8 @@ object FieldGetterSetter {
             } else null
         }
 
-        val methodName = "get${field.name.capitalize()}"
         val method = Method(
-            field.selfType, false, methodName, emptyList(), emptyList(),
+            field.selfType, false, getterName(field.name), emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
             expr, packFlags() or field.flags, origin
         )
@@ -100,7 +112,6 @@ object FieldGetterSetter {
         return method
     }
 
-
     fun ZauberASTBuilderBase.createSetterMethod0(
         field: Field, expr0: Expression?, fieldName: String,
         setterScope: Scope, origin: Int,
@@ -110,7 +121,7 @@ object FieldGetterSetter {
         return createSetterMethod1(field, expr0, backingField, valueField, setterScope, origin)
     }
 
-    fun ZauberASTBuilderBase.createSetterMethod1(
+    private fun ZauberASTBuilderBase.createSetterMethod1(
         field: Field, expr0: Expression?,
         backingField: Field, valueField: Field,
         setterScope: Scope, origin: Int,
@@ -124,10 +135,9 @@ object FieldGetterSetter {
             } else null
         }
 
-        val methodName = "set${field.name.capitalize()}"
         val parameter = Parameter(0, valueField.name, field.valueType ?: TypeOfField(field), setterScope, origin)
         val method = Method(
-            field.selfType, false, methodName, emptyList(),
+            field.selfType, false, setterName(field.name), emptyList(),
             listOf(parameter), setterScope,
             Types.Unit, emptyList(),
             expr, packFlags() or field.flags, origin

@@ -127,7 +127,7 @@ class LambdaExpression(
     private fun findSelfType(context: ResolutionContext): Type {
         var selfMethodScope = scope[ScopeInitType.AFTER_DISCOVERY]
         while (true) {
-            if (selfMethodScope.isMethodType() || selfMethodScope.isClassLike()) {
+            if (selfMethodScope.isMethodLike() || selfMethodScope.isClassLike()) {
                 return selfMethodScope.typeWithArgs
             }
 

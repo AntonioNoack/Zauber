@@ -77,7 +77,7 @@ class SignatureReader(val signature: String, val scope: Scope) {
         i = i1 + 1
 
         var scope = scope
-        if (scope.isMethodType() &&
+        if (scope.isMethodLike() &&
             scope.typeParameters.none { it.name == name }
         ) scope = scope.parent!!
 

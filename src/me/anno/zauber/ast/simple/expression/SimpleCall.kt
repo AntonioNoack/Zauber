@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.utils.LazyMap
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
@@ -13,13 +14,12 @@ import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import me.anno.utils.LazyMap
-import me.anno.zauber.scope.ScopeInitType
 
 class SimpleCall(
     dst: SimpleField,
@@ -62,17 +62,26 @@ class SimpleCall(
                 } else {
                     val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
                     val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
-                    val choices = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY].methods0.filter { option ->
+                    val clazzScope = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY]
+                    val choices = clazzScope.methods0.filter { option ->
                         option.name == method.name &&
                                 sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
                                 sameParameters(selfScope, option.valueParameters, methodValueParameters)
                     }
                     check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
                     check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
-                    // println("Selected ${choices.first()} for $invokedType.$method")
+                    println("Selected ${choices.first().scope.pathStr}/${choices.first()} " +
+                            "for $invokedType.$method, " +
+                            "options: ${clazzScope.methods0.map { it.scope.pathStr }}")
                     choices.first()
                 }
             }
+        }
+    }
+
+    init {
+        if (methodName == "getSize" && methods is FullMap<*, *>) {
+            throw IllegalStateException("Testing: methods should not be a fullmap")
         }
     }
 
