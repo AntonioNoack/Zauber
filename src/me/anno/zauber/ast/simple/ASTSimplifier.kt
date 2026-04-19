@@ -309,7 +309,7 @@ object ASTSimplifier {
 
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
-        if (selfMethod != null && selfMethod != valueMethod) {
+        if (needsCapture(selfMethod, valueMethod)) {
             field.isCaptured = true
             val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
             return block1.withValue(dst, block1v.block)
@@ -347,6 +347,11 @@ object ASTSimplifier {
         }
     }
 
+    private fun needsCapture(selfMethod: MethodLike?, valueMethod: MethodLike): Boolean {
+        return selfMethod != null && selfMethod != valueMethod &&
+                valueMethod.scope.parent?.isObjectLike() != true
+    }
+
     private fun simplifySetField(
         context: ResolutionContext,
         expr: ResolvedSetFieldExpression,
@@ -374,7 +379,7 @@ object ASTSimplifier {
 
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
-        if (selfMethod != null && selfMethod != valueMethod) {
+        if (needsCapture(selfMethod, valueMethod)) {
             field.isCaptured = true
             /* val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
              return block1.withValue(dst, block1v.block)
