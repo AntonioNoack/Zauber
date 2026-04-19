@@ -72,28 +72,11 @@ class TypeScriptClassScanner(tokens: TokenList) :
         scopeType: ScopeType
     ) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
-
-            // generics: <T>
             val typeParams = readTypeParameters()
             classScope.typeParameters = typeParams
             classScope.hasTypeParameters = true
 
-            // extends
-            if (consumeIf("extends")) {
-                do {
-                    val type = readTypeNotNull(null, true)
-                    classScope.superCalls.add(SuperCall(type, null, null))
-                } while (consumeIf(TokenType.COMMA))
-            }
-
-            // implements
-            if (consumeIf("implements")) {
-                do {
-                    val type = readTypeNotNull(null, true)
-                    classScope.superCalls.add(SuperCall(type, null, null))
-                } while (consumeIf(TokenType.COMMA))
-            }
-
+            readSuperCalls(classScope)
             readClassBody(classScope, readBody)
         }
     }
@@ -270,10 +253,6 @@ class TypeScriptClassScanner(tokens: TokenList) :
         return params
     }
 
-    // ------------------------------------------------------------
-    // TYPE PARAMETERS <T>
-    // ------------------------------------------------------------
-
     private fun readTypeParameters(): List<Parameter> {
         if (!consumeIf("<")) return emptyList()
         val params = ArrayList<Parameter>()
@@ -316,6 +295,16 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
     override fun readMethodBody(): ExpressionList {
         throw NotImplementedError()
+    }
+
+    override fun readSuperCalls(classScope: Scope) {
+        if (consumeIf("extends")) {
+            collectSuperNames(classScope)
+        }
+
+        if (consumeIf("implements")) {
+            collectSuperNames(classScope)
+        }
     }
 
     override fun readSelfTypeIfPresent(end: Int): Type? = null

@@ -657,13 +657,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     override fun readSuperCalls(classScope: Scope) {
-        if (consumeIf("extends")) {
-            collectSuperNames(classScope)
-        }
-
-        if (consumeIf("implements")) {
-            collectSuperNames(classScope)
-        }
+        throw NotImplementedError()
     }
 
     override fun readExpression(minPrecedence: Int): Expression = readLazyValue(false)
