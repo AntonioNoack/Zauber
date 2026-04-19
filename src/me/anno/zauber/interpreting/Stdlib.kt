@@ -43,8 +43,14 @@ object Stdlib {
     }
 
     fun registerArrayAccess() {
-        runtime.register(Types.Array.clazz, "get", listOf(Types.Int)) { self, params ->
-            val index = params[0].castToInt()
+        runtime.register(
+            Types.Array.clazz, "get",
+            listOf(Types.Int)
+        ) { self, (index0) ->
+            check((self.clazz.type as ClassType).clazz == Types.Array.clazz) {
+                "ClassCastException: $self is not an array"
+            }
+            val index = index0.castToInt()
             val rt = runtime
             when (val content = self.rawValue) {
                 is Array<*> -> content[index] as Instance
@@ -56,17 +62,18 @@ object Stdlib {
                 is LongArray -> rt.createLong(content[index])
                 is FloatArray -> rt.createFloat(content[index])
                 is DoubleArray -> rt.createDouble(content[index])
-                null -> throw IllegalStateException("Missing array content")
+                null -> throw IllegalStateException("Missing array content in $self")
                 else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
             }
         }
         runtime.register(
-            Types.Array.clazz,
-            "set",
+            Types.Array.clazz, "set",
             listOf(Types.Int, GenericType(Types.Array.clazz, "V"))
-        ) { self, params ->
-            val index = params[0].castToInt()
-            val value = params[1]
+        ) { self, (index0, value) ->
+            check((self.clazz.type as ClassType).clazz == Types.Array.clazz) {
+                "ClassCastException: $self is not an array"
+            }
+            val index = index0.castToInt()
             val rt = runtime
             @Suppress("UNCHECKED_CAST")
             when (val content = self.rawValue) {

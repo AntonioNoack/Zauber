@@ -69,7 +69,8 @@ object TypeResolution {
 
     fun resolveValueParameters(
         context: ResolutionContext,
-        base: List<NamedParameter>
+        base: List<NamedParameter>,
+        selfScope: Scope? = null,
     ): List<ValueParameter> {
         // target-type does not apply to parameters
         val contextI = context.withTargetType(null)
@@ -79,7 +80,7 @@ object TypeResolution {
                 LOGGER.info("Underdefined generics in $param :/")
                 UnderdefinedValueParameter(param, contextI, hasVarargStar)
             } else {
-                val type = resolveType(contextI, param.value)
+                val type = resolveType(contextI, param.value).resolve(selfScope)
                 ValueParameterImpl(param.name, type, hasVarargStar)
             }
         }

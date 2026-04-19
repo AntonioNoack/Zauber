@@ -8,6 +8,6 @@ class ValueParameterImpl(
 ) : ValueParameter(name, hasVarargStar) {
     override fun getType(targetType: Type): Type = this.type
     override fun toString(): String {
-        return if (name != null) "$name=$type" else "$type"
+        return if (name != null) "VP[$name=$type]" else "VP[$type]"
     }
 }

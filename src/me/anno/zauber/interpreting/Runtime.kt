@@ -201,8 +201,8 @@ class Runtime {
         for ((capture, dstField) in graph.capturedFields) {
             val (owner, capturedField) = capture
             val prevCall = findPrevCall(owner)
-            val prevCallInstanceRef = prevCall.graph.thisFields[SimpleThis(capturedField.classScope, false)]
-                ?: throw IllegalStateException("Missing thisField for ${capturedField.classScope} in $owner")
+            val prevCallInstanceRef = prevCall.graph.thisFields[SimpleThis(capturedField.ownerScope, false)]
+                ?: throw IllegalStateException("Missing thisField for ${capturedField.ownerScope} in $owner")
             val prevCallInstance = this[prevCall, prevCallInstanceRef]
             call.simpleFields[dstField] = prevCallInstance[capturedField]
         }

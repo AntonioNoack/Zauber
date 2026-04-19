@@ -111,6 +111,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             )
 
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolving generics for $method")
+            println("Resolving generics for $method")
             val generics = findGenericsForMatch(
                 method.selfType.resolvedName, selfType,
                 methodReturnType, returnType,

@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -20,6 +21,8 @@ class ReduceTests {
     class Int {
         operator fun plus(other: Int): Int
         operator fun plus(other: Float): Float
+        external fun compareTo(other: Int): Int
+        infix fun inc() = this + 1
     }
     class Any
     class Array<V>(val size: Int) {
@@ -30,16 +33,25 @@ class ReduceTests {
     fun interface Function2<P0, P1, R> {
         fun call(p0: P0, p1: P1): R
     }
+    enum class Boolean { TRUE, FALSE }
     """.trimIndent()
 
     @Test
     fun testArrayReduceWithLambda() {
+        LogManager.disableLoggers("Inheritance," +
+                "ConstructorResolver,MemberResolver,CallExpression," +
+                "MethodResolver,LambdaExpression,FieldResolver,ResolvedField," +
+                "ResolvedMethod,FieldExpression,")
         val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }
 
     @Test
     fun testSimpleArrayReduceWithLambda() {
+        LogManager.disableLoggers("Inheritance,TypeResolution,Field,ASTSimplifier," +
+                "ConstructorResolver,MemberResolver,CallExpression," +
+                "MethodResolver,LambdaExpression,FieldResolver,ResolvedField," +
+                "ResolvedMethod,FieldExpression,")
         val code = "val tested = arrayOf(1, 2, 3).reduce { a: Int, b: Int -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }

@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.MethodLike
 
 data class Capture(val owner: MethodLike, val field: Field) {
     init {
-        val owner = field.classScope
+        val owner = field.ownerScope
         if (owner.isObjectLike()) {
             throw IllegalArgumentException("Capturing object properties like $field is unnecessary, use SimpleGetObject instead")
         }

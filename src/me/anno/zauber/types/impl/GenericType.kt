@@ -27,9 +27,9 @@ class GenericType(val scope: Scope, val name: String) : Type() {
     override fun toStringImpl(depth: Int): String {
         val superBounds = superBoundsOrNull
         return if (superBounds == Types.NullableAny || superBounds == null) {
-            "${scope.name}.$name"
+            "${scope.pathStr}.$name"
         } else {
-            "(${scope.name}.$name: ${superBounds.toString(depth)})"
+            "(${scope.pathStr}.$name: ${superBounds.toString(depth)})"
         }
     }
 

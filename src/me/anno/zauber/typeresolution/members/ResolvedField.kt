@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
+import jdk.internal.classfile.impl.Util.parameterTypes
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -186,7 +187,7 @@ class ResolvedField(
     }
 
     override fun toString(): String {
-        return "ResolvedField(field=$resolved)"
+        return "ResolvedField(field=${resolved.toStringWithoutDefault()})"
     }
 
     fun resolveCalledMethod(typeParameters: List<Type>?, valueParameters: List<ValueParameter>): ResolvedMethod {
@@ -202,13 +203,22 @@ class ResolvedField(
 
             val method = lambdaClassScope.getMethods(ScopeInitType.AFTER_OVERRIDES)
                 .firstOrNull { it.name == "call" }
-                ?: throw IllegalStateException("Class $className is missing .call() method")
+                ?: throw IllegalStateException("Fun-Interface $className is missing .call() method")
 
-            val scopeSelfType = lambdaClassScope.typeWithArgs
+            val scopeSelfType = lambdaClassScope.typeWithoutArgs // without args is correct!!!
             val returnType = context.targetType
             val methodReturnType = if (returnType != null) {
                 getMethodReturnType(scopeSelfType, method)
             } else method.returnType // no resolution invoked (fast-path)
+
+            /*
+            println("Finding method match:")
+            println("  method: $method -> $methodReturnType")
+            println("  targetType: ${context.targetType}")
+            println("  selfType: $scopeSelfType")
+            println("  typeParameters: $typeParameters")
+            println("  valueParameters: $valueParameters")*/
+
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, codeScope, resolved.origin

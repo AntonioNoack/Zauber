@@ -128,15 +128,20 @@ class Field(
     }
 
     fun toString(depth: Int): String {
-        val self = selfType ?: classScope.pathStr
+        val self = selfType ?: ownerScope.pathStr
         return if (initialValue == null || depth < 0) {
-            "Field($self.$name)"
+            toStringWithoutDefault()
         } else {
             "Field($self.$name=${initialValue.toString(depth - 1)})"
         }
     }
 
-    val classScope get() = scope
+    fun toStringWithoutDefault(): String {
+        val self = selfType ?: ownerScope.pathStr
+        return "Field($self.$name)"
+    }
+
+    val ownerScope get() = scope
     val fieldScope: Scope get() = throw IllegalStateException("Fields don't have their own scope")
 
     fun moveToScope(newScope: Scope) {
@@ -148,9 +153,9 @@ class Field(
     fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
     fun isLateinit(): Boolean = flags.hasFlag(Flags.LATEINIT)
     fun isOpen(): Boolean {
-        if (classScope.isInterface()) return true
+        if (ownerScope.isInterface()) return true
         val isOpenField = flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
-        val isOpenClass = classScope.isOpen()
+        val isOpenClass = ownerScope.isOpen()
         return isOpenField && isOpenClass
     }
 

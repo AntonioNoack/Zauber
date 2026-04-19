@@ -20,7 +20,7 @@ class SimpleGetField(
     }
 
     init {
-        if (field.classScope.isInterface()) {
+        if (field.ownerScope.isInterface()) {
             throw IllegalStateException("Cannot just get field of an interface, must use getter, $field")
         }
     }

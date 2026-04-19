@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.generation.Specializations
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
@@ -7,7 +8,6 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
-import me.anno.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type

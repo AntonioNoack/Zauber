@@ -12,11 +12,14 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.LambdaType
 
 /**
@@ -224,7 +227,11 @@ abstract class CallExpressionBase(
                 }
 
                 val base = self.resolve(context)
-                val valueParameters1 = resolveValueParameters(context, valueParameters)
+                val valueParameters1 = resolveValueParameters(context, valueParameters, null)
+                for (vp in valueParameters1) checkTypeMakesSense((vp as? ValueParameterImpl)?.type, scope)
+
+                println("Resolved value parameters: $valueParameters -> $valueParameters1")
+
                 val calledMethod = callable.resolveCalledMethod(typeParameters, valueParameters1)
                 val targetParams = calledMethod.resolved.valueParameters
                 val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
@@ -232,6 +239,28 @@ abstract class CallExpressionBase(
                 ResolvedCallExpression(base1, calledMethod, params, scope, origin)
             }
             else -> throw NotImplementedError()
+        }
+    }
+
+    fun checkTypeMakesSense(type: Type?, scope: Scope) {
+        // println("checkTypeMakesSense($type, ${type?.javaClass?.simpleName}, ${scope.pathStr})")
+        when (type) {
+            null -> return
+            is ClassType -> {
+                val tp = type.typeParameters ?: return
+                for (tpi in tp) checkTypeMakesSense(tpi, scope)
+            }
+            is GenericType -> {
+                val targetScope = type.scope
+                var scopeI = scope
+                // scope must be available/visible from us...
+                while (true) {
+                    if (scopeI == targetScope) return // all fine
+                    scopeI = scopeI.parentIfSameFileAndVisible ?: break
+                }
+                throw IllegalStateException("$type is not defined in $scope")
+            }
+            else -> TODO("Is $type (${type.javaClass.simpleName}) generic?")
         }
     }
 }

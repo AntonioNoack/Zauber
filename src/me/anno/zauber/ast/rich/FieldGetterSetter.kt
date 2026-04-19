@@ -44,7 +44,7 @@ object FieldGetterSetter {
     )
 
     fun ZauberASTBuilderBase.finishField(ownerScope: Scope, field: Field) {
-        println("Finishing field $field")
+        // println("Finishing field $field")
         flags = 0
         val origin = field.origin
         if (field.getter == null) {

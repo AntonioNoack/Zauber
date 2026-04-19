@@ -124,17 +124,19 @@ class Scope(val name: String, val parent: Scope? = null) {
     @Deprecated("There is few cases, where we don't need or don't have generic parameters")
     val typeWithoutArgs = ClassType(this, null)
 
-    val typeWithArgs by lazy {
+    private fun getParameterList(): ParameterList {
         if (!hasTypeParameters && scopeType?.needsTypeParams() != true) {
             typeParameters = emptyList()
             hasTypeParameters = true
         }
         check(hasTypeParameters) { "Missing type-params for $this ($scopeType) to take typeWithArgs" }
-        ClassType(
-            this, ParameterList(
-                typeParameters,
-                typeParameters.map { GenericType(it.scope, it.name) })
-        )
+        return ParameterList(
+            typeParameters,
+            typeParameters.map { GenericType(it.scope, it.name) })
+    }
+
+    val typeWithArgs by lazy {
+        ClassType(this, getParameterList())
     }
 
     /**
@@ -526,6 +528,28 @@ class Scope(val name: String, val parent: Scope? = null) {
                 parent
             } else null
         }
+
+    val parentIfSameFileAndVisible: Scope?
+        get() {
+            val scopeType = scopeType
+            return if (
+                scopeType != ScopeType.PACKAGE &&
+                scopeType != null &&
+                parent != null &&
+                isVisible(scopeType, parent.scopeType)
+            ) {
+                parent
+            } else null
+        }
+
+    fun isVisible(ownScopeType: ScopeType, parentScopeType: ScopeType?): Boolean {
+        if (ownScopeType == ScopeType.PACKAGE) return false
+        if (parentScopeType == null || parentScopeType.isObject()) return true
+        if (ownScopeType == ScopeType.INNER_CLASS) return true
+        if (ownScopeType.isClassType()) return false
+        if (ownScopeType.isInsideExpression()) return true
+        TODO("isVisible? $ownScopeType > $parentScopeType")
+    }
 
     fun createImmutableField(initialValue: Expression): Field {
         val name = generateName("tmpField")

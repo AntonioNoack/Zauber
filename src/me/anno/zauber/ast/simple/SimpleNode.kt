@@ -1,9 +1,11 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.generation.c.CSourceGenerator.isValueType
+import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -110,9 +112,17 @@ class SimpleNode(val graph: SimpleGraph) {
                     is ReturnExpression -> true
                     is ResolvedCallExpression -> {
                         val methodOrField = contextExpr.callable.resolved
-                        !methodOrField.scope.isInsideExpression()
+                        val methodOwner = (methodOrField as? Field)?.ownerScope ?: (methodOrField.scope.parent!!)
+                        !methodOwner.isInsideExpression() && !methodOwner.isMethodLike()
+                    }
+                    is ResolvedGetFieldExpression -> {
+                        val methodOrField = contextExpr.field.resolved
+                        val fieldOwner = methodOrField.ownerScope
+                        !fieldOwner.isInsideExpression() && !fieldOwner.isMethodLike()
                     }
                     else -> TODO("$scopeIfThis is ambiguous, what does $contextExpr ${contextExpr?.javaClass?.simpleName} indicate?")
+                }.apply {
+                    println("isExplicitSelf? $contextExpr -> $this")
                 }
             } else false
 
