@@ -149,7 +149,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
     }
 
-    fun readClassBody(classScope: Scope, readBody: Boolean) {
+    open fun readClassBody(classScope: Scope, readBody: Boolean) {
         if (readBody) readClassBody(classScope)
         else if (tokens.equals(i, TokenType.OPEN_BLOCK)) skipBlock()
     }
@@ -328,7 +328,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
     }
 
-    private fun readSelfTypeIfPresent(end: Int): Type? {
+    open fun readSelfTypeIfPresent(end: Int): Type? {
         val nameStart = i
         check(tokens.equals(end - 1, TokenType.NAME, TokenType.KEYWORD)) {
             "Expected name at ${tokens.err(end - 1)}"
@@ -364,7 +364,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         // if (selfType != null) selfType = selfType.resolve()
 
         val name1 = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-        check(name == name1)
+        check(name == name1) { "Expected same name, got mismatch: $name vs $name1" }
 
         var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
         val initialValue =
@@ -562,7 +562,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
     }
 
-    private fun readLazyBody(): Expression {
+    fun readLazyBody(): Expression {
         return pushBlock(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, tokens.size)
             val expr = LazyExpression(tokens1, true, scope, origin(i), imports, generics)
@@ -573,7 +573,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
     }
 
-    private fun readLazyValue(forField: Boolean): Expression {
+    fun readLazyValue(forField: Boolean): Expression {
         check(i < tokens.size) { "Cannot read lazy-value at the end, ${tokens.err(i)}" }
         val end = findLazyValueEnd(forField)
         check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
@@ -657,7 +657,13 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     }
 
     override fun readSuperCalls(classScope: Scope) {
-        throw NotImplementedError()
+        if (consumeIf("extends")) {
+            collectSuperNames(classScope)
+        }
+
+        if (consumeIf("implements")) {
+            collectSuperNames(classScope)
+        }
     }
 
     override fun readExpression(minPrecedence: Int): Expression = readLazyValue(false)

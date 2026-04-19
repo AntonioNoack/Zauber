@@ -337,7 +337,7 @@ abstract class ZauberASTBuilderBase(
             ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
     }
 
-    fun readType(
+    open fun readType(
         selfType: Type?, allowSubTypes: Boolean,
         isAndType: Boolean, insideTypeParams: Boolean
     ): Type? {
@@ -580,41 +580,48 @@ abstract class ZauberASTBuilderBase(
             if (LOGGER.isDebugEnabled) LOGGER.debug("  check ${tokens.err(i)} for type-args-compatibility")
             // todo support annotations here?
             when {
-                tokens.equals(i, TokenType.COMMA) -> {} // ok
-                tokens.equals(i, TokenType.NAME) -> {} // ok
-                tokens.equals(i, TokenType.STRING) ||
-                        tokens.equals(i, TokenType.NUMBER) -> {
-                } // comptime values
                 tokens.equals(i, "<") -> depth++
                 tokens.equals(i, ">") -> depth--
-                tokens.equals(i, "?") ||
-                        tokens.equals(i, "->") ||
-                        tokens.equals(i, ":") || // names are allowed
-                        tokens.equals(i, ".") ||
-                        tokens.equals(i, "in") ||
-                        tokens.equals(i, "out") ||
-                        tokens.equals(i, "*") -> {
-                    // ok
-                }
-                tokens.equals(i, TokenType.OPEN_ARRAY) ||
-                        tokens.equals(i, TokenType.CLOSE_ARRAY) ||
-                        tokens.equals(i, "super") -> {
-                    // can appear in Java types as List<? super T>
-                    // or as array notation, e.g. Object[]
-                    this is JavaASTClassScanner || this is JavaASTBuilder
-                }
                 tokens.equals(i, TokenType.OPEN_CALL) -> depth++
                 tokens.equals(i, TokenType.CLOSE_CALL) -> depth--
-                tokens.equals(i, TokenType.OPEN_BLOCK) ||
-                        tokens.equals(i, TokenType.CLOSE_BLOCK) ||
-                        tokens.equals(i, TokenType.SYMBOL) ||
-                        tokens.equals(i, TokenType.APPEND_STRING) ||
-                        tokens.equals(i, "val", "var") ||
-                        tokens.equals(i, "else", "fun", "override") ||
-                        tokens.equals(i, "this") -> return false
-                else -> throw NotImplementedError("Can ${tokens.err(i)} appear inside a type?")
+                else -> if (!canAppearInsideAType()) return false
             }
             i++
+        }
+        return true
+    }
+
+    open fun canAppearInsideAType(): Boolean {
+        when {
+            tokens.equals(i, TokenType.COMMA) -> {} // ok
+            tokens.equals(i, TokenType.NAME) -> {} // ok
+            tokens.equals(i, TokenType.STRING) ||
+                    tokens.equals(i, TokenType.NUMBER) -> {
+            } // comptime values
+            tokens.equals(i, "?") ||
+                    tokens.equals(i, "->") ||
+                    tokens.equals(i, ":") || // names are allowed
+                    tokens.equals(i, ".") ||
+                    tokens.equals(i, "in") ||
+                    tokens.equals(i, "out") ||
+                    tokens.equals(i, "*") -> {
+                // ok
+            }
+            tokens.equals(i, TokenType.OPEN_ARRAY) ||
+                    tokens.equals(i, TokenType.CLOSE_ARRAY) ||
+                    tokens.equals(i, "super") -> {
+                // can appear in Java types as List<? super T>
+                // or as array notation, e.g. Object[]
+                this is JavaASTClassScanner || this is JavaASTBuilder
+            }
+            tokens.equals(i, TokenType.OPEN_BLOCK) ||
+                    tokens.equals(i, TokenType.CLOSE_BLOCK) ||
+                    tokens.equals(i, TokenType.SYMBOL) ||
+                    tokens.equals(i, TokenType.APPEND_STRING) ||
+                    tokens.equals(i, "val", "var") ||
+                    tokens.equals(i, "else", "fun", "override") ||
+                    tokens.equals(i, "this") -> return false
+            else -> throw NotImplementedError("Can ${tokens.err(i)} appear inside a type?")
         }
         return true
     }
@@ -797,7 +804,7 @@ abstract class ZauberASTBuilderBase(
         }
     }
 
-    fun readInterface() {
+    open fun readInterface() {
         val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
         val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
         val keywords = packFlags()
