@@ -103,6 +103,8 @@ class TryCatchTests {
 
     @Test
     fun testNullPointerExceptionManual() {
+        LogManager.disableLoggers("ResolvedField,TypeResolution,Field,MemberResolver,Inheritance,ConstructorResolver," +
+                "FieldExpression,FieldResolver,CallExpression,SimpleGetField,CallWithNames")
         val code = """
             val likeNull: Int? = null
             val tested = try {

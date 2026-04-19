@@ -4,12 +4,10 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.FlagSet
-import me.anno.zauber.ast.rich.FieldGetterSetter.createBackingField
-import me.anno.zauber.ast.rich.FieldGetterSetter.createGetterMethod
-import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod
-import me.anno.zauber.ast.rich.FieldGetterSetter.createValueField
+import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
+import me.anno.zauber.ast.rich.FieldGetterSetter.createGetterMethod0
+import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod0
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
-import me.anno.zauber.ast.rich.FieldGetterSetter.needsGetter
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
@@ -123,31 +121,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                         readParameterDeclarations(selfType, extra)
                     } else extra
 
-                    val instr = ArrayList<Expression>()
-                    for (param in valueParameters) {
-                        if (param.isVal || param.isVar) {
-                            val paramField = param.getOrCreateField(classScope.typeWithArgs, Flags.NONE)
-                            val initialValue = FieldExpression(paramField, constructorScope, param.origin)
-                            val classField = classScope.addField(
-                                null, false, param.isVar,
-                                null, param.name, param.type, initialValue,
-                                paramField.flags, param.origin
-                            )
-                            finishField(classField)
-
-                            // todo is this our job? compare with ZauberASTBuilder
-                            instr.add(
-                                AssignmentExpression(
-                                    FieldExpression(classField, constructorScope, param.origin),
-                                    initialValue
-                                )
-                            )
-                        }
-                    }
-
+                    val instr = createAssignmentInstructionsForPrimaryConstructor(classScope, valueParameters, origin)
                     constructorScope.selfAsConstructor = Constructor(
                         valueParameters, constructorScope,
-                        null, ExpressionList(instr, constructorScope, constrOrigin), flags, constrOrigin
+                        null, instr, flags, constrOrigin
                     )
                 }
             } else if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -445,20 +422,9 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 constr.code.add(AssignmentExpression(fieldExpr, initialValue))
             }
 
-            if (getterBody != null) {
-                val backingField = createBackingField(field, getterBody.scope, getterOrigin)
-                createGetterMethod(field, getterBody, backingField, getterBody.scope, getterOrigin)
-            }
-
-            if (setterBody != null) {
-                val backingField = createBackingField(field, setterBody.scope, setterOrigin)
-                val valueField = createValueField(field, setterName, setterBody.scope, setterOrigin)
-                createSetterMethod(field, setterBody, backingField, valueField, setterBody.scope, setterOrigin)
-            }
-
-            if (needsGetter(field)) {
-                finishField(field)
-            }
+            if (getterBody != null) createGetterMethod0(field, getterBody, getterBody.scope, getterOrigin)
+            if (setterBody != null) createSetterMethod0(field, setterBody, setterName, setterBody.scope, setterOrigin)
+            finishField(field)
 
             field.getter?.addFlags(getterVisibility)
             field.setter?.addFlags(setterVisibility)
