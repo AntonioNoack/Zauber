@@ -14,7 +14,7 @@ class SimpleCheckEquals(
     val negated: Boolean,
     val method: ResolvedMethod,
     scope: Scope, origin: Int
-) : SimpleAssignment(dst, scope, origin) {
+) : SimpleCallable(dst, method.specialization, scope, origin) {
 
     override fun toString(): String {
         return "$dst = $left ${if (negated) "!=" else "=="} $right"

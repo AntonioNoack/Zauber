@@ -9,16 +9,16 @@ import me.anno.zauber.types.impl.ClassType
 
 class SimpleAllocateInstance(
     dst: SimpleField,
-    val selfType: ClassType,
+    val allocatedType: ClassType,
     scope: Scope, origin: Int
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
-        return "$dst = new $selfType"
+        return "$dst = new $allocatedType"
     }
 
     override fun eval(): BlockReturn {
-        val newInstance = runtime.getClass(selfType).createInstance()
+        val newInstance = runtime.getClass(allocatedType).createInstance()
         return BlockReturn(ReturnType.VALUE, newInstance)
     }
 }

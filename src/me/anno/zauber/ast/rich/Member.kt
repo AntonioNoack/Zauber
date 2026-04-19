@@ -17,6 +17,6 @@ abstract class Member(
     }
 
     // due to multi-interface, there may be many of them
-    var overriddenMembers: List<Member> = emptyList()
+    var overriddenFor: List<Member> = emptyList()
     var overriddenBy: List<Member> = emptyList()
 }

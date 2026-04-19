@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 class SimpleField(val type: Type, val ownership: Ownership, val id: Int) {
 

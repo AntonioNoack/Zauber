@@ -1,4 +1,4 @@
-package me.anno.zauber.generation.java
+package me.anno.generation.java
 
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.Compile.root

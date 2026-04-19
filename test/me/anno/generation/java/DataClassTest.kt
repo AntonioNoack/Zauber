@@ -1,4 +1,4 @@
-package me.anno.zauber.generation.java
+package me.anno.generation.java
 
 import me.anno.zauber.generation.java.JavaGenerationTest.Companion.testClassGenIsFine
 import org.junit.jupiter.api.Test
@@ -22,7 +22,7 @@ class DataClassTest {
                 external fun equals(other: String): Boolean
             }
         """.trimIndent()
-        val generated = testClassGenIsFine(source)
+        val generated = JavaGenerationTest.testClassGenIsFine(source)
         Thread.sleep(250)
         println(generated)
     }

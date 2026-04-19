@@ -112,7 +112,7 @@ object MethodOverrides {
                     "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)}"
                 }
 
-                method.overriddenMembers += selfMethod
+                method.overriddenFor += selfMethod
                 selfMethod.overriddenBy += method
             }
         }
@@ -151,7 +151,7 @@ object MethodOverrides {
                     "$scope.$selfField cannot both be open and closed, got ${Flags.toString(selfField.flags)}"
                 }
 
-                field.overriddenMembers += selfField
+                field.overriddenFor += selfField
                 selfField.overriddenBy += field
             }
         }

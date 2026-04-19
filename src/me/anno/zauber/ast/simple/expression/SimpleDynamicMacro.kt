@@ -10,7 +10,9 @@ import me.anno.zauber.scope.Scope
 
 /**
  * simple-expression that cannot be compiled, only executed,
- * because it calls a macro
+ * because it calls a macro;
+ *
+ * should only be found inside macros
  * */
 class SimpleDynamicMacro(
     dst: SimpleField,
