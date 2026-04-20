@@ -1,11 +1,11 @@
 package me.anno.zauber.types
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.impl.*
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 val Types by threadLocal { TypesImpl() }
 
@@ -47,7 +47,8 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
 class TypesImpl {
 
     private fun getType(i: String): ClassType {
-        return ClassType(getScope(i, "", UnknownType), emptyList(), -1)
+        val scope = getScope(i, "", UnknownType)
+        return ClassType(scope, emptyList(), -1, true)
     }
 
     private fun getType(i: String, genericNames: String, nat: Type): ClassType {
@@ -57,7 +58,7 @@ class TypesImpl {
             genericNames.indices.map {
                 val param = scope.typeParameters[it]
                 GenericType(scope, param.name)
-            }, -1
+            }, -1, true
         )
     }
 

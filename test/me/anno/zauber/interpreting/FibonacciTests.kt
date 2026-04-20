@@ -107,6 +107,20 @@ class FibonacciTests {
     @Test
     fun testTailRecursiveFibonacci() {
         val code = """
+        tailrec fun fib(i: Int, a: Int, b: Int): Int {
+            if (i < 2) return b
+            return fib(i - 1, b, a + b)
+        }
+        val tested = fib(5,1,1)
+        """.trimIndent() + stdlib
+
+        val value = testExecute(code)
+        assertEquals(8, value.castToInt())
+    }
+
+    @Test
+    fun testTailRecursiveDefaultParamsFibonacci() {
+        val code = """
         tailrec fun fib(i: Int, a: Int = 1, b: Int = 1): Int {
             if (i < 2) return b
             return fib(i - 1, b, a + b)

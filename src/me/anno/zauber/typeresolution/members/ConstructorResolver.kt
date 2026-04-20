@@ -133,7 +133,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         ) ?: return null
         val context = ResolutionContext(
             constructor.selfType, Specialization(generics),
-            false, returnType, emptyMap()
+            false, returnType
         )
         return ResolvedConstructor(generics, constructor, context, codeScope, matchScore)
     }

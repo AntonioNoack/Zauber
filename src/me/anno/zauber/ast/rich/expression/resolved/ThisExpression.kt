@@ -1,9 +1,9 @@
 package me.anno.zauber.ast.rich.expression.resolved
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveThisType
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -12,7 +12,7 @@ class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(s
 
     override fun toStringImpl(depth: Int): String = "this@$label"
     override fun resolveReturnType(context: ResolutionContext): Type {
-        return resolveThisType(label)
+        return resolveThisType(context, label)
     }
 
     override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing

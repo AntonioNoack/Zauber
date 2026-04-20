@@ -278,8 +278,8 @@ class TypeScriptClassScanner(tokens: TokenList) :
         popGenericParams()
     }
 
-    override fun canAppearInsideAType(): Boolean {
-        return tokens.equals(i, "number") || super.canAppearInsideAType()
+    override fun canAppearInsideAType(i: Int): Boolean {
+        return tokens.equals(i, "number") || super.canAppearInsideAType(i)
     }
 
     override fun readExpression(minPrecedence: Int): Expression =

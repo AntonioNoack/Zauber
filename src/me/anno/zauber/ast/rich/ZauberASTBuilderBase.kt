@@ -584,14 +584,14 @@ abstract class ZauberASTBuilderBase(
                 tokens.equals(i, ">") -> depth--
                 tokens.equals(i, TokenType.OPEN_CALL) -> depth++
                 tokens.equals(i, TokenType.CLOSE_CALL) -> depth--
-                else -> if (!canAppearInsideAType()) return false
+                else -> if (!canAppearInsideAType(i)) return false
             }
             i++
         }
         return true
     }
 
-    open fun canAppearInsideAType(): Boolean {
+    open fun canAppearInsideAType(i: Int): Boolean {
         when {
             tokens.equals(i, TokenType.COMMA) -> {} // ok
             tokens.equals(i, TokenType.NAME) -> {} // ok

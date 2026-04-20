@@ -56,10 +56,7 @@ object Macro {
     }
 
     private fun createContext(): ResolutionContext {
-        return ResolutionContext(
-            null, Specializations.specialization, true,
-            null, emptyMap()
-        )
+        return ResolutionContext(null, Specializations.specialization, true, null)
     }
 
     private fun ZauberASTBuilderBase.resolveMacroByName(

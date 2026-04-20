@@ -26,44 +26,60 @@ data class ResolutionContext(
     val targetType: Type?,
     /**
      * This value is only set if we're currently resolving expressions for inlining calls.
-     * Otherwise, just leave it empty; todo instead of key=name, use key=field/parameter??
+     * Otherwise, just leave it empty
      * */
     val knownLambdas: Map<Field, Expression>,
+    /**
+     * when methods are resolved, this is some extra 'this' possibilities;
+     * these come from lambdas with self-type, e.g. S.()->Boolean
+     * */
+    val extensionThis: List<ExtensionThis>,
 ) {
 
     constructor(
         selfType: Type?, allowTypeless: Boolean, targetType: Type?,
-        knownLambdas: Map<Field, Expression> = emptyMap()
-    ) : this(selfType, Specialization.noSpecialization, allowTypeless, targetType, knownLambdas)
+        knownLambdas: Map<Field, Expression> = emptyMap(),
+        extensionThis: List<ExtensionThis> = emptyList(),
+    ) : this(
+        selfType, Specialization.noSpecialization, allowTypeless,
+        targetType, knownLambdas, extensionThis
+    )
 
     constructor(selfType: Type?, specialization: Specialization, allowTypeless: Boolean, targetType: Type?) :
-            this(selfType, specialization, allowTypeless, targetType, emptyMap())
+            this(selfType, specialization, allowTypeless, targetType, emptyMap(), emptyList())
 
     val selfScope = typeToScope(selfType)
 
     fun withTargetType(newTargetType: Type?): ResolutionContext {
         if (newTargetType == targetType) return this
-        return ResolutionContext(selfType, specialization, allowTypeless, newTargetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, newTargetType, knownLambdas, extensionThis)
     }
 
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
-        return ResolutionContext(newSelfType, specialization, allowTypeless, targetType, knownLambdas)
+        return ResolutionContext(newSelfType, specialization, allowTypeless, targetType, knownLambdas, extensionThis)
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
         if (allowTypeless == newAllowTypeless) return this
-        return ResolutionContext(selfType, specialization, newAllowTypeless, targetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, newAllowTypeless, targetType, knownLambdas, extensionThis)
     }
 
     fun withKnownLambdas(newKnownLambdas: Map<Field, Expression>): ResolutionContext {
         if (knownLambdas == newKnownLambdas) return this
-        return ResolutionContext(selfType, specialization, allowTypeless, targetType, newKnownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, targetType, newKnownLambdas, extensionThis)
     }
 
     fun withSpec(specialization: Specialization): ResolutionContext {
         if (this.specialization == specialization) return this
-        return ResolutionContext(selfType, specialization, allowTypeless, targetType, knownLambdas)
+        return ResolutionContext(selfType, specialization, allowTypeless, targetType, knownLambdas, extensionThis)
+    }
+
+    fun withExtensionThis(extensionThis: ExtensionThis): ResolutionContext {
+        return ResolutionContext(
+            selfType, specialization, allowTypeless, targetType, knownLambdas,
+            this.extensionThis + extensionThis
+        )
     }
 
     override fun toString(): String {
@@ -71,7 +87,8 @@ data class ResolutionContext(
                 "spec=$specialization, " +
                 "allowTypeless=$allowTypeless, " +
                 "targetType=$targetType, " +
-                "knownLambdas=$knownLambdas)"
+                "knownLambdas=$knownLambdas, " +
+                "extensionThis=$extensionThis)"
     }
 
     companion object {

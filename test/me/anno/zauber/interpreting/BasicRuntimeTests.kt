@@ -3,7 +3,7 @@ package me.anno.zauber.interpreting
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
-import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
@@ -33,16 +33,8 @@ class BasicRuntimeTests {
             return value.value
         }
 
-        fun testExecuteWithScope(code: String): Pair<Instance, Scope> {
-            val (value, scope) = testExecuteCatchWithScope(code)
-            check(value.type == ReturnType.RETURN) {
-                "Expected function to return, got $value"
-            }
-            return value.value to scope
-        }
-
         fun testExecuteCatch(code: String, reset: Boolean = true): BlockReturn {
-            val scope = typeResolveScope(code, reset)
+            val scope = typeResolveScope(code, reset)[ScopeInitType.AFTER_DISCOVERY]
             val field = scope.fields.firstOrNull { it.name == "tested" }
                 ?: throw IllegalStateException("Missing 'tested' field in scope ${scope.pathStr}")
             val getter = field.getter
@@ -53,20 +45,6 @@ class BasicRuntimeTests {
             val self = runtime.getObjectInstance(scope.typeWithArgs)
             val value = runtime.executeCall(self, getter1, emptyList())
             return value
-        }
-
-        fun testExecuteCatchWithScope(code: String): Pair<BlockReturn, Scope> {
-            val scope = typeResolveScope(code)
-            val field = scope.fields.firstOrNull { it.name == "tested" }
-                ?: throw IllegalStateException("Missing 'tested' field in scope ${scope.pathStr}")
-            val getter = field.getter
-                ?: throw IllegalStateException("Missing getter for $field")
-
-            createTestRuntime()
-            val getter1 = MethodSpecialization(getter, noSpecialization)
-            val self = runtime.getObjectInstance(scope.typeWithArgs)
-            val value = runtime.executeCall(self, getter1, emptyList())
-            return value to scope
         }
     }
 

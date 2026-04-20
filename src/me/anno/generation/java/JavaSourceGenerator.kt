@@ -486,7 +486,7 @@ object JavaSourceGenerator : me.anno.generation.Generator() {
         appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
         val body = method.body
         if (body != null) {
-            val context = ResolutionContext(method.selfType, specialization, true, null, emptyMap())
+            val context = ResolutionContext(method.selfType, specialization, true, null)
             appendCode(context, method, body)
         } else {
             builder.append(";")

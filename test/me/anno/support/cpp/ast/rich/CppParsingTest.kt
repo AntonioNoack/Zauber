@@ -2,9 +2,8 @@ package me.anno.support.cpp.ast.rich
 
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
-import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import org.junit.jupiter.api.Test
 
 class CppParsingTest {
@@ -22,7 +21,6 @@ class CppParsingTest {
             // println("Tokens: $tokens")
 
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
-            createDefaultParameterFunctions(root)
             return root.children.first { it.name == testScopeName }
         }
     }

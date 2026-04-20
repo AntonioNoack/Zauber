@@ -19,7 +19,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
-abstract class MemberResolver<Resource: Member, Resolved : ResolvedMember<Resource>> {
+abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resource>> {
 
     companion object {
         private val LOGGER = LogManager.getLogger(MemberResolver::class)
@@ -269,6 +269,15 @@ abstract class MemberResolver<Resource: Member, Resolved : ResolvedMember<Resour
             } else {
                 if (print) LOGGER.info("$contextSelfScope has no companion")
             }
+        } else {
+            // handle all self-invocations
+            // todo we also somehow need to set 'this' into the resolved method...
+            for (explicitThis in context.extensionThis) {
+                val scope = explicitThis.thisTypeToScope ?: langScope // is langScope correct as a fallback?
+                if (print) LOGGER.info("Checking[s] $scope with ${explicitThis.thisType}")
+                val result = callback(scope, explicitThis.thisType)
+                if (result != null) return result
+            }
         }
 
         val scopes = PairArrayList<Scope, Type?>()
@@ -323,6 +332,8 @@ abstract class MemberResolver<Resource: Member, Resolved : ResolvedMember<Resour
         result: PairArrayList<Scope, Type?>
     ) {
         listScopeTypeCandidates(context, codeScope) { scope, selfType ->
+            scope[ScopeInitType.AFTER_OVERRIDES]
+
             val selfType = // replace useless package types with Unit s.t. we need to check fewer cases
                 if (selfType is ClassType && !selfType.clazz.isClassType())
                     null else selfType

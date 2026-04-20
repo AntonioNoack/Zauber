@@ -567,7 +567,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val tokens1 = TokenSubList(tokens, i, tokens.size)
             val expr = LazyExpression(tokens1, true, scope, origin(i), imports, generics)
             // load expression contents, if we need them
-            scope.addInitPart(ScopeInitType.RESOLVE_METHOD_BODY, { expr.value })
+            scope.addInitPart(ScopeInitType.RESOLVE_METHOD_BODY) { expr.value }
             i = tokens.size
             expr
         }
@@ -581,7 +581,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val tokens1 = TokenSubList(tokens, i, end)
             val expr = LazyExpression(tokens1, false, scope, origin(i), imports, generics)
             // load expression contents, if we need them
-            scope.addInitPart(ScopeInitType.RESOLVE_METHOD_BODY, { expr.value })
+            scope.addInitPart(ScopeInitType.RESOLVE_METHOD_BODY) { expr.value }
             i = end
             expr
         }

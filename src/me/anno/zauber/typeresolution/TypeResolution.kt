@@ -99,7 +99,7 @@ object TypeResolution {
         }
     }
 
-    fun resolveThisType(scope: Scope): Type {
+    fun resolveThisType(context: ResolutionContext, scope: Scope): Type {
         // todo we must also insert any known generics...
         var scopeI = scope
         while (true) {
@@ -111,10 +111,10 @@ object TypeResolution {
                 }
                 scopeI.isMethodLike() -> {
                     val func = scopeI.selfAsMethod
-                    val self = func?.selfType
+                    val self = func?.selfType?.specialize(context)
                     if (self != null) {
                         val selfScope = typeToScope(self)!!
-                        LOGGER.info("Method-SelfType[${scopeI.pathStr}]: $self -> $selfScope")
+                        LOGGER.info("Method-SelfType[${scopeI.pathStr}/spec=${context.specialization}]: $self -> $selfScope")
                         return resolveThisScope(selfScope).typeWithArgs
                     } else if (func != null) {
                         return scopeI.typeWithArgs

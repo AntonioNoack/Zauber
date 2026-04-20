@@ -4,8 +4,6 @@ import me.anno.utils.ResetThreadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
-import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.MethodOverrides.resolveOverrides
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -13,6 +11,7 @@ import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 
 object ResolutionUtils {
+
     fun typeResolveScope(code: String, reset: Boolean = true): Scope {
 
         if (reset) ResetThreadLocal.reset()
@@ -23,32 +22,38 @@ object ResolutionUtils {
             .split("\npackage ")
             .mapIndexed { index, content ->
                 if (index == 0) {
-                    """
-                        package $testScopeName
-                        
-                        $content
-                    """.trimIndent()
+                    testScopeName to "package $testScopeName\n\n$content"
                 } else {
-                    "package $content"
+                    val linebreak = content.indexOf('\n')
+                    val packageName = content.substring(0, linebreak).trim()
+                    packageName to "package $content"
                 }
             }
 
-        val tokens = sources.map { content ->
+        for (i in sources.indices) {
+            val (packageName, content) = sources[i]
             if (false) {
                 println("Test.zbr")
                 println(content.formatLines())
             }
-            ZauberTokenizer(content, "Test.zbr").tokenize()
+            val scope = getScope(packageName)
+            scope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
+                val tokenizer = ZauberTokenizer(content, "Test.zbr")
+                scanClasses(tokenizer.tokenize())
+            }
         }
-
-        for (index in tokens.indices) {
-            scanClasses(tokens[index])
-        }
-
-        createDefaultParameterFunctions(root)
-        resolveOverrides(root)
 
         return root.children.first { it.name == testScopeName }
+    }
+
+    fun getScope(path: String): Scope {
+        val parts = path.split('.')
+        var scope = root
+        for (part in parts) {
+            check(part.trim() == part)
+            scope = scope.getOrPut(part, ScopeType.PACKAGE)
+        }
+        return scope
     }
 
     fun String.formatLines(): String {

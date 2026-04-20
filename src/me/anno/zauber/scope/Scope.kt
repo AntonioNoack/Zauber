@@ -8,6 +8,8 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
+import me.anno.zauber.expansion.DefaultParameters
+import me.anno.zauber.expansion.MethodOverrides
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -27,6 +29,22 @@ import java.util.concurrent.atomic.AtomicInteger
 class Scope(val name: String, val parent: Scope? = null) {
 
     var scopeType: ScopeType? = null
+
+    val path: List<String>
+        get() {
+            val path = ArrayList<String>()
+            var that = this
+            while (true) {
+                if (that.name == "*") break
+                path.add(that.name)
+                that = that.parent!!
+            }
+            path.reverse()
+            return path
+        }
+
+    val pathStr: String = path.joinToString(".")
+    val depth get() = path.size
 
     var fileName: String? = parent?.fileName
 
@@ -65,18 +83,40 @@ class Scope(val name: String, val parent: Scope? = null) {
             .filter { it.scopeType == ScopeType.ENUM_ENTRY_CLASS }
             .map { it[ScopeInitType.AFTER_DISCOVERY] }
 
-    val initParts = ArrayList<ScopeInit>()
+    private val initParts = ArrayList<ScopeInit>(4)
+    private var sit = ScopeInitType.entries.first()
 
-    fun addInitPart(scopeInitType: ScopeInitType, runnable: () -> Unit) {
-        initParts.add(ScopeInit(scopeInitType, runnable))
+    fun addInitPart(scopeInitType: ScopeInitType, runnable: (Scope) -> Unit) {
+        addInitPart(ScopeInit(scopeInitType, runnable))
+    }
+
+    fun addInitPart(scopeInit: ScopeInit) {
+        check(scopeInit.type >= sit) { "Cannot add ${scopeInit.type} to '$pathStr', when $sit was already queried" }
+        // println("Adding ${scopeInit.type} to '$pathStr'")
+        initParts.add(scopeInit)
         initParts.sort()
     }
 
+    init {
+        addInitPart(DefaultParameters.defaultParameterCreator)
+        addInitPart(MethodOverrides.methodOverrideCreator)
+    }
+
     operator fun get(scopeInitType: ScopeInitType): Scope {
+        // println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
+
         parent?.get(scopeInitType)
+
+        if (scopeInitType > sit) {
+            sit = scopeInitType
+        }
+
         while (initParts.isNotEmpty() && initParts.last().type < scopeInitType) {
             @Suppress("Since15")
-            initParts.removeLast().runnable()
+            val element = initParts.removeLast()
+            // println("Running ${element.type} in '$pathStr'...")
+            element.runnable(this)
+            // println("... Finished ${element.type} in '$pathStr'")
         }
         return this
     }
@@ -150,9 +190,10 @@ class Scope(val name: String, val parent: Scope? = null) {
     var objectField: Field? = null
 
     fun getOrCreateObjectField(origin: Int): Field {
+        check(isObjectLike())
         if (objectField == null) objectField = addField(
             null, false, isMutable = false, null, name,
-            ClassType(this, emptyList(), origin),
+            ClassType(this, emptyList(), origin, true),
             /* todo should we set initialValue? */ null, Flags.NONE, origin
         )
         return objectField!!
@@ -335,22 +376,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (child.fileName == null) child.fileName = fileName
         return child
     }
-
-    val path: List<String>
-        get() {
-            val path = ArrayList<String>()
-            var that = this
-            while (true) {
-                if (that.name == "*") break
-                path.add(that.name)
-                that = that.parent!!
-            }
-            path.reverse()
-            return path
-        }
-
-    val pathStr: String = path.joinToString(".")
-    val depth get() = path.size
 
     fun resolveTypeInner(name: String): Scope? {
         if (name == this.name) return this
@@ -608,16 +633,6 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun addFlags(flags: FlagSet) {
         this.flags = this.flags or flags
-    }
-
-    fun forEachScopeLazy(scopeInitType: ScopeInitType, callback: (Scope) -> Unit) {
-        // execute it when we're ready
-        addInitPart(scopeInitType, {
-            callback(this)
-            for (i in children.indices) {
-                children[i].forEachScopeLazy(scopeInitType, callback)
-            }
-        })
     }
 
     fun isInsideExpression(): Boolean {

@@ -1,18 +1,16 @@
 package me.anno.zauber
 
+import me.anno.generation.java.JavaSourceGenerator
+import me.anno.utils.NumberUtils.f3
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.CompileSources.buildASTs
 import me.anno.zauber.CompileSources.printPackages
 import me.anno.zauber.CompileSources.tokenizeSources
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanAllClasses
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.MethodOverrides.resolveOverrides
-import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.utils.NumberUtils.f3
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import java.io.File
 
 // todo convert JVM Bytecode AST into simplified AST...
@@ -72,15 +70,7 @@ object Compile {
             buildASTs()
         }
 
-        step("Solve Overrides") {
-            resolveOverrides(root)
-        }
-
         if (false) printPackages(root, 0)
-
-        step("Creating Default Parameter Functions") {
-            createDefaultParameterFunctions(root)
-        }
 
         step("Resolution & Creating Java-Code") {
             JavaSourceGenerator.generateCode(File("./out/java"), root)

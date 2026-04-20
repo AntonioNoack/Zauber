@@ -6,13 +6,12 @@ import me.anno.support.cpp.ast.rich.CppStandard
 import me.anno.support.cpp.ast.rich.PointerType.Companion.ptr
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.Compile.root
-import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
 import me.anno.zauber.resolution.ResolutionUtils.getField
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -33,7 +32,6 @@ class CppTypeResolutionTest {
             // todo run the preprocessor?
 
             CppASTBuilder(tokens, root, CppStandard.CPP11).readFileLevel()
-            createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             val field = testScope[ScopeInitType.AFTER_DISCOVERY]
                 .fields.first { it.name == "tested" }

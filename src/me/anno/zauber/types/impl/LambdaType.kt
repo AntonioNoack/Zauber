@@ -13,7 +13,7 @@ class LambdaType(
     val returnType: Type
 ) : Type() {
     override fun toStringImpl(depth: Int): String {
-        val scopeType = if (selfType != null) "${selfType.toString(depth)}." else null
+        val scopeType = if (selfType != null) "self=${selfType.toString(depth)} | " else null
         return "LambdaType($scopeType(${
             parameters.joinToString(", ") {
                 if (it.name != null) "${it.name}=${it.type.toString(depth)}"

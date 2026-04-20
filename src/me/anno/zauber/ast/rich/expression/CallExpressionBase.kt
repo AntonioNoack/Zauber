@@ -10,8 +10,10 @@ import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ExtensionThis
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
@@ -82,15 +84,21 @@ abstract class CallExpressionBase(
         context: ResolutionContext, callable: ResolvedMethod,
         params0: List<Expression>
     ): Expression {
+
+        val context = context.withSpec(context.specialization + callable.specialization)
+        println("Resolving inline method: $callable, $params0, $context")
+
         // define all parameters, that are not lambda-likes
         val method = callable.resolved
         val subscope = scope.generate("inline", ScopeType.METHOD_BODY)
+
         // todo define 'this' field/parameter in all relevant scopes
         // todo handle 'this' like any other field, and allow labels on any field to denote the scope
         // todo create sub-scope for this, and define all parameters as fields of that sub-scope,
         //  because usually, they would be in the method scope, but here, we don't use that scope
         // todo we must recursively support this replacement, e.g. for inline methods with default parameters
         //  -> register these special lambdas in the context :)
+
         val body = ArrayList<Expression>()
         val knownLambdas = HashMap(context.knownLambdas)
         val inlineBody = method.body
@@ -98,29 +106,39 @@ abstract class CallExpressionBase(
                 "Inline method must have a body, method: $method, " +
                         "at ${resolveOrigin(origin)}"
             )
+
         for (i in params0.indices) {
             val param = params0[i]
+            val dstField = method.valueParameters[i].field!!
             if (!param.isLambdaLike()) {
-                val dstField = method.valueParameters[i].field!!
                 val dstFieldExpr = FieldExpression(dstField, subscope, origin)
                 body.add(AssignmentExpression(dstFieldExpr, param))
                 subscope.addField(dstField)
             } else {
-                knownLambdas[method.valueParameters[i].field!!] = param
+                println("KnownLambdas[$dstField] = $param")
+                knownLambdas[dstField] = param
             }
         }
+
         body.add(inlineBody)
+
         val extendedContext = context.withKnownLambdas(knownLambdas)
+
         // todo if lambdaType has a 'this'/when we have some sort of 'this',
         //  we need to define it as a variable/field...
         println("Inlined body:\n${body.joinToString("\n") { "  $it" }}")
+
         return ExpressionList(body, scope, origin).resolve(extendedContext)
+
     }
 
     private fun resolveInlineInvocation(
         context: ResolutionContext, callable: ResolvedField,
         inlineBody: Expression
     ): Expression {
+
+        println("Resolving inline invocation: $callable, $inlineBody")
+
         val parameter = callable.resolved.byParameter as? Parameter
             ?: throw IllegalStateException(
                 "Expected field by lambda to belong to a parameter, " +
@@ -131,9 +149,16 @@ abstract class CallExpressionBase(
         val body = ArrayList<Expression>()
         when (inlineBody) {
             is LambdaExpression -> {
-                val selfType = parameterType.selfType
+                val selfType = parameterType.selfType?.specialize(context)
+                var subContext = context
                 if (selfType != null) {
-                    // todo define 'this' at inlined place with 'base'
+                    val baseField = subscope.createImmutableField(self).apply {
+                        valueType = selfType
+                    }
+                    val selfScope = typeToScope(selfType)
+                    subContext = subContext.withExtensionThis(ExtensionThis(selfType, selfScope, baseField))
+                    val baseFieldExpr = FieldExpression(baseField, scope, origin)
+                    body.add(AssignmentExpression(baseFieldExpr, self))
                 }
 
                 for (i in parameterType.parameters.indices) {
@@ -159,7 +184,9 @@ abstract class CallExpressionBase(
                     body.add(AssignmentExpression(dstFieldExpr, param))
                     subscope.addField(dstField)
 
-                    // todo we could run and support this recursively :3
+                    // we could run and support this recursively :3
+                    //  -> I think we kind of already do support recursion :)
+                    // todo test recursion for inlined functions
                     if (variable is LambdaDestructuring) {
                         // we must also assign all the child fields
                         val components = variable.components
@@ -178,7 +205,7 @@ abstract class CallExpressionBase(
                         }
                     }
                 }
-                body.add(inlineBody.body)
+                body.add(inlineBody.body.resolve(subContext))
             }
             else -> throw NotImplementedError("Implement inlining a call for a lambda-like: $inlineBody (${inlineBody.javaClass.simpleName})")
         }
@@ -189,11 +216,11 @@ abstract class CallExpressionBase(
         return when (val callable = resolveCallable(context)) {
             is ResolvedMethod -> {
                 val method = callable.resolved
-                val isInlineMethod = method.isInline()
+                val shouldBeInlined = method.isInline()
                 // we can only inline, if some or our parameters are lambdas
                 //  or lambda-likes... (Type::add) should work, too
                 //  -> no, we can always inline :)
-                if (isInlineMethod) {
+                if (shouldBeInlined) {
                     val params0 = reorderParameters(valueParameters, method.valueParameters, scope, origin)
                     resolveInlineMethod(context, callable, params0)
                 } else {

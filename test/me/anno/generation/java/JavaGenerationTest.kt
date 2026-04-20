@@ -1,10 +1,7 @@
 package me.anno.generation.java
 
-import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
-import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.MethodOverrides.resolveOverrides
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
@@ -27,8 +24,6 @@ class JavaGenerationTest {
         """.trimIndent(), "Test.zbr"
             ).tokenize()
             scanClasses(tokens)
-            resolveOverrides(root)
-            createDefaultParameterFunctions(root)
             val testScope = root.children.first { it.name == testScopeName }
             val testClassName = "Test"
             val testClass = testScope[ScopeInitType.AFTER_DISCOVERY].children.first { it.name == testClassName }

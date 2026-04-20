@@ -8,8 +8,6 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.expansion.DefaultParameterExpansion.createDefaultParameterFunctions
-import me.anno.zauber.expansion.MethodOverrides.resolveOverrides
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.tokenizer.ZauberTokenizer
@@ -27,6 +25,7 @@ import org.junit.jupiter.api.Test
 class TypeResolutionTest {
 
     companion object {
+
         var ctr = 0
 
         fun testTypeResolution0(code: String, reset: Boolean): Scope {
@@ -43,10 +42,7 @@ class TypeResolutionTest {
         """.trimIndent(), "Test.zbr"
             ).tokenize()
             scanClasses(tokens)
-            createDefaultParameterFunctions(root)
-            val testScope = root.children.first { it.name == testScopeName }
-            resolveOverrides(testScope)
-            return testScope
+            return root.children.first { it.name == testScopeName }
         }
 
         fun testTypeResolutionGetField(code: String, reset: Boolean): Field {

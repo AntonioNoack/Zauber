@@ -38,7 +38,9 @@ class Method(
      * */
     var backedField: Field? = null
 
-    // todo can inline methods open? explicit inheritance-tree would need to be inlined...
+    val hasVarargParameter = valueParameters.any { it.isVararg }
+
+    // can inline methods be open? explicit inheritance-tree would need to be inlined...
     fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {

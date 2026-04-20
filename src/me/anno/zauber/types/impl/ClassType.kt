@@ -22,6 +22,11 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         else createParameterList(clazz, typeParameters, origin)
     )
 
+    constructor(clazz: Scope, typeParameters: List<Type>?, origin: Int, ignoreSIT: Boolean) : this(
+        clazz, if (typeParameters == null) null
+        else createParameterList(clazz, typeParameters, origin, ignoreSIT)
+    )
+
     init {
         if (clazz.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
             throw IllegalStateException("Classes should use the general enum, not the entries")
@@ -60,9 +65,14 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
          * */
         var strictMode = true
 
-        fun createParameterList(clazz: Scope, typeParams: List<Type>, origin: Int): ParameterList {
+        fun createParameterList(
+            clazz: Scope,
+            typeParams: List<Type>,
+            origin: Int,
+            ignoreSIT: Boolean = false
+        ): ParameterList {
             if (strictMode) {
-                clazz[ScopeInitType.AFTER_DISCOVERY]
+                if (!ignoreSIT) clazz[ScopeInitType.AFTER_DISCOVERY]
                 check(clazz.hasTypeParameters) {
                     "$clazz is missing type parameter definition, at ${resolveOrigin(origin)}"
                 }

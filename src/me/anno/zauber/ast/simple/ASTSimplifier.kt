@@ -310,7 +310,7 @@ object ASTSimplifier {
 
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
-        if (needsCapture(selfMethod, valueMethod)) {
+        if (needsCapture(selfMethod, valueMethod, field)) {
             field.isCaptured = true
             val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
             return block1.withValue(dst, block1v.block)
@@ -348,9 +348,10 @@ object ASTSimplifier {
         }
     }
 
-    private fun needsCapture(selfMethod: MethodLike?, valueMethod: MethodLike): Boolean {
+    private fun needsCapture(selfMethod: MethodLike?, valueMethod: MethodLike, field: Field): Boolean {
         return selfMethod != null && selfMethod != valueMethod &&
-                valueMethod.scope.parent?.isObjectLike() != true
+                valueMethod.scope.parent?.isObjectLike() != true &&
+                !field.ownerScope.isObjectLike()
     }
 
     private fun simplifySetField(
@@ -380,12 +381,12 @@ object ASTSimplifier {
 
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
-        if (needsCapture(selfMethod, valueMethod)) {
+        if (needsCapture(selfMethod, valueMethod, field)) {
             field.isCaptured = true
             /* val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
              return block1.withValue(dst, block1v.block)
              */
-            TODO("Create setter for field in another scope")
+            TODO("Create setter for field in another scope: $field from $selfMethod")
         }
 
         if (useSetter) {
