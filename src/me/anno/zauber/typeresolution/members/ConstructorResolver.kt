@@ -120,15 +120,15 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
     ): ResolvedConstructor? {
 
         val typeParameters = typeParameters
-            ?.toParameterList(constructor.selfType.clazz.typeParameters)
+            ?.toParameterList(constructor.selfTypeI.clazz.typeParameters)
 
         LOGGER.info("Resolving generics for constructor $constructor")
         val matchScore = MatchScore(constructor.valueParameters.size + 2)
-        val tmpSelfType = constructor.selfType.withTypeParameters(typeParameters)
+        val tmpSelfType = constructor.selfTypeI.withTypeParameters(typeParameters)
         val generics = findGenericsForMatch(
             tmpSelfType, tmpSelfType,
             memberReturnType, returnType,
-            constructor.selfType.clazz.typeParameters, typeParameters,
+            constructor.selfTypeI.clazz.typeParameters, typeParameters,
             constructor.valueParameters, valueParameters, matchScore
         ) ?: return null
         val context = ResolutionContext(

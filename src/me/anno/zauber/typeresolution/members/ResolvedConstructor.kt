@@ -17,7 +17,7 @@ class ResolvedConstructor(
     override fun getScopeOfResolved(): Scope = resolved.scope
 
     override fun getTypeFromCall(): Type {
-        return ClassType(resolved.selfType.clazz, selfTypeParameters)
+        return ClassType(resolved.selfTypeI.clazz, selfTypeParameters)
     }
 
     override fun toString(): String {

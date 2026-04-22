@@ -352,10 +352,11 @@ object JavaSimplifiedASTWriter {
 
     fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
         if (self != null) {
-            val needsCast = self.type != field.selfType
-            if (needsCast && field.selfType != null) {
+            val fieldSelfType = field.selfType
+            val needsCast = self.type != fieldSelfType
+            if (needsCast && fieldSelfType != null) {
                 builder.append("((")
-                appendType(field.selfType, exprScope, true)
+                appendType(fieldSelfType, exprScope, true)
                 builder.append(')')
                 builder.append1(self).append(").")
             } else if (noThis(self)) {

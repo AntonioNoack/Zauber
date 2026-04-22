@@ -943,7 +943,7 @@ object ASTSimplifier {
             )
         } else {
             val dst = block0.field(method0.getTypeFromCall())
-            var selfType = method.selfType.specialize(method0.specialization) as ClassType
+            var selfType = method.selfType?.specialize(method0.specialization) as ClassType
             if (selfType.typeParameters == null) {
                 selfType = ClassType(selfType.clazz, method0.selfTypeParameters)
             }

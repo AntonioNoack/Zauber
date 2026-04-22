@@ -526,8 +526,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             methodScope.hasTypeParameters = true
 
             val selfType0 = readSelfTypeIfPresent(end)
-            var selfType = selfType0 ?: getSelfType(ownerScope)
-            if (selfType != null) selfType = selfType.resolve()
+            val selfType = selfType0 ?: getSelfType(ownerScope)
 
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 

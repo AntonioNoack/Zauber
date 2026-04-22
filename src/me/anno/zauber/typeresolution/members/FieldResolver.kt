@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -150,12 +151,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             )
         } else {
 
+            var fieldSelfType = field.selfType?.resolve(null)
             val selfTypeI = selfType
-                ?: if (field.selfType is ClassType && field.selfType.clazz.isObject())
+                ?: if (fieldSelfType is ClassType && fieldSelfType.clazz.isObject())
                     field.selfType else null
 
             var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
-            var fieldSelfType = field.selfType // todo we should clear these garbage types before type resolution
             if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassType()) {
                 LOGGER.info("Field '$field' had invalid selfType: $fieldSelfType")
                 fieldSelfType = null

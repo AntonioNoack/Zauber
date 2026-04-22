@@ -100,7 +100,8 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         }
 
         val matchScore = MatchScore(method.valueParameters.size + 2)
-        return if (method.selfType == null) {
+        val methodSelfType = method.selfType?.resolvedName
+        return if (methodSelfType == null) {
 
             val actualTypeParameters = mergeCallPart(method.typeParameters, typeParameters, origin)
             if (LOGGER.isInfoEnabled) LOGGER.info("Merged ${method.typeParameters} with $typeParameters into $actualTypeParameters")
@@ -129,13 +130,13 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolving generics for $method")
             // println("Resolving generics for $method")
             val generics = findGenericsForMatch(
-                method.selfType.resolvedName, selfType,
+                methodSelfType, selfType,
                 methodReturnType, returnType,
                 methodSelfParams + method.typeParameters, actualTypeParams,
                 method.valueParameters, actualValueParameters, matchScore
             ) ?: return null
 
-            val selfType1 = selfType ?: method.selfType.resolvedName
+            val selfType1 = selfType ?: methodSelfType
             val context = ResolutionContext(selfType1, false, returnType, emptyMap())
             // println("selfType: $selfType1, generics: $generics for $method")
             ResolvedMethod(

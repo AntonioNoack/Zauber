@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.expansion.DefaultParameters
+import me.anno.zauber.expansion.EarlyTypeResolution
 import me.anno.zauber.expansion.MethodOverrides
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
@@ -91,13 +92,14 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun addInitPart(scopeInit: ScopeInit) {
-        check(scopeInit.type >= sit) { "Cannot add ${scopeInit.type} to '$pathStr', when $sit was already queried" }
         // println("Adding ${scopeInit.type} to '$pathStr'")
+        check(scopeInit.type >= sit) { "Cannot add ${scopeInit.type} to '$pathStr', when $sit was already queried" }
         initParts.add(scopeInit)
         initParts.sort()
     }
 
     init {
+        addInitPart(EarlyTypeResolution.typeResolutionCreator)
         addInitPart(DefaultParameters.defaultParameterCreator)
         addInitPart(MethodOverrides.methodOverrideCreator)
     }

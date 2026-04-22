@@ -19,10 +19,9 @@ class Constructor(
     Types.Unit, scope, "?", body, keywords, origin
 ) {
 
-    override val selfType: ClassType
-        get() = super.selfType as ClassType
+    val selfTypeI get() = selfType as ClassType
 
     override fun toString(): String {
-        return "new ${selfType.clazz.pathStr}($valueParameters) { ... }"
+        return "new ${selfTypeI.clazz.pathStr}($valueParameters) { ... }"
     }
 }

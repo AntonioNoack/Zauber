@@ -2,16 +2,21 @@ package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Import
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.NonObjectClassType
 
 /**
  * Generates a lambda from the base, effectively being a::b -> { a.b(allParamsNeeded) }
@@ -23,6 +28,10 @@ class GetMethodFromValueExpression(
     origin: Int
 ) : Expression(self.scope, origin) {
 
+    companion object {
+        private val LOGGER = LogManager.getLogger(GetMethodFromValueExpression::class)
+    }
+
     override fun toStringImpl(depth: Int): String {
         return "${self.toString(depth)}::$name"
     }
@@ -33,7 +42,8 @@ class GetMethodFromValueExpression(
             return targetType
         }
 
-        TODO("ResolveReturnType($this, $context)")
+        // quick and dirty fallback:
+        return resolveImpl(context).resolveReturnType(context)
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {
@@ -48,6 +58,7 @@ class GetMethodFromValueExpression(
                         return resolveFromType(context, targetType, selfType)
                     } else {
                         val field = self.resolveField(context.withTargetType(null))
+                            ?: self.onMissingField()
                         TODO("ResolveImpl($this, $context, ${self.javaClass.simpleName}, field $field)")
                     }
                 }
@@ -57,7 +68,32 @@ class GetMethodFromValueExpression(
             }
         }
 
-        TODO("ResolveImpl($this, $context)")
+        // todo maybe we have luck, and there is only one candidate? if so, use that...
+        //  Object::method is ambiguous: is self part of the lambda-type?
+
+        // todo this itself is also ambiguous: Int::plus matches Int.(Int) -> Int and (Int,Int)->Int
+
+        val valueType = self.resolveReturnType(context)
+        if (valueType is NonObjectClassType) {
+            // todo check visibility... private methods may only be resolved from inside this class...
+            val methods = valueType.type.clazz[ScopeInitType.AFTER_OVERRIDES].methods0
+                .filter { it.name == name }
+            check(methods.isNotEmpty()) { "Failed to resolve $valueType::$name at ${resolveOrigin(origin)}" }
+            check(methods.size == 1) {
+                "Call to $valueType::$name is ambiguous, found multiple candidates: $methods, " +
+                        "at ${resolveOrigin(origin)}"
+            }
+            val method = methods.first()
+            val lambdaType = LambdaType(
+                valueType.type,
+                method.valueParameters.map { LambdaParameter(it.name, it.type) },
+                method.resolveReturnType(context)
+            )
+            LOGGER.info("Trying to resolve $this using $lambdaType")
+            return resolveFromType(context, lambdaType, valueType.type)
+        }
+
+        TODO("ResolveImpl($this, $context), tt: $targetType, vt: $valueType")
     }
 
     private fun resolveFromType(context: ResolutionContext, targetType: LambdaType, selfType: Type): Expression {

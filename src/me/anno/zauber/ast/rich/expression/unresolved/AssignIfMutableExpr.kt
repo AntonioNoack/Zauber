@@ -68,7 +68,7 @@ class AssignIfMutableExpr(
     private fun findField(expr: Expression, context: ResolutionContext): ResolvedField? {
         return when (expr) {
             is FieldExpression -> expr.resolveField(context)
-            is UnresolvedFieldExpression -> expr.resolveField(context)
+            is UnresolvedFieldExpression -> expr.resolveField(context) ?: expr.onMissingField()
             is ResolvedGetFieldExpression -> expr.field
             is DotExpression -> expr.resolveField(context)
             else -> throw NotImplementedError("Resolve field in ${expr.javaClass.simpleName}")

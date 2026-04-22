@@ -46,6 +46,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
             }
             is UnresolvedFieldExpression -> {
                 val field = dstExpr.resolveField(context)
+                    ?: dstExpr.onMissingField()
                 val owner = field.resolveOwnerWithoutLeftSide(origin)
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
@@ -58,6 +59,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
                 val owner = dstExpr.left.resolve(context)
                 val ownerType = owner.resolveReturnType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
+                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
                 check(field.resolved.isMutable || dstExpr.left.field.isMutableEx) {
                     "Expected ${dstExpr.left.field}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
                 }

@@ -4,5 +4,5 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedField
 
 interface FieldResolvable {
-    fun resolveField(context: ResolutionContext): ResolvedField
+    fun resolveField(context: ResolutionContext): ResolvedField?
 }
