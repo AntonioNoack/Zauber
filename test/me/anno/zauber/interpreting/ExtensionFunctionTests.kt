@@ -9,16 +9,17 @@ class ExtensionFunctionTests {
     fun testGetMethodField() {
         val code = """
             fun Int.calc(): Int {
-                val x = 2
-                return x
+                return this + 2
             }
-            val tested = 0.calc()
+            val tested = 1.calc()
             
             package zauber
-            class Int
+            class Int {
+                external fun plus(other: Int): Int
+            }
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(2, value.castToInt())
+        assertEquals(3, value.castToInt())
     }
 
     @Test

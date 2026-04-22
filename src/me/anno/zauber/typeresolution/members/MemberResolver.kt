@@ -274,7 +274,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             // todo we also somehow need to set 'this' into the resolved method...
             for (explicitThis in context.extensionThis) {
                 val scope = explicitThis.thisTypeToScope ?: langScope // is langScope correct as a fallback?
-                if (print) LOGGER.info("Checking[s] $scope with ${explicitThis.thisType}")
+                if (print) LOGGER.info("Checking[ext] $scope with ${explicitThis.thisType}")
                 val result = callback(scope, explicitThis.thisType)
                 if (result != null) return result
             }
@@ -286,7 +286,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         if (print) LOGGER.info("Scopes/selfTypes: $scopes")
 
         val selfType0 = scopes.firstBOrNull() ?: Types.Unit
-        val selfTypeZ = context.selfType ?: selfType0
+        val selfTypeZ = contextSelfType ?: selfType0
         var handledLangScope = false
 
         // selfType goes over all scopes below it...
@@ -298,7 +298,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             for (typeIndex in 0..scopeIndex) {
                 val type = scopes.getB(typeIndex)
                 if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue // already done
-                val selfType = context.selfType ?: type ?: selfType0
+                val selfType = contextSelfType ?: type ?: selfType0
                 if (print) LOGGER.info("Checking[i] $scope with $type -> $selfType")
                 if (scope == langScope && selfType == selfTypeZ) handledLangScope = true
                 val result = callback(scope, selfType)

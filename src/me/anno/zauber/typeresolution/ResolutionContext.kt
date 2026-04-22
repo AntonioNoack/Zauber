@@ -57,7 +57,7 @@ data class ResolutionContext(
 
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
-        return ResolutionContext(newSelfType, specialization, allowTypeless, targetType, knownLambdas, extensionThis)
+        return ResolutionContext(newSelfType?.specialize(specialization), specialization, allowTypeless, targetType, knownLambdas, extensionThis)
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
@@ -72,7 +72,7 @@ data class ResolutionContext(
 
     fun withSpec(specialization: Specialization): ResolutionContext {
         if (this.specialization == specialization) return this
-        return ResolutionContext(selfType, specialization, allowTypeless, targetType, knownLambdas, extensionThis)
+        return ResolutionContext(selfType?.specialize(specialization), specialization, allowTypeless, targetType, knownLambdas, extensionThis)
     }
 
     fun withExtensionThis(extensionThis: ExtensionThis): ResolutionContext {

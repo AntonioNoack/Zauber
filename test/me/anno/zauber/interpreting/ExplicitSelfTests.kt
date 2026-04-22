@@ -50,6 +50,12 @@ class ExplicitSelfTests {
             fun <S, R> S.run(runnable: S.() -> R): R {
                 return runnable()
             }
+            fun interface Function0<R> {
+                fun call(): R
+            }
+            fun interface Function1<P0, R> {
+                fun call(p0: P0): R
+            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(2, value.castToInt())

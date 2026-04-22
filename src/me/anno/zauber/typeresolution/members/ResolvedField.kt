@@ -193,16 +193,15 @@ class ResolvedField(
     fun resolveCalledMethod(typeParameters: List<Type>?, valueParameters: List<ValueParameter>): ResolvedMethod {
         val baseType = getValueType()
         if (baseType is LambdaType) {
-            // check for self-type: it's another argument...
-            val numArguments = (if (baseType.selfType != null) 1 else 0) + baseType.parameters.size
+            val numArguments = baseType.parameters.size
             val className = getLambdaTypeName(numArguments)
             val genericNames = String(CharArray(numArguments + 1) { 'A' + it })
 
             val nat = Types.NullableAny
             val lambdaClassScope = getScope(className, genericNames, nat)
 
-            val method = lambdaClassScope.getMethods(ScopeInitType.AFTER_OVERRIDES)
-                .firstOrNull { it.name == "call" }
+            val method = lambdaClassScope.getMethods(ScopeInitType.AFTER_DISCOVERY)
+                .firstOrNull { it.name == "call" && it.typeParameters.isEmpty() && it.valueParameters.size == numArguments }
                 ?: throw IllegalStateException("Fun-Interface $className is missing .call() method")
 
             val scopeSelfType = lambdaClassScope.typeWithoutArgs // without args is correct!!!
@@ -222,7 +221,7 @@ class ResolvedField(
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, codeScope, resolved.origin
-            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda")
+            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $className (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
