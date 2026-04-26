@@ -19,7 +19,7 @@ import me.anno.zauber.types.Type
 class FieldExpression(
     val field: Field,
     scope: Scope, origin: Int
-) : Expression(scope, origin) {
+) : Expression(scope, origin), FieldResolvable {
 
     companion object {
         private val LOGGER = LogManager.getLogger(FieldExpression::class)
@@ -31,7 +31,7 @@ class FieldExpression(
     override fun isResolved(): Boolean = false // base is missing
     override fun needsBackingField(methodScope: Scope): Boolean = field.isBackingField(methodScope)
 
-    fun resolveField(context: ResolutionContext): ResolvedField {
+    override fun resolveField(context: ResolutionContext): ResolvedField {
         if (LOGGER.isInfoEnabled) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
         val scopeSelfType = TypeResolution.getSelfType(scope)
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
