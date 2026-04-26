@@ -1,8 +1,8 @@
 package me.anno.zauber.typeresolution.members
 
+import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -72,9 +72,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             bestMatch = joinMatches(bestMatch, match)
         }
 
-        for (child in scope[ScopeInitType.RESOLVE_TYPES].children) {
-            if (child.name != name) continue
-            val field = child[ScopeInitType.RESOLVE_TYPES].objectField ?: continue
+        for (child in scope[ScopeInitType.AFTER_DISCOVERY].children) {
+            if (child.name != name || !child.isObjectLike()) continue
+
+            child[ScopeInitType.AFTER_DISCOVERY]
+
+            val field = child.getOrCreateObjectField(-1)
             val valueType = getFieldReturnType(scopeSelfType, field, returnType)
             val match = findMemberMatch(
                 field, valueType,
@@ -207,6 +210,8 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             context, codeScope,
             name, nameAsImport,
             typeParameters, origin
+        ) ?: resolveFieldByPackages(
+            context, name, origin
         )
     }
 
@@ -242,6 +247,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             }
         }
         return null
+    }
+
+    fun resolveFieldByPackages(context: ResolutionContext, name: String, origin: Int): ResolvedField? {
+        if (context.selfType != null) return null
+        val root = root[ScopeInitType.AFTER_DISCOVERY]
+        return findMemberInScope(root, origin, name, null, emptyList(), context)
     }
 
     fun resolveField(

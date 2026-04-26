@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
@@ -83,7 +83,7 @@ class CallExpression(
 
                 if (baseScope.scopeType == ScopeType.INNER_CLASS) {
                     val selfType = baseScope.parent!!.typeWithArgs.specialize(context)
-                    val selfParam = ValueParameterImpl(OUTER_NAME, selfType, false)
+                    val selfParam = ValueParameterImpl(OUTER_FIELD_NAME, selfType, false)
                     valueParameters = listOf(selfParam) + valueParameters
                 }
 

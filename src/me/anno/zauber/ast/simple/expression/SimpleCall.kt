@@ -80,12 +80,6 @@ class SimpleCall(
         }
     }
 
-    init {
-        if (methodName == "getSize" && methods is FullMap<*, *>) {
-            throw IllegalStateException("Testing: methods should not be a fullmap")
-        }
-    }
-
     constructor(
         dst: SimpleField,
         method: MethodLike,

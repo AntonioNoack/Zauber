@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.generation.c.CSourceGenerator.isValueType
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
@@ -132,8 +132,6 @@ class SimpleNode(val graph: SimpleGraph) {
                 val ownerScope = graph.method.ownerScope
                 if (ownerScope.inheritsFrom(thisScope)) {
                     return thisField(type, ownerScope, scope, origin, contextExpr)
-                } else {
-                    println("$thisScope !is $ownerScope")
                 }
 
                 if (ownerScope.isInnerClassOf(thisScope)) {
@@ -141,7 +139,7 @@ class SimpleNode(val graph: SimpleGraph) {
                     var currScope = ownerScope
                     while (currScope != thisScope) {
                         val dst = field(currScope.typeWithArgs) // todo specialize
-                        val field1 = currScope.fields.first { it.name == OUTER_NAME }
+                        val field1 = currScope.fields.first { it.name == OUTER_FIELD_NAME }
                         add(SimpleGetField(dst, currField, field1, scope, origin))
                         currField = dst
                         currScope = currScope.parent!!

@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
@@ -89,7 +89,7 @@ class NamedCallExpression(
             }
             println("Inner class for $baseType: $innerClass")
             if (innerClass != null) {
-                val selfValueParameter = ValueParameterImpl(OUTER_NAME, baseType, false)
+                val selfValueParameter = ValueParameterImpl(OUTER_FIELD_NAME, baseType, false)
                 ConstructorResolver.findMemberInScopeImpl(
                     innerClass, name, typeParameters,
                     listOf(selfValueParameter) + valueParameters, context

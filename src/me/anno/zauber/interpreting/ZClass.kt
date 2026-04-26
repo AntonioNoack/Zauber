@@ -1,6 +1,6 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -35,12 +35,14 @@ class ZClass(val type: Type) {
             if (type.clazz.isConstructor() && type.clazz.parent!!.scopeType == ScopeType.INNER_CLASS) {
                 // move __outer__ to the front
                 // todo ideally, it would be sorted inside the scope already...
-                return fields.sortedByDescending { it.name == OUTER_NAME }
+                return fields.sortedByDescending { it.name == OUTER_FIELD_NAME }
             }
             return fields
         }
 
         fun Field.needsBackingFieldImpl(type0: Type): Boolean {
+            if (isObjectInstance()) return false
+
             val type = scope.typeWithoutArgs
             // LOGGER.info("[$type0] $this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
             return (!explicitSelfType || selfType == type) &&
@@ -55,6 +57,7 @@ class ZClass(val type: Type) {
     // todo bug: this is currently used inside methods,
     //  so if a recursive function called itself,
     //  we would have only one instance
+
     fun getOrCreateObjectInstance(): Instance {
         var objectInstance = objectInstance
         if (objectInstance != null) return objectInstance

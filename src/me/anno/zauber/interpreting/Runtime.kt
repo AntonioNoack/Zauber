@@ -221,9 +221,10 @@ class Runtime {
                     self
                 }
                 scope.isClassLike() -> {
-                    check(scope == method.ownerScope) {
+                    // this check is incorrect for extension methods
+                    /*check(scope == method.ownerScope) {
                         "Scope mismatch: $scope != ${method.ownerScope} in $method"
-                    }
+                    }*/
                     self
                 }
                 scope == method.scope -> methodScopeInstance

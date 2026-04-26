@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
@@ -193,11 +193,21 @@ object ASTSimplifier {
             is CheckEqualsOp -> return simplifyCheckEqualsOp(context, expr, block0, flow0)
             is LazyExpression -> return simplifyImpl(context, expr.value, block0, flow0, needsValue)
 
+            is BreakExpression -> return simplifyJump(expr, flow0, block0.graph.breakLabels[expr.label])
+            is ContinueExpression -> return simplifyJump(expr, flow0, block0.graph.continueLabels[expr.label])
+
             else -> {
                 if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")
                 throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
             }
         }
+    }
+
+    private fun simplifyJump(expr: Expression, flow0: FlowResult, target: SimpleNode?): FlowResult {
+        val block0 = flow0.value ?: return flow0
+        check(target != null) { "Failed to resolve jump target to $expr" }
+        block0.block.nextBranch = target
+        return flow0.withoutValue() // our flow ends here, nothing can come after
     }
 
     private fun simplifyList(
@@ -295,6 +305,13 @@ object ASTSimplifier {
         flow0: FlowResult
     ): FlowResult {
         val field = expr.field.resolved
+        if (field.isObjectInstance()) {
+            val dst = block0.field(field.ownerScope.typeWithArgs)
+            val value = SimpleGetObject(dst, field.ownerScope, expr.scope, expr.origin)
+            block0.add(value)
+            return flow0.withValue(dst)
+        }
+
         val valueType = expr.resolveReturnType(context)
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true, expr)
@@ -342,8 +359,8 @@ object ASTSimplifier {
             // add extra getters for inner classes
             if (self.type is ClassType && self.type.clazz.isInnerClassOf(field.ownerScope)) {
                 val clazz = self.type.clazz
-                val outerField = clazz.fields.firstOrNull { it.name == OUTER_NAME }
-                    ?: throw IllegalStateException("Missing $OUTER_NAME field in $clazz for $field")
+                val outerField = clazz.fields.firstOrNull { it.name == OUTER_FIELD_NAME }
+                    ?: throw IllegalStateException("Missing $OUTER_FIELD_NAME field in $clazz for $field")
                 val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
                 println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
                 block1v.block.add(SimpleGetField(selfDst, self.use(), outerField, expr.scope, expr.origin))
@@ -634,19 +651,14 @@ object ASTSimplifier {
         flow0: FlowResult,
     ): FlowResult {
 
-        val label = expr.label
         val graph = block0.graph
         val conditionBlock = block0.nextOrSelfIfEmpty()
         val bodyBlock = graph.addNode()
         val afterBlock = graph.addNode()
 
-        graph.breakLabels[null] = afterBlock
-        graph.continueLabels[null] = conditionBlock
-
-        if (label != null) {
-            graph.breakLabels[label] = afterBlock
-            graph.continueLabels[label] = conditionBlock
-        }
+        val labelScope = expr.body.scope
+        graph.breakLabels[labelScope] = afterBlock
+        graph.continueLabels[labelScope] = conditionBlock
 
         val unit = unitInstance(graph, expr)
         val beforeFlow0 = flow0.withValue(unit, conditionBlock)
@@ -675,19 +687,14 @@ object ASTSimplifier {
         flow0: FlowResult,
     ): FlowResult {
 
-        val label = expr.label
         val graph = block0.graph
         val bodyBlock = block0.nextOrSelfIfEmpty()
         val conditionBlock = graph.addNode()
         val afterBlock = graph.addNode()
 
-        graph.breakLabels[null] = afterBlock
-        graph.continueLabels[null] = conditionBlock
-
-        if (label != null) {
-            graph.breakLabels[label] = afterBlock
-            graph.continueLabels[label] = conditionBlock
-        }
+        val labelScope = expr.body.scope
+        graph.breakLabels[labelScope] = afterBlock
+        graph.continueLabels[labelScope] = conditionBlock
 
         val unit = unitInstance(graph, expr)
         val insideFlow0 = flow0.withValue(unit, bodyBlock)

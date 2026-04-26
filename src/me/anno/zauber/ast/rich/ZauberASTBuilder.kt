@@ -364,7 +364,7 @@ class ZauberASTBuilder(
 
             val scopeName = currPackage.generateName("body", origin(i))
             pushBlock(ScopeType.METHOD_BODY, scopeName) { scope ->
-                scope.breakLabel = label
+                scope.jumpLabel = label
                 readMethodBody()
             }
         } else {
@@ -376,17 +376,25 @@ class ZauberASTBuilder(
         val origin = origin(i)
         val scopeName = currPackage.generateName("expr", origin)
         return pushScope(scopeName, ScopeType.METHOD_BODY) { scope ->
-            scope.breakLabel = label
-            readExpression()
+            scope.jumpLabel = label
+            if (consumeIf(";")) unitInstance
+            else readExpression()
         }
     }
 
     private fun readPrefix(): Expression {
 
         val origin = origin(i)
-        val label =
-            if (tokens.equals(i, TokenType.LABEL)) tokens.toString(i++)
-            else null
+
+        val label = if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
+            tokens.equals(i + 1, "@") &&
+            tokens.equals(i + 2, "while", "do", "for") &&
+            !tokens.equals(i, "this", "super", "break", "continue", "return")
+        ) {
+            val name = consumeName(VSCodeType.LABEL, 0)
+            consume("@")
+            name
+        } else null
 
         return when {
             consumeIf("@", VSCodeType.DECORATOR, 0) -> {
@@ -396,8 +404,8 @@ class ZauberASTBuilder(
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
-            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), false, currPackage, origin)
-            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
+            consumeIf("super") -> SuperExpression(resolveSuperLabel(readLabelMaybe()), false, currPackage, origin)
+            consumeIf("this") -> ThisExpression(resolveThisLabel(readLabelMaybe()), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.unescapeString(i++), currPackage, origin)
             consumeIf("!") -> {
@@ -453,17 +461,19 @@ class ZauberASTBuilder(
             consumeIf("async", VSCodeType.KEYWORD, 0) -> {
                 AsyncExpression(readExpression(), currPackage, origin)
             }
-            consumeIf("break") -> BreakExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
-            consumeIf("continue") -> ContinueExpression(resolveBreakLabel(label), currPackage, origin(i - 1))
+            consumeIf("break") -> BreakExpression(resolveJumpLabel(readLabelMaybe()), currPackage, origin)
+            consumeIf("continue") -> ContinueExpression(resolveJumpLabel(readLabelMaybe()), currPackage, origin)
 
             tokens.equals(i, "object") &&
                     (tokens.equals(i + 1, ":") || tokens.equals(i + 1, TokenType.OPEN_BLOCK)) -> {
                 readInlineClass()
             }
 
-            tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
+            tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) && !tokens.equals(i + 1, "@") -> {
                 val vsCodeType = if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK))
                     VSCodeType.METHOD else VSCodeType.VARIABLE
+
+                println("name: ${tokens.err(i)}")
 
                 val namePath = consumeName(vsCodeType, 0)
                 val typeParameters = readTypeParameters(null)
@@ -1078,6 +1088,7 @@ class ZauberASTBuilder(
                 splitIntoSubScope(oldNumFields, result)
             }
         }
+
         val code = ExpressionList(result, methodScope, origin)
         // methodScope.code.add(code)
         currPackage = methodScope // restore scope

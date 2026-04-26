@@ -5,7 +5,6 @@ import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
@@ -170,7 +169,7 @@ class DotExpression(
                         it.scopeType == ScopeType.INNER_CLASS && it.name == base.name
                     }
                     if (innerClass != null) {
-                        val valueParam0 = listOf(ValueParameterImpl(SpecialFieldNames.OUTER_NAME, baseTypeI, false))
+                        val valueParam0 = listOf(ValueParameterImpl(SpecialFieldNames.OUTER_FIELD_NAME, baseTypeI, false))
                         ConstructorResolver.findMemberInScopeImpl(
                             innerClass, base.name,
                             typeParameters, valueParam0 + valueParameters, context1
@@ -239,7 +238,7 @@ class DotExpression(
                         callable.resolved.scope.parent!!.scopeType == ScopeType.INNER_CLASS
                 val valueParameters =
                     if (isConstrForInnerClass) {
-                        val outer = NamedParameter(SpecialFieldNames.OUTER_NAME, base)
+                        val outer = NamedParameter(SpecialFieldNames.OUTER_FIELD_NAME, base)
                         listOf(outer) + right.valueParameters
                     } else right.valueParameters
                 val valueParametersI = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)

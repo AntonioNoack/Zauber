@@ -1,5 +1,6 @@
 package me.anno.zauber.expansion
 
+import me.anno.generation.Specializations
 import me.anno.support.jvm.expression.JVMSimpleCall
 import me.anno.support.jvm.expression.JVMSimpleExpr
 import me.anno.utils.RecursiveException
@@ -10,7 +11,6 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
-import me.anno.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
@@ -62,7 +62,7 @@ abstract class MethodColoring<Color : Any> {
                     is ThisExpression, is SuperExpression, is NumberExpression, is StringExpression,
                     is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock,
                     is GetClassFromTypeExpression, is GetClassFromValueExpression,
-                    is IsInstanceOfExpr,
+                    is BreakExpression, is ContinueExpression, is IsInstanceOfExpr,
                     is CheckEqualsOp, is SpecialValueExpression, is LazyExpression -> {
                         // no direct call
                     }

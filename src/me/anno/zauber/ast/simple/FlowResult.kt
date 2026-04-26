@@ -50,6 +50,10 @@ data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) 
         return withValue(newValue, value.block)
     }
 
+    fun withoutValue(): FlowResult {
+        return FlowResult(null, returned, thrown)
+    }
+
     fun thrownToValue() = FlowResult(thrown, null, null)
     fun returnToValue() = FlowResult(returned, null, null)
     fun valueToReturn(returned: Flow): FlowResult {

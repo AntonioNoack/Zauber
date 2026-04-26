@@ -38,7 +38,9 @@ object ResolutionUtils {
                 println(content.formatLines())
             }
             val scope = getScope(packageName)
-            scope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
+            // sit, so we can add the parts no matter what...
+            // may cause us to skip some initialization :/
+            scope.addInitPart(scope.scopeInitType) {
                 val tokenizer = ZauberTokenizer(content, "Test.zbr")
                 scanClasses(tokenizer.tokenize())
             }

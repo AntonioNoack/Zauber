@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.scope.Scope
@@ -50,8 +51,9 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
                 val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
-            is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldExpression -> {
+            is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldResolvable -> {
                 val field = dstExpr.right.resolveField(context)
+                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
                 val owner = dstExpr.left
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
@@ -62,6 +64,16 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
                     ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
                 check(field.resolved.isMutable || dstExpr.left.field.isMutableEx) {
                     "Expected ${dstExpr.left.field}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
+                }
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
+            }
+            is DotExpression if dstExpr.left is TypeExpression && dstExpr.right is FieldResolvable -> {
+                val owner = dstExpr.left.resolve(context)
+                val ownerType = owner.resolveReturnType(context)
+                val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
+                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                check(field.resolved.isMutable) {
+                    "Expected ${dstExpr.left}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
                 }
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }

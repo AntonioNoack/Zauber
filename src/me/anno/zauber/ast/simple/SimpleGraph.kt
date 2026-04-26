@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.SimpleNode.Companion.getOwnership
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 class SimpleGraph(val method: MethodLike) {
@@ -17,8 +18,8 @@ class SimpleGraph(val method: MethodLike) {
 
     val capturedFields = HashMap<Capture, SimpleField>()
 
-    val continueLabels = HashMap<String?, SimpleNode>()
-    val breakLabels = HashMap<String?, SimpleNode>()
+    val continueLabels = HashMap<Scope, SimpleNode>()
+    val breakLabels = HashMap<Scope, SimpleNode>()
 
     var unitField: SimpleField? = null
 

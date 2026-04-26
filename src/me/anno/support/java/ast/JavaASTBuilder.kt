@@ -411,7 +411,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             pushBlock(ScopeType.METHOD_BODY, scopeName) { scope ->
                 if (label != null) {
                     // println("registering label $label onto ${scope.pathStr}")
-                    scope.breakLabel = label
+                    scope.jumpLabel = label
                 }
                 readMethodBody()
             }
@@ -422,7 +422,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         val origin = origin(i)
         val scopeName = currPackage.generateName("expr", origin)
         return pushScope(scopeName, ScopeType.METHOD_BODY) { scope ->
-            scope.breakLabel = label
+            scope.jumpLabel = label
             readExpression()
         }
     }
@@ -446,14 +446,14 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
-            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), false, currPackage, origin)
-            consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
+            consumeIf("super") -> SuperExpression(resolveSuperLabel(readLabelMaybe()), false, currPackage, origin)
+            consumeIf("this") -> ThisExpression(resolveThisLabel(readLabelMaybe()), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
             consumeIf("return") -> readReturn(null)
             consumeIf("throw") -> ThrowExpression(readExpression(), currPackage, origin)
-            consumeIf("break") -> BreakExpression(readBreakLabel(), currPackage, origin)
-            consumeIf("continue") -> ContinueExpression(readBreakLabel(), currPackage, origin)
+            consumeIf("break") -> BreakExpression(readJumpLabel(), currPackage, origin)
+            consumeIf("continue") -> ContinueExpression(readJumpLabel(), currPackage, origin)
             consumeIf("switch") -> readSwitch(label)
             consumeIf("if") -> readIfBranch()
             consumeIf("for") -> readForLoop(label)
@@ -462,7 +462,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             consumeIf("yield") -> {
                 // return from a switch...
                 val value = readExpression()
-                val label = resolveBreakLabel(null).name
+                val label = resolveJumpLabel(null).name
                 ReturnExpression(value, label, currPackage, origin)
             }
             consumeIf("!") -> {
@@ -973,8 +973,8 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         }
     }
 
-    private fun readBreakLabel(): Scope {
-        return resolveBreakLabel(readBreakLabelName())
+    private fun readJumpLabel(): Scope {
+        return resolveJumpLabel(readBreakLabelName())
     }
 
     private fun readBreakLabelName(): String? {
@@ -1030,12 +1030,12 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
                 consumeIf("synchronized") -> result += readSynchronized()
                 consumeIf("break") -> {
                     val origin = origin(i - 1)
-                    result += BreakExpression(readBreakLabel(), currPackage, origin)
+                    result += BreakExpression(readJumpLabel(), currPackage, origin)
                     consume(";")
                 }
                 consumeIf("continue") -> {
                     val origin = origin(i - 1)
-                    result += ContinueExpression(readBreakLabel(), currPackage, origin)
+                    result += ContinueExpression(readJumpLabel(), currPackage, origin)
                     consume(";")
                 }
                 consumeIf("return") -> {

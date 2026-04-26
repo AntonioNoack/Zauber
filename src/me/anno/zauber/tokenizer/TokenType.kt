@@ -6,7 +6,6 @@ enum class TokenType {
     STRING,
     NUMBER, // starts with 0-9.; a char is a special number
     SYMBOL, // anything like +-*/=&%$§
-    LABEL,
 
     KEYWORD,
 

@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -157,6 +158,11 @@ class Field(
         val isOpenField = flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
         val isOpenClass = ownerScope.isOpen()
         return isOpenField && isOpenClass
+    }
+
+    fun isObjectInstance(): Boolean {
+        return name == OBJECT_FIELD_NAME &&
+                ownerScope.objectField === this
     }
 
 }

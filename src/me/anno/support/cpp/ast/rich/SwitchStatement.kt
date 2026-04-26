@@ -46,7 +46,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
     }
 
     val bodyScope = pushBlock(ScopeType.WHEN_CASES, scopeName) { scope ->
-        scope.breakLabel = label ?: ""
+        scope.jumpLabel = label ?: ""
 
         val noPrevBranch = scope.addField(
             null, false, isMutable = true, null,

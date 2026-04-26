@@ -152,14 +152,14 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
     val shouldBeResolvable = emptyList<Import>()
 
-    fun resolveBreakLabel(label: String?): Scope {
+    fun resolveJumpLabel(label: String?): Scope {
         var scope = currPackage
         if (label == null) {
             while (true) {
-                if (scope.breakLabel != null) return scope
+                if (scope.jumpLabel != null) return scope
                 scope = scope.parentIfSameFile
                     ?: throw IllegalStateException(
-                        "Could not resolve break-label@$label " +
+                        "Could not resolve jump label $label@ " +
                                 "in $currPackage " +
                                 "at ${tokens.err(i)}, " +
                                 "exit at ${scope.pathStr}"
@@ -167,10 +167,10 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
             }
         } else {
             while (true) {
-                if (scope.breakLabel == label) return scope
+                if (scope.jumpLabel == label) return scope
                 scope = scope.parentIfSameFile
                     ?: throw IllegalStateException(
-                        "Could not resolve break-label@$label " +
+                        "Could not resolve jump label $label@ " +
                                 "in $currPackage " +
                                 "at ${tokens.err(i)}, " +
                                 "exit at ${scope.pathStr}"

@@ -13,7 +13,7 @@ import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
 import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
@@ -77,6 +77,13 @@ abstract class ZauberASTBuilderBase(
         if (consumeIf("@")) {
             annotations.add(readAnnotation())
         }
+    }
+
+    fun readLabelMaybe(): String? {
+        println("Reading label at maybe ${tokens.err(i)}")
+        return if (consumeIf("@")) {
+            consumeName(VSCodeType.TYPE, 0)
+        } else null
     }
 
     fun readClassBody(name: String, keywords: FlagSet, scopeType: ScopeType): Scope {
@@ -803,7 +810,7 @@ abstract class ZauberASTBuilderBase(
             ScopeType.INNER_CLASS -> {
                 // inner classes store a reference to their outer class
                 val outerType = classScope.parent!!.typeWithArgs
-                listOf(Parameter(0, OUTER_NAME, outerType, constructorScope, constructorOrigin))
+                listOf(Parameter(0, OUTER_FIELD_NAME, outerType, constructorScope, constructorOrigin))
             }
             else -> emptyList()
         }

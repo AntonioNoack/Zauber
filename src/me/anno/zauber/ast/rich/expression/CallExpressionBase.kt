@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.SpecialFieldNames.OUTER_NAME
+import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
@@ -233,6 +233,9 @@ abstract class CallExpressionBase(
                     ) {
                         self.resolve(context)
                     } else null // else base was consumed to be the method
+
+                    println("Resolved $self (${self.javaClass.simpleName}) to $base")
+
                     // println("base for call: $method, base: $base, this.base: ${this.base}")
                     val targetParams = method.valueParameters
                     val paramContext = context.withSpec(context.specialization + callable.specialization)
@@ -255,7 +258,7 @@ abstract class CallExpressionBase(
                 val createdType = callable.resolved.selfTypeI
                 if (createdType.clazz.scopeType == ScopeType.INNER_CLASS) {
                     // println("self for constructor: $self for ${callable.resolved}")
-                    val outerSelfParam = NamedParameter(OUTER_NAME, self)
+                    val outerSelfParam = NamedParameter(OUTER_FIELD_NAME, self)
                     valueParams = listOf(outerSelfParam) + valueParams
                 }
 

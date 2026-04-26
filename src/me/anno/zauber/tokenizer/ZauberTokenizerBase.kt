@@ -29,21 +29,17 @@ abstract class ZauberTokenizerBase(
                     val start = i
                     i++
                     while (i < n && (src[i].isLetterOrDigit() || src[i] in nameLetters)) i++
-                    if (i < n && src[i] == '@') {
-                        tokens.add(TokenType.LABEL, start, i)
-                        i++
+
+                    // hack for non-sealed
+                    if (hasNonSealedKeyword && i - start == 3 &&
+                        src.startsWith("non-sealed", start) &&
+                        (start + "non-sealed".length < src.length ||
+                                src[start + "non-sealed".length].isWhitespace())
+                    ) {
+                        i = start + "non-sealed".length
+                        tokens.add(TokenType.KEYWORD, start, i)
                     } else {
-                        // hack for non-sealed
-                        if (hasNonSealedKeyword && i - start == 3 &&
-                            src.startsWith("non-sealed", start) &&
-                            (start + "non-sealed".length < src.length ||
-                                    src[start + "non-sealed".length].isWhitespace())
-                        ) {
-                            i = start + "non-sealed".length
-                            tokens.add(TokenType.KEYWORD, start, i)
-                        } else {
-                            tokens.add(TokenType.NAME, start, i)
-                        }
+                        tokens.add(TokenType.NAME, start, i)
                     }
                 }
 

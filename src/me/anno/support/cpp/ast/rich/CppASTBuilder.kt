@@ -426,11 +426,11 @@ class CppASTBuilder(
             consumeIf("while") -> readWhile(label)
             consumeIf("switch") -> readSwitch(label)
             consumeIf("continue") -> {
-                val label = resolveBreakLabel(readLabel())
+                val label = resolveJumpLabel(readLabel())
                 ContinueExpression(label, currPackage, origin)
             }
             consumeIf("break") -> {
-                val label = resolveBreakLabel(readLabel())
+                val label = resolveJumpLabel(readLabel())
                 BreakExpression(label, currPackage, origin)
             }
 

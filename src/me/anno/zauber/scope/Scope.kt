@@ -1,7 +1,7 @@
 package me.anno.zauber.scope
 
 import me.anno.zauber.Compile.STDLIB_NAME
-import me.anno.zauber.SpecialFieldNames.OBJECT_NAME
+import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
@@ -86,7 +86,8 @@ class Scope(val name: String, val parent: Scope? = null) {
             .map { it[ScopeInitType.AFTER_DISCOVERY] }
 
     private val initParts = ArrayList<ScopeInit>(4)
-    private var sit = ScopeInitType.entries.first()
+    var scopeInitType = ScopeInitType.entries.first()
+        private set
 
     fun addInitPart(scopeInitType: ScopeInitType, runnable: (Scope) -> Unit) {
         addInitPart(ScopeInit(scopeInitType, runnable))
@@ -94,7 +95,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun addInitPart(scopeInit: ScopeInit) {
         // println("Adding ${scopeInit.type} to '$pathStr'")
-        check(scopeInit.type >= sit) { "Cannot add ${scopeInit.type} to '$pathStr', when $sit was already queried" }
+        check(scopeInit.type >= scopeInitType) { "Cannot add ${scopeInit.type} to '$pathStr', when $scopeInitType was already queried" }
         initParts.add(scopeInit)
         initParts.sort()
     }
@@ -110,8 +111,8 @@ class Scope(val name: String, val parent: Scope? = null) {
 
         parent?.get(scopeInitType)
 
-        if (scopeInitType > sit) {
-            sit = scopeInitType
+        if (scopeInitType > this@Scope.scopeInitType) {
+            this@Scope.scopeInitType = scopeInitType
         }
 
         while (initParts.isNotEmpty() && initParts.last().type < scopeInitType) {
@@ -152,7 +153,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         }
 
     // todo register this where appropriate
-    var breakLabel: String? = null
+    var jumpLabel: String? = null
 
     var typeParameters: List<Parameter> = emptyList()
         set(value) {
@@ -193,9 +194,9 @@ class Scope(val name: String, val parent: Scope? = null) {
     var objectField: Field? = null
 
     fun getOrCreateObjectField(origin: Int): Field {
-        check(isObjectLike())
+        check(isObjectLike()) { "Expected $this to be object-like, got $scopeType" }
         if (objectField == null) objectField = addField(
-            null, false, isMutable = false, null, OBJECT_NAME,
+            null, false, isMutable = false, null, OBJECT_FIELD_NAME,
             ClassType(this, emptyList(), origin, true),
             /* todo should we set initialValue? */ null, Flags.NONE, origin
         )
