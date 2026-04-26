@@ -25,6 +25,7 @@ class GetterSetterTests {
             val tested get() = x * x
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
@@ -49,6 +50,7 @@ class GetterSetterTests {
             }
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
@@ -72,6 +74,7 @@ class GetterSetterTests {
             }
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int

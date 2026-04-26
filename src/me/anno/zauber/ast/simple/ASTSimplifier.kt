@@ -324,8 +324,6 @@ object ASTSimplifier {
                             !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
         }
 
-        // println("use getter for $field: $useGetter")
-
         val selfMethod = getMethod(self.type)
         val valueMethod = block0.graph.method
 

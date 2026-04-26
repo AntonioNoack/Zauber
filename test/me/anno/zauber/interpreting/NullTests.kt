@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertContains
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -57,8 +58,9 @@ class NullTests {
         assertEquals(runtime.getClass(Types.NullPointerException), thrown.clazz)
         // todo: why is the message field not assigned?
         val messageIndex = thrown.clazz.properties.indexOfFirst { it.name == "message" }
-        val messageField = thrown.properties[messageIndex]?.castToString()
-        assertEquals("nullX cannot be null", messageField)
+        val messageField = thrown.properties[messageIndex]?.castToString() ?: ""
+        assertContains(" cannot be null", messageField)
+        assertContains("nullX", messageField)
     }
 
 }

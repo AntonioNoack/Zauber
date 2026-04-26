@@ -17,6 +17,7 @@ class FactorialTests {
             val tested = fac(5)
             
             package zauber
+            class Any
             class Int {
                 external fun compareTo(other: Int): Int
                 external fun times(other: Int): Int
@@ -54,6 +55,7 @@ class FactorialTests {
             val tested = fac(10)
             
             package zauber
+            class Any
             class Int {
                 external fun compareTo(other: Int): Int
                 external fun times(other: Int): Int
@@ -86,6 +88,7 @@ class FactorialTests {
         LogManager.enableDebug("Runtime")
         val stdlib = """
             package zauber
+            class Any
             object Unit
             class Int {
                 external operator fun plus(other: Int): Int

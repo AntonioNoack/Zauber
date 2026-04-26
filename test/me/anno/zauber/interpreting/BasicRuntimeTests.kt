@@ -78,6 +78,7 @@ class BasicRuntimeTests {
     fun testBoolean() {
         val stdlib = """
             package zauber
+            class Any
             enum class Boolean {
                 TRUE, FALSE
             }
@@ -98,6 +99,9 @@ class BasicRuntimeTests {
         val code = """
             class Test(val a: Int)
             val tested = Test(5)
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", (value.clazz.type as ClassType).clazz.name)

@@ -22,6 +22,7 @@ class UnderdefinedCallTests {
             val tested = arrayOf(1, 2, 3)
             
             package zauber
+            class Any
             class Array<V>(override val size: Int) {
                 external fun set(index: Int, value: V)
             }
@@ -45,6 +46,7 @@ class UnderdefinedCallTests {
             val tested = listOf(1, 2, 3)
             
             package zauber
+            class Any
             interface List<V> {
                 val size: Int
             }

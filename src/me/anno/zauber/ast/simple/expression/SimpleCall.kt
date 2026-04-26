@@ -14,6 +14,7 @@ import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -39,16 +40,29 @@ class SimpleCall(
     companion object {
 
         fun selfTypeIsOpen(method: Method): Boolean {
-            val selfType = method.scope.parent?.get(ScopeInitType.AFTER_DISCOVERY) ?: return false
+            val selfType = method.ownerScope
+
+            selfType[ScopeInitType.AFTER_DISCOVERY]
+
             if (!selfType.isClass()) return false // non-class-likes cannot be open
             if (selfType.isObjectLike()) return false // objects cannot be open
             if (selfType.isInterface()) return true // interfaces are always open
+
+            when (method.scope.scopeType) {
+                ScopeType.FIELD_GETTER,
+                ScopeType.FIELD_SETTER -> {
+                    val field = method.backedField!!
+                    if (!field.isOpen()) return false
+                }
+                else -> {}
+            }
 
             // anything else needs the open flag to be open
             return selfType.flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
         }
 
-        fun createObjectMap(method: MethodLike): Map<ClassType, MethodLike> {
+        fun createDynamicDispatchMap(method: MethodLike): Map<ClassType, MethodLike> {
+
             // constructors aren't dynamic
             val dynamicDispatch = method is Method && selfTypeIsOpen(method)
             if (!dynamicDispatch) return FullMap(method)
@@ -90,7 +104,7 @@ class SimpleCall(
         scopeBridgingParameters: List<SimpleField>,
         scope: Scope, origin: Int
     ) : this(
-        dst, (method as? Method)?.name ?: "?", createObjectMap(method), method, self,
+        dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method), method, self,
         specialization, typeParameters, valueParameters, scopeBridgingParameters, scope, origin
     )
 

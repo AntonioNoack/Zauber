@@ -17,6 +17,7 @@ class CaptureTests {
             }
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
             }
@@ -41,6 +42,7 @@ class CaptureTests {
             val tested = f()
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun compareTo(other: Int): Int

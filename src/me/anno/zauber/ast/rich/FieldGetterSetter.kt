@@ -75,6 +75,12 @@ object FieldGetterSetter {
         field: Field, expr0: Expression?, backingField: Field,
         getterScope: Scope, origin: Int
     ): Method {
+        var getterScope = getterScope
+        while (getterScope.scopeType != ScopeType.FIELD_GETTER) {
+            getterScope = getterScope.parent
+                ?: throw IllegalStateException("Expected getterScope to be FIELD_GETTER")
+        }
+
         val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
         val expr = expr0 ?: run {
             if (!isInterface) {
@@ -126,6 +132,12 @@ object FieldGetterSetter {
         backingField: Field, valueField: Field,
         setterScope: Scope, origin: Int,
     ): Method {
+        var setterScope = setterScope
+        while (setterScope.scopeType != ScopeType.FIELD_SETTER) {
+            setterScope = setterScope.parent
+                ?: throw IllegalStateException("Expected setterScope to be FIELD_SETTER")
+        }
+
         val isInterface = setterScope.parent?.scopeType == ScopeType.INTERFACE
         val expr = expr0 ?: run {
             if (!isInterface) {

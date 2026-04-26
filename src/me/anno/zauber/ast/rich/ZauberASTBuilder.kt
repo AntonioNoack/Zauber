@@ -473,8 +473,6 @@ class ZauberASTBuilder(
                 val vsCodeType = if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK))
                     VSCodeType.METHOD else VSCodeType.VARIABLE
 
-                println("name: ${tokens.err(i)}")
-
                 val namePath = consumeName(vsCodeType, 0)
                 val typeParameters = readTypeParameters(null)
 

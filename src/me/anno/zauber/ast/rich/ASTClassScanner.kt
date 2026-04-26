@@ -400,8 +400,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val selfType = selfType0 ?: getSelfType(ownerScope)
         // if (selfType != null) selfType = selfType.resolve()
 
-        val name1 = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-        check(name == name1) { "Expected same name, got mismatch: $name vs $name1" }
+        val fieldName = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName" }
 
         var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
         val initialValue =
@@ -424,7 +424,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             getterOrigin = origin(i - 1)
             val body = if (consumeIf(TokenType.OPEN_CALL)) {
                 consume(TokenType.CLOSE_CALL)
-                tryReadBody(ownerScope, true)
+                readBodyForField(fieldName, ScopeType.FIELD_GETTER)
             } else null
             setterVisibility = readVisibility()
             body
@@ -442,7 +442,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 if (valueType == null) valueType = setterType
 
                 consume(TokenType.CLOSE_CALL)
-                tryReadBody(ownerScope, true)
+                readBodyForField(fieldName, ScopeType.FIELD_SETTER)
             } else null
         } else null
 
@@ -467,13 +467,15 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         popGenericParams()
     }
 
-    private fun tryReadBody(fieldScope: Scope, forField: Boolean): Expression {
-        return if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            readLazyBody()
-        } else if (consumeIf("=")) {
-            val originI = origin(i - 1)
-            ReturnExpression(readLazyValue(forField), null, fieldScope, originI)
-        } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+    private fun readBodyForField(fieldName: String, scopeType: ScopeType): Expression {
+        return pushScope(scopeType, fieldName) { newScope ->
+            if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                readLazyBody()
+            } else if (consumeIf("=")) {
+                val originI = origin(i - 1)
+                ReturnExpression(readLazyValue(forField = true), null, newScope, originI)
+            } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+        }
     }
 
     private fun readVisibility(): Int {
@@ -541,7 +543,8 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                         call.type.clazz
                     }
                 }
-                val base = SuperExpression(label, superCall.target == InnerSuperCallTarget.THIS, constrScope, superCall.origin)
+                val base =
+                    SuperExpression(label, superCall.target == InnerSuperCallTarget.THIS, constrScope, superCall.origin)
                 println("Super-call for $superCall in $constrScope")
                 list.add(SuperCallExpression(base, null, superCall.valueParameters, origin))
             }

@@ -80,7 +80,6 @@ abstract class ZauberASTBuilderBase(
     }
 
     fun readLabelMaybe(): String? {
-        println("Reading label at maybe ${tokens.err(i)}")
         return if (consumeIf("@")) {
             consumeName(VSCodeType.TYPE, 0)
         } else null

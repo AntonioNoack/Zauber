@@ -33,6 +33,12 @@ open class MethodLike(
         private val LOGGER = LogManager.getLogger(MethodLike::class)
     }
 
+    init {
+        check(scope.isMethodLike()) {
+            "Method scope must be method-like, got $scope (${scope.scopeType})"
+        }
+    }
+
     val ownerScope get() = scope.parent!!
     val methodScope get() = scope
 

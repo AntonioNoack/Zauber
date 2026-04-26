@@ -17,6 +17,7 @@ class TypeRefinementTests {
             }
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
             }
