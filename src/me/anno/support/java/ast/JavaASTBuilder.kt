@@ -130,7 +130,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         }
     }
 
-    override fun readSuperCalls(classScope: Scope) {
+    override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (consumeIf("extends")) {
             do {
                 val origin = origin(i)
@@ -446,7 +446,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
-            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), currPackage, origin)
+            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), false, currPackage, origin)
             consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)

@@ -29,6 +29,8 @@ class PlusAssignTest {
                     instance += 1
                 }
                 val tested = 0
+                
+                package zauber
             """.trimIndent()
         )
     }
@@ -45,6 +47,8 @@ class PlusAssignTest {
                     instance += 1
                 }
                 val tested = 0
+                
+                package zauber
             """.trimIndent()
         )
     }

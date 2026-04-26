@@ -3,10 +3,10 @@ package me.anno.zauber.ast.rich.controlflow
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.BooleanUtils.not
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
@@ -17,20 +17,25 @@ class IfElseBranch(
 ) : Expression(condition.scope, condition.origin) {
 
     init {
-        check(ifBranch.scope != elseBranch?.scope) {
+        check(
+            ifBranch.scope != elseBranch?.scope ||
+                    ifBranch.isResolved() && elseBranch.isResolved()
+        ) {
             "IfBranch and ElseBranch must have different scopes. ${ifBranch.scope}, " +
                     "at ${resolveOrigin(condition.origin)}"
         }
         check(
             ifBranch.scope != condition.scope ||
-                    ifBranch is SpecialValueExpression
+                    ifBranch is SpecialValueExpression ||
+                    ifBranch.isResolved() && condition.isResolved()
         ) {
             "If and condition somehow have the same scope: ${condition.scope.pathStr}, " +
                     "at ${resolveOrigin(condition.origin)}"
         }
         check(
             elseBranch?.scope != condition.scope ||
-                    elseBranch is SpecialValueExpression
+                    elseBranch is SpecialValueExpression ||
+                    elseBranch.isResolved() && condition.isResolved()
         ) {
             "Else and condition somehow have the same scope: ${condition.scope.pathStr}, " +
                     "at ${resolveOrigin(condition.origin)}"
@@ -58,7 +63,10 @@ class IfElseBranch(
     }
 
     override fun resolveYieldedType(context: ResolutionContext): Type {
-        return unionTypes(ifBranch.resolveYieldedType(context), elseBranch?.resolveYieldedType(context) ?: Types.Nothing)
+        return unionTypes(
+            ifBranch.resolveYieldedType(context),
+            elseBranch?.resolveYieldedType(context) ?: Types.Nothing
+        )
     }
 
     override fun clone(scope: Scope): Expression = IfElseBranch(

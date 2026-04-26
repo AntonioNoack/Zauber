@@ -335,7 +335,11 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun toStringUnsafe(i: Int): String {
-        return source.substring(getI0(i), getI1(i))
+        return toStringUnsafe(i, i + 1)
+    }
+
+    fun toStringUnsafe(i0: Int, i1: Int): String {
+        return source.substring(getI0(i0), getI1(i1 - 1))
     }
 
     fun isSameLine(tokenI: Int, tokenJ: Int): Boolean {

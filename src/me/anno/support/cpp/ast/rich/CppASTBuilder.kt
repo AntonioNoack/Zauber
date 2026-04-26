@@ -129,7 +129,7 @@ class CppASTBuilder(
         return path
     }
 
-    override fun readSuperCalls(classScope: Scope) {
+    override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         TODO("Not yet implemented")
     }
 

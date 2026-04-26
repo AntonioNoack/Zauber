@@ -38,6 +38,8 @@ class TryCatchTests {
             }
             
             package zauber
+            class Any
+            class Throwable
             class Exception: Throwable()
             class RuntimeException : Exception()
             class NullPointerException : RuntimeException()
@@ -88,6 +90,7 @@ class TryCatchTests {
             }
             
             package zauber
+            class Any
             class Throwable(val message: String?)
             class Exception(message: String?): Throwable(message)
             class NullPointerException(message: String?) : Exception(message)

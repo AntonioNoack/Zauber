@@ -1,7 +1,8 @@
 package me.anno.zauber.types.impl
 
-import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -84,7 +85,8 @@ object TypeUtils {
         var depth = 0
         var scope = this
         while (true) {
-            val superCall = scope.superCalls.firstOrNull { it.isClassCall }
+            val superCall = scope[ScopeInitType.AFTER_DISCOVERY]
+                .superCalls.firstOrNull { it.isClassCall }
             scope = superCall?.type?.clazz ?: return depth
             depth++
         }

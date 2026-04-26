@@ -1,6 +1,7 @@
 package me.anno.zauber.scope
 
 import me.anno.zauber.Compile.STDLIB_NAME
+import me.anno.zauber.SpecialFieldNames.OBJECT_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
@@ -194,7 +195,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun getOrCreateObjectField(origin: Int): Field {
         check(isObjectLike())
         if (objectField == null) objectField = addField(
-            null, false, isMutable = false, null, name,
+            null, false, isMutable = false, null, OBJECT_NAME,
             ClassType(this, emptyList(), origin, true),
             /* todo should we set initialValue? */ null, Flags.NONE, origin
         )
@@ -391,21 +392,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             if (byParent != null) return byParent
         }
 
-        for (superCall in superCalls) {
-            val scope = extractScope(superCall.type)
-            val bySuperCall = scope.resolveTypeInner(name)
-            // println("rti[$name,$this] -> $type -> $scope -> $bySuperCall")
-            if (bySuperCall != null) return bySuperCall
-        }
-
         return null
-    }
-
-    private fun extractScope(type: Type): Scope {
-        return when (type) {
-            is ClassType -> type.clazz
-            else -> throw NotImplementedError("$type")
-        }
     }
 
     fun resolveTypeSameFolder(name: String): Scope? {
@@ -441,7 +428,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         searchInside: Boolean
     ): Type? {
 
-        // println("Resolving $name in $this ($searchInside, $fileName, ${parent?.fileName})")
+        println("Resolving $name in $this ($searchInside, $fileName, ${parent?.fileName})")
 
         val parentI = parentIfSameFile
         if (parentI != null && parentI.name == name) {
@@ -500,6 +487,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         }
 
         // we must also check langScope for any valid paths...
+        val langScope = langScope[ScopeInitType.AFTER_DISCOVERY]
         for (child in langScope.children) {
             if (child.name == name) {
                 return child[ScopeInitType.RESOLVE_TYPES].typeWithArgs
@@ -630,6 +618,8 @@ class Scope(val name: String, val parent: Scope? = null) {
      * method, getter, setter or constructor
      * */
     fun isMethodLike(): Boolean = scopeType?.isMethodLike() == true
+
+    fun isConstructor(): Boolean = scopeType?.isConstructor() == true
 
     /**
      * method, getter or setter

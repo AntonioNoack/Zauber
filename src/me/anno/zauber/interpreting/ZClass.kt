@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -28,9 +29,15 @@ class ZClass(val type: Type) {
                 if (type != NullType) LOGGER.warn("type $type is not a ClassType")
                 return emptyList()
             }
-            return type.clazz[ScopeInitType.AFTER_DISCOVERY].fields.filter { field ->
+            val fields = type.clazz[ScopeInitType.AFTER_DISCOVERY].fields.filter { field ->
                 field.needsBackingFieldImpl(type)
             }
+            if (type.clazz.isConstructor() && type.clazz.parent!!.scopeType == ScopeType.INNER_CLASS) {
+                // move __outer__ to the front
+                // todo ideally, it would be sorted inside the scope already...
+                return fields.sortedByDescending { it.name == OUTER_NAME }
+            }
+            return fields
         }
 
         fun Field.needsBackingFieldImpl(type0: Type): Boolean {

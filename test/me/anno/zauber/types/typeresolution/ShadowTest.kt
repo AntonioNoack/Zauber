@@ -1,6 +1,5 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,11 +20,10 @@ class ShadowTest {
                 
                 val tested = main(0)
                 
-                // register classes
-                package $STDLIB_NAME
+                package zauber
                 class Int
                 class Float
-            """.trimIndent()
+            """.trimIndent(), true
         )
         assertEquals(Types.Float, actualType)
     }

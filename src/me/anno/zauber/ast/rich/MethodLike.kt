@@ -33,6 +33,9 @@ open class MethodLike(
         private val LOGGER = LogManager.getLogger(MethodLike::class)
     }
 
+    val ownerScope get() = scope.parent!!
+    val methodScope get() = scope
+
     fun isRecursive(specialization: Specialization): Boolean {
         return IsMethodRecursive[MethodSpecialization(this, specialization)]
     }

@@ -720,7 +720,7 @@ abstract class ZauberASTBuilderBase(
         return name
     }
 
-    abstract fun readSuperCalls(classScope: Scope)
+    abstract fun readSuperCalls(classScope: Scope, readBody: Boolean)
 
     fun readClass(scopeType: ScopeType) {
         val origin = origin(i)
@@ -751,7 +751,7 @@ abstract class ZauberASTBuilderBase(
             classScope, constructorParams, constructorOrigin
         )
 
-        readSuperCalls(classScope)
+        readSuperCalls(classScope, true)
 
         val primConstructorScope = classScope.getOrCreatePrimaryConstructorScope()
         val primarySuperCall = classScope.superCalls.firstOrNull { it.isClassCall }
@@ -816,7 +816,7 @@ abstract class ZauberASTBuilderBase(
         clazz.typeParameters = readTypeParameterDeclarations(clazz)
         clazz.hasTypeParameters = true
 
-        readSuperCalls(clazz)
+        readSuperCalls(clazz, false)
         readClassBody(name, keywords, ScopeType.INTERFACE)
         popGenericParams()
     }

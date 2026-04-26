@@ -14,13 +14,6 @@ abstract class ResolvedFieldExpression(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
-    init {
-        val ownerScope = field.resolved.ownerScope
-        if (self is ThisExpression && self.label != ownerScope) {
-            throw IllegalStateException("Cannot get/set field ${field.resolved} on $self, ${self.label} != $ownerScope")
-        }
-    }
-
     val context get() = field.context
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

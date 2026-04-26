@@ -30,6 +30,11 @@ class SuperCallExpression(
         private val LOGGER = LogManager.getLogger(SuperCallExpression::class)
     }
 
+    init {
+        if (base.label.pathStr == "zauber.Any" && valueParameters.isNotEmpty())
+            throw IllegalArgumentException("Cannot call $this")
+    }
+
     override fun toStringImpl(depth: Int): String {
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         val base = self.toString(depth)
@@ -63,8 +68,10 @@ class SuperCallExpression(
         if (LOGGER.isInfoEnabled) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
 
         return ConstructorResolver.findMemberInScopeImpl(targetScope, name, typeParameters, valueParameters, context)
-            ?: throw IllegalStateException("Could not resolve constructor $targetScope$valueParameters, " +
-                    "candidates: ${targetScope.constructors0.map { constr -> constr.valueParameters.map { it.type } }}")
+            ?: throw IllegalStateException(
+                "Could not resolve constructor $targetScope$valueParameters, " +
+                    "candidates: ${targetScope.constructors0.map { constr -> constr.valueParameters.map { it.type } }}"
+            )
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

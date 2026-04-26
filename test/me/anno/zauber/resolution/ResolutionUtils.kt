@@ -24,7 +24,8 @@ object ResolutionUtils {
                 if (index == 0) {
                     testScopeName to "package $testScopeName\n\n$content"
                 } else {
-                    val linebreak = content.indexOf('\n')
+                    var linebreak = content.indexOf('\n')
+                    if (linebreak < 0) linebreak = content.length
                     val packageName = content.substring(0, linebreak).trim()
                     packageName to "package $content"
                 }

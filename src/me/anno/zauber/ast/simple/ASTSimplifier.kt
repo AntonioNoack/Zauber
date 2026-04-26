@@ -11,7 +11,6 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
-import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield
@@ -23,12 +22,9 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.MatchScore
-import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
@@ -284,9 +280,10 @@ object ASTSimplifier {
 
         val method = expr.callable
         val selfExpr = if (expr.self != null) base.value.use() else null
+        val selfIfInsideConstructor = (expr.self as? SuperExpression)?.isThis
         return simplifyCall(
             blockI.value!!.block, blockI, selfExpr, expr.self,
-            valueParameters, method, null,
+            valueParameters, method, selfIfInsideConstructor,
             expr.scope, expr.origin
         )
     }
@@ -337,18 +334,21 @@ object ASTSimplifier {
                 null, expr.scope, expr.origin
             )
         } else {
+
             println("Creating SimpleGetField for $field, self: ${expr.self}")
 
             var self = self
+
             // add extra getters for inner classes
             if (self.type is ClassType && self.type.clazz.isInnerClassOf(field.ownerScope)) {
                 val clazz = self.type.clazz
                 val outerField = clazz.fields.firstOrNull { it.name == OUTER_NAME }
                     ?: throw IllegalStateException("Missing $OUTER_NAME field in $clazz for $field")
                 val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
+                println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
                 block1v.block.add(SimpleGetField(selfDst, self.use(), outerField, expr.scope, expr.origin))
                 self = selfDst
-            } else println("  not inner class")
+            }
 
             block1v.block.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
             return block1.withValue(dst, block1v.block)
@@ -752,162 +752,6 @@ object ASTSimplifier {
     }
 
     private fun simplifyCall(
-        context: ResolutionContext,
-        block0: SimpleNode,
-        flow0: FlowResult,
-        graph: SimpleGraph,
-
-        selfExpr: Expression,
-        typeParameters: ParameterList,
-        valueParameters: List<NamedParameter>,
-
-        method0: ResolvedMember<*>,
-        selfIfInsideConstructor: Boolean?,
-
-        scope: Scope, origin: Int
-    ): FlowResult {
-        return when (val method = method0.resolved) {
-            is Method -> simplifyMethodCall(
-                context, block0, flow0, selfExpr, valueParameters,
-                method0, method, scope, origin
-            )
-            is Constructor -> simplifyConstructorCall(
-                context, block0, flow0, valueParameters,
-                method0, method, selfIfInsideConstructor, scope, origin
-            )
-            is Field -> simplifyFieldCall(
-                context, block0, flow0, graph, selfExpr, typeParameters, valueParameters,
-                method0, method, scope, origin
-            )
-            else -> throw NotImplementedError("Simplify call $method, ${resolveOrigin(origin)}")
-        }
-    }
-
-    private fun simplifyMethodCall(
-        context: ResolutionContext,
-        block0: SimpleNode,
-        flow0: FlowResult,
-
-        selfExpr: Expression,
-        valueParameters: List<NamedParameter>,
-
-        method0: ResolvedMember<*>,
-        method: Method,
-
-        scope: Scope, origin: Int
-    ): FlowResult {
-        val self = simplifyImpl(context, selfExpr, block0, flow0, true)
-        val self0 = self.value ?: return self
-
-        val (valueParametersI, block1) = reorderParameters(
-            context, block0, self,
-            valueParameters, method0, scope, origin, method
-        )
-
-        val block1v = block1.value
-        if (valueParametersI == null || block1v == null) return block1
-
-        // then execute it
-        val dst = block1v.block.field(method0.getTypeFromCall())
-        for (param in valueParametersI) param.use()
-        val specialization = method0.specialization
-        val selfField = self0.value.use()
-        val call = if (selfExpr is SuperExpression) {
-            val methodMap = FullMap<ClassType, MethodLike>(method)
-            SimpleCall(dst, method, methodMap, selfField, specialization, valueParametersI, scope, origin)
-        } else {
-            SimpleCall(dst, method, selfField, specialization, valueParametersI, scope, origin)
-        }
-        return handleThrown(block1v.block, block1, dst, call, method.getThrownType(specialization))
-    }
-
-    private fun simplifyConstructorCall(
-        context: ResolutionContext,
-        block0: SimpleNode,
-        flow0: FlowResult,
-
-        valueParameters: List<NamedParameter>,
-
-        method0: ResolvedMember<*>, method: Constructor,
-        selfIfInsideConstructor: Boolean?,
-
-        scope: Scope, origin: Int
-    ): FlowResult {
-        // base is a type
-        val (params, block1) = reorderParameters(
-            context, block0, flow0,
-            valueParameters, method0, scope, origin, method
-        )
-
-        val block1v = block1.value
-        if (params == null || block1v == null) return block1
-
-        return createConstructorInvocation(
-            block1v.block, block1,
-            method, params, method0,
-            selfIfInsideConstructor, scope, origin
-        )
-    }
-
-    private fun simplifyFieldCall(
-        context: ResolutionContext,
-        block0: SimpleNode,
-        flow0: FlowResult,
-        graph: SimpleGraph,
-
-        selfExpr: Expression,
-        typeParameters: ParameterList,
-        valueParameters: List<NamedParameter>,
-
-        method0: ResolvedMember<*>, method: Field,
-        scope: Scope, origin: Int
-    ): FlowResult {
-        // todo why is self not used???
-        val fieldExpr = FieldExpression(method, scope, origin)
-        val method0 = (method0 as ResolvedField).resolveCalledMethod(
-            typeParameters, resolveValueParameters(context, valueParameters)
-        )
-        return simplifyCall(
-            context, block0, flow0, graph, fieldExpr,
-            ParameterList.emptyParameterList() /* the type is in the class, not the invocation */,
-            valueParameters, method0, null, scope, origin
-        )
-    }
-
-    private fun reorderParameters(
-        context: ResolutionContext,
-        block0: SimpleNode,
-        flow0: FlowResult,
-
-        valueParameters: List<NamedParameter>,
-        method0: ResolvedMember<*>,
-
-        scope: Scope,
-        origin: Int,
-
-        method: MethodLike
-    ): Pair<List<SimpleField>?, FlowResult> {
-        val params = reorderParameters(
-            valueParameters,
-            method.valueParameters,
-            scope, origin
-        )
-        check(block0 == flow0.value?.block)
-        var blockI = flow0
-        val values = params.mapIndexed { index, parameter ->
-            var targetType = method.valueParameters[index].type
-            targetType = method0.selfTypeParameters.resolveGenerics(null, targetType)
-            targetType = method0.callTypeParameters.resolveGenerics(null, targetType)
-            targetType = targetType.resolve().specialize()
-            val contextI = context.withTargetType(targetType)
-            // (value, blockJ)
-            blockI = simplifyImpl(contextI, parameter, blockI.value!!.block, blockI, true)
-            blockI.value?.value ?: return null to blockI
-        }
-        return values to blockI
-    }
-
-    private fun simplifyCall(
         block0: SimpleNode,
         flow0: FlowResult,
 
@@ -960,16 +804,16 @@ object ASTSimplifier {
         return if (selfIfInsideConstructor != null) {
             val graph = block0.graph
             val unit = unitInstance(graph, scope, origin)
-            val self = run {
-                val selfScope = graph.method.scope
-                val selfType = selfScope.typeWithArgs
-                    .specialize(method0.specialization)
-                block0.thisField(selfType, selfScope, scope, origin, null)
-            }
+
+            val selfScope = (graph.method as Constructor).classScope
+            val selfType = selfScope.typeWithArgs.specialize(method0.specialization)
+            val self = block0.thisField(selfType, selfScope, scope, origin, null)
+
             val constructor = SimpleSelfConstructor(
                 unit, selfIfInsideConstructor,
-                self, method, method0.specialization, valueParameters, scope, origin
+                self.use(), method, method0.specialization, valueParameters, scope, origin
             )
+
             handleThrown(
                 block0, flow0, unit, constructor,
                 method.getThrownType(method0.specialization)

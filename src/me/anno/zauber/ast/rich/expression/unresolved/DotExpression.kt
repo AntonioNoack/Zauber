@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
@@ -44,7 +45,7 @@ class DotExpression(
     }
 
     init {
-        if (right is DotExpression) {
+        if (right is DotExpression || right is EnsureNotNullExpression) {
             throw IllegalArgumentException("List of dot-expressions must be left-to-right, $this is right to left")
         }
     }

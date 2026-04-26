@@ -20,7 +20,7 @@ class ResolvedCallExpression(
 ) : Expression(scope, origin) {
 
     val self: Expression? =
-        if (callable is ResolvedConstructor) null
+        if (callable is ResolvedConstructor) self as? SuperExpression
         else self ?: callable.getBaseIfMissing(scope, origin)
 
     init {
@@ -32,7 +32,8 @@ class ResolvedCallExpression(
             }
             is ResolvedConstructor -> {
                 // in inner classes, self is passed by the first value parameter
-                check(this.self == null) { "Expected self to be null for $callable, got $self" }
+                // check(this.self == null) { "Expected self to be null for $callable, got $self" }
+                // self may be SuperExpression
             }
             else -> throw NotImplementedError()
         }

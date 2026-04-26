@@ -76,7 +76,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
             classScope.typeParameters = typeParams
             classScope.hasTypeParameters = true
 
-            readSuperCalls(classScope)
+            readSuperCalls(classScope, readBody)
             readClassBody(classScope, readBody)
         }
     }
@@ -297,13 +297,13 @@ class TypeScriptClassScanner(tokens: TokenList) :
         throw NotImplementedError()
     }
 
-    override fun readSuperCalls(classScope: Scope) {
+    override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (consumeIf("extends")) {
-            collectSuperCalls(classScope)
+            super.readSuperCalls(classScope, readBody)
         }
 
         if (consumeIf("implements")) {
-            collectSuperCalls(classScope)
+            super.readSuperCalls(classScope, readBody)
         }
     }
 

@@ -81,6 +81,10 @@ fun ASTBuilderBase.binaryOp(
                     val leftAndMiddle = DotExpression(left, typeParameters, right.left, left.scope, left.origin)
                     DotExpression(leftAndMiddle, right.typeParameters, right.right, right.scope, right.origin)
                 }
+                is EnsureNotNullExpression -> {
+                    val leftAndMiddle = DotExpression(left, typeParameters, right.value, left.scope, left.origin)
+                    EnsureNotNullExpression(leftAndMiddle, right.scope, right.origin)
+                }
                 else -> DotExpression(left, typeParameters, right, right.scope, right.origin)
             }
         }

@@ -1,8 +1,8 @@
 package me.anno.zauber.types
 
+import me.anno.generation.Specializations.specialization
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
-import me.anno.generation.Specializations.specialization
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -60,6 +60,23 @@ abstract class Type {
             is NotType -> type.isResolved()
             is ComptimeValue -> true // is it though?
             else -> throw NotImplementedError("Is $this (${javaClass.simpleName}) resolved?")
+        }
+    }
+
+    fun removeNull(): Type {
+        return when (this) {
+            is ClassType -> this
+            is UnresolvedType -> resolvedName.removeNull()
+            is NullType -> Types.Nothing
+            is UnionType -> {
+                if (types.any { it == NullType }) unionTypes(types - NullType)
+                else this
+            }
+            is AndType -> {
+                if (types.any { it is NotType && it.type == NullType }) this
+                else andTypes(this, NotType(NullType))
+            }
+            else -> andTypes(this, NotType(NullType))
         }
     }
 

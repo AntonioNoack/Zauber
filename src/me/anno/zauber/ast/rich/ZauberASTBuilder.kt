@@ -99,20 +99,23 @@ class ZauberASTBuilder(
         tokens.size = tmp
     }
 
-    override fun readSuperCalls(classScope: Scope) {
+    override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (consumeIf(":")) {
             var endIndex = findEndOfSuperCalls(i)
             if (endIndex < 0) endIndex = tokens.size
-            push(endIndex) {
+            if (readBody) push(endIndex) {
                 while (i < tokens.size) {
                     classScope.superCalls.add(readSuperCall(classScope.typeWithArgs))
                     readComma()
                 }
-            }
+            } // else skip
+
             i = endIndex // index of {
         }
-        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+
+        if (readBody && classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
             val origin = origin(i - 1) // fine?
+            println("Adding super-Any to $classScope")
             classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
         }
     }
@@ -393,7 +396,7 @@ class ZauberASTBuilder(
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
-            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), currPackage, origin)
+            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), false, currPackage, origin)
             consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.unescapeString(i++), currPackage, origin)
@@ -547,7 +550,7 @@ class ZauberASTBuilder(
         classScope.typeParameters = getNextOuterTypeParams()
         classScope.hasTypeParameters = true
 
-        readSuperCalls(classScope)
+        readSuperCalls(classScope, true)
 
         // println("Inline class has the following type-params: ${classScope.typeParameters}")
 
@@ -957,23 +960,7 @@ class ZauberASTBuilder(
             }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
             consumeIf("--") -> createPostfixExpression(expr, InplaceModifyType.DECREMENT, origin(i - 1))
-            tokens.equals(i, "!!") -> {
-                val origin = origin(i++)
-                val scope = currPackage
-                createBranchExpression(
-                    expr, scope, origin,
-                    { fieldExpr -> isNotNullCondition(fieldExpr, scope, origin) },
-                    { fieldExpr, ifTrueScope ->
-                        fieldExpr.clone(ifTrueScope)
-                    }, { scope ->
-                        val debugInfoExpr = StringExpression(expr.toString(), scope, origin)
-                        CallExpression(
-                            UnresolvedFieldExpression("throwNPE", shouldBeResolvable, scope, origin), emptyList(),
-                            listOf(NamedParameter(null, debugInfoExpr)), origin
-                        )
-                    }
-                )
-            }
+            consumeIf("!!") -> EnsureNotNullExpression(expr, currPackage, origin(i - 1))
             else -> null
         }
     }

@@ -21,6 +21,11 @@ class SimpleGetField(
     }
 
     init {
+        if (self.type is ClassType) {
+            if (self.type.clazz.isInnerClassOf(field.ownerScope)) {
+                throw IllegalStateException("Cannot get $field from $self")
+            }
+        }
         if (field.ownerScope.isInterface()) {
             throw IllegalStateException("Cannot just get field of an interface, must use getter, $field")
         }

@@ -44,6 +44,7 @@ class ExplicitSelfTests {
             val tested = A(2).run { x() }
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }

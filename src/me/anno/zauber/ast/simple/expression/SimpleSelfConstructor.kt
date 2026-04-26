@@ -5,6 +5,7 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 
@@ -20,6 +21,8 @@ class SimpleSelfConstructor(
 
     init {
         check(method.valueParameters.size == valueParameters.size)
+        check(self.type is ClassType)
+        check(self.type.clazz.isClassLike()) { "Cannot invoke constructor on self $self" }
     }
 
     private val methodSpec = MethodSpecialization(method, specialization)
@@ -32,6 +35,10 @@ class SimpleSelfConstructor(
     override fun execute() = eval()
     override fun eval(): BlockReturn {
         val runtime = runtime
-        return runtime.executeCall(runtime[self], methodSpec, valueParameters)
+        val self = runtime[self]
+        check((self.clazz.type as ClassType).clazz.isClassLike()) {
+            "Cannot invoke constructor on $self"
+        }
+        return runtime.executeCall(self, methodSpec, valueParameters).retToVal()
     }
 }

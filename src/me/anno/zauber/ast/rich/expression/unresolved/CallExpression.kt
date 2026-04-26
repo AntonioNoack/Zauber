@@ -6,7 +6,6 @@ import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
-import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType

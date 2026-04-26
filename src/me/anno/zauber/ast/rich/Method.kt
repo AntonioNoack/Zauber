@@ -40,9 +40,6 @@ class Method(
 
     val hasVarargParameter = valueParameters.any { it.isVararg }
 
-    val ownerScope get() = scope.parent!!
-    val methodScope get() = scope
-
     // can inline methods be open? explicit inheritance-tree would need to be inlined...
     fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
 

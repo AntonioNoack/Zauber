@@ -1,11 +1,13 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.generation.c.CSourceGenerator.isValueType
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.simple.expression.SimpleGetField
 import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -96,17 +98,17 @@ class SimpleNode(val graph: SimpleGraph) {
         graph.field(type, ownership)
 
     fun thisField(
-        type: Type, scopeIfThis: Scope, scope: Scope, origin: Int,
+        type: Type, thisScope: Scope, scope: Scope, origin: Int,
         contextExpr: Expression?
     ): SimpleField {
-        scopeIfThis[ScopeInitType.AFTER_DISCOVERY]
-        if (scopeIfThis.isObjectLike()) {
+        thisScope[ScopeInitType.AFTER_DISCOVERY]
+        if (thisScope.isObjectLike()) {
             // are objects comptime? yes
-            val dst = field(scopeIfThis.typeWithArgs, Ownership.COMPTIME)
-            add(SimpleGetObject(dst, scopeIfThis, scope, origin))
+            val dst = field(thisScope.typeWithArgs, Ownership.COMPTIME)
+            add(SimpleGetObject(dst, thisScope, scope, origin))
             return dst
         } else {
-            val isAmbiguous = scopeIfThis.selfAsMethod?.explicitSelfType == true
+            val isAmbiguous = thisScope.selfAsMethod?.explicitSelfType == true
             val isExplicitSelf = if (isAmbiguous) {
                 when (contextExpr) {
                     is ReturnExpression -> true
@@ -120,15 +122,49 @@ class SimpleNode(val graph: SimpleGraph) {
                         val fieldOwner = methodOrField.ownerScope
                         !fieldOwner.isInsideExpression() && !fieldOwner.isMethodLike()
                     }
-                    else -> TODO("$scopeIfThis is ambiguous, what does $contextExpr ${contextExpr?.javaClass?.simpleName} indicate?")
+                    else -> TODO("$thisScope is ambiguous, what does $contextExpr ${contextExpr?.javaClass?.simpleName} indicate?")
                 }.apply {
                     println("isExplicitSelf? $contextExpr -> $this")
                 }
             } else false
 
-            println("Creating simple-this: $scopeIfThis, $isExplicitSelf, type: $type")
-            return graph.thisFields.getOrPut(SimpleThis(scopeIfThis, isExplicitSelf)) { field(type) }
+            if (thisScope.isClassLike()) {
+                val ownerScope = graph.method.ownerScope
+                if (ownerScope.inheritsFrom(thisScope)) {
+                    return thisField(type, ownerScope, scope, origin, contextExpr)
+                } else {
+                    println("$thisScope !is $ownerScope")
+                }
+
+                if (ownerScope.isInnerClassOf(thisScope)) {
+                    var currField = thisField(type, ownerScope, scope, origin, contextExpr)
+                    var currScope = ownerScope
+                    while (currScope != thisScope) {
+                        val dst = field(currScope.typeWithArgs) // todo specialize
+                        val field1 = currScope.fields.first { it.name == OUTER_NAME }
+                        add(SimpleGetField(dst, currField, field1, scope, origin))
+                        currField = dst
+                        currScope = currScope.parent!!
+                    }
+                    return currField
+                }
+            }
+
+            println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
+            return graph.thisFields.getOrPut(SimpleThis(thisScope, isExplicitSelf)) { field(type) }
         }
+    }
+
+    // todo allow A<B: C|D>: B()? could be nice to use...
+
+    private fun Scope.inheritsFrom(superScope: Scope): Boolean {
+        if (this == superScope) return false
+        for (superCall in superCalls) {
+            if (superCall.type.clazz == superScope) return true
+            val isGrandChild = superCall.type.clazz.inheritsFrom(superScope)
+            if (isGrandChild) return true
+        }
+        return false
     }
 
     override fun toString(): String {

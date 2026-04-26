@@ -7,7 +7,6 @@ import me.anno.zauber.scope.Scope
 
 class Call(val method: MethodLike) {
     val simpleFields = HashMap<SimpleField, Instance>()
-    val scopes = HashMap<Scope, Instance>()
 
     lateinit var graph: SimpleGraph
 }

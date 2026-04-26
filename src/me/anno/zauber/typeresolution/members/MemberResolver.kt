@@ -280,6 +280,10 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         }
 
         val scopes = PairArrayList<Scope, Type>()
+        if (contextSelfScope != null && contextSelfType != null) {
+            scopes.add(contextSelfScope, contextSelfType)
+        }
+
         listScopeTypeCandidates(context, codeScope, scopes)
 
         if (print) LOGGER.info("Scopes/selfTypes: $scopes")

@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test
 
 class StringTests {
 
-    val smallStdlib = """
+    val smallStdlib = "\n" + """
+        package zauber
+        class Any
         class Array<V>(val size: Int) {
             external operator fun get(index: Int): V
             external operator fun set(index: Int, value: V)
@@ -134,10 +136,7 @@ class StringTests {
         )
         val code = """
             val tested = "Some " + "String"
-            
-            package zauber
-            $smallStdlib
-        """.trimIndent()
+        """.trimIndent() + smallStdlib
         val value = testExecute(code)
         assertEquals("Some String", value.castToString())
     }
@@ -151,9 +150,7 @@ class StringTests {
         )
         val code = """
             val tested = " Hello  \r\n".trim()
-            
-            package zauber
-            $smallStdlib
+        """.trimIndent() + smallStdlib + """
             
             fun Char.isWhitespace(): Boolean = this in " \t\r\n"
             fun String.trim(): String {

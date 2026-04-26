@@ -24,6 +24,9 @@ class InheritanceInterfaceTests {
             class Child: Parent
             fun runTest(p: Parent): Int = p.x()
             val tested = runTest(Child())
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(Types.Int, value.clazz.type)
@@ -39,6 +42,9 @@ class InheritanceInterfaceTests {
             class Child: Parent
             fun runTest(p: Parent): Int = p.x
             val tested = runTest(Child())
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(0, value.castToInt())
@@ -55,6 +61,9 @@ class InheritanceInterfaceTests {
             }
             fun runTest(p: Parent): Int = p.x()
             val tested = runTest(Child())
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(1, value.castToInt())
@@ -78,6 +87,9 @@ class InheritanceInterfaceTests {
             }
             fun runTest(p: Parent): Int = p.x
             val tested = runTest(Child())
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(1, value.castToInt())

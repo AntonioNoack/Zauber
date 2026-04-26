@@ -11,7 +11,6 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.expansion.MethodOverrides.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -72,8 +71,8 @@ class SimpleCall(
                     check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
                     println(
                         "Selected ${choices.first().scope.pathStr}/${choices.first()} " +
-                            "for $invokedType.$method, " +
-                            "options: ${clazzScope.methods0.map { it.scope.pathStr }}"
+                                "for $invokedType.$method, " +
+                                "options: ${clazzScope.methods0.map { it.scope.pathStr }}"
                     )
                     choices.first()
                 }
@@ -176,10 +175,7 @@ class SimpleCall(
         initializeArrayIfNeeded(self, method)
 
         val method1 = MethodSpecialization(method, specialization)
-        val result = runtime.executeCall(self, method1, valueParameters)
-        return if (result.type == ReturnType.RETURN) {
-            BlockReturn(ReturnType.VALUE, result.value)
-        } else result
+        return runtime.executeCall(self, method1, valueParameters).retToVal()
     }
 
     fun initializeArrayIfNeeded(self: Instance, method: MethodLike) {

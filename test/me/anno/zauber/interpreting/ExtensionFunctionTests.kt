@@ -30,6 +30,9 @@ class ExtensionFunctionTests {
                 return x
             }
             val tested = A(3).calc()
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(3, value.castToInt())
@@ -61,6 +64,9 @@ class ExtensionFunctionTests {
                 return this
             }
             val tested = A(3).calc().x
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(5, value.castToInt())
@@ -92,6 +98,9 @@ class ExtensionFunctionTests {
                 return x()
             }
             val tested = A().calc()
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(3, value.castToInt())

@@ -102,4 +102,6 @@ class TypesImpl {
     val GenericType = getType("GenericType")
     val Field = getType("Field")
 
+    val NullPointerException = getType("NullPointerException")
+
 }

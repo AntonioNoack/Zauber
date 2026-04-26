@@ -254,13 +254,14 @@ abstract class CallExpressionBase(
                 var valueParams = valueParameters
                 val createdType = callable.resolved.selfTypeI
                 if (createdType.clazz.scopeType == ScopeType.INNER_CLASS) {
-                    println("self for constructor: $self for ${callable.resolved}")
+                    // println("self for constructor: $self for ${callable.resolved}")
                     val outerSelfParam = NamedParameter(OUTER_NAME, self)
                     valueParams = listOf(outerSelfParam) + valueParams
                 }
+
                 val targetParams = callable.resolved.valueParameters
                 val params = reorderResolveParameters(context, valueParams, targetParams, scope, origin)
-                ResolvedCallExpression(null, callable, params, scope, origin)
+                ResolvedCallExpression(self as? SuperExpression, callable, params, scope, origin)
             }
             is ResolvedField -> {
                 val inlineBody = context.knownLambdas[callable.resolved]

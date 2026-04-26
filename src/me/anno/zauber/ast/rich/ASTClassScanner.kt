@@ -133,12 +133,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 packFlags()
             }
 
-            if (consumeIf(":")) {
-                collectSuperCalls(classScope)
-            }
+            readSuperCalls(classScope, readBody)
 
-            addAnySuperCall(classScope)
-            if (readBody) addSuperCallToInit(classScope)
+            if (readBody) {
+                addAnySuperCall(classScope)
+                addSuperCallToInit(classScope)
+            }
 
             if (scopeType == ScopeType.OBJECT || scopeType == ScopeType.COMPANION_OBJECT) {
                 classScope.getOrCreateObjectField(origin)
@@ -161,7 +161,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             if (call.valueParameters != null) {
                 val primBody = classScope.getOrCreatePrimaryConstructorScope()
                 val origin = call.origin
-                val base = SuperExpression(call.type.clazz, classScope, origin)
+                val base = SuperExpression(call.type.clazz, false, classScope, origin)
                 primBody.code.add(SuperCallExpression(base, null, call.valueParameters, origin))
             }
         }
@@ -172,16 +172,34 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         else if (tokens.equals(i, TokenType.OPEN_BLOCK)) skipBlock()
     }
 
-    fun collectSuperCalls(classScope: Scope) {
-        do {
-            val origin = origin(i)
-            val type = readTypeNotNull(classScope.typeWithArgs, true)
-            val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                readValueParameters()
-            } else null
-            val delegate = if (consumeIf("by")) readLazyValue(false) else null
-            classScope.superCalls.add(SuperCall(type, valueParameters, delegate, origin))
-        } while (consumeIf(TokenType.COMMA))
+    override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
+        if (!consumeIf(":")) return
+
+        val scope = classScope.getOrCreatePrimaryConstructorScope()
+        pushScope(scope) {
+            do {
+                val origin = origin(i)
+                val type = readTypeNotNull(classScope.typeWithArgs, true)
+                val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                    if (readBody) readValueParameters() else {
+                        skipValueParameters()
+                        null
+                    }
+                } else null
+                val delegate = if (consumeIf("by")) {
+                    if (readBody) readLazyValue(false)
+                    else skipLazyValue(false)
+                } else null
+                if (readBody) {
+                    classScope.superCalls.add(SuperCall(type, valueParameters, delegate, origin))
+                }
+            } while (consumeIf(TokenType.COMMA))
+        }
+    }
+
+    @Deprecated("Call readSuperCalls directly")
+    fun collectSuperCalls(classScope: Scope, readBody: Boolean) {
+        return readSuperCalls(classScope, readBody)
     }
 
     fun skipValueParameters() {
@@ -498,7 +516,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     open fun readConstructor() {
         val origin = origin(i - 1)
-        val classScope = currPackage
+        val classScope = currPackage[ScopeInitType.AFTER_DISCOVERY]
         val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
         constrScope.typeParameters = emptyList()
         constrScope.hasTypeParameters = true
@@ -516,13 +534,15 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 val label = when (superCall.target) {
                     InnerSuperCallTarget.THIS -> classScope
                     InnerSuperCallTarget.SUPER -> {
+                        println("SuperCalls for $classScope: ${classScope.superCalls}")
                         val call = classScope.superCalls
                             .firstOrNull { it.isClassCall }
                             ?: throw IllegalStateException("Missing super call in class for $superCall")
                         call.type.clazz
                     }
                 }
-                val base = SuperExpression(label, constrScope, superCall.origin)
+                val base = SuperExpression(label, superCall.target == InnerSuperCallTarget.THIS, constrScope, superCall.origin)
+                println("Super-call for $superCall in $constrScope")
                 list.add(SuperCallExpression(base, null, superCall.valueParameters, origin))
             }
 
@@ -625,6 +645,14 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
     }
 
+    fun skipLazyValue(forField: Boolean): Expression? {
+        check(i < tokens.size) { "Cannot read lazy-value at the end, ${tokens.err(i)}" }
+        val end = findLazyValueEnd(forField)
+        check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
+        i = end
+        return null
+    }
+
     private fun findLazyValueEnd(forField: Boolean): Int {
         var end = i
         var depth = 0
@@ -692,10 +720,6 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
         }
         return end
-    }
-
-    override fun readSuperCalls(classScope: Scope) {
-        throw NotImplementedError()
     }
 
     override fun readExpression(minPrecedence: Int): Expression = readLazyValue(false)

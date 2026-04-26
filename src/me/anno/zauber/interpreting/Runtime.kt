@@ -1,16 +1,17 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.CollectionUtils.getOrPutRecursive
+import me.anno.utils.CollectionUtils.mapArray
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
-import me.anno.zauber.ast.simple.ASTSimplifier
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleNode
-import me.anno.zauber.ast.simple.SimpleThis
+import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
@@ -22,10 +23,6 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnresolvedType
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.utils.CollectionUtils.getOrPutRecursive
-import me.anno.utils.CollectionUtils.mapArray
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.scope.ScopeInitType
 import javax.lang.model.type.UnionType
 
 class Runtime {
@@ -130,6 +127,8 @@ class Runtime {
         valueParameters: List<SimpleField>
     ): BlockReturn {
 
+        println("Calling $methodSpec on $self with $valueParameters")
+
         if (isNull(self)) {
             throw IllegalArgumentException("Cannot execute $methodSpec on null instance")
         }
@@ -161,12 +160,37 @@ class Runtime {
         val graph = ASTSimplifier.simplify(methodSpec)
 
         val call = Call(method)
+        prepareCall(graph, call, method, self, valueParameters)
+
+        val result = executeBlock(graph.startBlock)
+
+        @Suppress("Since15")
+        check(callStack.removeLast() === call)
+        // println("Returning $result from call to $method")
+        return result ?: BlockReturn(ReturnType.RETURN, getUnit())
+    }
+
+    private fun prepareCall(
+        graph: SimpleGraph, call: Call,
+        method: MethodLike, self: Instance,
+        valueParameters: List<Instance>,
+    ) {
         call.graph = graph
         callStack.add(call)
 
         val class0 = getClass(method.scope.typeWithArgs)
         val methodScopeInstance = class0.createInstance()
-        call.scopes[method.scope] = methodScopeInstance
+
+        assignParameters(method, methodScopeInstance, valueParameters)
+        assignThisFields(graph, call, method, self, methodScopeInstance)
+        assignCapturedFields(graph, call)
+    }
+
+    private fun assignParameters(
+        method: MethodLike,
+        methodScopeInstance: Instance,
+        valueParameters: List<Instance>,
+    ) {
         for (i in valueParameters.indices) {
             val parameter = valueParameters[i]
             val field = methodScopeInstance.clazz.properties.getOrNull(i)
@@ -177,11 +201,18 @@ class Runtime {
                             "properties: ${methodScopeInstance.clazz.properties}"
                 )
             check(field.name == method.valueParameters[i].name) {
-                "Field order not as expected, expected parameters to come first"
+                "Unexpected field order, " +
+                        "${methodScopeInstance.clazz.properties.map { it.name }} != ${method.valueParameters.map { it.name }}"
             }
             methodScopeInstance.properties[i] = parameter
         }
+    }
 
+    private fun assignThisFields(
+        graph: SimpleGraph, call: Call,
+        method: MethodLike, self: Instance,
+        methodScopeInstance: Instance
+    ) {
         for ((selfI, dst) in graph.thisFields) {
             val (scope, isExplicitSelf) = selfI
             call.simpleFields[dst] = when {
@@ -189,15 +220,22 @@ class Runtime {
                     check(scope == method.scope)
                     self
                 }
-                scope.isClassLike() -> self
+                scope.isClassLike() -> {
+                    check(scope == method.ownerScope) {
+                        "Scope mismatch: $scope != ${method.ownerScope} in $method"
+                    }
+                    self
+                }
                 scope == method.scope -> methodScopeInstance
                 else -> {
-                    // just create a temporary scope...
+                    // not class like -> just create a temporary scope...
                     getClass(scope.typeWithArgs).createInstance()
                 }
             }
         }
+    }
 
+    private fun assignCapturedFields(graph: SimpleGraph, call: Call) {
         for ((capture, dstField) in graph.capturedFields) {
             val (owner, capturedField) = capture
             val prevCall = findPrevCall(owner)
@@ -206,13 +244,6 @@ class Runtime {
             val prevCallInstance = this[prevCall, prevCallInstanceRef]
             call.simpleFields[dstField] = prevCallInstance[capturedField]
         }
-
-        val result = executeBlock(graph.startBlock)
-
-        @Suppress("Since15")
-        check(callStack.removeLast() === call)
-        // println("Returning $result from call to $method")
-        return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 
     fun findPrevCall(owner: MethodLike): Call {

@@ -33,7 +33,7 @@ class SimpleCheckEquals(
         // todo handle yield from this...
         val method1 = MethodSpecialization(method.resolved, method.specialization)
         val result = runtime.executeCall(va, method1, listOf(right))
-        if (!negated) return result
+        if (!negated) return result.retToVal()
 
         return when (result.type) {
             ReturnType.THROW -> result

@@ -21,6 +21,7 @@ class SuperCallTests {
                 val tested = Child().calc()
                 
                 package zauber
+                class Any
                 class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1
@@ -48,6 +49,7 @@ class SuperCallTests {
                 val tested = Child().calc()
                 
                 package zauber
+                class Any
                 class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1
@@ -67,6 +69,7 @@ class SuperCallTests {
                 val tested = Child(5).x
                 
                 package zauber
+                class Any
                 class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1
@@ -88,6 +91,7 @@ class SuperCallTests {
                 val tested = Child(5).x
                 
                 package zauber
+                class Any
                 class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1
@@ -109,6 +113,7 @@ class SuperCallTests {
                 val tested = Child(2,3).x
                 
                 package zauber
+                class Any
                 class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1

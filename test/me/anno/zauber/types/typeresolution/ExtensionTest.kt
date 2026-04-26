@@ -1,7 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.defineListParameters
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -13,106 +12,90 @@ class ExtensionTest {
 
     @Test
     fun testExtensionMethods() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl()
                 fun Impl.get() = 0
                 
                 val tested = Impl().get()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionFields() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl()
                 val Impl.value get() = 0
                 
                 val tested = Impl().value
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionMethodsOnSuperClass() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Super()
                 class Impl(): Super()
                 fun Super.get() = 0
                 
                 val tested = Impl().get()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionFieldsOnSuperClass() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Super()
                 class Impl(): Super()
                 val Super.value get() = 0
                 
                 val tested = Impl().value
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionMethodsOnInterfaces() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 interface Func
                 class Impl(): Func
                 fun Func.get() = 0
                 
                 val tested = Impl().get()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionFieldOnInterfaces() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 interface Func
                 class Impl(): Func
                 val Func.value get() = 0
                 
                 val tested = Impl().value
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testUnderdefinedExtensionMethodsByMethod() {
-        defineListParameters()
-
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl()
                 fun <V> Impl.get(): List<V>
                 
@@ -120,18 +103,14 @@ class ExtensionTest {
                 
                 val tested = sum(Impl().get())
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testUnderdefinedExtensionFieldsByField() {
-        defineListParameters()
-
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl()
                 val <V> Impl.value: List<V>
                 
@@ -139,18 +118,14 @@ class ExtensionTest {
                 
                 val tested = sum(Impl().value)
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass() {
-        defineListParameters()
-
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl<V>()
                 // illegal syntax: V is not defined
                 // fun Impl.get(): List<V> = emptyList()
@@ -162,18 +137,14 @@ class ExtensionTest {
                 
                 val tested = sum(Impl().get())
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass2() {
-        defineListParameters()
-
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl()
                 // illegal syntax: V is not defined
                 // fun Impl.get(): List<V> = emptyList()
@@ -185,18 +156,14 @@ class ExtensionTest {
                 
                 val tested = sum(Impl().get())
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testUnderdefinedExtensionFieldsByClass() {
-        defineListParameters()
-
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl<V>()
                 // illegal syntax: V is not defined
                 // val Impl.value: List<V> get() = emptyList()
@@ -208,16 +175,14 @@ class ExtensionTest {
                 
                 val tested = sum(Impl().value)
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionMethodToMethod() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl() {
                     fun calc() = 0
                 }
@@ -225,16 +190,14 @@ class ExtensionTest {
                 
                 val tested = Impl().get()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionMethodToField() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl {
                     val calc = 0
                 }
@@ -242,16 +205,14 @@ class ExtensionTest {
                 
                 val tested = Impl().get()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionFieldToMethod() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl {
                     fun calc() = 0
                 }
@@ -259,16 +220,14 @@ class ExtensionTest {
                 
                 val tested = Impl().value
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testExtensionFieldToField() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class Impl {
                     val calc = 0
                 }
@@ -276,7 +235,7 @@ class ExtensionTest {
                 
                 val tested = Impl().value
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 }

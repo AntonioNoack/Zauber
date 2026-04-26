@@ -14,12 +14,13 @@ class StrongGenericsTest {
     companion object {
         val stdlib = """
             package zauber
-            
-            enum class Boolean { TRUE, FALSE }
+            class Any
             object Unit
             class Array<V>(val size: Int) {
                 external operator fun set(index: Int, value: V)
             }
+            
+            enum class Boolean { TRUE, FALSE }
             
             class Type {
                 external fun isSubTypeOf(other: Type): Boolean

@@ -46,6 +46,7 @@ val xmlNode = XML"<h1>Hello World!</h1>"
 val tested = xmlNode.toString()
 
 package zauber
+class Any
 interface List<V> {
     operator fun get(index: Int): V
 }

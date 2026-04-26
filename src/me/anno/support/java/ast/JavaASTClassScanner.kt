@@ -30,13 +30,7 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
 
             skipValueParameters()
 
-            if (consumeIf("extends")) {
-                collectSuperCalls(classScope)
-            }
-
-            if (consumeIf("implements")) {
-                collectSuperCalls(classScope)
-            }
+            readSuperCalls(classScope, readBody)
 
             if (consumeIf("permits")) {
                 skipSuperNames(classScope)
@@ -47,9 +41,19 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
         }
     }
 
+    override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
+        if (consumeIf("extends")) {
+            super.readSuperCalls(classScope, readBody)
+        }
+
+        if (consumeIf("implements")) {
+            super.readSuperCalls(classScope, readBody)
+        }
+    }
+
     fun skipSuperNames(classScope: Scope) {
         val name0 = classScope.superCalls.size
-        collectSuperCalls(classScope)
+        readSuperCalls(classScope, false)
         while (classScope.superCalls.size > name0) {
             @Suppress("Since15")
             classScope.superCalls.removeLast()
