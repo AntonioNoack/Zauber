@@ -12,6 +12,9 @@ class ThisTests {
         val code = """
             class A(val x: Int)
             val tested = A(1).x
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(1, value.castToInt())
@@ -24,6 +27,9 @@ class ThisTests {
                 fun x() = x
             }
             val tested = A(1).x()
+            
+            package zauber
+            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(1, value.castToInt())
@@ -36,6 +42,7 @@ class ThisTests {
             val tested = A(2).run { x }
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -56,6 +63,7 @@ class ThisTests {
             val tested = A(2).run { x() }
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -76,6 +84,7 @@ class ThisTests {
             val tested = A(2).add1(5)
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -97,6 +106,7 @@ class ThisTests {
             val tested = A(2).add1(5)
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -117,6 +127,7 @@ class ThisTests {
             val tested = A(2).add1()
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -144,6 +155,7 @@ class ThisTests {
             val tested = A(2).add1()
             
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -166,6 +178,7 @@ class ThisTests {
             }
             val tested = A(1).B(2).test()
             package zauber
+            class Any
             class Int {
                 external fun plus(other: Int): Int
             }
@@ -197,6 +210,8 @@ val tested: Int get() {
 }
 
 package zauber
+
+class Any
 
 interface Iterator<V> {
     fun hasNext(): Boolean

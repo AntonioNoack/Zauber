@@ -90,7 +90,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): ResolvedMethod? {
         val avp = actualValueParameters.size
         val mvp = method.valueParameters.size
-        if (avp < mvp) {
+        if (if (method.hasVarargParameter) avp + 1 < mvp else avp < mvp) {
             LOGGER.info("Rejecting $method, not enough value parameters")
             return null
         }

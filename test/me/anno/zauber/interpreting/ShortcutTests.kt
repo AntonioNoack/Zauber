@@ -8,6 +8,7 @@ class ShortcutTests {
 
     private val stdlib = """
 package zauber
+class Any
 class Throwable()
 enum class Boolean { TRUE, FALSE }
 class Array<V>(val size: Int) {

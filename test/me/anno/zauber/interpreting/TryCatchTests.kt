@@ -63,6 +63,8 @@ class TryCatchTests {
             }
             
             package zauber
+            class Any
+            class Throwable
             class Exception: Throwable()
             class RuntimeException : Exception()
             class NullPointerException : RuntimeException()
@@ -222,6 +224,7 @@ class TryCatchTests {
             }
             
             package zauber
+            class Any
             external fun println(value: Int)
             
             // stdlib for for-loop:

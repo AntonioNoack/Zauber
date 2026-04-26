@@ -20,7 +20,7 @@ class ResolvedCallExpression(
 ) : Expression(scope, origin) {
 
     val self: Expression? =
-        if (callable is ResolvedConstructor) self
+        if (callable is ResolvedConstructor) null
         else self ?: callable.getBaseIfMissing(scope, origin)
 
     init {

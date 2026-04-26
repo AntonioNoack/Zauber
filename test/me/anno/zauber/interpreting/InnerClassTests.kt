@@ -24,6 +24,9 @@ class InnerClassTests {
                 }
                 
                 val tested = X().I().call()
+                
+                package zauber
+                class Any
             """.trimIndent()
         )
         assertEquals(0f, value.castToFloat())
@@ -47,6 +50,9 @@ class InnerClassTests {
                 }
                 
                 val tested = X().I().call()
+                
+                package zauber
+                class Any
             """.trimIndent()
         )
         assertEquals(0f, value.castToFloat())
@@ -66,6 +72,9 @@ class InnerClassTests {
                 }
                 
                 val tested = X().I().call()
+                
+                package zauber
+                class Any
             """.trimIndent()
         )
         assertEquals(0f, type.castToFloat())
@@ -93,6 +102,7 @@ class InnerClassTests {
                 val tested = X(5).calc()
                 
                 package zauber
+                class Any
                 class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1

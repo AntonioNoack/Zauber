@@ -158,7 +158,7 @@ class Instance(
         ) initializeConstant(field, fieldIndex)
 
         return properties[fieldIndex]
-            ?: throw IllegalStateException("$this.$field[$fieldIndex] accessed before initialization")
+            ?: throw IllegalStateException("$this.${field.toStringWithoutDefault()}[$fieldIndex] accessed before initialization")
     }
 
     private fun initializeConstant(field: Field, fieldIndex: Int) {

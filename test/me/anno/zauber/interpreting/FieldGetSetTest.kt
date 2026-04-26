@@ -54,6 +54,7 @@ class FieldGetSetTest {
             val tested = calculate(Vector(3,4))
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
             }

@@ -18,6 +18,8 @@ class VarargTest {
                 """
                 fun <V> arrayOf(vararg values: V): Array<V>
                 val tested = arrayOf<Float>()
+                
+                package zauber
             """.trimIndent()
             )
         )

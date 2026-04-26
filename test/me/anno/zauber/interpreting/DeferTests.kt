@@ -23,6 +23,7 @@ class DeferTests {
             val tested = run()
             
             package zauber
+            class Any
             object Unit
             class String
             external fun println(str: String)
@@ -51,6 +52,7 @@ class DeferTests {
             val tested = run()
             
             package zauber
+            class Any
             class String
             class Throwable()
             class Exception(): Throwable()
@@ -83,6 +85,7 @@ class DeferTests {
             
             package zauber
             class String
+            class Throwable
             class Exception: Throwable
             external fun println(str: String)
         """.trimIndent()

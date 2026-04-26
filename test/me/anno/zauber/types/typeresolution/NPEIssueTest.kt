@@ -13,6 +13,8 @@ class NPEIssueTest {
             return 1f / this
         }
         val tested = 1f.reciprocal()
+        
+        package zauber
             """.trimIndent()
         )
     }

@@ -8,6 +8,7 @@ class WhenTests {
 
     private val stdlib = """
 package zauber
+class Any
 class Int {
     external operator fun compareTo(other: Int): Int
     fun equals(other: Int): Boolean = this >= other && this <= other

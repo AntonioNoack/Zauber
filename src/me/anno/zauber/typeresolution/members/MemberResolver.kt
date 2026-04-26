@@ -16,7 +16,6 @@ import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resource>> {
@@ -273,39 +272,34 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             // handle all self-invocations
             // todo we also somehow need to set 'this' into the resolved method...
             for (explicitThis in context.extensionThis) {
-                val scope = explicitThis.thisTypeToScope ?: langScope // is langScope correct as a fallback?
-                if (print) LOGGER.info("Checking[ext] $scope with ${explicitThis.thisType}")
-                val result = callback(scope, explicitThis.thisType)
+                val explicitThisScope = explicitThis.thisTypeToScope ?: langScope // is langScope correct as a fallback?
+                if (print) LOGGER.info("Checking[ext] $explicitThisScope with ${explicitThis.thisType}")
+                val result = callback(explicitThisScope, explicitThis.thisType)
                 if (result != null) return result
             }
         }
 
-        val scopes = PairArrayList<Scope, Type?>()
+        val scopes = PairArrayList<Scope, Type>()
         listScopeTypeCandidates(context, codeScope, scopes)
 
         if (print) LOGGER.info("Scopes/selfTypes: $scopes")
 
-        val selfType0 = scopes.firstBOrNull() ?: Types.Unit
+        val selfType0 = scopes.firstBOrNull()
         val selfTypeZ = contextSelfType ?: selfType0
-        var handledLangScope = false
 
         // selfType goes over all scopes below it...
         for (scopeIndex in scopes.indices) {
             val scope = scopes.getA(scopeIndex) // should be unique by itself
             var lastType: Type? = null // to avoid duplicate checking
-            var hadLastType = false
-            var hadUnit = false
+
             for (typeIndex in 0..scopeIndex) {
                 val type = scopes.getB(typeIndex)
-                if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue // already done
-                val selfType = /*contextSelfType ?:*/ type ?: selfType0
-                if (print) LOGGER.info("Checking[i] $scope with $type -> $selfType")
-                if (scope == langScope && selfType == selfTypeZ) handledLangScope = true
-                val result = callback(scope, selfType)
+                if (type == lastType) continue // already done
+
+                if (print) LOGGER.info("Checking[i] $scope with $type")
+                val result = callback(scope, type)
                 if (result != null) return result
                 lastType = type
-                hadLastType = true
-                if (type == null) hadUnit = true
             }
         }
 
@@ -318,25 +312,15 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             LOGGER.info("Not-Checking[y]: ($contextSelfScope == null && $contextSelfType == null) || $selfTypeZ !is ClassType")
         }
 
-        if (!handledLangScope) {
-            if (print) LOGGER.info("Checking[z] $langScope with $selfTypeZ")
-            val result = callback(langScope, selfTypeZ)
-            if (result != null) return result
-        }
-
         return null
     }
 
     private fun listScopeTypeCandidates(
         context: ResolutionContext, codeScope: Scope,
-        result: PairArrayList<Scope, Type?>
+        result: PairArrayList<Scope, Type>
     ) {
         listScopeTypeCandidates(context, codeScope) { scope, selfType ->
             scope[ScopeInitType.AFTER_OVERRIDES]
-
-            val selfType = // replace useless package types with Unit s.t. we need to check fewer cases
-                if (selfType is ClassType && !selfType.clazz.isClassOrObject())
-                    null else selfType
             result.add(scope, selfType)
 
             // if scope has a companion object, list that, too
@@ -358,13 +342,17 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         while (true) {
             if (isScopeAvailable(scope, outerClassDepth)) {
                 val selfType = resolveTypeFromScoping(scope, context).specialize(context)
-                // println("SelfType[$scope]: $selfType")
                 callback(scope, selfType)
-            } else {
-                // println("Skipping scope '$scope'")
+
+                val selfType0 = scope.typeWithArgs
+                if (selfType0 != selfType) {
+                    callback(scope, selfType0)
+                }
             }
-            scope = scope.parentIfSameFile ?: return
+            scope = scope.parentIfSameFile ?: break
         }
+
+        callback(langScope, langScope.typeWithArgs)
     }
 
     private fun resolveTypeFromScoping(candidateScope: Scope, context: ResolutionContext): Type {
@@ -377,10 +365,12 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             }
             candidateScope = candidateScope.parentIfSameFile ?: break
         }
-        if (candidateScope == context.selfType) {
+
+        if (candidateScope == (context.selfType?.resolvedName as? ClassType)?.clazz) {
             // println("Found context.selfType: $candidateScope")
             return context.selfType
         }
+
         // if candidateScope is method & has self type, use that instead
         val selfAsMethod = candidateScope.selfAsMethod
         if (selfAsMethod != null) {
@@ -390,13 +380,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
                 return selfType
             }
         }
-        if (candidateScope.isClassLike() ||
-            candidateScope.scopeType == ScopeType.PACKAGE
-        ) {
-            // println("Found class: $candidateScope")
-            return candidateScope.typeWithArgs
-        }
-        // println("Using scope blindly: $candidateScope")
+
         return candidateScope.typeWithArgs
     }
 

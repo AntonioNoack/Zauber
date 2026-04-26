@@ -12,6 +12,7 @@ import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
@@ -106,6 +107,8 @@ class ResolvedField(
                 is ResolvedFieldExpression -> expr.field.resolved == field
                 is NamedCallExpression,
                 is CallExpression,
+                is ResolvedCallExpression,
+                is SuperCallExpression,
                 is SpecialValueExpression -> false
                 is ExpressionList -> exprIsField(field, expr.list.last(), context)
                 is IfElseBranch -> expr.elseBranch != null && // unlikely

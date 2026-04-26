@@ -32,6 +32,7 @@ class ConstTests {
             const tested = B.v2
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
             }
@@ -55,6 +56,7 @@ class ConstTests {
             const tested = calculate()
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
             }
@@ -79,6 +81,7 @@ class ConstTests {
             const tested = calculate()
             
             package zauber
+            class Any
             class Int {
                 external operator fun plus(other: Int): Int
             }

@@ -72,27 +72,25 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val classScope = parentScope.getOrPut(name, scopeType)
         classScope.addFlags(listenType or packFlags())
         classScope.fileName = tokens.fileName
-        classScope.addInitPart(
-            ScopeInitType.DISCOVER_MEMBERS, {
+        classScope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
 
-                // store old state
-                val prevPackage = currPackage
-                val prevSize = tokens.size
-                val prevI = i
+            // store old state
+            val prevPackage = currPackage
+            val prevSize = tokens.size
+            val prevI = i
 
-                // set original state
-                i = i0
-                tokens.size = i1
-                currPackage = parentScope
+            // set original state
+            i = i0
+            tokens.size = i1
+            currPackage = parentScope
 
-                readLazily(classScope, true)
+            readLazily(classScope, true)
 
-                // restore state
-                currPackage = prevPackage
-                tokens.size = prevSize
-                i = prevI
-            }
-        )
+            // restore state
+            currPackage = prevPackage
+            tokens.size = prevSize
+            i = prevI
+        }
 
         readLazily(classScope, false)
     }
@@ -140,8 +138,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
 
             addAnySuperCall(classScope)
-
-            addSuperCallToInit(classScope)
+            if (readBody) addSuperCallToInit(classScope)
 
             if (scopeType == ScopeType.OBJECT || scopeType == ScopeType.COMPANION_OBJECT) {
                 classScope.getOrCreateObjectField(origin)
