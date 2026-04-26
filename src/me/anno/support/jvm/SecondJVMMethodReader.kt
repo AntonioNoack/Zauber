@@ -561,7 +561,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         if (field != null) return field
 
         for (superCall in scope.superCalls) {
-            if (superCall.valueParameters != null) {
+            if (!superCall.isInterfaceCall) {
                 return findField(superCall.type.clazz, name)
             }
         }
@@ -910,7 +910,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             // check super classes
             scope = scope.superCalls
-                .firstOrNull { it.valueParameters != null }
+                .firstOrNull { it.isClassCall }
                 ?.type?.clazz
                 ?: break
         }

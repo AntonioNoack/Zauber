@@ -5,11 +5,11 @@ import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.FieldResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 /**
@@ -50,7 +50,7 @@ class FieldExpression(
 
     override fun resolveImpl(context: ResolutionContext): Expression {
         val field = resolveField(context)
-        val owner = field.resolveOwnerWithoutLeftSide(origin)
+        val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
         return ResolvedGetFieldExpression(owner, field, scope, origin)
     }
 

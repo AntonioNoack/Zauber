@@ -241,7 +241,7 @@ object JavaSourceGenerator : me.anno.generation.Generator() {
 
     fun generate(scope: Scope, dst: File, writer: JavaWriter, specialization: Specialization) {
         val scopeType = scope.scopeType
-        if (scope.isClassType()) {
+        if (scope.isClassLike() && scope.scopeType != ScopeType.PACKAGE) {
             val name = createClassName(scope, specialization)
 
             appendPackage(scope.path.dropLast(1))
@@ -376,7 +376,7 @@ object JavaSourceGenerator : me.anno.generation.Generator() {
                 // todo we may need sub-specializations...
                 for (child in scope.children) {
                     val childType = child.scopeType ?: continue
-                    if (childType.isClassType()) {
+                    if (childType.isClassLike()) {
                         // some spacing
                         nextLine()
                         generateInside(child.name, child[ScopeInitType.CODE_GENERATION], specialization)
@@ -602,7 +602,7 @@ object JavaSourceGenerator : me.anno.generation.Generator() {
         try {
             val superCall0 = scope.superCalls.firstOrNull()
             if (superCall0 != null &&
-                superCall0.valueParameters != null &&
+                superCall0.isClassCall &&
                 superCall0.type != Types.Any
             ) {
                 val type = superCall0.type
@@ -612,11 +612,12 @@ object JavaSourceGenerator : me.anno.generation.Generator() {
 
             var implementsKeyword = if (scope.scopeType == ScopeType.INTERFACE) " extends " else " implements "
             for (superCall in scope.superCalls) {
-                if (superCall.valueParameters != null) continue
-                val type = superCall.type
-                builder.append(implementsKeyword)
-                appendType(type, scope, true)
-                implementsKeyword = ", "
+                if (superCall.isInterfaceCall) {
+                    val type = superCall.type
+                    builder.append(implementsKeyword)
+                    appendType(type, scope, true)
+                    implementsKeyword = ", "
+                }
             }
         } catch (e: Exception) {
             comment { builder.append(e) }

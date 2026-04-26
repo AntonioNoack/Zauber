@@ -59,7 +59,7 @@ abstract class MethodColoring<Color : Any> {
             body.forEachExpressionRecursively { expr ->
                 when (expr) { // only top-level needs to be checked
                     is YieldExpression, is ReturnExpression, is ThrowExpression,
-                    is ThisExpression, is NumberExpression, is StringExpression,
+                    is ThisExpression, is SuperExpression, is NumberExpression, is StringExpression,
                     is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock,
                     is GetClassFromTypeExpression, is GetClassFromValueExpression,
                     is IsInstanceOfExpr,

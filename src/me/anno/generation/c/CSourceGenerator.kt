@@ -58,7 +58,7 @@ object CSourceGenerator : me.anno.generation.Generator() {
                 ScopeType.METHOD -> {
                     writeMethod(scope)
                 }
-                else -> if (scopeType.isClassType()) {
+                else -> if (scopeType.isClassLike()) {
                     writeClassReflectionStruct(scope)
                     writeClassInstanceStruct(scope)
                 }
@@ -283,8 +283,8 @@ object CSourceGenerator : me.anno.generation.Generator() {
             // super class as a field
             for (parent in scope.superCalls) {
                 // only primary super instance is needed, the rest should be put into Class
-                if (parent.valueParameters == null) continue
-                val pt = parent.type as ClassType
+                if (parent.isInterfaceCall) continue
+                val pt = parent.type
                 indent()
                 builder.append("struct ").append(getName(pt.clazz)).append(" superStruct;\n")
             }

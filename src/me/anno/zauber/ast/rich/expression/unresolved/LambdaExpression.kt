@@ -162,7 +162,7 @@ class LambdaExpression(
             else -> throw NotImplementedError("Convert $superType to class type")
         }
         classScope.superCalls.clear()
-        classScope.superCalls.add(SuperCall(superTypeI, null, null))
+        classScope.superCalls.add(SuperCall(superTypeI, null, null, origin))
 
         val selfMethodType = findSelfType(context)
         // todo if selfType != null, we need a second self-parameter

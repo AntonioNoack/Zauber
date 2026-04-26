@@ -38,7 +38,7 @@ object TypeResolution {
         // println("Searching selfType for $scope")
         var scope = scope
         while (true) {
-            if (scope.isClassType()) {
+            if (scope.isClassLike()) {
                 return scope.typeWithArgs
             }
 
@@ -91,10 +91,10 @@ object TypeResolution {
         while (true) {
             LOGGER.info("Checking ${scope.pathStr}/${scope.scopeType} for 'this'")
             when {
-                scope.isClassType() || scope.isMethodLike() -> return scope
+                scope.isClassLike() || scope.isMethodLike() -> return scope
                 else -> {}
             }
-            scope = scope.parent
+            scope = scope.parentIfSameFile
                 ?: throw IllegalStateException("Failed to resolve 'this' in $scope0")
         }
     }
@@ -105,7 +105,7 @@ object TypeResolution {
         while (true) {
             LOGGER.info("Checking ${scopeI.pathStr}/${scopeI.scopeType} for 'this'")
             when {
-                scopeI.isClassType() || scopeI.scopeType == ScopeType.PACKAGE -> {
+                scopeI.isClassLike() -> {
                     val base = scopeI.typeWithArgs
                     return if (scopeI.isObjectLike()) base else NonObjectClassType(base)
                 }
@@ -161,7 +161,8 @@ object TypeResolution {
         while (true) {
 
             val selfMatch = scope.children
-                .firstOrNull { it.name == name && it[ScopeInitType.AFTER_DISCOVERY].isClassType() }
+                .firstOrNull { it.name == name && it[ScopeInitType.AFTER_DISCOVERY].isClassLike() }
+
             if (selfMatch != null) {
                 val typeParams: List<Type>? =
                     if (selfMatch.hasTypeParameters && selfMatch.typeParameters.isEmpty()) emptyList() else null

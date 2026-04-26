@@ -754,11 +754,16 @@ abstract class ZauberASTBuilderBase(
         readSuperCalls(classScope)
 
         val primConstructorScope = classScope.getOrCreatePrimaryConstructorScope()
-        val primarySuperCall = classScope.superCalls.firstOrNull { it.valueParameters != null }
+        val primarySuperCall = classScope.superCalls.firstOrNull { it.isClassCall }
         val primaryConstructor = Constructor(
             constructorParams ?: emptyList(),
             primConstructorScope, if (primarySuperCall != null) {
-                InnerSuperCall(InnerSuperCallTarget.SUPER, primarySuperCall.valueParameters!!, origin)
+                InnerSuperCall(
+                    InnerSuperCallTarget.SUPER,
+                    // null means that there is no true primary constructor in this class
+                    primarySuperCall.valueParameters ?: emptyList(),
+                    origin
+                )
             } else null, constructorBody,
             if (privatePrimaryConstructor) Flags.PRIVATE else Flags.NONE,
             constructorOrigin

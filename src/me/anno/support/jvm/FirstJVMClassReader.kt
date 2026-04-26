@@ -174,10 +174,10 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             val superScope = getScope(superName, ScopeType.NORMAL_CLASS)
             val typeWithArgs = superTypesWithGenerics.firstOrNull { it.clazz == superScope }
                 ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
-            classScope.superCalls.add(SuperCall(typeWithArgs, emptyList(), null))
+            classScope.superCalls.add(SuperCall(typeWithArgs, emptyList(), null, -1))
         } else {
             val superType = if (name == "java/lang/Object") Types.Any else nameToType("java/lang/Object")
-            classScope.superCalls.add(SuperCall(superType, emptyList(), null))
+            classScope.superCalls.add(SuperCall(superType, emptyList(), null, -1))
         }
 
         if (interfaces != null) {
@@ -186,7 +186,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
                 val typeWithArgs =
                     superTypesWithGenerics.firstOrNull { it.clazz == superScope }
                         ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
-                classScope.superCalls.add(SuperCall(typeWithArgs, null, null))
+                classScope.superCalls.add(SuperCall(typeWithArgs, null, null, -1))
             }
         }
     }

@@ -46,7 +46,7 @@ abstract class ResolvedMember<V : Member>(
             var baseScope = resolvedScope
             while (true) {
                 val scopeType = baseScope.scopeType
-                if (scopeType != null && (scopeType.isClassType() || scopeType == ScopeType.PACKAGE)) {
+                if (scopeType != null && (scopeType.isClassLike() || scopeType == ScopeType.PACKAGE)) {
                     return ThisExpression(baseScope, codeScope, origin)
                 }
                 baseScope = baseScope.parent
@@ -55,7 +55,7 @@ abstract class ResolvedMember<V : Member>(
         }
 
         if (type is ClassType) {
-            check(type.clazz.isClassType()) // just in case
+            check(type.clazz.isClassLike()) // just in case
             return ThisExpression(type.clazz, scope, origin)
         }
 

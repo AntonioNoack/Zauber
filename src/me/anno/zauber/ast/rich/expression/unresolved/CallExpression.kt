@@ -1,17 +1,21 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.ValueParameter
+import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
@@ -62,7 +66,7 @@ class CallExpression(
 
     override fun resolveCallable(context: ResolutionContext): ResolvedMember<*> {
         val typeParameters = typeParameters
-        val valueParameters = resolveValueParameters(context, valueParameters)
+        var valueParameters = resolveValueParameters(context, valueParameters)
         if (LOGGER.isInfoEnabled) LOGGER.info("Resolving call: ${self}<${typeParameters ?: "?"}>($valueParameters)")
 
         // base can be a constructor, field or a method
@@ -77,7 +81,12 @@ class CallExpression(
                 val baseType = self.type
                 val baseScope = TypeResolution.typeToScope(baseType)
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
-                check(baseScope.hasTypeParameters)
+
+                if (baseScope.scopeType == ScopeType.INNER_CLASS) {
+                    val selfType = baseScope.parent!!.typeWithArgs.specialize(context)
+                    val selfParam = ValueParameterImpl(OUTER_NAME, selfType, false)
+                    valueParameters = listOf(selfParam) + valueParameters
+                }
 
                 val constructor = ConstructorResolver.findMemberInScopeImpl(
                     baseScope, baseScope.name,

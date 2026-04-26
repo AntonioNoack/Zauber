@@ -33,7 +33,7 @@ class SimpleSetField(
         val runtime = runtime
         val selfInstance = runtime[self]
         val value = runtime[value]
-        LOGGER.info("[SET] $selfInstance.${field.name} = $value")
+        LOGGER.info("[SET] $selfInstance.${field.name} (${field.ownerScope}) = $value")
         runtime[selfInstance, field] = value.cloneIfValue()
         return null
     }

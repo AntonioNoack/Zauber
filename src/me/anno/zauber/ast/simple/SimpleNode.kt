@@ -126,6 +126,7 @@ class SimpleNode(val graph: SimpleGraph) {
                 }
             } else false
 
+            println("Creating simple-this: $scopeIfThis, $isExplicitSelf, type: $type")
             return graph.thisFields.getOrPut(SimpleThis(scopeIfThis, isExplicitSelf)) { field(type) }
         }
     }

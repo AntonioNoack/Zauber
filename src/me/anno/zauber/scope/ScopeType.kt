@@ -38,13 +38,16 @@ enum class ScopeType {
     WHEN_CASES,
     WHEN_ELSE, ;
 
-    fun isClassType(): Boolean {
+    fun isClass(): Boolean {
         return when (this) {
             NORMAL_CLASS, ENUM_CLASS, INNER_CLASS, INLINE_CLASS,
-            INTERFACE,
-            OBJECT, COMPANION_OBJECT -> true
+            INTERFACE -> true
             else -> false
         }
+    }
+
+    fun isClassLike(): Boolean {
+        return isClass() || isObject()
     }
 
     fun isObject(): Boolean {
@@ -52,6 +55,10 @@ enum class ScopeType {
             OBJECT, COMPANION_OBJECT -> true
             else -> false
         }
+    }
+
+    fun isObjectLike(): Boolean {
+        return isObject() || this == PACKAGE
     }
 
     fun isInsideExpression(): Boolean {

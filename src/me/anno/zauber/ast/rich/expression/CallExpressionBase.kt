@@ -1,9 +1,11 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
@@ -240,11 +242,24 @@ abstract class CallExpressionBase(
                 }
             }
             is ResolvedConstructor -> {
-                check(self is TypeExpression || self is UnresolvedFieldExpression || self is CallExpression) {
+                check(
+                    self is TypeExpression ||
+                            self is UnresolvedFieldExpression ||
+                            self is CallExpression ||
+                            self is SuperExpression
+                ) {
                     "In ResolvedConstructor, base should be a TypeExpression/UFE/CallE, but got ${self.javaClass.simpleName}"
                 }
+
+                var valueParams = valueParameters
+                val createdType = callable.resolved.selfTypeI
+                if (createdType.clazz.scopeType == ScopeType.INNER_CLASS) {
+                    println("self for constructor: $self for ${callable.resolved}")
+                    val outerSelfParam = NamedParameter(OUTER_NAME, self)
+                    valueParams = listOf(outerSelfParam) + valueParams
+                }
                 val targetParams = callable.resolved.valueParameters
-                val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
+                val params = reorderResolveParameters(context, valueParams, targetParams, scope, origin)
                 ResolvedCallExpression(null, callable, params, scope, origin)
             }
             is ResolvedField -> {

@@ -52,7 +52,7 @@ class UnresolvedFieldExpression(
 
     override fun resolveImpl(context: ResolutionContext): ResolvedGetFieldExpression {
         val field = resolveField(context) ?: onMissingField()
-        val owner = field.resolveOwnerWithoutLeftSide(origin)
+        val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
         return ResolvedGetFieldExpression(owner, field, scope, origin)
     }
 

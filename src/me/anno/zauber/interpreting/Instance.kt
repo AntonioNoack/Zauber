@@ -144,8 +144,9 @@ class Instance(
         val fieldIndex = clazz.properties.indexOf(field)
         check(fieldIndex != -1) { "Instance $this does not have field $field (${field.scope})" }
 
-        if (fieldIndex >= properties.size)
+        if (fieldIndex >= properties.size) {
             throw IllegalStateException("Outdated instance? $this")
+        }
 
         if (properties[fieldIndex] == null &&
             clazz.type == Types.String &&

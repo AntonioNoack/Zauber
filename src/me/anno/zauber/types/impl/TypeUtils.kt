@@ -72,7 +72,7 @@ object TypeUtils {
     }
 
     fun getSuperType(a: ClassType, selfType: ClassType): ClassType {
-        val superCall = a.clazz.superCalls.first { it.valueParameters != null }
+        val superCall = a.clazz.superCalls.first { it.isClassCall }
         return resolveGenerics(
             selfType, superCall.type,
             a.clazz.typeParameters,
@@ -84,7 +84,7 @@ object TypeUtils {
         var depth = 0
         var scope = this
         while (true) {
-            val superCall = scope.superCalls.firstOrNull { it.valueParameters != null }
+            val superCall = scope.superCalls.firstOrNull { it.isClassCall }
             scope = superCall?.type?.clazz ?: return depth
             depth++
         }

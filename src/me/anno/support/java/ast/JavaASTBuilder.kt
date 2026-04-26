@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
@@ -132,15 +133,17 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
     override fun readSuperCalls(classScope: Scope) {
         if (consumeIf("extends")) {
             do {
+                val origin = origin(i)
                 val type = readTypeNotNull(null, true) as ClassType
-                classScope.superCalls.add(SuperCall(type, emptyList(), null))
+                classScope.superCalls.add(SuperCall(type, emptyList(), null, origin))
             } while (consumeIf(","))
         }
 
         if (consumeIf("implements")) {
             do {
+                val origin = origin(i)
                 val type = readTypeNotNull(null, true) as ClassType
-                classScope.superCalls.add(SuperCall(type, null, null))
+                classScope.superCalls.add(SuperCall(type, null, null, origin))
             } while (consumeIf(","))
         }
 
@@ -151,9 +154,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             } while (consumeIf(","))
         }
 
-        val addAnyIfEmpty = classScope != Types.Any.clazz
-        if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
-            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null))
+        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+            val origin = origin(i - 1) // fine?
+            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
         }
     }
 
@@ -443,7 +446,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
-            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin)
+            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), currPackage, origin)
             consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
@@ -622,7 +625,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
         val classScope = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
         classScope.typeParameters = emptyList()
         classScope.hasTypeParameters = true
-        classScope.superCalls.add(SuperCall(type as ClassType, null, null))
+        classScope.superCalls.add(SuperCall(type as ClassType, null, null, origin))
 
         readClassBody(name, Flags.NONE, ScopeType.INLINE_CLASS)
         return ConstructorExpression(

@@ -36,7 +36,13 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         for (child in scope.children) {
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
                 LOGGER.info("Found constructor-name pre-match: $child")
-                val constructor = findMemberInScopeImpl(child[ScopeInitType.AFTER_OVERRIDES], name, typeParameters, valueParameters, context)
+                val constructor = findMemberInScopeImpl(
+                    child[ScopeInitType.AFTER_OVERRIDES],
+                    name,
+                    typeParameters,
+                    valueParameters,
+                    context
+                )
                 if (constructor != null) return constructor
             }
         }
@@ -50,7 +56,10 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         context: ResolutionContext
     ): ResolvedConstructor? {
 
-        check(scope.name == name)
+        check(scope.name == name) {
+            "Expected $name, but got '${scope.pathStr}'"
+        }
+
         if (scope.scopeType == ScopeType.TYPE_ALIAS) {
             return getByTypeAlias(scope, typeParameters, valueParameters, context)
         }

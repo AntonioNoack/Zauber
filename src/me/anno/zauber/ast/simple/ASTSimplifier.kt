@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
@@ -134,8 +135,6 @@ object ASTSimplifier {
                 val type = when (expr.type) {
                     SpecialValue.NULL -> NullType
                     SpecialValue.TRUE, SpecialValue.FALSE -> Types.Boolean
-                    SpecialValue.SUPER ->
-                        throw NotImplementedError("Cannot simplify just 'super' at ${resolveOrigin(expr.origin)}")
                 }
                 val dst = block0.field(type)
                 block0.add(SimpleSpecialValue(dst, expr.type, expr.scope, expr.origin))
@@ -143,7 +142,12 @@ object ASTSimplifier {
             }
 
             is ThisExpression -> {
-                val type = TypeResolution.resolveType(context, expr)
+                val type = expr.label.typeWithArgs.specialize(context)
+                val dst = block0.thisField(type, expr.label, expr.scope, expr.origin, contextExpr)
+                return flow0.withValue(dst, block0)
+            }
+            is SuperExpression -> {
+                val type = expr.label.typeWithArgs.specialize(context)
                 val dst = block0.thisField(type, expr.label, expr.scope, expr.origin, contextExpr)
                 return flow0.withValue(dst, block0)
             }
@@ -266,7 +270,9 @@ object ASTSimplifier {
     ): FlowResult {
 
         // (base, block1)
-        val block1 = simplifyImpl(context, expr.self, block0, flow0, true, contextExpr = expr)
+        val block1 = if (expr.self != null) {
+            simplifyImpl(context, expr.self, block0, flow0, true, contextExpr = expr)
+        } else flow0
         val base = block1.value ?: return block1
 
         // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
@@ -277,8 +283,9 @@ object ASTSimplifier {
         }
 
         val method = expr.callable
+        val selfExpr = if (expr.self != null) base.value.use() else null
         return simplifyCall(
-            blockI.value!!.block, blockI, base.value.use(),
+            blockI.value!!.block, blockI, selfExpr, expr.self,
             valueParameters, method, null,
             expr.scope, expr.origin
         )
@@ -325,11 +332,24 @@ object ASTSimplifier {
                 context, expr.scope, MatchScore(0)
             )
             return simplifyCall(
-                block1v.block, block1, self,
+                block1v.block, block1, self, expr.self,
                 emptyList(), method0,
                 null, expr.scope, expr.origin
             )
         } else {
+            println("Creating SimpleGetField for $field, self: ${expr.self}")
+
+            var self = self
+            // add extra getters for inner classes
+            if (self.type is ClassType && self.type.clazz.isInnerClassOf(field.ownerScope)) {
+                val clazz = self.type.clazz
+                val outerField = clazz.fields.firstOrNull { it.name == OUTER_NAME }
+                    ?: throw IllegalStateException("Missing $OUTER_NAME field in $clazz for $field")
+                val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
+                block1v.block.add(SimpleGetField(selfDst, self.use(), outerField, expr.scope, expr.origin))
+                self = selfDst
+            } else println("  not inner class")
+
             block1v.block.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
             return block1.withValue(dst, block1v.block)
         }
@@ -397,7 +417,7 @@ object ASTSimplifier {
                 context, expr.scope, MatchScore(0)
             )
             return simplifyCall(
-                block2v.block, block2, self,
+                block2v.block, block2, self, expr.self,
                 listOf(value), method0,
                 null, expr.scope, expr.origin
             )
@@ -791,7 +811,13 @@ object ASTSimplifier {
         val dst = block1v.block.field(method0.getTypeFromCall())
         for (param in valueParametersI) param.use()
         val specialization = method0.specialization
-        val call = SimpleCall(dst, method, self0.value.use(), specialization, valueParametersI, scope, origin)
+        val selfField = self0.value.use()
+        val call = if (selfExpr is SuperExpression) {
+            val methodMap = FullMap<ClassType, MethodLike>(method)
+            SimpleCall(dst, method, methodMap, selfField, specialization, valueParametersI, scope, origin)
+        } else {
+            SimpleCall(dst, method, selfField, specialization, valueParametersI, scope, origin)
+        }
         return handleThrown(block1v.block, block1, dst, call, method.getThrownType(specialization))
     }
 
@@ -885,7 +911,8 @@ object ASTSimplifier {
         block0: SimpleNode,
         flow0: FlowResult,
 
-        selfExpr: SimpleField,
+        selfField: SimpleField?,
+        selfExpr: Expression?,
         valueParameters: List<SimpleField>,
 
         method0: ResolvedMember<*>,
@@ -900,7 +927,13 @@ object ASTSimplifier {
                 // then execute it
                 val dst = block0.field(method0.getTypeFromCall())
                 val specialization = method0.specialization
-                val call = SimpleCall(dst, method, selfExpr.use(), specialization, valueParameters, scope, origin)
+                val selfField = selfField!!.use()
+                val call = if (selfExpr is SuperExpression) {
+                    val methodMap = FullMap<ClassType, MethodLike>(method)
+                    SimpleCall(dst, method, methodMap, selfField, specialization, valueParameters, scope, origin)
+                } else {
+                    SimpleCall(dst, method, selfField, specialization, valueParameters, scope, origin)
+                }
                 handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
             }
             is Constructor -> createConstructorInvocation(

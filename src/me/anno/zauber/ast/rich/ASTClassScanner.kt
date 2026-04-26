@@ -16,8 +16,10 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.SuperCallExpression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -134,11 +136,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
 
             if (consumeIf(":")) {
-                collectSuperNames(classScope)
+                collectSuperCalls(classScope)
             }
 
-            if (classScope.superCalls.isEmpty() && classScope.pathStr != "zauber.Any")
-                classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null))
+            addAnySuperCall(classScope)
+
+            addSuperCallToInit(classScope)
 
             if (scopeType == ScopeType.OBJECT || scopeType == ScopeType.COMPANION_OBJECT) {
                 classScope.getOrCreateObjectField(origin)
@@ -149,19 +152,38 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         }
     }
 
+    fun addAnySuperCall(classScope: Scope) {
+        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+            val origin = origin(i - 1) // fine?
+            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
+        }
+    }
+
+    fun addSuperCallToInit(classScope: Scope) {
+        for (call in classScope.superCalls) {
+            if (call.valueParameters != null) {
+                val primBody = classScope.getOrCreatePrimaryConstructorScope()
+                val origin = call.origin
+                val base = SuperExpression(call.type.clazz, classScope, origin)
+                primBody.code.add(SuperCallExpression(base, null, call.valueParameters, origin))
+            }
+        }
+    }
+
     open fun readClassBody(classScope: Scope, readBody: Boolean) {
         if (readBody) readClassBody(classScope)
         else if (tokens.equals(i, TokenType.OPEN_BLOCK)) skipBlock()
     }
 
-    fun collectSuperNames(classScope: Scope) {
+    fun collectSuperCalls(classScope: Scope) {
         do {
+            val origin = origin(i)
             val type = readTypeNotNull(classScope.typeWithArgs, true)
             val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 readValueParameters()
             } else null
             val delegate = if (consumeIf("by")) readLazyValue(false) else null
-            classScope.superCalls.add(SuperCall(type, valueParameters, delegate))
+            classScope.superCalls.add(SuperCall(type, valueParameters, delegate, origin))
         } while (consumeIf(TokenType.COMMA))
     }
 
@@ -491,7 +513,27 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             val valueParameters = readParameterDeclarations(selfType, extra)
             val superCall = if (consumeIf(":")) readInnerSuperCall() else null
 
-            val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) readLazyBody() else null
+            // add explicit super-invocation
+            val list = ArrayList<Expression>(2)
+            if (superCall != null) {
+                val label = when (superCall.target) {
+                    InnerSuperCallTarget.THIS -> classScope
+                    InnerSuperCallTarget.SUPER -> {
+                        val call = classScope.superCalls
+                            .firstOrNull { it.isClassCall }
+                            ?: throw IllegalStateException("Missing super call in class for $superCall")
+                        call.type.clazz
+                    }
+                }
+                val base = SuperExpression(label, constrScope, superCall.origin)
+                list.add(SuperCallExpression(base, null, superCall.valueParameters, origin))
+            }
+
+            if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+                list.add(readLazyBody())
+            }
+
+            val body = ExpressionList(list, constrScope, origin)
             constrScope.selfAsConstructor = Constructor(
                 valueParameters,
                 constrScope, superCall, body,

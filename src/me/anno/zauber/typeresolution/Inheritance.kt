@@ -412,11 +412,12 @@ object Inheritance {
     }
 
     fun getSuperCalls(scope: Scope): List<SuperCall> {
+        // I don't think we need this...
         if (scope == Types.Any.clazz) return emptyList()
         if (scope.superCalls.isEmpty()) return listOf(superCallAny)
         return scope.superCalls
     }
 
-    private val superCallAny by threadLocal { SuperCall(Types.Any, emptyList(), null) }
+    private val superCallAny by threadLocal { SuperCall(Types.Any, emptyList(), null, -1) }
 
 }

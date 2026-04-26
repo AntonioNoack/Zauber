@@ -20,7 +20,6 @@ class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope,
             SpecialValue.NULL -> runtime.getNull()
             SpecialValue.TRUE -> runtime.getBool(true)
             SpecialValue.FALSE -> runtime.getBool(false)
-            SpecialValue.SUPER -> throw NotImplementedError("Cannot get just 'super'")
         }
         return BlockReturn(ReturnType.VALUE, value)
     }

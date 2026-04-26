@@ -230,7 +230,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
 
         var scopeJ = lowestMethodScope ?: scope
         while (true) {
-            if (scopeJ.isClassType() && scopeJ.scopeType != ScopeType.INNER_CLASS) {
+            if (scopeJ.isClassLike() && scopeJ.scopeType != ScopeType.INNER_CLASS) {
                 // inner class continues one down
                 return scopeJ.path.size
             }
@@ -298,7 +298,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             for (typeIndex in 0..scopeIndex) {
                 val type = scopes.getB(typeIndex)
                 if ((type == lastType && hadLastType) || (type == null && hadUnit)) continue // already done
-                val selfType = contextSelfType ?: type ?: selfType0
+                val selfType = /*contextSelfType ?:*/ type ?: selfType0
                 if (print) LOGGER.info("Checking[i] $scope with $type -> $selfType")
                 if (scope == langScope && selfType == selfTypeZ) handledLangScope = true
                 val result = callback(scope, selfType)
@@ -335,7 +335,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             scope[ScopeInitType.AFTER_OVERRIDES]
 
             val selfType = // replace useless package types with Unit s.t. we need to check fewer cases
-                if (selfType is ClassType && !selfType.clazz.isClassType())
+                if (selfType is ClassType && !selfType.clazz.isClassOrObject())
                     null else selfType
             result.add(scope, selfType)
 
@@ -390,7 +390,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
                 return selfType
             }
         }
-        if (candidateScope.isClassType() ||
+        if (candidateScope.isClassLike() ||
             candidateScope.scopeType == ScopeType.PACKAGE
         ) {
             // println("Found class: $candidateScope")

@@ -4,9 +4,12 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.members.ResolvedConstructor
+import me.anno.zauber.typeresolution.members.ResolvedField
+import me.anno.zauber.typeresolution.members.ResolvedMember
+import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
 
 class ResolvedCallExpression(
@@ -16,21 +19,36 @@ class ResolvedCallExpression(
     scope: Scope, origin: Int
 ) : Expression(scope, origin) {
 
+    val self: Expression? =
+        if (callable is ResolvedConstructor) self
+        else self ?: callable.getBaseIfMissing(scope, origin)
+
     init {
         check(valueParameters.all { it.isResolved() })
+        when (callable) {
+            is ResolvedMethod, is ResolvedField -> {
+                // these must have an owner
+                check(this.self != null) { "Expected self to not be null for $callable" }
+            }
+            is ResolvedConstructor -> {
+                // in inner classes, self is passed by the first value parameter
+                check(this.self == null) { "Expected self to be null for $callable, got $self" }
+            }
+            else -> throw NotImplementedError()
+        }
     }
 
-    val self = self ?: callable.getBaseIfMissing(scope, origin)
+
     val context get() = callable.context
 
     override fun clone(scope: Scope) = ResolvedCallExpression(
-        self.clone(scope), callable,
+        self?.clone(scope), callable,
         valueParameters.map { it.clone(scope) },
         scope, origin
     )
 
     override fun needsBackingField(methodScope: Scope): Boolean {
-        return self.needsBackingField(methodScope) ||
+        return (self != null && self.needsBackingField(methodScope)) ||
                 valueParameters.any { it.needsBackingField(methodScope) }
     }
 
@@ -40,24 +58,24 @@ class ResolvedCallExpression(
     override fun isResolved(): Boolean = true
 
     override fun toStringImpl(depth: Int): String {
-        val base = self.toString(depth)
+        val base = if (self != null) "(${self.toString(depth)})." else ""
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         val typeParameters = callable.callTypeParameters
         val name = when (val m = callable.resolved) {
             is Method -> m.name
             is Field -> m.name
-            is Constructor -> "<new>"
+            is Constructor -> m.classScope.name
             else -> throw NotImplementedError()
         }
         return if (typeParameters.isEmpty()) {
-            "($base).$name$valueParameters"
+            "$base$name$valueParameters"
         } else {
-            "($base).$name${typeParameters.joinToString(", ", "<", ">")}$valueParameters"
+            "$base$name${typeParameters.joinToString(", ", "<", ">")}$valueParameters"
         }
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
-        callback(self)
+        if (self != null) callback(self)
         for (param in valueParameters) callback(param)
     }
 

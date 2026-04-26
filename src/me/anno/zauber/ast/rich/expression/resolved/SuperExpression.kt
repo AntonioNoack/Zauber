@@ -7,9 +7,9 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveThisType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
+class SuperExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
 
-    override fun toStringImpl(depth: Int): String = "this@$label"
+    override fun toStringImpl(depth: Int): String = "super@$label"
     override fun resolveReturnType(context: ResolutionContext): Type {
         return resolveThisType(context, label)
     }
@@ -17,7 +17,7 @@ class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(s
     override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
-    override fun clone(scope: Scope) = ThisExpression(label, scope, origin)
+    override fun clone(scope: Scope) = SuperExpression(label, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // should not have any
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false

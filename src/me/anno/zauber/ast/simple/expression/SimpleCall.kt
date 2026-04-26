@@ -41,7 +41,7 @@ class SimpleCall(
 
         fun selfTypeIsOpen(method: Method): Boolean {
             val selfType = method.scope.parent?.get(ScopeInitType.AFTER_DISCOVERY) ?: return false
-            if (!selfType.isClassType()) return false // non-class-likes cannot be open
+            if (!selfType.isClass()) return false // non-class-likes cannot be open
             if (selfType.isObjectLike()) return false // objects cannot be open
             if (selfType.isInterface()) return true // interfaces are always open
 
@@ -70,9 +70,11 @@ class SimpleCall(
                     }
                     check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
                     check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
-                    println("Selected ${choices.first().scope.pathStr}/${choices.first()} " +
+                    println(
+                        "Selected ${choices.first().scope.pathStr}/${choices.first()} " +
                             "for $invokedType.$method, " +
-                            "options: ${clazzScope.methods0.map { it.scope.pathStr }}")
+                            "options: ${clazzScope.methods0.map { it.scope.pathStr }}"
+                    )
                     choices.first()
                 }
             }
@@ -108,6 +110,20 @@ class SimpleCall(
         scope: Scope, origin: Int
     ) : this(
         dst, method, self, specialization,
+        emptyList(), valueParameters, emptyList(),
+        scope, origin
+    )
+
+    constructor(
+        dst: SimpleField,
+        method: MethodLike,
+        methodMap: Map<ClassType, MethodLike>,
+        self: SimpleField,
+        specialization: Specialization,
+        valueParameters: List<SimpleField>,
+        scope: Scope, origin: Int
+    ) : this(
+        dst, (method as? Method)?.name ?: "?", methodMap, method, self, specialization,
         emptyList(), valueParameters, emptyList(),
         scope, origin
     )

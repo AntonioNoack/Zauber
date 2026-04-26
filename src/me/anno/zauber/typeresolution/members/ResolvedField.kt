@@ -1,12 +1,14 @@
 package me.anno.zauber.typeresolution.members
 
-import jdk.internal.classfile.impl.Util.parameterTypes
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -14,6 +16,8 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -22,8 +26,6 @@ import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.getScope
@@ -221,7 +223,8 @@ class ResolvedField(
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, codeScope, resolved.origin
-            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $className (${valueParameters.size})")
+            )
+                ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $className (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
@@ -229,7 +232,8 @@ class ResolvedField(
 
     val ownerScope get() = resolved.scope
 
-    fun resolveOwnerWithoutLeftSide(origin: Int): Expression {
-        return ThisExpression(ownerScope, codeScope, origin)
+    fun resolveOwnerWithoutLeftSide(scope: Scope, origin: Int): Expression {
+        println("Returning this for $resolved in $scope")
+        return ThisExpression(ownerScope, scope, origin)
     }
 }

@@ -573,7 +573,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (ownScopeType == ScopeType.PACKAGE) return false
         if (parentScopeType == null || parentScopeType.isObject()) return true
         if (ownScopeType == ScopeType.INNER_CLASS) return true
-        if (ownScopeType.isClassType()) return false
+        if (ownScopeType.isClassLike()) return false
         if (ownScopeType.isInsideExpression()) return true
         TODO("isVisible? $ownScopeType > $parentScopeType")
     }
@@ -614,8 +614,17 @@ class Scope(val name: String, val parent: Scope? = null) {
         return hash
     }
 
-    fun isClassType(): Boolean = scopeType?.isClassType() == true
-    fun isClassLike(): Boolean = isClassType() || isObjectLike()
+    @Deprecated("This is unclear whether it includes objects, use isClassLike() or isClass() instead")
+    fun isClassType(): Boolean = scopeType?.isClassLike() == true
+
+    fun isClass(): Boolean = scopeType?.isClass() == true
+    fun isClassOrObject() = isClass() || isObject()
+
+    /**
+     * class | enum | interface | object | package
+     * aka hasInstance
+     * */
+    fun isClassLike(): Boolean = isClass() || isObjectLike()
 
     /**
      * method, getter, setter or constructor
@@ -628,8 +637,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isMethod(): Boolean = scopeType?.isMethod() == true
 
     fun isTypeAlias(): Boolean = scopeType == ScopeType.TYPE_ALIAS
-    fun isObject(): Boolean = scopeType?.isObject() == true
-    fun isObjectLike(): Boolean = isObject() || scopeType == ScopeType.PACKAGE
+    fun isObject(): Boolean = scopeType?.isObject() ?: false
+    fun isObjectLike(): Boolean = scopeType?.isObjectLike() ?: false
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
     fun isValueType(): Boolean = flags.hasFlag(Flags.VALUE)
 
@@ -646,6 +655,13 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (isInterface()) return true
         if (isObjectLike()) return false
         return isClassType() && flags.hasAnyFlag(Flags.OPEN or Flags.ABSTRACT)
+    }
+
+    fun isInnerClassOf(ownerScope: Scope): Boolean {
+        if (scopeType != ScopeType.INNER_CLASS) return false
+        val parent = parent!!
+        if (parent == ownerScope) return true
+        return parent.isInnerClassOf(ownerScope)
     }
 
     companion object {

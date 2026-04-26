@@ -299,11 +299,11 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
     override fun readSuperCalls(classScope: Scope) {
         if (consumeIf("extends")) {
-            collectSuperNames(classScope)
+            collectSuperCalls(classScope)
         }
 
         if (consumeIf("implements")) {
-            collectSuperNames(classScope)
+            collectSuperCalls(classScope)
         }
     }
 

@@ -14,7 +14,6 @@ class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) 
         return when (type) {
             SpecialValue.NULL -> NullType
             SpecialValue.TRUE, SpecialValue.FALSE -> Types.Boolean
-            else -> throw NotImplementedError("Resolve type for ConstantExpression in ${scope},${type}")
         }
     }
 

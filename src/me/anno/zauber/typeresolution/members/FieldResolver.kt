@@ -157,7 +157,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                     field.selfType else null
 
             var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
-            if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassType()) {
+            if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassLike()) {
                 LOGGER.info("Field '$field' had invalid selfType: $fieldSelfType")
                 fieldSelfType = null
                 fieldSelfParams = emptyList()

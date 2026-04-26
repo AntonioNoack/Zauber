@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.SpecialFieldNames.OUTER_NAME
 import me.anno.zauber.ast.rich.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
@@ -10,6 +11,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
+import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
@@ -80,14 +82,17 @@ class NamedCallExpression(
         val baseType = calculateBaseType(context).handleNOCTForCall()
         val valueParameters = resolveValueParameters(context, valueParameters)
 
+        println("Resolving callable $name, baseType: ${baseType.javaClass.simpleName}")
         val constructor = if (baseType is ClassType) {
             val innerClass = baseType.clazz[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { child ->
                 child.scopeType == ScopeType.INNER_CLASS && child.name == name
             }
+            println("Inner class for $baseType: $innerClass")
             if (innerClass != null) {
+                val selfValueParameter = ValueParameterImpl(OUTER_NAME, baseType, false)
                 ConstructorResolver.findMemberInScopeImpl(
                     innerClass, name, typeParameters,
-                    valueParameters, context
+                    listOf(selfValueParameter) + valueParameters, context
                 )
             } else null
         } else null
@@ -106,6 +111,8 @@ class NamedCallExpression(
             }
             throw IllegalStateException("Missing type parameters for $baseType in $this, $context")
         }
+
+        println("Resolving callable $name, baseType: $baseType, constructor: $constructor")
 
         return MethodResolver.resolveCallable(
             contextI, scope, name, nameAsImport, constructor,

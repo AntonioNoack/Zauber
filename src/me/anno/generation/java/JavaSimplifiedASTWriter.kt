@@ -1,5 +1,6 @@
 package me.anno.generation.java
 
+import me.anno.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
@@ -13,7 +14,6 @@ import me.anno.zauber.ast.simple.SimpleNode
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.generation.java.JavaSourceGenerator.appendType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -21,7 +21,7 @@ import me.anno.zauber.types.impl.*
 
 object JavaSimplifiedASTWriter {
 
-    private val builder = _root_ide_package_.me.anno.generation.java.JavaSourceGenerator.builder
+    private val builder = JavaSourceGenerator.builder
     val imports = HashSet<Scope>()
 
     fun canBeNull(type: Type): Boolean {
@@ -71,7 +71,7 @@ object JavaSimplifiedASTWriter {
 
     // todo we have converted SimpleBlock into a complex graph,
     //  before we can use it, we must convert it back
-    fun me.anno.generation.java.JavaSourceGenerator.appendSimplifiedAST(
+    fun JavaSourceGenerator.appendSimplifiedAST(
         method: MethodLike, expr: SimpleNode,
         // loop: SimpleLoop? = null
     ) {
@@ -95,7 +95,7 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    fun me.anno.generation.java.JavaSourceGenerator.appendSimplifiedAST(
+    fun JavaSourceGenerator.appendSimplifiedAST(
         method: MethodLike, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
@@ -238,7 +238,6 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.TRUE -> builder.append("true")
                     SpecialValue.FALSE -> builder.append("false")
                     SpecialValue.NULL -> builder.append("null")
-                    SpecialValue.SUPER -> throw IllegalStateException("Super cannot be standalone")
                 }
             }
             is SimpleGetObject -> {

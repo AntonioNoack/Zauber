@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
@@ -10,6 +11,10 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.types.impl.GenericType
 
 open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(ASTBuilderBase::class)
+    }
 
     var flags = 0
 
@@ -178,7 +183,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         var scope = currPackage
         while (true) {
             // check if this is an instance
-            if (scope.isClassType() && (scope.name == label || label == null)) {
+            if (scope.isClassLike() && (scope.name == label || label == null)) {
                 return scope
             }
 
@@ -197,5 +202,60 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
             scope = scope.parentIfSameFile
                 ?: throw IllegalStateException("Could not resolve this-label@$label in $currPackage")
         }
+    }
+
+    fun resolveSuperLabel(label: String?): Scope {
+        var scope = currPackage
+        while (true) {
+            // check if this is an instance
+            if (scope.isClassLike()) {
+                return resolveSuperLabelI(label, scope)
+            }
+
+            scope = scope.parentIfSameFile
+                ?: throw IllegalStateException("Could not resolve super-label@$label in $currPackage")
+        }
+    }
+
+    fun resolveSuperLabelI(label: String?, scope: Scope): Scope {
+        check(scope.isClassLike())
+        val parents = scope.superCalls
+        if (label == null) {
+            // todo this should be smarter w.r.t. when we access a child member,
+            //  and we have multiple candidates (class and interfaces or multiple interfaces)
+            //  we can at least check whether the member exists in the super class, and prefer that one
+            if (parents.isEmpty()) throw IllegalStateException("Cannot access super in $scope")
+            if (parents.size == 1) return parents[0].type.clazz
+
+            val uniqueScopes = parents.map { it.type.clazz }
+                .distinct()
+
+            if (uniqueScopes.size == 1) {
+                return uniqueScopes[0]
+            }
+
+            // todo we may need to support generics, when we allow inheriting from interfaces with different generics,
+            //  e.g. class X: Function<Int>, Function<Float>
+            LOGGER.warn("Super without label is ambiguous for $scope, selecting ${uniqueScopes[0]}")
+            return uniqueScopes[0]
+        } else {
+            return resolveSuperLabelByName(label, scope)
+                ?: throw IllegalStateException("Missing super type called '$label' in $scope")
+        }
+    }
+
+    fun resolveSuperLabelByName(label: String, scope: Scope): Scope? {
+        check(scope.isClassLike())
+        val parents = scope.superCalls
+        for (parent in parents) {
+            if (parent.type.clazz.name == label) {
+                return parent.type.clazz
+            }
+        }
+        for (parent in parents) {
+            val solution = resolveSuperLabelByName(label, parent.type.clazz)
+            if (solution != null) return solution
+        }
+        return null
     }
 }

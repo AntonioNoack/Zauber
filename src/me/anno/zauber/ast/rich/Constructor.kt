@@ -20,6 +20,7 @@ class Constructor(
 ) {
 
     val selfTypeI get() = selfType as ClassType
+    val classScope get() = selfTypeI.clazz
 
     override fun toString(): String {
         return "new ${selfTypeI.clazz.pathStr}($valueParameters) { ... }"

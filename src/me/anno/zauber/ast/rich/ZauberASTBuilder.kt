@@ -13,6 +13,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
@@ -110,9 +111,9 @@ class ZauberASTBuilder(
             }
             i = endIndex // index of {
         }
-        val addAnyIfEmpty = classScope != Types.Any.clazz
-        if (addAnyIfEmpty && classScope.superCalls.isEmpty()) {
-            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null))
+        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+            val origin = origin(i - 1) // fine?
+            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
         }
     }
 
@@ -177,7 +178,7 @@ class ZauberASTBuilder(
         val keywords = packFlags()
 
         // parse optional <T, U>
-        val classScopeIfInClass = if (currPackage.isClassType()) currPackage else null
+        val classScopeIfInClass = if (currPackage.isClassOrObject()) currPackage else null
         val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin)
         val typeParameters = readTypeParameterDeclarations(methodScope)
         methodScope.typeParameters = typeParameters
@@ -392,7 +393,7 @@ class ZauberASTBuilder(
             consumeIf("null") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
             consumeIf("true") -> SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
-            consumeIf("super") -> SpecialValueExpression(SpecialValue.SUPER, currPackage, origin)
+            consumeIf("super") -> SuperExpression(resolveSuperLabel(label), currPackage, origin)
             consumeIf("this") -> ThisExpression(resolveThisLabel(label), currPackage, origin)
             tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
             tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.unescapeString(i++), currPackage, origin)
@@ -527,7 +528,7 @@ class ZauberASTBuilder(
         while (scope != null) {
             val scopeType = scope.scopeType
             if (scope.hasTypeParameters && scopeType != null &&
-                (scopeType.isMethodLike() || scopeType.isClassType())
+                (scopeType.isMethodLike() || scopeType.isClassLike())
             ) {
                 return scope.typeParameters
             }
@@ -559,6 +560,7 @@ class ZauberASTBuilder(
 
     private fun readSuperCall(selfType: Type): SuperCall {
         val i0 = i
+        val origin = origin(i)
         val type = readType(selfType, true) as? ClassType
             ?: throw IllegalStateException("SuperType must be a ClassType, at ${tokens.err(i0)}")
 
@@ -567,7 +569,7 @@ class ZauberASTBuilder(
         } else null
 
         val delegate = if (consumeIf("by")) readExpression() else null
-        return SuperCall(type, valueParams, delegate)
+        return SuperCall(type, valueParams, delegate, origin)
     }
 
     private fun readForLoop(label: String?): Expression {

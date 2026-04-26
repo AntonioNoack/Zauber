@@ -41,13 +41,13 @@ class AssignmentExpression(val dst: Expression, val src: Expression) :
         when (val dstExpr = dst) {
             is FieldExpression -> {
                 val field = dstExpr.resolveField(context)
-                val owner = field.resolveOwnerWithoutLeftSide(origin)
+                val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is UnresolvedFieldExpression -> {
                 val field = dstExpr.resolveField(context)
                     ?: dstExpr.onMissingField()
-                val owner = field.resolveOwnerWithoutLeftSide(origin)
+                val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldExpression -> {

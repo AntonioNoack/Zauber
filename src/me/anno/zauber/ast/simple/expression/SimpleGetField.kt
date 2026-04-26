@@ -7,6 +7,7 @@ import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.impl.ClassType
 
 class SimpleGetField(
     dst: SimpleField,
@@ -37,7 +38,7 @@ class SimpleGetField(
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")
         }
-        LOGGER.info("[GET] $self.${field.name}")
+        LOGGER.info("[GET] $self.${field.name} (${field.ownerScope})")
         val value = self[field]
         return BlockReturn(ReturnType.VALUE, value)
     }

@@ -43,7 +43,7 @@ object MethodOverrides {
     }
 
     private fun resolveOverrides(scope: Scope) {
-        if (!scope.isClassType()) return
+        if (!scope.isClassLike() || scope.scopeType == ScopeType.PACKAGE) return
         if (!processedScopes.add(scope)) return
 
         for (superCall in scope.superCalls) {
