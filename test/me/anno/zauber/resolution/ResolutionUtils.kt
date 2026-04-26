@@ -1,5 +1,6 @@
 package me.anno.zauber.resolution
 
+import me.anno.generation.Specializations
 import me.anno.utils.ResetThreadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Field
@@ -14,7 +15,10 @@ object ResolutionUtils {
 
     fun typeResolveScope(code: String, reset: Boolean = true): Scope {
 
-        if (reset) ResetThreadLocal.reset()
+        if (reset) {
+            ResetThreadLocal.reset()
+            Specializations.reset()
+        }
 
         val testScopeName = "test${ctr++}"
 

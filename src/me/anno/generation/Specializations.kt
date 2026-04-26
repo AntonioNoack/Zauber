@@ -20,6 +20,17 @@ object Specializations {
     val doneTypeSpecializations = HashSet<TypeSpecialization>()
     val doneMethodSpecializations = HashSet<MethodSpecialization>()
 
+    fun reset() {
+        todoTypeSpecializations.clear()
+        todoMethodSpecializations.clear()
+
+        doneTypeSpecializations.clear()
+        doneMethodSpecializations.clear()
+
+        specializations.clear()
+        specializations.add(noSpecialization)
+    }
+
     fun <R> push(specialization: Specialization, runnable: () -> R): R {
         return try {
             specializations.add(specialization)

@@ -17,6 +17,7 @@ class ConstTests {
     @Test
     fun testConstWithCrissCrossReferences() {
         // todo why does this fail when executed together with other tests?
+        //  we must still have shared state somewhere...
         val value = testExecute(
             """
             object A {

@@ -74,9 +74,4 @@ class Method(
         builder.append(')')
         return builder.toString()
     }
-
-    init {
-        if (explicitSelfType && name == "x")
-            throw IllegalStateException("Testing: Explicit self-type??? $this")
-    }
 }

@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -177,12 +178,16 @@ class Instance(
     }
 
     fun evaluateExpressionUnsafe(value: Expression, flags: Int, valueType: Type?): BlockReturn {
+        val tmpMethodScope = value.scope.generate("exprUnsafe", ScopeType.METHOD) // needed? not really...
+        tmpMethodScope.hasTypeParameters = true
+
         val method = Method(
             null, false, null,
-            emptyList(), emptyList(), value.scope, valueType,
+            emptyList(), emptyList(), tmpMethodScope, valueType,
             emptyList(), ReturnExpression(value, null, value.scope, value.origin),
             flags, value.origin
         )
+
         val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
         return runtime.executeCall(this, methodSpec, emptyList())
     }
