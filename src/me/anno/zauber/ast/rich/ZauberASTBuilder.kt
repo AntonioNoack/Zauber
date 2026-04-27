@@ -1060,6 +1060,7 @@ class ZauberASTBuilder(
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
                     throw IllegalStateException("} in the middle at ${tokens.err(i)}")
+
                 consumeIf(";") -> {} // skip
                 consumeIf("@") -> annotations.add(readAnnotation())
                 consumeIf("lateinit") -> {
@@ -1078,6 +1079,7 @@ class ZauberASTBuilder(
                 consumeIf("inner") -> throw IllegalStateException("Inner classes inside methods are not supported")
                 consumeIf("enum") -> throw IllegalStateException("Enum classes inside methods are not supported")
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+                consumeIf("typealias") -> readTypeAlias()
 
                 language == ZauberLanguage.ZAUBER && consumeIf("defer") -> readDefer(result, origin(i - 1))
                 language == ZauberLanguage.ZAUBER && consumeIf("errdefer") -> readErrdefer(result, origin(i - 1))

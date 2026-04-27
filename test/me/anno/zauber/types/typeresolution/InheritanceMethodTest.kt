@@ -9,42 +9,36 @@ class InheritanceMethodTest {
 
     @Test
     fun testDirectCall() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class A {
                     fun call(): Int
                 }
                 
                 val tested = A().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testDirectCallWithGenerics() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class A<V> {
                     fun call(): Int
                 }
                 
                 val tested = A<Int>().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperCallX1() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A {
                     fun call(): Int
                 }
@@ -52,16 +46,14 @@ class InheritanceMethodTest {
                 
                 val tested = B().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperCallX1WithGenerics() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A<V> {
                     fun call(): Int
                 }
@@ -69,16 +61,14 @@ class InheritanceMethodTest {
                 
                 val tested = B<Float>().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperCallX2() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A {
                     fun call(): Int
                 }
@@ -87,16 +77,14 @@ class InheritanceMethodTest {
                 
                 val tested = C().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperCallX2WithGenerics() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A<I> {
                     fun call(): Int
                 }
@@ -105,7 +93,7 @@ class InheritanceMethodTest {
                 
                 val tested = C<Float>().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 }

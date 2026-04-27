@@ -1,12 +1,14 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class NPEIssueTest {
     @Test
     fun testNPE() {
-        testTypeResolution(
+        val actual = testTypeResolution(
             """
         typealias SomeFloat = Float | Double
         fun <N : SomeFloat> N.reciprocal(): N {
@@ -17,5 +19,6 @@ class NPEIssueTest {
         package zauber
             """.trimIndent()
         )
+        assertEquals(Types.Float, actual)
     }
 }

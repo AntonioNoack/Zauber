@@ -9,42 +9,36 @@ class InheritanceFieldTest {
 
     @Test
     fun testDirectField() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class A {
                     val size: Int
                 }
                 
                 val tested = A().size
-            """.trimIndent()
-            )
+            """.trimIndent(),
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testDirectFieldWithGenerics() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 class A<V> {
                     val size: Int
                 }
                 
                 val tested = A<Int>().size
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperFieldX1() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A {
                     val size: Int
                 }
@@ -52,16 +46,14 @@ class InheritanceFieldTest {
                 
                 val tested = B().size
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperFieldX1WithGenerics() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A<V> {
                     val size: Int
                 }
@@ -69,16 +61,14 @@ class InheritanceFieldTest {
                 
                 val tested = B<Float>().size
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperFieldX2() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A {
                     val size: Int
                 }
@@ -87,16 +77,14 @@ class InheritanceFieldTest {
                 
                 val tested = C().size
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testSuperFieldX2WithGenerics() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 open class A<I> {
                     val size: Int
                 }
@@ -105,7 +93,7 @@ class InheritanceFieldTest {
                 
                 val tested = C<Float>().size
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 }
