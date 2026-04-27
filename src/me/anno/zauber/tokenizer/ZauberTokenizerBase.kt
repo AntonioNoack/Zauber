@@ -163,6 +163,11 @@ abstract class ZauberTokenizerBase(
             first == '0' && i < n && src[i] in "bB" -> {
                 i++ // skip 0b
                 while (i < n && (src[i] in "01_")) i++
+                if (i + 1 < n && src[i] == '.' && src[i + 1] in "01") {
+                    i++
+                    while (i < n && (src[i] in "01_")) i++
+                }
+                readBinaryExponent()
             }
             first == '.' -> {
                 readInteger()

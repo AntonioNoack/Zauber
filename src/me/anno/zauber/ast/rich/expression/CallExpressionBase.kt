@@ -139,7 +139,7 @@ abstract class CallExpressionBase(
         inlineBody: Expression
     ): Expression {
 
-        println("Resolving inline invocation: $callable, $inlineBody")
+        // println("Resolving inline invocation: $callable, $inlineBody")
 
         val parameter = callable.resolved.byParameter as? Parameter
             ?: throw IllegalStateException(
@@ -234,7 +234,7 @@ abstract class CallExpressionBase(
                         self.resolve(context)
                     } else null // else base was consumed to be the method
 
-                    println("Resolved $self (${self.javaClass.simpleName}) to $base")
+                    // println("Resolved $self (${self.javaClass.simpleName}) to $base")
 
                     // println("base for call: $method, base: $base, this.base: ${this.base}")
                     val targetParams = method.valueParameters

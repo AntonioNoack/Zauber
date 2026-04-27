@@ -5,6 +5,7 @@ import me.anno.support.jvm.expression.JVMSimpleCall
 import me.anno.support.jvm.expression.JVMSimpleExpr
 import me.anno.utils.RecursiveException
 import me.anno.utils.RecursiveLazy
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -20,7 +21,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 
 abstract class MethodColoring<Color : Any> {
 
-    private val cache = HashMap<MethodSpecialization, RecursiveLazy<Color>>()
+    private val cache by threadLocal { HashMap<MethodSpecialization, RecursiveLazy<Color>>() }
 
     operator fun get(method: MethodSpecialization): Color {
         return cache.getOrPut(method) {
@@ -43,7 +44,7 @@ abstract class MethodColoring<Color : Any> {
         return mergeColors(selfColor, colors, isRecursive)
     }
 
-    fun getDependencies(method: MethodSpecialization) =
+    open fun getDependencies(method: MethodSpecialization) =
         getMethodDependencies(method)
 
     abstract fun getSelfColor(method: MethodSpecialization): Color

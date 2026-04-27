@@ -413,12 +413,20 @@ class ZauberASTBuilder(
                 NamedCallExpression(base, "not", currPackage, origin)
             }
             consumeIf("+") -> {
-                val base = readExpression()
-                NamedCallExpression(base, "unaryPlus", currPackage, origin)
+                if (tokens.equals(i, TokenType.NUMBER)) { // just skip it
+                    NumberExpression(tokens.toString(i++), currPackage, origin)
+                } else {
+                    val base = readExpression()
+                    NamedCallExpression(base, "unaryPlus", currPackage, origin)
+                }
             }
             consumeIf("-") -> {
-                val base = readExpression()
-                NamedCallExpression(base, "unaryMinus", currPackage, origin)
+                if (tokens.equals(i, TokenType.NUMBER)) { // immediately apply it
+                    NumberExpression("-" + tokens.toString(i++), currPackage, origin)
+                } else {
+                    val base = readExpression()
+                    NamedCallExpression(base, "unaryMinus", currPackage, origin)
+                }
             }
             consumeIf("++") -> {
                 val rhs = readRHS(unaryOperators["++"]!!)
@@ -516,13 +524,9 @@ class ZauberASTBuilder(
                     nameExpression(namePath, origin, currPackage)
                 }
             }
-            tokens.equals(i, TokenType.OPEN_CALL) -> {
-                // just something in brackets
-                pushCall { readExpression() }
-            }
-            tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                readLambdaBlock(null)
-            }
+            // just something in brackets
+            tokens.equals(i, TokenType.OPEN_CALL) -> pushCall { readExpression() }
+            tokens.equals(i, TokenType.OPEN_BLOCK) -> readLambdaBlock(null)
             else -> {
                 tokens.printTokensInBlocks(max(i - 5, 0))
                 throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
@@ -531,7 +535,15 @@ class ZauberASTBuilder(
     }
 
     private fun readLambdaBlock(selfType: Type?): Expression {
-        return pushBlock(ScopeType.LAMBDA, null) { readLambda(selfType) }
+        return pushBlock(ScopeType.LAMBDA, null) { lambdaScope ->
+            val origin = origin(i)
+            val lambda = readLambda(selfType)
+            lambdaScope.selfAsMethod = Method(
+                null, false, null, emptyList(), emptyList(),
+                lambdaScope, null, emptyList(), lambda, 0, origin
+            )
+            lambda
+        }
     }
 
     private fun getNextOuterTypeParams(): List<Parameter> {
@@ -540,9 +552,7 @@ class ZauberASTBuilder(
             val scopeType = scope.scopeType
             if (scope.hasTypeParameters && scopeType != null &&
                 (scopeType.isMethodLike() || scopeType.isClassLike())
-            ) {
-                return scope.typeParameters
-            }
+            ) return scope.typeParameters
 
             scope = scope.parentIfSameFile
         }

@@ -127,7 +127,7 @@ class Runtime {
         valueParameters: List<SimpleField>
     ): BlockReturn {
 
-        println("Calling $methodSpec on $self with $valueParameters")
+        // println("Calling $methodSpec on $self with $valueParameters")
 
         if (isNull(self)) {
             throw IllegalArgumentException("Cannot execute $methodSpec on null instance")

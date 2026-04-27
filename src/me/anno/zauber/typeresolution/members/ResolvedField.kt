@@ -199,35 +199,32 @@ class ResolvedField(
         val baseType = getValueType()
         if (baseType is LambdaType) {
             val numArguments = baseType.parameters.size
-            val className = getLambdaTypeName(numArguments)
+            val lambdaClassName = getLambdaTypeName(numArguments)
             val genericNames = String(CharArray(numArguments + 1) { 'A' + it })
 
             val nat = Types.NullableAny
-            val lambdaClassScope = getScope(className, genericNames, nat)
+            val lambdaClassScope = getScope(lambdaClassName, genericNames, nat)
 
             val method = lambdaClassScope.getMethods(ScopeInitType.AFTER_DISCOVERY)
                 .firstOrNull { it.name == "call" && it.typeParameters.isEmpty() && it.valueParameters.size == numArguments }
-                ?: throw IllegalStateException("Fun-Interface $className is missing .call() method")
+                ?: throw IllegalStateException("Fun-Interface $lambdaClassName is missing .call() method")
 
-            val scopeSelfType = lambdaClassScope.typeWithoutArgs // without args is correct!!!
-            val returnType = context.targetType
-            val methodReturnType = if (returnType != null) {
-                getMethodReturnType(scopeSelfType, method)
-            } else method.returnType // no resolution invoked (fast-path)
+            val scopeSelfType = lambdaClassScope.typeWithArgs
+            val methodReturnType = baseType.returnType
 
-            /*
-            println("Finding method match:")
+            /*println("Finding method match:")
             println("  method: $method -> $methodReturnType")
             println("  targetType: ${context.targetType}")
             println("  selfType: $scopeSelfType")
             println("  typeParameters: $typeParameters")
-            println("  valueParameters: $valueParameters")*/
+            println("  valueParameters: $valueParameters")
+            println("  lambda-params: ${baseType.parameters}")
+            println("  lambda-returnType: ${baseType.returnType}")*/
 
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, codeScope, resolved.origin
-            )
-                ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $className (${valueParameters.size})")
+            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
@@ -236,7 +233,7 @@ class ResolvedField(
     val ownerScope get() = resolved.scope
 
     fun resolveOwnerWithoutLeftSide(scope: Scope, origin: Int): Expression {
-        println("Returning this for $resolved in $scope")
+        // println("Returning this for $resolved in $scope")
         return ThisExpression(ownerScope, scope, origin)
     }
 }

@@ -220,7 +220,7 @@ object ASTSimplifier {
         val exprScope = expr.scope
 
         // declare fields -> needed?
-        for (field in exprScope.fields) {
+        if (false) for (field in exprScope.fields) {
             if (needsFieldByParameter(field.byParameter) &&
                 // field.originalScope == field.codeScope && // not moved
                 block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
@@ -330,8 +330,7 @@ object ASTSimplifier {
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
         if (needsCapture(selfMethod, valueMethod, field)) {
-            field.isCaptured = true
-            val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
+            val dst = block0.graph.readCapturedField(valueMethod, field, valueType)
             return block1.withValue(dst, block1v.block)
         }
 
@@ -350,7 +349,7 @@ object ASTSimplifier {
             )
         } else {
 
-            println("Creating SimpleGetField for $field, self: ${expr.self}")
+            // println("Creating SimpleGetField for $field, self: ${expr.self}")
 
             var self = self
 
@@ -417,11 +416,9 @@ object ASTSimplifier {
         // todo if we call in an inner method, immediately AST-simplify it, so we know all captured fields
 
         if (needsCapture(selfMethod, valueMethod, field)) {
-            field.isCaptured = true
-            /* val dst = block0.graph.requestCapturedField(valueMethod, field, valueType)
-             return block1.withValue(dst, block1v.block)
-             */
-            TODO("Create setter for field in another scope: $field from $selfMethod")
+            block0.graph.onCapturedField(field)
+
+            TODO("Set captured field somehow...")
         }
 
         if (useSetter) {
@@ -697,7 +694,7 @@ object ASTSimplifier {
         val unit = unitInstance(graph, expr)
         val insideFlow0 = flow0.withValue(unit, bodyBlock)
         val insideBlock1 = simplifyImpl(context, expr.body, bodyBlock, insideFlow0, false)
-        var flow1 = flow0.joinError(insideBlock1)
+        var flow1 = insideFlow0.joinError(insideBlock1)
         if (insideBlock1.value != null) {
             insideBlock1.value.block.nextBranch = conditionBlock
 

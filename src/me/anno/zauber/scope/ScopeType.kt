@@ -82,7 +82,7 @@ enum class ScopeType {
 
     fun isMethod(): Boolean {
         return when (this) {
-            METHOD,
+            METHOD, LAMBDA,
             FIELD_GETTER, FIELD_SETTER -> true
             else -> false
         }

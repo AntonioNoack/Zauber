@@ -35,9 +35,12 @@ class StrongGenericsTest {
 
     @Test
     fun testGenericsHaveNameNativeType() {
+        // todo what is that weird error?
+        //  Unresolved field for field type: (MemberNameExpression) zauber.Nothing dot name in test0.$call_o2.$body_n1
+
         // todo when we don't define the return-type for call, we somehow get an error :(
         val code = """
-            fun <V> call(v: V): String = (V::class as ClassType).name
+            fun <V> call(v: V): String = (V::class as ClassType<*>).name
             val tested = call(0)
         """.trimIndent() + stdlib
         val value = testExecute(code)
@@ -57,7 +60,7 @@ class StrongGenericsTest {
     @Test
     fun testGenericsHaveNameReferenceType() {
         val code = """
-            fun <V> call(v: V): String = (V::class as ClassType).name
+            fun <V> call(v: V): String = (V::class as ClassType<*>).name
             val tested = call("Hello")
         """.trimIndent() + stdlib
         val value = testExecute(code)

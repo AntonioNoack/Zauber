@@ -79,6 +79,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     val superCalls = ArrayList<SuperCall>()
     val sealedPermits = ArrayList<Type>(0) // for Java
+    val capturedFields = HashSet<Field>()
 
     val enumEntries: List<Scope>
         get() = children
@@ -429,7 +430,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         searchInside: Boolean
     ): Type? {
 
-        println("Resolving $name in $this ($searchInside, $fileName, ${parent?.fileName})")
+        // println("Resolving $name in $this ($searchInside, $fileName, ${parent?.fileName})")
 
         val parentI = parentIfSameFile
         if (parentI != null && parentI.name == name) {

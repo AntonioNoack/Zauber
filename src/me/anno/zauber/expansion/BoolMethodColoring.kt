@@ -7,6 +7,7 @@ import me.anno.utils.RecursiveLazy
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 abstract class BoolMethodColoring(val isRecursionColored: Boolean) {
+
     private val cache by threadLocal { HashMap<MethodSpecialization, RecursiveLazy<Boolean>>() }
 
     operator fun get(method: MethodSpecialization): Boolean {

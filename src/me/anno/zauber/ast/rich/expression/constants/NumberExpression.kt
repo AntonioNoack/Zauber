@@ -13,45 +13,52 @@ import kotlin.math.pow
 class NumberExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
 
     companion object {
+
         private val LOGGER = LogManager.getLogger(NumberExpression::class)
 
-        fun parseHexFloat(value: String): Double {
+        private fun parseDigit(c: Char): Int {
+            return when (c) {
+                in '0'..'9' -> c - '0'
+                in 'A'..'F' -> c - 'A' + 10
+                in 'a'..'f' -> c - 'a' + 10
+                else -> 1000
+            }
+        }
+
+        fun parseFloat(value: String, basis: Int): Double {
             var result = 0.0
             var i = 0
+            if (value.startsWith('-')) i++ // skip sign
             while (i < value.length) {
-                result = result * 10.0 + when (val c = value[i++]) {
-                    in '0'..'9' -> c - '0'
-                    in 'A'..'F' -> c - 'A' + 10
-                    in 'a'..'f' -> c - 'a' + 10
-                    else -> {
-                        i--
-                        break
-                    }
+                val digit = parseDigit(value[i++])
+                if (digit >= basis) {
+                    i--
+                    break
                 }
+                result = result * basis + digit
             }
             if (i < value.length && value[i] == '.') {
-                i++
-                val factor = 1.0 / 16.0
+                i++ // skip period
+                val factor = 1.0 / basis
                 var exponent = 1.0
                 while (i < value.length) {
                     exponent *= factor
-                    result += exponent * when (val c = value[i++]) {
-                        in '0'..'9' -> c - '0'
-                        in 'A'..'F' -> c - 'A' + 10
-                        in 'a'..'f' -> c - 'a' + 10
-                        else -> {
-                            i--
-                            break
-                        }
+                    val digit = parseDigit(value[i++])
+                    if (digit >= basis) {
+                        i--
+                        break
                     }
+                    result += exponent * digit
                 }
             }
             if (i + 1 < value.length && value[i] in "pP") {
-                i++
+                i++ // skip symbol
                 val isNegative = value[i] == '-'
                 if (isNegative || value[i] == '+') i++
                 var exponent = 0
                 while (i < value.length) {
+                    // confirm with URL, that exponent should be decimal
+                    // https://docs.oracle.com/javase/specs/jls/se11/html/jls-3.html#jls-BinaryExponent
                     exponent = exponent * 10 + when (val c = value[i++]) {
                         in '0'..'9' -> c - '0'
                         else -> {
@@ -65,7 +72,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             }
             if (i < value.length && value[i] in "fFdD") i++
             check(i == value.length)
-            return result
+            return if (value.startsWith('-')) -result else +result
         }
 
     }
@@ -83,33 +90,43 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
     }
 
     private fun resolveIntType(): ClassType {
-        val extraLength = value.count { it == '_' }
-        return if (value.length <= 9 + extraLength &&
+        val extraLength = value.count { it in "_-" }
+        return if (value.length <= 10 + extraLength &&
             value.replace("_", "")
                 .toIntOrNull() != null
         ) Types.Int else Types.Long
     }
 
     private fun resolveHexIntType(): ClassType {
-        val extraLength = 2 + value.count { it == '_' }
+        val extraLength = 2 + value.count { it in "_-" }
+        val start = if (value.startsWith('-')) 1 else 0
         return if (value.length <= 8 + extraLength &&
-            value.substring(2)
+            value.removeRange(start, start + 2)
                 .replace("_", "")
                 .toIntOrNull(16) != null
         ) Types.Int else Types.Long
     }
 
     private fun resolveBinIntType(): ClassType {
-        val extraLength = 2 + value.count { it == '_' }
+        val extraLength = 2 + value.count { it in "_-" }
+        val start = if (value.startsWith('-')) 1 else 0
         return if (value.length <= 32 + extraLength &&
-            value.substring(2)
+            value.removeRange(start, start + 2)
                 .replace("_", "")
                 .toIntOrNull(2) != null
         ) Types.Int else Types.Long
     }
 
     private fun typeBySuffix(): ClassType? {
-        val maybeIsFloat = !value.startsWith("0x", true) || value.contains("p", true)
+        if (value.contains('p', true)) {
+            return when (value.last()) {
+                'f', 'F' -> Types.Float
+                'h', 'H' -> Types.Half
+                else -> Types.Double
+            }
+        }
+
+        val maybeIsFloat = !(value.startsWith("0x", true) || value.startsWith("-0x", true))
         return when {
             value.endsWith("ul", true) -> Types.ULong
             value.endsWith("u", true) -> Types.UInt
@@ -117,8 +134,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             value.endsWith("h", true) -> Types.Half
             maybeIsFloat && value.endsWith("f", true) -> Types.Float
             maybeIsFloat && value.endsWith("d", true) -> Types.Double
-            value.startsWith("0x", true) &&
-                    ('.' in value || value.contains("pP", true)) -> Types.Double
+            (value.startsWith("0x", true) || value.startsWith("0b", true)) &&
+                    '.' in value -> Types.Double
             else -> null
         }
     }
@@ -164,6 +181,12 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
 
             if (str.startsWith("0x")) {
                 str = str.substring(2).toInt(16).toString()
+            } else if (str.startsWith("-0x")) {
+                str = str.removeRange(1, 3).toInt(16).toString()
+            } else if (str.startsWith("0b")) {
+                str = str.substring(2).toInt(2).toString()
+            } else if (str.startsWith("-0b")) {
+                str = str.removeRange(1, 3).toInt(2).toString()
             } else {
                 if (str.isNotEmpty() && str.last() in "hfdHFD") {
                     str = str.substring(0, str.length - 1)

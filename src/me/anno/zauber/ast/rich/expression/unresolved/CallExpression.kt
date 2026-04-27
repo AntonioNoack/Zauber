@@ -119,13 +119,13 @@ class CallExpression(
             ?: c.findMemberInFile(scope, origin, name, returnType, null, typeParameters, valueParameters, context)
             ?: c.findMemberInFile(langScope, origin, name, returnType, null, typeParameters, valueParameters, context)
 
-        println("Resolving callable '$name' in context $context")
+        // println("Resolving callable '$name' in context $context")
         val byMethodCall = MethodResolver.resolveCallable(
             context, scope, name, nameAsImport,
             constructor, typeParameters, valueParameters, origin
         )
 
-        println("callable for '$name': $byMethodCall")
+        // println("callable for '$name': $byMethodCall")
         if (byMethodCall != null) return byMethodCall
 
         MethodResolver.printScopeForMissingMethod(context, this, name, typeParameters, valueParameters)

@@ -36,15 +36,24 @@ class SimpleGraph(val method: MethodLike) {
         return node
     }
 
-    override fun toString(): String {
-        return "Graph[${nodes.size} nodes, $numFields fields]\n" +
-                nodes.joinToString("\n") { it.toString() }
-    }
 
     fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
         SimpleField(type, ownership, numFields++)
 
-    fun requestCapturedField(owner: MethodLike, field: Field, valueType: Type): SimpleField {
+    fun onCapturedField(field: Field) {
+        field.isCaptured = true
+        method.capturedFields += field // todo may be specialization dependant...
+    }
+
+    fun readCapturedField(owner: MethodLike, field: Field, valueType: Type): SimpleField {
+        onCapturedField(field)
         return capturedFields.getOrPut(Capture(owner, field)) { field(valueType) }
+    }
+
+    override fun toString(): String {
+        return "Graph[${nodes.size} nodes, $numFields fields]\n" +
+                "unit: $unitField\n" +
+                "this: ${thisFields.map { "\n  %${it.value.id} = ${it.key.scope}" }}\n" +
+                nodes.joinToString("\n") { it.toString() }
     }
 }

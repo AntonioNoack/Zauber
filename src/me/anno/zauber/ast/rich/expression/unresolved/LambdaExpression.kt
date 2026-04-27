@@ -56,8 +56,10 @@ class LambdaExpression(
 
     override fun resolveReturnType(context: ResolutionContext): Type {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")
+
         val bodyContext = context
             .withTargetType(null)
+
         when (val targetLambdaType = context.targetType) {
             is LambdaType -> {
                 // automatically add it...

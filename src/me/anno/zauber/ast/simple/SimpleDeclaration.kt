@@ -11,7 +11,7 @@ class SimpleDeclaration(val type: Type, val name: String, scope: Scope, origin: 
     SimpleInstruction(scope, origin) {
 
     override fun toString(): String {
-        return "$type $name;"
+        return "DECL: $type $name;"
     }
 
     override fun execute(): BlockReturn? {

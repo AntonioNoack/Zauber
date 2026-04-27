@@ -82,13 +82,13 @@ class NamedCallExpression(
         val baseType = calculateBaseType(context).handleNOCTForCall()
         val valueParameters = resolveValueParameters(context, valueParameters)
 
-        println("Resolving callable $name, baseType: ${baseType.javaClass.simpleName}")
+        // println("Resolving callable $name, baseType: ${baseType.javaClass.simpleName}")
         val constructor = if (baseType is ClassType) {
             val innerClass = baseType.clazz[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { child ->
                 child.scopeType == ScopeType.INNER_CLASS && child.name == name
             }
-            println("Inner class for $baseType: $innerClass")
             if (innerClass != null) {
+                println("Inner class for $baseType: $innerClass")
                 val selfValueParameter = ValueParameterImpl(OUTER_FIELD_NAME, baseType, false)
                 ConstructorResolver.findMemberInScopeImpl(
                     innerClass, name, typeParameters,
@@ -112,7 +112,7 @@ class NamedCallExpression(
             throw IllegalStateException("Missing type parameters for $baseType in $this, $context")
         }
 
-        println("Resolving callable $name, baseType: $baseType, constructor: $constructor")
+        // println("Resolving callable $name, baseType: $baseType, constructor: $constructor")
 
         return MethodResolver.resolveCallable(
             contextI, scope, name, nameAsImport, constructor,

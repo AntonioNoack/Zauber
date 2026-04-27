@@ -9,58 +9,91 @@ class FloatFormatTests {
 
     @Test
     fun testSimpleFloatField() {
-        val value = testExecute("val tested = 17f")
-        assertEquals(17f, value.castToFloat())
+        val float = testExecute("val tested = 17f")
+        assertEquals(17f, float.castToFloat())
+
+        val double = testExecute("val tested = 17.0")
+        assertEquals(17.0, double.castToDouble())
     }
 
     @Test
     fun testNegativeFloatField() {
-        val code = """
-            val tested = -17f
-            
-            package zauber
-            class Float {
-                external fun minus(other: Float): Float
-                fun unaryMinus() = 0f - this
-            }
-        """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(-17f, value.castToFloat())
+        val float = testExecute("val tested = -17f")
+        assertEquals(-17f, float.castToFloat())
+
+        val double = testExecute("val tested = -17.0")
+        assertEquals(-17.0, double.castToDouble())
     }
 
     @Test
     fun testFloatFieldWithExponent() {
-        val value = testExecute("val tested = 17e3f")
-        assertEquals(17e3f, value.castToFloat())
+        val float = testExecute("val tested = 17e3f")
+        assertEquals(17e3f, float.castToFloat())
+
+        val double = testExecute("val tested = 17e3")
+        assertEquals(17e3, double.castToDouble())
     }
 
     @Test
     fun testFloatFieldWithDecimalsAndExponent() {
-        val value = testExecute("val tested = 17.31e3f")
-        assertEquals(17.31e3f, value.castToFloat())
+        val float = testExecute("val tested = 17.31e3f")
+        assertEquals(17.31e3f, float.castToFloat())
+
+        val double = testExecute("val tested = 17.31e3")
+        assertEquals(17.31e3, double.castToDouble())
     }
 
     @Test
     fun testHexFloatField() {
-        val value = testExecute("val tested = 0x1.4ap5f")
-        assertEquals((1f + 4f / 16f + 10f / 256f) * 2f.pow(5), value.castToFloat())
+        val float = testExecute("val tested = 0x1.4ap5f")
+        assertEquals((0x1 + 0x4 / 16f + 0xa / 256f) * 2f.pow(5), float.castToFloat())
+
+        val double = testExecute("val tested = 0x1.4ap5")
+        assertEquals((0x1 + 0x4 / 16.0 + 0xa / 256.0) * 2.0.pow(5), double.castToDouble())
     }
 
     @Test
     fun testHexFloatFieldNegativeBase() {
-        val value = testExecute("val tested = 0x1.4ap-5f")
-        assertEquals((1f + 4f / 16f + 10f / 256f) * 2f.pow(-5), value.castToFloat())
+        val float = testExecute("val tested = 0x1.4ap-5f")
+        assertEquals((0x1 + 0x4 / 16f + 0xa / 256f) * 2f.pow(-5), float.castToFloat())
+
+        val double = testExecute("val tested = 0x1.4ap-5")
+        assertEquals((0x1 + 0x4 / 16.0 + 0xa / 256.0) * 2.0.pow(-5), double.castToDouble())
     }
 
     @Test
     fun testHexFloatFieldPlusBase() {
-        val value = testExecute("val tested = 0x1.4ap+5f")
-        assertEquals((1f + 4f / 16f + 10f / 256f) * 2f.pow(5), value.castToFloat())
+        val float = testExecute("val tested = 0x1.4ap+5f")
+        assertEquals((0x1 + 0x4 / 16f + 0xa / 256f) * 2f.pow(5), float.castToFloat())
+
+        val double = testExecute("val tested = 0x1.4ap+5")
+        assertEquals((0x1 + 0x4 / 16.0 + 0xa / 256.0) * 2.0.pow(5), double.castToDouble())
     }
 
     @Test
-    fun testHexDoubleField() {
-        val value = testExecute("val tested = 0x1.4ap5")
-        assertEquals((1.0 + 4.0 / 16.0 + 10.0 / 256.0) * 2.0.pow(5), value.castToDouble())
+    fun testBinFloatField() {
+        val float = testExecute("val tested = 0b1011p5f")
+        assertEquals(0b1011 * 2f.pow(5), float.castToFloat())
+
+        val double = testExecute("val tested = 0b1011p5")
+        assertEquals(0b1011 * 2.0.pow(5), double.castToDouble())
+    }
+
+    @Test
+    fun testBinFloatFieldNegativeBase() {
+        val float = testExecute("val tested = 0b1011p-5f")
+        assertEquals(0b1011 * 2f.pow(-5), float.castToFloat())
+
+        val double = testExecute("val tested = 0b1011p-5")
+        assertEquals(0b1011 * 2.0.pow(-5), double.castToDouble())
+    }
+
+    @Test
+    fun testBinFloatFieldPlusBase() {
+        val float = testExecute("val tested = 0b1011p+5f")
+        assertEquals(0b1011 * 2f.pow(5), float.castToFloat())
+
+        val double = testExecute("val tested = 0b1011p+5")
+        assertEquals(0b1011 * 2.0.pow(5), double.castToDouble())
     }
 }

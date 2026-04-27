@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -79,6 +80,12 @@ class JumpToLabelTests {
 
     @Test
     fun testContinueToNamedDoWhile() {
+        LogManager.disableLoggers("TypeResolution,MemberResolver," +
+                "SuperCallExpression,CallExpression,Inheritance," +
+                "FieldResolver,FieldExpression,Field,ResolvedField," +
+                "ConstructorResolver," +
+                "MethodResolver,ResolvedMethod," +
+                "Runtime,SimpleGetField,SimpleSetField")
         // todo why/now does this return Unit?
         val code = """
             fun call(): Int {

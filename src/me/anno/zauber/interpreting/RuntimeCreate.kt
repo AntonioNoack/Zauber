@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.parseHexFloat
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.parseFloat
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
@@ -15,19 +15,33 @@ object RuntimeCreate {
                 value = value.substring(2)
                 16
             }
+            value.startsWith("-0x", true) -> {
+                value = "-" + value.substring(3)
+                16
+            }
             value.startsWith("0b", true) -> {
                 value = value.substring(2)
                 2
             }
+            value.startsWith("-0b", true) -> {
+                value = "-" + value.substring(3)
+                2
+            }
             else -> 10
+        }
+        if (value.endsWith("l", true)) {
+            value = value.substring(0, value.length - 1)
+        }
+        if ('_' in value) {
+            value = value.replace("_", "")
         }
         return when (type) {
             Types.Byte -> createByte(value.toByte(basis))
             Types.Short -> createShort(value.toShort(basis))
             Types.Int -> createInt(value.toInt(basis))
             Types.Long -> createLong(value.toLong(basis))
-            Types.Float -> createFloat(if (basis == 10) value.toFloat() else parseHexFloat(value).toFloat())
-            Types.Double -> createDouble(if (basis == 10) value.toDouble() else parseHexFloat(value))
+            Types.Float -> createFloat(if (basis == 10) value.toFloat() else parseFloat(value, basis).toFloat())
+            Types.Double -> createDouble(if (basis == 10) value.toDouble() else parseFloat(value, basis))
             else -> throw NotImplementedError("Create instance of type $type")
         }
     }

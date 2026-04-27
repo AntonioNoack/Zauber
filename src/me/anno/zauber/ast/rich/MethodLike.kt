@@ -39,6 +39,8 @@ open class MethodLike(
         }
     }
 
+    val capturedFields = HashSet<Field>()
+
     val ownerScope get() = scope.parent!!
     val methodScope get() = scope
 

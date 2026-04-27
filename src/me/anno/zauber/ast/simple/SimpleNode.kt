@@ -148,7 +148,7 @@ class SimpleNode(val graph: SimpleGraph) {
                 }
             }
 
-            println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
+            // println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
             return graph.thisFields.getOrPut(SimpleThis(thisScope, isExplicitSelf)) { field(type) }
         }
     }

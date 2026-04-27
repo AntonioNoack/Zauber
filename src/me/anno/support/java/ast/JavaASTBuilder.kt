@@ -656,11 +656,11 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
     }
 
     private fun readLambda(end: Int): Expression {
-        return pushScope(ScopeType.LAMBDA, "lambda") { scope ->
+        return pushScope(ScopeType.LAMBDA, "lambda") { lambdaScope ->
+            val origin = origin(i)
             val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 pushCall { readLambdaVariables() }
             } else {
-                val origin = origin(i)
                 val name = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
                 listOf(createLambdaVariable(null, name, origin))
             }
@@ -669,7 +669,12 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
             consume("->")
 
             val value = readBodyOrExpression(null)
-            LambdaExpression(params, scope, value)
+            val lambda = LambdaExpression(params, lambdaScope, value)
+            lambdaScope.selfAsMethod = Method(
+                null, false, null, emptyList(), emptyList(),
+                lambdaScope, null, emptyList(), lambda, 0, origin
+            )
+            lambda
         }
     }
 
