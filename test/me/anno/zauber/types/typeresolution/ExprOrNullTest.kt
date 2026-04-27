@@ -11,10 +11,8 @@ class ExprOrNullTest {
 
     @Test
     fun testExprOrNull() {
-        assertEquals(
-            unionTypes(Types.Float, NullType),
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 fun Int.plus(other: Float): Float
                 
                 val x: Int? = null
@@ -23,17 +21,15 @@ class ExprOrNullTest {
                 package zauber
                 class Int
                 class Float
-            """.trimIndent()
-            )
+            """.trimIndent(), true
         )
+        assertEquals(unionTypes(Types.Float, NullType), actual)
     }
 
     @Test
     fun testExprOrOther() {
-        assertEquals(
-            unionTypes(Types.Float, Types.Double),
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 fun Int.plus(other: Float): Float
                 
                 val x: Int? = null
@@ -42,8 +38,8 @@ class ExprOrNullTest {
                 package zauber
                 class Int
                 class Float
-            """.trimIndent()
-            )
+            """.trimIndent(), true
         )
+        assertEquals(unionTypes(Types.Float, Types.Double), actual)
     }
 }

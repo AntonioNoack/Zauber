@@ -82,10 +82,6 @@ class TypeResolutionTest {
             scan(method.body!!)
             return types
         }
-
-        fun defineListParameters() {
-            Types.List.clazz
-        }
     }
 
     @Test
@@ -142,37 +138,33 @@ class TypeResolutionTest {
 
     @Test
     fun testNullableTypes() {
-        assertEquals(
-            UnionType(listOf(ClassType(Types.Boolean.clazz, null), NullType)),
-            testTypeResolution("val tested: Boolean?")
-        )
+        val actual = testTypeResolution("val tested: Boolean?")
+        assertEquals(UnionType(listOf(Types.Boolean, NullType)), actual)
     }
 
     @Test
     fun testConstructorWithParameter() {
-        val code = """
+        val actual = testTypeResolution(
+            """
             val tested = IntArray(5)
             
             package zauber
             class Array<V>(val size: Int)
             typealias IntArray = Array<Int>
-        """.trimIndent()
-        assertEquals(
-            Types.Array.withTypeParameter(Types.Int),
-            testTypeResolution(code)
+        """.trimIndent(), true
         )
+        assertEquals(Types.Array.withTypeParameter(Types.Int), actual)
     }
 
     @Test
     fun testGetOperator() {
-        val type =
-            testTypeResolution(
-                """
+        val type = testTypeResolution(
+            """
             class Node(val value: Int)
             val x: Node
             val tested = x.value
         """.trimIndent()
-            )
+        )
         assertEquals(Types.Int, type)
     }
 

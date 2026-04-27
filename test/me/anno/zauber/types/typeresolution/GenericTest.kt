@@ -24,7 +24,7 @@ class GenericTest {
                 
                 package zauber
                 class ArrayList<Int>(initialCapacity: Int)
-            """.trimIndent()
+            """.trimIndent(), true
         )
         val expected = Types.ArrayList.withTypeParameter(Types.Int)
         assertEquals(expected, actual)
@@ -91,7 +91,7 @@ class GenericTest {
                 }
                 // mark Any as a class
                 class Any()
-            """.trimIndent()
+            """.trimIndent(), true
         )
         assertEquals(Types.List.withTypeParameter(Types.Float), actual)
     }
@@ -143,7 +143,7 @@ class GenericTest {
                     val size: Int
                     operator fun get(index: Int): V
                 }
-            """.trimIndent()
+            """.trimIndent(), true
         )
         assertEquals(Types.Int, actualType)
     }
@@ -169,7 +169,7 @@ class GenericTest {
                     val size: Int
                     operator fun get(index: Int): V
                 }
-            """.trimIndent()
+            """.trimIndent(), true
         )
         assertEquals(Types.Int, actual)
     }
@@ -216,7 +216,7 @@ class GenericTest {
                 class Int
                 class String
                 class Char
-            """.trimIndent()
+            """.trimIndent(), true
         )
         val listOfInt = Types.List.withTypeParameter(Types.Int)
         assertEquals(Types.List.withTypeParameter(listOfInt), actual)
@@ -236,7 +236,7 @@ class GenericTest {
                 class Int
                 class String
                 class Float
-            """.trimIndent()
+            """.trimIndent(), true
         )
         val mixedType = unionTypes(listOf(Types.String, Types.Int, Types.Float))
         assertEquals(Types.List.withTypeParameter(mixedType), actual)

@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -80,6 +81,8 @@ class CallExpression(
                 val baseType = self.type
                 val baseScope = TypeResolution.typeToScope(baseType)
                     ?: throw NotImplementedError("Instantiating a $baseType is not yet implemented")
+
+                baseScope[ScopeInitType.AFTER_OVERRIDES]
 
                 if (baseScope.scopeType == ScopeType.INNER_CLASS) {
                     val selfType = baseScope.parent!!.typeWithArgs.specialize(context)

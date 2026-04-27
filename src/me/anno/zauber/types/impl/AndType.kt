@@ -6,12 +6,18 @@ import me.anno.zauber.types.impl.TypeUtils.canInstanceBeBoth
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.unresolved.UnresolvedAndType
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 class AndType(val types: List<Type>) : Type() {
 
     companion object {
 
         fun andTypes(typeA: Type, typeB: Type): Type {
+            if (typeA is UnresolvedType || typeB is UnresolvedType) {
+                return UnresolvedAndType(listOf(typeA, typeB))
+            }
+
             if (typeA == typeB) return typeA
             if (typeA == NullType || typeB == NullType ||
                 typeA == Types.Nothing || typeB == Types.Nothing
@@ -37,6 +43,10 @@ class AndType(val types: List<Type>) : Type() {
 
         fun andTypes(types: List<Type>): Type {
             if (types.isEmpty()) return Types.Nothing
+            if (types.any { it is UnresolvedType }) {
+                return UnresolvedAndType(types)
+            }
+
             val uniqueTypes = reduceAndTypes(types)
             if (uniqueTypes.size == 1) return uniqueTypes[0]
             return AndType(uniqueTypes)

@@ -40,6 +40,8 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.NullType.typeOrNull
 import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.unresolved.UnresolvedSubType
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import kotlin.math.min
 
 abstract class ZauberASTBuilderBase(

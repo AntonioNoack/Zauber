@@ -348,7 +348,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         val name = langAlias(name)
         var child = children.firstOrNull { it.name == name }
         if (child != null) {
-            child[ScopeInitType.DISCOVER_MEMBERS]
             // if (child.fileName == null) child.fileName = fileName
             child.mergeScopeTypes(scopeType)
             return child

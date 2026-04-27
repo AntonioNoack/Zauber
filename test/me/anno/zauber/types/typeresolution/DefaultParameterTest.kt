@@ -55,17 +55,15 @@ class DefaultParameterTest {
 
     @Test
     fun testDefaultConstructorParam() {
-        assertEquals(
-            Types.Float,
-            testTypeResolution(
-                """
+        val type = testTypeResolution(
+            """
                 class X(val x: Int = 0) {
                     fun call(): Float
                 }
                 
                 val tested = X().call()
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Float, type)
     }
 }

@@ -4,6 +4,8 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
+import me.anno.zauber.types.impl.unresolved.UnresolvedUnionType
 
 class UnionType(val types: List<Type>) : Type() {
 
@@ -13,6 +15,10 @@ class UnionType(val types: List<Type>) : Type() {
         //  e.g. Int|Number -> Number, because Int extends Number
 
         fun unionTypes(typeA: Type, typeB: Type): Type {
+            if (typeA is UnresolvedType || typeB is UnresolvedType) {
+                return UnresolvedUnionType(listOf(typeA, typeB))
+            }
+
             if (typeA == typeB) return typeA
             if (typeA == Types.Nothing) return typeB
             if (typeB == Types.Nothing) return typeA
@@ -27,6 +33,9 @@ class UnionType(val types: List<Type>) : Type() {
 
         fun unionTypes(types: List<Type>): Type {
             if (types.isEmpty()) return Types.Nothing
+            if (types.any { it is UnresolvedType }) {
+                return UnresolvedUnionType(types)
+            }
             return reduceUnionTypes(types.flatMap { typeI -> getTypes(typeI) })
         }
 
@@ -34,7 +43,7 @@ class UnionType(val types: List<Type>) : Type() {
             return if (type is UnionType) type.types else listOf(type)
         }
 
-        fun reduceUnionTypes(types: List<Type>): Type {
+        private fun reduceUnionTypes(types: List<Type>): Type {
             val types = types.distinct().filter { it != Types.Nothing }
             if (types.isEmpty()) return Types.Nothing
             if (types.size == 1) return types[0]

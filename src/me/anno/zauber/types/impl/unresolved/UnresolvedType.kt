@@ -1,10 +1,11 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.unresolved
 
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
-import java.io.InputStreamReader
+import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnknownType
 
 class UnresolvedType(
     val className: String, val typeParameters: List<Type>?,
@@ -16,6 +17,8 @@ class UnresolvedType(
     }
 
     override val resolvedName: Type by lazy { resolve() }
+
+    override fun not(): Type = UnresolvedNotType(this)
 
     override fun toStringImpl(depth: Int): String {
         return "¿$className?<$typeParameters>"

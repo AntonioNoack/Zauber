@@ -10,6 +10,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 /**
  * Check if one type inherits from another, incl. generic checks.

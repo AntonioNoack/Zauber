@@ -10,10 +10,8 @@ import org.junit.jupiter.api.Test
 class ClassCastTest {
     @Test
     fun testTypeIsCastInBranch() {
-        assertEquals(
-            unionTypes(Types.Float, Types.String),
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 fun Int.plus(other: Float): Float
                 
                 val x: Int? = null
@@ -24,9 +22,9 @@ class ClassCastTest {
                 class Int
                 class Float
                 class String
-            """.trimIndent()
-            )
+            """.trimIndent(), true
         )
+        assertEquals(unionTypes(Types.Float, Types.String), actual)
     }
 
     @Test

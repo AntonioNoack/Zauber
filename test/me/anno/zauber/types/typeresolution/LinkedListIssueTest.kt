@@ -78,7 +78,7 @@ class LinkedListIssueTest {
             external fun unaryMinus(): Int
             external fun minus(other: Int): Int
         }
-            """.trimIndent()
+            """.trimIndent(), true
         )
         assertEquals(Types.LinkedList.withTypeParameter(Types.Int), type)
     }

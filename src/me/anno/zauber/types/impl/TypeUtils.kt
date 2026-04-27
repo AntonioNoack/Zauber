@@ -5,6 +5,7 @@ import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 object TypeUtils {
 

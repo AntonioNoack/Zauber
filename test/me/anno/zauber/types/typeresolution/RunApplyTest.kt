@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 class RunApplyTest {
     @Test
     fun testRun() {
+        // todo why does this run when run together with others??
         val actualType = testTypeResolution(
             """
                 inline fun <V, R> V.run(runnable: V.() -> R): R {
@@ -17,7 +18,9 @@ class RunApplyTest {
                 class Impl(val x: Int)
                 
                 val tested = Impl(1).run { x }
-            """.trimIndent()
+                
+                package zauber
+            """.trimIndent(), reset = true
         )
         assertEquals(Types.Int, actualType)
     }
@@ -38,6 +41,9 @@ class RunApplyTest {
                 external fun println(str: String)
                 fun interface Function0<R> {
                     fun call(): R
+                }
+                fun interface Function1<P0,R> {
+                    fun call(p0: P0): R
                 }
             """.trimIndent()
         )

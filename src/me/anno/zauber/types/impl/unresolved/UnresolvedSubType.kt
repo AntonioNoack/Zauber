@@ -1,4 +1,4 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.unresolved
 
 import me.anno.zauber.types.Import
 import me.anno.zauber.scope.Scope

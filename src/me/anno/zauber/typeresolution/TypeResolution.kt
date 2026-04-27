@@ -9,9 +9,9 @@ import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 /**
  * Resolve types step by step, might fail, but should be stable at least.
