@@ -14,6 +14,8 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ASTBuilderBase::class)
+
+        val shouldBeResolvable = emptyList<Import>()
     }
 
     var flags = 0
@@ -149,8 +151,6 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
     fun nameAsImport(name: String): List<Import> {
         return imports.filter { it.name == name }
     }
-
-    val shouldBeResolvable = emptyList<Import>()
 
     fun resolveJumpLabel(label: String?): Scope {
         var scope = currPackage

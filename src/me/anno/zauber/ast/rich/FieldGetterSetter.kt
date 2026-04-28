@@ -1,17 +1,16 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.zauber.ast.rich.ASTBuilderBase.Companion.shouldBeResolvable
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
+import me.anno.zauber.ast.rich.expression.DelegateExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
-import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types
@@ -37,11 +36,20 @@ object FieldGetterSetter {
         )
     }
 
-    fun createBackingField(field: Field, scope: Scope, origin: Int): Field = scope.addField(
-        field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
-        "field", field.valueType, field.initialValue ?: field.getterExpr,
-        Flags.SYNTHETIC, origin
-    )
+    fun createBackingField(field: Field, scope: Scope, origin: Int): Field {
+        var value = field.initialValue ?: field.getterExpr
+        var valueType = field.valueType
+        if (value is DelegateExpression) {
+            value = createDelegateGetter(scope, value.value, origin)
+            valueType = null // needs resolution of getValue()
+        }
+
+        return scope.addField(
+            field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
+            "field", valueType, value /* just for the type */,
+            Flags.SYNTHETIC, origin
+        )
+    }
 
     fun ZauberASTBuilderBase.finishField(ownerScope: Scope, field: Field) {
         // println("Finishing field $field")
@@ -82,27 +90,19 @@ object FieldGetterSetter {
         }
 
         val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
-        val expr = expr0 ?: run {
-            if (!isInterface) {
-                val fieldExpr = FieldExpression(backingField, getterScope, origin)
-                val valueExpr = if (field.flags.hasFlag(Flags.LATEINIT)) {
-                    val nullExpr = SpecialValueExpression(SpecialValue.NULL, getterScope, origin)
-                    val condition = CheckEqualsOp(
-                        fieldExpr, nullExpr, byPointer = true, negated = false, null,
-                        getterScope, origin
-                    )
-                    val ifScope = getterScope.generate("if", ScopeType.METHOD_BODY)
-                    val elseScope = getterScope.generate("if", ScopeType.METHOD_BODY)
-                    val debugInfoParam = StringExpression(field.name, ifScope, origin)
-                    val throwExpr = CallExpression(
-                        UnresolvedFieldExpression("throwJNE", shouldBeResolvable, ifScope, origin),
-                        emptyList(), listOf(NamedParameter(null, debugInfoParam)), origin
-                    )
-                    IfElseBranch(condition, throwExpr, fieldExpr.clone(elseScope))
-                } else fieldExpr
-                ReturnExpression(valueExpr, null, getterScope, origin)
-            } else null
-        }
+        val expr = expr0 ?: if (!isInterface) {
+            val backingFieldExpr = FieldExpression(backingField, getterScope, origin)
+            val initialValue = field.initialValue
+            val valueExpr = when {
+                field.flags.hasFlag(Flags.LATEINIT) ->
+                    createLateinitExpression(field, getterScope, backingFieldExpr, origin)
+                initialValue is DelegateExpression ->
+                    createDelegateGetter(getterScope, backingFieldExpr, origin)
+                else -> backingFieldExpr
+            }
+            ReturnExpression(valueExpr, null, getterScope, origin)
+        } else null
+
 
         val method = Method(
             field.selfType, false, getterName(field.name), emptyList(), emptyList(),
@@ -111,11 +111,45 @@ object FieldGetterSetter {
         )
         method.backedField = field
         method.backingField = backingField
+
         getterScope.selfAsMethod = method
         field.getterExpr = expr
         field.getter = method
         field.hasCustomGetter = expr0 != null
         return method
+    }
+
+    private fun createLateinitExpression(
+        field: Field, getterScope: Scope,
+        backingFieldExpr: FieldExpression, origin: Int,
+    ): Expression {
+        val nullExpr = SpecialValueExpression(SpecialValue.NULL, getterScope, origin)
+        val condition = CheckEqualsOp(
+            backingFieldExpr, nullExpr, byPointer = true, negated = false, null,
+            getterScope, origin
+        )
+        val ifScope = getterScope.generate("if", ScopeType.METHOD_BODY)
+        val elseScope = getterScope.generate("if", ScopeType.METHOD_BODY)
+        val debugInfoParam = StringExpression(field.name, ifScope, origin)
+        val throwExpr = CallExpression(
+            UnresolvedFieldExpression("throwJNE", shouldBeResolvable, ifScope, origin),
+            emptyList(), listOf(NamedParameter(null, debugInfoParam)), origin
+        )
+        return IfElseBranch(condition, throwExpr, backingFieldExpr.clone(elseScope))
+    }
+
+    private fun createDelegateGetter(getterScope: Scope, backingFieldExpr: Expression, origin: Int): Expression {
+        return NamedCallExpression(backingFieldExpr, "getValue", emptyList(), getterScope, origin)
+    }
+
+    private fun createDelegateSetter(
+        setterScope: Scope, backingFieldExpr: FieldExpression,
+        valueExpr: Expression, origin: Int,
+    ): Expression {
+        return NamedCallExpression(
+            backingFieldExpr, "setValue", emptyList(),
+            emptyList(), listOf(NamedParameter(null, valueExpr)), setterScope, origin
+        )
     }
 
     fun ZauberASTBuilderBase.createSetterMethod0(
@@ -141,9 +175,13 @@ object FieldGetterSetter {
         val isInterface = setterScope.parent?.scopeType == ScopeType.INTERFACE
         val expr = expr0 ?: run {
             if (!isInterface) {
-                val backingExpr = FieldExpression(backingField, setterScope, origin)
+                val backingFieldExpr = FieldExpression(backingField, setterScope, origin)
                 val valueExpr = FieldExpression(valueField, setterScope, origin)
-                AssignmentExpression(backingExpr, valueExpr)
+                when {
+                    field.initialValue is DelegateExpression ->
+                        createDelegateSetter(setterScope, backingFieldExpr, valueExpr, origin)
+                    else -> AssignmentExpression(backingFieldExpr, valueExpr)
+                }
             } else null
         }
 

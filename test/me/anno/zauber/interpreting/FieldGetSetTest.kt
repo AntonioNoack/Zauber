@@ -107,4 +107,53 @@ class FieldGetSetTest {
             testExecute(code)
         }
     }
+
+    @Test
+    fun testGetterAndSetterWithDelegate() {
+        // todo why does it try to resolve Int.getValue?
+        val actual = testExecute(
+            """
+            var tmp: Int by LazyInit { 3 }
+            val tested: Int
+                get() {
+                    val v = tmp
+                    tmp += 5
+                    return v + tmp
+                }
+            
+            package zauber
+            class Any
+            class LazyInit<V>(val initialValue: () -> V) {
+                
+                var hasValue = false
+                lateinit var value: V
+                
+                external operator fun getValue(): V {
+                    if (!hasValue) {
+                        value = initialValue()
+                        hasValue = true
+                    }
+                    return value
+                }
+                external operator fun setValue(value: V) {
+                    this.value = value
+                }
+            }
+            
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external operator fun set(index: Int, value: V)
+            }
+            
+            class Int {
+                external operator fun plus(other: Int): Int
+            }
+            
+            fun interface Function0<R> {
+                fun call(): R
+            }
+            """.trimIndent()
+        )
+        assertEquals(8, actual.castToInt())
+    }
 }

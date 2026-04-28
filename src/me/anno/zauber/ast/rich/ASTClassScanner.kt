@@ -12,6 +12,7 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.expression.DelegateExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -404,12 +405,12 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName" }
 
         var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
-        val initialValue =
-            if (consumeIf("=")) {
-                readLazyValue(true)
-            } else if (flags.hasFlag(Flags.LATEINIT)) {
-                SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
-            } else null
+        val initialValue = when {
+            consumeIf("=") -> readLazyValue(true)
+            consumeIf("by") -> DelegateExpression(readLazyValue(true))
+            flags.hasFlag(Flags.LATEINIT) -> SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
+            else -> null
+        }
 
         if (isConst) {
             check(initialValue != null) {
@@ -505,7 +506,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
                 else -> when {
                     tokens.equals(j0, "<") -> depth++
                     tokens.equals(j0, ">") -> depth--
-                    tokens.equals(j0, ":", "=", "get", "set", "public", "private", "protected") -> {
+                    tokens.equals(j0, ":", "=", "get", "set", "public", "private", "protected", "by") -> {
                         if (depth == 0) return j0
                     }
                 }

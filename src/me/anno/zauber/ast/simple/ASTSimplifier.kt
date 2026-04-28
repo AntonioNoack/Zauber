@@ -196,6 +196,9 @@ object ASTSimplifier {
             is BreakExpression -> return simplifyJump(expr, flow0, block0.graph.breakLabels[expr.label])
             is ContinueExpression -> return simplifyJump(expr, flow0, block0.graph.continueLabels[expr.label])
 
+            // pseudo/placeholder
+            is DelegateExpression -> return simplifyImpl(context, expr.value, block0, flow0, needsValue)
+
             else -> {
                 if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")
                 throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
@@ -318,11 +321,11 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
-        val useGetter = if (expr.field.resolved.isOpen()) true else {
-            !expr.field.isBackingField && (
-                    field.hasCustomGetter || field.isLateinit() ||
-                            !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
-        }
+        val useGetter = expr.field.resolved.isOpen() || expr.field.resolved.initialValue is DelegateExpression || (
+                !expr.field.isBackingField && (
+                        field.hasCustomGetter || field.isLateinit() ||
+                                !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+                )
 
         val selfMethod = getMethod(self.type)
         val valueMethod = block0.graph.method
@@ -405,10 +408,11 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val value = block2v.value
 
-        val useSetter = if (expr.field.resolved.isOpen()) true else {
-            !expr.field.isBackingField &&
-                    (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
-        }
+        val useSetter = expr.field.resolved.isOpen() ||
+                expr.field.resolved.initialValue is DelegateExpression || (
+                !expr.field.isBackingField &&
+                        (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+                )
 
         val selfMethod = getMethod(self.type)
         val valueMethod = block0.graph.method

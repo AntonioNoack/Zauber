@@ -14,6 +14,8 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 
 class Field(
     scope: Scope,
@@ -92,11 +94,17 @@ class Field(
         }
 
         var getterExpr = getterExpr
-        if (getterExpr is ReturnExpression) getterExpr = getterExpr.value
-        if (getterExpr != null) {
-            val newContext = context
-                .withSelfType(selfType ?: context.selfType)
-            return TypeResolution.resolveType(newContext, getterExpr)
+        while (getterExpr is ReturnExpression) {
+            getterExpr = getterExpr.value
+        }
+        if (getterExpr != null) { // a block
+            val newContext = context.withSelfType(selfType ?: context.selfType)
+            val resolvedExpr = getterExpr.resolve(newContext)
+            var type = TypeResolution.resolveType(newContext, resolvedExpr)
+            if (type == Types.Nothing) {
+                type = findReturnExprType(newContext, resolvedExpr)
+            }
+            return type
         }
 
         if (name == "field") {
@@ -111,6 +119,18 @@ class Field(
         }
 
         throw IllegalStateException("Field $this at ${resolveOrigin(origin)} has neither type, nor initial/getter, cannot resolve type")
+    }
+
+    fun findReturnExprType(context: ResolutionContext, expression: Expression): Type {
+        val foundTypes = ArrayList<Type>()
+        expression.forEachExpressionRecursively { expr ->
+            if (expr is ReturnExpression) {
+                val value = expr.value
+                val type = TypeResolution.resolveType(context, value)
+                foundTypes.add(type)
+            }
+        }
+        return unionTypes(foundTypes)
     }
 
     fun getGetterOrSetterScope(): Scope? {

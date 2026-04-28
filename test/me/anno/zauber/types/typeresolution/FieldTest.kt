@@ -9,27 +9,73 @@ class FieldTest {
 
     @Test
     fun testTypeByAssignment() {
-        assertEquals(Types.Int, testTypeResolution("val tested = 0"))
+        val actual = testTypeResolution("val tested = 0")
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testTypeByDeclaration() {
-        assertEquals(Types.Int, testTypeResolution("val tested: Int"))
+        val actual = testTypeResolution("val tested: Int")
+        assertEquals(Types.Int, actual)
     }
 
     @Test
     fun testTypeByGetter() {
-        assertEquals(
-            Types.Int,
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 val tested
                     get() = 0
             """.trimIndent()
-            )
         )
+        assertEquals(Types.Int, actual)
     }
 
-    // todo by delegate, when we have them
+    @Test
+    fun testTypeByGetterBlock() {
+        // Kotlin cannot do this one
+        val actual = testTypeResolution(
+            """
+                val tested
+                    get() {
+                        return 0
+                    }
+            """.trimIndent()
+        )
+        assertEquals(Types.Int, actual)
+    }
+
+
+    @Test
+    fun testTypeByDelegate() {
+        // todo test delegates in runtime
+        /* class Delegate {
+            operator fun getValue(thisRef: Any?, property: KProperty<*>): String {
+                return "$thisRef, thank you for delegating '${property.name}' to me!"
+            }
+
+            operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+                println("$value has been assigned to '${property.name}' in $thisRef.")
+            }
+        } */
+        // todo bug: type is not fully resolved :/
+        val actual = testTypeResolution(
+            """
+                val tested by lazy { 0 }
+                
+                package zauber
+                class Lazy<V>(val getter: () -> V) {
+                    // implementation not needed here
+                    external operator fun getValue(): V
+                }
+                fun <R> lazy(getter: () -> R): Lazy {
+                    return Lazy(getter)
+                }
+                fun interface Function0<R> {
+                    fun call(): R
+                }
+            """.trimIndent()
+        )
+        assertEquals(Types.Int, actual)
+    }
 
 }
