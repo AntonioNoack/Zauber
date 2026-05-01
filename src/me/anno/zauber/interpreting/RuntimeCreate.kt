@@ -91,13 +91,13 @@ object RuntimeCreate {
     fun Runtime.createString(value: String): Instance {
         val type = getClass(Types.String)
         val instance = type.createInstance()
-        if (type.properties.isNotEmpty()) {
+        if (type.fields.isNotEmpty()) {
             val arrayType = ClassType(Types.Array.clazz, listOf(Types.Byte), -1)
             val content = getClass(arrayType).createInstance()
             val bytes = value.encodeToByteArray()
-            content.properties[0] = createInt(bytes.size)
+            content.fields[0] = createInt(bytes.size)
             content.rawValue = bytes
-            instance.properties[0] = content
+            instance.fields[0] = content
         } else {
             instance.rawValue = value
         }

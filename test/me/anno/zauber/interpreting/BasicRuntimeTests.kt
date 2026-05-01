@@ -105,10 +105,10 @@ class BasicRuntimeTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", (value.clazz.type as ClassType).clazz.name)
-        check(value.properties.isNotEmpty()) {
+        check(value.fields.isNotEmpty()) {
             "${value.clazz} somehow has no properties"
         }
-        val a = value.properties[0]!!
+        val a = value.fields[0]!!
         assertEquals(5, a.castToInt())
     }
 

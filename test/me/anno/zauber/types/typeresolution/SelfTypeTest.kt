@@ -15,7 +15,7 @@ class SelfTypeTest {
     }
 
     @Test
-    fun testSimpleSelfType() {
+    fun testDirectSelfTypeForField() {
         val type0 = testTypeResolution(
             """
             class A(val other: Self?)
@@ -31,7 +31,25 @@ class SelfTypeTest {
     }
 
     @Test
-    fun testChildSelfType() {
+    fun testDirectSelfTypeForMethod() {
+        val type0 = testTypeResolution(
+            """
+            class A {
+                fun call(): Self? = this
+            }
+            val tested = A().call()
+        """.trimIndent()
+        )
+        check(type0 is UnionType && NullType in type0.types && type0.types.size == 2)
+        val type1 = type0.types.first { it != NullType }
+        LOGGER.info("Resolved Self to $type1 (should be A)")
+        assertTrue(type1 is ClassType)
+        assertEquals("A", (type1 as ClassType).clazz.name)
+        LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
+    }
+
+    @Test
+    fun testChildSelfTypeForField() {
         // this has a hacky solution, how does it know of the type being B???
         //  -> it was using the constructor parameter...
         val type0 = testTypeResolution(
@@ -51,7 +69,27 @@ class SelfTypeTest {
     }
 
     @Test
-    fun testSelfType2() {
+    fun testChildSelfTypeForMethod() {
+        val type0 = testTypeResolution(
+            """
+            open class A {
+                fun call(): Self? = this
+            }
+            class B(): A()
+            val tested = B().call()
+        """.trimIndent()
+        )
+        check(type0 is UnionType && NullType in type0.types && type0.types.size == 2)
+        val type1 = type0.types.first { it != NullType }
+        LOGGER.info("Resolved Self to $type1 (should be B)")
+        assertTrue(type1 is ClassType) { "Expected $type1 to be ClassType, but got ${type1.javaClass.simpleName}" }
+        assertEquals("B", (type1 as ClassType).clazz.name)
+        LOGGER.info("Fields[$type1]: ${type1.clazz.fields}")
+        assertFalse(type1.clazz.fields.any { it.name == "other" })
+    }
+
+    @Test
+    fun testChildSelfTypeForField2() {
         val type = testTypeResolution(
             """
             open class A(val other: Self?)
@@ -66,6 +104,7 @@ class SelfTypeTest {
 
     @Test
     fun testInterlinkedTypes() {
+        // todo this only works together with other tests???
         val type = testTypeResolution(
             """
             open class Node<L: Link<Self>>
@@ -79,7 +118,7 @@ class SelfTypeTest {
             val link = IntLink(from, to)
             
             val tested = link.from
-        """.trimIndent()
+        """.trimIndent(), true
         )
         // todo type is generally correct, but it should be resolved and specialized!
         assertTrue(type is ClassType && type.clazz.name == "IntNode") {

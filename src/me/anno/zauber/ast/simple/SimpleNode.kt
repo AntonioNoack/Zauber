@@ -12,6 +12,7 @@ import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.specialization.Specialization
 
 class SimpleNode(val graph: SimpleGraph) {
 
@@ -99,6 +100,7 @@ class SimpleNode(val graph: SimpleGraph) {
 
     fun thisField(
         type: Type, thisScope: Scope, scope: Scope, origin: Int,
+        specialization: Specialization,
         contextExpr: Expression?
     ): SimpleField {
         thisScope[ScopeInitType.AFTER_DISCOVERY]
@@ -131,26 +133,44 @@ class SimpleNode(val graph: SimpleGraph) {
             if (thisScope.isClassLike()) {
                 val ownerScope = graph.method.ownerScope
                 if (ownerScope.inheritsFrom(thisScope)) {
-                    return thisField(type, ownerScope, scope, origin, contextExpr)
+                    return thisField(type, ownerScope, scope, origin, specialization, contextExpr)
                 }
 
                 if (ownerScope.isInnerClassOf(thisScope)) {
-                    var currField = thisField(type, ownerScope, scope, origin, contextExpr)
-                    var currScope = ownerScope
-                    while (currScope != thisScope) {
-                        val dst = field(currScope.typeWithArgs) // todo specialize
-                        val field1 = currScope.fields.first { it.name == OUTER_FIELD_NAME }
-                        add(SimpleGetField(dst, currField, field1, scope, origin))
-                        currField = dst
-                        currScope = currScope.parent!!
-                    }
-                    return currField
+                    return createOuterFieldChain(ownerScope, thisScope, scope, origin, specialization, contextExpr)
                 }
             }
 
             // println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
             return graph.thisFields.getOrPut(SimpleThis(thisScope, isExplicitSelf)) { field(type) }
         }
+    }
+
+    private fun createOuterFieldChain(
+        innerScope: Scope, outerScope: Scope,
+        scope: Scope, origin: Int,
+        specialization: Specialization,
+        contextExpr: Expression?
+    ): SimpleField {
+
+        check(innerScope.isInnerClassOf(outerScope))
+
+        var currField = thisField(innerScope.typeWithArgs, innerScope, scope, origin, specialization, contextExpr)
+
+        var innerScopeI = innerScope
+        while (innerScopeI != outerScope) {
+            val outerScopeI = innerScopeI.parent!!
+
+            val dst = field(outerScopeI.typeWithArgs) // todo specialize
+            val field1 = innerScopeI.fields.first { it.name == OUTER_FIELD_NAME }
+
+            println("Step: ${innerScopeI}.$field1 -> $dst, calling on $currField")
+
+            add(SimpleGetField(dst, currField, field1, specialization, scope, origin))
+            currField = dst
+            innerScopeI = outerScopeI
+        }
+        return currField
     }
 
     // todo allow A<B: C|D>: B()? could be nice to use...

@@ -124,12 +124,10 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass() {
+        // Kotlin fails on this one, too
         val actual = testTypeResolution(
             """
                 class Impl<V>()
-                // illegal syntax: V is not defined
-                // fun Impl.get(): List<V> = emptyList()
-                // proper syntax:
                 fun <V> Impl<V>.get(): List<V> = emptyList()
                 
                 fun <V> emptyList(): List<V>
@@ -143,16 +141,15 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionMethodsByClass2() {
+        // Kotlin gets this one -> we definitely should support it
+        // -> we do :)
         val actual = testTypeResolution(
             """
                 class Impl()
-                // illegal syntax: V is not defined
-                // fun Impl.get(): List<V> = emptyList()
-                // proper syntax:
                 fun <V> Impl.get(): List<V> = emptyList()
                 
                 fun <V> emptyList(): List<V>
-                fun sum(values: List<Int>): Int
+                fun sum(values: List<Int>): Int = 0
                 
                 val tested = sum(Impl().get())
             """.trimIndent()
@@ -162,18 +159,18 @@ class ExtensionTest {
 
     @Test
     fun testUnderdefinedExtensionFieldsByClass() {
+        // Kotlin doesn't support extension fields
         val actual = testTypeResolution(
             """
                 class Impl<V>()
-                // illegal syntax: V is not defined
-                // val Impl.value: List<V> get() = emptyList()
-                // proper syntax:
                 val <V> Impl<V>.value: List<V> get() = emptyList()
                 
                 fun <V> emptyList(): List<V>
-                fun sum(values: List<Int>): Int
+                fun sum(values: List<Int>): Int = 0
                 
                 val tested = sum(Impl().value)
+                
+                package zauber
             """.trimIndent()
         )
         assertEquals(Types.Int, actual)

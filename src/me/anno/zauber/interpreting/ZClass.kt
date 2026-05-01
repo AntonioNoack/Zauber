@@ -24,7 +24,7 @@ class ZClass(val type: Type) {
     companion object {
         private val LOGGER = LogManager.getLogger(ZClass::class)
 
-        fun getProperties(type: Type): List<Field> {
+        fun collectFields(type: Type): List<Field> {
             if (type !is ClassType) {
                 if (type != NullType) LOGGER.warn("type $type is not a ClassType")
                 return emptyList()
@@ -50,7 +50,7 @@ class ZClass(val type: Type) {
         }
     }
 
-    val properties = getProperties(type)
+    val fields = collectFields(type)
 
     private var objectInstance: Instance? = null
 
@@ -88,7 +88,7 @@ class ZClass(val type: Type) {
         if (type !is ClassType) {
             throw IllegalStateException("Type to create must be concrete and fully specified ($type)")
         }
-        return Instance(this, arrayOfNulls(properties.size), runtime.nextInstanceId())
+        return Instance(this, arrayOfNulls(fields.size), runtime.nextInstanceId())
     }
 
     fun createArray(items: Array<Instance>): Instance {
@@ -112,6 +112,6 @@ class ZClass(val type: Type) {
         type is ClassType && type.clazz.flags.hasFlag(Flags.VALUE)
 
     override fun toString(): String {
-        return "ZClass($type,${properties.map { it.name }})"
+        return "ZClass($type,${fields.map { it.name }})"
     }
 }

@@ -1,5 +1,7 @@
 package me.anno.zauber.logging
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import java.io.PrintStream
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -14,7 +16,8 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     private fun infoImpl(prefix: String, message: String, stream: PrintStream) {
         if ('\n' !in message) {
-            stream.println("[${getTime()},$name:$prefix] $message")
+            val time = style(getTime(), timeStyle)
+            stream.println("[$time,$name:$prefix] $message")
         } else {
             val lines = message.split('\n')
             infoImpl(prefix, lines.first(), stream)
@@ -47,6 +50,9 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
     }
 
     companion object {
+
+        val timeStyle = StringStyles.ITALIC + StringStyles.color(0x777777)
+
         private fun getTime(): String {
             val calendar = Calendar.getInstance()
             val millis = calendar.get(Calendar.MILLISECOND)

@@ -2,16 +2,50 @@ package me.anno.zauber.dependency
 
 import me.anno.zauber.Compile
 import me.anno.zauber.expansion.Dependencies
+import me.anno.zauber.expansion.DependencyData
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.resolution.ResolutionUtils
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.specialization.ClassSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class DependencyGraphTests {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(DependencyGraphTests::class)
+
+        fun printDependencies(data: DependencyData) {
+            if (!LOGGER.isInfoEnabled) return
+
+            LOGGER.info("Classes:")
+            for (clazz in data.createdClasses) {
+                LOGGER.info("  - ${clazz.clazz}, ${clazz.specialization}")
+            }
+
+            LOGGER.info("Methods:")
+            for (method in data.calledMethods) {
+                LOGGER.info("  - ${method.method}, ${method.specialization}")
+            }
+
+            LOGGER.info("Fields:")
+            val fields = data.getFields + data.setFields
+            for (field in fields) {
+                val get = field in data.getFields
+                val set = field in data.setFields
+                val str = when {
+                    !get -> "set"
+                    !set -> "get"
+                    else -> "get+set"
+                }
+                LOGGER.info("  - ${field.field}, ${field.specialization}: $str")
+            }
+        }
+    }
 
     // todo we should also define a more complex example,
     //  e.g. with generics
@@ -35,17 +69,10 @@ class DependencyGraphTests {
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
         Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))
 
-        val (classes, methods) = Dependencies.collectClassesAndMethods()
-
-        println("Classes:")
-        for (clazz in classes) {
-            println("- $clazz")
-        }
-
-        println("Methods:")
-        for (method in methods) {
-            println("- $method")
-        }
+        val dependencies = Dependencies.collectClassesAndMethods()
+        printDependencies(dependencies)
+        val classes = dependencies.createdClasses
+        val methods = dependencies.calledMethods
 
         val zauberScope = Compile.root.getOrPut("zauber", ScopeType.PACKAGE)
         val printlnMethod = zauberScope
@@ -60,8 +87,8 @@ class DependencyGraphTests {
             Types.Unit,
             zauberScope.typeWithArgs,
             testScope.typeWithArgs,
-        )
-        Assertions.assertEquals(expectedClasses, classes)
+        ).map { ClassSpecialization(it) }
+        assertEquals(expectedClasses, classes)
 
         val expectedMethods = setOf(
             method, printlnMethod, intPlusMethod,
@@ -70,6 +97,6 @@ class DependencyGraphTests {
         )
             .map { method -> MethodSpecialization(method, Specialization.noSpecialization) }
             .toSet()
-        Assertions.assertEquals(expectedMethods, methods)
+        assertEquals(expectedMethods, methods)
     }
 }

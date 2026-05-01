@@ -11,6 +11,8 @@ import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
+import me.anno.support.javascript.ast.FieldOfType
+import me.anno.support.javascript.ast.TypeScriptClassScanner
 import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
 import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
@@ -117,7 +119,7 @@ abstract class ZauberASTBuilderBase(
     open fun readTypeAlias() {
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val aliasScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
-        aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope)
+        aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope, true)
         aliasScope.hasTypeParameters = true
 
         consume("=")
@@ -132,9 +134,14 @@ abstract class ZauberASTBuilderBase(
         } else null
     }
 
-    fun readTypeParameterDeclarations(classScope: Scope): List<Parameter> {
+    fun readTypeParameterDeclarations(classScope: Scope, assignToScope: Boolean): List<Parameter> {
         pushGenericParams()
-        if (!tokens.equals(i, "<")) return emptyList()
+        if (!tokens.equals(i, "<")) {
+            classScope.typeParameters = emptyList()
+            classScope.hasTypeParameters = true
+            return emptyList()
+        }
+
         val tmpSelf = classScope.typeWithoutArgs
         val parameters = ArrayList<Parameter>()
         tokens.push(i++, "<", ">") {
@@ -162,8 +169,10 @@ abstract class ZauberASTBuilderBase(
             }
         }
         consume(">")
-        classScope.typeParameters = parameters
-        classScope.hasTypeParameters = true
+        if (assignToScope) {
+            classScope.typeParameters = parameters
+            classScope.hasTypeParameters = true
+        }
 
         // replace classScope.typeWithoutArgs with classScope.typeWithArgs
         val properSelf = classScope.typeWithArgs
@@ -384,7 +393,7 @@ abstract class ZauberASTBuilderBase(
         ) {
             while (consumeIf(TokenType.OPEN_ARRAY)) {
                 if (consumeIf(TokenType.CLOSE_ARRAY)) {
-                    base = ClassType(Types.Array.clazz, listOf(base), origin(i))
+                    base = Types.Array.withTypeParameter(base)
                 } else {
                     i-- // go one back for pushArray
                     val size = pushArray { readExpression() }
@@ -393,13 +402,27 @@ abstract class ZauberASTBuilderBase(
             }
         }
 
+        if (this is TypeScriptClassScanner) {
+            while (consumeIf(TokenType.OPEN_ARRAY)) {
+                if (consumeIf(TokenType.CLOSE_ARRAY)) {
+                    base = Types.Array.withTypeParameter(base)
+                } else {
+                    i-- // go one back for pushArray
+                    val propertyName = pushArray { readTypeNotNull(selfType, true) }
+                    base = FieldOfType(base, propertyName)
+                }
+            }
+        }
+
         if (negate) base = base.not()
         while (consumeIf("&", VSCodeType.OPERATOR, 0)) {
-            val typeB = readType(null, allowSubTypes, true, insideTypeParams)!!
+            val typeB = readType(null, allowSubTypes, true, insideTypeParams)
+                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
             base = andTypes(base, typeB)
         }
         if (!isAndType && consumeIf("|", VSCodeType.OPERATOR, 0)) {
-            val typeB = readType(null, allowSubTypes, false, insideTypeParams)!!
+            val typeB = readType(null, allowSubTypes, false, insideTypeParams)
+                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
             return unionTypes(base, typeB)
         }
         return base
@@ -437,7 +460,7 @@ abstract class ZauberASTBuilderBase(
         return result
     }
 
-    private fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type? {
+    open fun readTypeExpr(selfType: Type?, allowSubTypes: Boolean, insideTypeParams: Boolean): Type? {
 
         if (consumeIf("*", VSCodeType.TYPE, 0)) {
             return UnknownType
@@ -445,7 +468,11 @@ abstract class ZauberASTBuilderBase(
 
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             val endI = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-            if (tokens.equals(endI + 1, "->")) {
+            val lambdaSymbolForTypes = when {
+                this is TypeScriptClassScanner -> "=>"
+                else -> "->"
+            }
+            if (tokens.equals(endI + 1, lambdaSymbolForTypes)) {
                 val parameters = pushCall { readZauberLambdaParameters() }
                 i = endI + 2 // skip ) and ->
                 val returnType = readTypeNotNull(selfType, true)
@@ -465,7 +492,7 @@ abstract class ZauberASTBuilderBase(
             }
 
             if (tokens.equals(i, TokenType.STRING)) {
-                if (!insideTypeParams) {
+                if (!insideTypeParams && this !is TypeScriptClassScanner) {
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
@@ -555,7 +582,7 @@ abstract class ZauberASTBuilderBase(
     fun readZauberLambdaParameters(): List<LambdaParameter> {
         val result = ArrayList<LambdaParameter>()
         loop@ while (i < tokens.size) {
-            if (tokens.equals(i, TokenType.NAME) &&
+            if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                 tokens.equals(i + 1, ":")
             // && tokens.equals(i + 2, TokenType.NAME)
             ) {
@@ -592,7 +619,10 @@ abstract class ZauberASTBuilderBase(
                 tokens.equals(i, ">") -> depth--
                 tokens.equals(i, TokenType.OPEN_CALL) -> depth++
                 tokens.equals(i, TokenType.CLOSE_CALL) -> depth--
-                else -> if (!canAppearInsideAType(i)) return false
+                else -> if (!canAppearInsideAType(i)) {
+                    println("Cannot appear inside type: ${tokens.err(i)}")
+                    return false
+                }
             }
             i++
         }
@@ -652,7 +682,9 @@ abstract class ZauberASTBuilderBase(
      * ClassType | SelfType
      * */
     open fun readTypePath(selfType: Type?): Type? {
-        if (!tokens.equals(i, TokenType.NAME)) return null
+        if (!(tokens.equals(i, TokenType.NAME) ||
+                    this is TypeScriptClassScanner && isKeywordTypeName(i))
+        ) return null
 
         val name = tokens.toString(i++)
         if (this is ZauberASTBuilder) {
@@ -743,10 +775,7 @@ abstract class ZauberASTBuilderBase(
         val keywords = packFlags()
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
 
-        val typeParameters = readTypeParameterDeclarations(classScope)
-        classScope.typeParameters = typeParameters
-        classScope.hasTypeParameters = true
-
+        readTypeParameterDeclarations(classScope, true)
         val privatePrimaryConstructor = consumeIf("private")
 
         readAnnotations()
@@ -819,12 +848,11 @@ abstract class ZauberASTBuilderBase(
 
     open fun readInterface() {
         val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
-        val clazz = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
+        val classScope = currPackage.getOrPut(name, tokens.fileName, ScopeType.INTERFACE)
         val keywords = packFlags()
-        clazz.typeParameters = readTypeParameterDeclarations(clazz)
-        clazz.hasTypeParameters = true
+        readTypeParameterDeclarations(classScope, true)
 
-        readSuperCalls(clazz, false)
+        readSuperCalls(classScope, false)
         readClassBody(name, keywords, ScopeType.INTERFACE)
         popGenericParams()
     }

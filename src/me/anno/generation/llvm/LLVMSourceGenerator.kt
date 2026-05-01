@@ -1,12 +1,6 @@
 package me.anno.generation.llvm
 
 import me.anno.generation.Generator
-import me.anno.zauber.scope.Scope
-import java.io.File
 
 // todo this is like C, just different commands?
-object LLVMSourceGenerator : Generator() {
-    override fun generateCode(dst: File, root: Scope) {
-        TODO("Not yet implemented")
-    }
-}
+object LLVMSourceGenerator : Generator()

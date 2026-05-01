@@ -24,7 +24,7 @@ class TypeScriptTokenizer(
             // TypeScript
             "as", "any", "unknown", "never", "number", "string", "boolean", "symbol", "bigint",
             "type", "from", "of", "readonly", "keyof", "infer", "is", "asserts", "namespace",
-            "abstract", "override", "satisfies"
+            "abstract", "override", "satisfies", "declare"
         )
 
         val OPERATORS = setOf(

@@ -99,9 +99,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
     open fun foundNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
         val origin = origin(i - 1)
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
-            val typeParameters = readTypeParameterDeclarations(classScope)
-            classScope.typeParameters = typeParameters
-            classScope.hasTypeParameters = true
+            readTypeParameterDeclarations(classScope, true)
 
             if (consumeIf("private")) {
                 addFlag(Flags.PRIVATE)
@@ -175,7 +173,10 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
 
     override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (!consumeIf(":")) return
+        return readSuperCallsImpl(classScope, readBody)
+    }
 
+    fun readSuperCallsImpl(classScope: Scope, readBody: Boolean) {
         val scope = classScope.getOrCreatePrimaryConstructorScope()
         pushScope(scope) {
             do {
@@ -393,16 +394,14 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         val ownerScope = currPackage
         val flags = packFlags()
 
-        val typeParameters = readTypeParameterDeclarations(ownerScope)
-        // fieldScope.typeParameters = typeParameters
-        // fieldScope.hasTypeParameters = true
+        val typeParameters = readTypeParameterDeclarations(ownerScope, false)
 
         val selfType0 = readSelfTypeIfPresent(end)
         val selfType = selfType0 ?: getSelfType(ownerScope)
         // if (selfType != null) selfType = selfType.resolve()
 
         val fieldName = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-        check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName" }
+        check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName at ${tokens.err(i - 1)}" }
 
         var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
         val initialValue = when {
@@ -584,9 +583,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
         methodScope.addFlags(packFlags())
 
         pushScope(methodScope) {
-            val typeParameters = readTypeParameterDeclarations(methodScope)
-            methodScope.typeParameters = typeParameters
-            methodScope.hasTypeParameters = true
+            val typeParameters = readTypeParameterDeclarations(methodScope, true)
 
             val selfType0 = readSelfTypeIfPresent(end)
             val selfType = selfType0 ?: getSelfType(ownerScope)

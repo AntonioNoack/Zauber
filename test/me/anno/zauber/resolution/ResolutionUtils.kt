@@ -18,6 +18,7 @@ object ResolutionUtils {
         if (reset) {
             ResetThreadLocal.reset()
             Specializations.reset()
+            ctr = 0
         }
 
         val testScopeName = "test${ctr++}"

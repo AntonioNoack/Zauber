@@ -1,6 +1,6 @@
 package me.anno.generation.java
 
-import me.anno.generation.java.JavaSourceGenerator.appendType
+import me.anno.generation.java.JavaBuilder.appendType
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
@@ -99,6 +99,7 @@ object JavaSimplifiedASTWriter {
         method: MethodLike, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
+        if (expr is SimpleGetObject) return
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing) {
             val notNeeded = expr.dst.numReads == 0
             if (notNeeded) comment { appendAssign(expr) }
@@ -240,10 +241,6 @@ object JavaSimplifiedASTWriter {
                     SpecialValue.NULL -> builder.append("null")
                 }
             }
-            is SimpleGetObject -> {
-                imports.add(expr.objectScope)
-                builder.append(expr.objectScope.pathStr)
-            }
             is SimpleCall -> {
                 if (expr.sample is Constructor) {
                     builder.append("new ")
@@ -349,26 +346,47 @@ object JavaSimplifiedASTWriter {
         }
     }
 
+    private fun outsideClassLike(scope: Scope): Scope? {
+        var scope = scope
+        while (true) {
+            if (scope.isClassLike()) return scope
+            scope = scope.parentIfSameFile ?: return null
+        }
+    }
+
+    private fun appendObjectInstance(field: Field, exprScope: Scope) {
+        // todo if there is nothing dangerous in-between, we could use this.
+        if (field.ownerScope == outsideClassLike(exprScope)) {
+            builder.append("this.")
+        } else {
+            appendType(field.ownerScope.typeWithArgs, exprScope, true)
+            builder.append(".__instance__.")
+        }
+    }
+
     fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
         if (self != null) {
-            val fieldSelfType = field.selfType
-            val needsCast = self.type != fieldSelfType
-            if (needsCast && fieldSelfType != null) {
-                builder.append("((")
-                appendType(fieldSelfType, exprScope, true)
-                builder.append(')')
-                builder.append1(self).append(").")
-            } else if (noThis(self)) {
-                // just comment the type
-                builder.append1(self)
+            if (self.type is ClassType && self.type.clazz.isObjectLike()) {
+                appendObjectInstance(field, exprScope)
             } else {
-                builder.append1(self).append('.')
+                val fieldSelfType = field.selfType
+                val needsCast = self.type != fieldSelfType
+                if (needsCast && fieldSelfType != null) {
+                    builder.append("((")
+                    appendType(fieldSelfType, exprScope, true)
+                    builder.append(')')
+                    builder.append1(self).append(").")
+                } else if (noThis(self)) {
+                    // just comment the type
+                    builder.append1(self)
+                } else {
+                    builder.append1(self).append('.')
+                }
             }
         } else if (field.scope == method.scope.parent) {
             builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this").append('.')
-        } else if (field.scope.parent?.isObject() == true) {
-            appendType(field.scope.parent!!.typeWithoutArgs, exprScope, true)
-            builder.append(".__instance__.")
+        } else if (field.ownerScope.isObjectLike()) {
+            appendObjectInstance(field, exprScope)
         }
     }
 

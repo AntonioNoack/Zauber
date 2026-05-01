@@ -22,10 +22,8 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
 
     override fun foundNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
-            val genericParams = readTypeParameterDeclarations(classScope)
+            readTypeParameterDeclarations(classScope, true)
 
-            classScope.typeParameters = genericParams
-            classScope.hasTypeParameters = true
             if (false) println("Defined type parameters for ${classScope.pathStr}")
 
             skipValueParameters()
@@ -43,11 +41,11 @@ open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
 
     override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (consumeIf("extends")) {
-            super.readSuperCalls(classScope, readBody)
+            readSuperCallsImpl(classScope, readBody)
         }
 
         if (consumeIf("implements")) {
-            super.readSuperCalls(classScope, readBody)
+            readSuperCallsImpl(classScope, readBody)
         }
     }
 

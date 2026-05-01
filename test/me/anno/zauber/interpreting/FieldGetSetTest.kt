@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -111,6 +112,7 @@ class FieldGetSetTest {
     @Test
     fun testGetterAndSetterWithDelegate() {
         // todo why does it try to resolve Int.getValue?
+        LogManager.disableLoggers("MemberResolver,ResolvedField")
         val actual = testExecute(
             """
             var tmp: Int by LazyInit { 3 }

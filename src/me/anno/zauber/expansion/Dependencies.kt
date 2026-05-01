@@ -9,6 +9,8 @@ import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.ClassSpecialization
+import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 
@@ -19,15 +21,10 @@ import me.anno.zauber.types.specialization.Specialization
  * */
 object Dependencies {
 
-    private class DependencyData {
-        val createdClasses = HashSet<ClassType>()
-        val calledMethods = HashSet<MethodSpecialization>()
-    }
-
     private val reached by threadLocal { DependencyData() }
 
     fun addClass(type: ClassType) {
-        if (reached.createdClasses.add(type)) {
+        if (reached.createdClasses.add(ClassSpecialization(type))) {
             markSuperTypesConstructable(type)
             markChildMethodsReachable(type)
         }
@@ -74,6 +71,9 @@ object Dependencies {
                         }
                     }
                     is SimpleGetTypeInstance -> addClass(instr.dst.type as ClassType)
+                    is SimpleSetField -> reached.setFields.add(FieldSpecialization(instr.field, instr.specialization))
+                    is SimpleGetField -> reached.getFields.add(FieldSpecialization(instr.field, instr.specialization))
+
                     // how do we handle dynamic macros? can only be inside macros, so we're fine (?)
                 }
             }
@@ -98,9 +98,6 @@ object Dependencies {
         }
     }
 
-    fun collectClassesAndMethods(): Pair<Set<ClassType>, Set<MethodSpecialization>> {
-        val data = reached
-        return data.createdClasses to data.calledMethods
-    }
+    fun collectClassesAndMethods(): DependencyData = reached
 
 }

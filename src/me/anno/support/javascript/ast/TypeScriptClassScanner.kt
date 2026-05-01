@@ -6,6 +6,8 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.scope.Scope
@@ -14,37 +16,91 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import kotlin.math.max
 
 class TypeScriptClassScanner(tokens: TokenList) :
     ASTClassScanner(tokens) {
 
+    // todo use these accordingly when reading fields/methods...
+    var isStatic = false
+    var isReadOnly = false
+
     override fun readFileLevel() {
+        if (currPackage.isClass()) {
+            return readClassLevel()
+        }
+
         while (i < tokens.size) {
             val i0 = i
-            readTopLevel()
+            when {
+                consumeIf("import") -> readImport()
+                consumeIf("export") -> addFlag(Flags.PUBLIC) // ^^
+
+                consumeIf("class") -> readClass()
+                consumeIf("interface") -> readInterface()
+                consumeIf("enum") -> readEnum()
+                consumeIf("type") -> readTypeAlias()
+
+                consumeIf("function") -> readMethod()
+
+                consumeIf("declare") -> {
+                    // just a "trust me, this field/type exists"
+                    if (consumeIf("type")) {
+                        readTypeAlias()
+                    } else {
+                        consume("var")
+                        readField()
+                    }
+                }
+
+                tokens.equals(i, TokenType.NAME) -> {
+                    // variable / field
+                    readField()
+                }
+
+                consumeIf(";") -> {}
+
+                else -> throw IllegalStateException("Unknown token at ${tokens.err(i)}")
+            }
             i = max(i0 + 1, i)
         }
     }
 
-    private fun readTopLevel() {
-        when {
-            consumeIf("import") -> readImport()
-            consumeIf("export") -> addFlag(Flags.PUBLIC) // ^^
+    private fun readClassLevel() {
+        while (i < tokens.size) {
+            val i0 = i
+            when {
+                consumeIf("get") -> TODO("read getter at ${tokens.err(i)}")
+                consumeIf("set") -> TODO("read setter at ${tokens.err(i)}")
+                consumeIf("static") -> isStatic = true
+                consumeIf("readonly") -> isReadOnly = true
+                consumeIf("public") -> addFlag(Flags.PUBLIC)
+                consumeIf("private") -> addFlag(Flags.PRIVATE)
+                consumeIf("protected") -> addFlag(Flags.PROTECTED)
+                consumeIf("#") -> addFlag(Flags.PRIVATE)
+                consumeIf("constructor") -> readConstructor()
+                consumeIf("declare") -> {
+                    // just a "trust me, this field exists"
+                    consume("var")
+                    readField()
+                }
 
-            consumeIf("class") -> readClass()
-            consumeIf("interface") -> readInterface()
-            consumeIf("enum") -> readEnum()
-            consumeIf("type") -> readTypeAlias()
+                tokens.equals(i, TokenType.NAME) || tokens.equals(i, "type") -> {
+                    if (tokens.equals(i + 1, "<", "(")) {
+                        println("Reading function at ${tokens.err(i)}")
+                        readMethod()
+                    } else {
+                        println("Reading field at ${tokens.err(i)}")
+                        readField()
+                    }
+                }
 
-            consumeIf("function") -> readFunction()
-
-            tokens.equals(i, TokenType.NAME) -> {
-                // variable / field
-                readField()
+                consumeIf(";") -> {}
+                else -> throw IllegalStateException("Unknown token at ${tokens.err(i)}")
             }
-
-            else -> i++
+            i = max(i0 + 1, i)
         }
     }
 
@@ -53,6 +109,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         isAndType: Boolean, insideTypeParams: Boolean
     ): Type? {
         consumeIf("|") // or-types may start with pipes in TypeScript
+        println("Reading type at ${tokens.err(i)}")
         return super.readType(selfType, allowSubTypes, isAndType, insideTypeParams)
     }
 
@@ -90,49 +147,23 @@ class TypeScriptClassScanner(tokens: TokenList) :
         }
 
         pushBlock(classScope) {
-            while (i < tokens.size) {
-                readClassMember()
-            }
+            readClassLevel()
         }
     }
 
-    private fun readClassMember() {
-        val flags = readModifiers()
-
-        when {
-            consumeIf("constructor") -> readConstructor(flags)
-            consumeIf("function") -> readMethod(flags)
-            tokens.equals(i, TokenType.NAME) -> readField(flags)
-
-            else -> i++
-        }
-    }
-
-    private fun readModifiers(): Int {
-        var flags = 0
-        while (true) {
-            flags = flags or when {
-                consumeIf("public") -> Flags.PUBLIC
-                consumeIf("private") -> Flags.PRIVATE
-                consumeIf("protected") -> Flags.PROTECTED
-                // todo TypeScript has static??? -> yes, like in Java
-                // consumeIf("static") -> Flags.STATIC
-                consumeIf("abstract") -> Flags.ABSTRACT
-                // consumeIf("readonly") -> Flags.CONST
-                // consumeIf("async") -> Flags.ASYNC
-                else -> return flags
-            }
-        }
-    }
-
-    fun readField(flags: Int = packFlags()) {
+    override fun readField() {
         val origin = origin(i)
+        val flags = packFlags()
 
         val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
         val owner = currPackage
 
-        val type = if (consumeIf(":")) {
+        val type = if (consumeIf("?:")) {
+            // optional field
+            val type0 = readTypeNotNull(null, true)
+            unionTypes(type0, NullType)
+        } else if (consumeIf(":")) {
             readTypeNotNull(null, true)
         } else null
 
@@ -159,8 +190,9 @@ class TypeScriptClassScanner(tokens: TokenList) :
         consumeIf(TokenType.SEMICOLON)
     }
 
-    fun readMethod(flags: Int = packFlags()) {
+    override fun readMethod() {
         val origin = origin(i - 1)
+        val flags = packFlags()
 
         val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 
@@ -197,12 +229,9 @@ class TypeScriptClassScanner(tokens: TokenList) :
         }
     }
 
-    private fun readFunction() {
-        readMethod()
-    }
-
-    private fun readConstructor(flags: Int) {
+    override fun readConstructor() {
         val origin = origin(i - 1)
+        val flags = packFlags()
 
         val classScope = currPackage
         val scope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
@@ -229,12 +258,18 @@ class TypeScriptClassScanner(tokens: TokenList) :
                 val origin = origin(i)
                 val name = consumeName(VSCodeType.PARAMETER, 0)
 
-                val type = if (consumeIf(":")) {
+                var defaultIsNull = false
+                val type = if (consumeIf("?:")) {
+                    defaultIsNull = true
+                    readTypeNotNull(null, true)
+                } else if (consumeIf(":")) {
                     readTypeNotNull(null, true)
                 } else Types.Any
 
                 val defaultValue = if (consumeIf("=")) {
                     readLazyValue(false)
+                } else if (defaultIsNull) {
+                    SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
                 } else null
 
                 params.add(
@@ -259,8 +294,14 @@ class TypeScriptClassScanner(tokens: TokenList) :
         while (!tokens.equals(i, ">")) {
             val origin = origin(i)
             val name = consumeName(VSCodeType.TYPE_PARAM, 0)
-            params.add(Parameter(params.size, name, Types.NullableAny, currPackage, origin))
-            readComma()
+            val type = if (consumeIf("extends")) {
+                if (consumeIf("keyof")) {
+                    val classType = readTypeNotNull(null, true)
+                    KeyOfType(classType)
+                } else readTypeNotNull(null, true)
+            } else Types.NullableAny
+            params.add(Parameter(params.size, name, type, currPackage, origin))
+            if (!consumeIf(",")) break
         }
         consume(">")
         return params
@@ -269,7 +310,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
     override fun readTypeAlias() {
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val aliasScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
-        aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope)
+        aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope, true)
         aliasScope.hasTypeParameters = true
 
         consume("=")
@@ -278,8 +319,20 @@ class TypeScriptClassScanner(tokens: TokenList) :
         popGenericParams()
     }
 
+    override fun readTypePath(selfType: Type?): Type? {
+        if (consumeIf(TokenType.OPEN_BLOCK)) {
+            TODO("Read unnamed class type at ${tokens.err(i - 1)}")
+        }
+        return super.readTypePath(selfType)
+    }
+
+    fun isKeywordTypeName(i: Int): Boolean {
+        return tokens.equals(i, "any", "number", "string", "boolean", "undefined", "null", "void")
+    }
+
     override fun canAppearInsideAType(i: Int): Boolean {
-        return tokens.equals(i, "number") || super.canAppearInsideAType(i)
+        return isKeywordTypeName(i) || tokens.equals(i, "|", "{", "}") ||
+                super.canAppearInsideAType(i)
     }
 
     override fun readExpression(minPrecedence: Int): Expression =
@@ -299,11 +352,11 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
     override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (consumeIf("extends")) {
-            super.readSuperCalls(classScope, readBody)
+            readSuperCallsImpl(classScope, readBody)
         }
 
         if (consumeIf("implements")) {
-            super.readSuperCalls(classScope, readBody)
+            readSuperCallsImpl(classScope, readBody)
         }
     }
 

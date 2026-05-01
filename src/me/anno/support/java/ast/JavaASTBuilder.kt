@@ -216,7 +216,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase
 
     fun readGenericMethod() {
         val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin(i))
-        val typeParams = readTypeParameterDeclarations(methodScope)
+        val typeParams = readTypeParameterDeclarations(methodScope, true)
         val tn = readTypeAndName()
             ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
         check(tokens.equals(i, "("))

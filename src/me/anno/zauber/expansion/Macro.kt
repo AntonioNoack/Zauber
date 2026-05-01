@@ -217,8 +217,8 @@ object Macro {
         check(result.type == ReturnType.THROW) { "Failed calling $method at ${resolveOrigin(origin)}" }
         check(result.value.clazz == runtime.getClass(Types.MacroContext))
 
-        val resultIndex = result.value.clazz.properties.indexOfFirst { it.name == "result" }
-        val value = result.value.properties.getOrNull(resultIndex)
+        val resultIndex = result.value.clazz.fields.indexOfFirst { it.name == "result" }
+        val value = result.value.fields.getOrNull(resultIndex)
             ?: throw IllegalStateException("Missing first property of TokenResult")
 
         // todo allow special character codes to encode where something came from...

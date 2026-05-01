@@ -57,8 +57,8 @@ class NullTests {
         val thrown = value.value
         assertEquals(runtime.getClass(Types.NullPointerException), thrown.clazz)
         // todo: why is the message field not assigned?
-        val messageIndex = thrown.clazz.properties.indexOfFirst { it.name == "message" }
-        val messageField = thrown.properties[messageIndex]?.castToString() ?: ""
+        val messageIndex = thrown.clazz.fields.indexOfFirst { it.name == "message" }
+        val messageField = thrown.fields[messageIndex]?.castToString() ?: ""
         assertContains(" cannot be null", messageField)
         assertContains("nullX", messageField)
     }

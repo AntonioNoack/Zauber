@@ -245,15 +245,6 @@ abstract class CallExpressionBase(
                 }
             }
             is ResolvedConstructor -> {
-                check(
-                    self is TypeExpression ||
-                            self is UnresolvedFieldExpression ||
-                            self is CallExpression ||
-                            self is SuperExpression
-                ) {
-                    "In ResolvedConstructor, base should be a TypeExpression/UFE/CallE, but got ${self.javaClass.simpleName}"
-                }
-
                 var valueParams = valueParameters
                 val createdType = callable.resolved.selfTypeI
                 if (createdType.clazz.scopeType == ScopeType.INNER_CLASS) {

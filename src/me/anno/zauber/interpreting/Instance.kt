@@ -12,32 +12,41 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 
 class Instance(
     val clazz: ZClass,
-    val properties: Array<Instance?>,
+    val fields: Array<Instance?>,
     val id: Int
 ) {
 
     var rawValue: Any? = null
 
     override fun toString(): String {
-        val rawValue = rawValue
-        val prefix = "Instance@$id($clazz,${properties.toList()}"
-        return when (rawValue) {
-            null -> "$prefix)"
-            is Array<*> -> "$prefix,${rawValue.toList()})"
-            is IntArray -> "$prefix,I${rawValue.toList()})"
-            is LongArray -> "$prefix,J${rawValue.toList()})"
-            is FloatArray -> "$prefix,F${rawValue.toList()})"
-            is DoubleArray -> "$prefix,D${rawValue.toList()})"
-            is ByteArray -> "$prefix,B${rawValue.toList()})"
-            is ShortArray -> "$prefix,S${rawValue.toList()})"
-            is CharArray -> "$prefix,C${rawValue.joinToString()})"
-            is BooleanArray -> "$prefix,Z${rawValue.toList()})"
-            else -> "$prefix,$rawValue)"
+        return "Instance@$id($clazz,${fields.map { it?.toStringInner() }}${rawValueStr()})"
+    }
+
+    fun toStringInner(): String {
+        val rv = rawValueStr()
+        if (clazz.type is NullType) return "null@$id"
+        return "${(clazz.type as ClassType).clazz.pathStr}@$id${if (rv.isNotEmpty()) "($rv)" else ""}"
+    }
+
+    private fun rawValueStr(): String {
+        return when (val rawValue = rawValue) {
+            null -> ""
+            is Array<*> -> ",${rawValue.toList()}"
+            is IntArray -> ",I${rawValue.toList()}"
+            is LongArray -> ",J${rawValue.toList()}"
+            is FloatArray -> ",F${rawValue.toList()}"
+            is DoubleArray -> ",D${rawValue.toList()}"
+            is ByteArray -> ",B${rawValue.toList()}"
+            is ShortArray -> ",S${rawValue.toList()}"
+            is CharArray -> ",C${rawValue.joinToString()}"
+            is BooleanArray -> ",Z${rawValue.toList()}"
+            else -> ",$rawValue"
         }
     }
 
@@ -101,7 +110,7 @@ class Instance(
         checkType(Types.String)
         if (rawValue == null) {
             // a byte array
-            val content = properties[0]!!
+            val content = fields[0]!!
             val string = when (val bytes = content.rawValue) {
                 is ByteArray -> bytes
                 is Array<*> -> ByteArray(bytes.size) { (bytes[it] as Instance).castToByte() }
@@ -129,42 +138,42 @@ class Instance(
     fun clone(): Instance {
         check(clazz.type is ClassType)
         val newId = runtime.nextInstanceId()
-        val newProperties = Array(properties.size) {
-            properties[it]?.cloneIfValue()
+        val newProperties = Array(fields.size) {
+            fields[it]?.cloneIfValue()
         }
         return Instance(clazz, newProperties, newId)
     }
 
     fun set(fieldName: String, value: String) {
-        val fieldIndex = clazz.properties.indexOfFirst { it.name == fieldName }
+        val fieldIndex = clazz.fields.indexOfFirst { it.name == fieldName }
         if (fieldIndex < 0) return
-        properties[fieldIndex] = runtime.createString(value)
+        fields[fieldIndex] = runtime.createString(value)
     }
 
     operator fun get(field: Field): Instance {
-        val fieldIndex = clazz.properties.indexOf(field)
+        val fieldIndex = clazz.fields.indexOf(field)
         check(fieldIndex != -1) { "Instance $this does not have field $field (${field.scope})" }
 
-        if (fieldIndex >= properties.size) {
+        if (fieldIndex >= fields.size) {
             throw IllegalStateException("Outdated instance? $this")
         }
 
-        if (properties[fieldIndex] == null &&
+        if (fields[fieldIndex] == null &&
             clazz.type == Types.String &&
             field.name == "content"
         ) createStringContentArray(fieldIndex)
 
-        if (properties[fieldIndex] == null &&
+        if (fields[fieldIndex] == null &&
             field.flags.hasFlag(Flags.CONSTEXPR)
         ) initializeConstant(field, fieldIndex)
 
-        return properties[fieldIndex]
+        return fields[fieldIndex]
             ?: throw IllegalStateException("$this.${field.toStringWithoutDefault()}[$fieldIndex] accessed before initialization")
     }
 
     private fun initializeConstant(field: Field, fieldIndex: Int) {
         val value = field.initialValue!!
-        properties[fieldIndex] = evaluateExpression(value, field.flags, field.valueType)
+        fields[fieldIndex] = evaluateExpression(value, field.flags, field.valueType)
     }
 
     fun evaluateExpression(value: Expression, flags: Int, valueType: Type?): Instance {
@@ -193,12 +202,12 @@ class Instance(
     }
 
     fun set(fieldName: String, value: Instance) {
-        val fieldIndex = clazz.properties.indexOfFirst { it.name == fieldName }
+        val fieldIndex = clazz.fields.indexOfFirst { it.name == fieldName }
         if (fieldIndex < 0) return
-        properties[fieldIndex] = value
+        fields[fieldIndex] = value
     }
 
     fun hasProperty(fieldName: String): Boolean {
-        return clazz.properties.any { it.name == fieldName }
+        return clazz.fields.any { it.name == fieldName }
     }
 }

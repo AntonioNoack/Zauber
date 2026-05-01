@@ -34,7 +34,6 @@ abstract class DeltaWriter<V>(val root: File) {
 
     operator fun get(file: File): V? {
         return newContent[file]
-            ?: throw IllegalStateException("Missing $file")
     }
 
     operator fun set(file: File, content: V) {

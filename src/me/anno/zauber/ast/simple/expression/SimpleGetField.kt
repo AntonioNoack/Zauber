@@ -8,11 +8,13 @@ import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.Specialization
 
 class SimpleGetField(
     dst: SimpleField,
     val self: SimpleField,
     val field: Field,
+    val specialization: Specialization,
     scope: Scope, origin: Int
 ) : SimpleAssignment(dst, scope, origin) {
 
@@ -22,7 +24,11 @@ class SimpleGetField(
 
     init {
         if (self.type is ClassType) {
-            if (self.type.clazz.isInnerClassOf(field.ownerScope)) {
+            val selfScope = self.type.clazz
+            val fieldScope = field.ownerScope
+            if (selfScope.isInnerClassOf(fieldScope) ||
+                fieldScope.isInnerClassOf(selfScope)
+            ) {
                 throw IllegalStateException("Cannot get $field from $self")
             }
         }
@@ -32,7 +38,7 @@ class SimpleGetField(
     }
 
     override fun toString(): String {
-        return "$dst = $self?[${field.selfType}].${field.name}"
+        return "$dst = $self?[${field.selfType ?: field.ownerScope.pathStr}].${field.name}"
     }
 
     override fun eval(): BlockReturn {

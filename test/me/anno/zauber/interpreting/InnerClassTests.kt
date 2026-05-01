@@ -14,16 +14,38 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassFields() {
+        LogManager.disableLoggers("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
-                class X {
+                class Outer {
                     var x = 0f
-                    inner class I {
+                    inner class Inner {
                         fun call() = x
                     }
                 }
                 
-                val tested = X().I().call()
+                val tested = Outer().Inner().call()
+                
+                package zauber
+                class Any
+            """.trimIndent()
+        )
+        assertEquals(0f, value.castToFloat())
+    }
+
+    @Test
+    fun testInnerClassCanAccessOuterClassFieldChain() {
+        LogManager.disableLoggers("TypeResolution,MemberResolver,CallExpression")
+        val value = testExecute(
+            """
+                class Outer {
+                    var x = 0f
+                    inner class Inner {
+                        val y get() = x
+                    }
+                }
+                
+                val tested = Outer().Inner().y
                 
                 package zauber
                 class Any
@@ -34,22 +56,18 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassMethods() {
-        LogManager.disableLoggers(
-            "" +
-                    "TypeResolution,MemberResolver,CallExpression"
-        )
-        // todo issue: this-chain is not solved properly; are the methods called on the correct instance???
+        LogManager.disableLoggers("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
-                class X {
+                class Outer {
                     var y = 0f
                     fun x() = y
-                    inner class I {
+                    inner class Inner {
                         fun call() = x()
                     }
                 }
                 
-                val tested = X().I().call()
+                val tested = Outer().Inner().call()
                 
                 package zauber
                 class Any
@@ -58,20 +76,17 @@ class InnerClassTests {
         assertEquals(0f, value.castToFloat())
     }
 
-    // todo test that we can access outer class constructors ^^, creating I() from inside I
-    // todo test (deeply) nested inner classes -> must create a getter-chain
-
     @Test
     fun testCallInnerClassConstructorFromOutside() {
         val type = testExecute(
             """
-                class X {
-                    inner class I {
+                class Outer {
+                    inner class Inner {
                         fun call(): Float = 0f
                     }
                 }
                 
-                val tested = X().I().call()
+                val tested = Outer().Inner().call()
                 
                 package zauber
                 class Any
@@ -89,17 +104,16 @@ class InnerClassTests {
                     "ConstructorResolver," +
                     ""
         )
-        // todo bug: FieldExpression doesn't validate 'this.' enough
         val type = testExecute(
             """
-                class X(val x: Int) {
-                    inner class I {
-                        fun call(): Int = x++
+                class Outer(var x: Int) {
+                    inner class Inner {
+                        fun call(): Int = ++x
                     }
-                    fun calc(): Int = I().call()
+                    fun calc(): Int = Inner().call()
                 }
                 
-                val tested = X(5).calc()
+                val tested = Outer(5).calc()
                 
                 package zauber
                 class Any
@@ -109,6 +123,70 @@ class InnerClassTests {
                 }
             """.trimIndent()
         )
+        assertEquals(6, type.castToInt())
+    }
+
+    @Test
+    fun testCallInnerClassConstructorFromInsideInner() {
+        LogManager.disableLoggers(
+            "" +
+                    "ASTSimplifier,TypeResolution,Inheritance,Runtime," +
+                    "CallExpression,MemberResolver,SuperCallExpression," +
+                    "ResolvedMethod,MethodResolver," +
+                    "ConstructorResolver," +
+                    "ResolvedField,FieldExpression,FieldResolver"
+        )
+        val type = testExecute(
+            """
+                class Outer(var x: Int) {
+                    inner class Inner {
+                        fun call(): Int = Inner().x
+                    }
+                }
+                
+                val tested = Outer(5).Inner().call()
+                
+                package zauber
+                class Any
+            """.trimIndent()
+        )
         assertEquals(5, type.castToInt())
     }
+
+
+    @Test
+    fun testInnerClassChainAndFieldAccess() {
+        LogManager.disableLoggers(
+            "" +
+                    "ASTSimplifier,TypeResolution,Inheritance,Runtime," +
+                    "CallExpression,MemberResolver,SuperCallExpression," +
+                    "ResolvedMethod,MethodResolver," +
+                    "ConstructorResolver," +
+                    "ResolvedField,FieldExpression,FieldResolver"
+        )
+        val type = testExecute(
+            """
+                class Outer(var x: Int) {
+                    inner class I1 {
+                        inner class I2 {
+                            inner class I3 {
+                                fun call(): Int = ++x
+                            }
+                        }
+                    }
+                }
+                
+                val tested = Outer(5).I1().I2().I3().call()
+                
+                package zauber
+                class Any
+                class Int {
+                    external operator fun plus(other: Int): Int
+                    operator fun inc() = this + 1
+                }
+            """.trimIndent()
+        )
+        assertEquals(6, type.castToInt())
+    }
+
 }

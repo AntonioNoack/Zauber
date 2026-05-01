@@ -4,6 +4,7 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer
+import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
@@ -28,7 +29,9 @@ class JavaGenerationTest {
             val testClassName = "Test"
             val testClass = testScope[ScopeInitType.AFTER_DISCOVERY].children.first { it.name == testClassName }
             val sourceCode = JavaSourceGenerator.run {
-                generateInside(testClassName, testClass, noSpecialization)
+                generateInside(
+                    testClassName, testClass, noSpecialization,
+                    testClass.methods0.map { MethodSpecialization(it, noSpecialization) })
                 if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
                 finish()
             }

@@ -33,6 +33,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NullType
 import me.anno.zauber.types.impl.UnknownType
 import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 object ASTSimplifier {
 
@@ -139,12 +140,18 @@ object ASTSimplifier {
 
             is ThisExpression -> {
                 val type = expr.label.typeWithArgs.specialize(context)
-                val dst = block0.thisField(type, expr.label, expr.scope, expr.origin, contextExpr)
+                val dst = block0.thisField(
+                    type, expr.label, expr.scope, expr.origin,
+                    context.specialization, contextExpr
+                )
                 return flow0.withValue(dst, block0)
             }
             is SuperExpression -> {
                 val type = expr.label.typeWithArgs.specialize(context)
-                val dst = block0.thisField(type, expr.label, expr.scope, expr.origin, contextExpr)
+                val dst = block0.thisField(
+                    type, expr.label, expr.scope, expr.origin,
+                    context.specialization, contextExpr
+                )
                 return flow0.withValue(dst, block0)
             }
 
@@ -362,12 +369,20 @@ object ASTSimplifier {
                 val outerField = clazz.fields.firstOrNull { it.name == OUTER_FIELD_NAME }
                     ?: throw IllegalStateException("Missing $OUTER_FIELD_NAME field in $clazz for $field")
                 val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
-                println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
-                block1v.block.add(SimpleGetField(selfDst, self.use(), outerField, expr.scope, expr.origin))
+                // println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
+                val getter = SimpleGetField(
+                    selfDst, self.use(), outerField,
+                    expr.field.specialization, expr.scope, expr.origin
+                )
+                block1v.block.add(getter)
                 self = selfDst
             }
 
-            block1v.block.add(SimpleGetField(dst, self.use(), field, expr.scope, expr.origin))
+            val getter = SimpleGetField(
+                dst, self.use(), field,
+                expr.field.specialization, expr.scope, expr.origin
+            )
+            block1v.block.add(getter)
             return block1.withValue(dst, block1v.block)
         }
     }
@@ -438,7 +453,16 @@ object ASTSimplifier {
                 null, expr.scope, expr.origin
             )
         } else {
-            block2v.block.add(SimpleSetField(self.use(), field, value.use(), expr.scope, expr.origin))
+            block2v.block.add(
+                SimpleSetField(
+                    self.use(),
+                    field,
+                    value.use(),
+                    expr.field.specialization,
+                    expr.scope,
+                    expr.origin
+                )
+            )
             return block2.withValue(unitInstance(block0.graph, expr), block2v.block)
         }
     }
@@ -596,9 +620,12 @@ object ASTSimplifier {
     ): FlowResult {
         val ifFlow = FlowResult(Flow(unitInstance(ifBlock.graph, expr), ifBlock), null, null)
         val methodType = catch.parameter.scope.typeWithArgs
-        val selfField = ifBlock.thisField(methodType, catch.parameter.scope, expr.scope, expr.origin, null)
+        val selfField = ifBlock.thisField(
+            methodType, catch.parameter.scope, expr.scope, expr.origin,
+            context.specialization, null
+        )
         val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
-        ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, expr.scope, expr.origin))
+        ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, noSpecialization, expr.scope, expr.origin))
         return simplifyImpl(context, catch.body, ifBlock, ifFlow, needsValue)
     }
 
@@ -813,7 +840,7 @@ object ASTSimplifier {
 
             val selfScope = (graph.method as Constructor).classScope
             val selfType = selfScope.typeWithArgs.specialize(method0.specialization)
-            val self = block0.thisField(selfType, selfScope, scope, origin, null)
+            val self = block0.thisField(selfType, selfScope, scope, origin, method0.specialization, null)
 
             val constructor = SimpleSelfConstructor(
                 unit, selfIfInsideConstructor,

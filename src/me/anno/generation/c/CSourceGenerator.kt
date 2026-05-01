@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -41,7 +42,7 @@ object CSourceGenerator : me.anno.generation.Generator() {
         }
     }
 
-    override fun generateCode(dst: File, root: Scope) {
+    fun generateCode(dst: File, root: Scope) {
         dst.deleteRecursively()
 
         fun generateCode(scope: Scope) {

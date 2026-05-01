@@ -65,7 +65,7 @@ class Runtime {
         val field = getMergedField(field)
         LOGGER.info("Getting SimpleField $field")
         return call.simpleFields[field]
-            ?: throw IllegalStateException("Missing field $field, fields: ${call.simpleFields}")
+            ?: throw IllegalStateException("Missing field $field, fields: ${call.simpleFields.entries.joinToString("") { (k, v) -> "\n  $k=$v" }}")
     }
 
     operator fun set(field: SimpleField, value: Instance) {
@@ -93,13 +93,13 @@ class Runtime {
 
     operator fun set(instance: Instance, field: Field, value: Instance) {
         val clazz = instance.clazz
-        val fieldIndex = clazz.properties.indexOf(field)
+        val fieldIndex = clazz.fields.indexOf(field)
         check(fieldIndex != -1) {
             "Instance $clazz does not have field $field, " +
-                    "available: ${clazz.properties.map { it.name }}, " +
+                    "available: ${clazz.fields.map { it.name }}, " +
                     "fields: ${(clazz.type as ClassType).clazz.fields.map { it.name }}"
         }
-        instance.properties[fieldIndex] = value
+        instance.fields[fieldIndex] = value
     }
 
     fun isNull(va: Instance) = va == getNull()
@@ -108,7 +108,7 @@ class Runtime {
         val boolCompanion = Types.Boolean.clazz[ScopeInitType.AFTER_DISCOVERY].companionObject
             ?: throw IllegalStateException("Missing definition for enum class Boolean")
         val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
-        val fields = boolInstance.clazz.properties
+        val fields = boolInstance.clazz.fields
         val name = if (bool) "TRUE" else "FALSE"
         val field = fields.firstOrNull { it.name == name }
             ?: throw IllegalStateException("Missing enum Boolean.$name")
@@ -193,18 +193,18 @@ class Runtime {
     ) {
         for (i in valueParameters.indices) {
             val parameter = valueParameters[i]
-            val field = methodScopeInstance.clazz.properties.getOrNull(i)
+            val field = methodScopeInstance.clazz.fields.getOrNull(i)
                 ?: throw IllegalStateException(
                     "Method needs at least as many fields as parameters, " +
                             "$method, " +
                             "fields: ${(methodScopeInstance.clazz.type as ClassType).clazz.fields} -> " +
-                            "properties: ${methodScopeInstance.clazz.properties}"
+                            "properties: ${methodScopeInstance.clazz.fields}"
                 )
             check(field.name == method.valueParameters[i].name) {
                 "Unexpected field order, " +
-                        "${methodScopeInstance.clazz.properties.map { it.name }} != ${method.valueParameters.map { it.name }}"
+                        "${methodScopeInstance.clazz.fields.map { it.name }} != ${method.valueParameters.map { it.name }}"
             }
-            methodScopeInstance.properties[i] = parameter
+            methodScopeInstance.fields[i] = parameter
         }
     }
 
@@ -347,7 +347,7 @@ class Runtime {
                     instance.set("name", clazz.name)
                     if (instance.hasProperty("fields")) {
                         val zType = getClass(type)
-                        val fields0 = zType.properties
+                        val fields0 = zType.fields
                         val fieldClass = getClass(Types.Field)
                         val fields1 = fields0.mapArray { field ->
                             val instance = fieldClass.createInstance()

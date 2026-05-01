@@ -7,11 +7,13 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.specialization.Specialization
 
 class SimpleSetField(
     val self: SimpleField,
     val field: Field,
     val value: SimpleField,
+    val specialization: Specialization,
     scope: Scope, origin: Int
 ) : SimpleInstruction(scope, origin) {
 

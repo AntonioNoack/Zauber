@@ -1,6 +1,6 @@
 package me.anno.generation
 
-import me.anno.zauber.scope.Scope
+import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
 // todo we could compile to other languages, too,
@@ -64,5 +64,7 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         return str
     }
 
-    abstract fun generateCode(dst: File, root: Scope)
+    open fun generateCode(dst: File, data: DependencyData) {
+        throw NotImplementedError()
+    }
 }

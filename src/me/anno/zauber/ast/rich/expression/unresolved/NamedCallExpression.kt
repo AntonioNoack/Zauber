@@ -88,7 +88,7 @@ class NamedCallExpression(
                 child.scopeType == ScopeType.INNER_CLASS && child.name == name
             }
             if (innerClass != null) {
-                println("Inner class for $baseType: $innerClass")
+                // println("Inner class for $baseType: $innerClass")
                 val selfValueParameter = ValueParameterImpl(OUTER_FIELD_NAME, baseType, false)
                 ConstructorResolver.findMemberInScopeImpl(
                     innerClass, name, typeParameters,
