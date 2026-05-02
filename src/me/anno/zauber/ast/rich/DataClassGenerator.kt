@@ -116,6 +116,9 @@ object DataClassGenerator {
     ) {
         lateinit var body: Expression
         val methodScope = pushScope("hashCode", ScopeType.METHOD) { scope ->
+            scope.typeParameters = emptyList()
+            scope.hasTypeParameters = true
+
             val builder = ExpressionBuilder(scope, origin, Types.Int)
             for (field in primaryFields) {
                 val fieldExpr = FieldExpression(field, scope, origin)
@@ -142,6 +145,9 @@ object DataClassGenerator {
     ) {
         lateinit var body: Expression
         val methodScope = pushScope("toString", ScopeType.METHOD) { scope ->
+            scope.typeParameters = emptyList()
+            scope.hasTypeParameters = true
+
             val builder = ExpressionBuilder(scope, origin, Types.String)
             builder.expr = StringExpression("${classScope.name}(", scope, origin)
             for ((i, field) in primaryFields.withIndex()) {
@@ -168,6 +174,9 @@ object DataClassGenerator {
         lateinit var body: Expression
         lateinit var parameter: Parameter
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
+            scope.typeParameters = emptyList()
+            scope.hasTypeParameters = true
+
             parameter = Parameter(0, "other", Types.NullableAny, scope, origin)
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
@@ -204,6 +213,9 @@ object DataClassGenerator {
         lateinit var body: Expression
         lateinit var parameter: Parameter
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
+            scope.typeParameters = emptyList()
+            scope.hasTypeParameters = true
+
             parameter = Parameter(0, "other", classScope.typeWithArgs, scope, origin)
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
 

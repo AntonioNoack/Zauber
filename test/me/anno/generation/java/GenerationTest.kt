@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-class JavaGenerationTest {
+class GenerationTest {
 
     companion object {
         fun testClassGeneration(code: String): String {

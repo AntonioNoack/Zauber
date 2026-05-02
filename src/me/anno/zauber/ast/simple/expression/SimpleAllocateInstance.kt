@@ -10,6 +10,7 @@ import me.anno.zauber.types.impl.ClassType
 class SimpleAllocateInstance(
     dst: SimpleField,
     val allocatedType: ClassType,
+    val paramsForLater: List<SimpleField>,
     scope: Scope, origin: Int
 ) : SimpleAssignment(dst, scope, origin) {
 

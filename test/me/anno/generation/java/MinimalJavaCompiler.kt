@@ -51,7 +51,12 @@ object MinimalJavaCompiler {
         return printed
     }
 
+
     fun testCompileMainToJavaAndRun(code: String, registerMethods: () -> Unit): String {
+        return testCompileMainToJavaAndRun(code, false, registerMethods)
+    }
+
+    fun testCompileMainToJavaAndRun(code: String, debug: Boolean, registerMethods: () -> Unit): String {
         val testScope = ResolutionUtils.typeResolveScope(code)
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
         Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))
@@ -60,7 +65,6 @@ object MinimalJavaCompiler {
         printDependencies(dependencies)
 
         // generate Java code
-        val debug = false
         val javaFolder =
             if (debug) File(System.getProperty("user.home"), "Desktop/ZauberJava")
             else File.createTempFile("JavaGenAndRun", ".tmp")

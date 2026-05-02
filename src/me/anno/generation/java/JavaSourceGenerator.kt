@@ -19,6 +19,7 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.interpreting.ExternalKey
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -41,6 +42,8 @@ import java.io.File
  *   - fields into lambdas must be effectively final [-> must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
  * */
 object JavaSourceGenerator : Generator() {
+
+    private val LOGGER = LogManager.getLogger(JavaSourceGenerator::class)
 
     val protectedTypes by threadLocal {
         Types.run {
@@ -155,9 +158,11 @@ object JavaSourceGenerator : Generator() {
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
         scope[ScopeInitType.CODE_GENERATION]
-        check(scope.isClassLike()) {
-            "Expected $scope to be class-like, but got ${scope.scopeType}"
+        if (!scope.isClassLike()) {
+            LOGGER.warn("Skipping generation for scope ${scope.pathStr}, ${scope.scopeType}")
+            return
         }
+
         if (scope.scopeType == ScopeType.PACKAGE) {
 
             // we need some package helper

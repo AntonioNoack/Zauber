@@ -876,7 +876,7 @@ object ASTSimplifier {
                 selfType = ClassType(selfType.clazz, method0.selfTypeParameters)
             }
             // todo allocation could fail, too...
-            block0.add(SimpleAllocateInstance(dst, selfType, scope, origin))
+            block0.add(SimpleAllocateInstance(dst, selfType, valueParameters, scope, origin))
             val unusedTmp = block0.field(Types.Unit)
             val specialization = method0.specialization
             val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)

@@ -21,7 +21,7 @@ class DataClassTest {
                 external fun equals(other: String): Boolean
             }
         """.trimIndent()
-        val generated = JavaGenerationTest.testClassGenIsFine(source)
+        val generated = GenerationTest.testClassGenIsFine(source)
         Thread.sleep(250)
         println(generated)
     }

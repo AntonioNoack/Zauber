@@ -220,9 +220,11 @@ object JavaSimplifiedASTWriter {
             }
             is SimpleCall -> {
                 if (expr.sample is Constructor) {
-                    builder.append("new ")
-                    appendType(expr.dst.type, expr.scope, true)
-                    appendValueParams(expr.valueParameters)
+                    comment {
+                        builder.append("new ")
+                        // appendType(expr.dst.type, expr.scope, true)
+                        appendValueParams(expr.valueParameters)
+                    }
                 } else {
                     // Number.toX() needs to be converted to a cast
                     val methodName = expr.methodName
@@ -291,6 +293,9 @@ object JavaSimplifiedASTWriter {
             }
             is SimpleAllocateInstance -> {
                 // handled in SimpleCall, because only there do we have the value parameters
+                builder.append("new ")
+                appendType(expr.allocatedType, expr.scope, true)
+                appendValueParams(expr.paramsForLater)
             }
             is SimpleSelfConstructor -> {
                 when (expr.isThis) {
