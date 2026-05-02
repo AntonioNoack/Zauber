@@ -16,7 +16,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 
 object JavaExpressionWriter {
 
-    fun me.anno.generation.java.JavaSourceGenerator.appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
+    fun JavaSourceGenerator.appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
         // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
         //  a) create helper functions
         //  b) implement our own constructor
@@ -26,10 +26,10 @@ object JavaExpressionWriter {
             appendExpression(context, parameter.value)
         }
         builder.append(");")
-        _root_ide_package_.me.anno.generation.java.JavaSourceGenerator.nextLine()
+        JavaSourceGenerator.nextLine()
     }
 
-    fun me.anno.generation.java.JavaSourceGenerator.appendExpression(context: ResolutionContext, expr: Expression) {
+    fun JavaSourceGenerator.appendExpression(context: ResolutionContext, expr: Expression) {
         when (expr) {
             is DotExpression -> {
                 appendExpression(context, expr.left)

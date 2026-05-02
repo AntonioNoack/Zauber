@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.SimpleNode.Companion.getOwnership
+import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
@@ -55,5 +56,13 @@ class SimpleGraph(val method: MethodLike) {
                 "unit: $unitField\n" +
                 "this: ${thisFields.map { "\n  %${it.value.id} = ${it.key.scope}" }}\n" +
                 nodes.joinToString("\n") { it.toString() }
+    }
+
+    fun removeSuperCalls() {
+        for (block in nodes) {
+            block.instructions.removeIf {
+                it is SimpleSelfConstructor
+            }
+        }
     }
 }

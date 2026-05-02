@@ -10,6 +10,7 @@ import me.anno.zauber.types.impl.UnknownType
 
 class Specialization(typeParameters: ParameterList) {
 
+    @Deprecated("This is incomplete for inner classes, where the outer class is generic")
     constructor(scope: ClassType) : this(
         ParameterList(
             scope.clazz.typeParameters,

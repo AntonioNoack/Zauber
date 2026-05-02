@@ -8,6 +8,8 @@ import me.anno.generation.java.JavaExpressionWriter.appendSuperCall
 import me.anno.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
 import me.anno.generation.java.JavaSimplifiedASTWriter.imports
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.Compile.root
+import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.*
@@ -22,8 +24,8 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.ClassSpecialization
+import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
@@ -59,32 +61,27 @@ object JavaSourceGenerator : Generator() {
     val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
     val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
 
-    // todo we need to add these for every constructor and super call,
-    //  we need specialized methods for every generic method (incl. getters and setters)
-
-    private val blacklistedPaths = listOf(listOf("java"))
-
-    override fun generateCode(dst: File, data: DependencyData) {
+    override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         val writer = JavaWriter(dst)
         try {
-            val classes = data.createdClasses
-            val methods = data.calledMethods
 
             defineNullableAnnotation(dst, writer)
-            val methodsByClass = methods.groupBy {
-                it.method.ownerScope.typeWithArgs
-                    .specialize(it.specialization)
+            defineMainMethodCall(dst, writer, mainMethod)
+
+            val methodsByClass = data.calledMethods.groupBy {
+                ClassSpecialization(it.method.ownerScope, it.specialization)
             }
 
-            val remainingClasses = HashSet(classes)
-            for ((clazz, methods) in methodsByClass.entries) {
-                clazz as ClassType
-                remainingClasses.remove(ClassSpecialization(clazz))
-                val classSpec = methods.first().specialization
-                generate(clazz.clazz, dst, writer, classSpec, methods)
+            val fieldsByClass = (data.getFields + data.setFields).groupBy {
+                ClassSpecialization(it.field.ownerScope, it.specialization)
             }
-            for (clazz in remainingClasses) {
-                generate(clazz.clazz, dst, writer, clazz.specialization, emptyList())
+
+            val classes = methodsByClass.keys + fieldsByClass.keys + data.createdClasses
+            for (clazz in classes) {
+                val methods = methodsByClass[clazz] ?: emptyList()
+                val fields = fieldsByClass[clazz] ?: emptyList()
+                val classSpec = clazz.specialization
+                generateClassForScope(clazz.clazz, dst, writer, classSpec, methods, fields)
             }
         } finally {
             writer.finish()
@@ -97,13 +94,41 @@ object JavaSourceGenerator : Generator() {
             .apply {
                 content.append(
                     """
+                import java.lang.annotation.*;
+                        
                 @Retention(RetentionPolicy.RUNTIME)
                 @Target(ElementType.TYPE)
                 public @interface Nullable {}
             """.trimIndent()
                 )
-                imports.add("java.lang.annotation.*")
             }
+    }
+
+    private fun defineMainMethodCall(dst: File, writer: JavaWriter, mainMethod: Method) {
+        val file = File(dst, "zauber/LaunchZauber.java")
+
+        appendType(mainMethod.ownerScope.typeWithArgs, root, true)
+        builder.append('.').append(OBJECT_FIELD_NAME)
+        val className = builder.toString()
+        builder.clear()
+
+        val needsArgs = mainMethod.valueParameters.isNotEmpty()
+
+        val imports0 = imports
+        writer[file] = JavaEntry("zauber")
+            .apply {
+                imports.putAll(imports0)
+                content.append(
+                    """
+                public class LaunchZauber {
+                    public static void main(String[] args) {
+                        $className.${mainMethod.name}(${if (needsArgs) "args" else ""});
+                    }
+                }
+            """.trimIndent()
+                )
+            }
+        imports0.clear()
     }
 
     fun createSpecializationSuffix(specialization: Specialization): String {
@@ -124,9 +149,9 @@ object JavaSourceGenerator : Generator() {
         return scope.name.capitalize() + "Kt" + createSpecializationSuffix(specialization)
     }
 
-    fun generate(
+    fun generateClassForScope(
         scope: Scope, dst: File, writer: JavaWriter, specialization: Specialization,
-        methods: Collection<MethodSpecialization>
+        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
         scope[ScopeInitType.CODE_GENERATION]
         check(scope.isClassLike()) {
@@ -136,13 +161,13 @@ object JavaSourceGenerator : Generator() {
 
             // we need some package helper
             val name = createPackageName(scope, specialization)
-            generateInside(name, scope, specialization, methods)
+            generateClassBody(name, scope, specialization, methods, fields)
             writeInto(scope, name, dst, writer)
 
         } else {
 
             val name = createClassName(scope, specialization)
-            generateInside(name, scope, specialization, methods)
+            generateClassBody(name, scope, specialization, methods, fields)
             writeInto(scope.parent!!, name, dst, writer)
 
         }
@@ -152,7 +177,7 @@ object JavaSourceGenerator : Generator() {
         val file = createFile(packageScope, name, dst)
         val entry = writer[file] ?: JavaEntry(packageScope.pathStr)
         entry.content.append(builder); builder.clear()
-        entry.imports.addAll(imports.map { it.pathStr })
+        entry.imports.putAll(imports)
         imports.clear()
         writer[file] = entry
     }
@@ -181,11 +206,27 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    fun generateInside(
+    private fun getJavaClassType(scope: Scope): String {
+        return when (scope.scopeType) {
+            ScopeType.ENUM_CLASS -> "final class"
+            ScopeType.NORMAL_CLASS -> {
+                val isFinal = isFinal(scope.flags)
+                if (isFinal) "final class" else "class"
+            }
+            ScopeType.INTERFACE -> "interface"
+            ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> "final class"
+            ScopeType.ENUM_ENTRY_CLASS -> "final class"
+            ScopeType.PACKAGE -> "final class"
+            else -> scope.scopeType.toString()
+        }
+    }
+
+    fun generateClassBody(
         className: String, scope: Scope, specialization: Specialization,
-        methods: Collection<MethodSpecialization>
+        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
 
+        nameCannotBeImported(className)
         specializations.add(specialization)
 
         if (specialization.isNotEmpty()) {
@@ -208,18 +249,7 @@ object JavaSourceGenerator : Generator() {
             builder.append("static ")
         }
 
-        val javaType = when (scope.scopeType) {
-            ScopeType.ENUM_CLASS -> "final class"
-            ScopeType.NORMAL_CLASS -> {
-                val isFinal = isFinal(scope.flags)
-                if (isFinal) "final class" else "class"
-            }
-            ScopeType.INTERFACE -> "interface"
-            ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> "final class"
-            ScopeType.ENUM_ENTRY_CLASS -> "final class"
-            ScopeType.PACKAGE -> "final class"
-            else -> scope.scopeType.toString()
-        }
+        val javaType = getJavaClassType(scope)
         if (scope.flags.hasFlag(Flags.ABSTRACT)) builder.append("abstract ")
         builder.append(javaType).append(' ').append(className)
 
@@ -230,15 +260,15 @@ object JavaSourceGenerator : Generator() {
 
         writeBlock {
 
-            if (scope.isObject()) {
+            if (scope.isObjectLike()) {
                 builder.append("public static final ")
-                builder.append(className).append(" __instance__ = new ")
-                builder.append(className).append("();")
+                builder.append(className).append(' ').append(OBJECT_FIELD_NAME)
+                    .append(" = new ").append(className).append("();")
                 nextLine()
                 nextLine()
             }
 
-            appendFields(scope)
+            appendFields(scope, fields)
             appendConstructors(scope, className, methods)
             appendMethods(scope, methods)
 
@@ -247,11 +277,9 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendFields(classScope: Scope) {
+    private fun appendFields(classScope: Scope, fields: Collection<FieldSpecialization>) {
         if (classScope.scopeType == ScopeType.INTERFACE) return // no backing fields
-        val fields = classScope.fields
-        for (field in fields) {
-            if (field.selfType != classScope.typeWithArgs) continue
+        for ((field) in fields) {
             if (!needsFieldByParameter(field.byParameter)) continue
             if (!needsBackingField(field)) continue
             appendBackingField(classScope, field)
@@ -327,11 +355,15 @@ object JavaSourceGenerator : Generator() {
             builder.append("abstract ")
         }
 
-        if (classScope.scopeType != ScopeType.INTERFACE) builder.append("public ")
-        if (method.flags.hasFlag(Flags.EXTERNAL)) builder.append("native ")
-        if (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.flags)) builder.append("final ")
-        if (classScope.scopeType == ScopeType.INTERFACE && method.body != null) builder.append("default ")
-        // if (!isBySelf || classScope.scopeType?.isObject() == true) builder.append("static ")
+        val isPublic = classScope.scopeType != ScopeType.INTERFACE
+        val isNative = method.flags.hasFlag(Flags.EXTERNAL)
+        val isFinal =
+            (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.flags)) || classScope.isObjectLike()
+        val isDefault = classScope.scopeType == ScopeType.INTERFACE && method.body != null
+        if (isPublic) builder.append("public ")
+        if (isNative) builder.append("native ")
+        if (isFinal) builder.append("final ")
+        if (isDefault) builder.append("default ")
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.returnType ?: Types.NullableAny, classScope, false)
@@ -347,7 +379,7 @@ object JavaSourceGenerator : Generator() {
         val body = method.body
         if (body != null) {
             val context = ResolutionContext(method.selfType, specialization, true, null)
-            appendCode(context, method, body)
+            appendCode(context, method, body, false)
         } else {
             builder.append(";")
             nextLine()
@@ -362,23 +394,18 @@ object JavaSourceGenerator : Generator() {
         val visibility = if (classScope.isObject()) "private " else "public "
         builder.append(visibility).append(name)
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
-        // todo append extra body-block for super-call
-        val body = constructor.body
 
+        val body = constructor.body
         val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
         val superCall = constructor.superCall
 
         writeBlock {
             if (superCall != null) {
                 appendSuperCall(context, superCall)
-            } else {
-                builder.append("// no super call")
-                nextLine()
             }
+
             if (body != null) {
-                builder.append("// body")
-                nextLine()
-                appendCode(context, constructor, body)
+                appendCode(context, constructor, body, true)
             }
         }
     }
@@ -415,11 +442,13 @@ object JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
-    private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression) {
+    private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
         writeBlock {
             try {
                 val method1 = MethodSpecialization(method, context.specialization)
                 val simplified = ASTSimplifier.simplify(method1)
+                if (skipSuperCall) simplified.removeSuperCalls()
+
                 CodeReconstruction.createCodeFromGraph(simplified)
                 // todo simplify all entry points as methods...
                 appendSimplifiedAST(method, simplified.startBlock)
@@ -477,5 +506,9 @@ object JavaSourceGenerator : Generator() {
         } catch (e: Exception) {
             comment { builder.append(e) }
         }
+    }
+
+    fun nameCannotBeImported(name: String) {
+        imports[name] = emptyList()
     }
 }

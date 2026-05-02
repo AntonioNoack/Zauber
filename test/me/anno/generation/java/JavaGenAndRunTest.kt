@@ -45,6 +45,8 @@ class JavaGenAndRunTest {
         }
     }
 
+    // todo why is getX() not discovered inside main()?
+
     @Test
     fun testGenAndRun() {
 
@@ -86,13 +88,13 @@ class JavaGenAndRunTest {
             else File.createTempFile("JavaGenAndRun", ".tmp")
         javaFolder.delete(); javaFolder.mkdirs()//; javaFolder.deleteOnExit()
         val srcFolder = File(javaFolder, "src").apply { mkdirs() }
-        JavaSourceGenerator.generateCode(srcFolder, dependencies)
+
+        JavaSourceGenerator.generateCode(srcFolder, dependencies,
+            testScope.methods0.first { it.name == "main" })
 
         // generate simple maven file
         val pom = File(javaFolder, "pom.xml")
         pom.writeBytes(minimalPom)
-
-        // todo generate meta-file...
 
         // compile it
         runProcess(javaFolder, "mvn", "clean", "install")
@@ -101,6 +103,5 @@ class JavaGenAndRunTest {
         val jarFile = File(javaFolder, "target/minimal-1.0-SNAPSHOT.jar")
         runProcess(javaFolder, "java", "-jar", jarFile.absolutePath)
     }
-
 
 }

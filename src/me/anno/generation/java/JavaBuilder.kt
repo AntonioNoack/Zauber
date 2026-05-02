@@ -2,10 +2,12 @@ package me.anno.generation.java
 
 import me.anno.generation.Specializations.foundTypeSpecialization
 import me.anno.generation.Specializations.specialization
+import me.anno.generation.java.JavaSimplifiedASTWriter.imports
 import me.anno.generation.java.JavaSourceGenerator.comment
 import me.anno.generation.java.JavaSourceGenerator.createClassName
 import me.anno.generation.java.JavaSourceGenerator.createPackageName
 import me.anno.generation.java.JavaSourceGenerator.protectedTypes
+import me.anno.generation.java.JavaWriter.Companion.appendPath
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -19,13 +21,7 @@ object JavaBuilder {
 
     val builder = JavaSourceGenerator.builder
 
-    fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
-        val protected = protectedTypes[type]
-        if (protected != null) {
-            builder.append(if (needsBoxedType) protected.boxed else protected.native)
-            return
-        }
-
+    private fun resolveType(type: Type): Type {
         var type = type
         while (true) {
             try {
@@ -36,6 +32,18 @@ object JavaBuilder {
                 e.printStackTrace()
                 break
             }
+        }
+        return type
+    }
+
+    fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
+        val type = resolveType(type)
+
+        val protected = protectedTypes[type]
+        // println("appending $type -> $protected, $needsBoxedType")
+        if (protected != null) {
+            builder.append(if (needsBoxedType) protected.boxed else protected.native)
+            return
         }
 
         when (type) {
@@ -111,19 +119,32 @@ object JavaBuilder {
         }
 
         val params = type.typeParameters
-        if (!params.isNullOrEmpty()) {
+        val path0 = if (!params.isNullOrEmpty()) {
             val spec = Specialization(type)
             val className = createClassName(type.clazz, spec)
-            builder.append(type.clazz.parent!!.pathStr).append('.')
-                .append(className)
             foundTypeSpecialization(type.clazz, spec)
+            type.clazz.parent!!.path + className
         } else {
-            builder.append(type.clazz.pathStr)
+            type.clazz.path
         }
 
-        if (type.clazz.scopeType == ScopeType.PACKAGE) {
+        val path1 = if (type.clazz.scopeType == ScopeType.PACKAGE) {
             val extraName = createPackageName(type.clazz, Specialization(type))
-            builder.append('.').append(extraName)
+            path0 + extraName
+        } else path0
+
+        appendClassName(path1)
+    }
+
+    fun appendClassName(path: List<String>) {
+        val name = path.last()
+        val existingImport = imports.getOrPut(name) { path }
+        if (existingImport == path) {
+            // good :)
+            builder.append(name)
+        } else {
+            // duplicate path -> full path needed
+            builder.appendPath(path)
         }
     }
 }

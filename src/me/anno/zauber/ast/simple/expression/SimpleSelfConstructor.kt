@@ -29,7 +29,7 @@ class SimpleSelfConstructor(
 
     override fun toString(): String {
         (0 until 1).reversed()
-        return "${if (isThis) "this" else "super"}${valueParameters.joinToString(", ", "](", ")")}"
+        return "${if (isThis) "this" else "super"}${valueParameters.joinToString(", ", "(", ")")}"
     }
 
     override fun execute() = eval()

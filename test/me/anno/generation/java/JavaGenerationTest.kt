@@ -1,9 +1,11 @@
 package me.anno.generation.java
 
 import me.anno.zauber.Compile.root
+import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer
+import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
@@ -29,9 +31,10 @@ class JavaGenerationTest {
             val testClassName = "Test"
             val testClass = testScope[ScopeInitType.AFTER_DISCOVERY].children.first { it.name == testClassName }
             val sourceCode = JavaSourceGenerator.run {
-                generateInside(
+                generateClassBody(
                     testClassName, testClass, noSpecialization,
-                    testClass.methods0.map { MethodSpecialization(it, noSpecialization) })
+                    testClass.methods0.map { MethodSpecialization(it, noSpecialization) },
+                    testClass.fields.map { FieldSpecialization(it, noSpecialization) })
                 if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
                 finish()
             }
@@ -100,7 +103,7 @@ class JavaGenerationTest {
         """.trimIndent()
         val expected = """
 public final class Test {
-  public static final Test __instance__ = new Test();
+  public static final Test $OBJECT_FIELD_NAME = new Test();
   
   
   private Test() {

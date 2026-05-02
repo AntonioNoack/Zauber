@@ -1,6 +1,6 @@
 package me.anno.generation.java
 
-data class JavaEntry(val packagePath: String,) {
+data class JavaEntry(val packagePath: String, ) {
     val content = StringBuilder()
-    val imports = HashSet<String>()
+    val imports = HashMap<String, List<String>>()
 }

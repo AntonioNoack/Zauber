@@ -1,6 +1,7 @@
 package me.anno.generation.java
 
 import me.anno.generation.java.JavaBuilder.appendType
+import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
@@ -11,6 +12,7 @@ import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
@@ -22,7 +24,7 @@ import me.anno.zauber.types.impl.*
 object JavaSimplifiedASTWriter {
 
     private val builder = JavaSourceGenerator.builder
-    val imports = HashSet<Scope>()
+    val imports = HashMap<String, List<String>>()
 
     fun canBeNull(type: Type): Boolean {
         return when (type) {
@@ -46,16 +48,19 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    fun noThis(field: SimpleField): Boolean {
-        return false
-    }
+    fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
 
     fun StringBuilder.append1(field: SimpleField): StringBuilder {
-        var field = field
-        while (true) {
-            field = field.mergeInfo?.dst ?: break
+        if (field.isObjectLike()) {
+            appendType(field.type, (field.type as ClassType).clazz, false)
+            append('.').append(OBJECT_FIELD_NAME)
+        } else {
+            var field = field
+            while (true) {
+                field = field.mergeInfo?.dst ?: break
+            }
+            append("tmp").append(field.id)
         }
-        append("tmp").append(field.id)
         return this
     }
 
@@ -100,7 +105,7 @@ object JavaSimplifiedASTWriter {
         // loop: SimpleLoop? = null
     ) {
         if (expr is SimpleGetObject) return
-        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing) {
+        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
             val notNeeded = expr.dst.numReads == 0
             if (notNeeded) comment { appendAssign(expr) }
             else appendAssign(expr)
@@ -137,18 +142,6 @@ object JavaSimplifiedASTWriter {
             is SimpleDeclaration -> {
                 appendType(expr.type, expr.scope, false)
                 builder.append(' ').append(expr.name)
-                if (false) {
-                    builder.append(" = ")
-                    when (expr.type) {
-                        Types.Int, Types.Long,
-                        Types.Float, Types.Double,
-                        Types.Byte, Types.Short -> builder.append("0")
-                        Types.Char -> builder.append("(char) 0")
-                        Types.Boolean -> builder.append("false")
-                        else -> builder.append("null")
-                    }
-                }
-                builder.append(';')
             }
             is SimpleString -> {
                 builder.append('"').append(expr.base.value).append('"')
@@ -160,27 +153,11 @@ object JavaSimplifiedASTWriter {
             }
             is SimpleGetField -> {
                 appendSelfForFieldAccess(method, expr.self, expr.field, expr.scope)
-                val field = expr.field
-                val getter = field.getter
-                if (getter != null) {
-                    builder.append(getter.name).append("()")
-                } else {
-                    builder.append(field.name)
-                }
+                builder.append(expr.field.name)
             }
             is SimpleSetField -> {
                 appendSelfForFieldAccess(method, expr.self, expr.field, expr.scope)
-                val field = expr.field
-                val setter = field.setter
-                if (setter != null) {
-                    builder.append(setter.name).append('(')
-                    builder.append1(expr.value)
-                    builder.append(')')
-                } else {
-                    builder.append(field.name)
-                        .append(" = ").append1(expr.value)
-                }
-                builder.append(';')
+                builder.append(expr.field.name).append(" = ").append1(expr.value)
             }
             is SimpleCompare -> {
                 builder.append1(expr.left).append(' ')
@@ -321,15 +298,14 @@ object JavaSimplifiedASTWriter {
                     false -> builder.append("super")
                 }
                 appendValueParams(expr.valueParameters)
-                builder.append(';')
             }
             is SimpleReturn -> {
                 // todo cast if necessary
-                builder.append("return ").append1(expr.field).append(';')
+                builder.append("return ").append1(expr.field)
             }
             is SimpleThrow -> {
                 // todo cast if necessary
-                builder.append("throw ").append1(expr.field).append(';')
+                builder.append("throw ").append1(expr.field)
             }
             else -> {
                 comment {
@@ -338,7 +314,13 @@ object JavaSimplifiedASTWriter {
                 }
             }
         }
-        if (expr is SimpleAssignment) builder.append(';')
+        when (expr) {
+            is SimpleAssignment,
+            is SimpleSetField,
+            is SimpleExit,
+            is SimpleDeclaration -> builder.append(';')
+            else -> {}
+        }
         if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
         if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
             builder.append("throw new AssertionError(\"Unreachable\");")
@@ -360,7 +342,7 @@ object JavaSimplifiedASTWriter {
             builder.append("this.")
         } else {
             appendType(field.ownerScope.typeWithArgs, exprScope, true)
-            builder.append(".__instance__.")
+            builder.append('.').append(OBJECT_FIELD_NAME).append('.')
         }
     }
 
@@ -376,9 +358,6 @@ object JavaSimplifiedASTWriter {
                     appendType(fieldSelfType, exprScope, true)
                     builder.append(')')
                     builder.append1(self).append(").")
-                } else if (noThis(self)) {
-                    // just comment the type
-                    builder.append1(self)
                 } else {
                     builder.append1(self).append('.')
                 }

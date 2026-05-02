@@ -1,5 +1,6 @@
 package me.anno.generation
 
+import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
@@ -64,7 +65,7 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         return str
     }
 
-    open fun generateCode(dst: File, data: DependencyData) {
+    open fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         throw NotImplementedError()
     }
 }
