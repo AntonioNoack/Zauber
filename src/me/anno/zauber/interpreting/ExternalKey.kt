@@ -3,4 +3,4 @@ package me.anno.zauber.interpreting
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
-data class ExternalKey(val scope: Scope, val name: String, val parameterTypes: List<Type>)
+data class ExternalKey(val scope: Scope, val name: String, val valueParameterTypes: List<Type>)

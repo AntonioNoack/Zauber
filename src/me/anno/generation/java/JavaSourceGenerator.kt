@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.expansion.DependencyData
+import me.anno.zauber.interpreting.ExternalKey
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -357,11 +358,17 @@ object JavaSourceGenerator : Generator() {
 
         val isPublic = classScope.scopeType != ScopeType.INTERFACE
         val isNative = method.flags.hasFlag(Flags.EXTERNAL)
-        val isFinal =
-            (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.flags)) || classScope.isObjectLike()
+        val isFinal = (classScope.scopeType != ScopeType.INTERFACE && isFinal(method.flags)) ||
+                isNative || classScope.isObjectLike()
         val isDefault = classScope.scopeType == ScopeType.INTERFACE && method.body != null
+
+        val nativeImpl = if (isNative) {
+            val valueParameterTypes = method.valueParameters.map { it.type.resolve(classScope) }
+            registeredMethods[ExternalKey(classScope, method.name, valueParameterTypes)]
+        } else null
+
         if (isPublic) builder.append("public ")
-        if (isNative) builder.append("native ")
+        if (isNative && nativeImpl == null) builder.append("native ")
         if (isFinal) builder.append("final ")
         if (isDefault) builder.append("default ")
 
@@ -380,6 +387,18 @@ object JavaSourceGenerator : Generator() {
         if (body != null) {
             val context = ResolutionContext(method.selfType, specialization, true, null)
             appendCode(context, method, body, false)
+        } else if (nativeImpl != null) {
+            writeBlock {
+                builder.append(nativeImpl)
+                builder.append(";")
+                nextLine()
+                if ("return " !in builder) {
+                    builder.append("return ")
+                    appendType(Types.Unit, method.scope, false)
+                    builder.append('.').append(OBJECT_FIELD_NAME).append(";")
+                    nextLine()
+                }
+            }
         } else {
             builder.append(";")
             nextLine()
@@ -510,5 +529,14 @@ object JavaSourceGenerator : Generator() {
 
     fun nameCannotBeImported(name: String) {
         imports[name] = emptyList()
+    }
+
+    val registeredMethods = HashMap<ExternalKey, String>()
+    fun register(key: ExternalKey, implementation: String) {
+        registeredMethods[key] = implementation
+    }
+
+    fun register(scope: Scope, name: String, valueParameterTypes: List<Type>, implementation: String) {
+        register(ExternalKey(scope, name, valueParameterTypes), implementation)
     }
 }
