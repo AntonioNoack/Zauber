@@ -1,6 +1,8 @@
 package me.anno.zauber.tokenizer
 
 import me.anno.utils.Maths.clamp
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile.root
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -131,26 +133,49 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     fun err(i: Int): String {
         val i = clamp(i, 0, size - 1)
-        val before = source.substring(0, getI0(i))
-        val lineNumber = before.count { it == '\n' } + 1
-        val lastLineBreak = before.lastIndexOf('\n')
-        val i0 = getI0(i) - lastLineBreak
+        val ix = getI0(i)
+        val lineNumber = countLines(0, ix)
+        val lastLineBreak = source.lastIndexOf('\n', ix)
+        val i0 = ix - lastLineBreak
         val i1 = getI1(i) - lastLineBreak
         // show position in line, and surroundings with arrow ^^^^ for the respective token
-        val posStr = getLinePosString(i0, i1, before, lineNumber, lastLineBreak)
-        return "$fileName:$lineNumber, ${i0}-${i1}, ${getTypeUnsafe(i)}, '${toStringUnsafe(i)}'\n$posStr"
+        val type = getTypeUnsafe(i)
+        return "${lineNumberStr(lineNumber)}, " +
+                "${style("${i0}-${i1}", StringStyles.TEXT)}, " +
+                "${style(type.toString(), type.style)}, " +
+                "'${style(toStringUnsafe(i), type.style)}'\n" +
+                getLinePosString(i, i0, i1, lineNumber, lastLineBreak)
     }
 
     fun errShort(i: Int): String {
         val i = clamp(i, 0, size - 1)
-        val before = source.substring(0, getI0(i))
-        val lineNumber = before.count { it == '\n' } + 1
-        return "$fileName:$lineNumber"
+        val lineNumber = countLines(0, getI0(i))
+        return lineNumberStr(lineNumber)
     }
 
-    fun getLinePosString(i0: Int, i1: Int, before: String, lineNumber: Int, lastLineBreak: Int): String {
-        var start = before.lastIndexOf('\n', max(lastLineBreak - 1, 0)) + 1
-        val isSingleLine = before.substring(start, max(lastLineBreak, 0)).all { it.isWhitespace() }
+    fun lineNumberStr(lineNumber: Int): String {
+        return "${style(fileName, StringStyles.UNDERLINE + StringStyles.LINK)}:$lineNumber"
+    }
+
+    @Suppress("SameParameterValue")
+    private fun countLines(i0: Int, i1: Int): Int {
+        var count = 1
+        for (i in i0 until i1) {
+            if (source[i] == '\n') count++
+        }
+        return count
+    }
+
+    private fun CharSequence.isAllWhitespace(i0: Int, i1: Int): Boolean {
+        for (j in i0 until i1) {
+            if (!this[j].isWhitespace()) return false
+        }
+        return true
+    }
+
+    private fun getLinePosString(i: Int, i0: Int, i1: Int, lineNumber: Int, lastLineBreak: Int): String {
+        var start = source.lastIndexOf('\n', max(lastLineBreak - 1, 0)) + 1
+        val isSingleLine = source.isAllWhitespace(start, max(lastLineBreak, 0))
         if (isSingleLine) start = lastLineBreak + 1
 
         var end = source.indexOf('\n', i1 + lastLineBreak)
@@ -164,17 +189,57 @@ class TokenList(val source: CharSequence, val fileName: String) {
                 i0--
             }
 
-            val lnPrefix = "$fileName:$lineNumber | "
-            return "$lnPrefix${source.substring(start, end)}\n" +
-                    " ".repeat(i0 + lnPrefix.length - 1) +
-                    "^".repeat(tokenLength)
+            return "${buildStyledSubString(i, start, end)}\n" +
+                    " ".repeat(i0 - 1) +
+                    style("^".repeat(tokenLength), StringStyles.YELLOW)
         }
 
         // todo nicely formatted line numbers before it
         // todo trim the lines
-        return "${source.substring(start, end)}\n" +
+        return "${buildStyledSubString(i, start, end)}\n" +
                 " ".repeat(i0 - 1) +
-                "^".repeat(tokenLength)
+                style("^".repeat(tokenLength), StringStyles.YELLOW)
+    }
+
+    private fun buildStyledSubString(i: Int, si0: Int, si1: Int): CharSequence {
+
+        var tokenIndex = i
+        while (tokenIndex > 0 && getI1(tokenIndex - 1) >= si0) tokenIndex--
+
+        val result = StringBuilder()
+        var sourceIndex = si0
+        while (sourceIndex < si1) {
+            while (tokenIndex < totalSize &&
+                (getI1(tokenIndex) <= sourceIndex ||
+                        // we can also increment, if the current style is blank, or the token is empty
+                        getI0(tokenIndex) >= getI1(tokenIndex) ||
+                        getTypeUnsafe(tokenIndex).style.isEmpty())
+            ) tokenIndex++
+
+            if (tokenIndex >= totalSize) {// last token reached
+                result.append(source, sourceIndex, si1)
+                break
+            }
+
+            val i0 = max(getI0(tokenIndex), sourceIndex)
+            val i1 = min(getI1(tokenIndex), si1)
+
+            val beforeI = min(i0, si1)
+
+            // append non-styled
+            result.append(source, sourceIndex, beforeI)
+            sourceIndex = beforeI
+
+            if (i1 > sourceIndex) {
+                // append styled
+                result.append(getTypeUnsafe(tokenIndex).style)
+                result.append(source, sourceIndex, i1)
+                result.append(StringStyles.RESET)
+                sourceIndex = i1
+            }
+        }
+
+        return result
     }
 
     fun getI0(i: Int) = offsets[i * 2]

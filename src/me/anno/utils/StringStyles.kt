@@ -36,46 +36,6 @@ object StringStyles {
     const val STRIKETHROUGH = "${ESC}9m"
     const val STRIKETHROUGH_OFF = "${ESC}29m"
 
-    // Foreground colors
-    const val BLACK = "${ESC}30m"
-    const val RED = "${ESC}31m"
-    const val GREEN = "${ESC}32m"
-    const val YELLOW = "${ESC}33m"
-    const val BLUE = "${ESC}34m"
-    const val MAGENTA = "${ESC}35m"
-    const val CYAN = "${ESC}36m"
-    const val WHITE = "${ESC}37m"
-
-    // Bright foreground colors
-    const val BRIGHT_BLACK = "${ESC}90m"
-    const val BRIGHT_RED = "${ESC}91m"
-    const val BRIGHT_GREEN = "${ESC}92m"
-    const val BRIGHT_YELLOW = "${ESC}93m"
-    const val BRIGHT_BLUE = "${ESC}94m"
-    const val BRIGHT_MAGENTA = "${ESC}95m"
-    const val BRIGHT_CYAN = "${ESC}96m"
-    const val BRIGHT_WHITE = "${ESC}97m"
-
-    // Background colors
-    const val BG_BLACK = "${ESC}40m"
-    const val BG_RED = "${ESC}41m"
-    const val BG_GREEN = "${ESC}42m"
-    const val BG_YELLOW = "${ESC}43m"
-    const val BG_BLUE = "${ESC}44m"
-    const val BG_MAGENTA = "${ESC}45m"
-    const val BG_CYAN = "${ESC}46m"
-    const val BG_WHITE = "${ESC}47m"
-
-    // Bright background colors
-    const val BG_BRIGHT_BLACK = "${ESC}100m"
-    const val BG_BRIGHT_RED = "${ESC}101m"
-    const val BG_BRIGHT_GREEN = "${ESC}102m"
-    const val BG_BRIGHT_YELLOW = "${ESC}103m"
-    const val BG_BRIGHT_BLUE = "${ESC}104m"
-    const val BG_BRIGHT_MAGENTA = "${ESC}105m"
-    const val BG_BRIGHT_CYAN = "${ESC}106m"
-    const val BG_BRIGHT_WHITE = "${ESC}107m"
-
     fun Int.r() = shr(16).and(0xff)
     fun Int.g() = shr(8).and(0xff)
     fun Int.b() = and(0xff)
@@ -116,5 +76,13 @@ object StringStyles {
     fun removeStyles(text: String): String {
         return text.replace(removeStyleRegex, "")
     }
+
+    val ORANGE = color(0xff9000)
+    val WHITE = color(0xffffff)
+    val YELLOW = color(0xdddd77)
+    val BLUE = color(0x6699ff)
+    val GREEN = color(0x66cc66)
+    val TEXT = color(0xd0d0d0) // slightly brighter than normal text
+    val LINK = color(0x99bbee) // for file names
 
 }

@@ -1,29 +1,31 @@
 package me.anno.zauber.tokenizer
 
-enum class TokenType {
+import me.anno.utils.StringStyles
 
-    NAME, // starts with A-Za-z_
-    STRING,
-    NUMBER, // starts with 0-9.; a char is a special number
-    SYMBOL, // anything like +-*/=&%$§
+enum class TokenType(val style: String) {
 
-    KEYWORD,
+    NAME(StringStyles.TEXT), // starts with A-Za-z_
+    STRING(StringStyles.GREEN),
+    NUMBER(StringStyles.BLUE), // starts with 0-9.; a char is a special number
+    SYMBOL(StringStyles.YELLOW), // anything like +-*/=&%$§
 
-    APPEND_STRING,// special string concat operator
+    KEYWORD(StringStyles.ORANGE),
 
-    COMMA,
-    SEMICOLON,
+    APPEND_STRING(StringStyles.GREEN),// special string concat operator
 
-    OPEN_CALL,
-    OPEN_BLOCK,
-    OPEN_ARRAY,
+    COMMA(StringStyles.ORANGE),
+    SEMICOLON(StringStyles.ORANGE),
 
-    CLOSE_CALL,
-    CLOSE_BLOCK,
-    CLOSE_ARRAY,
+    OPEN_CALL(StringStyles.WHITE),
+    OPEN_BLOCK(StringStyles.WHITE),
+    OPEN_ARRAY(StringStyles.WHITE),
+
+    CLOSE_CALL(StringStyles.WHITE),
+    CLOSE_BLOCK(StringStyles.WHITE),
+    CLOSE_ARRAY(StringStyles.WHITE),
 
     // python-exclusive:
-    INDENT,
-    DEDENT,
+    INDENT(""),
+    DEDENT(""),
     ;
 }

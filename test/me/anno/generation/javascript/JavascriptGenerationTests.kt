@@ -7,11 +7,11 @@ import java.io.File
 
 class JavascriptGenerationTests {
     @Test
-    fun testHelloWorld() {
+    fun testReadingStandardLibrary() {
         val home = System.getProperty("user.home")
         val files = File(home, "Downloads/lib/js")
         for (file in files.listFiles()!!) {
-            ResetThreadLocal.reset()
+            ResetThreadLocal.reset() // duplicates may exist and be incompatible
             StandardLibraryLoader.loadStandardLibrary(file)
         }
         // todo define zauber code
