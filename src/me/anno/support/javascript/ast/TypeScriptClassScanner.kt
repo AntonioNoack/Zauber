@@ -71,14 +71,17 @@ class TypeScriptClassScanner(tokens: TokenList) :
     private fun readClassLevel() {
         while (i < tokens.size) {
             val i0 = i
+            val expectName = tokens.equals(i + 1, ":", "?:", "(")
             when {
-                consumeIf("get") -> TODO("read getter at ${tokens.err(i)}")
-                consumeIf("set") -> TODO("read setter at ${tokens.err(i)}")
+                !expectName && consumeIf("get") -> readGetter()
+                !expectName && consumeIf("set") -> readSetter()
                 consumeIf("static") -> isStatic = true
                 consumeIf("readonly") -> isReadOnly = true
-                consumeIf("public") -> addFlag(Flags.PUBLIC)
-                consumeIf("private") -> addFlag(Flags.PRIVATE)
-                consumeIf("protected") -> addFlag(Flags.PROTECTED)
+
+                !expectName && consumeIf("public") -> addFlag(Flags.PUBLIC)
+                !expectName && consumeIf("private") -> addFlag(Flags.PRIVATE)
+                !expectName && consumeIf("protected") -> addFlag(Flags.PROTECTED)
+
                 consumeIf("#") -> addFlag(Flags.PRIVATE)
                 consumeIf("constructor") -> readConstructor()
                 consumeIf("declare") -> {
@@ -87,7 +90,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
                     readField()
                 }
 
-                tokens.equals(i, TokenType.NAME) || tokens.equals(i, "type") -> {
+                tokens.equals(i, TokenType.NAME) || expectName -> {
                     if (tokens.equals(i + 1, "<", "(")) {
                         println("Reading function at ${tokens.err(i)}")
                         readMethod()
@@ -97,10 +100,130 @@ class TypeScriptClassScanner(tokens: TokenList) :
                     }
                 }
 
+                // additional properties are indexed by string (or so), and return some specific value
+                consumeIf(TokenType.OPEN_ARRAY) -> readGetProperty()
+
                 consumeIf(";") -> {}
                 else -> throw IllegalStateException("Unknown token at ${tokens.err(i)}")
             }
             i = max(i0 + 1, i)
+        }
+    }
+
+    private fun readGetProperty() {
+        val origin = origin(i - 1)
+        val flags = packFlags()
+
+        val name = "get"
+        val ownerScope = currPackage
+        val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
+        methodScope.addFlags(flags)
+
+        pushScope(methodScope) {
+
+            val typeParams = emptyList<Parameter>()
+            methodScope.typeParameters = typeParams
+            methodScope.hasTypeParameters = true
+
+            val indexParameter = readParameterDeclaration(ownerScope.typeWithArgs, 0)
+            consume(TokenType.CLOSE_ARRAY)
+
+            consume(":")
+            val returnType = readType(ownerScope.typeWithArgs, true)
+
+            val body = when {
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
+                consumeIf("=>") -> readLazyValue(false)
+                else -> null
+            }
+
+            methodScope.selfAsMethod = Method(
+                null, false,
+                name, typeParams,
+                listOf(indexParameter),
+                methodScope, returnType,
+                emptyList(),
+                body, flags, origin
+            )
+        }
+    }
+
+    private fun readGetter() {
+
+        val origin = origin(i - 1)
+        val flags = packFlags()
+
+        var name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        name = "get${name.capitalize()}"
+
+        val ownerScope = currPackage
+        val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
+        methodScope.addFlags(flags)
+
+        pushScope(methodScope) {
+
+            val typeParameters = readTypeParameters()
+            methodScope.typeParameters = typeParameters
+            methodScope.hasTypeParameters = true
+
+            val valueParameters = readParameterDeclarations(ownerScope.typeWithArgs, emptyList())
+
+            consume(":")
+            val returnType = readType(ownerScope.typeWithArgs, true)
+
+            val body = when {
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
+                consumeIf("=>") -> readLazyValue(false)
+                else -> null
+            }
+
+            methodScope.selfAsMethod = Method(
+                null, false,
+                name, typeParameters, valueParameters,
+                methodScope, returnType,
+                emptyList(),
+                body, flags, origin
+            )
+        }
+    }
+
+    private fun readSetter() {
+
+        val origin = origin(i - 1)
+        val flags = packFlags()
+
+        var name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        name = "set${name.capitalize()}"
+
+        val ownerScope = currPackage
+        val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
+        methodScope.addFlags(flags)
+
+        pushScope(methodScope) {
+
+            val typeParameters = readTypeParameters()
+            methodScope.typeParameters = typeParameters
+            methodScope.hasTypeParameters = true
+
+            val valueParameters = readParameterDeclarations(ownerScope.typeWithArgs, emptyList())
+
+            val returnType = if (consumeIf(":")) {
+                readType(ownerScope.typeWithArgs, true)
+            } else Types.Unit
+
+            val body = when {
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
+                consumeIf("=>") -> readLazyValue(false)
+                else -> null
+            }
+
+            methodScope.selfAsMethod = Method(
+                null, false,
+                name, typeParameters, valueParameters,
+                methodScope, returnType,
+                emptyList(),
+                body, flags, origin
+            )
         }
     }
 
@@ -151,6 +274,14 @@ class TypeScriptClassScanner(tokens: TokenList) :
         }
     }
 
+    override fun consumeName(vsCodeType: VSCodeType, modifiers: Int): String {
+        return if (tokens.equals(i, TokenType.STRING)) {
+            // properties allow strings as names
+            // setLSType(i,)
+            tokens.toString(i++)
+        } else super.consumeName(vsCodeType, modifiers)
+    }
+
     override fun readField() {
         val origin = origin(i)
         val flags = packFlags()
@@ -158,7 +289,6 @@ class TypeScriptClassScanner(tokens: TokenList) :
         val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
 
         val owner = currPackage
-
         val type = if (consumeIf("?:")) {
             // optional field
             val type0 = readTypeNotNull(null, true)
@@ -206,7 +336,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
             methodScope.typeParameters = typeParams
             methodScope.hasTypeParameters = true
 
-            val params = readParameters()
+            val params = readParameterDeclarations(owner.typeWithArgs, emptyList())
 
             val returnType = if (consumeIf(":")) {
                 readTypeNotNull(null, true)
@@ -237,55 +367,51 @@ class TypeScriptClassScanner(tokens: TokenList) :
         val scope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
 
         pushScope(scope) {
-            val params = readParameters()
+            val valueParameters = readParameterDeclarations(classScope.typeWithArgs, emptyList())
 
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 readLazyBody()
             } else null
 
-            scope.selfAsConstructor = Constructor(
-                params, scope, null, body, flags, origin
-            )
+            scope.selfAsConstructor = Constructor(valueParameters, scope, null, body, flags, origin)
         }
     }
 
-    private fun readParameters(): List<Parameter> {
+    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
         val params = ArrayList<Parameter>()
-
         pushCall {
             while (i < tokens.size) {
-
-                val origin = origin(i)
-                val name = consumeName(VSCodeType.PARAMETER, 0)
-
-                var defaultIsNull = false
-                val type = if (consumeIf("?:")) {
-                    defaultIsNull = true
-                    readTypeNotNull(null, true)
-                } else if (consumeIf(":")) {
-                    readTypeNotNull(null, true)
-                } else Types.Any
-
-                val defaultValue = if (consumeIf("=")) {
-                    readLazyValue(false)
-                } else if (defaultIsNull) {
-                    SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
-                } else null
-
-                params.add(
-                    Parameter(
-                        params.size,
-                        false, false, false,
-                        name, type, defaultValue,
-                        currPackage, origin
-                    )
-                )
-
+                params.add(readParameterDeclaration(selfType, params.size))
                 readComma()
             }
         }
-
         return params
+    }
+
+    private fun readParameterDeclaration(selfType: Type?, index: Int): Parameter {
+        val origin = origin(i)
+        val isVararg = consumeIf("...")
+        val name = consumeName(VSCodeType.PARAMETER, 0)
+
+        var defaultIsNull = false
+        val type = if (consumeIf("?:")) {
+            defaultIsNull = true
+            readTypeNotNull(selfType, true)
+        } else if (consumeIf(":")) {
+            readTypeNotNull(selfType, true)
+        } else Types.Any
+
+        val defaultValue = if (consumeIf("=")) {
+            readLazyValue(false)
+        } else if (defaultIsNull) {
+            SpecialValueExpression(SpecialValue.NULL, currPackage, origin)
+        } else null
+
+        return Parameter(
+            index, false, false, isVararg,
+            name, type, defaultValue,
+            currPackage, origin
+        )
     }
 
     private fun readTypeParameters(): List<Parameter> {
@@ -320,14 +446,38 @@ class TypeScriptClassScanner(tokens: TokenList) :
     }
 
     override fun readTypePath(selfType: Type?): Type? {
-        if (consumeIf(TokenType.OPEN_BLOCK)) {
-            TODO("Read unnamed class type at ${tokens.err(i - 1)}")
+        if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+            return readUnnamedClassType(selfType)
         }
         return super.readTypePath(selfType)
     }
 
+    fun readUnnamedClassType(selfType: Type?): Type {
+        return pushBlock(ScopeType.INLINE_CLASS, "?") {
+            val superType = if (consumeIf("prototype")) {
+                consume(":")
+                val superType = readType(selfType, true)
+                consume(";")
+                superType
+            } else null
+
+            readClassLevel() // read all remaining properties
+            UnnamedType(superType)
+        }
+    }
+
     fun isKeywordTypeName(i: Int): Boolean {
-        return tokens.equals(i, "any", "number", "string", "boolean", "undefined", "null", "void")
+        return tokens.equals(
+            i,
+            "any",
+            "number",
+            "string",
+            "boolean",
+            "undefined",
+            "null",
+            "void",
+            "never" /* = Nothing */
+        )
     }
 
     override fun canAppearInsideAType(i: Int): Boolean {

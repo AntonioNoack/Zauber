@@ -166,6 +166,11 @@ abstract class ZauberASTBuilderBase(
                     readTypeNotNull(null, true)
                 } else Types.NullableAny
 
+                if (consumeIf("=")) {
+                    // default type???
+                    readType(null, true)
+                }
+
                 parameters.add(Parameter(parameters.size, name, type, classScope, origin))
                 readComma()
             }
@@ -485,8 +490,9 @@ abstract class ZauberASTBuilderBase(
         }
 
         if (this !is JavaASTBuilder && this !is JavaASTClassScanner) {
+            val forbidden = !insideTypeParams && this !is TypeScriptClassScanner
             if (tokens.equals(i, TokenType.NUMBER)) {
-                if (!insideTypeParams) {
+                if (forbidden) {
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
@@ -494,11 +500,19 @@ abstract class ZauberASTBuilderBase(
             }
 
             if (tokens.equals(i, TokenType.STRING)) {
-                if (!insideTypeParams && this !is TypeScriptClassScanner) {
+                if (forbidden) {
                     throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
                 return ComptimeValue(Types.String, listOf(value))
+            }
+
+            if (tokens.equals(i, "true", "false")) {
+                if (forbidden) {
+                    throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+                }
+                val value = tokens.toString(i++)
+                return ComptimeValue(Types.Boolean, listOf(value))
             }
         }
 
@@ -749,9 +763,9 @@ abstract class ZauberASTBuilderBase(
         return path
     }
 
-    fun consumeName(vsCodeType: VSCodeType, modifiers: Int): String {
+    open fun consumeName(vsCodeType: VSCodeType, modifiers: Int): String {
         check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
-            "Expected name for $vsCodeType"
+            "Expected name for $vsCodeType at ${tokens.err(i)}"
         }
         val name = tokens.toString(i)
         if (this is ZauberASTBuilder) {

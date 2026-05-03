@@ -59,15 +59,30 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         return TokenListIndex.getIndex(tokens, i)
     }
 
-    inline fun <R> pushCall(readImpl: () -> R): R {
+    inline fun <R> pushBlockLike(
+        readImpl: () -> R,
+        open: TokenType, close: TokenType
+    ): R {
         // val size0 = tokens.size
-        val end = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
-        consume(TokenType.OPEN_CALL)
+        val end = tokens.findBlockEnd(i, open, close)
+        consume(open)
         val result = tokens.push(end, readImpl)
         check(i == end) { "Missed reading tokens, $i != $end, ${tokens.err(i)}" }
-        // println("pushCall, $i vs $size0 vs ${tokens.size}")
-        consume(TokenType.CLOSE_CALL)
+        // println("pushBlock, $i vs $size0 vs ${tokens.size}")
+        consume(close)
         return result
+    }
+
+    inline fun <R> pushCall(readImpl: () -> R): R {
+        return pushBlockLike(readImpl, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
+    }
+
+    inline fun <R> pushBlock(readImpl: () -> R): R {
+        return pushBlockLike(readImpl, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
+    }
+
+    inline fun <R> pushArray(readImpl: () -> R): R {
+        return pushBlockLike(readImpl, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY)
     }
 
     fun skipCall() {
@@ -76,15 +91,6 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
         consume(TokenType.OPEN_CALL)
         i = end
         consume(TokenType.CLOSE_CALL)
-    }
-
-    inline fun <R> pushArray(readImpl: () -> R): R {
-        val end = tokens.findBlockEnd(i, TokenType.OPEN_ARRAY, TokenType.CLOSE_ARRAY)
-        consume(TokenType.OPEN_ARRAY)
-        val result = tokens.push(end, readImpl)
-        check(i == end) { "Missed reading tokens, $i != $end, ${tokens.err(i)}" }
-        consume(TokenType.CLOSE_ARRAY)
-        return result
     }
 
     fun readComma() {
