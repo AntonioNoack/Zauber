@@ -3,10 +3,11 @@ package me.anno.generation.java
 import me.anno.generation.Generator
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.Specializations.specializations
+import me.anno.generation.java.JavaBuilder.appendFieldName
 import me.anno.generation.java.JavaBuilder.appendType
-import me.anno.generation.java.JavaExpressionWriter.appendSuperCall
 import me.anno.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
 import me.anno.generation.java.JavaSimplifiedASTWriter.imports
+import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -183,6 +184,10 @@ object JavaSourceGenerator : Generator() {
         val file = createFile(packageScope, name, dst)
         val entry = writer[file] ?: JavaEntry(packageScope.pathStr)
         entry.content.append(builder); builder.clear()
+        imports.entries.removeIf { (name1, path) ->
+            // these are automatically imported:
+            name == name1 || path.subList(0, path.size - 1) == packageScope.path
+        }
         entry.imports.putAll(imports)
         imports.clear()
         writer[file] = entry
@@ -232,7 +237,7 @@ object JavaSourceGenerator : Generator() {
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
 
-        nameCannotBeImported(className)
+        nameCannotBeImported(className, scope)
         specializations.add(specialization)
 
         if (specialization.isNotEmpty()) {
@@ -306,7 +311,7 @@ object JavaSourceGenerator : Generator() {
         if (!field.isMutable) builder.append("final ")
         val valueType = (field.valueType ?: Types.NullableAny).resolve(classScope)
         appendType(valueType, classScope, false)
-        builder.append(' ').append(field.name).append(';')
+        builder.append(' ').appendFieldName(field).append(';')
         nextLine()
     }
 
@@ -461,7 +466,7 @@ object JavaSourceGenerator : Generator() {
         for (param in valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendType(param.type, scope, false)
-            builder.append(' ').append(param.name)
+            builder.append(' ').appendFieldName(param)
         }
         builder.append(')')
     }
@@ -470,12 +475,24 @@ object JavaSourceGenerator : Generator() {
         writeBlock {
             try {
                 val method1 = MethodSpecialization(method, context.specialization)
-                val simplified = ASTSimplifier.simplify(method1)
-                if (skipSuperCall) simplified.removeSuperCalls()
+                val graph = ASTSimplifier.simplify(method1)
+                if (skipSuperCall) graph.removeSuperCalls()
 
-                CodeReconstruction.createCodeFromGraph(simplified)
+                CodeReconstruction.createCodeFromGraph(graph)
+
+                for ((self, dst) in graph.thisFields) {
+                    val (scope, explicit) = self
+                    if (explicit) {
+                        TODO("Somehow get explicit self...")
+                    } else {
+                        if (!scope.isObjectLike() && scope != method.scope && scope != method.ownerScope) {
+                            TODO("Declare $self in $dst for $method")
+                        } // else not needed
+                    }
+                }
+
                 // todo simplify all entry points as methods...
-                appendSimplifiedAST(method, simplified.startBlock)
+                appendSimplifiedAST(graph, graph.startBlock)
             } catch (e: Throwable) {
                 e.printStackTrace()
                 comment {
@@ -532,11 +549,11 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    fun nameCannotBeImported(name: String) {
-        imports[name] = emptyList()
+    fun nameCannotBeImported(name: String, scope: Scope) {
+        imports[name] = scope.path
     }
 
-    val registeredMethods = HashMap<ExternalKey, String>()
+    val registeredMethods by threadLocal { HashMap<ExternalKey, String>() }
     fun register(key: ExternalKey, implementation: String) {
         registeredMethods[key] = implementation
     }

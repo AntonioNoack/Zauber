@@ -8,6 +8,8 @@ import me.anno.generation.java.JavaSourceGenerator.createClassName
 import me.anno.generation.java.JavaSourceGenerator.createPackageName
 import me.anno.generation.java.JavaSourceGenerator.protectedTypes
 import me.anno.generation.java.JavaWriter.Companion.appendPath
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TypeOfField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -146,5 +148,19 @@ object JavaBuilder {
             // duplicate path -> full path needed
             builder.appendPath(path)
         }
+    }
+
+    fun StringBuilder.appendFieldName(field: Field): StringBuilder {
+        if (!field.ownerScope.isClassLike()) {
+            // append("__").append(field.ownerScope.depth).append('_')
+        }
+        append(field.name)
+        return this
+    }
+
+    fun StringBuilder.appendFieldName(field: Parameter): StringBuilder {
+        // append("__").append(field.scope.depth).append('_')
+        append(field.name)
+        return this
     }
 }

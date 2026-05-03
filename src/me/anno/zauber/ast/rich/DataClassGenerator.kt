@@ -61,15 +61,22 @@ object DataClassGenerator {
         }
     }
 
+    fun Scope.findPrimaryFields(): List<Field> {
+        return getOrCreatePrimaryConstructorScope()
+            .selfAsConstructor!!
+            .valueParameters
+            .mapNotNull { it.field }
+            .map { constructorField ->
+                fields.first { constructorField.name == it.name }
+            }
+    }
+
     fun ZauberASTBuilderBase.finishDataClass(classScope: Scope) {
 
         check(currPackage === classScope) { "Expected currPackage to be classScope" }
         val origin = origin(i)
 
-        val primaryFields = classScope.getOrCreatePrimaryConstructorScope()
-            .selfAsConstructor!!
-            .valueParameters
-            .mapNotNull { it.field }
+        val primaryFields = classScope.findPrimaryFields()
 
         val context = ResolutionContext.minimal /// todo better context?
         val hashCodeMethod = MethodResolver.findMemberInScope(

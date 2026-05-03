@@ -14,7 +14,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 
-object JavaExpressionWriter {
+object JavaSuperCallWriter {
 
     fun JavaSourceGenerator.appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
         // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
@@ -36,15 +36,11 @@ object JavaExpressionWriter {
                 builder.append('.')
                 appendExpression(context, expr.right)
             }
-            is UnresolvedFieldExpression -> {
-                builder.append(expr.name)
-            }
-            is MemberNameExpression -> {
-                builder.append(expr.name)
-            }
-            is NumberExpression -> {
-                builder.append(expr.value)
-            }
+
+            is UnresolvedFieldExpression -> builder.append(expr.name)
+            is MemberNameExpression -> builder.append(expr.name)
+            is NumberExpression -> builder.append(expr.value)
+
             is SpecialValueExpression -> {
                 // null, true, false are fine
                 // 'this'/'super' do not exist

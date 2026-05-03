@@ -39,9 +39,6 @@ class GenerateAndRunTest {
 
     @Test
     fun testMethodCall() {
-        // todo bug: ThisExpression -> field isn't set correctly...
-        //  for methods, we must create a pseudo-instance,
-        //  or resolve these properly -> is difficult with shadowed fields -> we'd need to renamed all these :/
         val code = """
             fun calc(x: Int) = x+1
             
@@ -59,7 +56,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToJavaAndRun(code, true) {
+        val printed = testCompileMainToJavaAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
@@ -88,14 +85,21 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToJavaAndRun(code, true) {
+        val printed = testCompileMainToJavaAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
             )
         }
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
-
     }
+
+    // todo add .copy(name=value) as a special function on data classes
+
+    // todo implement value classes being copied when written / passed as parameter
+    // todo implement and test value classes being inlined
+
+    // todo implement and test working with strings
+    // todo test specialized classes being usable
 
 }

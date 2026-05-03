@@ -1,17 +1,14 @@
 package me.anno.generation.java
 
+import me.anno.generation.java.JavaBuilder.appendFieldName
 import me.anno.generation.java.JavaBuilder.appendType
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.simple.SimpleDeclaration
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleInstruction
-import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
@@ -37,23 +34,30 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    fun appendAssign(expression: SimpleAssignment) {
+    fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst
         if (dst.mergeInfo != null) {
-            builder.append1(dst).append(" = ")
+            builder.append1(graph, dst).append(" = ")
         } else {
             builder.append("final ")
             appendType(dst.type, expression.scope, false)
-            builder.append(' ').append1(dst).append(" = ")
+            builder.append(' ').append1(graph, dst).append(" = ")
         }
     }
 
     fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
 
-    fun StringBuilder.append1(field: SimpleField): StringBuilder {
+    fun SimpleField.isOwnerThis(graph: SimpleGraph): Boolean {
+        return type is ClassType && type.clazz == graph.method.ownerScope &&
+                graph.thisFields.any { !it.key.isExplicitSelf && it.value === this }
+    }
+
+    fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
         if (field.isObjectLike()) {
             appendType(field.type, (field.type as ClassType).clazz, false)
             append('.').append(OBJECT_FIELD_NAME)
+        } else if (field.isOwnerThis(graph)) {
+            append("this")
         } else {
             var field = field
             while (true) {
@@ -64,12 +68,12 @@ object JavaSimplifiedASTWriter {
         return this
     }
 
-    fun appendValueParams(valueParameters: List<SimpleField>, withOpen: Boolean = true) {
+    fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withOpen: Boolean = true) {
         if (withOpen) builder.append('(')
         for (i in valueParameters.indices) {
             if (i > 0) builder.append(", ")
             val parameter = valueParameters[i]
-            builder.append1(parameter)
+            builder.append1(graph, parameter)
         }
         if (withOpen) builder.append(')')
     }
@@ -77,13 +81,13 @@ object JavaSimplifiedASTWriter {
     // todo we have converted SimpleBlock into a complex graph,
     //  before we can use it, we must convert it back
     fun JavaSourceGenerator.appendSimplifiedAST(
-        method: MethodLike, expr: SimpleNode,
+        graph: SimpleGraph, expr: SimpleNode,
         // loop: SimpleLoop? = null
     ) {
         val instructions = expr.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
-            appendSimplifiedAST(method, instr /*loop*/)
+            appendSimplifiedAST(graph, instr /*loop*/)
             if (instr is SimpleAssignment &&
                 instr.dst.type == Types.Nothing
             ) break
@@ -91,7 +95,7 @@ object JavaSimplifiedASTWriter {
         if (expr.branchCondition == null) {
             val next = expr.nextBranch
             if (next != null) {
-                appendSimplifiedAST(method, next)
+                appendSimplifiedAST(graph, next)
             }
         } else {
             // todo this may or may not be simply be possible...
@@ -101,32 +105,32 @@ object JavaSimplifiedASTWriter {
     }
 
     fun JavaSourceGenerator.appendSimplifiedAST(
-        method: MethodLike, expr: SimpleInstruction,
+        graph: SimpleGraph, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
         if (expr is SimpleGetObject) return
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
             val notNeeded = expr.dst.numReads == 0
-            if (notNeeded) comment { appendAssign(expr) }
-            else appendAssign(expr)
+            if (notNeeded) comment { appendAssign(graph, expr) }
+            else appendAssign(graph, expr)
         }
         when (expr) {
             is SimpleBranch -> {
-                builder.append("if (").append1(expr.condition).append(')')
+                builder.append("if (").append1(graph, expr.condition).append(')')
                 writeBlock {
-                    appendSimplifiedAST(method, expr.ifTrue)
+                    appendSimplifiedAST(graph, expr.ifTrue)
                 }
                 trimWhitespaceAtEnd()
                 builder.append(" else ")
                 writeBlock {
-                    appendSimplifiedAST(method, expr.ifFalse)
+                    appendSimplifiedAST(graph, expr.ifFalse)
                 }
             }
             is SimpleLoop -> {
                 builder.append("b").append(expr.body.blockId)
                 builder.append(": while (true)")
                 writeBlock {
-                    appendSimplifiedAST(method, expr.body)
+                    appendSimplifiedAST(graph, expr.body)
                 }
             }
             /*is SimpleGoto -> {
@@ -152,20 +156,20 @@ object JavaSimplifiedASTWriter {
                 builder.append(expr.base.value)
             }
             is SimpleGetField -> {
-                appendSelfForFieldAccess(method, expr.self, expr.field, expr.scope)
-                builder.append(expr.field.name)
+                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
+                builder.appendFieldName(expr.field)
             }
             is SimpleSetField -> {
-                appendSelfForFieldAccess(method, expr.self, expr.field, expr.scope)
-                builder.append(expr.field.name).append(" = ").append1(expr.value)
+                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
+                builder.appendFieldName(expr.field).append(" = ").append1(graph, expr.value)
             }
             is SimpleCompare -> {
-                builder.append1(expr.left).append(' ')
+                builder.append1(graph, expr.left).append(' ')
                 builder.append(expr.type.symbol).append(" 0")
             }
             is SimpleInstanceOf -> {
                 // todo if type is ClassType, this is easy, else we need to build an expression...
-                builder.append1(expr.value).append(" instanceof ")
+                builder.append1(graph, expr.value).append(" instanceof ")
                 appendType(expr.type, expr.scope, false)
             }
             is SimpleCheckEquals -> {
@@ -182,34 +186,34 @@ object JavaSimplifiedASTWriter {
                 val rightNative = nativeTypes[expr.right.type]
                 when {
                     leftNative != null && rightNative != null -> {
-                        builder.append1(expr.left).append(" == ")
-                            .append1(expr.right)
+                        builder.append1(graph, expr.left).append(" == ")
+                            .append1(graph, expr.right)
                     }
                     leftCanBeNull && rightCanBeNull -> {
-                        builder.append1(expr.left).append(" == null ? ")
-                            .append1(expr.right).append(" == null : ")
-                            .append1(expr.left).append(".equals(")
-                            .append1(expr.right).append(")")
+                        builder.append1(graph, expr.left).append(" == null ? ")
+                            .append1(graph, expr.right).append(" == null : ")
+                            .append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
                     }
                     leftCanBeNull -> {
-                        builder.append1(expr.left).append(" != null && ")
-                            .append1(expr.left).append(".equals(")
-                            .append1(expr.right).append(")")
+                        builder.append1(graph, expr.left).append(" != null && ")
+                            .append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
                     }
                     rightCanBeNull -> {
-                        builder.append1(expr.right).append(" != null && ")
-                            .append1(expr.left).append(".equals(")
-                            .append1(expr.right).append(")")
+                        builder.append1(graph, expr.right).append(" != null && ")
+                            .append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
                     }
                     else -> {
-                        builder.append1(expr.left).append(".equals(")
-                            .append1(expr.right).append(")")
+                        builder.append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
                     }
                 }
             }
             is SimpleCheckIdentical -> {
-                builder.append1(expr.left).append(" == ")
-                    .append1(expr.right)
+                builder.append1(graph, expr.left).append(" == ")
+                    .append1(graph, expr.right)
             }
             is SimpleSpecialValue -> {
                 when (expr.type) {
@@ -223,7 +227,7 @@ object JavaSimplifiedASTWriter {
                     comment {
                         builder.append("new ")
                         // appendType(expr.dst.type, expr.scope, true)
-                        appendValueParams(expr.valueParameters)
+                        appendValueParams(graph, expr.valueParameters)
                     }
                 } else {
                     // Number.toX() needs to be converted to a cast
@@ -241,10 +245,10 @@ object JavaSimplifiedASTWriter {
                                 else -> null
                             }
                             if (castSymbol != null && expr.self.type in nativeNumbers) {
-                                builder.append(castSymbol).append1(expr.self)
+                                builder.append(castSymbol).append1(graph, expr.self)
                                 true
                             } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                                builder.append('!').append1(expr.self)
+                                builder.append('!').append1(graph, expr.self)
                                 true
                             } else false
                         }
@@ -265,8 +269,8 @@ object JavaSimplifiedASTWriter {
                                 else -> null
                             }
                             if (supportsType && symbol != null) {
-                                builder.append1(expr.self).append(symbol)
-                                builder.append1(expr.valueParameters[0])
+                                builder.append1(graph, expr.self).append(symbol)
+                                builder.append1(graph, expr.valueParameters[0])
                                 true
                             } else false
                         }
@@ -277,16 +281,16 @@ object JavaSimplifiedASTWriter {
                         if (needsCastForFirstValue != null) {
                             builder.append(needsCastForFirstValue.boxed).append('.')
                             builder.append(expr.methodName).append('(')
-                            builder.append1(expr.self)
+                            builder.append1(graph, expr.self)
                             if (expr.valueParameters.isNotEmpty()) {
                                 builder.append(", ")
-                                appendValueParams(expr.valueParameters, false)
+                                appendValueParams(graph, expr.valueParameters, false)
                             }
                             builder.append(')')
                         } else {
-                            builder.append1(expr.self).append('.')
+                            builder.append1(graph, expr.self).append('.')
                             builder.append(expr.methodName)
-                            appendValueParams(expr.valueParameters)
+                            appendValueParams(graph, expr.valueParameters)
                         }
                     }
                 }
@@ -295,22 +299,22 @@ object JavaSimplifiedASTWriter {
                 // handled in SimpleCall, because only there do we have the value parameters
                 builder.append("new ")
                 appendType(expr.allocatedType, expr.scope, true)
-                appendValueParams(expr.paramsForLater)
+                appendValueParams(graph, expr.paramsForLater)
             }
             is SimpleSelfConstructor -> {
                 when (expr.isThis) {
                     true -> builder.append("this")
                     false -> builder.append("super")
                 }
-                appendValueParams(expr.valueParameters)
+                appendValueParams(graph, expr.valueParameters)
             }
             is SimpleReturn -> {
                 // todo cast if necessary
-                builder.append("return ").append1(expr.field)
+                builder.append("return ").append1(graph, expr.field)
             }
             is SimpleThrow -> {
                 // todo cast if necessary
-                builder.append("throw ").append1(expr.field)
+                builder.append("throw ").append1(graph, expr.field)
             }
             else -> {
                 comment {
@@ -351,26 +355,22 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    fun appendSelfForFieldAccess(method: MethodLike, self: SimpleField?, field: Field, exprScope: Scope) {
-        if (self != null) {
-            if (self.type is ClassType && self.type.clazz.isObjectLike()) {
-                appendObjectInstance(field, exprScope)
-            } else {
-                val fieldSelfType = field.selfType
-                val needsCast = self.type != fieldSelfType
-                if (needsCast && fieldSelfType != null) {
-                    builder.append("((")
-                    appendType(fieldSelfType, exprScope, true)
-                    builder.append(')')
-                    builder.append1(self).append(").")
-                } else {
-                    builder.append1(self).append('.')
-                }
-            }
-        } else if (field.scope == method.scope.parent) {
-            builder.append(if (method.selfTypeIfNecessary != null) "__self" else "this").append('.')
-        } else if (field.ownerScope.isObjectLike()) {
+    fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
+        if (self.type is ClassType && self.type.clazz.isObjectLike()) {
             appendObjectInstance(field, exprScope)
+        } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {
+            builder.append("/* ${field.ownerScope.pathStr} */ ")
+        } else {
+            val fieldSelfType = field.selfType
+            val needsCast = self.type != fieldSelfType
+            if (needsCast && fieldSelfType != null) {
+                builder.append("((")
+                appendType(fieldSelfType, exprScope, true)
+                builder.append(')')
+                builder.append1(graph, self).append(").")
+            } else {
+                builder.append1(graph, self).append('.')
+            }
         }
     }
 
