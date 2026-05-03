@@ -86,7 +86,7 @@ class JavaASTBuilderTest {
         for (source in sources) {
             println("AST for ${source.fileName}")
             try {
-                JavaASTBuilder(source, Compile.root, Language.JAVA)
+                JavaASTBuilder(source, Compile.root, false, Language.JAVA)
                     .readFileLevel()
                 success++
             } catch (e: Throwable) {

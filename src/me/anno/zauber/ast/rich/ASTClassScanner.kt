@@ -224,8 +224,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         while (i < tokens.size) {
             val i0 = i
             when (tokens.getType(i)) {
-                TokenType.OPEN_BLOCK, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY,
-                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK ->
+                TokenType.OPEN_BLOCK, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.INDENT,
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK, TokenType.DEDENT ->
                     throw IllegalStateException("Unexpected token ${tokens.err(i)}")
                 else -> readNamed()
             }
@@ -502,8 +502,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         findFieldEnd@ while (end < tokens.size) {
             val j0 = end++
             when (tokens.getType(j0)) {
-                TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
-                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK, TokenType.INDENT -> depth++
+                TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK, TokenType.DEDENT -> depth--
                 else -> when {
                     tokens.equals(j0, "<") -> depth++
                     tokens.equals(j0, ">") -> depth--

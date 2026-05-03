@@ -22,11 +22,8 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
-class CppASTBuilder(
-    tokens: TokenList,
-    root: Scope,
-    val standard: CppStandard
-) : JavaASTBuilder(tokens, root, standard.kind()) {
+class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
+    JavaASTBuilder(tokens, root, false, standard.kind()) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(CppASTBuilder::class)
@@ -474,7 +471,7 @@ class CppASTBuilder(
         return expr
     }
 
-    private fun tryReadPostfix(expr: Expression): Expression? {
+    override fun tryReadPostfix(expr: Expression): Expression? {
         return when {
             // todo how about <>()?
             tokens.equals(i, "(") -> {

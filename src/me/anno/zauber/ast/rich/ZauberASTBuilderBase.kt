@@ -261,7 +261,7 @@ abstract class ZauberASTBuilderBase(
         else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
     }
 
-    fun readIfBranch(): IfElseBranch {
+    open fun readIfBranch(): IfElseBranch {
         val origin = origin(i)
         var condition = readExpressionCondition()
         val ifTrue = if (condition is NamedCastExpression) {

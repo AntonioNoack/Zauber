@@ -46,7 +46,7 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
 @Suppress("PropertyName")
 class TypesImpl {
 
-    private fun getType(i: String): ClassType {
+    fun getType(i: String): ClassType {
         val scope = getScope(i, "", UnknownType)
         return ClassType(scope, emptyList(), -1, true)
     }

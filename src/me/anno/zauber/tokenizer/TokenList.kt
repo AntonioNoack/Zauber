@@ -73,8 +73,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
                 return size
             }
             when (getType(j++)) {
-                open, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
-                close, TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> depth--
+                open, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK, TokenType.INDENT -> depth++
+                close, TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK, TokenType.DEDENT -> depth--
                 else -> {}
             }
         }

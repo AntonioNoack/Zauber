@@ -39,8 +39,8 @@ import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)
-open class JavaASTBuilder(tokens: TokenList, root: Scope, language: Language) :
-    ZauberASTBuilderBase(tokens, root, false, language) {
+open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: Boolean, language: Language) :
+    ZauberASTBuilderBase(tokens, root, allowUnresolvedTypes, language) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)
@@ -850,7 +850,6 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, language: Language) :
                 TokenType.APPEND_STRING -> "+"
                 else -> {
                     // postfix
-                    println("reading postfix for $expr")
                     expr = tryReadPostfix(expr) ?: break@loop
                     continue@loop
                 }
@@ -934,7 +933,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, language: Language) :
         return expr
     }
 
-    private fun tryReadPostfix(expr: Expression): Expression? {
+    open fun tryReadPostfix(expr: Expression): Expression? {
         return when {
             i >= tokens.size -> null
             tokens.equals(i, TokenType.OPEN_CALL) -> {
