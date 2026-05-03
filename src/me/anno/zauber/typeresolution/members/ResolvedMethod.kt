@@ -29,7 +29,7 @@ class ResolvedMethod(
         val forSelf = ownerTypes.resolveGenerics(selfType, inGeneral)
         val forCall = callTypes.resolveGenerics(selfType, forSelf)
         LOGGER.info("ReturnType for call: $inGeneral -${ownerNames}|$ownerTypes> $forSelf -${method.typeParameters}|$callTypes> $forCall")
-        forCall
+        forCall.specialize(specialization)
     }
 
     override fun getTypeFromCall(): Type {

@@ -1,13 +1,18 @@
 package me.anno.zauber.interpreting
 
+import me.anno.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class ArithmeticTests {
 
-    @Test
-    fun testSimpleIntCalculation() {
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime"])
+    fun testSimpleIntCalculation(type: String) {
         val code = """
             val tested = 1+3*7
             
@@ -17,8 +22,11 @@ class ArithmeticTests {
                 external fun times(other: Int): Int
             }
         """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(22, value.castToInt())
+        MultiTest()
+            .type(code) { Types.Int }
+            .runtime(code) { value ->
+                assertEquals(22, value.castToInt())
+            }.run(type)
     }
 
     @Test

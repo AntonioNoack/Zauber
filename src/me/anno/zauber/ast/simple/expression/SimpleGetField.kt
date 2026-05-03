@@ -35,6 +35,12 @@ class SimpleGetField(
         if (field.ownerScope.isInterface()) {
             throw IllegalStateException("Cannot just get field of an interface, must use getter, $field")
         }
+
+        if (self.type is ClassType && self.type.clazz.name == "Vector" &&
+            field.name == "x"
+        ) {
+            TODO("Testing: got field $this")
+        }
     }
 
     override fun toString(): String {

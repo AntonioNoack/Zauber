@@ -18,6 +18,7 @@ class ResolvedConstructor(
 
     override fun getTypeFromCall(): Type {
         return ClassType(resolved.selfTypeI.clazz, selfTypeParameters)
+            .specialize(specialization)
     }
 
     override fun toString(): String {

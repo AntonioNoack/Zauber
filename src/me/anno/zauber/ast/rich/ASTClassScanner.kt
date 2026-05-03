@@ -611,7 +611,7 @@ abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens,
             }
 
             methodScope.selfAsMethod = Method(
-                selfType, selfType0 != null, name,
+                selfType0, selfType0 != null, name,
                 typeParameters, valueParameters,
                 methodScope, returnType, whereConditions, body,
                 methodScope.flags, origin

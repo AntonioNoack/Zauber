@@ -341,6 +341,7 @@ object ASTSimplifier {
         }
 
         val valueType = expr.resolveReturnType(context)
+        println("valueType for $expr: $valueType")
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true, expr)
         val block1v = block1.value ?: return block1
@@ -871,7 +872,7 @@ object ASTSimplifier {
             )
         } else {
             val dst = block0.field(method0.getTypeFromCall())
-            var selfType = method.selfType?.specialize(method0.specialization) as ClassType
+            var selfType = method.selfTypeI.specialize(method0.specialization) as ClassType
             if (selfType.typeParameters == null) {
                 selfType = ClassType(selfType.clazz, method0.selfTypeParameters)
             }

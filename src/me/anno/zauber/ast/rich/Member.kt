@@ -6,12 +6,18 @@ import me.anno.zauber.types.Type
 
 abstract class Member(
     open var selfType: Type?,
-    val explicitSelfType: Boolean,
+    explicitSelfType: Boolean,
     val name: String,
     var scope: Scope,
     var flags: FlagSet,
     val origin: Int
 ) {
+    init {
+        check((selfType != null) == explicitSelfType)
+    }
+
+    val explicitSelfType get() = selfType != null
+
     fun addFlags(flags: FlagSet) {
         this.flags = this.flags or flags
     }

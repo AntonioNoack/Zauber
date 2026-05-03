@@ -133,10 +133,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
         if (field.selfType == null) {
 
-            val actualTypeParams = mergeCallPart(
-                field.typeParameters, typeParameters,
-                origin
-            )
+            val actualTypeParams = mergeCallPart(field.typeParameters, typeParameters, origin)
 
             LOGGER.info("Resolving generics for field $field")
             val matchScore = MatchScore(2)
@@ -148,6 +145,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             ) ?: return null
 
             val context = ResolutionContext(null, false, fieldReturnType, emptyMap())
+            println("Generics for resolved field,selfType=null: $field -> $")
             return ResolvedField(
                 emptyParameterList(), field, generics,
                 context, codeScope, isBackingField, matchScore
@@ -183,6 +181,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
             val selfType = selfTypeI ?: fieldSelfType
             val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
+            println("Generics for resolved field: $field -> $generics")
             return ResolvedField(
                 generics.subList(0, fieldSelfParams.size), field,
                 generics.subList(fieldSelfParams.size, generics.size),

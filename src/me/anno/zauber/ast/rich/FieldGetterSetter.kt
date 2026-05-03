@@ -105,7 +105,7 @@ object FieldGetterSetter {
 
 
         val method = Method(
-            field.selfType, false, getterName(field.name), emptyList(), emptyList(),
+            null, false, getterName(field.name), emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
             expr, packFlags() or field.flags, origin
         )

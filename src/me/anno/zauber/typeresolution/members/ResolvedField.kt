@@ -170,7 +170,9 @@ class ResolvedField(
         val forCall = callTypeParameters.resolveGenerics(selfType, forType)
 
         val context = context.withSelfType(selfType)
-        return filterTypeByScopeConditions(resolved, forCall, context, codeScope)
+        return filterTypeByScopeConditions(resolved, forCall, context, codeScope).apply {
+            println("RF.getValueType($resolved, $specialization) -> $valueType -> $this")
+        }
     }
 
     override fun getTypeFromCall(): Type {

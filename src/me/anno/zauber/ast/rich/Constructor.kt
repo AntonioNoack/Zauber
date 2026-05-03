@@ -14,13 +14,13 @@ class Constructor(
     keywords: FlagSet,
     origin: Int
 ) : MethodLike(
-    scope.parent!!.typeWithArgs, false,
+    null, false,
     scope.typeParameters, valueParameters,
     Types.Unit, scope, "?", body, keywords, origin
 ) {
 
-    val selfTypeI get() = selfType as ClassType
-    val classScope get() = selfTypeI.clazz
+    val selfTypeI get() = ownerScope.typeWithArgs
+    val classScope get() = ownerScope
 
     override fun toString(): String {
         return "new ${selfTypeI.clazz.pathStr}($valueParameters) { ... }"

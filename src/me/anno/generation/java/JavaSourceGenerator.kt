@@ -81,11 +81,13 @@ object JavaSourceGenerator : Generator() {
                 ClassSpecialization(it.field.ownerScope, it.specialization)
             }
 
-            val classes = methodsByClass.keys + fieldsByClass.keys + data.createdClasses
+            val classes = (methodsByClass.keys + fieldsByClass.keys + data.createdClasses)
+                .filter { it.clazz.isClassLike() }
             for (clazz in classes) {
                 val methods = methodsByClass[clazz] ?: emptyList()
                 val fields = fieldsByClass[clazz] ?: emptyList()
                 val classSpec = clazz.specialization
+                clazz.clazz[ScopeInitType.CODE_GENERATION]
                 generateClassForScope(clazz.clazz, dst, writer, classSpec, methods, fields)
             }
         } finally {
@@ -158,12 +160,6 @@ object JavaSourceGenerator : Generator() {
         scope: Scope, dst: File, writer: JavaWriter, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
-        scope[ScopeInitType.CODE_GENERATION]
-        if (!scope.isClassLike()) {
-            LOGGER.warn("Skipping generation for scope ${scope.pathStr}, ${scope.scopeType}")
-            return
-        }
-
         if (scope.scopeType == ScopeType.PACKAGE) {
 
             // we need some package helper
@@ -485,7 +481,7 @@ object JavaSourceGenerator : Generator() {
                     if (explicit) {
                         TODO("Somehow get explicit self...")
                     } else {
-                        if (!scope.isObjectLike() && scope != method.scope && scope != method.ownerScope) {
+                        if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
                             TODO("Declare $self in $dst for $method")
                         } // else not needed
                     }
