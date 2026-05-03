@@ -215,7 +215,7 @@ class ZauberASTBuilder(
         val extraConditions = readWhereConditions()
 
         val method = Method(
-            selfType, selfType0 != null, name, typeParameters, parameters, methodScope,
+            selfType0, selfType0 != null, name, typeParameters, parameters, methodScope,
             returnType, extraConditions, null, keywords, origin
         )
         methodScope.selfAsMethod = method

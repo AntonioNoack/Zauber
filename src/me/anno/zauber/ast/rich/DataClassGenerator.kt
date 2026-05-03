@@ -141,7 +141,7 @@ object DataClassGenerator {
             scope
         }
         methodScope.selfAsMethod = Method(
-            classScope.typeWithArgs, false, "hashCode", emptyList(), emptyList(),
+            null, false, "hashCode", emptyList(), emptyList(),
             methodScope, Types.Int, emptyList(), body, KEYWORDS, origin
         )
     }
@@ -169,7 +169,7 @@ object DataClassGenerator {
             scope
         }
         methodScope.selfAsMethod = Method(
-            classScope.typeWithArgs, false, "toString", emptyList(), emptyList(),
+            null, false, "toString", emptyList(), emptyList(),
             methodScope, Types.String, emptyList(), body, KEYWORDS, origin
         )
     }
@@ -208,7 +208,7 @@ object DataClassGenerator {
             scope
         }
         methodScope.selfAsMethod = Method(
-            classScope.typeWithArgs, false, "equals", emptyList(), listOf(parameter),
+            null, false, "equals", emptyList(), listOf(parameter),
             methodScope, Types.Boolean, emptyList(), body, KEYWORDS, origin
         )
     }
@@ -244,7 +244,7 @@ object DataClassGenerator {
             scope
         }
         methodScope.selfAsMethod = Method(
-            classScope.typeWithArgs, false, "equals", emptyList(), listOf(parameter),
+            null, false, "equals", emptyList(), listOf(parameter),
             methodScope, Types.Boolean, emptyList(), body, KEYWORDS, origin
         )
     }

@@ -137,8 +137,10 @@ abstract class ZauberASTBuilderBase(
     fun readTypeParameterDeclarations(classScope: Scope, assignToScope: Boolean): List<Parameter> {
         pushGenericParams()
         if (!tokens.equals(i, "<")) {
-            classScope.typeParameters = emptyList()
-            classScope.hasTypeParameters = true
+            if (assignToScope) {
+                classScope.typeParameters = emptyList()
+                classScope.hasTypeParameters = true
+            }
             return emptyList()
         }
 
