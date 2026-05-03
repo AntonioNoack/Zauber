@@ -10,6 +10,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
@@ -77,7 +78,7 @@ class Field(
     var hasCustomSetter = false
 
     fun selfTypeTypeParams(givenSelfType: Type?): List<Parameter> =
-        selfTypeToTypeParams(selfType, givenSelfType)
+        selfTypeToTypeParams(selfType ?: ownerScope.typeWithArgs, givenSelfType)
 
     var typeParameters: List<Parameter> = emptyList()
 

@@ -6,7 +6,7 @@ import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
@@ -115,12 +115,10 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
     fun findMemberMatch(
         field0: Field,
-        fieldReturnType: Type?,
+        byFieldExpectedType: Type?,
 
-        // todo what is the difference between fieldReturnType and returnType here?
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
+        byExprExpectedType: Type?, // sometimes, we know what to expect from the return type
+        selfType: Type?, //  this is non-null, iff the access is explicit (this.x, not just x)
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
@@ -139,15 +137,17 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             val matchScore = MatchScore(2)
             val generics = findGenericsForMatch(
                 null, null,
-                fieldReturnType, returnType,
+                byFieldExpectedType, byExprExpectedType,
                 field.typeParameters, actualTypeParams,
                 emptyList(), valueParameters, matchScore
             ) ?: return null
 
-            val context = ResolutionContext(null, false, fieldReturnType, emptyMap())
-            println("Generics for resolved field,selfType=null: $field -> $")
+            val ownerTypes = filterTypeParams((selfType as? ClassType)?.typeParameters, field.ownerScope)
+
+            val context = ResolutionContext(null, false, byFieldExpectedType, emptyMap())
+            // println("Generics for resolved field/2: $field, $selfType -> $ownerTypes, $generics, ctx: ${context.specialization}")
             return ResolvedField(
-                emptyParameterList(), field, generics,
+                ownerTypes, field, generics,
                 context, codeScope, isBackingField, matchScore
             )
         } else {
@@ -174,20 +174,25 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             val matchScore = MatchScore(2)
             val generics = findGenericsForMatch(
                 fieldSelfType, selfTypeI,
-                fieldReturnType, returnType,
+                byFieldExpectedType, byExprExpectedType,
                 fieldSelfParams + field.typeParameters, actualTypeParams,
                 emptyList(), valueParameters, matchScore
             ) ?: return null
 
             val selfType = selfTypeI ?: fieldSelfType
-            val context = ResolutionContext(selfType, false, fieldReturnType, emptyMap())
-            println("Generics for resolved field: $field -> $generics")
+            val context = ResolutionContext(selfType, false, byFieldExpectedType, emptyMap())
+            // println("Generics for resolved field: $field -> $generics")
             return ResolvedField(
                 generics.subList(0, fieldSelfParams.size), field,
                 generics.subList(fieldSelfParams.size, generics.size),
                 context, codeScope, isBackingField, matchScore
             )
         }
+    }
+
+    fun filterTypeParams(typeParams: ParameterList?, scope: Scope): ParameterList {
+        return typeParams?.filterByGenerics { it.scope == scope }
+            ?: ParameterList.emptyParameterList()
     }
 
     fun resolveField(

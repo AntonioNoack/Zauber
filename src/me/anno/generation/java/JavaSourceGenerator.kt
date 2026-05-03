@@ -20,7 +20,6 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.interpreting.ExternalKey
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -43,8 +42,6 @@ import java.io.File
  *   - fields into lambdas must be effectively final [-> must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
  * */
 object JavaSourceGenerator : Generator() {
-
-    private val LOGGER = LogManager.getLogger(JavaSourceGenerator::class)
 
     val protectedTypes by threadLocal {
         Types.run {
@@ -244,7 +241,7 @@ object JavaSourceGenerator : Generator() {
                 builder.append(params.generics[i].name).append('=')
                 builder.append(params.getOrNull(i))
             }
-            builder.append('\n')
+            nextLine()
         }
 
         builder.append("public ")
@@ -260,7 +257,7 @@ object JavaSourceGenerator : Generator() {
         if (scope.flags.hasFlag(Flags.ABSTRACT)) builder.append("abstract ")
         builder.append(javaType).append(' ').append(className)
 
-        if (specialization.isEmpty()) {
+        if (specialization.containsGenerics()) {
             appendTypeParams(scope)
         }
         appendSuperTypes(scope)
@@ -272,10 +269,10 @@ object JavaSourceGenerator : Generator() {
                 builder.append(className).append(' ').append(OBJECT_FIELD_NAME)
                     .append(" = new ").append(className).append("();")
                 nextLine()
-                nextLine()
             }
 
-            appendFields(scope, fields)
+            val allowFinalFields = methods.any { it.method is Constructor }
+            appendFields(scope, fields, allowFinalFields)
             appendConstructors(scope, className, methods)
             appendMethods(scope, methods)
 
@@ -284,12 +281,12 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendFields(classScope: Scope, fields: Collection<FieldSpecialization>) {
+    private fun appendFields(classScope: Scope, fields: Collection<FieldSpecialization>, allowFinal: Boolean) {
         if (classScope.scopeType == ScopeType.INTERFACE) return // no backing fields
         for ((field) in fields) {
             if (!needsFieldByParameter(field.byParameter)) continue
             if (!needsBackingField(field)) continue
-            appendBackingField(classScope, field)
+            appendBackingField(classScope, field, allowFinal)
         }
     }
 
@@ -301,10 +298,10 @@ object JavaSourceGenerator : Generator() {
         return setter.body!!.needsBackingField(setter.scope)
     }
 
-    private fun appendBackingField(classScope: Scope, field: Field) {
+    private fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean) {
         builder.append("public ")
         if (field == classScope.objectField) builder.append("static ")
-        if (!field.isMutable) builder.append("final ")
+        if (!field.isMutable && allowFinal) builder.append("final ")
         val valueType = (field.valueType ?: Types.NullableAny).resolve(classScope)
         appendType(valueType, classScope, false)
         builder.append(' ').appendFieldName(field).append(';')

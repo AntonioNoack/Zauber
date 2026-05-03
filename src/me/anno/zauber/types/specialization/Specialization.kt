@@ -24,6 +24,10 @@ class Specialization(typeParameters: ParameterList) {
     fun isEmpty(): Boolean = typeParameters.isEmpty()
     fun isNotEmpty(): Boolean = typeParameters.isNotEmpty()
 
+    fun containsGenerics(): Boolean {
+        return typeParameters.any { it is GenericType }
+    }
+
     override fun equals(other: Any?): Boolean {
         return other is Specialization &&
                 typeParameters == other.typeParameters

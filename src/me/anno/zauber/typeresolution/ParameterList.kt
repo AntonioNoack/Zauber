@@ -154,4 +154,18 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     override fun hashCode(): Int {
         return types.contentHashCode()
     }
+
+    fun filterByGenerics(filter: (Parameter) -> Boolean): ParameterList {
+        val mask = generics.map { filter(it) }
+        if (mask.none { it }) return emptyParameterList()
+
+        val dst = ParameterList(generics.filterIndexed { index, _ -> mask[index] })
+        var writeIndex = 0
+        for (readIndex in mask.indices) {
+            if (mask[readIndex]) {
+                dst.set(writeIndex++, types[readIndex], insertModes[readIndex])
+            }
+        }
+        return dst
+    }
 }
