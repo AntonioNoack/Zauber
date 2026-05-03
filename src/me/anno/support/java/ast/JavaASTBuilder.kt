@@ -2,6 +2,7 @@ package me.anno.support.java.ast
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.readSwitch
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
@@ -38,7 +39,8 @@ import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
 
 // todo this reader is closer to C++ than Zauber, create a common class for them(?)
-open class JavaASTBuilder(tokens: TokenList, root: Scope) : ZauberASTBuilderBase(tokens, root, false) {
+open class JavaASTBuilder(tokens: TokenList, root: Scope, language: Language) :
+    ZauberASTBuilderBase(tokens, root, false, language) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)

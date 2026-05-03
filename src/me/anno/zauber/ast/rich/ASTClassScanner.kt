@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
@@ -36,7 +37,8 @@ import kotlin.math.max
 /**
  * to make type-resolution immediately available/resolvable
  * */
-abstract class ASTClassScanner(tokens: TokenList) : ZauberASTBuilderBase(tokens, root, true) {
+abstract class ASTClassScanner(tokens: TokenList, language: Language) :
+    ZauberASTBuilderBase(tokens, root, true, language) {
 
     companion object {
         private val classPrefixes = arrayOf("data", "enum", "value", "inner")

@@ -1,5 +1,6 @@
 package me.anno.zauber
 
+import me.anno.support.Language
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.logging.LogManager
@@ -70,8 +71,8 @@ object CompileSources {
         for (i in sources.indices) {
             val source = sources[i]
             val language =
-                if (source.fileName.endsWith(".kt", true)) ZauberLanguage.KOTLIN
-                else ZauberLanguage.ZAUBER
+                if (source.fileName.endsWith(".kt", true)) Language.KOTLIN
+                else Language.ZAUBER
             ZauberASTBuilder(source, root, language).readFileLevel()
         }
     }

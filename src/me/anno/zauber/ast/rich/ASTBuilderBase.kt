@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -10,7 +11,7 @@ import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.impl.GenericType
 
-open class ASTBuilderBase(val tokens: TokenList, val root: Scope) {
+open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: Language) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ASTBuilderBase::class)

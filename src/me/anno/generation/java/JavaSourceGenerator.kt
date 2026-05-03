@@ -55,7 +55,17 @@ object JavaSourceGenerator : Generator() {
                 Char to BoxedType("Character", "char"),
                 Float to BoxedType("Float", "float"),
                 Double to BoxedType("Double", "double"),
-                Any to BoxedType("Object", "Object")
+                Any to BoxedType("Object", "Object"),
+
+                // what about these native types???
+                Array.withTypeParameter(Boolean) to BoxedType("Array_zauberBoolean", "boolean[]"),
+                Array.withTypeParameter(Byte) to BoxedType("Array_zauberByte", "byte[]"),
+                Array.withTypeParameter(Short) to BoxedType("Array_zauberShort", "short[]"),
+                Array.withTypeParameter(Int) to BoxedType("Array_zauberInt", "int[]"),
+                Array.withTypeParameter(Long) to BoxedType("Array_zauberLong", "long[]"),
+                Array.withTypeParameter(Char) to BoxedType("Array_zauberChar", "char[]"),
+                Array.withTypeParameter(Float) to BoxedType("Array_zauberFloat", "float[]"),
+                Array.withTypeParameter(Double) to BoxedType("Array_zauberDouble", "double[]"),
             )
         }
     }
@@ -230,7 +240,7 @@ object JavaSourceGenerator : Generator() {
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
 
-        nameCannotBeImported(className, scope)
+        declareImport(className, scope)
         specializations.add(specialization)
 
         if (specialization.isNotEmpty()) {
@@ -542,7 +552,7 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    fun nameCannotBeImported(name: String, scope: Scope) {
+    fun declareImport(name: String, scope: Scope) {
         imports[name] = scope.path
     }
 

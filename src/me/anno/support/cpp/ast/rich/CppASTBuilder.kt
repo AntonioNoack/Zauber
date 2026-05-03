@@ -1,7 +1,9 @@
 package me.anno.support.cpp.ast.rich
 
+import me.anno.support.Language
 import me.anno.support.cpp.ast.rich.PointerType.Companion.ptr
 import me.anno.support.java.ast.JavaASTBuilder
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
@@ -19,13 +21,12 @@ import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
 class CppASTBuilder(
     tokens: TokenList,
     root: Scope,
     val standard: CppStandard
-) : JavaASTBuilder(tokens, root) {
+) : JavaASTBuilder(tokens, root, standard.kind()) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(CppASTBuilder::class)
@@ -44,8 +45,6 @@ class CppASTBuilder(
             }
         }
     }
-
-    val language = standard.kind()
 
     override fun readFileLevel() {
         while (i < tokens.size) {
@@ -190,7 +189,7 @@ class CppASTBuilder(
     fun readMethod(typeNameEnd: Int): Method {
         val origin = origin(i)
         val (returnType, name) = readTypeAndName(typeNameEnd)
-        val genName = if (language == LanguageKind.C) name else currPackage.generateName("f:$name")
+        val genName = if (language == Language.C) name else currPackage.generateName("f:$name")
         val methodScope = currPackage.getOrPut(genName, ScopeType.METHOD)
         val keywords = packFlags()
         val arguments = pushScope(methodScope) {

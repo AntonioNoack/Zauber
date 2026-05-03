@@ -1,7 +1,7 @@
 package me.anno.zauber.langserver
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ZauberLanguage
+import me.anno.support.Language
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.langserver.logging.AppendLogging
 import me.anno.zauber.tokenizer.ZauberTokenizer
@@ -52,7 +52,7 @@ class ZauberTextDocumentService(val zls: ZauberLanguageServer) : TextDocumentSer
         val tokens = ZauberTokenizer(src, fileName)
             .withComments()
             .tokenize()
-        val language = if (uri.endsWith(".kt")) ZauberLanguage.KOTLIN else ZauberLanguage.ZAUBER
+        val language = if (uri.endsWith(".kt")) Language.KOTLIN else Language.ZAUBER
         val ast = ZauberASTBuilder(tokens, root, language)
         try {
             ast.readFileLevel()

@@ -1,6 +1,7 @@
 package me.anno.support.java.ast
 
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ASTClassScanner
 import me.anno.zauber.ast.rich.Flags
@@ -12,11 +13,12 @@ import me.anno.zauber.tokenizer.TokenType
 /**
  * to make type-resolution immediately available/resolvable
  * */
-open class JavaASTClassScanner(tokens: TokenList) : ASTClassScanner(tokens) {
+open class JavaASTClassScanner(tokens: TokenList, language: Language) :
+    ASTClassScanner(tokens, language) {
 
     companion object {
         fun collectNamedJavaClasses(tokens: TokenList) {
-            JavaASTClassScanner(tokens).readFileLevel()
+            JavaASTClassScanner(tokens, Language.JAVA).readFileLevel()
         }
     }
 

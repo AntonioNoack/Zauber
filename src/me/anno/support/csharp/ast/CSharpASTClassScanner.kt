@@ -1,6 +1,7 @@
 package me.anno.support.csharp.ast
 
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
@@ -9,7 +10,7 @@ import me.anno.zauber.tokenizer.TokenType
 /**
  * to make type-resolution immediately available/resolvable
  * */
-class CSharpASTClassScanner(tokens: TokenList) : JavaASTClassScanner(tokens) {
+class CSharpASTClassScanner(tokens: TokenList) : JavaASTClassScanner(tokens, Language.CSHARP) {
 
     companion object {
         fun collectNamedCSharpClasses(tokens: TokenList) {

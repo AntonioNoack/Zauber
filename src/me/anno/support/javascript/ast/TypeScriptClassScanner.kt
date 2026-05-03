@@ -2,6 +2,7 @@ package me.anno.support.javascript.ast
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.Expression
@@ -21,7 +22,7 @@ import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
 import kotlin.math.max
 
 class TypeScriptClassScanner(tokens: TokenList) :
-    ASTClassScanner(tokens) {
+    ASTClassScanner(tokens, Language.TYPESCRIPT) {
 
     // todo use these accordingly when reading fields/methods...
     var isStatic = false

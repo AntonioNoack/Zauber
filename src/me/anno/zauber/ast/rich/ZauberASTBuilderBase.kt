@@ -2,14 +2,10 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.support.cpp.ast.rich.ArrayType
-import me.anno.support.cpp.ast.rich.CppASTBuilder
-import me.anno.support.csharp.ast.CSharpASTBuilder
 import me.anno.support.csharp.ast.CSharpASTBuilder.Companion.nativeCSharpTypes
-import me.anno.support.csharp.ast.CSharpASTClassScanner
-import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
-import me.anno.support.java.ast.JavaASTClassScanner
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.javascript.ast.FieldOfType
 import me.anno.support.javascript.ast.TypeScriptClassScanner
@@ -48,8 +44,9 @@ import kotlin.math.min
 
 abstract class ZauberASTBuilderBase(
     tokens: TokenList, root: Scope,
-    val allowUnresolvedTypes: Boolean
-) : ASTBuilderBase(tokens, root) {
+    val allowUnresolvedTypes: Boolean,
+    language: Language
+) : ASTBuilderBase(tokens, root, language) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ZauberASTBuilderBase::class)
@@ -209,9 +206,7 @@ abstract class ZauberASTBuilderBase(
         val parameters = ArrayList<NamedParameter>()
         while (i < tokens.size) {
             val name = if (
-                (this !is JavaASTBuilder &&
-                        this !is JavaASTClassScanner &&
-                        this !is CppASTBuilder) &&
+                language.allowsDefaultsInParameterDeclaration &&
                 tokens.equals(i, TokenType.NAME) &&
                 tokens.equals(i + 1, "=")
             ) {
@@ -370,7 +365,8 @@ abstract class ZauberASTBuilderBase(
         if (consumeIf("*", VSCodeType.TYPE, 0)) {
             return UnknownType
         }
-        if (this is JavaASTBuilder || this is JavaASTClassScanner) {
+
+        if (language == Language.JAVA) {
             if (consumeIf("?", VSCodeType.TYPE, 0)) {
                 return UnknownType
             }
@@ -388,37 +384,35 @@ abstract class ZauberASTBuilderBase(
             return if (negate) base.not() else base
         }
 
-        if (this is ZauberASTBuilder || this is ZauberASTClassScanner) {
-            if (consumeIf("?")) {
-                base = typeOrNull(base)
-            }
-        }
-
-        if (this is JavaASTBuilder ||
-            this is JavaASTClassScanner ||
-            this is CppASTBuilder
-        ) {
-            while (consumeIf(TokenType.OPEN_ARRAY)) {
-                if (consumeIf(TokenType.CLOSE_ARRAY)) {
-                    base = Types.Array.withTypeParameter(base)
-                } else {
-                    i-- // go one back for pushArray
-                    val size = pushArray { readExpression() }
-                    base = ArrayType(base, size)
+        when (language) {
+            Language.ZAUBER, Language.KOTLIN -> {
+                if (consumeIf("?")) {
+                    base = typeOrNull(base)
                 }
             }
-        }
-
-        if (this is TypeScriptClassScanner) {
-            while (consumeIf(TokenType.OPEN_ARRAY)) {
-                if (consumeIf(TokenType.CLOSE_ARRAY)) {
-                    base = Types.Array.withTypeParameter(base)
-                } else {
-                    i-- // go one back for pushArray
-                    val propertyName = pushArray { readTypeNotNull(selfType, true) }
-                    base = FieldOfType(base, propertyName)
+            Language.JAVA, Language.CSHARP -> {
+                while (consumeIf(TokenType.OPEN_ARRAY)) {
+                    if (consumeIf(TokenType.CLOSE_ARRAY)) {
+                        base = Types.Array.withTypeParameter(base)
+                    } else {
+                        i-- // go one back for pushArray
+                        val size = pushArray { readExpression() }
+                        base = ArrayType(base, size)
+                    }
                 }
             }
+            Language.TYPESCRIPT -> {
+                while (consumeIf(TokenType.OPEN_ARRAY)) {
+                    if (consumeIf(TokenType.CLOSE_ARRAY)) {
+                        base = Types.Array.withTypeParameter(base)
+                    } else {
+                        i-- // go one back for pushArray
+                        val propertyName = pushArray { readTypeNotNull(selfType, true) }
+                        base = FieldOfType(base, propertyName)
+                    }
+                }
+            }
+            else -> {}
         }
 
         if (negate) base = base.not()
@@ -489,7 +483,7 @@ abstract class ZauberASTBuilderBase(
             }
         }
 
-        if (this !is JavaASTBuilder && this !is JavaASTClassScanner) {
+        if (language.allowsValuesAsTypes) {
             val forbidden = !insideTypeParams && this !is TypeScriptClassScanner
             if (tokens.equals(i, TokenType.NUMBER)) {
                 if (forbidden) {
@@ -562,7 +556,7 @@ abstract class ZauberASTBuilderBase(
 
         consume("<")
         if (consumeIf(">")) {
-            return if (this is JavaASTBuilder || this is JavaASTClassScanner) {
+            return if (language == Language.JAVA) {
                 null // = unknown
             } else {
                 // Kotlin, weird, known but empty
@@ -666,7 +660,7 @@ abstract class ZauberASTBuilderBase(
                     tokens.equals(i, "super") -> {
                 // can appear in Java types as List<? super T>
                 // or as array notation, e.g. Object[]
-                this is JavaASTClassScanner || this is JavaASTBuilder
+                language == Language.JAVA || language == Language.CSHARP
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) ||
                     tokens.equals(i, TokenType.CLOSE_BLOCK) ||
@@ -707,22 +701,22 @@ abstract class ZauberASTBuilderBase(
             setLSType(i - 1, VSCodeType.TYPE, 0)
         }
 
-        when (this) {
-            is ZauberASTBuilder, ZauberASTClassScanner -> {
+        when (language) {
+            Language.ZAUBER, Language.KOTLIN -> {
                 when (name) {
                     "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
                     "This" -> return ThisType(resolveSelfTypeI(selfType))
                 }
             }
-            is CSharpASTBuilder, CSharpASTClassScanner -> {
+            Language.CSHARP -> {
                 val nativeType = nativeCSharpTypes[name]
                 if (nativeType != null) return nativeType
             }
-            is JavaASTBuilder, JavaASTClassScanner -> {
+            Language.JAVA -> {
                 val nativeType = nativeJavaTypes[name]
                 if (nativeType != null) return nativeType
             }
-            is CppASTBuilder -> {}
+            else -> {}
         }
 
         var path: Type? = genericParams.last()[name]

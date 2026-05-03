@@ -2,6 +2,7 @@ package me.anno.support.csharp.ast
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
@@ -13,7 +14,7 @@ import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Types
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 
-class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, root) {
+class CSharpASTBuilder(tokens: TokenList, root: Scope) : JavaASTBuilder(tokens, root, Language.CSHARP) {
     companion object {
         private val LOGGER = LogManager.getLogger(CSharpASTBuilder::class)
 

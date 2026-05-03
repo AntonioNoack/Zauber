@@ -1,5 +1,6 @@
 package me.anno.support.java.ast
 
+import me.anno.support.Language
 import me.anno.support.java.tokenizer.JavaTokenizer
 import me.anno.zauber.Compile
 import me.anno.zauber.tokenizer.TokenList
@@ -85,7 +86,7 @@ class JavaASTBuilderTest {
         for (source in sources) {
             println("AST for ${source.fileName}")
             try {
-                JavaASTBuilder(source, Compile.root)
+                JavaASTBuilder(source, Compile.root, Language.JAVA)
                     .readFileLevel()
                 success++
             } catch (e: Throwable) {

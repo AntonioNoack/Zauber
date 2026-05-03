@@ -2,8 +2,8 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
+import me.anno.support.Language
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.ZauberLanguage
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
@@ -41,8 +41,8 @@ import kotlin.math.max
 
 class ZauberASTBuilder(
     tokens: TokenList, root: Scope,
-    val language: ZauberLanguage = ZauberLanguage.ZAUBER
-) : ZauberASTBuilderBase(tokens, root, false) {
+    language: Language = Language.ZAUBER
+) : ZauberASTBuilderBase(tokens, root, false, language) {
 
     companion object {
 
@@ -1079,8 +1079,8 @@ class ZauberASTBuilder(
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
                 consumeIf("typealias") -> readTypeAlias()
 
-                language == ZauberLanguage.ZAUBER && consumeIf("defer") -> readDefer(result, origin(i - 1))
-                language == ZauberLanguage.ZAUBER && consumeIf("errdefer") -> readErrdefer(result, origin(i - 1))
+                language == Language.ZAUBER && consumeIf("defer") -> readDefer(result, origin(i - 1))
+                language == Language.ZAUBER && consumeIf("errdefer") -> readErrdefer(result, origin(i - 1))
 
                 else -> {
                     result.add(readExpression())

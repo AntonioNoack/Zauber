@@ -1,5 +1,6 @@
 package me.anno.support.cpp.ast.rich
 
+import me.anno.support.Language
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.java.ast.NamedDestructuringExpression
@@ -78,7 +79,9 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     while (true) {
 
                         var foundCondition = false
-                        if (this is JavaASTBuilder && this !is CppASTBuilder) {
+                        if (language == Language.JAVA) {
+                            this as JavaASTBuilder
+
                             val k = i
                             val tn = readTypeAndName()
                             if (tn != null && tn.first != null && tokens.equals(i, "->")) {

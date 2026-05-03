@@ -1,7 +1,7 @@
 package me.anno.zauber.scope.lazy
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ZauberLanguage
+import me.anno.support.Language
 import me.anno.zauber.ast.rich.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
@@ -28,7 +28,7 @@ class LazyExpression(
             imports: List<Import>,
             generics: HashMap<String, GenericType>
         ): Expression {
-            val tmp = ZauberASTBuilder(tokens, root, ZauberLanguage.ZAUBER)
+            val tmp = ZauberASTBuilder(tokens, root, Language.ZAUBER)
             tmp.imports.addAll(imports)
             tmp.genericParams.add(generics)
 
