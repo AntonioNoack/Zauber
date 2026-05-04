@@ -11,11 +11,11 @@ class PythonTokenizer(val source: String, fileName: String) {
             "break", "class", "continue", "def", "del", "elif", "else", "except",
             "finally", "for", "from", "global", "if", "import", "in", "is",
             "lambda", "nonlocal", "not", "or", "pass", "raise", "return",
-            "try", "while", "with", "yield", "match", "case"
+            "try", "while", "with", "yield", "case"
         )
     }
 
-    private val n = source.length
+    private var n = source.length
     private var i = 0
 
     private val tokens = TokenList(source, fileName)
@@ -23,7 +23,9 @@ class PythonTokenizer(val source: String, fileName: String) {
     private val indentStack = ArrayDeque<Int>().apply { addLast(0) }
     private var atLineStart = true
 
-    fun tokenize(): TokenList {
+    var bracketDepth = 0
+
+    fun tokenizeImpl(){
         while (i < n) {
 
             if (atLineStart) handleIndentation()
@@ -41,21 +43,30 @@ class PythonTokenizer(val source: String, fileName: String) {
                 isStringStart(i) -> readString()
                 c.isLetter() || c == '_' -> readIdentifier()
                 c.isDigit() -> readNumber()
-                c in "(),;[]" -> {
+                c in "(),;[]{}" -> {
                     val type = when (c) {
                         ',' -> TokenType.COMMA
                         ';' -> TokenType.SEMICOLON
-                        '(' -> TokenType.OPEN_CALL
-                        ')' -> TokenType.CLOSE_CALL
-                        '[' -> TokenType.OPEN_ARRAY
-                        ']' -> TokenType.CLOSE_ARRAY
-                        else -> error("")
+                        '(' -> {
+                            bracketDepth++
+                            TokenType.OPEN_CALL
+                        }
+                        ')' -> {
+                            bracketDepth--
+                            TokenType.CLOSE_CALL
+                        }
+                        '[' -> {
+                            bracketDepth++
+                            TokenType.OPEN_ARRAY
+                        }
+                        ']' -> {
+                            bracketDepth--
+                            TokenType.CLOSE_ARRAY
+                        }
+                        '{' -> TokenType.OPEN_BLOCK
+                        '}' -> TokenType.CLOSE_BLOCK
+                        else -> error("Invalid state")
                     }
-                    tokens.add(type, i, i + 1)
-                    i++
-                }
-                c in "{}" -> {
-                    val type = if (c == '{') TokenType.OPEN_BLOCK else TokenType.CLOSE_BLOCK
                     tokens.add(type, i, i + 1)
                     i++
                 }
@@ -66,6 +77,10 @@ class PythonTokenizer(val source: String, fileName: String) {
                 else -> tokens.add(TokenType.SYMBOL, i++, i)
             }
         }
+    }
+
+    fun tokenize(): TokenList {
+        tokenizeImpl()
 
         // flush remaining dedents
         while (indentStack.size > 1) {
@@ -99,7 +114,7 @@ class PythonTokenizer(val source: String, fileName: String) {
         }
 
         val current = indentStack.last()
-        when {
+        if (bracketDepth == 0) when {
             spaces > current -> {
                 indentStack.addLast(spaces)
                 tokens.add(TokenType.INDENT, i, j)
@@ -186,10 +201,10 @@ class PythonTokenizer(val source: String, fileName: String) {
         val triple = i + 2 < n && source[i + 1] == quote && source[i + 2] == quote
         i += if (triple) 3 else 1
 
-        if (!isF) {
-            readPlainString(start, quote, triple)
-        } else {
+        if (isF) {
             readFString(start, quote, triple)
+        } else {
+            readPlainString(start, quote, triple)
         }
     }
 
@@ -219,7 +234,8 @@ class PythonTokenizer(val source: String, fileName: String) {
     // full F-String parser
     private fun readFString(start: Int, quote: Char, triple: Boolean) {
 
-        tokens.add(TokenType.OPEN_CALL, start, start + 1)
+        tokens.add(TokenType.KEYWORD, start, start + 1)
+        tokens.add(TokenType.OPEN_CALL, start + 1, start + 1)
 
         var chunkStart = i
 
@@ -247,16 +263,17 @@ class PythonTokenizer(val source: String, fileName: String) {
                     val exprEnd = findFExprEnd()
 
                     val oldI = i
+                    val oldN = n
                     i = exprStart
+                    n = exprEnd
 
                     // recursive tokenize expression
-                    val substr = source.substring(exprStart, exprEnd)
-                    val inner = PythonTokenizer(substr, tokens.fileName).tokenize()
-                    for (k in 0 until inner.size) {
-                        tokens.add(inner.getType(k), exprStart + inner.getI0(k), exprStart + inner.getI1(k))
-                    }
+                    bracketDepth++
+                    tokenizeImpl()
+                    bracketDepth--
 
                     i = oldI
+                    n = oldN
 
                     tokens.add(TokenType.CLOSE_CALL, i, i)
                     tokens.add(TokenType.APPEND_STRING, i, i)
@@ -322,4 +339,5 @@ class PythonTokenizer(val source: String, fileName: String) {
             }
         }
     }
+
 }

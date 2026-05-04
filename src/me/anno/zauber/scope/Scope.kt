@@ -153,7 +153,10 @@ class Scope(val name: String, val parent: Scope? = null) {
             selfAs = value
         }
 
-    // todo register this where appropriate
+    /**
+     * this is "" or labeled, wherever we can break/continue to.
+     * this is null, if you cannot jump there (e.g. if/else)
+     * */
     var jumpLabel: String? = null
 
     var typeParameters: List<Parameter> = emptyList()

@@ -180,7 +180,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
         var end = source.indexOf('\n', i1 + lastLineBreak)
         if (end < 0) end = source.length
-        val tokenLength = i1 - i0
+        val tokenLength = max(i1 - i0, 1)
 
         if (isSingleLine) {
             var i0 = i0
@@ -472,5 +472,38 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val i1 = min(getI1(min(i1x, size - 1)), source.length)
         if (i1 <= i0) return ""
         return source.substring(i0, i1)
+    }
+
+    fun validateBlocks() {
+        val blocks = StringBuilder()
+        fun remove(char: Char, i: Int) {
+            check(char == blocks.lastOrNull()) {
+                "Expected $char, but got ${blocks.lastOrNull()} at ${err(i)}"
+            }
+            blocks.setLength(blocks.length - 1)
+        }
+
+        var indent = 0
+        for (i in 0 until totalSize) {
+            when (getTypeUnsafe(i)) {
+                TokenType.OPEN_CALL -> blocks.append('(')
+                TokenType.OPEN_BLOCK -> blocks.append('{')
+                TokenType.OPEN_ARRAY -> blocks.append('[')
+                TokenType.INDENT -> indent++
+                TokenType.CLOSE_CALL -> remove('(', i)
+                TokenType.CLOSE_BLOCK -> remove('{', i)
+                TokenType.CLOSE_ARRAY -> remove('[', i)
+                TokenType.DEDENT -> {
+                    indent--
+                    check(indent >= 0) {
+                        "More dedents than indents at ${err(i)}"
+                    }
+                }
+                else -> {}
+            }
+        }
+        check(blocks.isEmpty()) {
+            "Asymmetric blocks, got remainder $blocks"
+        }
     }
 }

@@ -2,9 +2,12 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.ASTBuilderBase
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.expression.*
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.createDeclarationExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.scope.Scope
 
 fun ASTBuilderBase.iterableToIterator(iterable: Expression): NamedCallExpression {
     return NamedCallExpression(
@@ -13,21 +16,29 @@ fun ASTBuilderBase.iterableToIterator(iterable: Expression): NamedCallExpression
     )
 }
 
-fun ASTBuilderBase.iteratorToNext(iteratorField: Field, body: Expression): Expression {
+fun ASTBuilderBase.iteratorToNext(iteratorFieldExpr: FieldExpression, scope: Scope, origin: Int): Expression {
     return NamedCallExpression(
-        FieldExpression(iteratorField, body.scope, body.origin),
+        iteratorFieldExpr,
         "next", nameAsImport("next"),
-        body.scope, body.origin
+        scope, origin
     )
 }
 
 /** just for deducting the type...
 todo is there a better solution, that doesn't complicate our type system? */
-fun ASTBuilderBase.iterableToNextExpr(iterable: Expression): Expression {
+fun ASTBuilderBase.iterableToNextExpr(iterable: Expression): NamedCallExpression {
     val iterator = iterableToIterator(iterable)
     return NamedCallExpression(
         iterator, "next", nameAsImport("next"),
         iterator.scope, iterator.origin
+    )
+}
+
+fun ASTBuilderBase.iteratorToHasNext(iteratorFieldExpr: FieldExpression, scope: Scope, origin: Int): NamedCallExpression {
+    return NamedCallExpression(
+        iteratorFieldExpr,
+        "hasNext", nameAsImport("hasNext"),
+        scope, origin
     )
 }
 
@@ -42,21 +53,19 @@ fun ASTBuilderBase.iterableToNextExpr(iterable: Expression): Expression {
  * */
 fun ASTBuilderBase.forLoop(
     variableField: Field, iterable: Expression,
-    body: Expression, label: String?
+    body: Expression, label: String?,
+    elseBranch: Expression? = null
 ): Expression {
     val scope = iterable.scope
     val origin = iterable.origin
     val iterator = iterableToIterator(iterable)
     val iteratorField = scope.createImmutableField(iterator)
-    val getNextCall = iteratorToNext(iteratorField, body)
+    val iteratorFieldExpr = FieldExpression(iteratorField, scope, origin)
+    val getNextCall = iteratorToNext(iteratorFieldExpr, body.scope, body.origin)
     val outerAssignment = createDeclarationExpression(scope, iterator, iteratorField)
     val innerAssignment = createDeclarationExpression(body.scope, getNextCall, variableField)
-    val hasNextCall = NamedCallExpression(
-        FieldExpression(iteratorField, scope, origin),
-        "hasNext", nameAsImport("hasNext"),
-        scope, origin
-    )
+    val hasNextCall = iteratorToHasNext(iteratorFieldExpr, scope, origin)
     val newBody = ExpressionList(listOf(innerAssignment, body), body.scope, body.origin)
-    val loop = WhileLoop(hasNextCall, newBody, label)
+    val loop = WhileLoop(hasNextCall, newBody, label, elseBranch)
     return ExpressionList(listOf(outerAssignment, loop), scope, origin)
 }

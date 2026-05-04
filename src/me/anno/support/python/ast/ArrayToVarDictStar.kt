@@ -1,4 +1,4 @@
-package me.anno.zauber.ast.rich.expression.unresolved
+package me.anno.support.python.ast
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -7,9 +7,9 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
-class ArrayToVarargsStar(val value: Expression) : Expression(value.scope, value.origin) {
-    override fun clone(scope: Scope) = ArrayToVarargsStar(value.clone(scope))
-    override fun toStringImpl(depth: Int): String = "**${value.toStringImpl(depth)}"
+class ArrayToVarDictStar(val value: Expression) : Expression(value.scope, value.origin) {
+    override fun clone(scope: Scope) = ArrayToVarDictStar(value.clone(scope))
+    override fun toStringImpl(depth: Int): String = "*${value.toStringImpl(depth)}"
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)
     override fun splitsScope(): Boolean = value.splitsScope()

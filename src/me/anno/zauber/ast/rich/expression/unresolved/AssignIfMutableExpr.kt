@@ -6,6 +6,7 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.ValueParameterImpl
@@ -13,7 +14,6 @@ import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Import
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
 /**
@@ -144,7 +144,7 @@ class AssignIfMutableExpr(
                 "Resolve owner for $this, ${left.javaClass.simpleName}"
             }
             val owner = left.self// ?: dstField.resolveOwnerWithoutLeftSide(origin)
-            val setter = ResolvedSetFieldExpression(owner, dstField, call, scope, origin)
+            val setter = ResolvedSetFieldExpression(owner, dstField, call, false, scope, origin)
             return ExpressionList(listOf(call, setter), scope, origin)
         } else return call
     }

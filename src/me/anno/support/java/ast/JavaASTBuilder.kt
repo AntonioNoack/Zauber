@@ -1,5 +1,6 @@
 package me.anno.support.java.ast
 
+import com.sun.org.apache.xalan.internal.xsltc.compiler.sym
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
@@ -429,7 +430,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         }
     }
 
-    private fun readPrefix(): Expression {
+    open fun readPrefix(): Expression {
 
         val origin = origin(i)
         val label =
@@ -461,12 +462,6 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             consumeIf("for") -> readForLoop(label)
             consumeIf("while") -> readWhileLoop(label)
             consumeIf("do") -> readDoWhileLoop(label)
-            consumeIf("yield") -> {
-                // return from a switch...
-                val value = readExpression()
-                val label = resolveJumpLabel(null).name
-                ReturnExpression(value, label, currPackage, origin)
-            }
             consumeIf("!") -> {
                 val base = readExpression()
                 NamedCallExpression(base, "not", currPackage, origin)
@@ -727,7 +722,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 val body = ExpressionList(listOf(body, increment), currPackage, origin)
                 val result = ArrayList<Expression>()
                 if (initial != unitInstance) result.add(initial)
-                result.add(WhileLoop(condition, body, label))
+                result.add(WhileLoop(condition, body, label, null))
                 ExpressionList(result, currPackage, origin)
             }
         }
@@ -767,7 +762,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         return ReturnExpression(value, label, currPackage, origin)
     }
 
-    private fun findExpressionEnd(): Int {
+    open fun findExpressionEnd(): Int {
         var depth = 0
         var j = i
         while (j < tokens.size) {
@@ -800,64 +795,76 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         }
     }
 
-    private fun readExpressionImpl(minPrecedence: Int): Expression {
+    open fun readOperatorSymbol(): Pair<String, Int>? {
+        var opLength = 1
+        val symbol = when (tokens.getType(i)) {
+            TokenType.SYMBOL, TokenType.KEYWORD -> {
+                // support for <<, >>, >>>, <<=, >>=, >>>=
+                when {
+                    tokens.equals(i, "<") && tokens.equals(i + 1, "<=") -> {
+                        opLength++
+                        "<<="
+                    }
+                    tokens.equals(i, ">") && tokens.equals(i + 1, ">=") -> {
+                        opLength++
+                        ">>="
+                    }
+                    tokens.equals(i, "<") && tokens.equals(i + 1, "<") -> {
+                        opLength++
+                        if (tokens.equals(i + 2, "=")) {
+                            opLength++
+                            "<<="
+                        } else "<<"
+                    }
+                    tokens.equals(i, ">") && tokens.equals(i + 1, ">") -> {
+                        opLength++
+                        if (tokens.equals(i + 2, ">")) {
+                            opLength++
+                            if (tokens.equals(i + 3, "=")) {
+                                opLength++
+                                ">>>="
+                            } else {
+                                ">>>"
+                            }
+                        } else if (tokens.equals(i + 2, "=")) {
+                            opLength++
+                            ">>="
+                        } else ">>"
+                    }
+                    else -> tokens.toString(i)
+                }
+            }
+            TokenType.APPEND_STRING -> "+"
+            else -> return null
+        }
+        return symbol to opLength
+    }
+
+    open fun getOperator(symbol: String): Operator? {
+        return operators[symbol]
+    }
+
+    open fun readExpressionImpl(minPrecedence: Int): Expression {
         // println("reading expr at ${tokens.err(i)}")
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
 
         // main elements
         loop@ while (i < tokens.size) {
-            var opLength = 1
             // println("next token: ${tokens.err(i)}")
-            val symbol = when (tokens.getType(i)) {
-                TokenType.SYMBOL, TokenType.KEYWORD -> {
-                    // support for <<, >>, >>>, <<=, >>=, >>>=
-                    when {
-                        tokens.equals(i, "<") && tokens.equals(i + 1, "<=") -> {
-                            opLength++
-                            "<<="
-                        }
-                        tokens.equals(i, ">") && tokens.equals(i + 1, ">=") -> {
-                            opLength++
-                            ">>="
-                        }
-                        tokens.equals(i, "<") && tokens.equals(i + 1, "<") -> {
-                            opLength++
-                            if (tokens.equals(i + 2, "=")) {
-                                opLength++
-                                "<<="
-                            } else "<<"
-                        }
-                        tokens.equals(i, ">") && tokens.equals(i + 1, ">") -> {
-                            opLength++
-                            if (tokens.equals(i + 2, ">")) {
-                                opLength++
-                                if (tokens.equals(i + 3, "=")) {
-                                    opLength++
-                                    ">>>="
-                                } else {
-                                    ">>>"
-                                }
-                            } else if (tokens.equals(i + 2, "=")) {
-                                opLength++
-                                ">>="
-                            } else ">>"
-                        }
-                        else -> tokens.toString(i)
+            val (symbol, opLength) = readOperatorSymbol()
+                ?: when (tokens.getType(i)) {
+                    TokenType.NAME -> break@loop
+                    else -> {
+                        // postfix
+                        expr = tryReadPostfix(expr) ?: break@loop
+                        continue@loop
                     }
                 }
-                TokenType.NAME -> break@loop
-                TokenType.APPEND_STRING -> "+"
-                else -> {
-                    // postfix
-                    expr = tryReadPostfix(expr) ?: break@loop
-                    continue@loop
-                }
-            }
 
             if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
 
-            val op = operators[symbol]
+            val op = getOperator(symbol)
             if (op == null) {
                 // postfix
                 // println("binary[$symbol] -> null")
@@ -876,7 +883,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 val scope = currPackage
                 // println("binary[$symbol], $opLength, next: ${tokens.err(i)}")
                 expr = when (symbol) {
-                    "instanceof" -> {
+                    language.instanceOfName -> {
                         val type = readTypeNotNull(null, true)
                         val base = IsInstanceOfExpr(expr, type, scope, origin)
                         if (tokens.equals(i, TokenType.NAME)) {

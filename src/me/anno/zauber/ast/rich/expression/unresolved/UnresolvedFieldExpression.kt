@@ -29,7 +29,7 @@ class UnresolvedFieldExpression(
         return FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
     }
 
-    fun onMissingField(): Nothing {
+    override fun onMissingField(): Nothing {
         throw IllegalStateException("Failed to resolve field $name in $scope")
     }
 

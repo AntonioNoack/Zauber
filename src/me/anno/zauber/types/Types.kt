@@ -4,6 +4,7 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.impl.*
 
@@ -23,8 +24,30 @@ private fun getScope0(i: String): Scope {
     return scope
 }
 
+private fun getScope0(i: String, scopeType: ScopeType): Scope {
+    if ('.' !in i) {
+        return langScope.getOrPut(i, scopeType)
+    }
+
+    val parts = i.split('.')
+    var scope = root
+    for (i in parts.indices) {
+        val part = parts[i]
+        val scopeTypeI = if (i == parts.lastIndex) scopeType else null
+        scope = scope.getOrPut(part, scopeTypeI)
+    }
+    println("Created ${scope.pathStr} from root #${root.atomic}")
+    return scope
+}
+
 fun getScope(i: String, genericNames: String, nat: Type): Scope {
     val scope = getScope0(i)
+    ensureTypeParameters(scope, genericNames, nat)
+    return scope
+}
+
+fun getScope(i: String, genericNames: String, nat: Type, scopeType: ScopeType): Scope {
+    val scope = getScope0(i, scopeType)
     ensureTypeParameters(scope, genericNames, nat)
     return scope
 }
@@ -51,6 +74,11 @@ class TypesImpl {
         return ClassType(scope, emptyList(), -1, true)
     }
 
+    fun getType(i: String, scopeType: ScopeType): ClassType {
+        val scope = getScope(i, "", UnknownType, scopeType)
+        return ClassType(scope, emptyList(), -1, true)
+    }
+
     private fun getType(i: String, genericNames: String, nat: Type): ClassType {
         val scope = getScope(i, genericNames, nat)
         return ClassType(
@@ -62,10 +90,10 @@ class TypesImpl {
         )
     }
 
-    val Any = getType("Any")
+    val Any = getType("Any", ScopeType.NORMAL_CLASS)
     val NullableAny = UnionType(listOf(Any, NullType))
-    val Unit = getType("Unit")
-    val Boolean = getType("Boolean")
+    val Unit = getType("Unit", ScopeType.OBJECT)
+    val Boolean = getType("Boolean", ScopeType.ENUM_CLASS)
 
     val Char = getType("Char")
     val Number = getType("Number")
@@ -81,9 +109,9 @@ class TypesImpl {
     val ULong = getType("ULong")
     val Half = getType("Half")
 
-    val String = getType("String")
-    val Throwable = getType("Throwable")
-    val Nothing = getType("Nothing")
+    val String = getType("String", ScopeType.NORMAL_CLASS)
+    val Throwable = getType("Throwable", ScopeType.NORMAL_CLASS)
+    val Nothing = getType("Nothing", ScopeType.NORMAL_CLASS)
 
     val Array = getType("Array", "V", NullableAny)
     val List = getType("List", "V", NullableAny)

@@ -700,6 +700,7 @@ object ASTSimplifier {
         val conditionBlock = block0.nextOrSelfIfEmpty()
         val bodyBlock = graph.addNode()
         val afterBlock = graph.addNode()
+        val elseBlock = if (expr.elseBranch != null) graph.addNode() else null
 
         val labelScope = expr.body.scope
         graph.breakLabels[labelScope] = afterBlock
@@ -714,7 +715,13 @@ object ASTSimplifier {
         val condition = beforeBlock1v.value
         beforeBlock1v.block.branchCondition = condition.use()
         beforeBlock1v.block.ifBranch = bodyBlock
-        beforeBlock1v.block.elseBranch = afterBlock
+        beforeBlock1v.block.elseBranch = elseBlock ?: afterBlock
+
+        if (elseBlock != null) {
+            // todo test this
+            val elseBlock1 = simplifyImpl(context, expr.elseBranch!!, elseBlock, beforeBlock1, false)
+            elseBlock1.value?.block?.nextBranch = afterBlock
+        }
 
         // add body to insideBlock
         val insideFlow0 = beforeBlock1.withValue(unit, bodyBlock)

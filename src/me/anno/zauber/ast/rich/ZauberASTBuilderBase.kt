@@ -202,7 +202,7 @@ abstract class ZauberASTBuilderBase(
         return pushCall { readValueParametersImpl() }
     }
 
-    fun readValueParametersImpl(): ArrayList<NamedParameter> {
+    open fun readValueParametersImpl(): ArrayList<NamedParameter> {
         val parameters = ArrayList<NamedParameter>()
         while (i < tokens.size) {
             val name = if (
@@ -302,7 +302,7 @@ abstract class ZauberASTBuilderBase(
     fun readWhileLoop(label: String?): WhileLoop {
         val condition = readExpressionCondition()
         val body = readBodyOrExpression(label ?: "")
-        return WhileLoop(condition, body, label)
+        return WhileLoop(condition, body, label, null)
     }
 
     fun readDoWhileLoop(label: String?): DoWhileLoop {
@@ -314,7 +314,7 @@ abstract class ZauberASTBuilderBase(
 
     abstract fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter>
 
-    fun readTryCatch(): Expression {
+    open fun readTryCatch(): Expression {
         // try with resource
         val origin = origin(i - 1)
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
@@ -772,7 +772,7 @@ abstract class ZauberASTBuilderBase(
 
     abstract fun readSuperCalls(classScope: Scope, readBody: Boolean)
 
-    fun readClass(scopeType: ScopeType) {
+    open fun readClass(scopeType: ScopeType) {
         val origin = origin(i)
         val vsCodeType = when (scopeType) {
             ScopeType.INTERFACE -> VSCodeType.INTERFACE

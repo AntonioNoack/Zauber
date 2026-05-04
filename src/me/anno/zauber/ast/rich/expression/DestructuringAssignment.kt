@@ -8,6 +8,10 @@ import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 import me.anno.zauber.scope.Scope
 
+val componentNames = List(100) {
+    "component${it + 1}"
+}
+
 fun ASTBuilderBase.createDestructuringAssignment(
     names: List<FieldDeclaration>, initialValue: Expression,
     isMutable: Boolean, fieldScope: Scope
@@ -21,7 +25,7 @@ fun ASTBuilderBase.createDestructuringAssignment(
     for (i in names.indices) {
         val name = names[i]
         if (name.name == "_") continue
-        val name1 = "component${i + 1}"
+        val name1 = componentNames[i]
         val newValue = NamedCallExpression(
             tmpFieldExpr,
             name1, nameAsImport(name1),

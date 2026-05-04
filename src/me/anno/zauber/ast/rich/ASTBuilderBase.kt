@@ -96,7 +96,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
 
     fun readComma() {
         if (tokens.equals(i, TokenType.COMMA)) i++
-        else if (i < tokens.size) throw IllegalStateException("Expected comma, but got ${tokens.err(i)}")
+        else if (i < tokens.size) throw IllegalStateException("Expected comma, but got $i<${tokens.size} ${tokens.err(i)}")
     }
 
     fun consume(expected: String) {
@@ -111,6 +111,11 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             "Expected '$expected', but found ${tokens.err(i)}"
         }
         i++
+    }
+
+    fun consume(expected: String, expectedType: TokenType) {
+        consume(expected); i--
+        consume(expectedType)
     }
 
     fun consumeIf(keyword: String): Boolean {

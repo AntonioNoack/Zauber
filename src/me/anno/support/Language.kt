@@ -17,6 +17,16 @@ enum class Language {
     val allowsValuesAsTypes: Boolean
         get() = this == KOTLIN || this == ZAUBER || this == TYPESCRIPT
 
+    val hasSaveAssignments: Boolean
+        get() = this == KOTLIN || this == ZAUBER || this == PYTHON
+
+    val instanceOfName: String?
+        get() = when (this) {
+            CSHARP, JAVA -> "instanceof"
+            PYTHON, ZAUBER, KOTLIN -> "is"
+            else -> null
+        }
+
     companion object {
         fun byFileName(fileName: String): Language {
             return when {

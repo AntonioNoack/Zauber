@@ -289,7 +289,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     private fun readWhile(label: String?): WhileLoop {
         val condition = readExpressionCondition()
         val body = readBodyOrExpression()
-        return WhileLoop(condition, body, label)
+        return WhileLoop(condition, body, label, null)
     }
 
     private fun readDoWhile(label: String?): DoWhileLoop {
@@ -368,7 +368,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         TODO()
     }
 
-    fun readPrefix(): Expression {
+    override fun readPrefix(): Expression {
         val origin = origin(i)
 
         val label: String? = null

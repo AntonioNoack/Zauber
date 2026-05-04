@@ -78,7 +78,7 @@ class EnsureNotNullExpression(
         val thrownExpr = ResolvedCallExpression(null, thrownConstr, listOf(messageExpr), scope, origin)
         val throwExpr = ThrowExpression(thrownExpr, scope, origin)
 
-        val assignment = ResolvedSetFieldExpression(ownerR, fieldR, base, scope, origin)
+        val assignment = ResolvedSetFieldExpression(ownerR, fieldR, base, false, scope, origin)
         val value = IfElseBranch(isNull, throwExpr, fieldExpr, addToScope = false)
         return ExpressionList(listOf(assignment, value), scope, origin)
     }

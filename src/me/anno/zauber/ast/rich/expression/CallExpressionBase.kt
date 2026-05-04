@@ -198,10 +198,7 @@ abstract class CallExpressionBase(
 
                             val dstField = component.field
                             val dstFieldExpr = FieldExpression(dstField, subscope, dstField.origin)
-                            val param = NamedCallExpression(
-                                dstFieldExpr,
-                                "component${i + 1}", subscope, dstField.origin
-                            )
+                            val param = NamedCallExpression(dstFieldExpr, componentNames[i], subscope, dstField.origin)
                             body.add(AssignmentExpression(dstFieldExpr, param))
                             subscope.addField(dstField)
                         }

@@ -13,6 +13,7 @@ import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
+import me.anno.zauber.ast.rich.expression.componentNames
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
@@ -120,7 +121,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                                             val name = tokens.toString(i++)
                                             if (name == "_") names.add(null)
                                             else {
-                                                val getterName = "component${names.size + 1}"
+                                                val getterName = componentNames[names.size]
                                                 val initialValue =
                                                     NamedCallExpression(switchValue, getterName, scope, origin)
                                                 val field = scope.addField(

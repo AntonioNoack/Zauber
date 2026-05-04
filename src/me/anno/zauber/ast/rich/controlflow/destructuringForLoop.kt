@@ -22,7 +22,7 @@ fun ASTBuilderBase.destructuringForLoop(
         Flags.NONE, origin
     )
     val fields = variableNames.map { fieldDeclaration ->
-        // todo if _, don't create a field
+        // if _, don't create a field
         if (fieldDeclaration.name != "_") scope.addField(
             null, false, isMutable = false, null,
             fieldDeclaration.name, fieldDeclaration.type, null,
@@ -36,7 +36,7 @@ fun ASTBuilderBase.destructuringForLoop(
             .filter { it.value.name != "_" }
             .map { (index, _) ->
                 val newValue = NamedCallExpression(
-                    fullExpr, "component${index + 1}", emptyList(),
+                    fullExpr, componentNames[index], emptyList(),
                     scope, origin
                 )
                 val variableName = FieldExpression(fields[index]!!, scope, origin)

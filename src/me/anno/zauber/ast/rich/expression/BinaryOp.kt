@@ -8,8 +8,8 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 
 private val LOGGER = LogManager.getLogger("BinaryOp")
@@ -61,7 +61,8 @@ fun ASTBuilderBase.binaryOp(
                 )
             }
         }
-        "=" -> AssignmentExpression(left, right)
+        "=" -> AssignmentExpression(left, right, hasValue = !language.hasSaveAssignments)
+        ":=" -> AssignmentExpression(left, right, hasValue = true)
         "." -> {
             val typeParameters: List<Type> = emptyList()
             when (right) {
@@ -146,9 +147,9 @@ fun lookupBinaryOp(symbol: String, origin: Int): String {
         "<<" -> "shl"
         ">>" -> "shr"
         ">>>" -> "ushr"
-        "&" -> "and"
+        "&", "and" -> "and"
         "^" -> "xor"
-        "|" -> "or"
+        "|", "or" -> "or"
         else -> {
             LOGGER.warn("Unknown binary op: $symbol at ${resolveOrigin(origin)}")
             symbol
