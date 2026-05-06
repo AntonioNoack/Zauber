@@ -1,7 +1,7 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.arithmetic
 
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 /**
  * Exactly null

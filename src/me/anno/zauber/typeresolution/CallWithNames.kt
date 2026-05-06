@@ -14,7 +14,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 object CallWithNames {
 

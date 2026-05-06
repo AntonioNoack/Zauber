@@ -8,7 +8,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.UnknownType
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 
 class SignatureReader(val signature: String, val scope: Scope) {
 

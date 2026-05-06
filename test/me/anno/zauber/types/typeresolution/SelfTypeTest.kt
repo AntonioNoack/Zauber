@@ -2,8 +2,8 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test

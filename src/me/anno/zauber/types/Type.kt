@@ -11,8 +11,11 @@ import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenericsOrNull
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.impl.*
-import me.anno.zauber.types.impl.AndType.Companion.andTypes
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.*
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.memory.RefType
+import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.impl.unresolved.UnresolvedAndType
 import me.anno.zauber.types.impl.unresolved.UnresolvedNotType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
@@ -36,6 +39,7 @@ abstract class Type {
             is LambdaType -> (selfType?.contains(type) ?: false) || returnType.contains(type)
             is GenericType -> false // not the same; todo we might need to check super/redirects
             is UnresolvedType -> resolvedName.contains(type)
+            is ModifierType -> this.type.contains(type)
             else -> throw NotImplementedError("Does ${this.javaClass.simpleName} contain $type?")
         }
     }
@@ -44,9 +48,8 @@ abstract class Type {
         return when (this) {
             NullType -> false
             is ClassType -> typeParameters?.any { it.containsGenerics() } ?: false
-            is UnionType -> types.any { it.containsGenerics() }
-            is AndType -> types.any { it.containsGenerics() }
-            is NotType -> type.containsGenerics()
+            is CollectionType -> types.any { it.containsGenerics() }
+            is ModifierType -> type.containsGenerics()
             is GenericType -> true
             is LambdaType -> parameters.any { it.type.containsGenerics() } || returnType.containsGenerics()
             is UnresolvedType -> resolvedName.containsGenerics()
@@ -68,10 +71,9 @@ abstract class Type {
                     (typeParameters == null || typeParameters.indices.all {
                         typeParameters.getOrNull(it)?.isResolved() != false
                     })
-            is UnionType -> types.all { it.isResolved() }
-            is AndType -> types.any { it.isResolved() }
-            is NotType -> type.isResolved()
+            is CollectionType -> types.all { it.isResolved() }
             is ComptimeValue -> true // is it though?
+            is ModifierType -> type.isResolved()
             else -> throw NotImplementedError("Is $this (${javaClass.simpleName}) resolved?")
         }
     }
@@ -89,6 +91,7 @@ abstract class Type {
                 if (types.any { it is NotType && it.type == NullType }) this
                 else andTypes(this, NotType(NullType))
             }
+            is ModifierType -> withType(type.removeNull())
             else -> andTypes(this, NotType(NullType))
         }
     }
@@ -111,7 +114,7 @@ abstract class Type {
                     LambdaParameter(it.name, it.type.resolve(selfScope))
                 }, returnType.resolve(selfScope))
             }
-            is GenericType -> specialization[this]!!
+            is GenericType -> specialization[this] ?: superBounds
             is ClassType -> {
                 if (clazz.isTypeAlias()) {
                     val typeAlias = clazz.selfAsTypeAlias!!
@@ -133,9 +136,7 @@ abstract class Type {
                 field.resolveValueType(context)
             }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
-            is UnionType -> unionTypes(types.map { it.resolve(selfScope) })
-            is AndType -> andTypes(types.map { it.resolve(selfScope) })
-            is NotType -> type.resolve(selfScope).not()
+            is UnionType, is AndType -> withTypes(types.map { it.resolve(selfScope) })
             is UnresolvedType -> {
                 val baseType = resolveTypeByName(findSelfType(scope), className, scope, imports)
                     ?: throw IllegalStateException("Could not resolve $this in '$scope'")
@@ -152,6 +153,7 @@ abstract class Type {
             is UnresolvedNotType -> type.resolve(selfScope).not()
             is UnresolvedUnionType -> unionTypes(types.map { it.resolve(selfScope) })
             is UnresolvedAndType -> andTypes(types.map { it.resolve(selfScope) })
+            is NotType, is ValueType, is RefType -> withType(type.resolve(selfScope))
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
         }
     }
@@ -162,71 +164,60 @@ abstract class Type {
         genericValues: ParameterList?
     ): Type {
         if (genericValues == null) return this
-        return when (val type = this) {
+        return when (this) {
             is GenericType -> {
                 check(genericNames.size == genericValues.size) {
-                    "Expected same number of generic names and generic values, got $genericNames vs $genericValues ($type)"
+                    "Expected same number of generic names and generic values, got $genericNames vs $genericValues ($this)"
                 }
-                val idx = genericNames.indexOfFirst { it.name == type.name && it.scope == type.scope }
-                genericValues.getOrNull(idx) ?: type
+                val idx = genericNames.indexOfFirst { it.name == name && it.scope == scope }
+                genericValues.getOrNull(idx) ?: this
             }
-            is UnionType -> {
-                val types = types
-                    .map { genericValues.resolveGenerics(selfType, it) }
-                unionTypes(types)
-            }
-            is AndType -> {
-                val types = types
-                    .map { genericValues.resolveGenerics(selfType, it) }
-                andTypes(types)
+            is CollectionType -> {
+                withTypes(
+                    types
+                        .map { genericValues.resolveGenerics(selfType, it) })
             }
             is ClassType -> {
                 val typeArgs = typeParameters
-                if (typeArgs.isNullOrEmpty()) return type
+                if (typeArgs.isNullOrEmpty()) return this
                 val newTypeArgs = typeArgs.map { genericValues.resolveGenerics(selfType, it) }
                 if (false && typeArgs != newTypeArgs) {
                     LOGGER.info("Mapped types: $typeArgs -> $newTypeArgs")
                 }
-                ClassType(type.clazz, newTypeArgs)
+                ClassType(clazz, newTypeArgs)
             }
-            NullType, UnknownType -> type
+            NullType, UnknownType -> this
             is LambdaType -> {
-                val newSelfType = genericValues.resolveGenericsOrNull(selfType, type.selfType)
-                val newReturnType = genericValues.resolveGenerics(selfType, type.returnType)
-                val newParameters = type.parameters.map {
+                val newSelfType = genericValues.resolveGenericsOrNull(selfType, selfType)
+                val newReturnType = genericValues.resolveGenerics(selfType, returnType)
+                val newParameters = parameters.map {
                     val newType = genericValues.resolveGenerics(selfType, it.type)
                     LambdaParameter(it.name, newType)
                 }
                 LambdaType(newSelfType, newParameters, newReturnType)
             }
-            is SelfType -> selfType ?: genericValues.resolveGenerics(selfType, type.scope.typeWithArgs)
-            is ThisType -> selfType ?: genericValues.resolveGenerics(selfType, type.type)
+            is SelfType, is ThisType -> selfType ?: genericValues.resolveGenerics(selfType, type)
             is TypeOfField -> {
-                val valueType = type.field.valueType
+                val valueType = field.valueType
                 if (valueType != null) {
                     valueType.resolveGenerics(selfType, genericNames, genericValues)
                 } else {
-                    val context = ResolutionContext(type.field.selfType, false, null, emptyMap())
-                    type.field.resolveValueType(context)
+                    val context = ResolutionContext(field.selfType, false, null, emptyMap())
+                    field.resolveValueType(context)
                 }
             }
-            is NotType -> type.type.resolveGenerics(selfType, genericNames, genericValues).not()
-            is UnresolvedType -> type.resolvedName.resolveGenerics(selfType, genericNames, genericValues)
-            is UnresolvedNotType -> type.type.resolveGenerics(selfType, genericNames, genericValues).not()
-            is UnresolvedUnionType ->
-                unionTypes(types.map { it.resolveGenerics(selfType, genericNames, genericValues) })
-            is UnresolvedAndType ->
-                andTypes(types.map { it.resolveGenerics(selfType, genericNames, genericValues) })
-            else -> throw NotImplementedError("Resolve generics in $type (${type.javaClass.simpleName})")
+            is ModifierType -> withType(type.resolveGenerics(selfType, genericNames, genericValues))
+            is UnresolvedType -> resolvedName.resolveGenerics(selfType, genericNames, genericValues)
+            is UnresolvedNotType -> type.resolveGenerics(selfType, genericNames, genericValues).not()
+            else -> throw NotImplementedError("Resolve generics in $this (${javaClass.simpleName})")
         }
     }
 
     fun replace(oldType: ClassType, newType: ClassType): Type {
         return when (this) {
             oldType -> newType
-            is UnionType -> unionTypes(types.map { it.replace(oldType, newType) })
-            is AndType -> andTypes(types.map { it.replace(oldType, newType) })
-            is NotType -> type.replace(oldType, newType).not()
+            is CollectionType -> withTypes(types.map { it.replace(oldType, newType) })
+            is ModifierType -> withType(type.replace(oldType, newType))
             is GenericType, NullType -> this
             is UnresolvedType -> {
                 if (typeParameters.isNullOrEmpty()) this
@@ -259,15 +250,19 @@ abstract class Type {
         return when (this) {
             NullType, Types.Nothing,
             is UnknownType -> true
-            is GenericType, is ThisType, is SelfType -> false
+            is GenericType,
+            is ThisType,
+            is SelfType,
+            is UnresolvedType,
+            is UnresolvedAndType,
+            is UnresolvedUnionType,
+            is UnresolvedNotType -> false
             is ClassType -> typeParameters?.all { member -> member.isFullySpecialized() } ?: true
-            is UnionType -> types.all { member -> member.isFullySpecialized() }
-            is AndType -> types.all { member -> member.isFullySpecialized() }
-            is NotType -> type.isFullySpecialized()
+            is CollectionType -> types.all { member -> member.isFullySpecialized() }
+            is ModifierType -> type.isFullySpecialized()
             is LambdaType -> (selfType?.isFullySpecialized() ?: true) &&
                     parameters.all { it.type.isFullySpecialized() } &&
                     returnType.isFullySpecialized()
-            is UnresolvedType -> false
             else -> throw IllegalStateException("Is ${javaClass.simpleName} fully specialized?")
         }
     }
@@ -289,8 +284,7 @@ abstract class Type {
             }
             is UnresolvedType -> resolvedName.specialize(spec)
             // todo we need selfType to properly resolve them...
-            is ThisType -> type.specialize(spec)
-            is SelfType -> scope.typeWithArgs.specialize(spec)
+            is ThisType, is SelfType -> type.specialize(spec)
             else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
         }
     }

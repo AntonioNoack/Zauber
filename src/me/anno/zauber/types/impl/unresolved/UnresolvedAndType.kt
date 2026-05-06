@@ -1,12 +1,14 @@
 package me.anno.zauber.types.impl.unresolved
 
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.CollectionType
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 
-class UnresolvedAndType(val types: List<Type>) : Type() {
+class UnresolvedAndType(types: List<Type>) : CollectionType(types) {
 
     override fun toStringImpl(depth: Int): String = types.joinToString(" & ", "[", "]") { it.toString() }
 
+    override fun withTypes(types: List<Type>): Type = UnresolvedAndType(types)
     override fun not(): Type = UnresolvedNotType(this)
 
     override val resolvedName: Type

@@ -1,7 +1,7 @@
 package me.anno.zauber.types.impl.unresolved
 
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.NotType
+import me.anno.zauber.types.impl.arithmetic.NotType
 
 class UnresolvedNotType(val type: Type) : Type() {
 

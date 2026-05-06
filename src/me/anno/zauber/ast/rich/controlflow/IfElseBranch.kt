@@ -9,7 +9,7 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class IfElseBranch(
     val condition: Expression, val ifBranch: Expression, val elseBranch: Expression?,

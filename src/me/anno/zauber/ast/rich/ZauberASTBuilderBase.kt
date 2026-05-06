@@ -35,9 +35,12 @@ import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
-import me.anno.zauber.types.impl.AndType.Companion.andTypes
-import me.anno.zauber.types.impl.NullType.typeOrNull
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.arithmetic.NullType.typeOrNull
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnknownType
+import me.anno.zauber.types.impl.memory.RefType
+import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.impl.unresolved.UnresolvedSubType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import kotlin.math.min
@@ -361,6 +364,19 @@ abstract class ZauberASTBuilderBase(
         isAndType: Boolean, insideTypeParams: Boolean
     ): Type? {
         val i0 = i
+        if (language == Language.ZAUBER) {
+            if (consumeIf("value")) {
+                val base = readType(selfType, allowSubTypes, isAndType, insideTypeParams)
+                    ?: return null
+                return ValueType(base)
+            }
+            if (consumeIf("ref")) {
+                val base = readType(selfType, allowSubTypes, isAndType, insideTypeParams)
+                    ?: return null
+                return RefType(base)
+            }
+        }
+
         val negate = consumeIf("!", VSCodeType.OPERATOR, 0)
         if (consumeIf("*", VSCodeType.TYPE, 0)) {
             return UnknownType
@@ -704,7 +720,7 @@ abstract class ZauberASTBuilderBase(
         when (language) {
             Language.ZAUBER, Language.KOTLIN -> {
                 when (name) {
-                    "Self" -> return SelfType((resolveSelfTypeI(selfType) as ClassType).clazz)
+                    "Self" -> return SelfType(resolveSelfTypeI(selfType))
                     "This" -> return ThisType(resolveSelfTypeI(selfType))
                 }
             }

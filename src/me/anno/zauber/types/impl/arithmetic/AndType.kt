@@ -1,15 +1,17 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.arithmetic
 
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.CollectionType
 import me.anno.zauber.types.impl.TypeUtils.canInstanceBeBoth
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.impl.unresolved.UnresolvedAndType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
-class AndType(val types: List<Type>) : Type() {
+class AndType(types: List<Type>) : CollectionType(types) {
 
     companion object {
 
@@ -109,6 +111,10 @@ class AndType(val types: List<Type>) : Type() {
         check(types.size >= 2) {
             "AndType should have at least two types inside"
         }
+    }
+
+    override fun withTypes(types: List<Type>): Type {
+        return andTypes(types)
     }
 
     override fun toStringImpl(depth: Int): String {

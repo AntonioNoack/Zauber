@@ -12,7 +12,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 

@@ -14,7 +14,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 private val LOGGER = LogManager.getLogger("WhenSubjectExpression")
 

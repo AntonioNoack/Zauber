@@ -17,8 +17,8 @@ import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import kotlin.math.max
 
 class TypeScriptClassScanner(tokens: TokenList) :

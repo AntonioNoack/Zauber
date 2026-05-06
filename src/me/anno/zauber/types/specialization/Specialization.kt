@@ -5,8 +5,8 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnknownType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 
 class Specialization(typeParameters: ParameterList) {
 

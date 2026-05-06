@@ -25,8 +25,8 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnknownType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Label

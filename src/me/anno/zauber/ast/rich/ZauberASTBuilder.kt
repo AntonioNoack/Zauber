@@ -30,7 +30,7 @@ import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.NullType.typeOrNull
+import me.anno.zauber.types.impl.arithmetic.NullType.typeOrNull
 import kotlin.math.max
 
 // I want macros... how could we implement them? learn about Rust macros

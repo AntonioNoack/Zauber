@@ -2,7 +2,7 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

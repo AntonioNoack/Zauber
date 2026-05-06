@@ -1,12 +1,15 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.arithmetic
 
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ModifierType
 
-class NotType(val type: Type) : Type() {
+class NotType(type: Type) : ModifierType(type) {
 
     init {
         check(type !is NotType)
     }
+
+    override fun withType(type: Type) = type.not()
 
     override fun not(): Type = type
 

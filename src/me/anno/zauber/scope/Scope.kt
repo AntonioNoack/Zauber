@@ -480,7 +480,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         }
 
         if (name == "Self" && isClassLike()) {
-            return SelfType(this)
+            return SelfType(typeWithArgs)
         }
 
         // check siblings

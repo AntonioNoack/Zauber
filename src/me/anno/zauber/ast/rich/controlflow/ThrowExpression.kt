@@ -5,7 +5,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
     ExitExpression(value, null, scope, origin) {

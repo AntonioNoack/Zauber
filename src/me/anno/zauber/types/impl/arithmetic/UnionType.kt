@@ -1,13 +1,15 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.arithmetic
 
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.CollectionType
 import me.anno.zauber.types.impl.TypeUtils.getHierarchyDepth
 import me.anno.zauber.types.impl.TypeUtils.isChildTypeOf
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import me.anno.zauber.types.impl.unresolved.UnresolvedUnionType
 
-class UnionType(val types: List<Type>) : Type() {
+class UnionType(types: List<Type>) : CollectionType(types) {
 
     companion object {
 
@@ -74,6 +76,10 @@ class UnionType(val types: List<Type>) : Type() {
         check(types.size >= 2) {
             "Union type should have at least two types"
         }
+    }
+
+    override fun withTypes(types: List<Type>): Type {
+        return unionTypes(types)
     }
 
     override fun toStringImpl(depth: Int): String {

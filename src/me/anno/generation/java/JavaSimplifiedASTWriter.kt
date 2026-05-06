@@ -17,6 +17,9 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.arithmetic.AndType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
 
 object JavaSimplifiedASTWriter {
 

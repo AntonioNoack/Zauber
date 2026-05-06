@@ -4,8 +4,8 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnknownType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 
 class UnresolvedType(
     val className: String, val typeParameters: List<Type>?,

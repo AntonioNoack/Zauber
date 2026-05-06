@@ -15,10 +15,9 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

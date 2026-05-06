@@ -1,4 +1,4 @@
-package me.anno.zauber.types.impl
+package me.anno.zauber.types.impl.arithmetic
 
 import me.anno.zauber.types.Type
 

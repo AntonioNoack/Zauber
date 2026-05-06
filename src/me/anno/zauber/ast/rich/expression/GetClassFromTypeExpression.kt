@@ -5,7 +5,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnionType
+import me.anno.zauber.types.impl.arithmetic.UnionType
 
 class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Expression(scope, origin) {
 

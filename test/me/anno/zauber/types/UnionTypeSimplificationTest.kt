@@ -2,9 +2,9 @@ package me.anno.zauber.types
 
 import me.anno.zauber.types.IsSubTypeOfTest.Companion.get
 import me.anno.zauber.types.IsSubTypeOfTest.Companion.testInheritance
-import me.anno.zauber.types.impl.UnionType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
-import me.anno.zauber.types.impl.UnknownType
+import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

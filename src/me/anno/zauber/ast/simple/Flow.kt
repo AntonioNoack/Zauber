@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 data class Flow(val value: SimpleField, val block: SimpleNode) {
     override fun toString(): String {

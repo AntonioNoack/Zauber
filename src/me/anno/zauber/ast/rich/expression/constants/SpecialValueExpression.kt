@@ -5,7 +5,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.NullType
+import me.anno.zauber.types.impl.arithmetic.NullType
 
 class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) : Expression(scope, origin) {
 

@@ -9,12 +9,12 @@ import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.types.impl.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.NullType
-import me.anno.zauber.types.impl.UnionType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test

@@ -17,6 +17,9 @@ import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 import me.anno.zauber.types.specialization.Specialization
 
 object JavaBuilder {

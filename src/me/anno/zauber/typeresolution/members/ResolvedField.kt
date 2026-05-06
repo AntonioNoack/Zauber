@@ -26,11 +26,10 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
-import me.anno.zauber.typeresolution.members.MethodResolver.getMethodReturnType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.getScope
-import me.anno.zauber.types.impl.AndType.Companion.andTypes
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
 

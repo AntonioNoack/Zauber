@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.UnionType.Companion.unionTypes
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class ParameterList(val generics: List<Parameter>) : List<Type> {
 
