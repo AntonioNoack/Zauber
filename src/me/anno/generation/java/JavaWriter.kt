@@ -1,6 +1,7 @@
 package me.anno.generation.java
 
 import me.anno.generation.DeltaWriter
+import me.anno.generation.Generator
 import java.io.File
 
 class JavaWriter(root: File) : DeltaWriter<JavaEntry>(root) {
@@ -26,7 +27,7 @@ class JavaWriter(root: File) : DeltaWriter<JavaEntry>(root) {
         }
     }
 
-    val builder = JavaSourceGenerator.builder
+    private val builder = Generator.builder
 
     override fun finishContent(v: JavaEntry): String {
         check(v.packagePath != "?")

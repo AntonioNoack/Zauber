@@ -9,47 +9,73 @@ import java.io.File
 //  -> implement a JavaScript and a Python backend, too :3 -> surely they will share lots of logic
 
 abstract class Generator(val blockSuffix: String = "}\n") {
+    companion object {
+        val builder = StringBuilder()
 
-    val builder = StringBuilder()
-
-    var depth = 0
-    fun indent() {
-        repeat(depth) { builder.append("  ") }
-    }
-
-    var commentDepth = 0
-    fun comment(body: () -> Unit) {
-        commentDepth++
-        try {
-            builder.append(if (commentDepth == 1) "/* " else "(")
-            body()
-            builder.append(if (commentDepth == 1) " */" else ")")
-        } finally {
-            commentDepth--
+        var depth = 0
+        fun indent() {
+            repeat(depth) { builder.append("  ") }
         }
-    }
 
-    fun trimWhitespaceAtEnd() {
-        var lastIndex = builder.lastIndex
-        while (lastIndex >= 0 && builder[lastIndex].isWhitespace()) {
-            lastIndex--
+        var commentDepth = 0
+        fun comment(body: () -> Unit) {
+            commentDepth++
+            try {
+                builder.append(if (commentDepth == 1) "/* " else "(")
+                body()
+                builder.append(if (commentDepth == 1) " */" else ")")
+            } finally {
+                commentDepth--
+            }
         }
-        builder.setLength(lastIndex + 1)
-    }
 
-    fun openBlock() {
-        indent()
-        depth++
-    }
+        fun trimWhitespaceAtEnd() {
+            var lastIndex = builder.lastIndex
+            while (lastIndex >= 0 && builder[lastIndex].isWhitespace()) {
+                lastIndex--
+            }
+            builder.setLength(lastIndex + 1)
+        }
 
-    fun closeBlock() {
-        depth--
-        indent()
-    }
+        fun openBlock() {
+            indent()
+            depth++
+        }
 
-    fun nextLine() {
-        builder.append('\n')
-        indent()
+        fun closeBlock() {
+            depth--
+            indent()
+        }
+
+        fun nextLine() {
+            builder.append('\n')
+            indent()
+        }
+
+        fun writeBlock(run: () -> Unit) {
+            if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
+            builder.append("{")
+
+            depth++
+            nextLine()
+
+            try {
+                run()
+
+                if (builder.endsWith("  ")) {
+                    builder.setLength(builder.length - 2)
+                }
+
+                depth--
+                builder.append("}\n")
+                indent()
+                depth++
+
+            } finally {
+                depth--
+            }
+        }
+
     }
 
     fun block(run: () -> Unit) {

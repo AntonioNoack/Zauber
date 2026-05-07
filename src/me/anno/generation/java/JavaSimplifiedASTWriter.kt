@@ -1,5 +1,10 @@
 package me.anno.generation.java
 
+import me.anno.generation.Generator
+import me.anno.generation.Generator.Companion.comment
+import me.anno.generation.Generator.Companion.nextLine
+import me.anno.generation.Generator.Companion.trimWhitespaceAtEnd
+import me.anno.generation.Generator.Companion.writeBlock
 import me.anno.generation.java.JavaBuilder.appendFieldName
 import me.anno.generation.java.JavaBuilder.appendType
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -16,14 +21,15 @@ import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 
 object JavaSimplifiedASTWriter {
 
-    private val builder = JavaSourceGenerator.builder
+    private val builder = Generator.builder
     val imports = HashMap<String, List<String>>()
 
     fun canBeNull(type: Type): Boolean {

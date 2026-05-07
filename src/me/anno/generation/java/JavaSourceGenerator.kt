@@ -196,30 +196,6 @@ object JavaSourceGenerator : Generator() {
         writer[file] = entry
     }
 
-    fun writeBlock(run: () -> Unit) {
-        if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
-        builder.append("{")
-
-        depth++
-        nextLine()
-
-        try {
-            run()
-
-            if (builder.endsWith("  ")) {
-                builder.setLength(builder.length - 2)
-            }
-
-            depth--
-            builder.append("}\n")
-            indent()
-            depth++
-
-        } finally {
-            depth--
-        }
-    }
-
     private fun getJavaClassType(scope: Scope): String {
         return when (scope.scopeType) {
             ScopeType.ENUM_CLASS -> "final class"

@@ -1,5 +1,6 @@
 package me.anno.generation.java
 
+import me.anno.generation.Generator
 import me.anno.zauber.Compile.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
@@ -18,6 +19,7 @@ class GenerationTest {
 
     companion object {
         fun testClassGeneration(code: String): String {
+            val builder = Generator.builder
             val testScopeName = "test${ctr++}"
             val tokens = ZauberTokenizer(
                 """

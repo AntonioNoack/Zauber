@@ -1,9 +1,10 @@
 package me.anno.generation.java
 
+import me.anno.generation.Generator
+import me.anno.generation.Generator.Companion.comment
 import me.anno.generation.Specializations.foundTypeSpecialization
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.JavaSimplifiedASTWriter.imports
-import me.anno.generation.java.JavaSourceGenerator.comment
 import me.anno.generation.java.JavaSourceGenerator.createClassName
 import me.anno.generation.java.JavaSourceGenerator.createPackageName
 import me.anno.generation.java.JavaSourceGenerator.protectedTypes
@@ -24,7 +25,7 @@ import me.anno.zauber.types.specialization.Specialization
 
 object JavaBuilder {
 
-    val builder = JavaSourceGenerator.builder
+    private val builder = Generator.builder
 
     private fun resolveType(type: Type): Type {
         var type = type
