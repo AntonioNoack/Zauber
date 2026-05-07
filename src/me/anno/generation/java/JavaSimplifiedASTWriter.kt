@@ -7,6 +7,8 @@ import me.anno.generation.Generator.Companion.trimWhitespaceAtEnd
 import me.anno.generation.Generator.Companion.writeBlock
 import me.anno.generation.java.JavaBuilder.appendFieldName
 import me.anno.generation.java.JavaBuilder.appendType
+import me.anno.generation.java.JavaSourceGenerator.nativeNumbers
+import me.anno.generation.java.JavaSourceGenerator.nativeTypes
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
@@ -89,7 +91,7 @@ object JavaSimplifiedASTWriter {
 
     // todo we have converted SimpleBlock into a complex graph,
     //  before we can use it, we must convert it back
-    fun JavaSourceGenerator.appendSimplifiedAST(
+    fun appendSimplifiedAST(
         graph: SimpleGraph, expr: SimpleNode,
         // loop: SimpleLoop? = null
     ) {
@@ -113,7 +115,7 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    fun JavaSourceGenerator.appendSimplifiedAST(
+    fun appendSimplifiedAST(
         graph: SimpleGraph, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
@@ -346,7 +348,7 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    private fun outsideClassLike(scope: Scope): Scope? {
+    fun outsideClassLike(scope: Scope): Scope? {
         var scope = scope
         while (true) {
             if (scope.isClassLike()) return scope
@@ -354,7 +356,7 @@ object JavaSimplifiedASTWriter {
         }
     }
 
-    private fun appendObjectInstance(field: Field, exprScope: Scope) {
+    fun appendObjectInstance(field: Field, exprScope: Scope) {
         // todo if there is nothing dangerous in-between, we could use this.
         if (field.ownerScope == outsideClassLike(exprScope)) {
             builder.append("this.")

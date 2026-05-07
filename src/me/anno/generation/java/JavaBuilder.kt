@@ -27,7 +27,7 @@ object JavaBuilder {
 
     private val builder = Generator.builder
 
-    private fun resolveType(type: Type): Type {
+    fun resolveType(type: Type): Type {
         var type = type
         while (true) {
             try {

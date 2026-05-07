@@ -2,20 +2,21 @@ package me.anno.generation.llvm
 
 import me.anno.generation.Generator
 import me.anno.generation.java.BoxedType
+import me.anno.generation.java.JavaBuilder
 import me.anno.generation.java.JavaBuilder.appendFieldName
-import me.anno.generation.java.JavaBuilder.appendType
-import me.anno.generation.java.JavaSimplifiedASTWriter.append1
-import me.anno.generation.java.JavaSimplifiedASTWriter.appendAssign
-import me.anno.generation.java.JavaSimplifiedASTWriter.appendSelfForFieldAccess
 import me.anno.generation.java.JavaSimplifiedASTWriter.appendValueParams
 import me.anno.generation.java.JavaSimplifiedASTWriter.canBeNull
 import me.anno.generation.java.JavaSimplifiedASTWriter.isObjectLike
+import me.anno.generation.java.JavaSimplifiedASTWriter.isOwnerThis
+import me.anno.generation.java.JavaSimplifiedASTWriter.outsideClassLike
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
@@ -24,8 +25,10 @@ import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.expansion.DependencyData
-import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import java.io.File
 
@@ -66,24 +69,77 @@ object LLVMSourceGenerator : Generator() {
                 JavaSourceGenerator.createSpecializationSuffix(method.specialization)
     }
 
+    fun comment(body: () -> Unit) {
+        commentDepth++
+        try {
+            builder.append(if (commentDepth == 1) "; " else "(")
+            body()
+            if (commentDepth == 1) nextLine()
+            else builder.append(")")
+        } finally {
+            commentDepth--
+        }
+    }
+
     fun generateCode(method0: MethodSpecialization) {
 
         val (method, specialization) = method0
         val body = method.body ?: return
 
         nextLine()
-        builder.append("define void @")
-            .append(getMethodName(method0))
-        builder.append("()")
+        builder.append("define ")
+        appendType(method.returnType ?: Types.NullableAny, method.scope, false)
 
-        val context = ResolutionContext(method.selfType, specialization, true, null)
+        builder.append(" @")
+        builder.append(getMethodName(method0))
+        builder.append("(")
+
+        appendType(method.ownerScope.typeWithArgs.specialize(specialization), method.scope, false)
+        builder.append(" %this")
+        for (parameter in method.valueParameters) {
+            builder.append(", ")
+            appendType(parameter.type, method.scope, false)
+            builder.append(" %").append(parameter.name)
+        }
+
+        builder.append(")")
+
         val graph = ASTSimplifier.simplify(method0)
-
         CodeReconstruction.createCodeFromGraph(graph)
 
         writeBlock {
             appendSimplifiedAST(graph, graph.startBlock)
         }
+    }
+
+    fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
+        when (val type = JavaBuilder.resolveType(type)) {
+            Types.Int, Types.UInt -> builder.append("i32")
+            Types.Long, Types.ULong -> builder.append("i64")
+            Types.Half -> builder.append("f16")
+            Types.Float -> builder.append("f32")
+            Types.Double -> builder.append("f64")
+            else -> {
+                comment { builder.append("$type") }
+                builder.append(" i64")
+            }
+        }
+    }
+
+    fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
+        if (field.isObjectLike()) {
+            builder.append((field.type as ClassType).clazz.pathStr)
+            append('.').append(OBJECT_FIELD_NAME)
+        } else if (field.isOwnerThis(graph)) {
+            append("this")
+        } else {
+            var field = field
+            while (true) {
+                field = field.mergeInfo?.dst ?: break
+            }
+            append("%").append(field.id)
+        }
+        return this
     }
 
     fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleNode) {
@@ -104,6 +160,16 @@ object LLVMSourceGenerator : Generator() {
             // todo this may or may not be simply be possible...
             // todo this may be a loop, branch, or similar...
             TODO("Jump to either branch")
+        }
+    }
+
+    fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
+        val dst = expression.dst
+        if (dst.mergeInfo != null) {
+            builder.append1(graph, dst).append(" = ")
+        } else {
+            comment { appendType(dst.type, expression.scope, false) }
+            builder.append(' ').append1(graph, dst).append(" = ")
         }
     }
 
@@ -248,18 +314,21 @@ object LLVMSourceGenerator : Generator() {
                                 else -> false
                             }
                             val symbol = when (methodName) {
-                                "plus" -> " + "
-                                "minus" -> " - "
-                                "times" -> " * "
-                                "div" -> " / "
-                                "rem" -> " % "
+                                "plus" -> "add"
+                                "minus" -> "sub"
+                                "times" -> "mul"
+                                "div" -> "div"
+                                "rem" -> "mod"
                                 // compareTo is a problem for numbers:
                                 //  we must call their static compare() function
                                 "compareTo" -> "compare"
                                 else -> null
                             }
                             if (supportsType && symbol != null) {
-                                builder.append1(graph, expr.self).append(symbol)
+                                builder.append(symbol).append(' ')
+                                appendType(expr.dst.type, expr.scope, false)
+                                builder.append(' ')
+                                builder.append1(graph, expr.self).append(", ")
                                 builder.append1(graph, expr.valueParameters[0])
                                 true
                             } else false
@@ -300,7 +369,7 @@ object LLVMSourceGenerator : Generator() {
             }
             is SimpleReturn -> {
                 // todo cast if necessary
-                builder.append("return ").append1(graph, expr.field)
+                builder.append("ret ").append1(graph, expr.field)
             }
             is SimpleThrow -> {
                 // todo cast if necessary
@@ -313,17 +382,39 @@ object LLVMSourceGenerator : Generator() {
                 }
             }
         }
-        when (expr) {
-            is SimpleAssignment,
-            is SimpleSetField,
-            is SimpleExit,
-            is SimpleDeclaration -> builder.append(';')
-            else -> {}
-        }
         if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
         if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
-            builder.append("throw new AssertionError(\"Unreachable\");")
+            builder.append("throw new AssertionError(\"Unreachable\")")
             nextLine()
+        }
+    }
+
+    fun appendObjectInstance(field: Field, exprScope: Scope) {
+        // todo if there is nothing dangerous in-between, we could use this.
+        if (field.ownerScope == outsideClassLike(exprScope)) {
+            builder.append("this.")
+        } else {
+            JavaBuilder.appendType(field.ownerScope.typeWithArgs, exprScope, true)
+            builder.append('.').append(OBJECT_FIELD_NAME).append('.')
+        }
+    }
+
+    fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
+        if (self.type is ClassType && self.type.clazz.isObjectLike()) {
+            appendObjectInstance(field, exprScope)
+        } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {
+            builder.append("/* ${field.ownerScope.pathStr} */ ")
+        } else {
+            val fieldSelfType = field.selfType
+            val needsCast = self.type != fieldSelfType
+            if (needsCast && fieldSelfType != null) {
+                builder.append("((")
+                JavaBuilder.appendType(fieldSelfType, exprScope, true)
+                builder.append(')')
+                builder.append1(graph, self).append(").")
+            } else {
+                builder.append1(graph, self).append('.')
+            }
         }
     }
 
