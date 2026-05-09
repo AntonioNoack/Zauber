@@ -1,6 +1,6 @@
-package me.anno.generation.java
+package me.anno.generation
 
-import me.anno.generation.DeltaWriter
+import me.anno.generation.java.JavaSourceGenerator
 import java.io.File
 
 class FileWithImportsWriter(val self: JavaSourceGenerator, root: File) : DeltaWriter<FileEntry>(root) {

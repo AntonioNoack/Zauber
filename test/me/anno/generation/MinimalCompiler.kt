@@ -75,6 +75,7 @@ abstract class MinimalCompiler {
             projectFolder.mkdirs()
 
             val srcFolder = File(projectFolder, "src")
+            if (!debug) srcFolder.delete()
             srcFolder.mkdirs()
 
             registerMethods()

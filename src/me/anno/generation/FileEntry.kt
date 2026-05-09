@@ -1,4 +1,4 @@
-package me.anno.generation.java
+package me.anno.generation
 
 data class FileEntry(val packagePath: String) {
     val content = StringBuilder()

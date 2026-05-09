@@ -1,4 +1,4 @@
-package me.anno.generation.java
+package me.anno.generation
 
 /**
  * some types exist in two forms, native and boxed;

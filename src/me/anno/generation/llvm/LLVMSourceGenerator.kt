@@ -1,7 +1,6 @@
 package me.anno.generation.llvm
 
-import me.anno.generation.java.BoxedType
-import me.anno.generation.java.JavaBuilder
+import me.anno.generation.BoxedType
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -55,7 +54,7 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
         builder.clear()
     }
 
-    fun getMethodName(method: MethodSpecialization): String {
+    override fun getMethodName(method: MethodSpecialization): String {
         return method.method.methodScope.pathStr +
                 JavaSourceGenerator().createSpecializationSuffix(method.specialization)
     }
@@ -75,7 +74,7 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
     fun generateCode(method0: MethodSpecialization) {
 
         val (method, specialization) = method0
-        val body = method.body ?: return
+        method.body ?: return
 
         nextLine()
         builder.append("define ")
@@ -104,7 +103,7 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
-        when (val type = JavaBuilder.resolveType(type)) {
+        when (val type = resolveType(type)) {
             Types.Int, Types.UInt -> builder.append("i32")
             Types.Long, Types.ULong -> builder.append("i64")
             Types.Half -> builder.append("f16")
