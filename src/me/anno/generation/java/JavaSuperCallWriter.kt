@@ -1,8 +1,5 @@
 package me.anno.generation.java
 
-import me.anno.generation.Generator
-import me.anno.generation.Generator.Companion.comment
-import me.anno.generation.Generator.Companion.nextLine
 import me.anno.zauber.ast.rich.InnerSuperCall
 import me.anno.zauber.ast.rich.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
@@ -19,9 +16,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 
 object JavaSuperCallWriter {
 
-    private val builder = Generator.builder
-
-    fun appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
+    fun JavaSourceGenerator.appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
         // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
         //  a) create helper functions
         //  b) implement our own constructor
@@ -34,7 +29,7 @@ object JavaSuperCallWriter {
         nextLine()
     }
 
-    fun appendExpression(context: ResolutionContext, expr: Expression) {
+    fun JavaSourceGenerator.appendExpression(context: ResolutionContext, expr: Expression) {
         when (expr) {
             is DotExpression -> {
                 appendExpression(context, expr.left)

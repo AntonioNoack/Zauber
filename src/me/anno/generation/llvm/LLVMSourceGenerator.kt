@@ -60,7 +60,7 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
                 JavaSourceGenerator().createSpecializationSuffix(method.specialization)
     }
 
-    fun comment(body: () -> Unit) {
+    override fun comment(body: () -> Unit) {
         commentDepth++
         try {
             builder.append(if (commentDepth == 1) "; " else "(")

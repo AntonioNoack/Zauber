@@ -6,7 +6,7 @@ import java.io.File
 
 class FileWithImportsWriter(val self: JavaSourceGenerator, root: File) : DeltaWriter<FileEntry>(root) {
 
-    private val builder = Generator.builder
+    private val builder = self.builder
 
     override fun finishContent(v: FileEntry): String {
         check(v.packagePath != "?")
@@ -14,6 +14,6 @@ class FileWithImportsWriter(val self: JavaSourceGenerator, root: File) : DeltaWr
         self.writeImports(v.imports)
 
         builder.append(v.content)
-        return Generator.finish()
+        return self.finish()
     }
 }
