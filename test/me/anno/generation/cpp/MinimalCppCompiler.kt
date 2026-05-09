@@ -21,7 +21,7 @@ object MinimalCppCompiler : MinimalCompiler() {
         gen.generateCode(srcFolder, dependencies, mainMethod)
 
         val si = projectFolder.absolutePath.length + 1
-        val filesList = gen.cppFiles.joinToString(" ") { file -> file.absolutePath.substring(si) }
+        val filesList = gen.cppFiles.joinToString("\n") { file -> file.absolutePath.substring(si) }
         File(projectFolder, "CMakeLists.txt")
             .writeText(minimalCMakeLists.replace("CPP_FILES_LIST", filesList))
 
@@ -34,10 +34,9 @@ object MinimalCppCompiler : MinimalCompiler() {
 
     override fun execute(projectFolder: File): String {
         val buildFolder = File(projectFolder, "build")
-        // run it
-        val executable =
-            if (isLinux) File(buildFolder, "Zauber")
-            else File(buildFolder, "Debug/Zauber.exe")
-        return runProcessGetPrinted(executable)
+        val programName =
+            if (isLinux) "./Zauber"
+            else "./Debug/Zauber.exe"
+        return runProcessGetPrinted(buildFolder, programName)
     }
 }

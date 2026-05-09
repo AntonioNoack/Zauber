@@ -54,7 +54,7 @@ open class JavaSourceGenerator : Generator() {
 
     companion object {
 
-        val protectedTypes by threadLocal {
+        val protectedJavaTypes by threadLocal {
             Types.run {
                 mapOf(
                     String to BoxedType("java.lang.String", "java.lang.String"),
@@ -81,8 +81,8 @@ open class JavaSourceGenerator : Generator() {
             }
         }
 
-        val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
-        val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
+        val nativeJavaTypes by threadLocal { protectedJavaTypes.filter { (_, it) -> it.boxed != it.native } }
+        val nativeJavaNumbers by threadLocal { nativeJavaTypes - Types.Boolean }
 
         val registeredMethods by threadLocal { HashMap<ExternalKey, String>() }
         fun register(key: ExternalKey, implementation: String) {
@@ -93,6 +93,10 @@ open class JavaSourceGenerator : Generator() {
             register(ExternalKey(scope, name, valueParameterTypes), implementation)
         }
     }
+
+    open val protectedTypes: Map<ClassType, BoxedType> = protectedJavaTypes
+    open val nativeTypes: Map<ClassType, BoxedType> get() = nativeJavaTypes
+    open val nativeNumbers: Map<ClassType, BoxedType> get() = nativeJavaNumbers
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         val writer = FileWithImportsWriter(this, dst)
@@ -139,17 +143,17 @@ open class JavaSourceGenerator : Generator() {
             }
     }
 
-    open fun defineMainMethodCall(dst: File, writer: FileWithImportsWriter, mainMethod: Method) {
-        val file = File(dst, "zauber/LaunchZauber.${getExtension(false)}")
+    open fun getMainMethodFile(dst: File): File {
+        return File(dst, "zauber/LaunchZauber.${getExtension(false)}")
+    }
 
+    open fun defineMainMethodCall(dst: File, writer: FileWithImportsWriter, mainMethod: Method) {
         appendType(mainMethod.ownerScope.typeWithArgs, root, true)
         appendGetObjectInstance()
         val className = builder.toString()
         builder.clear()
 
-        val imports0 = imports
-        writer[file] = defineMainMethodCallEntry(dst, writer, mainMethod, className)
-        imports0.clear()
+        writer[getMainMethodFile(dst)] = defineMainMethodCallEntry(dst, writer, mainMethod, className)
     }
 
     open fun appendGetObjectInstance() {

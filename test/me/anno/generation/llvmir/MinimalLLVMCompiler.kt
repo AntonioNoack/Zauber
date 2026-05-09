@@ -10,7 +10,7 @@ object MinimalLLVMCompiler : MinimalCompiler() {
 
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
         val srcFile = File(projectFolder, "Source.ll")
-        LLVMSourceGenerator.generateCode(
+        LLVMSourceGenerator().generateCode(
             srcFile, dependencies,
             mainMethod
         )

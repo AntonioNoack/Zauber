@@ -23,26 +23,34 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 import java.io.File
 
 // todo this is like C (end game difficulty), just different commands?
-object LLVMSourceGenerator : JavaSourceGenerator() {
+class LLVMSourceGenerator : JavaSourceGenerator() {
 
-    // taken from Java
-    val protectedTypes by threadLocal {
-        Types.run {
-            mapOf(
-                Boolean to BoxedType("Boolean", "boolean"),
-                Byte to BoxedType("Byte", "byte"),
-                Short to BoxedType("Short", "short"),
-                Int to BoxedType("Integer", "int"),
-                Long to BoxedType("Long", "long"),
-                Char to BoxedType("Character", "char"),
-                Float to BoxedType("Float", "float"),
-                Double to BoxedType("Double", "double"),
-            )
+    companion object {
+
+        // taken from Java
+        val protectedLLVMTypes by threadLocal {
+            Types.run {
+                mapOf(
+                    Boolean to BoxedType("Boolean", "boolean"),
+                    Byte to BoxedType("Byte", "byte"),
+                    Short to BoxedType("Short", "short"),
+                    Int to BoxedType("Integer", "int"),
+                    Long to BoxedType("Long", "long"),
+                    Char to BoxedType("Character", "char"),
+                    Float to BoxedType("Float", "float"),
+                    Double to BoxedType("Double", "double"),
+                )
+            }
         }
+
+        val nativeLLVMTypes by threadLocal { protectedLLVMTypes.filter { (_, it) -> it.boxed != it.native } }
+        val nativeLLVMNumbers by threadLocal { nativeLLVMTypes - Types.Boolean }
+
     }
 
-    val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
-    val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
+    override val protectedTypes: Map<ClassType, BoxedType> get() = protectedLLVMTypes
+    override val nativeTypes: Map<ClassType, BoxedType> get() = nativeLLVMTypes
+    override val nativeNumbers: Map<ClassType, BoxedType> get() = nativeLLVMNumbers
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         for (method in data.calledMethods) {

@@ -44,6 +44,7 @@ abstract class MinimalCompiler {
     }
 
     fun runProcessGetPrinted(folder: File, vararg params: String): String {
+        check(params.isNotEmpty()) { "Cannot run empty command" }
         val jvmProcess = ProcessBuilder(*params)
             .directory(folder)
             .start()
