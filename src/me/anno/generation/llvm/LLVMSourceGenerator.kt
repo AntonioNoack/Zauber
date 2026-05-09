@@ -20,7 +20,6 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
-import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
@@ -32,7 +31,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import java.io.File
 
-// todo this is like C, just different commands?
+// todo this is like C (end game difficulty), just different commands?
 object LLVMSourceGenerator : Generator() {
 
     // taken from Java
@@ -131,7 +130,7 @@ object LLVMSourceGenerator : Generator() {
             builder.append((field.type as ClassType).clazz.pathStr)
             append('.').append(OBJECT_FIELD_NAME)
         } else if (field.isOwnerThis(graph)) {
-            append("this")
+            append("%this")
         } else {
             var field = field
             while (true) {
@@ -392,9 +391,9 @@ object LLVMSourceGenerator : Generator() {
     fun appendObjectInstance(field: Field, exprScope: Scope) {
         // todo if there is nothing dangerous in-between, we could use this.
         if (field.ownerScope == outsideClassLike(exprScope)) {
-            builder.append("this.")
+            builder.append("%this.")
         } else {
-            JavaBuilder.appendType(field.ownerScope.typeWithArgs, exprScope, true)
+            appendType(field.ownerScope.typeWithArgs, exprScope, true)
             builder.append('.').append(OBJECT_FIELD_NAME).append('.')
         }
     }
@@ -409,7 +408,7 @@ object LLVMSourceGenerator : Generator() {
             val needsCast = self.type != fieldSelfType
             if (needsCast && fieldSelfType != null) {
                 builder.append("((")
-                JavaBuilder.appendType(fieldSelfType, exprScope, true)
+                appendType(fieldSelfType, exprScope, true)
                 builder.append(')')
                 builder.append1(graph, self).append(").")
             } else {

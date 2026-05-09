@@ -30,7 +30,7 @@ class GenerateAndRunTest {
         val printed = testCompileMainToLLVMAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
+                "System.out.println(arg0)" // todo adjust this
             )
         }
         assertEquals("3\n", printed)
