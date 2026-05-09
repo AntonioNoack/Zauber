@@ -92,6 +92,6 @@ abstract class Generator(val blockSuffix: String = "}\n") {
     }
 
     open fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
-        throw NotImplementedError()
+        throw NotImplementedError("${javaClass.simpleName}.generateCode()")
     }
 }
