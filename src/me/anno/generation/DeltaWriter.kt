@@ -47,7 +47,7 @@ abstract class DeltaWriter<V>(val root: File) {
         }
     }
 
-    abstract fun finishContent(v: V): String
+    abstract fun finishContent(file: File, content: V): String
 
     fun finish() {
         var numDeleted = 0
@@ -60,7 +60,7 @@ abstract class DeltaWriter<V>(val root: File) {
         }
         for ((file, content) in newContent) {
             if (content != null) {
-                val strContent = finishContent(content)
+                val strContent = finishContent(file, content)
                 if (strContent != oldContent[file]) {
                     file.parentFile.mkdirs()
                     file.writeText(strContent)

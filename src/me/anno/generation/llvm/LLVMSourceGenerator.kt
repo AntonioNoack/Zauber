@@ -3,7 +3,6 @@ package me.anno.generation.llvm
 import me.anno.generation.BoxedType
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
@@ -119,7 +118,7 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
     override fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
         if (field.isObjectLike()) {
             builder.append((field.type as ClassType).clazz.pathStr)
-            append('.').append(OBJECT_FIELD_NAME)
+            appendGetObjectInstance()
         } else if (field.isOwnerThis(graph)) {
             append("%this")
         } else {
@@ -386,7 +385,8 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
             builder.append("%this.")
         } else {
             appendType(field.ownerScope.typeWithArgs, exprScope, true)
-            builder.append('.').append(OBJECT_FIELD_NAME).append('.')
+            appendGetObjectInstance()
+            builder.append('.')
         }
     }
 

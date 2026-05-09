@@ -1,10 +1,6 @@
 package me.anno.generation.java
 
-import me.anno.generation.BoxedType
-import me.anno.generation.FileEntry
-import me.anno.generation.FileWithImportsWriter
-import me.anno.generation.Generator
-import me.anno.generation.Specializations.foundTypeSpecialization
+import me.anno.generation.*
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.Specializations.specializations
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
@@ -127,9 +123,9 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun defineNullableAnnotation(dst: File, writer: FileWithImportsWriter) {
+    open fun defineNullableAnnotation(dst: File, writer: FileWithImportsWriter) {
         val file = File(dst, "org/jetbrains/annotations/Nullable.java")
-        writer[file] = FileEntry("org.jetbrains.annotations")
+        writer[file] = FileEntry("org.jetbrains.annotations".split('.'), this)
             .apply {
                 content.append(
                     """
@@ -147,7 +143,7 @@ open class JavaSourceGenerator : Generator() {
         val file = File(dst, "zauber/LaunchZauber.${getExtension(false)}")
 
         appendType(mainMethod.ownerScope.typeWithArgs, root, true)
-        builder.append('.').append(OBJECT_FIELD_NAME)
+        appendGetObjectInstance()
         val className = builder.toString()
         builder.clear()
 
@@ -156,15 +152,17 @@ open class JavaSourceGenerator : Generator() {
         imports0.clear()
     }
 
+    open fun appendGetObjectInstance() {
+        builder.append('.').append(OBJECT_FIELD_NAME)
+    }
+
     open fun defineMainMethodCallEntry(
         dst: File, writer: FileWithImportsWriter,
         mainMethod: Method, className: String
     ): FileEntry {
         val needsArgs = mainMethod.valueParameters.isNotEmpty()
-        val imports0 = imports
-        return FileEntry("zauber")
+        return FileEntry(listOf("zauber"), this)
             .apply {
-                imports.putAll(imports0)
                 content.append(
                     """
                 public class LaunchZauber {
@@ -227,7 +225,12 @@ open class JavaSourceGenerator : Generator() {
     /**
      * whether classes in this package are already included
      * */
-    open fun hasAutoPackageImports() = true
+    open fun filterImports(name: String, packageScope: Scope, headerOnly: Boolean) {
+        imports.entries.removeIf { (name1, path) ->
+            // these are automatically imported:
+            name == name1 || path.subList(0, path.size - 1) == packageScope.path
+        }
+    }
 
     fun writeInto(
         packageScope: Scope,
@@ -237,15 +240,18 @@ open class JavaSourceGenerator : Generator() {
         headerOnly: Boolean
     ): File {
         val file = createFile(packageScope, name, dst, getExtension(headerOnly))
-        val entry = writer[file] ?: FileEntry(packageScope.pathStr)
-        entry.content.append(builder); builder.clear()
-        if (hasAutoPackageImports()) imports.entries.removeIf { (name1, path) ->
-            // these are automatically imported:
-            name == name1 || path.subList(0, path.size - 1) == packageScope.path
+        filterImports(name, packageScope, headerOnly)
+        val entry = writer[file]
+        if (entry != null) {
+            entry.content.append(builder); builder.clear()
+            entry.imports.putAll(imports)
+            entry.nativeImports.addAll(nativeImports)
+            imports.clear()
+            nativeImports.clear()
+            writer[file] = entry
+        } else {
+            writer[file] = FileEntry(packageScope.path, this)
         }
-        entry.imports.putAll(imports)
-        imports.clear()
-        writer[file] = entry
         return file
     }
 
@@ -304,42 +310,50 @@ open class JavaSourceGenerator : Generator() {
         nextLine()
     }
 
-    fun generateClassBody(
-        className: String, scope: Scope, specialization: Specialization,
+    open fun generateClassBody(
+        className: String, classScope: Scope, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
         headerOnly: Boolean
     ) {
-
-        declareImport(className, scope)
+        declareImport(classScope, specialization)
         specializations.add(specialization)
 
         appendSpecializationInfoComment()
 
-        appendClassFlags(scope)
-        appendClassPrefix(scope, className)
+        appendClassFlags(classScope)
+        appendClassPrefix(classScope, className)
 
         if (specialization.containsGenerics()) {
-            appendTypeParams(scope)
+            appendTypeParams(classScope)
         }
-        appendSuperTypes(scope)
+        appendSuperTypes(classScope)
 
-        writeBlock {
-
-            if (scope.isObjectLike()) {
-                appendStaticInstance(className)
-            }
-
-            val allowFinalFields = methods.any { it.method is Constructor }
-            appendFields(scope, fields, allowFinalFields, headerOnly)
-            appendConstructors(scope, className, methods, headerOnly)
-            appendMethods(scope, methods, headerOnly)
-        }
+        appendClassBody(classScope, className, methods, fields, headerOnly)
 
         @Suppress("Since15")
         specializations.removeLast()
     }
 
-    private fun appendFields(
+    open fun appendClassBody(
+        classScope: Scope, className: String,
+        methods: Collection<MethodSpecialization>,
+        fields: Collection<FieldSpecialization>,
+        headerOnly: Boolean
+    ) {
+        writeBlock {
+
+            if (classScope.isObjectLike()) {
+                appendStaticInstance(className)
+            }
+
+            val allowFinalFields = methods.any { it.method is Constructor }
+            appendFields(classScope, fields, allowFinalFields, headerOnly)
+            appendConstructors(classScope, className, methods, headerOnly)
+            appendMethods(classScope, className, methods, headerOnly)
+        }
+    }
+
+    fun appendFields(
         classScope: Scope, fields: Collection<FieldSpecialization>, allowFinal: Boolean,
         headerOnly: Boolean
     ) {
@@ -347,7 +361,7 @@ open class JavaSourceGenerator : Generator() {
         for ((field) in fields) {
             if (!needsFieldByParameter(field.byParameter)) continue
             if (!needsBackingField(field)) continue
-            appendBackingField(classScope, field, allowFinal)
+            appendBackingField(classScope, field, allowFinal, headerOnly)
         }
     }
 
@@ -359,10 +373,14 @@ open class JavaSourceGenerator : Generator() {
         return setter.body!!.needsBackingField(setter.scope)
     }
 
-    private fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean) {
+    open fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
         builder.append("public ")
         if (field == classScope.objectField) builder.append("static ")
         if (!field.isMutable && allowFinal) builder.append("final ")
+    }
+
+    open fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+        appendFieldFlags(classScope, field, allowFinal)
 
         val valueType = (field.valueType ?: Types.NullableAny).resolve(classScope)
         appendType(valueType, classScope, false)
@@ -373,7 +391,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun appendMethods(
-        classScope: Scope,
+        classScope: Scope, className: String,
         methods: Collection<MethodSpecialization>,
         headerOnly: Boolean
     ) {
@@ -386,7 +404,7 @@ open class JavaSourceGenerator : Generator() {
             }
 
             try {
-                appendMethod(classScope, method0, headerOnly)
+                appendMethod(classScope, className, method0, headerOnly)
             } catch (e: Exception) {
                 comment { builder.append(e) }
                 nextLine()
@@ -395,13 +413,13 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun appendConstructors(
-        classScope: Scope, name: String,
+        classScope: Scope, className: String,
         methods: Collection<MethodSpecialization>,
         headerOnly: Boolean
     ) {
         for ((constructor) in methods) {
             if (constructor !is Constructor) continue
-            appendConstructor(classScope, constructor, name, headerOnly)
+            appendConstructor(classScope, className, constructor, headerOnly)
         }
     }
 
@@ -413,13 +431,24 @@ open class JavaSourceGenerator : Generator() {
                 )
     }
 
-    fun appendMethod(classScope: Scope, method0: MethodSpecialization, headerOnly: Boolean) {
+    open fun appendMethod(classScope: Scope, className: String, method0: MethodSpecialization, headerOnly: Boolean) {
         val (method, spec) = method0
         method as Method
 
         // some spacing
         nextLine()
 
+        appendMethodHeader(classScope, className, method0, headerOnly)
+        appendMethodBody(method, spec, headerOnly)
+    }
+
+    open fun appendMethodHeader(
+        classScope: Scope,
+        className: String,
+        method0: MethodSpecialization,
+        headerOnly: Boolean
+    ) {
+        val method = method0.method as Method
         appendMethodFlags(classScope, method, headerOnly)
 
         val selfType = method.selfType
@@ -435,7 +464,6 @@ open class JavaSourceGenerator : Generator() {
         val selfTypeIfNecessary = if (!isBySelf) selfType else null
         method.selfTypeIfNecessary = selfTypeIfNecessary
         appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
-        appendMethodBody(method, spec, headerOnly)
     }
 
     open fun appendMethodBody(method: Method, spec: Specialization, headerOnly: Boolean) {
@@ -453,7 +481,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendNativeImplementation(nativeImpl: String, method: MethodLike) {
+    open fun appendNativeImplementation(nativeImpl: String, method: MethodLike) {
         writeBlock {
             builder.append(nativeImpl)
             builder.append(";")
@@ -466,7 +494,8 @@ open class JavaSourceGenerator : Generator() {
         if ("return " !in builder) {
             builder.append("return ")
             appendType(Types.Unit, method.scope, false)
-            builder.append('.').append(OBJECT_FIELD_NAME).append(";")
+            appendGetObjectInstance()
+            builder.append(";")
             nextLine()
         }
     }
@@ -512,15 +541,26 @@ open class JavaSourceGenerator : Generator() {
         } else null
     }
 
-    fun appendConstructor(classScope: Scope, constructor: Constructor, name: String, headerOnly: Boolean) {
+    open fun appendConstructorFlags(classScope: Scope, constructor: Constructor, headerOnly: Boolean) {
+        val visibility = if (classScope.isObject()) "private " else "public "
+        builder.append(visibility)
+    }
+
+    open fun appendConstructor(classScope: Scope, className: String, constructor: Constructor, headerOnly: Boolean) {
 
         // some spacing
         nextLine()
 
-        val visibility = if (classScope.isObject()) "private " else "public "
-        builder.append(visibility).append(name)
-        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+        appendConstructorHeader(classScope, className, constructor, headerOnly)
+        appendConstructorBody(classScope, className, constructor, headerOnly)
+    }
 
+    open fun appendConstructorBody(
+        classScope: Scope,
+        className: String,
+        constructor: Constructor,
+        headerOnly: Boolean
+    ) {
         val body = constructor.body
         val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
 
@@ -536,7 +576,16 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
+    open fun appendConstructorHeader(
+        classScope: Scope, className: String,
+        constructor: Constructor, headerOnly: Boolean
+    ) {
+        appendConstructorFlags(classScope, constructor, headerOnly)
+        builder.append(className)
+        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+    }
+
+    fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
         if (valueParameters.isEmpty()) return
         builder.append('<')
         for (param in valueParameters) {
@@ -550,7 +599,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append("> ")
     }
 
-    private fun appendValueParameterDeclaration(
+    fun appendValueParameterDeclaration(
         selfTypeIfNecessary: Type?,
         valueParameters: List<Parameter>,
         scope: Scope
@@ -569,7 +618,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
-    private fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
+    fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
         writeBlock {
             try {
                 val method1 = MethodSpecialization(method, context.specialization)
@@ -605,7 +654,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendTypeParams(scope: Scope) {
+    fun appendTypeParams(scope: Scope) {
         val typeParams = scope.typeParameters
         if (typeParams.isNotEmpty()) {
             builder.append('<')
@@ -621,7 +670,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun appendSuperTypes(scope: Scope) {
+    fun appendSuperTypes(scope: Scope) {
         try {
             val superCall0 = scope.superCalls.firstOrNull()
             if (superCall0 != null &&
@@ -647,11 +696,14 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun declareImport(name: String, scope: Scope) {
-        imports[name] = scope.path
+    fun declareImport(classScope: Scope, specialization: Specialization) {
+        val length = builder.length
+        appendClassType(classScope, specialization)
+        builder.setLength(length)
     }
 
     val imports = HashMap<String, List<String>>()
+    val nativeImports = LinkedHashSet<String>()
 
     fun canBeNull(type: Type): Boolean {
         return when (type) {
@@ -669,10 +721,15 @@ open class JavaSourceGenerator : Generator() {
         if (dst.mergeInfo != null) {
             builder.append1(graph, dst).append(" = ")
         } else {
-            builder.append("final ")
-            appendType(dst.type, expression.scope, false)
-            builder.append(' ').append1(graph, dst).append(" = ")
+            appendDeclare(graph, expression)
         }
+    }
+
+    open fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
+        val dst = expression.dst
+        builder.append("final ")
+        appendType(dst.type, expression.scope, false)
+        builder.append(' ').append1(graph, dst).append(" = ")
     }
 
     fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
@@ -685,7 +742,7 @@ open class JavaSourceGenerator : Generator() {
     open fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
         if (field.isObjectLike()) {
             appendType(field.type, (field.type as ClassType).clazz, false)
-            append('.').append(OBJECT_FIELD_NAME)
+            appendGetObjectInstance()
         } else if (field.isOwnerThis(graph)) {
             append("this")
         } else {
@@ -982,7 +1039,8 @@ open class JavaSourceGenerator : Generator() {
             builder.append("this.")
         } else {
             appendType(field.ownerScope.typeWithArgs, exprScope, true)
-            builder.append('.').append(OBJECT_FIELD_NAME).append('.')
+            appendGetObjectInstance()
+            builder.append('.')
         }
     }
 
@@ -1087,18 +1145,19 @@ open class JavaSourceGenerator : Generator() {
             return
         }
 
-        val params = type.typeParameters
-        val path0 = if (!params.isNullOrEmpty()) {
-            val spec = Specialization(type)
-            val className = createClassName(type.clazz, spec)
-            foundTypeSpecialization(type.clazz, spec)
-            type.clazz.parent!!.path + className
-        } else {
-            type.clazz.path
-        }
+        val specialization = Specialization(type)
+        appendClassType(type.clazz, specialization)
+    }
 
-        val path1 = if (type.clazz.scopeType == ScopeType.PACKAGE) {
-            val extraName = createPackageName(type.clazz, Specialization(type))
+    fun appendClassType(type: Scope, specialization: Specialization) {
+
+        check(type.scopeType != ScopeType.TYPE_ALIAS)
+
+        val className = createClassName(type, specialization)
+        val path0 = type.parent!!.path + className
+
+        val path1 = if (type.scopeType == ScopeType.PACKAGE) {
+            val extraName = createPackageName(type, specialization)
             path0 + extraName
         } else path0
 
@@ -1129,19 +1188,31 @@ open class JavaSourceGenerator : Generator() {
         builder.append(field.name)
     }
 
-    open fun appendPackageDeclaration(packagePath: String) {
-        builder.append("package ").append(packagePath).append(";\n\n")
+    open fun appendPackageDeclaration(packagePath: List<String>, file: File) {
+        builder.append("package ")
+        appendPath(packagePath)
+        builder.append(";\n\n")
     }
 
-    fun writeImports(imports: Map<String, List<String>>) {
-        var hadImport = false
-        for (import in imports.values) {
-            if (import.isNotEmpty()) {
-                appendImport(import)
-                hadImport = true
-            }
+    open fun beginPackageDeclaration(
+        packagePath: List<String>, file: File, imports: Map<String, List<String>>,
+        nativeImports: Set<String>
+    ) {
+        appendPackageDeclaration(packagePath, file)
+        writeImports(packagePath, imports)
+    }
+
+    open fun endPackageDeclaration(packagePath: List<String>, file: File) {
+        // nothing to do in Java
+    }
+
+    open fun writeImports(packagePath: List<String>, imports: Map<String, List<String>>) {
+        val importList = imports.values.sortedWith(ImportSorter)
+        val position = builder.length
+        for (import in importList) {
+            appendImport(packagePath, import)
         }
-        if (hadImport) builder.append('\n')
+        if (builder.length > position) nextLine()
     }
 
     fun appendPath(path: List<String>) {
@@ -1151,7 +1222,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendImport(import: List<String>) {
+    open fun appendImport(packagePath: List<String>, import: List<String>) {
         builder.append("import ")
         appendPath(import)
         builder.append(";\n")

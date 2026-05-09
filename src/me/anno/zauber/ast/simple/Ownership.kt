@@ -32,6 +32,8 @@ enum class Ownership {
      * used for call arguments;
      * GC only happens on owner
      * pointer-comparison compares data-pointer
+     *
+     * todo keyword/annotation for this :)
      * */
     OWNED,
 

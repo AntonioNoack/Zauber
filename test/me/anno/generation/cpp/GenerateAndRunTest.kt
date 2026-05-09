@@ -9,6 +9,14 @@ import org.junit.jupiter.api.Test
 
 class GenerateAndRunTest {
 
+    fun registerLib() {
+        register(
+            langScope, "println", listOf(Types.Int),
+            "#include <stdio.h>\n" +
+                    "printf(\"%d\\n\",arg0)"
+        )
+    }
+
     @Test
     fun testSimpleAddition() {
         val code = """
@@ -28,10 +36,7 @@ class GenerateAndRunTest {
         """.trimIndent()
 
         val printed = testCompileMainAndRun(code, true) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "printf(\"%d\",arg0)"
-            )
+            registerLib()
         }
         assertEquals("3\n", printed)
 
@@ -86,10 +91,7 @@ class GenerateAndRunTest {
         """.trimIndent()
 
         val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "printf(\"%d\",arg0)"
-            )
+            registerLib()
         }
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
@@ -115,10 +117,7 @@ class GenerateAndRunTest {
         """.trimIndent()
 
         val printed = testCompileMainAndRun(code, true) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "printf(\"%d\",arg0)"
-            )
+            registerLib()
         }
         assertEquals("1\n", printed)
     }
@@ -146,10 +145,7 @@ class GenerateAndRunTest {
         """.trimIndent()
 
         val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "printf(\"%d\",arg0)"
-            )
+            registerLib()
         }
         assertEquals("7\n", printed)
     }
@@ -182,10 +178,7 @@ class GenerateAndRunTest {
         """.trimIndent()
 
         val printed = testCompileMainAndRun(code, true) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "printf(\"%d\",arg0)"
-            )
+            registerLib()
         }
         assertEquals("1\n", printed)
     }

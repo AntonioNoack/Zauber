@@ -7,12 +7,11 @@ class FileWithImportsWriter(val self: JavaSourceGenerator, root: File) : DeltaWr
 
     private val builder = self.builder
 
-    override fun finishContent(v: FileEntry): String {
-        check(v.packagePath != "?")
-        self.appendPackageDeclaration(v.packagePath)
-        self.writeImports(v.imports)
-
-        builder.append(v.content)
+    override fun finishContent(file: File, content: FileEntry): String {
+        check(content.packagePath != listOf("?"))
+        self.beginPackageDeclaration(content.packagePath, file, content.imports, content.nativeImports)
+        builder.append(content.content)
+        self.endPackageDeclaration(content.packagePath, file)
         return self.finish()
     }
 }

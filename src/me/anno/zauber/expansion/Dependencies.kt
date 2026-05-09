@@ -13,6 +13,7 @@ import me.anno.zauber.types.specialization.ClassSpecialization
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 /**
  * Given a set of entry points,
@@ -38,8 +39,20 @@ object Dependencies {
         if (method.method.flags.hasFlag(Flags.MACRO)) return
 
         if (reached.calledMethods.add(method)) {
+            markMethodObjectReachable(method)
             markMethodsInSubClassesReachable(method)
             markCalledMethodsReachable(method)
+        }
+    }
+
+    private fun markMethodObjectReachable(method: MethodSpecialization) {
+        val ownerClass = method.method.ownerScope
+        if (ownerClass.isObjectLike()) {
+            addClass(ownerClass.typeWithArgs)
+            val ownerConstructor = ownerClass
+                .getOrCreatePrimaryConstructorScope()
+                .selfAsConstructor!!
+            addMethod(MethodSpecialization(ownerConstructor, noSpecialization))
         }
     }
 
