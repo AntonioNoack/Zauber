@@ -23,18 +23,22 @@ class DependencyGraphTests {
             if (!LOGGER.isInfoEnabled) return
 
             LOGGER.info("Classes:")
-            for (clazz in data.createdClasses) {
-                LOGGER.info("  - ${clazz.clazz}, ${clazz.specialization}")
+            for (clazz in data.createdClasses.map { clazz ->
+                "  - ${clazz.clazz}, ${clazz.specialization}"
+            }.sorted()) {
+                LOGGER.info(clazz)
             }
 
             LOGGER.info("Methods:")
-            for (method in data.calledMethods) {
-                LOGGER.info("  - ${method.method}, ${method.specialization}")
+            for (method in data.calledMethods.map { method ->
+                "  - ${method.method}, ${method.specialization}"
+            }.sorted()) {
+                LOGGER.info(method)
             }
 
             LOGGER.info("Fields:")
             val fields = data.getFields + data.setFields
-            for (field in fields) {
+            for (field in fields.map { field ->
                 val get = field in data.getFields
                 val set = field in data.setFields
                 val str = when {
@@ -42,7 +46,9 @@ class DependencyGraphTests {
                     !set -> "get"
                     else -> "get+set"
                 }
-                LOGGER.info("  - ${field.field}, ${field.specialization}: $str")
+                "  - ${field.field}, ${field.specialization}: $str"
+            }.sorted()) {
+                LOGGER.info(field)
             }
         }
     }

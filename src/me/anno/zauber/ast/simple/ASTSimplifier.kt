@@ -247,14 +247,16 @@ object ASTSimplifier {
     ): FlowResult {
         val exprScope = expr.scope
 
-        // declare fields -> needed?
-        if (false) for (field in exprScope.fields) {
-            if (needsFieldByParameter(field.byParameter) &&
-                // field.originalScope == field.codeScope && // not moved
-                block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
-            ) {
-                val type = field.resolveValueType(context)
-                block0.add(SimpleDeclaration(type, field.name, field.scope, field.origin))
+        // declare fields -> needed? yes, better like that for some generators
+        if (exprScope.isInsideExpression()) {
+            for (field in exprScope.fields) {
+                if (needsFieldByParameter(field.byParameter) &&
+                    // field.originalScope == field.codeScope && // not moved
+                    block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
+                ) {
+                    val type = field.resolveValueType(context)
+                    block0.add(SimpleDeclaration(type, field.name, field.scope, field.origin))
+                }
             }
         }
 

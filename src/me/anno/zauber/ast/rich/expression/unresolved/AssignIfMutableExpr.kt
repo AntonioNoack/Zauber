@@ -94,7 +94,7 @@ class AssignIfMutableExpr(
 
     fun resolveMethod(context: ResolutionContext): AssignIfMutableResolveResult {
         val field = findField(left, context)
-        val isFieldMutable = field?.resolved?.isMutable == true
+        val isFieldMutable = field?.isMutable == true
         val leftType = TypeResolution.resolveType(context, left)
         val rightType = TypeResolution.resolveType(context, right)
         val leftContext = context.withSelfType(leftType)
@@ -106,9 +106,13 @@ class AssignIfMutableExpr(
         }
 
         val isContentMutable = plusAssignMethod != null
+        check(isFieldMutable || isContentMutable) {
+            "Either field or content must be mutable, both are immutable, $plusName? $plusMethod, " +
+                    "$plusAssignName? $plusAssignMethod, at ${resolveOrigin(origin)}, this: $this"
+        }
         check(isFieldMutable != isContentMutable) {
-            "Either field or content must be mutable, $plusName? $plusMethod, " +
-                    "$plusAssignName? $plusAssignMethod, fieldMutable? $isFieldMutable, at ${resolveOrigin(origin)}"
+            "Either field or content must be mutable, both are mutable, $plusName? $plusMethod, " +
+                    "$plusAssignName? $plusAssignMethod, at ${resolveOrigin(origin)}, this: $this"
         }
 
         return if (isContentMutable) {

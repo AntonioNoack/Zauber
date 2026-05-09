@@ -11,25 +11,29 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.simple.SimpleDeclaration
+import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
+import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.interpreting.ExternalKey
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
-// todo compared to C, this has inheritance built-in, which
+// compared to C, this has inheritance built-in, which
 //  we can directly use; and it has ready-made shared references
-class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
+class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
     companion object {
 
@@ -39,9 +43,9 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
                     Boolean to BoxedType("Boolean", "boolean"),
                     Byte to BoxedType("Byte", "byte"),
                     Short to BoxedType("Short", "short"),
-                    Int to BoxedType("Integer", "int"),
+                    Int to BoxedType("Int", "int"),
                     Long to BoxedType("Long", "long"),
-                    Char to BoxedType("Character", "char"),
+                    Char to BoxedType("Char", "char"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
                 )
@@ -101,9 +105,10 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
             appendClassFlags(classScope)
             appendClassPrefix(classScope, className)
 
-            if (specialization.containsGenerics()) {
+            // we specialize only the generics we need
+            /*if (specialization.containsGenerics()) {
                 appendTypeParams(classScope)
-            }
+            }*/
 
             appendSuperTypes(classScope)
             appendClassBody(classScope, className, methods, fields, true)
@@ -118,6 +123,40 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
         @Suppress("Since15")
         specializations.removeLast()
+    }
+
+    override fun appendConstructors(
+        classScope: Scope, className: String,
+        methods: Collection<MethodSpecialization>, headerOnly: Boolean
+    ) {
+        super.appendConstructors(classScope, className, methods, headerOnly)
+
+        // if this is a value class & we have no empty constructor, append one
+        if (headerOnly &&
+            isValue(classScope.typeWithArgs) &&
+            methods.none { (method, _) ->
+                method is Constructor && method.valueParameters.isEmpty()
+            }
+        ) {
+            builder.append("public: ")
+            builder.append(className).append("(){}")
+            nextLine()
+        }
+    }
+
+    override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+        appendFieldFlags(classScope, field, allowFinal)
+
+        var valueType = (field.valueType ?: Types.NullableAny)
+        valueType = valueType.resolve(classScope)
+        valueType = resolveType(valueType)
+
+        appendType(valueType, classScope, false)
+        builder.append(' ')
+        appendFieldName(field)
+        val isNumber = valueType in nativeCppNumbers
+        builder.append(if (isNumber) " = 0;" else " = {};")
+        nextLine()
     }
 
     override fun appendStaticInstance(className: String) {
@@ -178,8 +217,8 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
     }
 
     override fun appendPackageDeclaration(packagePath: List<String>, file: File) {
-        if (file.name.endsWith(".hpp")) builder.append("#pragma once\n")
         if (packagePath.isEmpty()) return
+
         if (cppVersion >= 17) {
             for (part in packagePath) {
                 builder.append("namespace ").append(part).append(" {")
@@ -212,6 +251,7 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
         imports: Map<String, List<String>>,
         nativeImports: Set<String>
     ) {
+        if (file.name.endsWith(".hpp")) builder.append("#pragma once\n")
         if (nativeImports.isNotEmpty()) {
             for (import in nativeImports) {
                 builder.append(import)
@@ -220,14 +260,18 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
             nextLine()
         }
 
+        // only really needed, if we have allocations...
+        builder.append("#include \"${"../".repeat(packagePath.size)}CppStandardLib.hpp\"\n")
+        nextLine()
+
         writeImports(packagePath, imports)
-        writeUsingNamespace(packagePath, imports)
+        writeUsingNamespace(imports)
 
         nextLine()
         appendPackageDeclaration(packagePath, file)
     }
 
-    fun writeUsingNamespace(packagePath: List<String>, imports: Map<String, List<String>>) {
+    fun writeUsingNamespace(imports: Map<String, List<String>>) {
         if (imports.none { it.value.size > 1 }) return
 
         val usingNamespace = imports.values
@@ -409,7 +453,8 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
         val dst = expression.dst
         // without final
         appendType(dst.type, expression.scope, false)
-        builder.append(' ').append1(graph, dst).append(" = ")
+        appendOwnershipSuffix(dst.type)
+        builder.append(' ').appendFieldName(graph, dst).append(" = ")
     }
 
     override fun appendObjectInstance(field: Field, exprScope: Scope) {
@@ -437,18 +482,109 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
         builder.append(symbol)
     }
 
-    fun isNullable(type: Type): Boolean {
-        return (type == NullType) || (type is UnionType && NullType in type.types)
-    }
-
     fun isValue(type: Type): Boolean {
-        return (type is ValueType) || (type is ClassType && type.clazz.isValueType())
+        return (type is ValueType) || (type is ClassType && type.clazz.isValueType()) || type in nativeCppTypes
     }
 
     override fun filterImports(name: String, packageScope: Scope, headerOnly: Boolean) {
         if (headerOnly) {
             // remove self-include
             imports.remove(name)
+        }
+    }
+
+    override fun StringBuilder.appendFieldName(
+        graph: SimpleGraph,
+        field: SimpleField,
+        forFieldAccess: String
+    ): StringBuilder {
+        val needsArrow = if (field.isObjectLike()) {
+            appendType(field.type, (field.type as ClassType).clazz, false)
+            appendGetObjectInstance()
+            false
+        } else if (field.isOwnerThis(graph)) {
+            append("this")
+            true
+        } else {
+            var field = field
+            while (true) {
+                field = field.mergeInfo?.dst ?: break
+            }
+            append("tmp").append(field.id)
+            // todo depending on type, we need . or ->
+            false
+        }
+        if (forFieldAccess.isNotEmpty()) {
+            val symbol = if (needsArrow) {
+                when (forFieldAccess) {
+                    "." -> "->"
+                    ")." -> ")->"
+                    else -> forFieldAccess.replace(".", "->")
+                }
+            } else forFieldAccess
+            builder.append(symbol)
+        }
+        return this
+    }
+
+    override fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
+        val type = resolveType(type)
+
+        if (!needsBoxedType) {
+            val protected = protectedTypes[type]
+            if (protected != null) {
+                builder.append(protected.native)
+                return
+            }
+        }
+
+        if (type is GenericType) {
+            return appendTypeImpl(type.superBounds, scope, needsBoxedType)
+        }
+
+        appendTypeImpl(type, scope, needsBoxedType)
+    }
+
+    override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+        // ensure import
+        val selfType = expr.self.type
+        val position = builder.length
+        appendType(selfType, expr.scope, true)
+        builder.setLength(position)
+
+        builder.append(needsCastForFirstValue.boxed).append("(")
+        builder.appendFieldName(graph, expr.self).append(").")
+        builder.append(expr.methodName)
+        appendValueParams(graph, expr.valueParameters)
+    }
+
+    override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
+        when (expr) {
+            is SimpleAllocateInstance -> {
+                val needsReference = isNullable(expr.allocatedType) || !isValue(expr.allocatedType)
+                if (needsReference) {
+                    // call GC-aware alloc instead
+                    builder.append("gcNew<")
+                    appendType(expr.allocatedType, expr.scope, true)
+                    builder.append(">")
+                    appendValueParams(graph, expr.paramsForLater)
+                } else {
+                    appendType(expr.allocatedType, expr.scope, true)
+                    appendValueParams(graph, expr.paramsForLater)
+                }
+            }
+            is SimpleDeclaration -> {
+                val type = expr.type
+                appendType(type, expr.scope, false)
+                builder.append(' ').append(expr.name)
+                when { // avoid undefined variables, where possible
+                    isNullable(type) -> builder.append(" = nullptr")
+                    isValue(type) -> builder.append(" = {}")
+                    type in nativeNumbers -> builder.append(" = 0")
+                    else -> {} // default value is unknown...
+                }
+            }
+            else -> super.appendInstrImpl(graph, expr)
         }
     }
 

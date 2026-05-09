@@ -13,6 +13,12 @@ object MinimalCppCompiler : MinimalCompiler() {
             .readBytes().decodeToString()
     }
 
+    val cppStandardLib by lazy {
+        MinimalCppCompiler::class.java
+            .classLoader.getResourceAsStream("./files/CppStandardLib.hpp")!!
+            .readBytes()
+    }
+
     override fun compile(
         projectFolder: File, srcFolder: File,
         dependencies: DependencyData, mainMethod: Method
@@ -22,8 +28,12 @@ object MinimalCppCompiler : MinimalCompiler() {
 
         val si = projectFolder.absolutePath.length + 1
         val filesList = gen.cppFiles.joinToString("\n") { file -> file.absolutePath.substring(si) }
+
         File(projectFolder, "CMakeLists.txt")
             .writeText(minimalCMakeLists.replace("CPP_FILES_LIST", filesList))
+
+        File(srcFolder, "CppStandardLib.hpp")
+            .writeBytes(cppStandardLib)
 
         val buildFolder = File(projectFolder, "build")
         buildFolder.mkdirs()

@@ -29,9 +29,9 @@ import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.getScope
-import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
 class ResolvedField(
@@ -161,6 +161,9 @@ class ResolvedField(
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 
+    val isMutable: Boolean
+        get() = resolved.isMutableEx
+
     fun getValueType(): Type {
         LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}, selfType: $selfType")
 
@@ -223,7 +226,8 @@ class ResolvedField(
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, codeScope, resolved.origin
-            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
+            )
+                ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")

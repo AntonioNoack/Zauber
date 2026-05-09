@@ -61,12 +61,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = testCompileMainAndRun(code, ::registerLib)
         assertEquals("3\n", printed)
     }
 
@@ -82,17 +77,45 @@ class GenerateAndRunTest {
             package zauber
             class Any
             object Unit
-            class Int {
+            class Int(val content: Int) {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
+                fun hashCode(): Int = content
             }
             
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            registerLib()
-        }
+        val printed = testCompileMainAndRun(code, ::registerLib)
+        assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
+    }
+
+    @Test
+    fun testValueClass() {
+        // todo how is this fragile???
+        val code = """
+            value class Vector(val x: Int, val y: Int, val z: Int)
+            
+            fun main() {
+                println(Vector(1, 2, 3).hashCode())
+            }
+            
+            package zauber
+            class Any
+            object Unit
+            
+            class Int(val content: Int) {
+                external operator fun plus(other: Int): Int
+                external operator fun times(other: Int): Int
+                fun hashCode(): Int = content
+            }
+            
+            external fun println(arg0: Int)
+        """.trimIndent()
+
+        // todo 'this' should work inside hashCode(), too...
+
+        val printed = testCompileMainAndRun(code, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
@@ -116,14 +139,13 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true) {
-            registerLib()
-        }
+        val printed = testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
 
     @Test
     fun testValueClassFieldIsWritable() {
+        // todo this has issues before ever reaching C++ ...
         val code = """
             value class Vector(val x: Int, val y: Int, val z: Int)
             
@@ -144,9 +166,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            registerLib()
-        }
+        val printed = testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("7\n", printed)
     }
 
@@ -177,16 +197,11 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true) {
-            registerLib()
+        val printed = testCompileMainAndRun(code, true, ::registerLib)
+        assertEquals("1\n", printed) {
+            "Expected response to be 1, got ${printed.trim()}"
         }
-        assertEquals("1\n", printed)
     }
-
-    // todo add .copy(name=value) as a special function on data classes
-
-    // todo implement value classes being copied when written / passed as parameter
-    // todo implement and test value classes being inlined
 
     // todo implement and test working with strings
     // todo test specialized classes being usable

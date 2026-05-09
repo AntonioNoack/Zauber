@@ -123,7 +123,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
+    override fun StringBuilder.appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String): StringBuilder {
         if (field.isObjectLike()) {
             builder.append((field.type as ClassType).clazz.pathStr)
             appendGetObjectInstance()
@@ -136,6 +136,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             }
             append("%").append(field.id)
         }
+        builder.append(forFieldAccess)
         return this
     }
 
@@ -163,10 +164,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst
         if (dst.mergeInfo != null) {
-            builder.append1(graph, dst).append(" = ")
+            builder.appendFieldName(graph, dst).append(" = ")
         } else {
             comment { appendType(dst.type, expression.scope, false) }
-            builder.append(' ').append1(graph, dst).append(" = ")
+            builder.append(' ').appendFieldName(graph, dst).append(" = ")
         }
     }
 
@@ -179,7 +180,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         }
         when (expr) {
             is SimpleBranch -> {
-                builder.append("if (").append1(graph, expr.condition).append(')')
+                builder.append("if (").appendFieldName(graph, expr.condition).append(')')
                 writeBlock {
                     appendSimplifiedAST(graph, expr.ifTrue)
                 }
@@ -215,15 +216,15 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             is SimpleSetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
                 appendFieldName(expr.field)
-                builder.append(" = ").append1(graph, expr.value)
+                builder.append(" = ").appendFieldName(graph, expr.value)
             }
             is SimpleCompare -> {
-                builder.append1(graph, expr.left).append(' ')
+                builder.appendFieldName(graph, expr.left).append(' ')
                 builder.append(expr.type.symbol).append(" 0")
             }
             is SimpleInstanceOf -> {
                 // todo if type is ClassType, this is easy, else we need to build an expression...
-                builder.append1(graph, expr.value).append(" instanceof ")
+                builder.appendFieldName(graph, expr.value).append(" instanceof ")
                 appendType(expr.type, expr.scope, false)
             }
             is SimpleCheckEquals -> {
@@ -233,41 +234,41 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 // todo if left cannot be null, skip null check
                 // todo if left side is a native field, use the static class for comparison
 
-                val leftCanBeNull = canBeNull(expr.left.type)
-                val rightCanBeNull = canBeNull(expr.right.type)
+                val leftCanBeNull = isNullable(expr.left.type)
+                val rightCanBeNull = isNullable(expr.right.type)
 
                 val leftNative = nativeTypes[expr.left.type]
                 val rightNative = nativeTypes[expr.right.type]
                 when {
                     leftNative != null && rightNative != null -> {
-                        builder.append1(graph, expr.left).append(" == ")
-                            .append1(graph, expr.right)
+                        builder.appendFieldName(graph, expr.left).append(" == ")
+                            .appendFieldName(graph, expr.right)
                     }
                     leftCanBeNull && rightCanBeNull -> {
-                        builder.append1(graph, expr.left).append(" == null ? ")
-                            .append1(graph, expr.right).append(" == null : ")
-                            .append1(graph, expr.left).append(".equals(")
-                            .append1(graph, expr.right).append(")")
+                        builder.appendFieldName(graph, expr.left).append(" == null ? ")
+                            .appendFieldName(graph, expr.right).append(" == null : ")
+                            .appendFieldName(graph, expr.left).append(".equals(")
+                            .appendFieldName(graph, expr.right).append(")")
                     }
                     leftCanBeNull -> {
-                        builder.append1(graph, expr.left).append(" != null && ")
-                            .append1(graph, expr.left).append(".equals(")
-                            .append1(graph, expr.right).append(")")
+                        builder.appendFieldName(graph, expr.left).append(" != null && ")
+                            .appendFieldName(graph, expr.left).append(".equals(")
+                            .appendFieldName(graph, expr.right).append(")")
                     }
                     rightCanBeNull -> {
-                        builder.append1(graph, expr.right).append(" != null && ")
-                            .append1(graph, expr.left).append(".equals(")
-                            .append1(graph, expr.right).append(")")
+                        builder.appendFieldName(graph, expr.right).append(" != null && ")
+                            .appendFieldName(graph, expr.left).append(".equals(")
+                            .appendFieldName(graph, expr.right).append(")")
                     }
                     else -> {
-                        builder.append1(graph, expr.left).append(".equals(")
-                            .append1(graph, expr.right).append(")")
+                        builder.appendFieldName(graph, expr.left).append(".equals(")
+                            .appendFieldName(graph, expr.right).append(")")
                     }
                 }
             }
             is SimpleCheckIdentical -> {
-                builder.append1(graph, expr.left).append(" == ")
-                    .append1(graph, expr.right)
+                builder.appendFieldName(graph, expr.left).append(" == ")
+                    .appendFieldName(graph, expr.right)
             }
             is SimpleSpecialValue -> {
                 when (expr.type) {
@@ -299,10 +300,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                                 else -> null
                             }
                             if (castSymbol != null && expr.self.type in nativeNumbers) {
-                                builder.append(castSymbol).append1(graph, expr.self)
+                                builder.append(castSymbol).appendFieldName(graph, expr.self)
                                 true
                             } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                                builder.append('!').append1(graph, expr.self)
+                                builder.append('!').appendFieldName(graph, expr.self)
                                 true
                             } else false
                         }
@@ -326,8 +327,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                                 builder.append(symbol).append(' ')
                                 appendType(expr.dst.type, expr.scope, false)
                                 builder.append(' ')
-                                builder.append1(graph, expr.self).append(", ")
-                                builder.append1(graph, expr.valueParameters[0])
+                                builder.appendFieldName(graph, expr.self).append(", ")
+                                builder.appendFieldName(graph, expr.valueParameters[0])
                                 true
                             } else false
                         }
@@ -338,14 +339,14 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                         if (needsCastForFirstValue != null) {
                             builder.append(needsCastForFirstValue.boxed).append('.')
                             builder.append(expr.methodName).append('(')
-                            builder.append1(graph, expr.self)
+                            builder.appendFieldName(graph, expr.self)
                             if (expr.valueParameters.isNotEmpty()) {
                                 builder.append(", ")
                                 appendValueParams(graph, expr.valueParameters, false)
                             }
                             builder.append(')')
                         } else {
-                            builder.append1(graph, expr.self).append('.')
+                            builder.appendFieldName(graph, expr.self).append('.')
                             builder.append(expr.methodName)
                             appendValueParams(graph, expr.valueParameters)
                         }
@@ -367,11 +368,11 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             }
             is SimpleReturn -> {
                 // todo cast if necessary
-                builder.append("ret ").append1(graph, expr.field)
+                builder.append("ret ").appendFieldName(graph, expr.field)
             }
             is SimpleThrow -> {
                 // todo cast if necessary
-                builder.append("throw ").append1(graph, expr.field)
+                builder.append("throw ").appendFieldName(graph, expr.field)
             }
             else -> {
                 comment {
@@ -410,9 +411,9 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 builder.append("((")
                 appendType(fieldSelfType, exprScope, true)
                 builder.append(')')
-                builder.append1(graph, self).append(").")
+                builder.appendFieldName(graph, self).append(").")
             } else {
-                builder.append1(graph, self).append('.')
+                builder.appendFieldName(graph, self).append('.')
             }
         }
     }

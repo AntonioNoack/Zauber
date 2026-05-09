@@ -24,10 +24,17 @@ object Dependencies {
 
     private val reached by threadLocal { DependencyData() }
 
-    fun addClass(type: ClassType) {
+    fun addClass(type: ClassType, markDefaultConstructor: Boolean = false) {
         if (reached.createdClasses.add(ClassSpecialization(type))) {
             markSuperTypesConstructable(type)
             markChildMethodsReachable(type)
+        }
+
+        if (markDefaultConstructor) {
+            val ownerConstructor = type.clazz
+                .getOrCreatePrimaryConstructorScope()
+                .selfAsConstructor!!
+            addMethod(MethodSpecialization(ownerConstructor, noSpecialization))
         }
     }
 
@@ -48,11 +55,7 @@ object Dependencies {
     private fun markMethodObjectReachable(method: MethodSpecialization) {
         val ownerClass = method.method.ownerScope
         if (ownerClass.isObjectLike()) {
-            addClass(ownerClass.typeWithArgs)
-            val ownerConstructor = ownerClass
-                .getOrCreatePrimaryConstructorScope()
-                .selfAsConstructor!!
-            addMethod(MethodSpecialization(ownerConstructor, noSpecialization))
+            addClass(ownerClass.typeWithArgs, true)
         }
     }
 
@@ -73,8 +76,8 @@ object Dependencies {
                     is SimpleCheckEquals -> addMethod(MethodSpecialization(instr.method.resolved, instr.specialization))
                     is SimpleSelfConstructor -> addMethod(MethodSpecialization(instr.method, instr.specialization))
                     is SimpleAllocateInstance -> addClass(instr.allocatedType)
-                    is SimpleString -> addClass(Types.String)
-                    is SimpleNumber -> addClass(instr.dst.type as ClassType)
+                    is SimpleString -> addClass(Types.String, true)
+                    is SimpleNumber -> addClass(instr.dst.type as ClassType, true)
                     is SimpleGetObject -> {
                         val scope = instr.objectScope[ScopeInitType.AFTER_DISCOVERY]
                         addClass(scope.typeWithArgs)

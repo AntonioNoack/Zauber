@@ -72,11 +72,11 @@ abstract class MinimalCompiler {
             else File.createTempFile("GenAndRun", ".tmp")
 
         try {
-            if (debug) projectFolder.delete()
+            if (!debug) projectFolder.delete()
             projectFolder.mkdirs()
 
             val srcFolder = File(projectFolder, "src")
-            if (!debug) srcFolder.delete()
+            if (srcFolder.exists()) srcFolder.delete()
             srcFolder.mkdirs()
 
             registerMethods()
