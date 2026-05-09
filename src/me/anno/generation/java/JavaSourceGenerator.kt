@@ -215,7 +215,13 @@ open class JavaSourceGenerator : Generator() {
         return "java"
     }
 
-    fun writeInto(packageScope: Scope, name: String, dst: File, writer: FileWithImportsWriter, headerOnly: Boolean): File {
+    fun writeInto(
+        packageScope: Scope,
+        name: String,
+        dst: File,
+        writer: FileWithImportsWriter,
+        headerOnly: Boolean
+    ): File {
         val file = createFile(packageScope, name, dst, getExtension(headerOnly))
         val entry = writer[file] ?: FileEntry(packageScope.pathStr)
         entry.content.append(builder); builder.clear()
@@ -324,7 +330,9 @@ open class JavaSourceGenerator : Generator() {
         if (!field.isMutable && allowFinal) builder.append("final ")
         val valueType = (field.valueType ?: Types.NullableAny).resolve(classScope)
         appendType(valueType, classScope, false)
-        builder.append(' ').appendFieldName(field).append(';')
+        builder.append(' ')
+        appendFieldName(field)
+        builder.append(';')
         nextLine()
     }
 
@@ -479,7 +487,8 @@ open class JavaSourceGenerator : Generator() {
         for (param in valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendType(param.type, scope, false)
-            builder.append(' ').appendFieldName(param)
+            builder.append(' ')
+            appendFieldName(param)
         }
         builder.append(')')
     }
@@ -702,11 +711,12 @@ open class JavaSourceGenerator : Generator() {
             }
             is SimpleGetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                builder.appendFieldName(expr.field)
+                appendFieldName(expr.field)
             }
             is SimpleSetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                builder.appendFieldName(expr.field).append(" = ").append1(graph, expr.value)
+                appendFieldName(expr.field)
+                builder.append(" = ").append1(graph, expr.value)
             }
             is SimpleCompare -> {
                 builder.append1(graph, expr.left).append(' ')
@@ -1027,50 +1037,48 @@ open class JavaSourceGenerator : Generator() {
             builder.append(name)
         } else {
             // duplicate path -> full path needed
-            builder.appendPath(path)
+            appendPath(path)
         }
     }
 
-    fun StringBuilder.appendFieldName(field: Field): StringBuilder {
+    fun appendFieldName(field: Field) {
         if (!field.ownerScope.isClassLike()) {
             // append("__").append(field.ownerScope.depth).append('_')
         }
-        append(field.name)
-        return this
+        builder.append(field.name)
     }
 
-    fun StringBuilder.appendFieldName(field: Parameter): StringBuilder {
+    fun appendFieldName(field: Parameter) {
         // append("__").append(field.scope.depth).append('_')
-        append(field.name)
-        return this
+        builder.append(field.name)
     }
 
-    fun writePackage(packagePath: String) {
+    open fun appendPackageDeclaration(packagePath: String) {
         builder.append("package ").append(packagePath).append(";\n\n")
     }
 
     fun writeImports(imports: Map<String, List<String>>) {
-        builder.appendImports(imports)
-    }
-
-    fun StringBuilder.appendPath(path: List<String>) {
-        for (i in path.indices) {
-            if (i > 0) append('.')
-            append(path[i])
-        }
-    }
-
-    fun StringBuilder.appendImports(imports: Map<String, List<String>>) {
         var hadImport = false
         for (import in imports.values) {
             if (import.isNotEmpty()) {
-                append("import ")
-                appendPath(import)
-                append(";\n")
+                appendImport(import)
                 hadImport = true
             }
         }
-        if (hadImport) append('\n')
+        if (hadImport) builder.append('\n')
+    }
+
+    fun appendPath(path: List<String>) {
+        for (i in path.indices) {
+            if (i > 0) builder.append('.')
+            builder.append(path[i])
+        }
+    }
+
+    open fun appendImport(import: List<String>) {
+        builder.append("import ")
+        appendPath(import)
+        builder.append(";\n")
     }
 
 }

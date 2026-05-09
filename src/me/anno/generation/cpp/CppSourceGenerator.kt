@@ -1,7 +1,7 @@
 package me.anno.generation.cpp
 
-import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.FileWithImportsWriter
+import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
@@ -33,6 +33,14 @@ class CppSourceGenerator : JavaSourceGenerator() {
 
         generateClassBody(name, scope, specialization, methods, fields, false)
         cppFiles += writeInto(packageScope, name, dst, writer, false)
+    }
+
+    override fun appendPackageDeclaration(packagePath: String) {
+        builder.append("// package $packagePath\n\n")
+    }
+
+    override fun appendImport(import: List<String>) {
+        builder.append("#include \"").append(import.joinToString("/")).append(".hpp\"\n")
     }
 
 }

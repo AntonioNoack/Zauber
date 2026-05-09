@@ -204,11 +204,12 @@ object LLVMSourceGenerator : JavaSourceGenerator() {
             }
             is SimpleGetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                builder.appendFieldName(expr.field)
+                appendFieldName(expr.field)
             }
             is SimpleSetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                builder.appendFieldName(expr.field).append(" = ").append1(graph, expr.value)
+                appendFieldName(expr.field)
+                builder.append(" = ").append1(graph, expr.value)
             }
             is SimpleCompare -> {
                 builder.append1(graph, expr.left).append(' ')
