@@ -1,6 +1,6 @@
 package me.anno.generation.cpp
 
-import me.anno.generation.cpp.MinimalCppCompiler.testCompileMainToCppAndRun
+import me.anno.generation.cpp.MinimalCppCompiler.testCompileMainAndRun
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
@@ -27,7 +27,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToCppAndRun(code) {
+        val printed = testCompileMainAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "printf(\"%d\",arg0)"
@@ -56,7 +56,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToCppAndRun(code) {
+        val printed = testCompileMainAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
@@ -85,7 +85,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToCppAndRun(code) {
+        val printed = testCompileMainAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "printf(\"%d\",arg0)"
@@ -114,7 +114,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToCppAndRun(code, true) {
+        val printed = testCompileMainAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "printf(\"%d\",arg0)"
@@ -145,7 +145,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToCppAndRun(code) {
+        val printed = testCompileMainAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "printf(\"%d\",arg0)"
@@ -181,7 +181,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToCppAndRun(code, true) {
+        val printed = testCompileMainAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "printf(\"%d\",arg0)"

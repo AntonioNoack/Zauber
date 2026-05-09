@@ -1,7 +1,7 @@
 package me.anno.generation.llvmir
 
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.generation.llvmir.MinimalLLVMIRCompiler.testCompileMainToLLVMAndRun
+import me.anno.generation.llvmir.MinimalLLVMCompiler.testCompileMainAndRun
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,7 +27,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToLLVMAndRun(code, true) {
+        val printed = testCompileMainAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)" // todo adjust this
@@ -56,7 +56,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToLLVMAndRun(code) {
+        val printed = testCompileMainAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
@@ -85,7 +85,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToLLVMAndRun(code) {
+        val printed = testCompileMainAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
@@ -114,7 +114,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToLLVMAndRun(code, true) {
+        val printed = testCompileMainAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
@@ -145,7 +145,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToLLVMAndRun(code) {
+        val printed = testCompileMainAndRun(code) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
@@ -181,7 +181,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainToLLVMAndRun(code, true) {
+        val printed = testCompileMainAndRun(code, true) {
             register(
                 langScope, "println", listOf(Types.Int),
                 "System.out.println(arg0)"
