@@ -75,7 +75,7 @@ object MinimalJavaCompiler {
 
             registerMethods()
 
-            JavaSourceGenerator.generateCode(
+            JavaSourceGenerator().generateCode(
                 srcFolder, dependencies,
                 testScope.methods0.first { it.name == "main" })
 

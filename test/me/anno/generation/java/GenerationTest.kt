@@ -32,15 +32,13 @@ class GenerationTest {
             val testScope = root.children.first { it.name == testScopeName }
             val testClassName = "Test"
             val testClass = testScope[ScopeInitType.AFTER_DISCOVERY].children.first { it.name == testClassName }
-            val sourceCode = JavaSourceGenerator.run {
-                generateClassBody(
-                    testClassName, testClass, noSpecialization,
-                    testClass.methods0.map { MethodSpecialization(it, noSpecialization) },
-                    testClass.fields.map { FieldSpecialization(it, noSpecialization) })
-                if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
-                finish()
-            }
-            return sourceCode
+
+            JavaSourceGenerator().generateClassBody(
+                testClassName, testClass, noSpecialization,
+                testClass.methods0.map { MethodSpecialization(it, noSpecialization) },
+                testClass.fields.map { FieldSpecialization(it, noSpecialization) }, false)
+            if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
+            return Generator.finish()
         }
 
         fun testClassGenIsFine(code: String): String {

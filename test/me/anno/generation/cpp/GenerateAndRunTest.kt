@@ -1,7 +1,7 @@
 package me.anno.generation.cpp
 
 import me.anno.generation.cpp.MinimalCppCompiler.testCompileMainToCppAndRun
-import me.anno.generation.java.JavaSourceGenerator.register
+import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals

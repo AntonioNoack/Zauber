@@ -76,6 +76,12 @@ abstract class Generator(val blockSuffix: String = "}\n") {
             }
         }
 
+        fun finish(): String {
+            val str = builder.toString()
+            builder.clear()
+            return str
+        }
+
     }
 
     fun block(run: () -> Unit) {
@@ -83,12 +89,6 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         run()
         closeBlock()
         builder.append(blockSuffix)
-    }
-
-    fun finish(): String {
-        val str = builder.toString()
-        builder.clear()
-        return str
     }
 
     open fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {

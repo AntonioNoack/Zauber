@@ -1,14 +1,7 @@
 package me.anno.generation.llvm
 
-import me.anno.generation.Generator
 import me.anno.generation.java.BoxedType
 import me.anno.generation.java.JavaBuilder
-import me.anno.generation.java.JavaBuilder.appendFieldName
-import me.anno.generation.java.JavaSimplifiedASTWriter.appendValueParams
-import me.anno.generation.java.JavaSimplifiedASTWriter.canBeNull
-import me.anno.generation.java.JavaSimplifiedASTWriter.isObjectLike
-import me.anno.generation.java.JavaSimplifiedASTWriter.isOwnerThis
-import me.anno.generation.java.JavaSimplifiedASTWriter.outsideClassLike
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -32,7 +25,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 import java.io.File
 
 // todo this is like C (end game difficulty), just different commands?
-object LLVMSourceGenerator : Generator() {
+object LLVMSourceGenerator : JavaSourceGenerator() {
 
     // taken from Java
     val protectedTypes by threadLocal {
@@ -53,7 +46,6 @@ object LLVMSourceGenerator : Generator() {
     val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
     val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
 
-
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         for (method in data.calledMethods) {
             generateCode(method)
@@ -65,7 +57,7 @@ object LLVMSourceGenerator : Generator() {
 
     fun getMethodName(method: MethodSpecialization): String {
         return method.method.methodScope.pathStr +
-                JavaSourceGenerator.createSpecializationSuffix(method.specialization)
+                JavaSourceGenerator().createSpecializationSuffix(method.specialization)
     }
 
     fun comment(body: () -> Unit) {
@@ -111,7 +103,7 @@ object LLVMSourceGenerator : Generator() {
         }
     }
 
-    fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
+    override fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
         when (val type = JavaBuilder.resolveType(type)) {
             Types.Int, Types.UInt -> builder.append("i32")
             Types.Long, Types.ULong -> builder.append("i64")
@@ -125,7 +117,7 @@ object LLVMSourceGenerator : Generator() {
         }
     }
 
-    fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
+    override fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
         if (field.isObjectLike()) {
             builder.append((field.type as ClassType).clazz.pathStr)
             append('.').append(OBJECT_FIELD_NAME)
@@ -141,7 +133,7 @@ object LLVMSourceGenerator : Generator() {
         return this
     }
 
-    fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleNode) {
+    override fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleNode) {
         val instructions = expr.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
@@ -162,7 +154,7 @@ object LLVMSourceGenerator : Generator() {
         }
     }
 
-    fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
+    override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst
         if (dst.mergeInfo != null) {
             builder.append1(graph, dst).append(" = ")
@@ -172,7 +164,7 @@ object LLVMSourceGenerator : Generator() {
         }
     }
 
-    fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleInstruction) {
+    override fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleInstruction) {
         if (expr is SimpleGetObject) return
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
             val notNeeded = expr.dst.numReads == 0
@@ -388,7 +380,7 @@ object LLVMSourceGenerator : Generator() {
         }
     }
 
-    fun appendObjectInstance(field: Field, exprScope: Scope) {
+    override fun appendObjectInstance(field: Field, exprScope: Scope) {
         // todo if there is nothing dangerous in-between, we could use this.
         if (field.ownerScope == outsideClassLike(exprScope)) {
             builder.append("%this.")
@@ -398,7 +390,7 @@ object LLVMSourceGenerator : Generator() {
         }
     }
 
-    fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
+    override fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
         if (self.type is ClassType && self.type.clazz.isObjectLike()) {
             appendObjectInstance(field, exprScope)
         } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {

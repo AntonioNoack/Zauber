@@ -6,5 +6,5 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(Zauber
-    src/Zauber.cpp
+    CPP_FILES_LIST
 )

@@ -1,31 +1,42 @@
 package me.anno.generation.java
 
 import me.anno.generation.Generator
+import me.anno.generation.Specializations.foundTypeSpecialization
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.Specializations.specializations
-import me.anno.generation.java.JavaBuilder.appendFieldName
-import me.anno.generation.java.JavaBuilder.appendType
-import me.anno.generation.java.JavaSimplifiedASTWriter.appendSimplifiedAST
-import me.anno.generation.java.JavaSimplifiedASTWriter.imports
+import me.anno.generation.java.JavaBuilder.resolveType
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
+import me.anno.zauber.ast.reverse.SimpleBranch
+import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
+import me.anno.zauber.ast.simple.controlflow.SimpleExit
+import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.interpreting.ExternalKey
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.arithmetic.AndType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.arithmetic.UnknownType
 import me.anno.zauber.types.specialization.ClassSpecialization
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
@@ -41,40 +52,52 @@ import java.io.File
  *   - Java forbids duplicate field names in cascading method scopes [-> we must rename them]
  *   - fields into lambdas must be effectively final [-> must create wrapper objects of all local variables in these cases just like in C (unless inlined)]
  * */
-object JavaSourceGenerator : Generator() {
+open class JavaSourceGenerator : Generator() {
 
-    val protectedTypes by threadLocal {
-        Types.run {
-            mapOf(
-                String to BoxedType("java.lang.String", "java.lang.String"),
-                Boolean to BoxedType("Boolean", "boolean"),
-                Byte to BoxedType("Byte", "byte"),
-                Short to BoxedType("Short", "short"),
-                Int to BoxedType("Integer", "int"),
-                Long to BoxedType("Long", "long"),
-                Char to BoxedType("Character", "char"),
-                Float to BoxedType("Float", "float"),
-                Double to BoxedType("Double", "double"),
-                Any to BoxedType("Object", "Object"),
+    companion object {
 
-                // what about these native types???
-                Array.withTypeParameter(Boolean) to BoxedType("Array_zauberBoolean", "boolean[]"),
-                Array.withTypeParameter(Byte) to BoxedType("Array_zauberByte", "byte[]"),
-                Array.withTypeParameter(Short) to BoxedType("Array_zauberShort", "short[]"),
-                Array.withTypeParameter(Int) to BoxedType("Array_zauberInt", "int[]"),
-                Array.withTypeParameter(Long) to BoxedType("Array_zauberLong", "long[]"),
-                Array.withTypeParameter(Char) to BoxedType("Array_zauberChar", "char[]"),
-                Array.withTypeParameter(Float) to BoxedType("Array_zauberFloat", "float[]"),
-                Array.withTypeParameter(Double) to BoxedType("Array_zauberDouble", "double[]"),
-            )
+        val protectedTypes by threadLocal {
+            Types.run {
+                mapOf(
+                    String to BoxedType("java.lang.String", "java.lang.String"),
+                    Boolean to BoxedType("Boolean", "boolean"),
+                    Byte to BoxedType("Byte", "byte"),
+                    Short to BoxedType("Short", "short"),
+                    Int to BoxedType("Integer", "int"),
+                    Long to BoxedType("Long", "long"),
+                    Char to BoxedType("Character", "char"),
+                    Float to BoxedType("Float", "float"),
+                    Double to BoxedType("Double", "double"),
+                    Any to BoxedType("Object", "Object"),
+
+                    // what about these native types???
+                    Array.withTypeParameter(Boolean) to BoxedType("Array_zauberBoolean", "boolean[]"),
+                    Array.withTypeParameter(Byte) to BoxedType("Array_zauberByte", "byte[]"),
+                    Array.withTypeParameter(Short) to BoxedType("Array_zauberShort", "short[]"),
+                    Array.withTypeParameter(Int) to BoxedType("Array_zauberInt", "int[]"),
+                    Array.withTypeParameter(Long) to BoxedType("Array_zauberLong", "long[]"),
+                    Array.withTypeParameter(Char) to BoxedType("Array_zauberChar", "char[]"),
+                    Array.withTypeParameter(Float) to BoxedType("Array_zauberFloat", "float[]"),
+                    Array.withTypeParameter(Double) to BoxedType("Array_zauberDouble", "double[]"),
+                )
+            }
+        }
+
+        val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
+        val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
+
+        val registeredMethods by threadLocal { HashMap<ExternalKey, String>() }
+        fun register(key: ExternalKey, implementation: String) {
+            registeredMethods[key] = implementation
+        }
+
+        fun register(scope: Scope, name: String, valueParameterTypes: List<Type>, implementation: String) {
+            register(ExternalKey(scope, name, valueParameterTypes), implementation)
         }
     }
 
-    val nativeTypes by threadLocal { protectedTypes.filter { (_, it) -> it.boxed != it.native } }
-    val nativeNumbers by threadLocal { nativeTypes - Types.Boolean }
-
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
-        val writer = JavaWriter(dst)
+        val writer = FileWithImportsWriter(this, dst)
         try {
 
             defineNullableAnnotation(dst, writer)
@@ -102,9 +125,9 @@ object JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun defineNullableAnnotation(dst: File, writer: JavaWriter) {
+    private fun defineNullableAnnotation(dst: File, writer: FileWithImportsWriter) {
         val file = File(dst, "org/jetbrains/annotations/Nullable.java")
-        writer[file] = JavaEntry("org.jetbrains.annotations")
+        writer[file] = FileEntry("org.jetbrains.annotations")
             .apply {
                 content.append(
                     """
@@ -118,7 +141,7 @@ object JavaSourceGenerator : Generator() {
             }
     }
 
-    private fun defineMainMethodCall(dst: File, writer: JavaWriter, mainMethod: Method) {
+    private fun defineMainMethodCall(dst: File, writer: FileWithImportsWriter, mainMethod: Method) {
         val file = File(dst, "zauber/LaunchZauber.java")
 
         appendType(mainMethod.ownerScope.typeWithArgs, root, true)
@@ -129,7 +152,7 @@ object JavaSourceGenerator : Generator() {
         val needsArgs = mainMethod.valueParameters.isNotEmpty()
 
         val imports0 = imports
-        writer[file] = JavaEntry("zauber")
+        writer[file] = FileEntry("zauber")
             .apply {
                 imports.putAll(imports0)
                 content.append(
@@ -151,8 +174,8 @@ object JavaSourceGenerator : Generator() {
         return "_${specialization.createUniqueName()}"
     }
 
-    fun createFile(packageScope: Scope, name: String, dst: File): File {
-        return File(dst, packageScope.path.joinToString("/") + "/$name.java")
+    fun createFile(packageScope: Scope, name: String, dst: File, extension: String): File {
+        return File(dst, packageScope.path.joinToString("/") + "/$name.$extension")
     }
 
     fun createClassName(scope: Scope, specialization: Specialization): String {
@@ -163,29 +186,38 @@ object JavaSourceGenerator : Generator() {
         return scope.name.capitalize() + "Kt" + createSpecializationSuffix(specialization)
     }
 
-    fun generateClassForScope(
-        scope: Scope, dst: File, writer: JavaWriter, specialization: Specialization,
+    open fun generateClassForScope(
+        scope: Scope, dst: File, writer: FileWithImportsWriter, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
-        if (scope.scopeType == ScopeType.PACKAGE) {
-
-            // we need some package helper
-            val name = createPackageName(scope, specialization)
-            generateClassBody(name, scope, specialization, methods, fields)
-            writeInto(scope, name, dst, writer)
-
-        } else {
-
-            val name = createClassName(scope, specialization)
-            generateClassBody(name, scope, specialization, methods, fields)
-            writeInto(scope.parent!!, name, dst, writer)
-
-        }
+        val (name, packageScope) = getNameAndScope(scope, specialization)
+        generateClassBody(name, scope, specialization, methods, fields, false)
+        writeInto(packageScope, name, dst, writer, false)
     }
 
-    fun writeInto(packageScope: Scope, name: String, dst: File, writer: JavaWriter) {
-        val file = createFile(packageScope, name, dst)
-        val entry = writer[file] ?: JavaEntry(packageScope.pathStr)
+    fun getNameAndScope(
+        scope: Scope, specialization: Specialization
+    ): Pair<String, Scope> {
+        val name: String
+        val packageScope: Scope
+        if (scope.scopeType == ScopeType.PACKAGE) {
+            // we need some package helper
+            name = createPackageName(scope, specialization)
+            packageScope = scope
+        } else {
+            name = createClassName(scope, specialization)
+            packageScope = scope.parent!!
+        }
+        return name to packageScope
+    }
+
+    open fun getExtension(headerOnly: Boolean): String {
+        return "java"
+    }
+
+    fun writeInto(packageScope: Scope, name: String, dst: File, writer: FileWithImportsWriter, headerOnly: Boolean): File {
+        val file = createFile(packageScope, name, dst, getExtension(headerOnly))
+        val entry = writer[file] ?: FileEntry(packageScope.pathStr)
         entry.content.append(builder); builder.clear()
         imports.entries.removeIf { (name1, path) ->
             // these are automatically imported:
@@ -194,6 +226,7 @@ object JavaSourceGenerator : Generator() {
         entry.imports.putAll(imports)
         imports.clear()
         writer[file] = entry
+        return file
     }
 
     private fun getJavaClassType(scope: Scope): String {
@@ -213,7 +246,8 @@ object JavaSourceGenerator : Generator() {
 
     fun generateClassBody(
         className: String, scope: Scope, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
+        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
+        headerOnly: Boolean
     ) {
 
         declareImport(className, scope)
@@ -532,12 +566,511 @@ object JavaSourceGenerator : Generator() {
         imports[name] = scope.path
     }
 
-    val registeredMethods by threadLocal { HashMap<ExternalKey, String>() }
-    fun register(key: ExternalKey, implementation: String) {
-        registeredMethods[key] = implementation
+    val imports = HashMap<String, List<String>>()
+
+    fun canBeNull(type: Type): Boolean {
+        return when (type) {
+            NullType -> true
+            is ClassType -> false
+            is UnionType -> type.types.any { canBeNull(it) }
+            is AndType -> type.types.all { canBeNull(it) }
+            is GenericType -> canBeNull(type.superBounds)
+            else -> throw NotImplementedError("Can a $type be null?")
+        }
     }
 
-    fun register(scope: Scope, name: String, valueParameterTypes: List<Type>, implementation: String) {
-        register(ExternalKey(scope, name, valueParameterTypes), implementation)
+    open fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
+        val dst = expression.dst
+        if (dst.mergeInfo != null) {
+            builder.append1(graph, dst).append(" = ")
+        } else {
+            builder.append("final ")
+            appendType(dst.type, expression.scope, false)
+            builder.append(' ').append1(graph, dst).append(" = ")
+        }
     }
+
+    fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
+
+    fun SimpleField.isOwnerThis(graph: SimpleGraph): Boolean {
+        return type is ClassType && type.clazz == graph.method.ownerScope &&
+                graph.thisFields.any { !it.key.isExplicitSelf && it.value === this }
+    }
+
+    open fun StringBuilder.append1(graph: SimpleGraph, field: SimpleField): StringBuilder {
+        if (field.isObjectLike()) {
+            appendType(field.type, (field.type as ClassType).clazz, false)
+            append('.').append(OBJECT_FIELD_NAME)
+        } else if (field.isOwnerThis(graph)) {
+            append("this")
+        } else {
+            var field = field
+            while (true) {
+                field = field.mergeInfo?.dst ?: break
+            }
+            append("tmp").append(field.id)
+        }
+        return this
+    }
+
+    fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withOpen: Boolean = true) {
+        if (withOpen) builder.append('(')
+        for (i in valueParameters.indices) {
+            if (i > 0) builder.append(", ")
+            val parameter = valueParameters[i]
+            builder.append1(graph, parameter)
+        }
+        if (withOpen) builder.append(')')
+    }
+
+    // todo we have converted SimpleBlock into a complex graph,
+    //  before we can use it, we must convert it back
+    open fun appendSimplifiedAST(
+        graph: SimpleGraph, expr: SimpleNode,
+        // loop: SimpleLoop? = null
+    ) {
+        val instructions = expr.instructions
+        for (i in instructions.indices) {
+            val instr = instructions[i]
+            appendSimplifiedAST(graph, instr /*loop*/)
+            if (instr is SimpleAssignment &&
+                instr.dst.type == Types.Nothing
+            ) break
+        }
+        if (expr.branchCondition == null) {
+            val next = expr.nextBranch
+            if (next != null) {
+                appendSimplifiedAST(graph, next)
+            }
+        } else {
+            // todo this may or may not be simply be possible...
+            // todo this may be a loop, branch, or similar...
+            TODO("Jump to either branch")
+        }
+    }
+
+    open fun appendSimplifiedAST(
+        graph: SimpleGraph, expr: SimpleInstruction,
+        // loop: SimpleLoop? = null
+    ) {
+        if (expr is SimpleGetObject) return
+        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
+            val notNeeded = expr.dst.numReads == 0
+            if (notNeeded) comment { appendAssign(graph, expr) }
+            else appendAssign(graph, expr)
+        }
+        when (expr) {
+            is SimpleBranch -> {
+                builder.append("if (").append1(graph, expr.condition).append(')')
+                writeBlock {
+                    appendSimplifiedAST(graph, expr.ifTrue)
+                }
+                trimWhitespaceAtEnd()
+                builder.append(" else ")
+                writeBlock {
+                    appendSimplifiedAST(graph, expr.ifFalse)
+                }
+            }
+            is SimpleLoop -> {
+                builder.append("b").append(expr.body.blockId)
+                builder.append(": while (true)")
+                writeBlock {
+                    appendSimplifiedAST(graph, expr.body)
+                }
+            }
+            /*is SimpleGoto -> {
+                if (expr.condition != null) {
+                    builder.append("if (").append1(expr.condition).append(") ")
+                }
+                builder.append(if (expr.isBreak) "break" else "continue")
+                if (expr.bodyBlock != loop?.body) {
+                    builder.append(" b").append(expr.bodyBlock.blockId)
+                }
+                builder.append(';')
+            }*/
+            is SimpleDeclaration -> {
+                appendType(expr.type, expr.scope, false)
+                builder.append(' ').append(expr.name)
+            }
+            is SimpleString -> {
+                builder.append('"').append(expr.base.value).append('"')
+            }
+            is SimpleNumber -> {
+                // todo remove suffixes, that are not supported by Java
+                //  and instead cast the value to the target
+                builder.append(expr.base.value)
+            }
+            is SimpleGetField -> {
+                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
+                builder.appendFieldName(expr.field)
+            }
+            is SimpleSetField -> {
+                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
+                builder.appendFieldName(expr.field).append(" = ").append1(graph, expr.value)
+            }
+            is SimpleCompare -> {
+                builder.append1(graph, expr.left).append(' ')
+                builder.append(expr.type.symbol).append(" 0")
+            }
+            is SimpleInstanceOf -> {
+                // todo if type is ClassType, this is easy, else we need to build an expression...
+                builder.append1(graph, expr.value).append(" instanceof ")
+                appendType(expr.type, expr.scope, false)
+            }
+            is SimpleCheckEquals -> {
+                // todo this could be converted into a SimpleBranch + SimpleCall
+                // todo simple types use ==, while complex types use .equals()
+
+                // todo if left cannot be null, skip null check
+                // todo if left side is a native field, use the static class for comparison
+
+                val leftCanBeNull = canBeNull(expr.left.type)
+                val rightCanBeNull = canBeNull(expr.right.type)
+
+                val leftNative = nativeTypes[expr.left.type]
+                val rightNative = nativeTypes[expr.right.type]
+                when {
+                    leftNative != null && rightNative != null -> {
+                        builder.append1(graph, expr.left).append(" == ")
+                            .append1(graph, expr.right)
+                    }
+                    leftCanBeNull && rightCanBeNull -> {
+                        builder.append1(graph, expr.left).append(" == null ? ")
+                            .append1(graph, expr.right).append(" == null : ")
+                            .append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
+                    }
+                    leftCanBeNull -> {
+                        builder.append1(graph, expr.left).append(" != null && ")
+                            .append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
+                    }
+                    rightCanBeNull -> {
+                        builder.append1(graph, expr.right).append(" != null && ")
+                            .append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
+                    }
+                    else -> {
+                        builder.append1(graph, expr.left).append(".equals(")
+                            .append1(graph, expr.right).append(")")
+                    }
+                }
+            }
+            is SimpleCheckIdentical -> {
+                builder.append1(graph, expr.left).append(" == ")
+                    .append1(graph, expr.right)
+            }
+            is SimpleSpecialValue -> {
+                when (expr.type) {
+                    SpecialValue.TRUE -> builder.append("true")
+                    SpecialValue.FALSE -> builder.append("false")
+                    SpecialValue.NULL -> builder.append("null")
+                }
+            }
+            is SimpleCall -> {
+                if (expr.sample is Constructor) {
+                    comment {
+                        builder.append("new ")
+                        // appendType(expr.dst.type, expr.scope, true)
+                        appendValueParams(graph, expr.valueParameters)
+                    }
+                } else {
+                    // Number.toX() needs to be converted to a cast
+                    val methodName = expr.methodName
+                    val done = when (expr.valueParameters.size) {
+                        0 -> {
+                            val castSymbol = when (methodName) {
+                                "toInt" -> "(int) "
+                                "toLong" -> "(long) "
+                                "toFloat" -> "(float) "
+                                "toDouble" -> "(double) "
+                                "toByte" -> "(byte) "
+                                "toShort" -> "(short) "
+                                "toChar" -> "(char) "
+                                else -> null
+                            }
+                            if (castSymbol != null && expr.self.type in nativeNumbers) {
+                                builder.append(castSymbol).append1(graph, expr.self)
+                                true
+                            } else if (expr.self.type == Types.Boolean && methodName == "not") {
+                                builder.append('!').append1(graph, expr.self)
+                                true
+                            } else false
+                        }
+                        1 -> {
+                            val supportsType = when (expr.self.type) {
+                                Types.String, in nativeTypes -> true
+                                else -> false
+                            }
+                            val symbol = when (methodName) {
+                                "plus" -> " + "
+                                "minus" -> " - "
+                                "times" -> " * "
+                                "div" -> " / "
+                                "rem" -> " % "
+                                // compareTo is a problem for numbers:
+                                //  we must call their static compare() function
+                                "compareTo" -> "compare"
+                                else -> null
+                            }
+                            if (supportsType && symbol != null) {
+                                builder.append1(graph, expr.self).append(symbol)
+                                builder.append1(graph, expr.valueParameters[0])
+                                true
+                            } else false
+                        }
+                        else -> false
+                    }
+                    if (!done) {
+                        val needsCastForFirstValue = nativeTypes[expr.self.type]
+                        if (needsCastForFirstValue != null) {
+                            builder.append(needsCastForFirstValue.boxed).append('.')
+                            builder.append(expr.methodName).append('(')
+                            builder.append1(graph, expr.self)
+                            if (expr.valueParameters.isNotEmpty()) {
+                                builder.append(", ")
+                                appendValueParams(graph, expr.valueParameters, false)
+                            }
+                            builder.append(')')
+                        } else {
+                            builder.append1(graph, expr.self).append('.')
+                            builder.append(expr.methodName)
+                            appendValueParams(graph, expr.valueParameters)
+                        }
+                    }
+                }
+            }
+            is SimpleAllocateInstance -> {
+                // handled in SimpleCall, because only there do we have the value parameters
+                builder.append("new ")
+                appendType(expr.allocatedType, expr.scope, true)
+                appendValueParams(graph, expr.paramsForLater)
+            }
+            is SimpleSelfConstructor -> {
+                when (expr.isThis) {
+                    true -> builder.append("this")
+                    false -> builder.append("super")
+                }
+                appendValueParams(graph, expr.valueParameters)
+            }
+            is SimpleReturn -> {
+                // todo cast if necessary
+                builder.append("return ").append1(graph, expr.field)
+            }
+            is SimpleThrow -> {
+                // todo cast if necessary
+                builder.append("throw ").append1(graph, expr.field)
+            }
+            else -> {
+                comment {
+                    builder.append(expr.javaClass.simpleName).append(": ")
+                        .append(expr)
+                }
+            }
+        }
+        when (expr) {
+            is SimpleAssignment,
+            is SimpleSetField,
+            is SimpleExit,
+            is SimpleDeclaration -> builder.append(';')
+            else -> {}
+        }
+        if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
+        if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
+            builder.append("throw new AssertionError(\"Unreachable\");")
+            nextLine()
+        }
+    }
+
+    fun outsideClassLike(scope: Scope): Scope? {
+        var scope = scope
+        while (true) {
+            if (scope.isClassLike()) return scope
+            scope = scope.parentIfSameFile ?: return null
+        }
+    }
+
+    open fun appendObjectInstance(field: Field, exprScope: Scope) {
+        // todo if there is nothing dangerous in-between, we could use this.
+        if (field.ownerScope == outsideClassLike(exprScope)) {
+            builder.append("this.")
+        } else {
+            appendType(field.ownerScope.typeWithArgs, exprScope, true)
+            builder.append('.').append(OBJECT_FIELD_NAME).append('.')
+        }
+    }
+
+    open fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
+        if (self.type is ClassType && self.type.clazz.isObjectLike()) {
+            appendObjectInstance(field, exprScope)
+        } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {
+            builder.append("/* ${field.ownerScope.pathStr} */ ")
+        } else {
+            val fieldSelfType = field.selfType
+            val needsCast = self.type != fieldSelfType
+            if (needsCast && fieldSelfType != null) {
+                builder.append("((")
+                appendType(fieldSelfType, exprScope, true)
+                builder.append(')')
+                builder.append1(graph, self).append(").")
+            } else {
+                builder.append1(graph, self).append('.')
+            }
+        }
+    }
+
+    open fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
+        val type = resolveType(type)
+
+        val protected = protectedTypes[type]
+        // println("appending $type -> $protected, $needsBoxedType")
+        if (protected != null) {
+            builder.append(if (needsBoxedType) protected.boxed else protected.native)
+            return
+        }
+
+        when (type) {
+            NullType -> {
+                builder.append("Object ")
+                comment { builder.append("null") }
+            }
+            Types.Nothing -> {
+                builder.append("Object ")
+                comment { builder.append("Nothing") }
+            }
+            is ClassType -> appendClassType(type, scope, needsBoxedType)
+            is UnionType if type.types.size == 2 && NullType in type.types -> {
+                // builder.append("@org.jetbrains.annotations.Nullable ")
+                appendType(
+                    type.types.first { it != NullType }, scope,
+                    true /* native types cannot be null */
+                )
+                comment { builder.append("or null") }
+            }
+            is SelfType if (type.scope == scope) -> builder.append(scope.name)
+            is ThisType -> appendType(type.type, scope, needsBoxedType)
+            UnknownType -> builder.append('?')
+            is LambdaType -> {
+                val selfType = type.selfType
+                builder.append("zauber.Function")
+                    .append(type.parameters.size + if (selfType != null) 1 else 0)
+                    .append('<')
+                if (selfType != null) {
+                    appendType(selfType, scope, true)
+                    builder.append(", ")
+                }
+                for (param in type.parameters) {
+                    appendType(param.type, scope, true)
+                    builder.append(", ")
+                }
+                appendType(type.returnType, scope, true)
+                builder.append('>')
+            }
+            is GenericType -> {
+                val lookup = specialization[type]
+                if (lookup != null) appendType(lookup, scope, needsBoxedType)
+                else {
+                    comment { builder.append(type.scope.pathStr) }
+                    builder.append(type.name)
+                }
+            }
+            is TypeOfField -> {
+                val valueType = type.resolve()
+                appendType(valueType, scope, needsBoxedType)
+            }
+            else -> {
+                builder.append("Object ")
+                comment {
+                    builder.append(type)
+                        .append(" (")
+                        .append(type.javaClass.simpleName)
+                        .append(')')
+                }
+            }
+        }
+    }
+
+    fun appendClassType(type: ClassType, scope: Scope, needsBoxedType: Boolean) {
+
+        if (type.clazz.scopeType == ScopeType.TYPE_ALIAS) {
+            val newType0 = type.clazz.selfAsTypeAlias!!
+            val newType = type.typeParameters.resolveGenerics(
+                null, /* used for 'This'/'Self' */ newType0
+            )
+            appendType(newType, scope, needsBoxedType)
+            return
+        }
+
+        val params = type.typeParameters
+        val path0 = if (!params.isNullOrEmpty()) {
+            val spec = Specialization(type)
+            val className = createClassName(type.clazz, spec)
+            foundTypeSpecialization(type.clazz, spec)
+            type.clazz.parent!!.path + className
+        } else {
+            type.clazz.path
+        }
+
+        val path1 = if (type.clazz.scopeType == ScopeType.PACKAGE) {
+            val extraName = createPackageName(type.clazz, Specialization(type))
+            path0 + extraName
+        } else path0
+
+        appendClassName(path1)
+    }
+
+    fun appendClassName(path: List<String>) {
+        val name = path.last()
+        val existingImport = imports.getOrPut(name) { path }
+        if (existingImport == path) {
+            // good :)
+            builder.append(name)
+        } else {
+            // duplicate path -> full path needed
+            builder.appendPath(path)
+        }
+    }
+
+    fun StringBuilder.appendFieldName(field: Field): StringBuilder {
+        if (!field.ownerScope.isClassLike()) {
+            // append("__").append(field.ownerScope.depth).append('_')
+        }
+        append(field.name)
+        return this
+    }
+
+    fun StringBuilder.appendFieldName(field: Parameter): StringBuilder {
+        // append("__").append(field.scope.depth).append('_')
+        append(field.name)
+        return this
+    }
+
+    fun writePackage(packagePath: String) {
+        builder.append("package ").append(packagePath).append(";\n\n")
+    }
+
+    fun writeImports(imports: Map<String, List<String>>) {
+        builder.appendImports(imports)
+    }
+
+    fun StringBuilder.appendPath(path: List<String>) {
+        for (i in path.indices) {
+            if (i > 0) append('.')
+            append(path[i])
+        }
+    }
+
+    fun StringBuilder.appendImports(imports: Map<String, List<String>>) {
+        var hadImport = false
+        for (import in imports.values) {
+            if (import.isNotEmpty()) {
+                append("import ")
+                appendPath(import)
+                append(";\n")
+                hadImport = true
+            }
+        }
+        if (hadImport) append('\n')
+    }
+
 }

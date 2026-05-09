@@ -15,7 +15,7 @@ object MinimalCppCompiler {
     val minimalCMakeLists by lazy {
         MinimalCppCompiler::class.java
             .classLoader.getResourceAsStream("./files/CMakeLists.txt")!!
-            .readBytes()
+            .readBytes().decodeToString()
     }
 
     val isLinux: Boolean =
@@ -45,12 +45,15 @@ object MinimalCppCompiler {
 
             registerMethods()
 
-            CppSourceGenerator.generateCode(
+            val gen = CppSourceGenerator()
+            gen.generateCode(
                 srcFolder, dependencies,
                 testScope.methods0.first { it.name == "main" })
 
+            val si = cppFolder.absolutePath.length + 1
+            val filesList = gen.cppFiles.joinToString(" ") { file -> file.absolutePath.substring(si) }
             File(cppFolder, "CMakeLists.txt")
-                .writeBytes(minimalCMakeLists)
+                .writeText(minimalCMakeLists.replace("CPP_FILES_LIST", filesList))
 
             val buildFolder = File(cppFolder, "build")
             buildFolder.mkdirs()

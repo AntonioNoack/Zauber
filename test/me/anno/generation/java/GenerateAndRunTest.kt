@@ -1,6 +1,6 @@
 package me.anno.generation.java
 
-import me.anno.generation.java.JavaSourceGenerator.register
+import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.generation.java.MinimalJavaCompiler.testCompileMainToJavaAndRun
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
