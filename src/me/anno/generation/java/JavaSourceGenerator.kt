@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
 import me.anno.zauber.ast.simple.SimpleNode.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleNode.Companion.needsCopy
 import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
@@ -32,7 +33,6 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
-import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
@@ -351,7 +351,9 @@ open class JavaSourceGenerator : Generator() {
                 appendStaticInstance(className)
             }
 
-            val allowFinalFields = methods.any { it.method is Constructor }
+            val allowFinalFields = !classScope.isValueType() &&
+                    methods.any { it.method is Constructor }
+
             appendFields(classScope, fields, allowFinalFields, headerOnly)
             appendConstructors(classScope, className, methods, headerOnly)
             appendMethods(classScope, className, methods, headerOnly)
@@ -802,6 +804,11 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
+            is SimpleCall -> {
+                if (expr.sample !is Constructor) {
+                    builder.append(";")
+                }// else we only placed a comment
+            }
             is SimpleAssignment,
             is SimpleSetField,
             is SimpleExit,
@@ -826,6 +833,12 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
+
+        val needsCopy = expr is SimpleAssignment &&
+                expr !is SimpleAllocateInstance &&
+                expr.dst.type.needsCopy()
+
+        if (needsCopy) builder.append('(')
         when (expr) {
             is SimpleBranch -> {
                 builder.append("if (").appendFieldName(graph, expr.condition).append(')')
@@ -892,8 +905,8 @@ open class JavaSourceGenerator : Generator() {
                 // todo if left cannot be null, skip null check
                 // todo if left side is a native field, use the static class for comparison
 
-                val leftCanBeNull = isNullable(expr.left.type)
-                val rightCanBeNull = isNullable(expr.right.type)
+                val leftCanBeNull = expr.left.type.isNullable()
+                val rightCanBeNull = expr.right.type.isNullable()
 
                 val leftNative = nativeTypes[expr.left.type]
                 val rightNative = nativeTypes[expr.right.type]
@@ -1028,6 +1041,9 @@ open class JavaSourceGenerator : Generator() {
                         .append(expr)
                 }
             }
+        }
+        if (needsCopy) {
+            builder.append(").copy()")
         }
     }
 

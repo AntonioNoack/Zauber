@@ -26,7 +26,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
@@ -134,7 +133,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         super.appendConstructors(classScope, className, methods, headerOnly)
 
         // if this is a value class & we have no empty constructor, append one
-        if (headerOnly && isValue(classScope.typeWithArgs) &&
+        if (headerOnly && classScope.typeWithArgs.isValue() &&
             methods.none { (method, _) ->
                 method is Constructor && method.valueParameters.isEmpty()
             }
@@ -476,8 +475,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     fun appendOwnershipSuffix(type: Type) {
         val type = resolveType(type)
         val symbol = when {
-            isNullable(type) -> "*"
-            isValue(type) -> ""
+            type.isNullable() -> "*"
+            type.isValue() -> ""
             else -> "&"
         }
         builder.append(symbol)
@@ -558,7 +557,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleAllocateInstance -> {
-                val needsReference = isNullable(expr.allocatedType) || !isValue(expr.allocatedType)
+                val needsReference = expr.allocatedType.isNullable() || !expr.allocatedType.isValue()
                 if (needsReference) {
                     // call GC-aware alloc instead
                     builder.append("gcNew<")
@@ -575,8 +574,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 appendType(type, expr.scope, false)
                 builder.append(' ').append(expr.name)
                 when { // avoid undefined variables, where possible
-                    isNullable(type) -> builder.append(" = nullptr")
-                    isValue(type) -> builder.append(" = {}")
+                    type.isNullable() -> builder.append(" = nullptr")
+                    type.isValue() -> builder.append(" = {}")
                     type in nativeNumbers -> builder.append(" = 0")
                     else -> {} // default value is unknown...
                 }

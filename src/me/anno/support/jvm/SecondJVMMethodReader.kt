@@ -45,7 +45,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     companion object {
 
         private val LOGGER = LogManager.getLogger(SecondJVMMethodReader::class)
-        private const val INVOKELAMBDA = 0
+
+        private const val INVOKE_LAMBDA = 0
 
         /**
          * cache for often-used constants, don't want to have to recreate them
@@ -798,7 +799,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
             INVOKEVIRTUAL, // normal call on potentially open method
             INVOKEINTERFACE,
-            INVOKELAMBDA -> {
+            INVOKE_LAMBDA -> {
                 // interface call
                 self = stack.removeLast().use()
                 method = resolveDynamicMethod(owner, name, descriptor, typeParameters, valueParameters)
@@ -809,7 +810,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val enableInheritance = when (opcode) {
             INVOKEVIRTUAL,
             INVOKEINTERFACE,
-            INVOKELAMBDA -> true
+            INVOKE_LAMBDA -> true
             else -> false
         }
 

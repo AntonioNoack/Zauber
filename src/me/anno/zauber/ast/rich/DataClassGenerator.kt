@@ -11,6 +11,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.unresolved.ConstructorExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
@@ -72,21 +73,35 @@ object DataClassGenerator {
     }
 
     fun ZauberASTBuilderBase.finishDataClass(classScope: Scope) {
+        pushScope(classScope) {
+            val origin = origin(i)
+            val primaryFields = classScope.findPrimaryFields()
+            val context = ResolutionContext.minimal /// todo better context?
 
-        check(currPackage === classScope) { "Expected currPackage to be classScope" }
-        val origin = origin(i)
+            ensureHashCodeMethod(classScope, primaryFields, context, origin)
+            ensureToStringMethod(classScope, primaryFields, context, origin)
+            ensureEqualsMethods(classScope, primaryFields, context, origin)
+            ensureCopyMethod(classScope, primaryFields, context, origin)
+        }
+    }
 
-        val primaryFields = classScope.findPrimaryFields()
-
-        val context = ResolutionContext.minimal /// todo better context?
+    private fun ZauberASTBuilderBase.ensureHashCodeMethod(
+        classScope: Scope, primaryFields: List<Field>,
+        context: ResolutionContext, origin: Int
+    ) {
         val hashCodeMethod = MethodResolver.findMemberInScope(
             classScope, origin, "hashCode", Types.Int, classScope.typeWithArgs,
             emptyList(), emptyList(), context
         )
         if (hashCodeMethod == null) {
-            generateHashCodeMethod(classScope, origin, primaryFields)
+            generateHashCodeMethod(primaryFields, origin)
         }
+    }
 
+    private fun ZauberASTBuilderBase.ensureToStringMethod(
+        classScope: Scope, primaryFields: List<Field>,
+        context: ResolutionContext, origin: Int
+    ) {
         val toStringMethod = MethodResolver.findMemberInScope(
             classScope, origin, "toString", Types.String, classScope.typeWithArgs,
             emptyList(), emptyList(), context
@@ -94,7 +109,12 @@ object DataClassGenerator {
         if (toStringMethod == null) {
             generateToStringMethod(classScope, origin, primaryFields)
         }
+    }
 
+    private fun ZauberASTBuilderBase.ensureEqualsMethods(
+        classScope: Scope, primaryFields: List<Field>,
+        context: ResolutionContext, origin: Int
+    ) {
         val equalsAnyMethod = MethodResolver.findMemberInScope(
             classScope, origin, "equals", Types.Boolean, classScope.typeWithArgs,
             emptyList(), listOf(ValueParameterImpl(null, Types.NullableAny, false)),
@@ -117,10 +137,7 @@ object DataClassGenerator {
         }
     }
 
-    private fun ZauberASTBuilderBase.generateHashCodeMethod(
-        classScope: Scope, origin: Int,
-        primaryFields: List<Field>
-    ) {
+    private fun ZauberASTBuilderBase.generateHashCodeMethod(primaryFields: List<Field>, origin: Int) {
         lateinit var body: Expression
         val methodScope = pushScope("hashCode", ScopeType.METHOD) { scope ->
             scope.typeParameters = emptyList()
@@ -249,4 +266,42 @@ object DataClassGenerator {
         )
     }
 
+    private fun ZauberASTBuilderBase.ensureCopyMethod(
+        classScope: Scope, primaryFields: List<Field>,
+        context: ResolutionContext, origin: Int
+    ) {
+        val copyMethod = MethodResolver.findMemberInScope(
+            classScope, origin, "copy", classScope.typeWithArgs, classScope.typeWithArgs,
+            emptyList(), emptyList(), context
+        )
+        if (copyMethod == null) {
+            generateCopyMethod(classScope, primaryFields, origin)
+        }
+    }
+
+    private fun ZauberASTBuilderBase.generateCopyMethod(
+        classScope: Scope, primaryFields: List<Field>, origin: Int,
+    ) {
+        lateinit var body: Expression
+        val methodScope = pushScope("copy", ScopeType.METHOD) { scope ->
+            scope.typeParameters = emptyList()
+            scope.hasTypeParameters = true
+
+            val typeParameters = classScope.typeParameters.map { it.type }
+            val valueParameters = primaryFields.map { field ->
+                val expr = FieldExpression(field, classScope, origin)
+                NamedParameter(field.name, expr)
+            }
+            val copyExpr = ConstructorExpression(
+                classScope, typeParameters,
+                valueParameters, null, classScope, origin
+            )
+            body = ReturnExpression(copyExpr, null, scope, origin)
+            scope
+        }
+        methodScope.selfAsMethod = Method(
+            null, false, "copy", emptyList(), emptyList(),
+            methodScope, classScope.typeWithArgs, emptyList(), body, KEYWORDS and Flags.OVERRIDE.inv(), origin
+        )
+    }
 }

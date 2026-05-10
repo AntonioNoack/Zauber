@@ -233,22 +233,30 @@ class SimpleNode(val graph: SimpleGraph) {
     companion object {
 
         fun getOwnership(type: Type): Ownership {
-            return if (isValue(type)) Ownership.VALUE
+            return if (type.isValue()) Ownership.VALUE
             else Ownership.SHARED
         }
 
-        fun isValue(type: Type): Boolean {
-            return (type is ValueType) || (type is ClassType && type.clazz.isValueType()) || type in nativeCppTypes
+        fun Type.isValue(): Boolean {
+            return needsCopy() || isNative()
         }
 
-        fun isNullable(type: Type): Boolean {
-            return when (type) {
+        fun Type.isNative(): Boolean {
+            return this in nativeCppTypes
+        }
+
+        fun Type.needsCopy(): Boolean {
+            return (this is ValueType) || (this is ClassType && clazz.isValueType())
+        }
+
+        fun Type.isNullable(): Boolean {
+            return when (this) {
                 NullType -> true
                 is ClassType -> false
-                is UnionType -> type.types.any { isNullable(it) }
-                is AndType -> type.types.all { isNullable(it) }
-                is GenericType -> isNullable(type.superBounds)
-                else -> throw NotImplementedError("Can a $type be null?")
+                is UnionType -> types.any { it.isNullable() }
+                is AndType -> types.all { it.isNullable() }
+                is GenericType -> superBounds.isNullable()
+                else -> throw NotImplementedError("Can a $this be null?")
             }
         }
     }

@@ -4,6 +4,7 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleNode.Companion.needsCopy
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList
@@ -71,6 +72,20 @@ object Dependencies {
         val simplified = ASTSimplifier.simplify(method)
         for (node in simplified.nodes) {
             for (instr in node.instructions) {
+
+                // if the dstType is a value class, we need the copy-instruction
+                // todo this is not needed, if our target language supports copy OOTB, like C or C++
+                if (instr is SimpleAssignment) {
+                    val dstType = instr.dst.type
+                    if (dstType.needsCopy()) {
+                        dstType as ClassType
+                        val method = dstType.clazz.methods0
+                            .firstOrNull { it.name == "copy" && it.valueParameters.isEmpty() }
+                            ?: throw IllegalStateException("Missing .copy() in value-type $dstType")
+                        addMethod(MethodSpecialization(method, Specialization(dstType)))
+                    }
+                }
+
                 when (instr) {
                     is SimpleCall -> addMethod(MethodSpecialization(instr.sample, instr.specialization))
                     is SimpleCheckEquals -> addMethod(MethodSpecialization(instr.method.resolved, instr.specialization))

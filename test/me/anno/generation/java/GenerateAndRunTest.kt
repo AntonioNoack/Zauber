@@ -2,6 +2,7 @@ package me.anno.generation.java
 
 import me.anno.compilation.MinimalJavaCompiler
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -143,6 +144,13 @@ class GenerateAndRunTest {
 
     @Test
     fun testValueIsPassedByCopy() {
+        LogManager.disableLoggers(
+            "TypeResolution,ASTSimplifier,MemberResolver,Inheritance," +
+                    "CallExpression,SuperCallExpression," +
+                    "MethodResolver,ResolvedMethod," +
+                    "ConstructorResolver," +
+                    "ResolvedField,Field,FieldResolver,FieldExpression"
+        )
         val code = """
             value class Vector(val x: Int)
             
@@ -175,8 +183,8 @@ class GenerateAndRunTest {
 
     // todo add .copy(name=value) as a special function on data classes
 
-    // todo implement value classes being copied when written / passed as parameter
-    // todo implement and test value classes being inlined
+    // todo implement and test value classes being inlined:
+    //  we explode them, and must make their body-functions static...
 
     // todo implement and test working with strings
     // todo test specialized classes being usable

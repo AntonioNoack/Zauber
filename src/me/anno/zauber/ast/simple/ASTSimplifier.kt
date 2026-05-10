@@ -343,7 +343,7 @@ object ASTSimplifier {
         }
 
         val valueType = expr.resolveReturnType(context)
-        println("valueType for $expr: $valueType")
+        // println("valueType for $expr: $valueType")
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true, expr)
         val block1v = block1.value ?: return block1

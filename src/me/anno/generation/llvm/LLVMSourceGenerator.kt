@@ -235,8 +235,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 // todo if left cannot be null, skip null check
                 // todo if left side is a native field, use the static class for comparison
 
-                val leftCanBeNull = isNullable(expr.left.type)
-                val rightCanBeNull = isNullable(expr.right.type)
+                val leftCanBeNull = expr.left.type.isNullable()
+                val rightCanBeNull = expr.right.type.isNullable()
 
                 val leftNative = nativeTypes[expr.left.type]
                 val rightNative = nativeTypes[expr.right.type]

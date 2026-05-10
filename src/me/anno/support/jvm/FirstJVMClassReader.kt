@@ -1,6 +1,7 @@
 package me.anno.support.jvm
 
 import me.anno.utils.CollectionUtils.getOrPutRecursive
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.RunOnceLazy
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.*
@@ -24,11 +25,13 @@ import java.io.IOException
 class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisitor(API_LEVEL) {
 
     companion object {
+
         const val API_LEVEL = ASM9
         private val LOGGER = LogManager.getLogger(FirstJVMClassReader::class)
 
-        var ctr = 0
-        val scanned = HashMap<String, Scope>()
+        val scanned by threadLocal {
+            HashMap<String, Scope>()
+        }
 
         fun splitPackage(name: String) = name.split('/', '$')
         fun getScope(name: String, scopeType: ScopeType?): Scope {

@@ -589,7 +589,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             check(root === otherRoot) {
                 "Root mismatch :(, " +
                         "#${root.atomic} vs " +
-                        "#${otherRoot.atomic}"
+                        "#${otherRoot.atomic}, ($pathStr vs ${other.pathStr})"
             }
         }
         return other is Scope && pathStr == other.pathStr
