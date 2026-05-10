@@ -1,6 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
+import me.anno.utils.ResolutionUtils.testTypeResolution
 import org.junit.jupiter.api.Test
 
 class InnerResolutionTest {

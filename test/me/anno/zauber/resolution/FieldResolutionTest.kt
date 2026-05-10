@@ -1,8 +1,8 @@
 package me.anno.zauber.resolution
 
 import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.resolution.ResolutionUtils.get
-import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.utils.ResolutionUtils.get
+import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext

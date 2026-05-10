@@ -1,12 +1,11 @@
-package me.anno.generation.llvmir
+package me.anno.compilation
 
-import me.anno.generation.MinimalCompiler
 import me.anno.generation.llvm.LLVMSourceGenerator
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-object MinimalLLVMCompiler : MinimalCompiler() {
+class MinimalLLVMCompiler : MinimalCompiler() {
 
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
         val srcFile = File(projectFolder, "Source.ll")

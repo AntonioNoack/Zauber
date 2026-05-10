@@ -17,6 +17,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
+import me.anno.zauber.ast.simple.SimpleNode.Companion.isNullable
 import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
@@ -711,17 +712,6 @@ open class JavaSourceGenerator : Generator() {
 
     val imports = HashMap<String, List<String>>()
     val nativeImports = LinkedHashSet<String>()
-
-    fun isNullable(type: Type): Boolean {
-        return when (type) {
-            NullType -> true
-            is ClassType -> false
-            is UnionType -> type.types.any { isNullable(it) }
-            is AndType -> type.types.all { isNullable(it) }
-            is GenericType -> isNullable(type.superBounds)
-            else -> throw NotImplementedError("Can a $type be null?")
-        }
-    }
 
     open fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst

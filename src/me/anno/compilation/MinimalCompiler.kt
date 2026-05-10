@@ -1,28 +1,33 @@
-package me.anno.generation
+package me.anno.compilation
 
+import me.anno.utils.ResolutionUtils
+import me.anno.utils.ResolutionUtils.printDependencies
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.dependency.DependencyGraphTests.Companion.printDependencies
 import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.resolution.ResolutionUtils
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import org.junit.jupiter.api.Assertions.assertEquals
 import java.io.File
 import java.io.InputStream
 import kotlin.concurrent.thread
 
+/**
+ * base class for toy compilers,
+ * compiling Zauber to other languages
+ * */
 abstract class MinimalCompiler {
 
     companion object {
+
+        private val LOGGER = LogManager.getLogger(MinimalCompiler::class)
+
         val isLinux: Boolean =
             System.getProperty("os.name")
                 .contains("linux", true)
     }
-
-    private val LOGGER = LogManager.getLogger(MinimalCompiler::class)
 
     fun InputStream.printToThread(showLine: (String) -> Unit) {
         thread {

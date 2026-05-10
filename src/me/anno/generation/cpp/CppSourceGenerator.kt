@@ -15,6 +15,8 @@ import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.SimpleNode.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
@@ -33,7 +35,7 @@ import java.io.File
 // compared to C, this has inheritance built-in, which
 //  we can directly use; and it has ready-made shared references
 
-class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
+open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
     companion object {
 
@@ -132,8 +134,7 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
         super.appendConstructors(classScope, className, methods, headerOnly)
 
         // if this is a value class & we have no empty constructor, append one
-        if (headerOnly &&
-            isValue(classScope.typeWithArgs) &&
+        if (headerOnly && isValue(classScope.typeWithArgs) &&
             methods.none { (method, _) ->
                 method is Constructor && method.valueParameters.isEmpty()
             }
@@ -480,10 +481,6 @@ class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
             else -> "&"
         }
         builder.append(symbol)
-    }
-
-    fun isValue(type: Type): Boolean {
-        return (type is ValueType) || (type is ClassType && type.clazz.isValueType()) || type in nativeCppTypes
     }
 
     override fun filterImports(name: String, packageScope: Scope, headerOnly: Boolean) {

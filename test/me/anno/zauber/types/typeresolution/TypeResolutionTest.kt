@@ -1,19 +1,9 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.utils.ResetThreadLocal
-import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.Field
+import me.anno.utils.ResolutionUtils.testTypeResolution
+import me.anno.utils.ResolutionUtils.testTypeResolutionGetField
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.lazy.LazyExpression
-import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
@@ -22,66 +12,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class TypeResolutionTest {
-
-    companion object {
-
-        var ctr = 0
-
-        fun testTypeResolution0(code: String, reset: Boolean): Scope {
-
-            // clean slate
-            if (reset) ResetThreadLocal.reset()
-
-            val testScopeName = "test${ctr++}"
-            val tokens = ZauberTokenizer(
-                """
-            package $testScopeName
-            
-            $code
-        """.trimIndent(), "Test.zbr"
-            ).tokenize()
-            scanClasses(tokens)
-            return root.children.first { it.name == testScopeName }
-        }
-
-        fun testTypeResolutionGetField(code: String, reset: Boolean): Field {
-            return testTypeResolution0(code, reset).fields.first { it.name == "tested" }
-        }
-
-        fun testTypeResolution(code: String, reset: Boolean = false): Type {
-            val field = testTypeResolutionGetField(code, reset)
-            val context = ResolutionContext(null, false, null)
-            return field.resolveValueType(context)
-        }
-
-        fun testMethodBodyResolution(code: String): List<Type> {
-            val testScope = testTypeResolution0(code, reset = true)
-            val method = testScope.methods0.first { it.name == "tested" }
-            val types = ArrayList<Type>()
-            fun scan(expr: Expression) {
-                when (expr) {
-                    is LazyExpression -> scan(expr.value)
-                    is ExpressionList -> {
-                        for (exprI in expr.list) {
-                            scan(exprI)
-                        }
-                    }
-                    else -> {
-                        val context = ResolutionContext(
-                            method.selfType,
-                            true,
-                            null,
-                            emptyMap()
-                        )
-                        val type = TypeResolution.resolveType(context, expr)
-                        types.add(type)
-                    }
-                }
-            }
-            scan(method.body!!)
-            return types
-        }
-    }
 
     @Test
     fun testConstants() {

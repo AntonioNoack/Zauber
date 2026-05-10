@@ -1,22 +1,24 @@
-package me.anno.generation.cpp
+package me.anno.compilation
 
-import me.anno.generation.MinimalCompiler
+import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-object MinimalCppCompiler : MinimalCompiler() {
+open class MinimalCppCompiler : MinimalCompiler() {
 
-    val minimalCMakeLists by lazy {
-        MinimalCppCompiler::class.java
-            .classLoader.getResourceAsStream("./files/CMakeLists.txt")!!
-            .readBytes().decodeToString()
-    }
+    companion object {
+        val minimalCMakeLists by lazy {
+            MinimalCppCompiler::class.java
+                .classLoader.getResourceAsStream("./files/CMakeLists.txt")!!
+                .readBytes().decodeToString()
+        }
 
-    val cppStandardLib by lazy {
-        MinimalCppCompiler::class.java
-            .classLoader.getResourceAsStream("./files/CppStandardLib.hpp")!!
-            .readBytes()
+        val cppStandardLib by lazy {
+            MinimalCppCompiler::class.java
+                .classLoader.getResourceAsStream("./files/CppStandardLib.hpp")!!
+                .readBytes()
+        }
     }
 
     override fun compile(

@@ -1,9 +1,9 @@
 package me.anno.zauber.types
 
+import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.zauber.types.typeresolution.TypeResolutionTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -11,7 +11,7 @@ class TypeParserTest {
 
     companion object {
         fun String.parseType(): Type {
-            return TypeResolutionTest.testTypeResolution("val tested: $this")
+            return testTypeResolution("val tested: $this")
         }
     }
 

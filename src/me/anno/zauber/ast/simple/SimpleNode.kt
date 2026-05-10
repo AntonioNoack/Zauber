@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.generation.c.CSourceGenerator.isValueType
+import me.anno.generation.cpp.CppSourceGenerator.Companion.nativeCppTypes
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
@@ -12,6 +12,12 @@ import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.arithmetic.AndType
+import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.specialization.Specialization
 
 class SimpleNode(val graph: SimpleGraph) {
@@ -225,9 +231,25 @@ class SimpleNode(val graph: SimpleGraph) {
     }
 
     companion object {
+
         fun getOwnership(type: Type): Ownership {
-            return if (type.isValueType()) Ownership.VALUE
+            return if (isValue(type)) Ownership.VALUE
             else Ownership.SHARED
+        }
+
+        fun isValue(type: Type): Boolean {
+            return (type is ValueType) || (type is ClassType && type.clazz.isValueType()) || type in nativeCppTypes
+        }
+
+        fun isNullable(type: Type): Boolean {
+            return when (type) {
+                NullType -> true
+                is ClassType -> false
+                is UnionType -> type.types.any { isNullable(it) }
+                is AndType -> type.types.all { isNullable(it) }
+                is GenericType -> isNullable(type.superBounds)
+                else -> throw NotImplementedError("Can a $type be null?")
+            }
         }
     }
 }

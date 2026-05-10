@@ -1,16 +1,17 @@
-package me.anno.generation.java
+package me.anno.compilation
 
-import me.anno.generation.MinimalCompiler
+import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-object MinimalJavaCompiler : MinimalCompiler() {
-
-    val minimalPom by lazy {
-        MinimalJavaCompiler::class.java
-            .classLoader.getResourceAsStream("./files/minimal.pom")!!
-            .readBytes()
+class MinimalJavaCompiler : MinimalCompiler() {
+    companion object {
+        val minimalPom by lazy {
+            MinimalJavaCompiler::class.java
+                .classLoader.getResourceAsStream("./files/minimal.pom")!!
+                .readBytes()
+        }
     }
 
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {

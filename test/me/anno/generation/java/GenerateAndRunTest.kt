@@ -1,13 +1,20 @@
 package me.anno.generation.java
 
+import me.anno.compilation.MinimalJavaCompiler
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.generation.java.MinimalJavaCompiler.testCompileMainAndRun
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class GenerateAndRunTest {
+
+    private fun registerLib() {
+        register(
+            langScope, "println", listOf(Types.Int),
+            "System.out.println(arg0)"
+        )
+    }
 
     @Test
     fun testSimpleAddition() {
@@ -27,12 +34,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = MinimalJavaCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("3\n", printed)
 
     }
@@ -56,12 +59,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = MinimalJavaCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("3\n", printed)
     }
 
@@ -85,12 +84,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = MinimalJavaCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
@@ -114,12 +109,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = MinimalJavaCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
 
@@ -145,12 +136,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = MinimalJavaCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("7\n", printed)
     }
 
@@ -181,12 +168,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true) {
-            register(
-                langScope, "println", listOf(Types.Int),
-                "System.out.println(arg0)"
-            )
-        }
+        val printed = MinimalJavaCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
 

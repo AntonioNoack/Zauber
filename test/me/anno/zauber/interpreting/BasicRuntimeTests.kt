@@ -2,7 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization

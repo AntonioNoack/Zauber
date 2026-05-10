@@ -1,6 +1,6 @@
 package me.anno.generation.cpp
 
-import me.anno.generation.cpp.MinimalCppCompiler.testCompileMainAndRun
+import me.anno.compilation.MinimalCppCompiler
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
@@ -35,9 +35,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true) {
-            registerLib()
-        }
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("3\n", printed)
 
     }
@@ -61,7 +60,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, ::registerLib)
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("3\n", printed)
     }
 
@@ -86,7 +86,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, ::registerLib)
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
@@ -115,7 +116,8 @@ class GenerateAndRunTest {
 
         // todo 'this' should work inside hashCode(), too...
 
-        val printed = testCompileMainAndRun(code, ::registerLib)
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
@@ -139,7 +141,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true, ::registerLib)
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
 
@@ -166,7 +169,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true, ::registerLib)
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("7\n", printed)
     }
 
@@ -197,7 +201,8 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = testCompileMainAndRun(code, true, ::registerLib)
+        val printed = MinimalCppCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed) {
             "Expected response to be 1, got ${printed.trim()}"
         }

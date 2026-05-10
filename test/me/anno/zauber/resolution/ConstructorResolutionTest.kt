@@ -1,7 +1,7 @@
 package me.anno.zauber.resolution
 
-import me.anno.zauber.resolution.ResolutionUtils.getField
-import me.anno.zauber.resolution.ResolutionUtils.typeResolveScope
+import me.anno.utils.ResolutionUtils.getField
+import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals

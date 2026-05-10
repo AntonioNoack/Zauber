@@ -1,5 +1,6 @@
 package me.anno.zauber.types
 
+import me.anno.utils.ResolutionUtils.ctr
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
@@ -15,7 +16,6 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.ctr
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

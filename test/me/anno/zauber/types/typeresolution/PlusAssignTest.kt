@@ -1,5 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.utils.ResolutionUtils.testMethodBodyResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -10,7 +11,7 @@ class PlusAssignTest {
     // todo also test complex accessor chains...
 
     private fun runTest(code: String) {
-        val result = TypeResolutionTest.testMethodBodyResolution(code)
+        val result = testMethodBodyResolution(code)
         assertEquals(
             listOf(Types.Unit, Types.Unit),
             result

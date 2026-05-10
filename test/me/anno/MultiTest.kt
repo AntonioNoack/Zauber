@@ -1,9 +1,9 @@
 package me.anno
 
+import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions.assertEquals
 
 class MultiTest {

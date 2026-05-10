@@ -1,7 +1,7 @@
 package me.anno.zauber.parsing
 
+import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.typeresolution.TypeResolutionTest.Companion.testTypeResolution
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 

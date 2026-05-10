@@ -1,5 +1,7 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.utils.ResolutionUtils.ctr
+import me.anno.utils.ResolutionUtils.firstChild
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ZauberASTBuilder
@@ -8,7 +10,6 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.resolution.ResolutionUtils.firstChild
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.scope.lazy.LazyExpression
@@ -22,7 +23,7 @@ class TestInlineLambdaParameterIsImmediatelyFound {
      * */
     @Test
     fun testLambdaCallIsImmediatelyResolvedToParameter() {
-        val testScopeName = "test${TypeResolutionTest.ctr++}"
+        val testScopeName = "test${ctr++}"
         val tokens = ZauberTokenizer(
             """
             package $testScopeName

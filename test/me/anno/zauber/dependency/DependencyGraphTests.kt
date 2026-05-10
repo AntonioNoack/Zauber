@@ -1,10 +1,9 @@
 package me.anno.zauber.dependency
 
+import me.anno.utils.ResolutionUtils
+import me.anno.utils.ResolutionUtils.printDependencies
 import me.anno.zauber.Compile
 import me.anno.zauber.expansion.Dependencies
-import me.anno.zauber.expansion.DependencyData
-import me.anno.zauber.logging.LogManager
-import me.anno.zauber.resolution.ResolutionUtils
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types
@@ -15,43 +14,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class DependencyGraphTests {
-
-    companion object {
-        private val LOGGER = LogManager.getLogger(DependencyGraphTests::class)
-
-        fun printDependencies(data: DependencyData) {
-            if (!LOGGER.isInfoEnabled) return
-
-            LOGGER.info("Classes:")
-            for (clazz in data.createdClasses.map { clazz ->
-                "  - ${clazz.clazz}, ${clazz.specialization}"
-            }.sorted()) {
-                LOGGER.info(clazz)
-            }
-
-            LOGGER.info("Methods:")
-            for (method in data.calledMethods.map { method ->
-                "  - ${method.method}, ${method.specialization}"
-            }.sorted()) {
-                LOGGER.info(method)
-            }
-
-            LOGGER.info("Fields:")
-            val fields = data.getFields + data.setFields
-            for (field in fields.map { field ->
-                val get = field in data.getFields
-                val set = field in data.setFields
-                val str = when {
-                    !get -> "set"
-                    !set -> "get"
-                    else -> "get+set"
-                }
-                "  - ${field.field}, ${field.specialization}: $str"
-            }.sorted()) {
-                LOGGER.info(field)
-            }
-        }
-    }
 
     // todo we should also define a more complex example,
     //  e.g. with generics
@@ -87,14 +49,14 @@ class DependencyGraphTests {
             .methods0.first { it.name == "plus" }
 
         // validate with what we expect
-        val expectedClasses = setOf(
+        val expectedClasses = listOf(
             Types.Any,
             Types.Int,
             Types.Unit,
             zauberScope.typeWithArgs,
             testScope.typeWithArgs,
         ).map { ClassSpecialization(it) }
-        assertEquals(expectedClasses, classes)
+        assertEquals(expectedClasses.toSet(), classes)
 
         val expectedMethods = setOf(
             method, printlnMethod, intPlusMethod,
