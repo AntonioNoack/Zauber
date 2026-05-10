@@ -31,9 +31,10 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
-// compared to C, this has inheritance built-in, which
-//  we can directly use; and it has ready-made shared references
-
+/**
+ * structs are directly supported, inheritance is still supported
+ * todo needs custom GC
+ * */
 open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
     companion object {

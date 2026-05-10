@@ -1,5 +1,5 @@
 package me.anno.generation.jvm
 
-import me.anno.generation.Generator
+import me.anno.generation.java.JavaSourceGenerator
 
-object JVMBytecodeGenerator : Generator()
+class JVMBytecodeGenerator : JavaSourceGenerator()

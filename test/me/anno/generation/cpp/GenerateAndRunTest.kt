@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 
 class GenerateAndRunTest {
 
-    fun registerLib() {
+    private fun registerLib() {
         register(
             langScope, "println", listOf(Types.Int),
             "#include <stdio.h>\n" +

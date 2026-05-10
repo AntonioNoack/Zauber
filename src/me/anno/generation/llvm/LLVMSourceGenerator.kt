@@ -1,6 +1,7 @@
 package me.anno.generation.llvm
 
 import me.anno.generation.BoxedType
+import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.reverse.CodeReconstruction
@@ -24,7 +25,7 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 import java.io.File
 
 // todo this is like C (end game difficulty), just different commands?
-class LLVMSourceGenerator : JavaSourceGenerator() {
+class LLVMSourceGenerator : CSourceGenerator() {
 
     companion object {
 
@@ -124,7 +125,11 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun StringBuilder.appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String): StringBuilder {
+    override fun StringBuilder.appendFieldName(
+        graph: SimpleGraph,
+        field: SimpleField,
+        forFieldAccess: String
+    ): StringBuilder {
         if (field.isObjectLike()) {
             builder.append((field.type as ClassType).clazz.pathStr)
             appendGetObjectInstance()
