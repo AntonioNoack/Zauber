@@ -168,7 +168,7 @@ If you need obfuscation, obfuscate all library-internal logic.
 
 ### Progress Estimation
 
-Total Progress: 2.3 %
+Total Progress: 2.7 %
 
 ```yaml
 - Kotlin-Style:
@@ -176,10 +176,10 @@ Total Progress: 2.3 %
   - AST: 85% of 3%
   - Typealias: 75% of 0.2%
   - Type-Resolution: 70% of 4%
-  - Baking(comptime) Generics: 50% of 2%
-  - Dependency-Optimization: 0% of 4%
-- Rust-style Macros: 0% of 3%
-- Compile to C/C++: 1% of 3%
+  - Baking(comptime) Generics: 70% of 2%
+  - Dependency-Optimization: 50% of 4%
+- Rust-style Macros: 15% of 3%
+- Compile to C/C++: 15% of 3%
 - Choose Allocator for Instantiation: 10% of 3%
 - Arena Allocator: 0% of 2%
 - Store struct members on stack: 0% of 3%
@@ -196,8 +196,8 @@ Total Progress: 2.3 %
 - Lambdas: 30% of 3%
 - Garbage Collector: 5% of 2%
 - Multithreading and Parallel GC: 0% of 5%
-- Completely Immutable Objects: 5% of 3%
-- CompileTime Interpreter: 10% of 5%
+- Completely Immutable Objects: 15% of 3%
+- CompileTime Interpreter: 40% of 5%
 - VisualStudioCode Extension for syntax checking: 70% of 3%
 - VisualStudioCode Extension for semantic checking: 3% of 5%
 - IntelliJ Idea Extension for syntax checking: 0% of 3%
