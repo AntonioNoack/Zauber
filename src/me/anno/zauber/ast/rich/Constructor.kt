@@ -22,6 +22,10 @@ class Constructor(
     val classScope get() = ownerScope
 
     override fun toString(): String {
-        return "new ${selfTypeI.clazz.pathStr}($valueParameters) { ... }"
+        val builder = StringBuilder()
+        builder.append("new ")
+        builder.append(selfTypeI.clazz.pathStr)
+        valueParams(builder)
+        return builder.toString()
     }
 }

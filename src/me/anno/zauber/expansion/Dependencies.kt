@@ -75,6 +75,11 @@ object Dependencies {
 
                 // if the dstType is a value class, we need the copy-instruction
                 // todo this is not needed, if our target language supports copy OOTB, like C or C++
+
+                // todo is this the right place to copy???
+                //  I think we need to copy, when we really assign...
+                //  e.g. when passing fields into a function...
+
                 if (instr is SimpleAssignment) {
                     val dstType = instr.dst.type
                     if (dstType.needsCopy()) {

@@ -1,8 +1,11 @@
 package me.anno.utils
 
 import me.anno.generation.Specializations
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile
+import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.ZauberASTClassScanner
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -156,31 +159,54 @@ object ResolutionUtils {
     fun printDependencies(data: DependencyData) {
         if (!LOGGER.isInfoEnabled) return
 
-        LOGGER.info("Classes:")
+        LOGGER.info(style("Classes:", StringStyles.BOLD))
         for (clazz in data.createdClasses.map { clazz ->
-            "  - ${clazz.clazz}, ${clazz.specialization}"
+            "  - ${style(clazz.clazz.pathStr, StringStyles.LIGHT_BLUE)}, ${clazz.specialization}"
         }.sorted()) {
             LOGGER.info(clazz)
         }
 
-        LOGGER.info("Methods:")
+        LOGGER.info(style("Methods:", StringStyles.BOLD))
         for (method in data.calledMethods.map { method ->
-            "  - ${method.method}, ${method.specialization}"
+            val methodStr = when (val method = method.method) {
+                is Method -> {
+                    style(method.flags().toString() + "fun ", StringStyles.ORANGE) +
+                            style(method.selfType(), StringStyles.LIGHT_BLUE) +
+                            style(method.typeParams(), StringStyles.GREEN) +
+                            style(method.name, StringStyles.YELLOW) +
+                            method.valueParams() +
+                            " in " +
+                            style(method.ownerScope.pathStr, StringStyles.LIGHT_BLUE)
+                }
+                is Constructor -> {
+                    style("new " + method.flags(), StringStyles.ORANGE) +
+                            style(method.selfTypeI.toString(), StringStyles.LIGHT_BLUE) +
+                            method.valueParams()
+                }
+                else -> method.toString()
+            }
+            "  - $methodStr, ${method.specialization}"
         }.sorted()) {
             LOGGER.info(method)
         }
 
-        LOGGER.info("Fields:")
+        val setStr = style("set", StringStyles.ORANGE)
+        val getStr = style("get", StringStyles.GREEN)
+        val getSetStr = "$getStr+$setStr"
+
+        LOGGER.info(style("Fields:", StringStyles.BOLD))
         val fields = data.getFields + data.setFields
         for (field in fields.map { field ->
             val get = field in data.getFields
             val set = field in data.setFields
+            val (field, spec) = field
             val str = when {
-                !get -> "set"
-                !set -> "get"
-                else -> "get+set"
+                !get -> setStr
+                !set -> getStr
+                else -> getSetStr
             }
-            "  - ${field.field}, ${field.specialization}: $str"
+            val fieldStr = "${field.selfType ?: field.ownerScope.pathStr}"
+            "  - ${style(field.name, StringStyles.YELLOW)} in ${style(fieldStr, StringStyles.LIGHT_BLUE)}, $spec: $str"
         }.sorted()) {
             LOGGER.info(field)
         }

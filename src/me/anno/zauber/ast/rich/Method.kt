@@ -53,25 +53,12 @@ class Method(
     }
 
     override fun toString(): String {
-        val builder = StringBuilder()
-        if (isPrivate()) builder.append("private ")
-        if (isProtected()) builder.append("protected ")
-        if (isExternal()) builder.append("external ")
+        val builder = flags()
         builder.append("fun ")
-        if (typeParameters.isNotEmpty()) {
-            builder.append('<')
-            builder.append(typeParameters.joinToString(", ") {
-                "${it.name}: ${it.type}"
-            })
-            builder.append("> ")
-        }
-        if (selfType != null) {
-            builder.append(selfType.toString()).append('.')
-        }
+        typeParams(builder)
+        selfType(builder)
         builder.append(name)
-        builder.append('(')
-        builder.append(valueParameters.joinToString(", "))
-        builder.append(')')
+        valueParams(builder)
         return builder.toString()
     }
 }

@@ -126,4 +126,36 @@ open class MethodLike(
 
     var selfTypeIfNecessary: Type? = null
 
+    fun flags(builder: StringBuilder = StringBuilder()): StringBuilder {
+        if (isPrivate()) builder.append("private ")
+        if (isProtected()) builder.append("protected ")
+        if (isExternal()) builder.append("external ")
+        return builder
+    }
+
+    fun selfType(builder: StringBuilder = StringBuilder()): StringBuilder {
+        if (selfType != null) {
+            builder.append(selfType.toString()).append('.')
+        }
+        return builder
+    }
+
+    fun typeParams(builder: StringBuilder = StringBuilder()): StringBuilder {
+        if (typeParameters.isNotEmpty()) {
+            builder.append('<')
+            builder.append(typeParameters.joinToString(", ") {
+                "${it.name}: ${it.type}"
+            })
+            builder.append("> ")
+        }
+        return builder
+    }
+
+    fun valueParams(builder: StringBuilder = StringBuilder()): StringBuilder {
+        builder.append(valueParameters.joinToString(", ", "(", ")") {
+            "${it.name}: ${it.type.resolvedName}"
+        })
+        return builder
+    }
+
 }
