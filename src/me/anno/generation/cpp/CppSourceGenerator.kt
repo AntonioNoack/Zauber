@@ -4,13 +4,14 @@ import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.ImportSorter
-import me.anno.generation.Specializations.specializations
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
-import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
@@ -20,7 +21,6 @@ import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
-import me.anno.zauber.interpreting.ExternalKey
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -30,6 +30,7 @@ import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
+import kotlin.math.max
 
 /**
  * structs are directly supported, inheritance is still supported
@@ -57,13 +58,27 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val nativeCppTypes by threadLocal { protectedCppTypes.filter { (_, it) -> it.boxed != it.native } }
         val nativeCppNumbers by threadLocal { nativeCppTypes - Types.Boolean }
 
-        val registeredMethods by threadLocal { HashMap<ExternalKey, String>() }
-        fun register(key: ExternalKey, implementation: String) {
-            registeredMethods[key] = implementation
-        }
-
-        fun register(scope: Scope, name: String, valueParameterTypes: List<Type>, implementation: String) {
-            register(ExternalKey(scope, name, valueParameterTypes), implementation)
+        fun StringBuilder.appendRelativePath(packagePath: List<String>, import: List<String>) {
+            var i = 0
+            while (i + 1 < import.size && i < packagePath.size && packagePath[i] == import[i]) {
+                // nothing to do
+                i++
+            }
+            val numBackwards = packagePath.size - i
+            if (numBackwards > 0) {
+                repeat(numBackwards) {
+                    append("../")
+                }
+            } else {
+                append("./")
+            }
+            var needsSlash = false
+            while (i < import.size) {
+                if (needsSlash) append("/")
+                append(import[i])
+                needsSlash = true
+                i++
+            }
         }
     }
 
@@ -72,6 +87,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override val nativeNumbers: Map<ClassType, BoxedType> get() = nativeCppNumbers
 
     val cppFiles = HashSet<File>()
+
+    open fun needsHeaders() = true
 
     override fun getExtension(headerOnly: Boolean): String {
         return if (headerOnly) "hpp" else "cpp"
@@ -85,46 +102,49 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         scope: Scope, dst: File, writer: FileWithImportsWriter, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
-        val (name, packageScope) = getNameAndScope(scope, specialization)
-        generateClassBody(name, scope, specialization, methods, fields, true)
-        writeInto(packageScope, name, dst, writer, true)
+        if (needsHeaders()) {
+            val (name, packageScope) = getNameAndScope(scope, specialization)
+            appendClass(name, scope, specialization, methods, fields, true)
+            writeInto(packageScope, name, dst, writer, true)
 
-        generateClassBody(name, scope, specialization, methods, fields, false)
-        cppFiles += writeInto(packageScope, name, dst, writer, false)
+            appendClass(name, scope, specialization, methods, fields, false)
+            cppFiles += writeInto(packageScope, name, dst, writer, false)
+        } else {
+            // just generate one class
+            super.generateClassForScope(scope, dst, writer, specialization, methods, fields)
+        }
     }
 
-    override fun generateClassBody(
+    override fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
-        specializations.add(specialization)
+        specialization.push {
 
-        appendSpecializationInfoComment()
+            appendSpecializationInfoComment()
 
-        if (headerOnly) {
-            appendClassFlags(classScope)
-            appendClassPrefix(classScope, className)
+            if (headerOnly) {
+                appendClassFlags(classScope)
+                appendClassPrefix(classScope, className)
 
-            // we specialize only the generics we need
-            /*if (specialization.containsGenerics()) {
-                appendTypeParams(classScope)
-            }*/
+                // we specialize only the generics we need
+                /*if (specialization.containsGenerics()) {
+                    appendTypeParams(classScope)
+                }*/
 
-            appendSuperTypes(classScope)
-            appendClassBody(classScope, className, methods, fields, true)
-            trimWhitespaceAtEnd()
-            builder.append(";")
-            nextLine()
+                appendSuperTypes(classScope)
+                appendClassBody(classScope, className, methods, fields, true)
+                trimWhitespaceAtEnd()
+                builder.append(";")
+                nextLine()
 
-        } else {
-            appendConstructors(classScope, className, methods, false)
-            appendMethods(classScope, className, methods, false)
+            } else {
+                appendConstructors(classScope, className, methods, false)
+                appendMethods(classScope, className, methods, false)
+            }
         }
-
-        @Suppress("Since15")
-        specializations.removeLast()
     }
 
     override fun appendConstructors(
@@ -160,7 +180,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         nextLine()
     }
 
-    override fun appendStaticInstance(className: String) {
+    override fun appendStaticInstance(classScope: Scope, className: String) {
         // https://stackoverflow.com/a/1008289/4979303
         builder.append(
             """
@@ -233,17 +253,16 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             builder.append("{")
             nextLine()
         }
-        depth++
         nextLine()
     }
 
     override fun endPackageDeclaration(packagePath: List<String>, file: File) {
         if (packagePath.isEmpty()) return
         val packageDepth = if (cppVersion >= 17) 1 else packagePath.size
+        nextLine()
         repeat(packageDepth) {
             builder.append("}")
         }
-        depth--
         nextLine()
     }
 
@@ -265,7 +284,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         builder.append("#include \"${"../".repeat(packagePath.size)}CppStandardLib.hpp\"\n")
         nextLine()
 
-        writeImports(packagePath, imports)
+        appendImports(packagePath, imports)
         writeUsingNamespace(imports)
 
         nextLine()
@@ -294,21 +313,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendImport(packagePath: List<String>, import: List<String>) {
         builder.append("#include \"")
-        var i = 0
-        while (i + 1 < import.size && i < packagePath.size && packagePath[i] == import[i]) {
-            // nothing to do
-            i++
-        }
-        repeat(packagePath.size - i) {
-            builder.append("../")
-        }
-        var needsSlash = false
-        while (i < import.size) {
-            if (needsSlash) builder.append("/")
-            builder.append(import[i])
-            needsSlash = true
-            i++
-        }
+        builder.appendRelativePath(packagePath, import)
         builder.append(".hpp\"")
         nextLine()
     }
@@ -398,11 +403,6 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val method = method0.method as Method
         appendMethodFlags(classScope, method, headerOnly)
 
-        val selfType = method.selfType
-        val isBySelf = selfType == classScope.typeWithArgs ||
-                method.flags.hasFlag(Flags.OVERRIDE) ||
-                method.flags.hasFlag(Flags.ABSTRACT)
-
         appendTypeParameterDeclaration(method.typeParameters, classScope)
 
         val returnType = resolveType(method.returnType ?: Types.NullableAny)
@@ -415,9 +415,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
         builder.append(getMethodName(method0))
 
-        val selfTypeIfNecessary = if (!isBySelf) selfType else null
-        method.selfTypeIfNecessary = selfTypeIfNecessary
-        appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
+        assignSelfType(classScope, method)
+        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }
 
 
@@ -446,7 +445,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         super.appendNativeImplementation(implWithoutImports, method)
     }
 
-    override fun appendGetObjectInstance() {
+    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
+        appendType(objectScope.typeWithArgs, objectScope, false)
         builder.append("::get").append(OBJECT_FIELD_NAME).append("()")
     }
 
@@ -455,16 +455,18 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         // without final
         appendType(dst.type, expression.scope, false)
         appendOwnershipSuffix(dst.type)
-        builder.append(' ').appendFieldName(graph, dst).append(" = ")
+        builder.append(' ')
+        appendFieldName(graph, dst)
+        builder.append(" = ")
     }
 
-    override fun appendObjectInstance(field: Field, exprScope: Scope) {
+    override fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
+        check(forFieldAccess == ".")
         if (field.ownerScope == outsideClassLike(exprScope)) {
             builder.append("this->")
         } else {
-            appendType(field.ownerScope.typeWithArgs, exprScope, true)
-            appendGetObjectInstance()
-            builder.append('.')
+            appendGetObjectInstance(field.ownerScope, exprScope)
+            builder.append(forFieldAccess)
         }
     }
 
@@ -490,24 +492,20 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
-    override fun StringBuilder.appendFieldName(
-        graph: SimpleGraph,
-        field: SimpleField,
-        forFieldAccess: String
-    ): StringBuilder {
+    override fun appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String) {
         val needsArrow = if (field.isObjectLike()) {
-            appendType(field.type, (field.type as ClassType).clazz, false)
-            appendGetObjectInstance()
+            val objectType = (field.type as ClassType).clazz
+            appendGetObjectInstance(objectType, graph.method.scope)
             false
         } else if (field.isOwnerThis(graph)) {
-            append("this")
+            builder.append("this")
             true
         } else {
             var field = field
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
-            append("tmp").append(field.id)
+            builder.append("tmp").append(field.id)
             // todo depending on type, we need . or ->
             false
         }
@@ -521,7 +519,6 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             } else forFieldAccess
             builder.append(symbol)
         }
-        return this
     }
 
     override fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
@@ -550,7 +547,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         builder.setLength(position)
 
         builder.append(needsCastForFirstValue.boxed).append("(")
-        builder.appendFieldName(graph, expr.self).append(").")
+        appendFieldName(graph, expr.self)
+        builder.append(").")
         builder.append(expr.methodName)
         appendValueParams(graph, expr.valueParameters)
     }
@@ -558,8 +556,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleAllocateInstance -> {
-                val needsReference = expr.allocatedType.isNullable() || !expr.allocatedType.isValue()
-                if (needsReference) {
+                // todo test nullable variables
+                // this allocation is a ClassType, so it cannot be null ever
+                if (!expr.allocatedType.isValue()) {
                     // call GC-aware alloc instead
                     builder.append("gcNew<")
                     appendType(expr.allocatedType, expr.scope, true)

@@ -1,11 +1,11 @@
-package me.anno.generation.javascript
+package me.anno.support.javascript.ast
 
 import me.anno.support.javascript.StandardLibraryLoader
 import me.anno.utils.ResetThreadLocal
 import org.junit.jupiter.api.Test
 import java.io.File
 
-class JavascriptGenerationTests {
+class ParsingTests {
     @Test
     fun testReadingStandardLibrary() {
         val home = System.getProperty("user.home")

@@ -1,5 +1,6 @@
 package me.anno.zauber.types.specialization
 
+import me.anno.generation.Specializations.specializations
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
@@ -17,6 +18,16 @@ class Specialization(typeParameters: ParameterList) {
             classType.typeParameters ?: emptyList()
         )
     )
+
+    inline fun <R> push(runnable: () -> R): R {
+        return try {
+            specializations.add(this)
+            runnable()
+        } finally {
+            @Suppress("Since15")
+            specializations.removeLast()
+        }
+    }
 
     val typeParameters = typeParameters.readonly()
     val hash = typeParameters.hashCode() and 0x7fff_ffff

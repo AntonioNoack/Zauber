@@ -15,7 +15,7 @@ abstract class DeltaWriter<V>(val root: File) {
     }
 
     private val oldContent = HashMap<File, String?>()
-    private val newContent = HashMap<File, V?>()
+    val newContent = HashMap<File, V?>()
 
     init {
         index(root)

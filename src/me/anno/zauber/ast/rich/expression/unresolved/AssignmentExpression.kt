@@ -48,19 +48,19 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             is FieldExpression -> {
                 val field = dstExpr.resolveField(context)
                 val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
-                return ResolvedSetFieldExpression(owner, field, newValue, hasValue, scope, origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is UnresolvedFieldExpression -> {
                 val field = dstExpr.resolveField(context)
                     ?: dstExpr.onMissingField()
                 val owner = field.resolveOwnerWithoutLeftSide(scope, origin)
-                return ResolvedSetFieldExpression(owner, field, newValue, hasValue, scope, origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldResolvable -> {
                 val field = dstExpr.right.resolveField(context)
                     ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
                 val owner = dstExpr.left
-                return ResolvedSetFieldExpression(owner, field, newValue, hasValue, scope, origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is DotExpression if dstExpr.left is FieldExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
@@ -70,7 +70,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
                 check(field.resolved.isMutable || dstExpr.left.field.isMutableEx) {
                     "Expected ${dstExpr.left.field}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
                 }
-                return ResolvedSetFieldExpression(owner, field, newValue, hasValue, scope, origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is DotExpression if dstExpr.left is TypeExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
@@ -80,7 +80,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
                 check(field.resolved.isMutable) {
                     "Expected ${dstExpr.left}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
                 }
-                return ResolvedSetFieldExpression(owner, field, newValue, hasValue, scope, origin)
+                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is DotExpression -> {
                 throw NotImplementedError(

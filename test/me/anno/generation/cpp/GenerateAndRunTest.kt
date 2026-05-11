@@ -2,9 +2,9 @@ package me.anno.generation.cpp
 
 import me.anno.compilation.MinimalCppCompiler
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
+import me.anno.utils.assertEquals
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class GenerateAndRunTest {
@@ -148,14 +148,13 @@ class GenerateAndRunTest {
 
     @Test
     fun testValueClassFieldIsWritable() {
-        // todo this has issues before ever reaching C++ ...
         val code = """
             value class Vector(val x: Int, val y: Int, val z: Int)
             
             fun main() {
                 var v = Vector(1,2,3)
                 v.x += v.y * v.z
-                println(x)
+                println(v.x)
             }
             
             package zauber

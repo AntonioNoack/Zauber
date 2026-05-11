@@ -1,19 +1,26 @@
-package me.anno.generation.llvmir
+package me.anno.generation.javascript
 
-import me.anno.compilation.MinimalLLVMCompiler
+import me.anno.compilation.MinimalJavaScriptCompiler
+import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
+import me.anno.utils.assertEquals
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class GenerateAndRunTest {
+class GenerateAndRunTests {
 
     private fun registerLib() {
         register(
             langScope, "println", listOf(Types.Int),
-            "System.out.println(arg0)" // todo adjust this
+            "console.log(arg0)"
         )
+    }
+
+    @BeforeEach
+    fun init() {
+        disableCompileLoggers()
     }
 
     @Test
@@ -34,16 +41,11 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, true) {
-                register(
-                    langScope, "println", listOf(Types.Int),
-                    "System.out.println(arg0)" // todo adjust this
-                )
-            }
+        val printed = MinimalJavaScriptCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("3\n", printed)
-
     }
+
 
     @Test
     fun testMethodCall() {
@@ -64,7 +66,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalLLVMCompiler()
+        val printed = MinimalJavaScriptCompiler()
             .testCompileMainAndRun(code, ::registerLib)
         assertEquals("3\n", printed)
     }
@@ -81,15 +83,16 @@ class GenerateAndRunTest {
             package zauber
             class Any
             object Unit
-            class Int {
+            class Int(val content: Int) {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
+                fun hashCode(): Int = content
             }
             
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalLLVMCompiler()
+        val printed = MinimalJavaScriptCompiler()
             .testCompileMainAndRun(code, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
@@ -114,7 +117,7 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalLLVMCompiler()
+        val printed = MinimalJavaScriptCompiler()
             .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
@@ -141,13 +144,14 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
+        val printed = MinimalJavaScriptCompiler()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("7\n", printed)
     }
 
     @Test
     fun testValueIsPassedByCopy() {
+        disableCompileLoggers()
         val code = """
             value class Vector(val x: Int)
             
@@ -173,17 +177,9 @@ class GenerateAndRunTest {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalLLVMCompiler()
+        val printed = MinimalJavaScriptCompiler()
             .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
-
-    // todo add .copy(name=value) as a special function on data classes
-
-    // todo implement value classes being copied when written / passed as parameter
-    // todo implement and test value classes being inlined
-
-    // todo implement and test working with strings
-    // todo test specialized classes being usable
 
 }

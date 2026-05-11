@@ -22,6 +22,13 @@ object LogManager {
         }
     }
 
+    fun enable(loggers: String) {
+        for (name in loggers.split(',')) {
+            val logger = getLogger(name, true)
+            logger.isInfoEnabled = true
+        }
+    }
+
     fun disableLoggers(loggers: String) {
         for (name in loggers.split(',')) {
             val logger = getLogger(name, false)

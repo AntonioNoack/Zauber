@@ -1,6 +1,7 @@
 package me.anno.generation.java
 
 import me.anno.compilation.MinimalJavaCompiler
+import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -123,7 +124,7 @@ class GenerateAndRunTest {
             fun main() {
                 var v = Vector(1,2,3)
                 v.x += v.y * v.z
-                println(x)
+                println(v.x)
             }
             
             package zauber
@@ -144,13 +145,7 @@ class GenerateAndRunTest {
 
     @Test
     fun testValueIsPassedByCopy() {
-        LogManager.disableLoggers(
-            "TypeResolution,ASTSimplifier,MemberResolver,Inheritance," +
-                    "CallExpression,SuperCallExpression," +
-                    "MethodResolver,ResolvedMethod," +
-                    "ConstructorResolver," +
-                    "ResolvedField,Field,FieldResolver,FieldExpression"
-        )
+        disableCompileLoggers()
         val code = """
             value class Vector(val x: Int)
             

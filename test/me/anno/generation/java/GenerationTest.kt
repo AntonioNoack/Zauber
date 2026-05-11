@@ -33,7 +33,7 @@ class GenerationTest {
 
             val gen = JavaSourceGenerator()
             val builder = gen.builder
-            gen.generateClassBody(
+            gen.appendClass(
                 testClassName, testClass, noSpecialization,
                 testClass.methods0.map { MethodSpecialization(it, noSpecialization) },
                 testClass.fields.map { FieldSpecialization(it, noSpecialization) }, false

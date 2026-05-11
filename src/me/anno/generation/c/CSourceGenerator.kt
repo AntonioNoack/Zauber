@@ -1,6 +1,7 @@
 package me.anno.generation.c
 
 import me.anno.generation.cpp.CppSourceGenerator
+import me.anno.zauber.types.specialization.MethodSpecialization
 
 /**
  * this is more custom than C++:
@@ -8,6 +9,27 @@ import me.anno.generation.cpp.CppSourceGenerator
  * todo we also need to deduplicate methods with same name, but different parameters
  * */
 open class CSourceGenerator : CppSourceGenerator() {
+
+    companion object {
+        fun hashMethodParameters(method: MethodSpecialization): String {
+            if (method.method.valueParameters.isEmpty()) {
+                // we rely on this special behaviour -> make it explicit
+                return "0"
+            }
+            return method.specialization.push {
+                val hash = method.method.valueParameters.joinToString {
+                    "${it.name}: ${resolveType(it.type)}"
+                }.hashCode()
+                hash.toUInt().toString(36)
+            }
+        }
+    }
+
+    override fun getMethodName(method: MethodSpecialization): String {
+        val base = super.getMethodName(method)
+        return "${base}_${hashMethodParameters(method)}"
+    }
+
     override fun getExtension(headerOnly: Boolean): String {
         return if (headerOnly) "h" else "c"
     }

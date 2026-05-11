@@ -13,13 +13,12 @@ class ResolvedSetFieldExpression(
     owner: Expression,
     field: ResolvedField,
     val value: Expression,
-    val hasValue: Boolean,
     scope: Scope, origin: Int
 ) : ResolvedFieldExpression(owner, field, scope, origin) {
 
     override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun clone(scope: Scope): Expression =
-        ResolvedSetFieldExpression(self.clone(scope), field, value.clone(scope), hasValue, scope, origin)
+        ResolvedSetFieldExpression(self.clone(scope), field, value.clone(scope), scope, origin)
 
     override fun toStringImpl(depth: Int): String {
         return "$self.$field=$value"

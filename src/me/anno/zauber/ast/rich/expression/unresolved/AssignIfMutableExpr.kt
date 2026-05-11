@@ -2,7 +2,6 @@ package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
@@ -144,13 +143,15 @@ class AssignIfMutableExpr(
         val right = right.resolve(context)
         val call = ResolvedCallExpression(left, method, listOf(right), scope, origin)
         if (dstField != null) {
+            // an assignment
             check(left is ResolvedGetFieldExpression) {
                 "Resolve owner for $this, ${left.javaClass.simpleName}"
             }
-            val owner = left.self// ?: dstField.resolveOwnerWithoutLeftSide(origin)
-            val setter = ResolvedSetFieldExpression(owner, dstField, call, false, scope, origin)
-            return ExpressionList(listOf(call, setter), scope, origin)
-        } else return call
+            return ResolvedSetFieldExpression(left.self, dstField, call, scope, origin)
+        } else {
+            // just a call
+            return call
+        }
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

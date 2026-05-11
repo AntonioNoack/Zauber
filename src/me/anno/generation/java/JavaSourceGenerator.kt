@@ -2,7 +2,6 @@ package me.anno.generation.java
 
 import me.anno.generation.*
 import me.anno.generation.Specializations.specialization
-import me.anno.generation.Specializations.specializations
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
@@ -93,9 +92,24 @@ open class JavaSourceGenerator : Generator() {
         fun register(scope: Scope, name: String, valueParameterTypes: List<Type>, implementation: String) {
             register(ExternalKey(scope, name, valueParameterTypes), implementation)
         }
+
+        fun resolveType(type: Type): Type {
+            var type = type
+            while (true) {
+                try {
+                    val resolved = type.resolve().specialize()
+                    if (resolved == type) break
+                    type = resolved
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    break
+                }
+            }
+            return type
+        }
     }
 
-    open val protectedTypes: Map<ClassType, BoxedType> = protectedJavaTypes
+    open val protectedTypes: Map<ClassType, BoxedType> get() = protectedJavaTypes
     open val nativeTypes: Map<ClassType, BoxedType> get() = nativeJavaTypes
     open val nativeNumbers: Map<ClassType, BoxedType> get() = nativeJavaNumbers
 
@@ -149,16 +163,11 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun defineMainMethodCall(dst: File, writer: FileWithImportsWriter, mainMethod: Method) {
-        appendType(mainMethod.ownerScope.typeWithArgs, root, true)
-        appendGetObjectInstance()
+        appendGetObjectInstance(mainMethod.ownerScope, root)
         val className = builder.toString()
         builder.clear()
 
         writer[getMainMethodFile(dst)] = defineMainMethodCallEntry(dst, writer, mainMethod, className)
-    }
-
-    open fun appendGetObjectInstance() {
-        builder.append('.').append(OBJECT_FIELD_NAME)
     }
 
     open fun defineMainMethodCallEntry(
@@ -203,7 +212,7 @@ open class JavaSourceGenerator : Generator() {
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
     ) {
         val (name, packageScope) = getNameAndScope(scope, specialization)
-        generateClassBody(name, scope, specialization, methods, fields, false)
+        appendClass(name, scope, specialization, methods, fields, false)
         writeInto(packageScope, name, dst, writer, false)
     }
 
@@ -308,35 +317,32 @@ open class JavaSourceGenerator : Generator() {
             .append(' ').append(className)
     }
 
-    open fun appendStaticInstance(className: String) {
+    open fun appendStaticInstance(classScope: Scope, className: String) {
         builder.append("public static final ")
         builder.append(className).append(' ').append(OBJECT_FIELD_NAME)
             .append(" = new ").append(className).append("();")
         nextLine()
     }
 
-    open fun generateClassBody(
+    open fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
-        specializations.add(specialization)
+        specialization.push {
+            appendSpecializationInfoComment()
 
-        appendSpecializationInfoComment()
+            appendClassFlags(classScope)
+            appendClassPrefix(classScope, className)
 
-        appendClassFlags(classScope)
-        appendClassPrefix(classScope, className)
+            if (specialization.containsGenerics()) {
+                appendTypeParams(classScope)
+            }
+            appendSuperTypes(classScope)
 
-        if (specialization.containsGenerics()) {
-            appendTypeParams(classScope)
+            appendClassBody(classScope, className, methods, fields, headerOnly)
         }
-        appendSuperTypes(classScope)
-
-        appendClassBody(classScope, className, methods, fields, headerOnly)
-
-        @Suppress("Since15")
-        specializations.removeLast()
     }
 
     open fun appendClassBody(
@@ -348,7 +354,7 @@ open class JavaSourceGenerator : Generator() {
         writeBlock {
 
             if (classScope.isObjectLike()) {
-                appendStaticInstance(className)
+                appendStaticInstance(classScope, className)
             }
 
             val allowFinalFields = !classScope.isValueType() &&
@@ -372,7 +378,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    private fun needsBackingField(field: Field): Boolean {
+    fun needsBackingField(field: Field): Boolean {
         val getter = field.getter
         val setter = field.setter
         if (getter?.body == null || getter.body!!.needsBackingField(getter.scope)) return true
@@ -452,6 +458,16 @@ open class JavaSourceGenerator : Generator() {
         appendMethodBody(method, spec, headerOnly)
     }
 
+    fun assignSelfType(classScope: Scope, method: Method) {
+        val selfType = method.selfType
+        val isBySelf = selfType == classScope.typeWithArgs ||
+                method.flags.hasFlag(Flags.OVERRIDE) ||
+                method.flags.hasFlag(Flags.ABSTRACT)
+
+        val selfTypeIfNecessary = if (!isBySelf) selfType else null
+        method.selfTypeIfNecessary = selfTypeIfNecessary
+    }
+
     open fun appendMethodHeader(
         classScope: Scope,
         className: String,
@@ -461,19 +477,13 @@ open class JavaSourceGenerator : Generator() {
         val method = method0.method as Method
         appendMethodFlags(classScope, method, headerOnly)
 
-        val selfType = method.selfType
-        val isBySelf = selfType == classScope.typeWithArgs ||
-                method.flags.hasFlag(Flags.OVERRIDE) ||
-                method.flags.hasFlag(Flags.ABSTRACT)
-
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.returnType ?: Types.NullableAny, classScope, false)
 
         builder.append(' ').append(getMethodName(method0))
 
-        val selfTypeIfNecessary = if (!isBySelf) selfType else null
-        method.selfTypeIfNecessary = selfTypeIfNecessary
-        appendValueParameterDeclaration(selfTypeIfNecessary, method.valueParameters, classScope)
+        assignSelfType(classScope, method)
+        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }
 
     open fun appendMethodBody(method: Method, spec: Specialization, headerOnly: Boolean) {
@@ -503,8 +513,7 @@ open class JavaSourceGenerator : Generator() {
     fun appendReturnIfMissing(method: MethodLike) {
         if ("return " !in builder) {
             builder.append("return ")
-            appendType(Types.Unit, method.scope, false)
-            appendGetObjectInstance()
+            appendGetObjectInstance(Types.Unit.clazz, method.scope)
             builder.append(";")
             nextLine()
         }
@@ -609,7 +618,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append("> ")
     }
 
-    fun appendValueParameterDeclaration(
+    open fun appendValueParameterDeclaration(
         selfTypeIfNecessary: Type?,
         valueParameters: List<Parameter>,
         scope: Scope
@@ -718,7 +727,8 @@ open class JavaSourceGenerator : Generator() {
     open fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst
         if (dst.mergeInfo != null) {
-            builder.appendFieldName(graph, dst).append(" = ")
+            appendFieldName(graph, dst)
+            builder.append(" = ")
         } else {
             appendDeclare(graph, expression)
         }
@@ -728,7 +738,9 @@ open class JavaSourceGenerator : Generator() {
         val dst = expression.dst
         builder.append("final ")
         appendType(dst.type, expression.scope, false)
-        builder.append(' ').appendFieldName(graph, dst).append(" = ")
+        builder.append(' ')
+        appendFieldName(graph, dst)
+        builder.append(" = ")
     }
 
     fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
@@ -738,24 +750,28 @@ open class JavaSourceGenerator : Generator() {
                 graph.thisFields.any { !it.key.isExplicitSelf && it.value === this }
     }
 
-    open fun StringBuilder.appendFieldName(
+    open fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
+        appendType(objectScope.typeWithArgs, objectScope, false)
+        builder.append('.').append(OBJECT_FIELD_NAME)
+    }
+
+    open fun appendFieldName(
         graph: SimpleGraph, field: SimpleField,
         forFieldAccess: String = ""
-    ): StringBuilder {
+    ) {
         if (field.isObjectLike()) {
-            appendType(field.type, (field.type as ClassType).clazz, false)
-            appendGetObjectInstance()
+            val objectScope = (field.type as ClassType).clazz
+            appendGetObjectInstance(objectScope, graph.method.scope)
         } else if (field.isOwnerThis(graph)) {
-            append("this")
+            builder.append("this")
         } else {
             var field = field
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
-            append("tmp").append(field.id)
+            builder.append("tmp").append(field.id)
         }
         builder.append(forFieldAccess)
-        return this
     }
 
     fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean = true) {
@@ -763,7 +779,7 @@ open class JavaSourceGenerator : Generator() {
         for (i in valueParameters.indices) {
             if (i > 0) builder.append(", ")
             val parameter = valueParameters[i]
-            builder.appendFieldName(graph, parameter)
+            appendFieldName(graph, parameter)
         }
         if (withBrackets) builder.append(')')
     }
@@ -833,15 +849,11 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
-
-        val needsCopy = expr is SimpleAssignment &&
-                expr !is SimpleAllocateInstance &&
-                expr.dst.type.needsCopy()
-
-        if (needsCopy) builder.append('(')
         when (expr) {
             is SimpleBranch -> {
-                builder.append("if (").appendFieldName(graph, expr.condition).append(')')
+                builder.append("if (")
+                appendFieldName(graph, expr.condition)
+                builder.append(')')
                 writeBlock {
                     appendSimplifiedAST(graph, expr.ifTrue)
                 }
@@ -887,15 +899,22 @@ open class JavaSourceGenerator : Generator() {
             is SimpleSetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
                 appendFieldName(expr.field)
-                builder.append(" = ").appendFieldName(graph, expr.value)
+                builder.append(" = ")
+
+                appendFieldName(graph, expr.value)
+
+                val needsCopy = expr.value.type.needsCopy()
+                if (needsCopy) appendCopy()
             }
             is SimpleCompare -> {
-                builder.appendFieldName(graph, expr.left).append(' ')
+                appendFieldName(graph, expr.left)
+                builder.append(' ')
                 builder.append(expr.type.symbol).append(" 0")
             }
             is SimpleInstanceOf -> {
                 // todo if type is ClassType, this is easy, else we need to build an expression...
-                builder.appendFieldName(graph, expr.value).append(" instanceof ")
+                appendFieldName(graph, expr.value)
+                builder.append(" instanceof ")
                 appendType(expr.type, expr.scope, false)
             }
             is SimpleCheckEquals -> {
@@ -912,34 +931,48 @@ open class JavaSourceGenerator : Generator() {
                 val rightNative = nativeTypes[expr.right.type]
                 when {
                     leftNative != null && rightNative != null -> {
-                        builder.appendFieldName(graph, expr.left).append(" == ")
-                            .appendFieldName(graph, expr.right)
+                        appendFieldName(graph, expr.left)
+                        builder.append(" == ")
+                        appendFieldName(graph, expr.right)
                     }
                     leftCanBeNull && rightCanBeNull -> {
-                        builder.appendFieldName(graph, expr.left).append(" == null ? ")
-                            .appendFieldName(graph, expr.right).append(" == null : ")
-                            .appendFieldName(graph, expr.left, ".").append("equals(")
-                            .appendFieldName(graph, expr.right).append(")")
+                        appendFieldName(graph, expr.left)
+                        builder.append(" == null ? ")
+                        appendFieldName(graph, expr.right)
+                        builder.append(" == null : ")
+                        appendFieldName(graph, expr.left, ".")
+                        builder.append("equals(")
+                        appendFieldName(graph, expr.right)
+                        builder.append(")")
                     }
                     leftCanBeNull -> {
-                        builder.appendFieldName(graph, expr.left).append(" != null && ")
-                            .appendFieldName(graph, expr.left, ".").append("equals(")
-                            .appendFieldName(graph, expr.right).append(")")
+                        appendFieldName(graph, expr.left)
+                        builder.append(" != null && ")
+                        appendFieldName(graph, expr.left, ".")
+                        builder.append("equals(")
+                        appendFieldName(graph, expr.right)
+                        builder.append(")")
                     }
                     rightCanBeNull -> {
-                        builder.appendFieldName(graph, expr.right).append(" != null && ")
-                            .appendFieldName(graph, expr.left, ".").append("equals(")
-                            .appendFieldName(graph, expr.right).append(")")
+                        appendFieldName(graph, expr.right)
+                        builder.append(" != null && ")
+                        appendFieldName(graph, expr.left, ".")
+                        builder.append("equals(")
+                        appendFieldName(graph, expr.right)
+                        builder.append(")")
                     }
                     else -> {
-                        builder.appendFieldName(graph, expr.left, ".").append("equals(")
-                            .appendFieldName(graph, expr.right).append(")")
+                        appendFieldName(graph, expr.left, ".")
+                        builder.append("equals(")
+                        appendFieldName(graph, expr.right)
+                        builder.append(")")
                     }
                 }
             }
             is SimpleCheckIdentical -> {
-                builder.appendFieldName(graph, expr.left).append(" == ")
-                    .appendFieldName(graph, expr.right)
+                appendFieldName(graph, expr.left)
+                builder.append(" == ")
+                appendFieldName(graph, expr.right)
             }
             is SimpleSpecialValue -> {
                 when (expr.type) {
@@ -971,10 +1004,12 @@ open class JavaSourceGenerator : Generator() {
                                 else -> null
                             }
                             if (castSymbol != null && expr.self.type in nativeNumbers) {
-                                builder.append(castSymbol).appendFieldName(graph, expr.self)
+                                builder.append(castSymbol)
+                                appendFieldName(graph, expr.self)
                                 true
                             } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                                builder.append('!').appendFieldName(graph, expr.self)
+                                builder.append('!')
+                                appendFieldName(graph, expr.self)
                                 true
                             } else false
                         }
@@ -995,22 +1030,16 @@ open class JavaSourceGenerator : Generator() {
                                 else -> null
                             }
                             if (supportsType && symbol != null) {
-                                builder.appendFieldName(graph, expr.self).append(symbol)
-                                builder.appendFieldName(graph, expr.valueParameters[0])
+                                appendFieldName(graph, expr.self)
+                                builder.append(symbol)
+                                appendFieldName(graph, expr.valueParameters[0])
                                 true
                             } else false
                         }
                         else -> false
                     }
                     if (!done) {
-                        val needsCastForFirstValue = nativeTypes[expr.self.type]
-                        if (needsCastForFirstValue != null) {
-                            appendCallForPrimitive(needsCastForFirstValue, expr, graph)
-                        } else {
-                            builder.appendFieldName(graph, expr.self, ".")
-                            builder.append(expr.methodName)
-                            appendValueParams(graph, expr.valueParameters)
-                        }
+                        appendCallImpl(graph, expr)
                     }
                 }
             }
@@ -1029,11 +1058,13 @@ open class JavaSourceGenerator : Generator() {
             }
             is SimpleReturn -> {
                 // todo cast if necessary
-                builder.append("return ").appendFieldName(graph, expr.field)
+                builder.append("return ")
+                appendFieldName(graph, expr.field)
             }
             is SimpleThrow -> {
                 // todo cast if necessary
-                builder.append("throw ").appendFieldName(graph, expr.field)
+                builder.append("throw ")
+                appendFieldName(graph, expr.field)
             }
             else -> {
                 comment {
@@ -1042,8 +1073,21 @@ open class JavaSourceGenerator : Generator() {
                 }
             }
         }
-        if (needsCopy) {
-            builder.append(").copy()")
+    }
+
+    open fun appendCopy() {
+        builder.append(".copy()")
+    }
+
+    open fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+        val needsCastForFirstValue = nativeTypes[expr.self.type]
+        if (needsCastForFirstValue != null) {
+            appendCallForPrimitive(needsCastForFirstValue, expr, graph)
+        } else {
+            appendFieldName(graph, expr.self, ".")
+            val methodName = getMethodName(MethodSpecialization(expr.sample, expr.specialization))
+            builder.append(methodName)
+            appendValueParams(graph, expr.valueParameters)
         }
     }
 
@@ -1052,8 +1096,9 @@ open class JavaSourceGenerator : Generator() {
         graph: SimpleGraph,
     ) {
         builder.append(needsCastForFirstValue.boxed).append('.')
-        builder.append(expr.methodName).append('(')
-        builder.appendFieldName(graph, expr.self)
+        val methodName = getMethodName(MethodSpecialization(expr.sample, expr.specialization))
+        builder.append(methodName).append('(')
+        appendFieldName(graph, expr.self)
         if (expr.valueParameters.isNotEmpty()) {
             builder.append(", ")
             appendValueParams(graph, expr.valueParameters, false)
@@ -1069,20 +1114,19 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendObjectInstance(field: Field, exprScope: Scope) {
-        // todo if there is nothing dangerous in-between, we could use this.
+    open fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
         if (field.ownerScope == outsideClassLike(exprScope)) {
-            builder.append("this.")
+            // if there is nothing dangerous in-between, we could use this.
+            builder.append("this")
         } else {
-            appendType(field.ownerScope.typeWithArgs, exprScope, true)
-            appendGetObjectInstance()
-            builder.append('.')
+            appendGetObjectInstance(field.ownerScope, exprScope)
         }
+        builder.append(forFieldAccess)
     }
 
     open fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
         if (self.type is ClassType && self.type.clazz.isObjectLike()) {
-            appendObjectInstance(field, exprScope)
+            appendObjectInstance(field, exprScope, ".")
         } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {
             builder.append("/* ${field.ownerScope.pathStr} */ ")
         } else {
@@ -1092,9 +1136,9 @@ open class JavaSourceGenerator : Generator() {
                 builder.append("((")
                 appendType(fieldSelfType, exprScope, true)
                 builder.append(')')
-                builder.appendFieldName(graph, self, ").")
+                appendFieldName(graph, self, ").")
             } else {
-                builder.appendFieldName(graph, self, ".")
+                appendFieldName(graph, self, ".")
             }
         }
     }
@@ -1239,14 +1283,14 @@ open class JavaSourceGenerator : Generator() {
         nativeImports: Set<String>
     ) {
         appendPackageDeclaration(packagePath, file)
-        writeImports(packagePath, imports)
+        appendImports(packagePath, imports)
     }
 
     open fun endPackageDeclaration(packagePath: List<String>, file: File) {
         // nothing to do in Java
     }
 
-    open fun writeImports(packagePath: List<String>, imports: Map<String, List<String>>) {
+    open fun appendImports(packagePath: List<String>, imports: Map<String, List<String>>) {
         val importList = imports.values.sortedWith(ImportSorter)
         val position = builder.length
         for (import in importList) {
@@ -1255,9 +1299,9 @@ open class JavaSourceGenerator : Generator() {
         if (builder.length > position) nextLine()
     }
 
-    fun appendPath(path: List<String>) {
+    fun appendPath(path: List<String>, separator: String = ".") {
         for (i in path.indices) {
-            if (i > 0) builder.append('.')
+            if (i > 0) builder.append(separator)
             builder.append(path[i])
         }
     }
@@ -1266,21 +1310,6 @@ open class JavaSourceGenerator : Generator() {
         builder.append("import ")
         appendPath(import)
         builder.append(";\n")
-    }
-
-    fun resolveType(type: Type): Type {
-        var type = type
-        while (true) {
-            try {
-                val resolved = type.resolve().specialize()
-                if (resolved == type) break
-                type = resolved
-            } catch (e: Exception) {
-                e.printStackTrace()
-                break
-            }
-        }
-        return type
     }
 
 }

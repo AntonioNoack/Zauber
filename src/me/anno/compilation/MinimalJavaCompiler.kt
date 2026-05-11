@@ -15,7 +15,8 @@ class MinimalJavaCompiler : MinimalCompiler() {
     }
 
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
-        JavaSourceGenerator().generateCode(srcFolder, dependencies, mainMethod)
+        JavaSourceGenerator()
+            .generateCode(srcFolder, dependencies, mainMethod)
 
         // generate simple maven file
         val pom = File(projectFolder, "pom.xml")
