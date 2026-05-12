@@ -92,7 +92,7 @@ class GenerateAndRunTests {
         """.trimIndent()
 
         val printed = MinimalRustCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
@@ -123,6 +123,7 @@ class GenerateAndRunTests {
 
     @Test
     fun testValueClassFieldIsWritable() {
+        // todo why is this producing the wrong value?
         val code = """
             value class Vector(val x: Int, val y: Int, val z: Int)
             

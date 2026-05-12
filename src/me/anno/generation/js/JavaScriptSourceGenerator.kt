@@ -181,7 +181,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    fun appendDefaultValue(valueType: Type) {
+    open fun appendDefaultValue(valueType: Type) {
         when (valueType) {
             Types.Boolean -> builder.append("false")
             in nativeTypes -> builder.append("0")
@@ -262,7 +262,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             }
             is SimpleCall if (expr.sample is Constructor) -> {
                 appendFieldName(graph, expr.self, ".")
-                builder.append(getMethodName(MethodSpecialization(expr.sample, expr.specialization)))
+                builder.append(getMethodName(expr.methodSpec))
                 appendValueParams(graph, expr.valueParameters)
             }
             is SimpleDeclaration -> {
@@ -303,7 +303,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         builder.append(needsCastForFirstValue.boxed).append("(), { content: ")
         appendFieldName(graph, expr.self)
         builder.append(" }).")
-        builder.append(getMethodName(MethodSpecialization(expr.sample, expr.specialization)))
+        builder.append(getMethodName(expr.methodSpec))
         appendValueParams(graph, expr.valueParameters)
     }
 

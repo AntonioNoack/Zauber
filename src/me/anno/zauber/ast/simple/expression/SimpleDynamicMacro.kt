@@ -20,7 +20,7 @@ class SimpleDynamicMacro(
     val self: SimpleField,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleCallable(dst, original.method.specialization, scope, origin) {
+) : SimpleCallable(dst, original.method.resolved, original.method.specialization, scope, origin) {
 
     val method get() = original.method
     val methodName get() = method.resolved.name
@@ -50,7 +50,8 @@ class SimpleDynamicMacro(
             throw IllegalStateException("Unexpected NPE: $this")
         }
 
-        val expression = evaluateMacroNow(method, valueParameters.map { runtime[it] }, imports, generics, original.scope, origin)
+        val expression =
+            evaluateMacroNow(method, valueParameters.map { runtime[it] }, imports, generics, original.scope, origin)
         return self.evaluateExpressionUnsafe(expression, Flags.NONE, method.returnType)
     }
 

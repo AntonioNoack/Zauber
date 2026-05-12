@@ -6,6 +6,8 @@ import me.anno.zauber.types.impl.ModifierType
 /**
  * Holds instances by reference, even if they are value-types
  * todo test these...
+ *
+ * todo generate synthetic classes for value X / ref X
  * */
 class ValueType(type: Type) : ModifierType(type.noRefNorValue()) {
 

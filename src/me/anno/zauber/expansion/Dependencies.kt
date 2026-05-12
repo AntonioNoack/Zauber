@@ -20,6 +20,9 @@ import me.anno.zauber.types.specialization.Specialization.Companion.noSpecializa
  * Given a set of entry points,
  *   find all methods and classes that are constructable,
  *   so we can create a minimal executable
+ *
+ * todo we have some dependency conditions,
+ *  but I still believe that we could define this as a graph coloring problem
  * */
 object Dependencies {
 
@@ -39,8 +42,9 @@ object Dependencies {
         }
     }
 
-    // todo calling Int.toString() doesn't need Any.toString(), because super is not called
-    // todo but calling Any.toString() and having Int constructable, now we need Int.toString()
+    // todo calling Int.toString() doesn't need Any.toString(), because super is not called automatically
+    // todo but calling Any.toString() and having Int constructable, now we need Int.toString(), because Any could be Int
+    //  -> todo we could make casting one type to another be also data we collect, and then we can limit these interactions
 
     fun addMethod(method: MethodSpecialization) {
         // if method is a macro, skip it, we cannot execute it at runtime anyway
@@ -92,9 +96,7 @@ object Dependencies {
                 }
 
                 when (instr) {
-                    is SimpleCall -> addMethod(MethodSpecialization(instr.sample, instr.specialization))
-                    is SimpleCheckEquals -> addMethod(MethodSpecialization(instr.method.resolved, instr.specialization))
-                    is SimpleSelfConstructor -> addMethod(MethodSpecialization(instr.method, instr.specialization))
+                    is SimpleCallable -> addMethod(instr.methodSpec)
                     is SimpleAllocateInstance -> addClass(instr.allocatedType)
                     is SimpleString -> addClass(Types.String, true)
                     is SimpleNumber -> addClass(instr.dst.type as ClassType, true)

@@ -10,13 +10,13 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
+import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
-import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
+import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -54,6 +54,16 @@ class RustSourceGenerator : CSourceGenerator() {
 
         val nativeRustTypes by threadLocal { protectedRustTypes.filter { (_, it) -> it.boxed != it.native } }
         val nativeRustNumbers by threadLocal { nativeRustTypes - Types.Boolean }
+
+        val refCellImport = "std::cell::RefCell".split("::")
+        val gcCellImport = "gc::GcCell".split("::")
+        val gcImport = "gc::Gc".split("::")
+
+        val libImports = listOf(
+            refCellImport,
+            gcCellImport,
+            gcImport
+        )
 
     }
 
@@ -141,6 +151,16 @@ class RustSourceGenerator : CSourceGenerator() {
         return "pub struct"
     }
 
+    override fun appendClassFlags(scope: Scope) {
+        if (scope.isValueType() && RustOwnership[scope.typeWithArgs].isImmutable) {
+            builder.append("#[derive(Copy,Clone)]") // simple mem-copy
+            nextLine()
+        } else {
+            builder.append("#[derive(Clone)]") // maybe complicated copy
+            nextLine()
+        }
+    }
+
     override fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
         methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
@@ -182,12 +202,11 @@ class RustSourceGenerator : CSourceGenerator() {
     fun appendCreateEmptyInstance(classScope: Scope, className: String) {
         builder.append(className).append(" {")
         for (field in classScope.fields) {
-            if (field.name == OBJECT_FIELD_NAME) continue
-            if (!needsFieldByParameter(field.byParameter)) continue
-            if (!needsBackingField(field)) continue
+            if (field.name == OBJECT_FIELD_NAME || !isStoredField(field)) continue
 
             builder.append(field.name).append(": ")
-            appendDefaultValue(field.valueType!!)
+            val type = field.valueType!!
+            appendDefaultValue(type)
             builder.append(", ")
         }
         builder.append("}")
@@ -240,6 +259,8 @@ class RustSourceGenerator : CSourceGenerator() {
         method0: MethodSpecialization, headerOnly: Boolean
     ) {
         val method = method0.method as Method
+        method.scope[ScopeInitType.CODE_GENERATION]
+
         appendMethodFlags(classScope, method, headerOnly)
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
@@ -257,6 +278,10 @@ class RustSourceGenerator : CSourceGenerator() {
         if (isObject) builder.append(">")
     }
 
+    override fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
+        builder.append("pub ")
+    }
+
     override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
         appendFieldFlags(classScope, field, allowFinal)
 
@@ -266,16 +291,25 @@ class RustSourceGenerator : CSourceGenerator() {
 
         appendFieldName(field)
         builder.append(": ")
-        appendType(valueType, classScope, false)
+        appendTypeDecl(valueType, classScope)
         builder.append(',')
         nextLine()
+    }
+
+    fun appendTypeDecl(valueType: Type, classScope: Scope) {
+        val ownership = getOwnership(valueType)
+        builder.append(ownership.typePrefix)
+        appendType(valueType, classScope, false)
+        builder.append(ownership.typeSuffix)
     }
 
     override fun appendConstructorHeader(
         classScope: Scope, className: String,
         constructor: Constructor, headerOnly: Boolean
     ) {
-        builder.append("fn new")
+        constructor.scope[ScopeInitType.CODE_GENERATION]
+
+        builder.append("pub fn new")
         appendValueParameterDeclaration1(constructor.valueParameters, classScope)
         builder.append(" -> Self")
         writeBlock {
@@ -300,14 +334,6 @@ class RustSourceGenerator : CSourceGenerator() {
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
     }
 
-    fun appendDefaultValue(valueType: Type) {
-        when (valueType) {
-            Types.Boolean -> builder.append("false")
-            in nativeTypes -> builder.append("0")
-            else -> builder.append("null")
-        }
-    }
-
     fun appendValueParameterDeclaration1(
         valueParameters: List<Parameter>, scope: Scope
     ) {
@@ -316,7 +342,7 @@ class RustSourceGenerator : CSourceGenerator() {
             if (!builder.endsWith("(")) builder.append(", ")
             appendFieldName(param)
             builder.append(": ")
-            appendType(param.type, scope, false)
+            appendTypeDecl(resolveType(param.type), scope)
         }
         builder.append(')')
     }
@@ -329,50 +355,53 @@ class RustSourceGenerator : CSourceGenerator() {
         if (selfTypeIfNecessary != null) {
             builder.append(", ")
             builder.append(" __self: ")
+            val ownership = getOwnership(selfTypeIfNecessary)
+            builder.append(ownership.typePrefix)
             appendType(selfTypeIfNecessary, scope, false)
+            builder.append(ownership.typeSuffix)
         }
         for (param in valueParameters) {
             builder.append(", ")
             appendFieldName(param)
             builder.append(": ")
-            appendType(param.type, scope, false)
+            appendTypeDecl(param.type, scope)
         }
         builder.append(')')
+    }
+
+    fun getOwnership(type: Type): RustOwnershipType {
+        val ownership = RustOwnership[resolveType(type)]
+        if (ownership.isFlatMutable) imports["RefCell"] = refCellImport
+        if (ownership.isDeepMutable) {
+            imports["GcCell"] = gcCellImport
+            imports["Gc"] = gcImport
+        }
+        return ownership
     }
 
     override fun beginPackageDeclaration(
         packagePath: List<String>, file: File,
         imports: Map<String, List<String>>, nativeImports: Set<String>
     ) {
-        appendPackageDeclaration(packagePath, file)
         appendImports(packagePath, imports)
     }
 
     override fun endPackageDeclaration(packagePath: List<String>, file: File) {
-        /*if (packagePath.isNotEmpty()) {
-            trimWhitespaceAtEnd()
-            depth--
-            nextLine()
-
-            repeat(packagePath.size) { builder.append("}") }
-            nextLine()
-        }*/
-    }
-
-    override fun appendPackageDeclaration(packagePath: List<String>, file: File) {
-        /*if (packagePath.isNotEmpty()) {
-            for (part in packagePath) {
-                builder.append("pub mod ").append(part).append(" {")
-            }
-            depth++
-            nextLine()
-        }*/
+        // nothing to do
     }
 
     override fun appendImport(packagePath: List<String>, import: List<String>) {
-        builder.append("use crate::") // internal imports start with "crate::"
+        builder.append("use ")
+        val fromZauber = import !in libImports
+        if (fromZauber) {
+            // internal imports start with "crate::"
+            builder.append("crate::")
+        }
         appendPath(import, "::")
-        builder.append("::").append(import.last())
+        if (fromZauber) {
+            // name must appear twice, once for the file, once for the class
+            builder.append("::").append(import.last())
+        }
         builder.append(";")
         nextLine()
     }
@@ -385,9 +414,10 @@ class RustSourceGenerator : CSourceGenerator() {
     override fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst
         builder.append("let ")
+        if (dst.type !in nativeTypes) builder.append("mut ")
         appendFieldName(graph, dst)
         builder.append(": ")
-        appendType(dst.type, expression.scope, false)
+        appendTypeDecl(dst.type, expression.scope)
         builder.append(" = ")
     }
 
@@ -396,9 +426,27 @@ class RustSourceGenerator : CSourceGenerator() {
         field: SimpleField,
         forFieldAccess: String
     ) {
-        // avoid special C++ logic
-        super.appendFieldName(graph, field, "")
-        builder.append(forFieldAccess)
+        if (field.isObjectLike()) {
+            val objectType = (field.type as ClassType).clazz
+            appendGetObjectInstance(objectType, graph.method.scope)
+            builder.append(forFieldAccess)
+        } else if (field.isOwnerThis(graph)) {
+            builder.append("self").append(forFieldAccess)
+        } else {
+            var field = field
+            while (true) {
+                field = field.mergeInfo?.dst ?: break
+            }
+            builder.append("tmp").append(field.id)
+            when(forFieldAccess) {
+                "" -> {}
+                "." -> {
+                    val ownership = getOwnership(field.type)
+                    builder.append(ownership.callPrefix)
+                    builder.append(forFieldAccess)
+                }
+            }
+        }
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
@@ -418,32 +466,66 @@ class RustSourceGenerator : CSourceGenerator() {
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleAllocateInstance -> {
-                val needsReference = !expr.allocatedType.isValue()
-                if (needsReference) {
-                    // todo depending on container type, define allocation...
-                    builder.append("gcNew<")
-                    appendType(expr.allocatedType, expr.scope, true)
-                    builder.append(">")
-                    appendValueParams(graph, expr.paramsForLater)
-                } else {
-                    appendType(expr.allocatedType, expr.scope, true)
-                    appendValueParams(graph, expr.paramsForLater)
-                }
+                val ownership = getOwnership(expr.allocatedType)
+                builder.append(ownership.allocPrefix)
+                appendType(expr.allocatedType, expr.scope, true)
+                builder.append("::new")
+                appendValueParams(graph, expr.paramsForLater)
+                builder.append(ownership.allocSuffix)
+            }
+            is SimpleDeclaration -> {
+                val type = expr.type
+                builder.append("let ")
+                builder.append(expr.name).append(": ")
+                appendTypeDecl(type, expr.scope)
             }
             else -> super.appendInstrImpl(graph, expr)
         }
     }
 
-    // todo container types:
-    //  type with GC inside | potentially self inside -> GcCell<Option<Gc<X>>>
-    //  value type -> X
-    //  else -> RefCell<X>
+    fun appendDefaultValue(valueType: Type) {
+        when (resolveType(valueType)) {
+            Types.Boolean -> builder.append("false")
+            in nativeTypes -> builder.append("0")
+            else -> builder.append("()")
+        }
+    }
 
-    // extern crate libc;
-    //
-    // use libc::c_char;
-    // use libc::c_int;
-    //
-    // use std::ffi::CString;
+    override fun appendCopy() {
+        // not necessary
+    }
+
+    override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+        // ensure import
+        val selfType = expr.self.type
+        val position = builder.length
+        appendType(selfType, expr.scope, true)
+        builder.setLength(position)
+
+        builder.append(needsCastForFirstValue.boxed).append("::new(")
+        appendFieldName(graph, expr.self)
+        builder.append(").")
+        builder.append(getMethodName(expr.methodSpec))
+        appendValueParams(graph, expr.valueParameters)
+    }
+
+    fun Type.isObjectLike() = this is ClassType && clazz.isObjectLike()
+
+    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+        val needsCastForFirstValue = nativeTypes[expr.self.type]
+        if (needsCastForFirstValue != null) {
+            appendCallForPrimitive(needsCastForFirstValue, expr, graph)
+        } else {
+            appendFieldName(graph, expr.self, "")
+            if (!expr.self.type.isObjectLike()) {
+                val ownership = RustOwnership[expr.self.type]
+                builder.append(ownership.callPrefix)
+            }
+            builder.append(".")
+            val methodName = getMethodName(expr.methodSpec)
+            builder.append(methodName)
+            appendValueParams(graph, expr.valueParameters)
+        }
+    }
 
 }

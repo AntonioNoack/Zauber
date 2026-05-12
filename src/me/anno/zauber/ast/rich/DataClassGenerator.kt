@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.controlflow.ShortcutOperator
@@ -25,9 +26,13 @@ import me.anno.zauber.types.Types
 
 object DataClassGenerator {
 
-    val i31 = NumberExpression("31", root, -1)
-    val i1 = NumberExpression("1", root, -1)
-    val iTrue = SpecialValueExpression(SpecialValue.TRUE, root, -1)
+    private class SpecialValues {
+        val i31 = NumberExpression("31", root, -1)
+        val i1 = NumberExpression("1", root, -1)
+        val iTrue = SpecialValueExpression(SpecialValue.TRUE, root, -1)
+    }
+
+    private val special by threadLocal { SpecialValues() }
 
     private const val KEYWORDS = Flags.SYNTHETIC or Flags.OVERRIDE
 
@@ -150,11 +155,11 @@ object DataClassGenerator {
                 if (builder.expr == null) {
                     builder.expr = hashExpr
                 } else {
-                    builder.times(i31)
+                    builder.times(special.i31)
                     builder.plus(hashExpr)
                 }
             }
-            body = ReturnExpression(builder.expr ?: i1, null, scope, origin)
+            body = ReturnExpression(builder.expr ?: special.i1, null, scope, origin)
             scope
         }
         methodScope.selfAsMethod = Method(
@@ -221,7 +226,7 @@ object DataClassGenerator {
                 }
             }
 
-            body = ReturnExpression(builder.expr ?: iTrue, null, scope, origin)
+            body = ReturnExpression(builder.expr ?: special.iTrue, null, scope, origin)
             scope
         }
         methodScope.selfAsMethod = Method(
@@ -257,7 +262,7 @@ object DataClassGenerator {
                 }
             }
 
-            body = ReturnExpression(builder.expr ?: iTrue, null, scope, origin)
+            body = ReturnExpression(builder.expr ?: special.iTrue, null, scope, origin)
             scope
         }
         methodScope.selfAsMethod = Method(

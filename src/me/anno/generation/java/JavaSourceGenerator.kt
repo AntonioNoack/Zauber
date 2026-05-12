@@ -107,6 +107,19 @@ open class JavaSourceGenerator : Generator() {
             }
             return type
         }
+
+        fun isStoredField(field: Field): Boolean {
+            return needsFieldByParameter(field.byParameter) && needsBackingField(field)
+        }
+
+        fun needsBackingField(field: Field): Boolean {
+            val getter = field.getter
+            val setter = field.setter
+            if (getter?.body == null || getter.body!!.needsBackingField(getter.scope)) return true
+            if (setter?.body == null) return field.isMutable
+            return setter.body!!.needsBackingField(setter.scope)
+        }
+
     }
 
     open val protectedTypes: Map<ClassType, BoxedType> get() = protectedJavaTypes
@@ -189,7 +202,7 @@ open class JavaSourceGenerator : Generator() {
             }
     }
 
-    fun createSpecializationSuffix(specialization: Specialization): String {
+    open fun createSpecializationSuffix(specialization: Specialization): String {
         if (specialization.isEmpty()) return ""
         // todo ensure the name is original, but keep it readable
         return "_${specialization.createUniqueName()}"
@@ -372,18 +385,10 @@ open class JavaSourceGenerator : Generator() {
     ) {
         if (classScope.scopeType == ScopeType.INTERFACE) return // no backing fields
         for ((field) in fields) {
-            if (!needsFieldByParameter(field.byParameter)) continue
-            if (!needsBackingField(field)) continue
-            appendBackingField(classScope, field, allowFinal, headerOnly)
+            if (isStoredField(field)) {
+                appendBackingField(classScope, field, allowFinal, headerOnly)
+            }
         }
-    }
-
-    fun needsBackingField(field: Field): Boolean {
-        val getter = field.getter
-        val setter = field.setter
-        if (getter?.body == null || getter.body!!.needsBackingField(getter.scope)) return true
-        if (setter?.body == null) return field.isMutable
-        return setter.body!!.needsBackingField(setter.scope)
     }
 
     open fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
@@ -1085,7 +1090,7 @@ open class JavaSourceGenerator : Generator() {
             appendCallForPrimitive(needsCastForFirstValue, expr, graph)
         } else {
             appendFieldName(graph, expr.self, ".")
-            val methodName = getMethodName(MethodSpecialization(expr.sample, expr.specialization))
+            val methodName = getMethodName(expr.methodSpec)
             builder.append(methodName)
             appendValueParams(graph, expr.valueParameters)
         }
@@ -1096,7 +1101,7 @@ open class JavaSourceGenerator : Generator() {
         graph: SimpleGraph,
     ) {
         builder.append(needsCastForFirstValue.boxed).append('.')
-        val methodName = getMethodName(MethodSpecialization(expr.sample, expr.specialization))
+        val methodName = getMethodName(expr.methodSpec)
         builder.append(methodName).append('(')
         appendFieldName(graph, expr.self)
         if (expr.valueParameters.isNotEmpty()) {

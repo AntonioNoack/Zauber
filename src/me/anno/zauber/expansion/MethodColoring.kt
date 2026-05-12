@@ -3,9 +3,6 @@ package me.anno.zauber.expansion
 import me.anno.generation.Specializations
 import me.anno.support.jvm.expression.JVMSimpleCall
 import me.anno.support.jvm.expression.JVMSimpleExpr
-import me.anno.utils.RecursiveException
-import me.anno.utils.RecursiveLazy
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -19,36 +16,10 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.specialization.MethodSpecialization
 
-abstract class MethodColoring<Color : Any> {
+abstract class MethodColoring<Color : Any> : GraphColoring<MethodSpecialization, Color>() {
 
-    private val cache by threadLocal { HashMap<MethodSpecialization, RecursiveLazy<Color>>() }
-
-    operator fun get(method: MethodSpecialization): Color {
-        return cache.getOrPut(method) {
-            RecursiveLazy { isColoredImpl(method) }
-        }.value
-    }
-
-    private fun isColoredImpl(method: MethodSpecialization): Color {
-        val selfColor = getSelfColor(method)
-        val dependencies = getDependencies(method)
-        var isRecursive = false
-        val colors = dependencies.mapNotNull { funcI ->
-            try {
-                get(funcI)
-            } catch (_: RecursiveException) {
-                isRecursive = true
-                null
-            }
-        }
-        return mergeColors(selfColor, colors, isRecursive)
-    }
-
-    open fun getDependencies(method: MethodSpecialization) =
-        getMethodDependencies(method)
-
-    abstract fun getSelfColor(method: MethodSpecialization): Color
-    abstract fun mergeColors(self: Color, colors: List<Color>, isRecursive: Boolean): Color
+    override fun getDependencies(key: MethodSpecialization) =
+        getMethodDependencies(key)
 
     companion object {
         private val LOGGER = LogManager.getLogger(MethodColoring::class)

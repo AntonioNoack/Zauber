@@ -28,14 +28,14 @@ class SimpleCall(
     // todo key should also contain specialization, or should it?
     //  method then could be the specialized one...
     val methods: Map<ClassType, MethodLike>,
-    val sample: MethodLike,
+    sample: MethodLike,
     val self: SimpleField,
     specialization: Specialization,
     val typeParameters: List<SimpleField>,
     val valueParameters: List<SimpleField>,
     val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleCallable(dst, specialization, scope, origin) {
+) : SimpleCallable(dst, sample, specialization, scope, origin) {
 
     companion object {
 

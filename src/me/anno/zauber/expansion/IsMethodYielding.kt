@@ -10,10 +10,10 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 
 object IsMethodYielding : MethodColoring<Type>() {
 
-    override fun getSelfColor(method: MethodSpecialization): Type {
-        val body = method.method.getSpecializedBody(method.specialization) ?: return Types.Nothing
+    override fun getSelfColor(key: MethodSpecialization): Type {
+        val body = key.method.getSpecializedBody(key.specialization) ?: return Types.Nothing
         val yieldedTypes = ArrayList<Type>()
-        val context = ResolutionContext(method.method.selfType, false, null)
+        val context = ResolutionContext(key.method.selfType, false, null)
         body.forEachExpressionRecursively { expr ->
             if (expr is YieldExpression) {
                 val type = TypeResolution.resolveType(context, expr.value)
@@ -24,6 +24,7 @@ object IsMethodYielding : MethodColoring<Type>() {
     }
 
     override fun mergeColors(
+        key: MethodSpecialization,
         self: Type,
         colors: List<Type>,
         isRecursive: Boolean

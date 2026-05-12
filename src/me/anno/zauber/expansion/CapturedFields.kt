@@ -10,14 +10,14 @@ import me.anno.zauber.typeresolution.ResolutionContext
 // todo use this to find captured fields early on
 object CapturedFields : MethodOrClassColoring<Set<Field>>() {
 
-    override fun getSelfColor(moc: MethodOrClassSpecialization): Set<Field> {
-        if (moc.method != null) {
-            val body = moc.method.getSpecializedBody(moc.specialization) ?: return emptySet()
+    override fun getSelfColor(key: MethodOrClassSpecialization): Set<Field> {
+        if (key.method != null) {
+            val body = key.method.getSpecializedBody(key.specialization) ?: return emptySet()
             val capturedFields = HashSet<Field>()
-            collectFields(body, moc, capturedFields)
+            collectFields(body, key, capturedFields)
             return capturedFields
         } else {
-            val clazz = moc.clazz ?: return emptySet()
+            val clazz = key.clazz ?: return emptySet()
             clazz[ScopeInitType.AFTER_DISCOVERY]
 
             if (!clazz.isClassLike() || clazz.isObjectLike()) return emptySet()
@@ -26,7 +26,7 @@ object CapturedFields : MethodOrClassColoring<Set<Field>>() {
             val capturedFields = HashSet<Field>()
             val prim = clazz.getOrCreatePrimaryConstructorScope()
             for (expr in prim.code) {
-                collectFields(expr, moc, capturedFields)
+                collectFields(expr, key, capturedFields)
             }
             return capturedFields
         }
@@ -77,8 +77,8 @@ object CapturedFields : MethodOrClassColoring<Set<Field>>() {
         }
     }
 
-    override fun getDependencies(moc: MethodOrClassSpecialization): Collection<MethodOrClassSpecialization> {
-        val method = moc.method
+    override fun getDependencies(key: MethodOrClassSpecialization): Collection<MethodOrClassSpecialization> {
+        val method = key.method
         if (method != null) {
             if (method.body == null) return emptyList()
             val dependencies = HashSet<MethodOrClassSpecialization>()
@@ -87,7 +87,7 @@ object CapturedFields : MethodOrClassColoring<Set<Field>>() {
             TODO("List methods and classes within 'this'-method")
         }
 
-        val clazz = moc.clazz ?: return emptyList()
+        val clazz = key.clazz ?: return emptyList()
         for (method in clazz.methods0) {
 
         }
@@ -95,6 +95,7 @@ object CapturedFields : MethodOrClassColoring<Set<Field>>() {
     }
 
     override fun mergeColors(
+        key: MethodOrClassSpecialization,
         self: Set<Field>,
         colors: List<Set<Field>>,
         isRecursive: Boolean

@@ -3,7 +3,6 @@ package me.anno.generation.java
 import me.anno.compilation.MinimalJavaCompiler
 import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -68,6 +67,7 @@ class GenerateAndRunTest {
 
     @Test
     fun testDataClassAndAllocation() {
+        // todo why is this flaky? root-mismatch
         val code = """
             data class Vector(val x: Int, val y: Int, val z: Int)
             

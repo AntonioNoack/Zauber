@@ -1,6 +1,7 @@
 package me.anno.zauber.types.specialization
 
 import me.anno.generation.Specializations.specializations
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
@@ -81,7 +82,7 @@ class Specialization(typeParameters: ParameterList) {
     override fun hashCode(): Int = hash
 
     fun createUniqueName(): String {
-        val name = uniqueNames[this]
+        val name = data.uniqueNames[this]
         if (name != null) return name
 
         val genName0 = typeParameters.indices.joinToString("_") {
@@ -113,15 +114,15 @@ class Specialization(typeParameters: ParameterList) {
                 .replace("?", "$")
         }
 
-        if (knownNames.add(genName0)) {
-            uniqueNames[this] = genName0
+        if (data.knownNames.add(genName0)) {
+            data.uniqueNames[this] = genName0
             return genName0
         }
 
         for (i in 0 until 1000) {
             val genNameI = "$genName0$i"
-            if (knownNames.add(genNameI)) {
-                uniqueNames[this] = genNameI
+            if (data.knownNames.add(genNameI)) {
+                data.uniqueNames[this] = genNameI
                 return genNameI
             }
         }
@@ -146,8 +147,13 @@ class Specialization(typeParameters: ParameterList) {
     }
 
     companion object {
-        private val uniqueNames = HashMap<Specialization, String>()
-        private val knownNames = HashSet<String>()
+        class Data {
+            val uniqueNames = HashMap<Specialization, String>()
+            val knownNames = HashSet<String>()
+        }
+
+        private val data by threadLocal { Data() }
+
         val noSpecialization = Specialization(ParameterList.emptyParameterList())
     }
 }

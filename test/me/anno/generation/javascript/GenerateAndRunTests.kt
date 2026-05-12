@@ -46,7 +46,6 @@ class GenerateAndRunTests {
         assertEquals("3\n", printed)
     }
 
-
     @Test
     fun testMethodCall() {
         val code = """
