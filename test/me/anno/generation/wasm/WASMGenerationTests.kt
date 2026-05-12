@@ -94,7 +94,7 @@ class WASMGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, ::registerLib)
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 

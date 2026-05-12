@@ -7,6 +7,8 @@ class WASMStruct(
     val fields: List<WASMProperty>
 ) {
     fun getOffset(field: Field): Int {
-        return fields.first { it.field == field }.offset
+        val field = fields.firstOrNull { it.field == field }
+            ?: throw IllegalStateException("Missing field $field in #$classIndex, $fields")
+        return field.offset
     }
 }

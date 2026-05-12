@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.*
+import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.expansion.DependencyData
@@ -22,8 +23,12 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
-// todo directly encode binary WASM
-// todo like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible
+/**
+ * todo current issue: implement gcNew
+ *
+ * todo directly encode binary WASM
+ * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
+ * */
 class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
 
     init {
@@ -272,6 +277,13 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
 
             declareLocalFieldsAsVariables(graph)
 
+            if (method is Constructor && method.ownerScope.isObjectLike()) {
+                val objectAddr = getObjectAddress(method.ownerScope)
+                builder.append(pointerType.wasmName).append(".const ").append(objectAddr)
+                builder.append(" i32.const 1 i32.store")
+                nextLine()
+            }
+
             appendSimplifiedAST(graph, graph.startBlock)
         } catch (e: Throwable) {
             e.printStackTrace()
@@ -326,6 +338,7 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         }
     }
 
+    // todo start classIndex at 0
     var allocOffset = 64
     var classOverhead = 4
     val objectInstances = HashMap<Scope, Int>()
@@ -367,32 +380,55 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         return if (mod != 0) pos + n - mod else pos
     }
 
-    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-        val offset = objectInstances.getOrPut(objectScope) {
+    fun getObjectAddress(objectScope: Scope): Int {
+        return objectInstances.getOrPut(objectScope) {
             val struct = getStruct(ClassSpecialization(objectScope, Specialization.noSpecialization))
             allocOffset = align(allocOffset, 8)
             val fixedAddress = allocOffset
             allocOffset = fixedAddress + struct.byteSize
             fixedAddress
         }
+    }
+
+    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
+        val offset = getObjectAddress(objectScope)
         builder.append(pointerType.wasmName).append(".const ").append(offset)
             .append(" ;; ").append(objectScope.pathStr)
+        nextLine()
+        builder.append("i32.load i32.eqz ")
+        val method = objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor!!
+        val methodInitName = getMethodName(MethodSpecialization(method, Specialization.noSpecialization))
+        builder.append("(if (then ").append(pointerType.wasmName).append(".const ").append(offset)
+            .append(" call $").append(methodInitName).append(" drop))")
+        nextLine()
+        builder.append(pointerType.wasmName).append(".const ").append(offset)
+        nextLine()
+    }
+
+    fun insideObjectConstructor(graph: SimpleGraph, objectScope: Scope): Boolean {
+        return objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor == graph.method
     }
 
     fun appendGetField(graph: SimpleGraph, field: SimpleField) {
-        if (field.isObjectLike()) {
-            val objectType = (field.type as ClassType).clazz
-            appendGetObjectInstance(objectType, graph.method.scope)
-        } else if (field.isOwnerThis(graph)) {
+        if (field.isOwnerThis(graph)) {
             builder.append("local.get \$this")
+            nextLine()
+        } else if (field.isObjectLike()) {
+            val objectScope = (field.type as ClassType).clazz
+            if (insideObjectConstructor(graph, objectScope)) {
+                builder.append("local.get \$this")
+                nextLine()
+            } else {
+                appendGetObjectInstance(objectScope, graph.method.scope)
+            }
         } else {
             var field = field
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
             builder.append("local.get \$tmp").append(field.id)
+            nextLine()
         }
-        nextLine()
     }
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
@@ -421,6 +457,21 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
             }
             is SimpleSelfConstructor -> {
                 appendCallImpl(graph, expr)
+            }
+            is SimpleAllocateInstance -> {
+                // todo test nullable variables
+                // this allocation is a ClassType, so it cannot be null ever
+                if (!expr.allocatedType.isValue()) {
+                    // call GC-aware alloc instead
+                    val struct = getStruct(ClassSpecialization(expr.allocatedType))
+                    builder.append("i32.const ").append(struct.classIndex)
+                        .append(" i32.const ").append(struct.byteSize)
+                        .append(" call \$gcNew ;; ").append(expr.allocatedType)
+                    nextLine()
+                } else {
+                    appendType(expr.allocatedType, expr.scope, true)
+                    appendValueParams(graph, expr.paramsForLater)
+                }
             }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
@@ -475,30 +526,45 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
                 }
             }
             is SimpleGetField -> {
-                // todo if this is a local variable, get that instead
-                appendGetField(graph, expr.self)
-                appendFieldOffset(expr.self, expr.field)
+                // if this is a local variable, get that instead
+                if (isLocalField(expr.self)) {
 
-                builder.append(pointerType.wasmName).append(".add")
-                nextLine()
+                    builder.append("local.get \$").append(expr.field.name)
+                    nextLine()
 
-                // todo choose correct instruction
-                builder.append("i32.load")
-                nextLine()
+                } else {
+                    appendGetField(graph, expr.self)
+                    appendFieldOffset(expr.self, expr.field)
+
+                    builder.append(pointerType.wasmName).append(".add")
+                    nextLine()
+
+                    // todo choose correct instruction
+                    builder.append("i32.load")
+                    nextLine()
+                }
             }
             is SimpleSetField -> {
-                // todo if this is a local variable, set that instead
-                appendGetField(graph, expr.self)
-                appendFieldOffset(expr.self, expr.field)
+                // if this is a local variable, set that instead
+                if (isLocalField(expr.self)) {
 
-                builder.append(pointerType.wasmName).append(".add")
-                nextLine()
+                    appendGetField(graph, expr.value)
+                    builder.append("local.set \$").append(expr.field.name)
+                    nextLine()
 
-                appendGetField(graph, expr.value)
+                } else {
+                    appendGetField(graph, expr.self)
+                    appendFieldOffset(expr.self, expr.field)
 
-                // todo choose correct instruction
-                builder.append("i32.store")
-                nextLine()
+                    builder.append(pointerType.wasmName).append(".add")
+                    nextLine()
+
+                    appendGetField(graph, expr.value)
+
+                    // todo choose correct instruction
+                    builder.append("i32.store")
+                    nextLine()
+                }
 
                 // todo we must call copy until we support structs...
             }
@@ -507,6 +573,10 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
                 nextLine()
             }
         }
+    }
+
+    fun isLocalField(self: SimpleField): Boolean {
+        return self.type is ClassType && !self.type.clazz.isClassLike()
     }
 
     fun appendFieldOffset(self: SimpleField, field: Field) {

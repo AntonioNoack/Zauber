@@ -15,7 +15,7 @@ const imports = {
     },
     env: {
         'zauber_println_wjpkxu': (self, value) => {
-            console.log("WASM says:", value);
+            console.log(value);
             return 0
         },
         'zauber.Int_plus_rtgkvs': () => {},
