@@ -109,7 +109,8 @@ open class JavaSourceGenerator : Generator() {
         }
 
         fun isStoredField(field: Field): Boolean {
-            return needsFieldByParameter(field.byParameter) && needsBackingField(field)
+            return if (field.isObjectInstance()) false
+            else needsFieldByParameter(field.byParameter) && needsBackingField(field)
         }
 
         fun needsBackingField(field: Field): Boolean {

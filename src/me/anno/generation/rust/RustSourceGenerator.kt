@@ -58,11 +58,15 @@ class RustSourceGenerator : CSourceGenerator() {
         val refCellImport = "std::cell::RefCell".split("::")
         val gcCellImport = "gc::GcCell".split("::")
         val gcImport = "gc::Gc".split("::")
+        val gcTraceImport = "gc::Trace".split("::")
+        val gcFinalizeImport = "gc::Finalize".split("::")
 
         val libImports = listOf(
             refCellImport,
             gcCellImport,
-            gcImport
+            gcImport,
+            gcTraceImport,
+            gcFinalizeImport // must be defined, when we have no own finalize implementation
         )
 
     }
@@ -152,11 +156,20 @@ class RustSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendClassFlags(scope: Scope) {
-        if (scope.isValueType() && RustOwnership[scope.typeWithArgs].isImmutable) {
+        val ownership = RustOwnership[resolveType(scope.typeWithArgs)]
+        if (scope.isValueType() && ownership.isImmutable) {
             builder.append("#[derive(Copy,Clone)]") // simple mem-copy
             nextLine()
-        } else {
+        } else if (scope.isObjectLike() ||
+            ownership.isDeepMutable ||
+            scope.typeWithArgs in nativeTypes
+        ) {
             builder.append("#[derive(Clone)]") // maybe complicated copy
+            nextLine()
+        } else {
+            imports["Trace"] = gcTraceImport
+            imports["Finalize"] = gcFinalizeImport
+            builder.append("#[derive(Trace, Finalize, Clone)]") // maybe complicated copy
             nextLine()
         }
     }
@@ -438,7 +451,7 @@ class RustSourceGenerator : CSourceGenerator() {
                 field = field.mergeInfo?.dst ?: break
             }
             builder.append("tmp").append(field.id)
-            when(forFieldAccess) {
+            when (forFieldAccess) {
                 "" -> {}
                 "." -> {
                     val ownership = getOwnership(field.type)
