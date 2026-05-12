@@ -8,6 +8,9 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
+/**
+ * execution time: ~7s
+ * */
 class GenerateAndRunTest {
 
     private fun registerLib() {

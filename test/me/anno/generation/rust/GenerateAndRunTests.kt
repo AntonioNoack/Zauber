@@ -9,6 +9,9 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
+/**
+ * execution time: ~10s for all
+ * */
 class GenerateAndRunTests {
 
     private fun registerLib() {

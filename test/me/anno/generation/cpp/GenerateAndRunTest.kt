@@ -7,6 +7,9 @@ import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
+/**
+ * execution time: ~3s for all
+ * */
 class GenerateAndRunTest {
 
     private fun registerLib() {
