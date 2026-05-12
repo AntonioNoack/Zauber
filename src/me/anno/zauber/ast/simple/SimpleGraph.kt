@@ -9,9 +9,10 @@ import me.anno.zauber.types.Type
 
 class SimpleGraph(val method: MethodLike) {
 
-    var numFields = 0
+    private var numFields = 0
     val nodes = ArrayList<SimpleNode>()
     val startBlock = SimpleNode(this)
+    val fields = ArrayList<SimpleField>()
 
     // todo in methods within classes, always request self at the start,
     //  so we can use it to call self-based methods with explicitSelf
@@ -37,9 +38,11 @@ class SimpleGraph(val method: MethodLike) {
         return node
     }
 
-
-    fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
-        SimpleField(type, ownership, numFields++)
+    fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField {
+        val field = SimpleField(type, ownership, numFields++)
+        fields.add(field)
+        return field
+    }
 
     fun onCapturedField(field: Field) {
         field.isCaptured = true

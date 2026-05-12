@@ -180,7 +180,7 @@ class RustSourceGenerator : CSourceGenerator() {
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
-        specialization.push {
+        specialization.use {
             appendSpecializationInfoComment()
 
             if (classScope.isObjectLike()) {

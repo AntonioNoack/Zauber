@@ -29,13 +29,13 @@ class SimpleCall(
     //  method then could be the specialized one...
     val methods: Map<ClassType, MethodLike>,
     sample: MethodLike,
-    val self: SimpleField,
+    self: SimpleField,
     specialization: Specialization,
     val typeParameters: List<SimpleField>,
     val valueParameters: List<SimpleField>,
     val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleCallable(dst, sample, specialization, scope, origin) {
+) : SimpleCallable(dst, self, sample, specialization, scope, origin) {
 
     companion object {
 

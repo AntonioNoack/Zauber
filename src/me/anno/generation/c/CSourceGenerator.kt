@@ -16,7 +16,7 @@ open class CSourceGenerator : CppSourceGenerator() {
                 // we rely on this special behaviour -> make it explicit
                 return "0"
             }
-            return method.specialization.push {
+            return method.specialization.use {
                 val hash = method.method.valueParameters.joinToString {
                     "${it.name}: ${resolveType(it.type)}"
                 }.hashCode()
@@ -26,7 +26,7 @@ open class CSourceGenerator : CppSourceGenerator() {
     }
 
     override fun getMethodName(method: MethodSpecialization): String {
-        val base = super.getMethodName(method)
+        val base = super.getMethodName0(method)
         return "${base}_${hashMethodParameters(method)}"
     }
 

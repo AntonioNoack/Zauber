@@ -344,7 +344,7 @@ open class JavaSourceGenerator : Generator() {
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
-        specialization.push {
+        specialization.use {
             appendSpecializationInfoComment()
 
             appendClassFlags(classScope)
@@ -526,6 +526,10 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun getMethodName(method: MethodSpecialization): String {
+        return getMethodName0(method)
+    }
+
+    fun getMethodName0(method: MethodSpecialization): String {
         val (method, specForName) = method
         return if (specForName.isNotEmpty()) {
             "${method.name}_${specForName.hash}"
@@ -643,7 +647,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
-    fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
+    open fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
         writeBlock {
             try {
                 val method1 = MethodSpecialization(method, context.specialization)
@@ -780,7 +784,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append(forFieldAccess)
     }
 
-    fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean = true) {
+    open fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean = true) {
         if (withBrackets) builder.append('(')
         for (i in valueParameters.indices) {
             if (i > 0) builder.append(", ")

@@ -81,6 +81,8 @@ flowchart TD
     Simple --> WASM[WASM or JavaScript]
     Simple --> GLSL
     Simple --> Java2[Java or JVM Bytecode]
+    Simple --> Rust
+    Simple --> Zig
 ```
 
 The Zauber AST is a typical AST:
@@ -98,6 +100,10 @@ The Flow Graph is a special AST:
 - low-level flow-control: only branches and calls
 - splits flow into value (normal execution), returned (passing finally/defer) and thrown (passing catches/errdefer)
 - generics are (partially) specialized (resolved)
+
+For generating code, there are two potential ways:
+- use other language's code as 'Zauber'
+- compile-time - generated bindings (easier)
 
 ## Budget
 
@@ -165,6 +171,8 @@ Kotlin libraries are weird, they ship compiled JVM Bytecode with special byte-en
 Java libraries are good w.r.t. that they can be loaded at runtime, but that also makes them less secure.
 Therefore, I'd like Zauber libraries to be plain Zauber code packages as a zip- or tar-file.
 If you need obfuscation, obfuscate all library-internal logic.
+
+For generated code in other languages, I'll add the basics to get the language working, and ideally auto-compile-time bindings for the stdlib, but more than that will be up to 3rd party libraries.
 
 ### Progress Estimation
 

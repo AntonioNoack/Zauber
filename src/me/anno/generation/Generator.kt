@@ -52,7 +52,7 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         indent()
     }
 
-    fun writeBlock(run: () -> Unit) {
+    open fun writeBlock(run: () -> Unit) {
         if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
         builder.append("{")
 

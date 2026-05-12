@@ -90,7 +90,7 @@ open class MethodLike(
         validateSpecialization(specialization)
 
         return specializations.getOrPut(specialization) {
-            specialization.push {
+            specialization.use {
                 val context = ResolutionContext(null, specialization, true, null)
                 Specializations.foundMethodSpecialization(this, specialization)
                 body.resolve(context)

@@ -20,7 +20,7 @@ class Specialization(typeParameters: ParameterList) {
         )
     )
 
-    inline fun <R> push(runnable: () -> R): R {
+    inline fun <R> use(runnable: () -> R): R {
         return try {
             specializations.add(this)
             runnable()

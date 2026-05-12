@@ -30,7 +30,6 @@ import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
-import kotlin.math.max
 
 /**
  * structs are directly supported, inheritance is still supported
@@ -121,7 +120,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
-        specialization.push {
+        specialization.use {
 
             appendSpecializationInfoComment()
 

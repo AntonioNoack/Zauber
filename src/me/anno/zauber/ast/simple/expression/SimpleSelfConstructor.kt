@@ -11,12 +11,12 @@ import me.anno.zauber.types.specialization.Specialization
 class SimpleSelfConstructor(
     unusedDst: SimpleField,
     val isThis: Boolean,
-    val self: SimpleField,
+    self: SimpleField,
     val method: Constructor,
     specialization: Specialization,
     val valueParameters: List<SimpleField>,
     scope: Scope, origin: Int
-) : SimpleCallable(unusedDst, method, specialization, scope, origin) {
+) : SimpleCallable(unusedDst, self, method, specialization, scope, origin) {
 
     init {
         check(method.valueParameters.size == valueParameters.size)

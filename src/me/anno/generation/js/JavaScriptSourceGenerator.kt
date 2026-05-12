@@ -124,7 +124,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
-        specialization.push {
+        specialization.use {
             appendSpecializationInfoComment()
 
             builder.append("export ")
