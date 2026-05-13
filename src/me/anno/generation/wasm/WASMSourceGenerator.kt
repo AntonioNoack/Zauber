@@ -1,7 +1,12 @@
 package me.anno.generation.wasm
 
 import me.anno.generation.c.CSourceGenerator
+import me.anno.generation.wasm.WASMType.Companion.anyRef
+import me.anno.utils.CollectionUtils.partitionBy
+import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.ast.reverse.CodeReconstruction
+import me.anno.zauber.ast.reverse.SimpleBranch
+import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
@@ -24,44 +29,88 @@ import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
 /**
- * todo current issue: implement gcNew
- *
  * todo directly encode binary WASM
  * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
  * */
-class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
+class WASMSourceGenerator : CSourceGenerator() {
 
-    init {
-        check(!binary) {
-            "Binary code gen not yet implemented"
-        }
-    }
-
-    val pointerType = WASMType.I32
     val functionTypes = HashMap<FunctionType, Int>()
     val functionTypeList = ArrayList<FunctionType>()
 
-    override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
-        for (method in data.calledMethods) {
-            getFunctionType(method)
-        }
-        beginModule()
-        writeMethodTypes()
+    val binary = WASMBinaryWriter()
+    val importList = ArrayList<Pair<String, Int>>()
+    val exportList = ArrayList<Pair<String, Int>>()
 
-        for (method in data.calledMethods) {
+    val functionIndexMap = HashMap<MethodSpecialization, Int>()
+    val functionIndexList = ArrayList<MethodSpecialization>()
+
+    val globalNames = ArrayList<String>()
+    val bodies = ListOfByteArrays(binary.out)
+
+    fun registerMethods(data: DependencyData) {
+        functionIndexList.addAll(data.calledMethods)
+        functionIndexList.partitionBy { method -> method.method.body != null }
+
+        var hadImpl = false
+        for (i in functionIndexList.indices) {
+            val method = functionIndexList[i]
+            functionIndexMap[method] = functionIndexMap.size
+            if (method.method.body != null) {
+                hadImpl = true
+            } else {
+                check(!hadImpl) { "Imports must be first" }
+                val methodName = getMethodName(method)
+                val funcType = getFunctionType(method)
+                importList.add(methodName to funcType)
+            }
+        }
+    }
+
+    override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
+
+        registerMethods(data)
+        depth++
+
+        for (method in functionIndexList) {
             if (method.method.body != null) continue
             appendMethodImport(method)
         }
 
-        for (method in data.calledMethods) {
+        val methodImports = builder.toString()
+        builder.clear()
+        indent()
+
+        for (method in functionIndexList) {
             if (method.method.body == null) continue
             appendMethodCode(method)
         }
 
+        depth--
+
+        val methodBodies = builder.toString()
+        builder.clear()
+
+        beginModule()
+        writeStructTypes()
+        writeMethodTypes()
+        builder.append(methodImports)
+        writeObjectGlobals()
+        builder.append(methodBodies)
         endModule()
 
         dst.writeText(builder.toString())
         builder.clear()
+
+        val start = binary.out.size
+        // todo don't we need a list for imports??
+        binary.writeModuleHeader()
+        binary.writeTypeSection(functionTypeList)
+        binary.writeFunctionSection(functionIndexList, ::getFunctionType)
+        binary.writeMemorySection()
+        binary.writeImportSection(importList)
+        binary.writeExportSection(exportList)
+        binary.writeCodeSection(bodies)
+        binary.out.removeSection(0, start)
     }
 
     override fun comment(body: () -> Unit) {
@@ -120,30 +169,68 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
     fun writeMethodTypes() {
         for (i in functionTypeList.indices) {
             val type = functionTypeList[i]
-            builder.append("(type \$t").append(i)
-                .append(" (func (param")
+
+            builder.append("(type \$t")
+                .append(i)
+                .append(" (func")
+
             for (param in type.params) {
-                builder.append(' ').append(param.wasmName)
+                builder.append(" (param ")
+                    .append(param.wasmName)
+                    .append(')')
             }
-            builder.append(") (result")
+
             for (result in type.results) {
-                builder.append(' ').append(result.wasmName)
+                builder.append(" (result ")
+                    .append(result.wasmName)
+                    .append(')')
             }
-            builder.append(")))")
+
+            builder.append("))")
+            nextLine()
+        }
+    }
+
+    fun writeStructTypes() {
+        for (struct in uniqueStructs.values) {
+
+            builder.append("(type \$")
+                .append(struct.typeName)
+                .append(" (struct")
+
+            for (property in struct.properties) {
+
+                builder.append(" (field \$")
+                    .append(property.field.name)
+                    .append(" ")
+
+                when (val t = property.wasmType) {
+                    is WASMType.Ref -> builder.append(t.wasmName)
+                    else -> builder.append(t.wasmName)
+                }
+
+                builder.append(")")
+            }
+
+            builder.append("))")
             nextLine()
         }
     }
 
     fun getWASMType(type: Type): WASMType {
-        val type = resolveType(type)
-        return when (type) {
-            Types.Byte, Types.UByte, Types.Short, Types.UShort, Types.Int, Types.UInt -> WASMType.I32
+        return when (val type = resolveType(type)) {
+
+            Types.Byte, Types.UByte,
+            Types.Short, Types.UShort,
+            Types.Int, Types.UInt -> WASMType.I32
+
             Types.Long, Types.ULong -> WASMType.I64
 
             Types.Float, Types.Half -> WASMType.F32
             Types.Double -> WASMType.F64
 
-            else -> pointerType
+            is ClassType -> getStruct(ClassSpecialization(type)).type
+            else -> anyRef
         }
     }
 
@@ -158,7 +245,7 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
             )
 
             // self:
-            params.add(pointerType)
+            params.add(getWASMType(method.ownerScope.typeWithArgs))
 
             if (method.explicitSelfType) {
                 val selfType = method.selfType!!
@@ -181,12 +268,19 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         }
     }
 
-    fun appendMethodHeader(typeIndex: Int, methodName: String, method: MethodLike, export: Boolean) {
+    fun appendMethodHeader(typeIndex: Int, methodName: String, method0: MethodSpecialization, export: Boolean) {
+        val method = method0.method
         val type = functionTypeList[typeIndex]
+
         builder.append("(func $").append(methodName)
-        if (export) builder.append(" (export \"").append(methodName).append("\")")
+
+        if (export) {
+            builder.append(" (export \"").append(methodName).append("\")")
+            exportList.add(methodName to functionIndexMap[method0]!!)
+        }
+
         builder.append(" (type \$t").append(typeIndex).append(")")
-        appendParamWithName(pointerType, "this")
+        appendParamWithName(type.params[0], "this")
         var j = 1
         if (method.explicitSelfType) {
             appendParamWithName(type.params[1], "__self")
@@ -219,7 +313,7 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
     fun appendMethodCode(method: MethodSpecialization) {
         val type = getFunctionType(method)
         method.specialization.use {
-            appendMethodHeader(type, getMethodName(method), method.method, true)
+            appendMethodHeader(type, getMethodName(method), method, true)
 
             val (method, spec) = method
             val body = method.body!!
@@ -229,15 +323,17 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
 
             if (method is Constructor) {
                 // return is typically missing
-                builder.append("i32.const 0")
-                nextLine()
+                appendGetThis()
             }
 
             // close body
             builder.setLength(builder.length - 2)
             builder.append(")")
+            binary.u8(WASMOpcode.END)
             depth--
             nextLine()
+
+            bodies.finishBody()
         }
     }
 
@@ -246,9 +342,8 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         val type = getFunctionType(method)
         method.specialization.use {
             val methodName = getMethodName(method)
-            builder.append("(import \"env\" \"").append(methodName)
-                .append("\" ")
-            appendMethodHeader(type, methodName, method.method, false)
+            builder.append("(import \"env\" \"").append(methodName).append("\" ")
+            appendMethodHeader(type, methodName, method, false)
             trimWhitespaceAtEnd()
             builder.append("))")
             depth--
@@ -277,14 +372,16 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
 
             declareLocalFieldsAsVariables(graph)
 
-            if (method is Constructor && method.ownerScope.isObjectLike()) {
+            /*if (method is Constructor && method.ownerScope.isObjectLike()) {
                 val objectAddr = getObjectAddress(method.ownerScope)
                 builder.append(pointerType.wasmName).append(".const ").append(objectAddr)
                 builder.append(" i32.const 1 i32.store")
                 nextLine()
-            }
+            }*/
 
+            // write all code
             appendSimplifiedAST(graph, graph.startBlock)
+
         } catch (e: Throwable) {
             e.printStackTrace()
             comment {
@@ -299,11 +396,75 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
     }
 
     fun declareLocalFieldsAsVariables(graph: SimpleGraph) {
+        // todo we must also include mutable fields...
+        val offset = getLocalFieldOffset(graph)
+        val mutableFields = collectMutableFields(graph, offset)
+
+        val types = ArrayList<WASMType>()
         for (field in graph.fields) {
+            val type = getWASMType(field.type)
             builder.append("(local \$tmp").append(field.id)
-                .append(' ').append(getWASMType(field.type).wasmName).append(')')
+                .append(' ').append(type.wasmName).append(')')
+            types.add(type)
             nextLine()
         }
+        for (field in mutableFields) {
+            // todo ensure unique names
+            val type = getWASMType(field.valueType!!)
+            builder.append("(local $").append(field.name)
+                .append(' ').append(type.wasmName).append(')')
+            types.add(type)
+            nextLine()
+        }
+
+        // todo we must reorder all field indices...
+        /*val grouped = graph.fields.groupBy { getWASMType(it.type) }
+        binary.u32(grouped.size)
+        for ((type, vars) in grouped) {
+            binary.u32(vars.size)
+            binary.u8(type.valType) // assumes mapping exists
+        }*/
+        // hack:
+        binary.u32(types.size)
+        for (type in types) {
+            binary.u32(1)
+            binary.writeValueType(type)
+        }
+    }
+
+    lateinit var mutableFields: Map<Field, Int>
+    lateinit var mutableFieldsList: List<Field>
+
+    fun collectMutableFields(graph: SimpleGraph, offset: Int): List<Field> {
+        val fieldMap = HashMap<Field, Int>()
+        val fieldList = ArrayList<Field>()
+        for (block in graph.nodes) {
+            for (expr in block.instructions) {
+                when (expr) {
+                    is SimpleGetField, is SimpleSetField -> {
+                        val fieldSelf = when (expr) {
+                            is SimpleGetField -> expr.self
+                            is SimpleSetField -> expr.self
+                            else -> error("Unreachable")
+                        }
+                        if (isLocalField(fieldSelf)) {
+                            val field = when (expr) {
+                                is SimpleGetField -> expr.field
+                                is SimpleSetField -> expr.field
+                                else -> error("Unreachable")
+                            }
+                            fieldMap.getOrPut(field) {
+                                fieldList.add(field)
+                                fieldMap.size + offset
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        mutableFieldsList = fieldList
+        mutableFields = fieldMap
+        return fieldList
     }
 
     override fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
@@ -312,16 +473,19 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
 
     fun appendDrop() {
         builder.append("drop")
+        binary.drop()
         nextLine()
     }
 
     fun appendUnreachable() {
         builder.append("unreachable")
+        binary.unreachable()
         nextLine()
     }
 
     override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         builder.append("local.set \$tmp").append(expression.dst.id)
+        binary.localSet(expression.dst.id + getLocalFieldOffset(graph))
         nextLine()
     }
 
@@ -338,86 +502,151 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         }
     }
 
-    // todo start classIndex at 0
-    var allocOffset = 64
-    var classOverhead = 4
-    val objectInstances = HashMap<Scope, Int>()
-
     val structs = HashMap<ClassSpecialization, WASMStruct>()
+    val uniqueStructs = HashMap<List<WASMProperty>, WASMStruct>()
+    val objectGlobals = HashMap<Scope, Int>()
+
+    fun writeObjectGlobals() {
+        for ((scope, index) in objectGlobals.entries.sortedBy { it.value }) {
+            val struct = getStruct(ClassSpecialization(scope, Specialization.noSpecialization))
+            builder.append("(global \$")
+                .append(globalNames[index])
+                .append(" (mut (ref null \$")
+                .append(struct.typeName)
+                .append(")) (ref.null \$")
+                .append(struct.typeName)
+                .append("))")
+            nextLine()
+        }
+    }
 
     fun getStruct(classSpecialization: ClassSpecialization): WASMStruct {
         return structs.getOrPut(classSpecialization) {
-            createStruct(classSpecialization, structs.size)
+            createStruct(classSpecialization)
         }
     }
 
-    fun createStruct(classSpecialization: ClassSpecialization, classIndex: Int): WASMStruct {
+    fun createStruct(classSpecialization: ClassSpecialization): WASMStruct {
         val (clazz, spec) = classSpecialization
         return spec.use {
-            var offset = classOverhead
-            val properties = clazz.fields
+
+            val props = clazz.fields
                 .filter { isStoredField(it) }
-                .map { field ->
-                    val type = getWASMType(resolveType(field.valueType!!))
-                    field to type
+                .mapIndexed { index, field ->
+                    val type = getWASMType(field.valueType!!)
+                    WASMProperty(field, type, index)
                 }
-                .sortedByDescending { it.second.byteSize }
-                .map { (field, type) ->
-                    offset = align(offset, type.byteSize)
-                    val offset0 = offset
-                    offset += type.byteSize
-                    WASMProperty(field, type, offset0)
-                }
-            // align with biggest property
-            val biggestMember = properties.maxOfOrNull { it.wasmType.byteSize } ?: 4
-            offset = align(offset, biggestMember)
-            WASMStruct(classIndex, offset, properties)
-        }
-    }
 
-    fun align(pos: Int, n: Int): Int {
-        val mod = pos % n
-        return if (mod != 0) pos + n - mod else pos
-    }
-
-    fun getObjectAddress(objectScope: Scope): Int {
-        return objectInstances.getOrPut(objectScope) {
-            val struct = getStruct(ClassSpecialization(objectScope, Specialization.noSpecialization))
-            allocOffset = align(allocOffset, 8)
-            val fixedAddress = allocOffset
-            allocOffset = fixedAddress + struct.byteSize
-            fixedAddress
+            uniqueStructs.getOrPut(props) {
+                val typeIndex = uniqueStructs.size
+                WASMStruct(
+                    typeIndex,
+                    "gc$typeIndex",
+                    props
+                )
+            }
         }
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-        val offset = getObjectAddress(objectScope)
-        builder.append(pointerType.wasmName).append(".const ").append(offset)
-            .append(" ;; ").append(objectScope.pathStr)
+
+        val globalIndex = objectGlobals.getOrPut(objectScope) {
+            globalNames.add("global_${objectScope.pathStr}")
+            objectGlobals.size
+        }
+
+        val struct = getStruct(ClassSpecialization(objectScope, Specialization.noSpecialization))
+
+        globalGet(globalIndex)
         nextLine()
-        builder.append("i32.load i32.eqz ")
-        val method = objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor!!
-        val methodInitName = getMethodName(MethodSpecialization(method, Specialization.noSpecialization))
-        builder.append("(if (then ").append(pointerType.wasmName).append(".const ").append(offset)
-            .append(" call $").append(methodInitName).append(" drop))")
+
+        builder.append("ref.is_null")
+        binary.u8(WASMOpcode.REF_IS_NULL)
         nextLine()
-        builder.append(pointerType.wasmName).append(".const ").append(offset)
+
+        emptyResultIf()
+
+        builder.append("struct.new_default $").append(struct.typeName)
+        binary.structNew(struct.typeIndex)
         nextLine()
+
+        globalSet(globalIndex)
+        builder.append(' ')
+        globalGet(globalIndex)
+        nextLine()
+
+        val constructor = objectScope
+            .getOrCreatePrimaryConstructorScope()
+            .selfAsConstructor!!
+
+        callMethod(MethodSpecialization(constructor, Specialization.noSpecialization))
+        nextLine()
+
+        appendDrop()
+        emptyResultEnd()
+
+        globalGet(globalIndex)
+        nextLine()
+    }
+
+    fun emptyResultIf() {
+        builder.append("(if (then")
+        depth++
+        nextLine()
+
+        binary.u8(WASMOpcode.IF)
+        binary.u8(0x40) // empty block
+    }
+
+    fun emptyResultElse() {
+        builder.append(") (else")
+        nextLine()
+
+        binary.u8(WASMOpcode.ELSE)
+    }
+
+    fun emptyResultEnd() {
+        builder.append("))")
+        depth--
+        nextLine()
+
+        binary.u8(WASMOpcode.END)
+    }
+
+    fun globalGet(globalIndex: Int) {
+        builder.append("global.get \$").append(globalNames[globalIndex])
+        binary.globalGet(globalIndex)
+    }
+
+    fun globalSet(globalIndex: Int) {
+        builder.append("global.set \$").append(globalNames[globalIndex])
+        binary.globalSet(globalIndex)
     }
 
     fun insideObjectConstructor(graph: SimpleGraph, objectScope: Scope): Boolean {
         return objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor == graph.method
     }
 
+    fun getLocalFieldOffset(graph: SimpleGraph): Int {
+        var offset = 1
+        if (graph.method.explicitSelfType) offset++
+        val numParams = graph.method.valueParameters.size
+        return offset + numParams
+    }
+
+    fun appendGetThis() {
+        builder.append("local.get \$this")
+        binary.localGet(0)
+        nextLine()
+    }
+
     fun appendGetField(graph: SimpleGraph, field: SimpleField) {
         if (field.isOwnerThis(graph)) {
-            builder.append("local.get \$this")
-            nextLine()
+            appendGetThis()
         } else if (field.isObjectLike()) {
             val objectScope = (field.type as ClassType).clazz
             if (insideObjectConstructor(graph, objectScope)) {
-                builder.append("local.get \$this")
-                nextLine()
+                appendGetThis()
             } else {
                 appendGetObjectInstance(objectScope, graph.method.scope)
             }
@@ -427,8 +656,34 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
                 field = field.mergeInfo?.dst ?: break
             }
             builder.append("local.get \$tmp").append(field.id)
+            binary.localGet(field.id + getLocalFieldOffset(graph))
             nextLine()
         }
+    }
+
+    fun i32Const(value: Int) {
+        builder.append("i32.const ").append(value)
+        binary.i32Const(value)
+    }
+
+    fun i64Const(value: Long) {
+        builder.append("i64.const ").append(value)
+        binary.i64Const(value)
+    }
+
+    fun f32Const(value: Float) {
+        builder.append("f32.const ").append(value)
+        binary.f32Const(value)
+    }
+
+    fun f64Const(value: Double) {
+        builder.append("f64.const ").append(value)
+        binary.f64Const(value)
+    }
+
+    fun ret() {
+        builder.append("return")
+        binary.ret()
     }
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
@@ -436,23 +691,36 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
             is SimpleNumber -> {
                 when (expr.dst.type) {
                     Types.Byte, Types.UByte, Types.Short, Types.UShort,
-                    Types.Int, Types.UInt -> builder.append("i32.const ").append(expr.base.value)
-                    Types.Long, Types.ULong -> builder.append("i64.const ").append(expr.base.value)
-                    Types.Float, Types.Half -> builder.append("f32.const ").append(expr.base.value)
-                    Types.Double -> builder.append("f64.const ").append(expr.base.value)
+                    Types.Int, Types.UInt -> i32Const(expr.base.asInt.toInt())
+                    Types.Long, Types.ULong -> i64Const(expr.base.asInt)
+                    Types.Float, Types.Half -> f32Const(expr.base.asFloat.toFloat())
+                    Types.Double -> f64Const(expr.base.asFloat)
                     else -> throw NotImplementedError("Append $expr")
                 }
                 nextLine()
             }
             is SimpleDeclaration -> {
-                builder.append("(local $").append(expr.name)
+                // is this supported in wasm??? obviously not
+                /*builder.append("(local $").append(expr.name)
                     .append(' ').append(getWASMType(expr.type).wasmName)
                     .append(")")
-                nextLine()
+                nextLine()*/
+                // just skipped, they need unique names anyway
+            }
+            is SimpleBranch -> {
+                appendGetField(graph, expr.condition)
+                emptyResultIf()
+                /**/appendSimplifiedAST(graph, expr.ifTrue)
+                emptyResultElse()
+                /**/appendSimplifiedAST(graph, expr.ifFalse)
+                emptyResultEnd()
+            }
+            is SimpleLoop -> {
+                TODO("implement loop")
             }
             is SimpleReturn -> {
                 appendGetField(graph, expr.field)
-                builder.append("return")
+                ret()
                 nextLine()
             }
             is SimpleSelfConstructor -> {
@@ -461,17 +729,19 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
             is SimpleAllocateInstance -> {
                 // todo test nullable variables
                 // this allocation is a ClassType, so it cannot be null ever
+                val struct = getStruct(ClassSpecialization(expr.allocatedType))
                 if (!expr.allocatedType.isValue()) {
-                    // call GC-aware alloc instead
-                    val struct = getStruct(ClassSpecialization(expr.allocatedType))
-                    builder.append("i32.const ").append(struct.classIndex)
-                        .append(" i32.const ").append(struct.byteSize)
-                        .append(" call \$gcNew ;; ").append(expr.allocatedType)
+                    for (param in expr.paramsForLater) {
+                        appendGetField(graph, param)
+                    }
+                    builder.append("struct.new \$").append(struct.typeName)
                     nextLine()
                 } else {
                     appendType(expr.allocatedType, expr.scope, true)
                     appendValueParams(graph, expr.paramsForLater)
                 }
+                // we will use the struct in both cases for now
+                binary.structNew(struct.typeIndex)
             }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
@@ -492,10 +762,12 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
                         if (castSymbol != null && expr.self.type in nativeNumbers) {
                             appendGetField(graph, expr.self)
                             builder.append(castSymbol)
+                            TODO("find cast-instr")
                             true
                         } else if (expr.self.type == Types.Boolean && methodName == "not") {
                             appendGetField(graph, expr.self)
-                            builder.append("i32.not")
+                            builder.append("i32.eqz")
+                            binary.u8(WASMOpcode.I32_EQZ)
                             nextLine()
                             true
                         } else false
@@ -526,47 +798,47 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
                 }
             }
             is SimpleGetField -> {
-                // if this is a local variable, get that instead
                 if (isLocalField(expr.self)) {
-
-                    builder.append("local.get \$").append(expr.field.name)
+                    builder.append("local.get $").append(expr.field.name)
+                    binary.localGet(mutableFields[expr.field]!!)
                     nextLine()
-
                 } else {
+
                     appendGetField(graph, expr.self)
-                    appendFieldOffset(expr.self, expr.field)
 
-                    builder.append(pointerType.wasmName).append(".add")
-                    nextLine()
-
-                    // todo choose correct instruction
-                    builder.append("i32.load")
+                    val struct = getStruct(ClassSpecialization(expr.self.type as ClassType))
+                    val fieldIndex = struct.getIndex(expr.field)
+                    builder.append("struct.get \$")
+                        .append(struct.typeName).append(' ')
+                        .append(fieldIndex)
+                    binary.structGet(struct.typeIndex, fieldIndex)
                     nextLine()
                 }
             }
             is SimpleSetField -> {
-                // if this is a local variable, set that instead
                 if (isLocalField(expr.self)) {
-
                     appendGetField(graph, expr.value)
-                    builder.append("local.set \$").append(expr.field.name)
+
+                    builder.append("local.set $").append(expr.field.name)
+                    binary.localSet(mutableFields[expr.field]!!)
                     nextLine()
 
                 } else {
+
                     appendGetField(graph, expr.self)
-                    appendFieldOffset(expr.self, expr.field)
-
-                    builder.append(pointerType.wasmName).append(".add")
-                    nextLine()
-
                     appendGetField(graph, expr.value)
 
-                    // todo choose correct instruction
-                    builder.append("i32.store")
+                    val struct = getStruct(
+                        ClassSpecialization(expr.self.type as ClassType)
+                    )
+
+                    val fieldIndex = struct.getIndex(expr.field)
+                    builder.append("struct.set \$")
+                        .append(struct.typeName).append(' ')
+                        .append(fieldIndex)
+                    binary.structSet(struct.typeIndex, fieldIndex)
                     nextLine()
                 }
-
-                // todo we must call copy until we support structs...
             }
             else -> {
                 super.appendInstrImpl(graph, expr)
@@ -579,14 +851,6 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         return self.type is ClassType && !self.type.clazz.isClassLike()
     }
 
-    fun appendFieldOffset(self: SimpleField, field: Field) {
-        val offset = getStruct(ClassSpecialization(self.type as ClassType))
-            .getOffset(field)
-        builder.append(pointerType.wasmName).append(".const ").append(offset)
-            .append(" ;; ").append(field.ownerScope.pathStr).append('.').append(field.name)
-        nextLine()
-    }
-
     override fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean) {
         for (i in valueParameters.indices) {
             appendGetField(graph, valueParameters[i])
@@ -597,8 +861,8 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         appendGetField(graph, expr.self)
         appendValueParams(graph, expr.valueParameters)
 
-        // todo do inheritance/method-res is necessary
-        builder.append("call \$").append(getMethodName(expr.methodSpec))
+        // todo do inheritance/method-res if necessary
+        callMethod(expr.methodSpec)
         nextLine()
     }
 
@@ -606,11 +870,16 @@ class WASMSourceGenerator(val binary: Boolean) : CSourceGenerator() {
         appendGetField(graph, expr.self)
         appendValueParams(graph, expr.valueParameters)
 
-        // todo do inheritance/method-res is necessary
-        builder.append("call \$").append(getMethodName(expr.methodSpec))
+        callMethod(expr.methodSpec)
         nextLine()
 
         appendDrop()
+    }
+
+    fun callMethod(method: MethodSpecialization) {
+        val index = functionIndexMap.getValue(method)
+        builder.append("call $").append(getMethodName(method))
+        binary.call(index)
     }
 
 }

@@ -2,13 +2,16 @@ package me.anno.generation.wasm
 
 import me.anno.zauber.ast.rich.Field
 
-class WASMStruct(
-    val classIndex: Int, val byteSize: Int,
-    val fields: List<WASMProperty>
+data class WASMStruct(
+    val typeIndex: Int,
+    val typeName: String,
+    val properties: List<WASMProperty>
 ) {
-    fun getOffset(field: Field): Int {
-        val field = fields.firstOrNull { it.field == field }
-            ?: throw IllegalStateException("Missing field $field in #$classIndex, $fields")
-        return field.offset
+    private val mapping = properties.associateBy { it.field }
+
+    fun getIndex(field: Field): Int {
+        return mapping[field]!!.index
     }
+
+    val type = WASMType.Ref(typeIndex, typeName)
 }

@@ -26,4 +26,21 @@ object CollectionUtils {
         return instance
     }
 
+    fun <V> ArrayList<V>.partitionBy(predicate: (V) -> Boolean): Int {
+        var left = 0
+        var right = size - 1
+        while (left <= right) {
+            while (left <= right && !predicate(this[left])) left++
+            while (left <= right && predicate(this[right])) right--
+            if (left >= right) break
+
+            // swap & advance by one
+            val tmp = this[left]
+            this[left] = this[right]
+            this[right] = tmp
+            left++; right--
+        }
+        return left
+    }
+
 }

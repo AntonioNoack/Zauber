@@ -7,6 +7,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import kotlin.math.min
 import kotlin.math.pow
 
 // todo the "true" type of this also could be "ComptimeValue", because it is :)
@@ -30,7 +31,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
             var i = 0
             if (value.startsWith('-')) i++ // skip sign
             while (i < value.length) {
-                val digit = parseDigit(value[i++])
+                val char = value[i++]
+                if (char == '_') continue
+                val digit = parseDigit(char)
                 if (digit >= basis) {
                     i--
                     break
@@ -43,7 +46,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
                 var exponent = 1.0
                 while (i < value.length) {
                     exponent *= factor
-                    val digit = parseDigit(value[i++])
+                    val char = value[i++]
+                    if (char == '_') continue
+                    val digit = parseDigit(char)
                     if (digit >= basis) {
                         i--
                         break
@@ -59,35 +64,101 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
                 while (i < value.length) {
                     // confirm with URL, that exponent should be decimal
                     // https://docs.oracle.com/javase/specs/jls/se11/html/jls-3.html#jls-BinaryExponent
-                    exponent = exponent * 10 + when (val c = value[i++]) {
-                        in '0'..'9' -> c - '0'
-                        else -> {
-                            i--
-                            break
-                        }
+                    val char = value[i++]
+                    if (char == '_') continue
+                    if (char in '0'..'9') {
+                        exponent = exponent * 10 + (char - '0')
+                        exponent = min(exponent, 1000_000) // will be null anyway
+                    } else {
+                        i--
+                        break
                     }
                 }
+
                 if (isNegative) exponent = -exponent
                 result *= 2.0.pow(exponent)
+            }
+
+            if (i + 1 < value.length && value[i] in "eE") {
+                i++ // skip symbol
+                val isNegative = value[i] == '-'
+                if (isNegative || value[i] == '+') i++
+                var exponent = 0
+                while (i < value.length) {
+                    // confirm with URL, that exponent should be decimal
+                    // https://docs.oracle.com/javase/specs/jls/se11/html/jls-3.html#jls-BinaryExponent
+                    val char = value[i++]
+                    if (char == '_') continue
+                    if (char in '0'..'9') {
+                        exponent = exponent * 10 + (char - '0')
+                        exponent = min(exponent, 1000) // will be null anyway
+                    } else {
+                        i--
+                        break
+                    }
+                }
+
+                if (isNegative) exponent = -exponent
+                result *= 10.0.pow(exponent)
             }
             if (i < value.length && value[i] in "fFdD") i++
             check(i == value.length)
             return if (value.startsWith('-')) -result else +result
         }
 
+        fun parseInt(value: String, basis: Int): Long {
+            var result = 0L
+            var i = 0
+            val isNegative = value.startsWith('-')
+            if (isNegative) i++ // skip sign
+            while (i < value.length) {
+                val char = value[i++]
+                if (char == '_') continue
+                val digit = parseDigit(char)
+                if (digit >= basis) {
+                    i--
+                    break
+                }
+                // sum negatively, so we can parse min_value
+                result = Math.multiplyExact(result, basis.toLong())
+                result = Math.subtractExact(result, digit.toLong())
+            }
+            if (i < value.length && value[i] in "lLuU") i++
+            check(i == value.length)
+            if (!isNegative && result == Long.MIN_VALUE) {
+                throw ArithmeticException("long overflow")
+            }
+            return if (isNegative) result else -result
+        }
+
+        fun parseBasis(value: String): Int {
+            return when {
+                value.startsWith("0x", true) || value.startsWith("-0x", true) -> 16
+                value.startsWith("0b", true) || value.startsWith("-0b", true) -> 2
+                else -> 10
+            }
+        }
     }
+
+    val basis = parseBasis(value)
 
     // based on the string content, decide what type this is
     val resolvedType0 = typeBySuffix() ?: when {
         value.startsWith("'") -> Types.Char
-        value.startsWith("0x", true) ||
-                value.startsWith("-0x", true) -> resolveHexIntType()
-        value.startsWith("0b", true) ||
-                value.startsWith("-0b", true) -> resolveBinIntType()
+        basis == 16 -> resolveHexIntType()
+        basis == 2 -> resolveBinIntType()
         // does Kotlin have numbers with binary exponent? -> no, but it might be useful...
-        value.contains('.') || value.contains('e', true) -> Types.Double
+        value.contains('.') ||
+                value.contains('e', true) ||
+                value.contains('p', true) -> Types.Double
         else -> resolveIntType()
     }
+
+    val isFloaty = resolvedType0 == Types.Half || resolvedType0 == Types.Float || resolvedType0 == Types.Double
+
+    // todo bug: ULong would currently overflow, although it is correct and valid
+    val asFloat = parseFloat(value, basis) // should always work
+    val asInt = if (isFloaty) asFloat.toLong() else parseInt(value, basis)
 
     private fun resolveIntType(): ClassType {
         val extraLength = value.count { it in "_-" }
@@ -151,21 +222,21 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         // todo if targetType is nullable, remove that type
         if (dataType == Types.Int && when (targetType) {
                 Types.Long -> true
-                Types.Byte -> checkLoss { it.toInt().toByte() }
-                Types.Short -> checkLoss { it.toInt().toShort() }
+                Types.Byte -> checkIntLoss { it.toInt().toByte().toLong() }
+                Types.Short -> checkIntLoss { it.toInt().toShort().toLong() }
                 Types.Half, // todo check for loss
-                Types.Float -> checkLoss { it.toDouble().toFloat() }
+                Types.Float -> checkFloatLoss { it.toFloat().toDouble() }
                 Types.Double -> true
                 else -> false
             }
         ) return targetType
         if (dataType == Types.Half && targetType == Types.Double) {
             // todo toHalf()
-            checkLoss { it.toDouble().toFloat() }
+            checkFloatLoss { it.toFloat().toDouble() }
             return targetType
         }
         if (dataType == Types.Float && targetType == Types.Double) {
-            checkLoss { it.toDouble().toFloat() }
+            checkFloatLoss { it.toFloat().toDouble() }
             return targetType
         }
         // todo if resolvedType is int, but context requests byte or short,
@@ -173,32 +244,20 @@ class NumberExpression(val value: String, scope: Scope, origin: Int) : Expressio
         return dataType
     }
 
-    fun checkLoss(cast: (String) -> Any): Boolean {
-        try {
-            var str = value
-            if (str.endsWith("l", true)) str = str.substring(0, str.length - 1)
-            if (str.endsWith("u", true)) str = str.substring(0, str.length - 1)
+    fun checkIntLoss(cast: (Long) -> Long): Boolean {
+        val maxPrecision = asInt
+        val realPrecision = cast(maxPrecision)
+        if (realPrecision != maxPrecision) {
+            LOGGER.warn("Losing information when casting $maxPrecision to $realPrecision")
+        }
+        return true
+    }
 
-            if (str.startsWith("0x")) {
-                str = str.substring(2).toInt(16).toString()
-            } else if (str.startsWith("-0x")) {
-                str = str.removeRange(1, 3).toInt(16).toString()
-            } else if (str.startsWith("0b")) {
-                str = str.substring(2).toInt(2).toString()
-            } else if (str.startsWith("-0b")) {
-                str = str.removeRange(1, 3).toInt(2).toString()
-            } else {
-                if (str.isNotEmpty() && str.last() in "hfdHFD") {
-                    str = str.substring(0, str.length - 1)
-                }
-            }
-
-            val samy = cast(str).toString()
-            if (samy != str) {
-                LOGGER.warn("Losing information when casting $str to $samy")
-            }
-        } catch (e: Exception) {
-            LOGGER.warn("Failed checkLoss: ${e.message ?: e}")
+    fun checkFloatLoss(cast: (Double) -> Double): Boolean {
+        val maxPrecision = asFloat
+        val realPrecision = cast(maxPrecision)
+        if (realPrecision.toString() != maxPrecision.toString()) {
+            LOGGER.warn("Losing information when casting $maxPrecision to $realPrecision")
         }
         return true
     }
