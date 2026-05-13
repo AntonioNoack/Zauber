@@ -29,13 +29,16 @@ import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
 /**
- * todo directly encode binary WASM
+ * todo as the next step, we need a function for JS to get the Unit-instance,
+ *   and also, all get-object-instance calls should be wrapped, because they are pretty big and appear everywhere
+ *
+ * directly encode binary WASM
  * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
  * */
 class WASMSourceGenerator : CSourceGenerator() {
 
     val functionTypes = HashMap<FunctionType, Int>()
-    val functionTypeList = ArrayList<FunctionType>()
+    val typeList = ArrayList<WASMType2>()
 
     val binary = WASMBinaryWriter()
     val importList = ArrayList<Pair<String, Int>>()
@@ -45,7 +48,13 @@ class WASMSourceGenerator : CSourceGenerator() {
     val functionIndexList = ArrayList<MethodSpecialization>()
 
     val globalNames = ArrayList<String>()
+    val globalStructs = ArrayList<WASMType.Ref>()
+    val objectGlobals = HashMap<Scope, Int>()
+
     val bodies = ListOfByteArrays(binary.out)
+
+    val structs = HashMap<ClassSpecialization, WASMStruct>()
+    val uniqueStructs = HashMap<List<WASMProperty>, WASMStruct>()
 
     fun registerMethods(data: DependencyData) {
         functionIndexList.addAll(data.calledMethods)
@@ -102,12 +111,14 @@ class WASMSourceGenerator : CSourceGenerator() {
         builder.clear()
 
         val start = binary.out.size
-        // todo don't we need a list for imports??
         binary.writeModuleHeader()
-        binary.writeTypeSection(functionTypeList)
-        binary.writeFunctionSection(functionIndexList, ::getFunctionType)
-        binary.writeMemorySection()
+        binary.writeTypeSection(typeList)
         binary.writeImportSection(importList)
+        val implFunctions = functionIndexList.subList(importList.size, functionIndexList.size)
+        check(implFunctions.size == bodies.size)
+        binary.writeFunctionSection(implFunctions, ::getFunctionType)
+        binary.writeMemorySection()
+        binary.writeGlobalSection(globalStructs)
         binary.writeExportSection(exportList)
         binary.writeCodeSection(bodies)
         binary.out.removeSection(0, start)
@@ -167,8 +178,9 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun writeMethodTypes() {
+        val functionTypeList = typeList
         for (i in functionTypeList.indices) {
-            val type = functionTypeList[i]
+            val type = functionTypeList[i] as? FunctionType ?: continue
 
             builder.append("(type \$t")
                 .append(i)
@@ -194,14 +206,12 @@ class WASMSourceGenerator : CSourceGenerator() {
     fun writeStructTypes() {
         for (struct in uniqueStructs.values) {
 
-            builder.append("(type \$")
-                .append(struct.typeName)
+            builder.append("(type $").append(struct.typeName)
                 .append(" (struct")
 
             for (property in struct.properties) {
 
-                builder.append(" (field \$")
-                    .append(property.field.name)
+                builder.append(" (field $").append(property.field.name)
                     .append(" ")
 
                 when (val t = property.wasmType) {
@@ -262,15 +272,15 @@ class WASMSourceGenerator : CSourceGenerator() {
             val returnTypes = listOf(getWASMType(method.returnType!!))
             val functionType = FunctionType(params, returnTypes)
             return functionTypes.getOrPut(functionType) {
-                functionTypeList.add(functionType)
-                functionTypes.size
+                typeList.add(functionType)
+                typeList.lastIndex
             }
         }
     }
 
     fun appendMethodHeader(typeIndex: Int, methodName: String, method0: MethodSpecialization, export: Boolean) {
         val method = method0.method
-        val type = functionTypeList[typeIndex]
+        val type = typeList[typeIndex] as FunctionType
 
         builder.append("(func $").append(methodName)
 
@@ -307,7 +317,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     override fun getMethodName(method: MethodSpecialization): String {
         val base = if (method.method is Constructor) "_init_" else super.getMethodName0(method)
-        return "${method.method.ownerScope.pathStr}_${base}_${hashMethodParameters(method)}"
+        return "${method.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method)}"
     }
 
     fun appendMethodCode(method: MethodSpecialization) {
@@ -323,7 +333,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
             if (method is Constructor) {
                 // return is typically missing
-                appendGetThis()
+                appendGetObjectInstance(Types.Unit.clazz, method.scope)
             }
 
             // close body
@@ -502,10 +512,6 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    val structs = HashMap<ClassSpecialization, WASMStruct>()
-    val uniqueStructs = HashMap<List<WASMProperty>, WASMStruct>()
-    val objectGlobals = HashMap<Scope, Int>()
-
     fun writeObjectGlobals() {
         for ((scope, index) in objectGlobals.entries.sortedBy { it.value }) {
             val struct = getStruct(ClassSpecialization(scope, Specialization.noSpecialization))
@@ -538,24 +544,23 @@ class WASMSourceGenerator : CSourceGenerator() {
                 }
 
             uniqueStructs.getOrPut(props) {
-                val typeIndex = uniqueStructs.size
-                WASMStruct(
-                    typeIndex,
-                    "gc$typeIndex",
-                    props
-                )
+                val typeIndex = typeList.size
+                val isNullable = clazz.isObjectLike() // globals must be nullable for late-init
+                val struct = WASMStruct(typeIndex, "gc$typeIndex", props, isNullable)
+                typeList.add(struct)
+                struct
             }
         }
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
 
+        val struct = getStruct(ClassSpecialization(objectScope, Specialization.noSpecialization))
         val globalIndex = objectGlobals.getOrPut(objectScope) {
-            globalNames.add("global_${objectScope.pathStr}")
+            globalNames.add("global_${objectScope.pathStr.replace('.', '_')}")
+            globalStructs.add(struct.type)
             objectGlobals.size
         }
-
-        val struct = getStruct(ClassSpecialization(objectScope, Specialization.noSpecialization))
 
         globalGet(globalIndex)
         nextLine()
@@ -567,7 +572,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         emptyResultIf()
 
         builder.append("struct.new_default $").append(struct.typeName)
-        binary.structNew(struct.typeIndex)
+        binary.structNewDefault(struct.typeIndex)
         nextLine()
 
         globalSet(globalIndex)
@@ -614,12 +619,12 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun globalGet(globalIndex: Int) {
-        builder.append("global.get \$").append(globalNames[globalIndex])
+        builder.append("global.get $").append(globalNames[globalIndex])
         binary.globalGet(globalIndex)
     }
 
     fun globalSet(globalIndex: Int) {
-        builder.append("global.set \$").append(globalNames[globalIndex])
+        builder.append("global.set $").append(globalNames[globalIndex])
         binary.globalSet(globalIndex)
     }
 
@@ -731,17 +736,17 @@ class WASMSourceGenerator : CSourceGenerator() {
                 // this allocation is a ClassType, so it cannot be null ever
                 val struct = getStruct(ClassSpecialization(expr.allocatedType))
                 if (!expr.allocatedType.isValue()) {
-                    for (param in expr.paramsForLater) {
+                    /*for (param in expr.paramsForLater) {
                         appendGetField(graph, param)
-                    }
-                    builder.append("struct.new \$").append(struct.typeName)
+                    }*/
+                    builder.append("struct.new $").append(struct.typeName)
                     nextLine()
                 } else {
                     appendType(expr.allocatedType, expr.scope, true)
-                    appendValueParams(graph, expr.paramsForLater)
+                    // appendValueParams(graph, expr.paramsForLater)
                 }
                 // we will use the struct in both cases for now
-                binary.structNew(struct.typeIndex)
+                binary.structNewDefault(struct.typeIndex)
             }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
@@ -785,8 +790,10 @@ class WASMSourceGenerator : CSourceGenerator() {
                         if (supportsType && symbol != null) {
                             appendGetField(graph, expr.self)
                             appendGetField(graph, expr.valueParameters[0])
-                            builder.append(getWASMType(expr.self.type).wasmName)
+                            val type = resolveType(expr.self.type)
+                            builder.append(getWASMType(type).wasmName)
                                 .append('.').append(symbol)
+                            binary.u8(getSimpleMathOp(type, symbol))
                             nextLine()
                             true
                         } else false
@@ -845,6 +852,60 @@ class WASMSourceGenerator : CSourceGenerator() {
                 nextLine()
             }
         }
+    }
+
+    fun getSimpleMathOp(type: Type, symbol: String): Int {
+        return when (type) {
+            Types.Int -> when (symbol) {
+                "add" -> WASMOpcode.I32_ADD
+                "sub" -> WASMOpcode.I32_SUB
+                "mul" -> WASMOpcode.I32_MUL
+                "div" -> WASMOpcode.I32_DIV_S
+                "mod" -> WASMOpcode.I32_REM_S
+                else -> null
+            }
+            Types.UInt -> when (symbol) {
+                "add" -> WASMOpcode.I32_ADD
+                "sub" -> WASMOpcode.I32_SUB
+                "mul" -> WASMOpcode.I32_MUL
+                "div" -> WASMOpcode.I32_DIV_U
+                "mod" -> WASMOpcode.I32_REM_U
+                else -> null
+            }
+            Types.Long -> when (symbol) {
+                "add" -> WASMOpcode.I64_ADD
+                "sub" -> WASMOpcode.I64_SUB
+                "mul" -> WASMOpcode.I64_MUL
+                "div" -> WASMOpcode.I64_DIV_S
+                "mod" -> WASMOpcode.I64_REM_S
+                else -> null
+            }
+            Types.ULong -> when (symbol) {
+                "add" -> WASMOpcode.I64_ADD
+                "sub" -> WASMOpcode.I64_SUB
+                "mul" -> WASMOpcode.I64_MUL
+                "div" -> WASMOpcode.I64_DIV_U
+                "mod" -> WASMOpcode.I64_REM_U
+                else -> null
+            }
+            Types.Float, Types.Half -> when (symbol) {
+                "add" -> WASMOpcode.F32_ADD
+                "sub" -> WASMOpcode.F32_SUB
+                "mul" -> WASMOpcode.F32_MUL
+                "div" -> WASMOpcode.F32_DIV
+                "mod" -> WASMOpcode.F32_REM
+                else -> null
+            }
+            Types.Double -> when (symbol) {
+                "add" -> WASMOpcode.F64_ADD
+                "sub" -> WASMOpcode.F64_SUB
+                "mul" -> WASMOpcode.F64_MUL
+                "div" -> WASMOpcode.F64_DIV
+                "mod" -> WASMOpcode.F64_REM
+                else -> null
+            }
+            else -> null
+        } ?: throw NotImplementedError("Missing opcode for $type.$symbol")
     }
 
     fun isLocalField(self: SimpleField): Boolean {

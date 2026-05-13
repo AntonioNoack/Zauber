@@ -14,7 +14,7 @@ sealed class WASMType(val wasmName: String) {
     class Ref(
         val typeIndex: Int,
         typeName: String,
-        val isNullable: Boolean = false
+        val isNullable: Boolean
     ) : WASMType(
         if (isNullable) "(ref null $$typeName)"
         else "(ref $$typeName)"

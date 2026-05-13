@@ -110,9 +110,21 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         u8(WASMOpcode.UNREACHABLE)
     }
 
+    /**
+     * needs all fields
+     * */
     fun structNew(typeIndex: Int) {
         u8(0xfb)
         u32(0x00)
+        u32(typeIndex)
+    }
+
+    /**
+     * zero/null initializes everything
+     * */
+    fun structNewDefault(typeIndex: Int) {
+        u8(0xfb)
+        u32(0x01)
         u32(typeIndex)
     }
 
@@ -148,25 +160,46 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         endSection(t)
     }
 
-    fun writeTypeSection(functionTypeList: List<FunctionType>) {
-        u8(0x01)
+    fun writeTypeSection(types: List<WASMType2>) {
+        u8(0x01) // type section
 
         val t = WASMBinaryWriter()
-        t.u32(functionTypeList.size)
+        t.u32(types.size)
 
-        for (ft in functionTypeList) {
-            t.u8(0x60) // func type
+        // struct types first, because our function types depend on them
+        for (type in types) {
+            when (type) {
+                is WASMStruct -> {
+                    t.u8(0x4e) // rec
+                    t.u32(1)
 
-            t.u32(ft.params.size)
-            for (p in ft.params) {
-                t.writeValueType(p)
-            }
+                    t.u8(0x5f) // struct
 
-            t.u32(ft.results.size)
-            for (r in ft.results) {
-                t.writeValueType(r)
+                    t.u32(type.properties.size)
+                    for (field in type.properties) {
+                        t.writeValueType(field.wasmType)
+
+                        // mutable
+                        t.u8(0x01)
+                    }
+                }
+                is FunctionType -> {
+                    t.u8(0x60)
+
+                    t.u32(type.params.size)
+                    for (p in type.params) {
+                        t.writeValueType(p)
+                    }
+
+                    t.u32(type.results.size)
+                    for (r in type.results) {
+                        t.writeValueType(r)
+                    }
+                }
+                else -> throw NotImplementedError()
             }
         }
+
         endSection(t)
     }
 
@@ -233,6 +266,28 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         }
     }
 
+    fun writeGlobalSection(globals: List<WASMType.Ref>) {
+        u8(0x06) // section id
+
+        val t = WASMBinaryWriter()
+        t.u32(globals.size)
+        for (type in globals) {
+
+            // global type
+            t.writeValueType(type)
+
+            // mutable
+            t.u8(0x01)
+
+            // init expr
+            t.u8(WASMOpcode.REF_NULL)
+            t.writeHeapTypeOnly(type)
+
+            t.u8(WASMOpcode.END)
+        }
+        endSection(t)
+    }
+
     fun writeCodeSection(bodies: ListOfByteArrays) {
         u8(0x0A) // code section id
 
@@ -244,11 +299,14 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
             val total = i1 - i0
 
             tmp.u32(total)
-            tmp.out.write(bodies.bytes.bytes, i0, i1)
+            tmp.out.write(bodies.bytes.bytes, i0, total)
         }
         endSection(tmp)
     }
 
+    fun writeHeapTypeOnly(type: WASMType.Ref) {
+        writeVarInt(type.typeIndex.toLong())
+    }
 
     fun writeValueType(type: WASMType) {
         when (type) {

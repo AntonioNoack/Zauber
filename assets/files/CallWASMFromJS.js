@@ -16,9 +16,9 @@ const imports = {
     env: {
         'zauber_println_wjpkxu': (self, value) => {
             console.log(value);
-            return 0
+            return self // todo we need unit from somewhere...
         },
-        'zauber.Int_plus_rtgkvs': () => {},
+        'zauber_Int_plus_rtgkvs': () => {},
     }
 };
 
