@@ -10,6 +10,10 @@ import me.anno.zauber.types.specialization.Specialization.Companion.noSpecializa
 data class ClassSpecialization(val clazz: Scope, val specialization: Specialization) {
     constructor(classType: ClassType) : this(classType.clazz, Specialization(classType))
 
+    init {
+        check(clazz == specialization.scope)
+    }
+
     val superType: ClassSpecialization?
         get() {
             if (clazz.isPackage()) {
@@ -27,7 +31,7 @@ data class ClassSpecialization(val clazz: Scope, val specialization: Specializat
 
             val typeParams = superClass.type.typeParameters ?: emptyList()
             val superTypeParams = typeParams.map { type -> type.specialize(specialization) }
-            val spec = Specialization(ParameterList(generics, superTypeParams))
+            val spec = Specialization(clazz, ParameterList(generics, superTypeParams))
             return ClassSpecialization(superClass.type.clazz, spec)
         }
 }

@@ -6,7 +6,7 @@ object LoggerUtils {
     fun disableCompileLoggers() {
         LogManager.disableLoggers(
             "TypeResolution,ASTSimplifier,MemberResolver,Inheritance," +
-                    "CallExpression,SuperCallExpression," +
+                    "CallExpression,SuperCallExpression,CallWithNames," +
                     "MethodResolver,ResolvedMethod," +
                     "ConstructorResolver," +
                     "ResolvedField,Field,FieldResolver,FieldExpression"

@@ -27,18 +27,29 @@ class Field(
     var byParameter: Any?, // Parameter | LambdaParameter | null
 
     name: String,
-    var valueType: Type?,
+    valueType: Type?,
     val initialValue: Expression?,
-    keywords: FlagSet,
+
+    flags: FlagSet,
     origin: Int
 ) : Member(
     selfType, explicitSelfType,
-    name, scope, keywords, origin
+    name, scope, flags,
+    emptyList(),
+    emptyList(),
+    valueType,
+    origin
 ) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(Field::class)
     }
+
+    var valueType
+        get() = returnType
+        set(value) {
+            returnType = value
+        }
 
     val isMutableEx get() = isMutable || scope.flags.hasFlag(Flags.VALUE)
     var isCaptured = false
@@ -53,13 +64,18 @@ class Field(
 
     fun isBackingField(methodScope: Scope): Boolean {
         return name == "field" &&
-                flags.hasFlag(Flags.SYNTHETIC) &&
+                this@Field.flags.hasFlag(Flags.SYNTHETIC) &&
                 scope == methodScope
+    }
+
+    fun isBackingField(): Boolean {
+        val field = getBackedField() ?: this
+        return this != field
     }
 
     fun getBackedField(): Field? {
         if (name != "field") return null
-        if (!flags.hasFlag(Flags.SYNTHETIC)) return null
+        if (!this@Field.flags.hasFlag(Flags.SYNTHETIC)) return null
         val scope = scope
         if (scope.scopeType != ScopeType.FIELD_GETTER &&
             scope.scopeType != ScopeType.FIELD_SETTER
@@ -78,8 +94,6 @@ class Field(
 
     fun selfTypeTypeParams(givenSelfType: Type?): List<Parameter> =
         selfTypeToTypeParams(selfType ?: ownerScope.typeWithArgs, givenSelfType)
-
-    var typeParameters: List<Parameter> = emptyList()
 
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
@@ -162,7 +176,7 @@ class Field(
         return "Field($self.$name)"
     }
 
-    val ownerScope get() = scope
+    override val ownerScope get() = scope
     val fieldScope: Scope get() = throw IllegalStateException("Fields don't have their own scope")
 
     fun moveToScope(newScope: Scope) {
@@ -171,11 +185,11 @@ class Field(
         newScope.addField(this)
     }
 
-    fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
-    fun isLateinit(): Boolean = flags.hasFlag(Flags.LATEINIT)
+    fun isPrivate(): Boolean = this@Field.flags.hasFlag(Flags.PRIVATE)
+    fun isLateinit(): Boolean = this@Field.flags.hasFlag(Flags.LATEINIT)
     fun isOpen(): Boolean {
         if (ownerScope.isInterface()) return true
-        val isOpenField = flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
+        val isOpenField = this@Field.flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)
         val isOpenClass = ownerScope.isOpen()
         return isOpenField && isOpenClass
     }

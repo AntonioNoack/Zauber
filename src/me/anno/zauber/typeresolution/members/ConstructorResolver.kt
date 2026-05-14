@@ -141,10 +141,10 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             constructor.valueParameters, valueParameters, matchScore
         ) ?: return null
         val context = ResolutionContext(
-            constructor.selfType, Specialization(generics),
+            constructor.selfType, Specialization(constructor.scope, generics),
             false, returnType
         )
-        return ResolvedConstructor(generics, constructor, context, codeScope, matchScore, origin)
+        return ResolvedConstructor(constructor, context, codeScope, matchScore)
     }
 
     fun List<Type>.toParameterList(generics: List<Parameter>): ParameterList {

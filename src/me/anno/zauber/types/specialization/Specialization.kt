@@ -3,6 +3,9 @@ package me.anno.zauber.types.specialization
 import me.anno.generation.Specializations.specializations
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.interpreting.ZClass
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -10,11 +13,17 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
 
-class Specialization(typeParameters: ParameterList) {
+// todo we want to define what a specialization actually can contain,
+//  e.g. it makes no sense to create 100 variants for wrapper-of-pointer for ArrayList.
+//  useful: native types, value types, 'else'
+// todo what about Int? (could be optimized after all)
+// todo Type-or-null could be mapped to value class Nullable(val value: V, val isNull: Boolean)
+
+class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     @Deprecated("This is incomplete for inner classes, where the outer class is generic")
     constructor(classType: ClassType) : this(
-        ParameterList(
+        classType.clazz, ParameterList(
             classType.clazz.typeParameters,
             classType.typeParameters ?: emptyList()
         )
@@ -32,6 +41,24 @@ class Specialization(typeParameters: ParameterList) {
 
     val typeParameters = typeParameters.readonly()
     val hash = typeParameters.hashCode() and 0x7fff_ffff
+
+    init {
+        validateCompleteness()
+    }
+
+    /**
+     * check that the specialization contains exactly what we require
+     * */
+    fun validateCompleteness() {
+        if (scope == null) return
+
+        val actualGenerics = typeParameters.generics
+        val expectedGenerics = collectGenerics(scope)
+        val matchesGenerics = actualGenerics.toSet() == expectedGenerics.toSet()
+        if (!matchesGenerics) {
+            throw IllegalStateException("Mismatched generics for $scope: got $typeParameters, expected $expectedGenerics")
+        }
+    }
 
     fun isEmpty(): Boolean = typeParameters.isEmpty()
     fun isNotEmpty(): Boolean = typeParameters.isNotEmpty()
@@ -58,12 +85,12 @@ class Specialization(typeParameters: ParameterList) {
     }
 
     operator fun plus(other: Specialization): Specialization {
-        // todo also resolve all recursive types,
-        //  so if A is defined in B, use B and vice-versa
-        // todo if something is defined twice, remove the duplicate and resolve conflicts...
-        val typeParametersI = typeParameters.map { it.specialize(other) }
-        val otherTypeParametersI = other.typeParameters.map { it.specialize(this) }
-        return Specialization(typeParametersI + otherTypeParametersI)
+        if (scope == null) return other
+        if (other.scope == null) return this
+        if (scope == other.scope) return other
+        if (scope.isInsideOf(other.scope)) return this
+        if (other.scope.isInsideOf(scope)) return other
+        return Specialization(null, typeParameters + other.typeParameters)
     }
 
     fun indexOf(type: Type): Int {
@@ -146,6 +173,11 @@ class Specialization(typeParameters: ParameterList) {
             }
     }
 
+    fun withScope(scope: Scope): Specialization {
+        return if (this.scope == scope) this
+        else Specialization(scope, typeParameters)
+    }
+
     companion object {
         class Data {
             val uniqueNames = HashMap<Specialization, String>()
@@ -154,6 +186,32 @@ class Specialization(typeParameters: ParameterList) {
 
         private val data by threadLocal { Data() }
 
-        val noSpecialization = Specialization(ParameterList.emptyParameterList())
+        fun collectGenerics(scope: Scope): List<Parameter> {
+            var scope = scope
+            val result = ArrayList<Parameter>()
+            while (true) {
+                result.addAll(scope.typeParameters)
+
+                if (scope.isObjectLike()) break
+                if (scope.isClass() &&
+                    scope.scopeType != ScopeType.INNER_CLASS &&
+                    scope.scopeType != ScopeType.INLINE_CLASS
+                ) break
+
+                // todo only accept parent-parameters on some conditions
+                scope = scope.parentIfSameFile ?: break
+            }
+            return result
+        }
+
+        fun filterSpecialization(type: Type, generic: Parameter): Type {
+            return when (type) {
+                in ZClass.nativeTypes -> type
+                is ClassType if type.clazz.isValueType() -> type
+                else -> generic.type
+            }
+        }
+
+        val noSpecialization = Specialization(null, ParameterList.emptyParameterList())
     }
 }

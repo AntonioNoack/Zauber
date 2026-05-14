@@ -625,9 +625,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         return hash
     }
 
-    @Deprecated("This is unclear whether it includes objects, use isClassLike() or isClass() instead")
-    fun isClassType(): Boolean = scopeType?.isClassLike() == true
-
     fun isClass(): Boolean = scopeType?.isClass() == true
     fun isClassOrObject() = isClass() || isObject()
 
@@ -668,7 +665,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isOpen(): Boolean {
         if (isInterface()) return true
         if (isObjectLike()) return false
-        return isClassType() && flags.hasAnyFlag(Flags.OPEN or Flags.ABSTRACT)
+        return isClass() && flags.hasAnyFlag(Flags.OPEN or Flags.ABSTRACT)
     }
 
     fun isInnerClassOf(ownerScope: Scope): Boolean {
@@ -676,6 +673,14 @@ class Scope(val name: String, val parent: Scope? = null) {
         val parent = parent!!
         if (parent == ownerScope) return true
         return parent.isInnerClassOf(ownerScope)
+    }
+
+    fun isInsideOf(scope: Scope): Boolean {
+        var self = this
+        while (true) {
+            self = self.parent ?: return false
+            if (self == scope) return true
+        }
     }
 
     companion object {

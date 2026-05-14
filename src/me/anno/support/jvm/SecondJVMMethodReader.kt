@@ -1,5 +1,6 @@
 package me.anno.support.jvm
 
+import me.anno.generation.Specializations
 import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
 import me.anno.support.jvm.expression.*
@@ -10,7 +11,6 @@ import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleThis
-import me.anno.generation.Specializations
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -27,6 +27,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
+import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Label
@@ -362,9 +363,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val dst = graph.field(Types.Boolean)
         val method = findMethod(type.clazz, "equals", type) as Method
         val method1 = ResolvedMethod(
-            ParameterList.emptyParameterList(), method,
-            ParameterList.emptyParameterList(), ResolutionContext.minimal,
-            methodScope, MatchScore(0), origin
+            method, ResolutionContext.minimal, // todo this content is incorrect...
+            methodScope, MatchScore(0)
         )
         block.add(JVMSimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
         stack.add(dst)
@@ -883,9 +883,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     }"
         )
         return ResolvedConstructor(
-            ownerTypes, method,
-            ResolutionContext.minimal, scope,
-            MatchScore(0), origin
+            method,
+            ResolutionContext.minimal.withSpec(
+                Specialization(method.scope, ownerTypes)
+            ),
+            methodScope, MatchScore(0),
         )
     }
 
@@ -902,10 +904,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
             if (method != null) {
                 return ResolvedMethod(
-                    ParameterList.emptyParameterList(), method,
-                    ParameterList.emptyParameterList(),
-                    ResolutionContext.minimal, scope,
-                    MatchScore(0), origin
+                    method,
+                    ResolutionContext.minimal.withSpec(
+                        Specialization(method.scope, ParameterList(typeParameters + valueParameters))
+                    ), methodScope, MatchScore(0)
                 )
             }
 

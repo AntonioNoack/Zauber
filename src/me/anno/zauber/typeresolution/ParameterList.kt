@@ -142,6 +142,16 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         return copy
     }
 
+    fun readonly(mapping: (Type, Parameter) -> Type): ParameterList {
+        if (insertModes.all { it == InsertMode.READ_ONLY }) return this
+        val copy = ParameterList(generics)
+        for (i in generics.indices) {
+            val type = types[i] ?: continue // null stays weak
+            copy.set(i, mapping(type, generics[i]), InsertMode.READ_ONLY)
+        }
+        return copy
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

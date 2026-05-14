@@ -34,6 +34,7 @@ class RefAndValueTests {
     fun testValueOnFieldsMustCopy() {
         // todo this won't work, maybe we need the value-keyword proposal after all
         //  we could solve it by self-defining the .copy() method...
+        // todo a macro could be the solution :)
         val code = """
             class Sample(var x: Int)
             fun inc(v: Sample) {

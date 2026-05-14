@@ -21,6 +21,7 @@ import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.specialization.Specialization
 
 /**
  * left!!
@@ -62,9 +63,8 @@ class EnsureNotNullExpression(
         val field = scope.createImmutableField(base)
         val ownerR = ThisExpression(field.ownerScope, scope, origin)
         val fieldR = ResolvedField(
-            ParameterList.emptyParameterList(), field,
-            ParameterList.emptyParameterList(), contextI, scope, true,
-            MatchScore(0), origin
+            field, contextI.withSpec(Specialization(field.scope, ParameterList.emptyParameterList())),
+            scope, MatchScore(0)
         )
         val fieldExpr = ResolvedGetFieldExpression(ownerR, fieldR, scope, origin)
         val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)

@@ -20,6 +20,7 @@ import me.anno.zauber.typeresolution.members.*
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NonObjectClassType
+import me.anno.zauber.types.specialization.Specialization
 
 /**
  * left.right
@@ -169,7 +170,8 @@ class DotExpression(
                         it.scopeType == ScopeType.INNER_CLASS && it.name == base.name
                     }
                     if (innerClass != null) {
-                        val valueParam0 = listOf(ValueParameterImpl(SpecialFieldNames.OUTER_FIELD_NAME, baseTypeI, false))
+                        val valueParam0 =
+                            listOf(ValueParameterImpl(SpecialFieldNames.OUTER_FIELD_NAME, baseTypeI, false))
                         ConstructorResolver.findMemberInScopeImpl(
                             innerClass, base.name,
                             typeParameters, valueParam0 + valueParameters, context1, origin
@@ -205,9 +207,8 @@ class DotExpression(
             val field = child.objectField
                 ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
             return ResolvedField(
-                ParameterList.emptyParameterList(),
-                field, ParameterList.emptyParameterList(), context, scope,
-                false, MatchScore(0), origin
+                field, context.withSpec(Specialization(field.scope, ParameterList.emptyParameterList())),
+                scope, MatchScore(0),
             )
         } else {
             TODO("return class-like instance")

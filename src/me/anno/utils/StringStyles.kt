@@ -84,6 +84,7 @@ object StringStyles {
     val GREEN = color(0x66cc66)
     val TEXT = color(0xd0d0d0) // slightly brighter than normal text
     val LINK = color(0x99bbee) // for file names
+    val RED = color(0xff5555)
 
     val LIGHT_BLUE = color(0x61B4D4)
 

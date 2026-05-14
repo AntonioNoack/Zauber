@@ -163,7 +163,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
     }
 
     private fun getStaticScope(): Scope {
-        check(currPackage.isClassType()) {
+        check(currPackage.isClass()) {
             "Base class for static scope was not a class $currPackage"
         }
         val co = currPackage.companionObject
@@ -184,7 +184,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
                 consumeIf("enum") -> readClass(ScopeType.ENUM_CLASS)
                 consumeIf("class") -> {
-                    val type = if (currPackage.isClassType() && !isStatic) ScopeType.INNER_CLASS
+                    val type = if (currPackage.isClass() && !isStatic) ScopeType.INNER_CLASS
                     else ScopeType.NORMAL_CLASS
                     readClass(type)
                 }

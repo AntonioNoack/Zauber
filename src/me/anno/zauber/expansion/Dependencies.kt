@@ -123,7 +123,7 @@ object Dependencies {
         val scope = type.clazz[ScopeInitType.AFTER_DISCOVERY]
         for (superType in scope.superCalls) {
             val superParams = ParameterList(type.clazz.typeParameters, type.typeParameters ?: emptyList())
-            val superTypeI = superType.type.specialize(Specialization(superParams)) as ClassType
+            val superTypeI = superType.type.specialize(Specialization(superType.type.clazz, superParams)) as ClassType
             addClass(superTypeI)
         }
     }

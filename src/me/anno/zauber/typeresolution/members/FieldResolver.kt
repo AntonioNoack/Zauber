@@ -6,17 +6,12 @@ import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeCallPart
-import me.anno.zauber.typeresolution.members.MergeTypeParams.mergeTypeParameters
-import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
 
 object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
@@ -124,75 +119,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         valueParameters: List<ValueParameter>,
         codeScope: Scope, origin: Int
     ): ResolvedField? {
-        check(valueParameters.isEmpty())
-
-        val field = field0.getBackedField() ?: field0
-        val isBackingField = field0 != field
-
-        if (field.selfType == null) {
-
-            val actualTypeParams = mergeCallPart(field.typeParameters, typeParameters, origin)
-
-            LOGGER.info("Resolving generics for field $field")
-            val matchScore = MatchScore(2)
-            val generics = findGenericsForMatch(
-                null, null,
-                byFieldExpectedType, byExprExpectedType,
-                field.typeParameters, actualTypeParams,
-                emptyList(), valueParameters, matchScore
-            ) ?: return null
-
-            val ownerTypes = filterTypeParams((selfType as? ClassType)?.typeParameters, field.ownerScope)
-
-            val context = ResolutionContext(null, false, byFieldExpectedType, emptyMap())
-            // println("Generics for resolved field/2: $field, $selfType -> $ownerTypes, $generics, ctx: ${context.specialization}")
-            return ResolvedField(
-                ownerTypes, field, generics,
-                context, codeScope, isBackingField, matchScore, origin
-            )
-        } else {
-
-            var fieldSelfType = field.selfType?.resolve(null)
-            val selfTypeI = selfType
-                ?: if (fieldSelfType is ClassType && fieldSelfType.clazz.isObject())
-                    field.selfType else null
-
-            var fieldSelfParams = selfTypeToTypeParams(field.selfType, selfTypeI)
-            if (fieldSelfType is ClassType && !fieldSelfType.clazz.isClassLike()) {
-                LOGGER.info("Field '$field' had invalid selfType: $fieldSelfType")
-                fieldSelfType = null
-                fieldSelfParams = emptyList()
-            }
-
-            val actualTypeParams = mergeTypeParameters(
-                fieldSelfParams, fieldSelfType,
-                field.typeParameters, typeParameters,
-                origin
-            )
-
-            LOGGER.info("Resolving generics for field $field")
-            val matchScore = MatchScore(2)
-            val generics = findGenericsForMatch(
-                fieldSelfType, selfTypeI,
-                byFieldExpectedType, byExprExpectedType,
-                fieldSelfParams + field.typeParameters, actualTypeParams,
-                emptyList(), valueParameters, matchScore
-            ) ?: return null
-
-            val selfType = selfTypeI ?: fieldSelfType
-            val context = ResolutionContext(selfType, false, byFieldExpectedType, emptyMap())
-            // println("Generics for resolved field: $field -> $generics")
-            return ResolvedField(
-                generics.subList(0, fieldSelfParams.size), field,
-                generics.subList(fieldSelfParams.size, generics.size),
-                context, codeScope, isBackingField, matchScore, origin
-            )
-        }
-    }
-
-    fun filterTypeParams(typeParams: ParameterList?, scope: Scope): ParameterList {
-        return typeParams?.filterByGenerics { it.scope == scope }
-            ?: ParameterList.emptyParameterList()
+        return FieldMethodResolver.findMemberMatch(
+            field0, byFieldExpectedType,
+            byExprExpectedType, selfType,
+            typeParameters, valueParameters,
+            codeScope, origin
+        ) as? ResolvedField
     }
 
     fun resolveField(
@@ -202,7 +134,11 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         origin: Int,
     ): ResolvedField? {
         val selfType = context.selfType
-        LOGGER.info("TypeParams for field '$name': $typeParameters, scope: $codeScope, selfType: $selfType, targetType: ${context.targetType}")
+        LOGGER.info(
+            "TypeParams for field '$name': $typeParameters, " +
+                    "scope: $codeScope, selfType: $selfType, " +
+                    "targetType: ${context.targetType}, spec: ${context.specialization}"
+        )
 
         return resolveInCodeScope(context, codeScope) { candidateScope, selfType ->
             findMemberInScope(

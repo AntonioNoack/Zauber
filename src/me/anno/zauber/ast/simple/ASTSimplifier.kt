@@ -33,6 +33,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
 import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 object ASTSimplifier {
@@ -369,9 +370,8 @@ object ASTSimplifier {
         if (useGetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val method0 = ResolvedMethod(
-                ownerTypes, field.getter ?: throw IllegalStateException("Missing getter for $field"),
-                ParameterList.emptyParameterList(),
-                context, expr.scope, MatchScore(0), expr.origin
+                field.getter ?: throw IllegalStateException("Missing getter for $field"),
+                context.withSpec(Specialization(field.scope, ownerTypes)), expr.scope, MatchScore(0),
             )
             return simplifyCall(
                 block1v.block, block1, self, expr.self,
@@ -464,9 +464,8 @@ object ASTSimplifier {
         if (useSetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val method0 = ResolvedMethod(
-                ownerTypes, field.setter ?: throw IllegalStateException("Missing setter for $field"),
-                ParameterList.emptyParameterList(),
-                context, expr.scope, MatchScore(0), expr.origin
+                field.setter ?: throw IllegalStateException("Missing setter for $field"),
+                context.withSpec(Specialization(field.scope, ownerTypes)), expr.scope, MatchScore(0),
             )
             return simplifyCall(
                 block2v.block, block2, self, expr.self,
@@ -883,7 +882,7 @@ object ASTSimplifier {
             val dst = block0.field(method0.getTypeFromCall())
             var selfType = method.selfTypeI.specialize(method0.specialization) as ClassType
             if (selfType.typeParameters == null) {
-                selfType = ClassType(selfType.clazz, method0.selfTypeParameters)
+                selfType = selfType.clazz.typeWithArgs.specialize(method0.specialization) as ClassType
             }
             // todo allocation could fail, too...
             block0.add(SimpleAllocateInstance(dst, selfType, valueParameters, scope, origin))

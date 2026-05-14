@@ -674,7 +674,7 @@ abstract class ZauberASTBuilderBase(
         } else {
             check(selfType == null)
             var scope = currPackage
-            while (!scope.isClassType()) {
+            while (!scope.isClassLike()) {
                 scope = scope.parent
                     ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
             }

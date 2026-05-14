@@ -14,7 +14,6 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -24,9 +23,7 @@ import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.LambdaType
-import me.anno.zauber.types.impl.arithmetic.UnionType
 
 class LambdaExpression(
     var variables: List<LambdaVariable>?,
@@ -115,14 +112,14 @@ class LambdaExpression(
                 // is this ok??? OMG, looks like it is fine
                 return targetLambdaType
             }*/
-           else -> {
+            else -> {
                 // else 'it' is not defined
                 val returnType = TypeResolution.resolveType(bodyContext, body)
                 return LambdaType(null, ensureVariables().map {
                     LambdaParameter(it.name, it.type!!)
                 }, returnType)
             }
-           // else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
+            // else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
         }
     }
 
@@ -207,9 +204,9 @@ class LambdaExpression(
         ).resolve(context)*/
 
         val method = ResolvedConstructor(
-            ParameterList.emptyParameterList(),
-            classConstructor.selfAsConstructor!!, context, scope,
-            MatchScore(0), origin
+            classConstructor.selfAsConstructor!!,
+            context.withSpec(context.specialization.withScope(classConstructor)),
+            scope, MatchScore(0),
         )
         val params = listOf(selfMethod).map { it.resolve(context) }
         return ResolvedCallExpression(null, method, params, scope, origin)

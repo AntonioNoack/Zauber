@@ -2,7 +2,6 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Member
 import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.scope.Scope
@@ -11,33 +10,20 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.Specialization
 
 abstract class ResolvedMember<V : Member>(
-    val selfTypeParameters: ParameterList,
-    val callTypeParameters: ParameterList,
     val resolved: V,
     val context: ResolutionContext,
     val codeScope: Scope,
-    val matchScore: MatchScore,
-    origin: Int
+    val matchScore: MatchScore
 ) {
 
     init {
-        check(!selfTypeParameters.containsNull()) {
-            "All self-type-params must be resolved,\n" +
-                    "  within $this,\n" +
-                    "  at ${resolveOrigin(origin)}"
-        }
-        check(!callTypeParameters.containsNull()) {
-            "All call-type-params must be resolved,\n" +
-                    "  within $this,\n" +
-                    "  at ${resolveOrigin(origin)}"
-        }
+        check(resolved.scope == context.specialization.scope)
     }
 
     val selfType get() = context.selfType
-    val specialization = Specialization(selfTypeParameters + callTypeParameters)
+    val specialization get() = context.specialization
 
     abstract fun getTypeFromCall(): Type
     abstract fun getScopeOfResolved(): Scope

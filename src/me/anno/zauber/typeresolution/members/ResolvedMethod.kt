@@ -4,21 +4,16 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
 class ResolvedMethod(
-    ownerTypes: ParameterList, method: Method, callTypes: ParameterList,
+    method: Method,
     context: ResolutionContext, codeScope: Scope,
     matchScore: MatchScore, // selfType, then all parameters
-    origin: Int,
-) : ResolvedMember<Method>(
-    ownerTypes, callTypes,
-    method, context, codeScope, matchScore, origin
-) {
+) : ResolvedMember<Method>(method, context, codeScope, matchScore) {
 
     val returnType get() = resolved.returnType?.specialize(specialization)
 
@@ -27,13 +22,10 @@ class ResolvedMethod(
     private val typeFromCallImpl = lazy {
         val method = resolved
         LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
-        val ownerNames = selfTypeToTypeParams(method.selfType, context.selfType)
-        val selfType = if (method.selfType != null) context.selfType else null
+        val selfType = if (method.selfType != null) context.selfType else method.ownerScope.typeWithArgs
         val inGeneral = method.resolveReturnType(context)
-        val forSelf = ownerTypes.resolveGenerics(selfType, inGeneral)
-        val forCall = callTypes.resolveGenerics(selfType, forSelf)
-        LOGGER.info("ReturnType for call: $inGeneral -${ownerNames}|$ownerTypes> $forSelf -${method.typeParameters}|$callTypes> $forCall")
-        forCall.specialize(specialization)
+        val forSelf = specialization.typeParameters.resolveGenerics(selfType, inGeneral)
+        forSelf.specialize(specialization)
     }
 
     override fun getTypeFromCall(): Type {
@@ -41,7 +33,7 @@ class ResolvedMethod(
     }
 
     override fun toString(): String {
-        return "ResolvedMethod(method=$resolved, generics=$callTypeParameters)"
+        return "ResolvedMethod(method=$resolved, generics=$specialization)"
     }
 
     companion object {

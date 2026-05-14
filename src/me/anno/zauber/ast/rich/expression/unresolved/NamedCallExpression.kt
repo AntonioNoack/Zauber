@@ -112,7 +112,7 @@ class NamedCallExpression(
             throw IllegalStateException("Missing type parameters for $baseType in $this, $context")
         }
 
-        // println("Resolving callable $name, baseType: $baseType, constructor: $constructor")
+        println("Resolving callable $name, baseType: $baseType, constructor: $constructor")
 
         return MethodResolver.resolveCallable(
             contextI, scope, name, nameAsImport, constructor,

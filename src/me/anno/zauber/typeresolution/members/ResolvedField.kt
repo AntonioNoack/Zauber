@@ -3,7 +3,6 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
@@ -20,7 +19,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -36,15 +34,10 @@ import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 
 // todo we don't need only the type-param-generics, but also the self-type generics...
 class ResolvedField(
-    ownerTypes: ParameterList,
-    field: Field, callTypes: ParameterList,
+    field: Field,
     context: ResolutionContext, codeScope: Scope,
-    val isBackingField: Boolean, matchScore: MatchScore,
-    origin: Int,
-) : ResolvedMember<Field>(
-    ownerTypes, callTypes,
-    field, context, codeScope, matchScore, origin
-) {
+    matchScore: MatchScore
+) : ResolvedMember<Field>(field, context, codeScope, matchScore) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ResolvedField::class)
@@ -157,13 +150,10 @@ class ResolvedField(
     }
 
     init {
-        val expectedOwnerTypes = field.selfTypeTypeParams(context.selfType)
-        check(expectedOwnerTypes.size == ownerTypes.size) {
-            "Expected $expectedOwnerTypes.size to be $ownerTypes.size for field $field,\n  " +
-                    "at ${resolveOrigin(origin)}"
-        }
-        check(field.typeParameters.size == callTypes.size)
+        check(context.specialization.scope == field.ownerScope)
     }
+
+    val isBackingField = field.isBackingField()
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 
@@ -174,11 +164,10 @@ class ResolvedField(
         LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}, selfType: $selfType")
 
         val valueType = resolved.resolveValueType(context)
-        val forType = selfTypeParameters.resolveGenerics(selfType, valueType)
-        val forCall = callTypeParameters.resolveGenerics(selfType, forType)
+        val valueTypeSpec = specialization.typeParameters.resolveGenerics(selfType, valueType)
 
         val context = context.withSelfType(selfType)
-        return filterTypeByScopeConditions(resolved, forCall, context, codeScope)
+        return filterTypeByScopeConditions(resolved, valueTypeSpec, context, codeScope)
     }
 
     override fun getTypeFromCall(): Type {
@@ -200,7 +189,7 @@ class ResolvedField(
     }
 
     override fun toString(): String {
-        return "ResolvedField(field=${resolved.toStringWithoutDefault()})"
+        return "ResolvedField(field=${resolved.toStringWithoutDefault()}, generics=$specialization)"
     }
 
     fun resolveCalledMethod(typeParameters: List<Type>?, valueParameters: List<ValueParameter>): ResolvedMethod {

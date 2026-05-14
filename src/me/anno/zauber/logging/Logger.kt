@@ -2,7 +2,6 @@ package me.anno.zauber.logging
 
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
-import java.io.PrintStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
@@ -14,26 +13,29 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     private val knownWarnings = HashSet<String>()
 
-    private fun infoImpl(prefix: String, message: String, stream: PrintStream) {
+    private fun infoImpl(prefix: String, message: String) {
         if ('\n' !in message) {
             val time = style(getTime(), timeStyle)
-            stream.println("[$time,$name:$prefix] $message")
+            println("[$time,$name:$prefix] $message")
         } else {
             val lines = message.split('\n')
-            infoImpl(prefix, lines.first(), stream)
+            infoImpl(prefix, lines.first())
             for (i in 1 until lines.size) {
-                stream.println("    " + lines[i])
+                println("    " + lines[i])
             }
         }
     }
 
     fun info(message: String) {
-        if (isInfoEnabled) infoImpl("INFO", message, System.out)
+        if (isInfoEnabled) infoImpl("INFO", message)
     }
 
     fun warn(message: String) {
         if (isWarnEnabled && knownWarnings.add(message)) {
-            infoImpl("ERR", message, System.err)
+            infoImpl(
+                style("ERR", StringStyles.RED),
+                style(message, StringStyles.RED)
+            )
         }
     }
 
@@ -46,7 +48,7 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
     }
 
     fun debug(message: String) {
-        if (isDebugEnabled) infoImpl("DEBUG", message, System.out)
+        if (isDebugEnabled) infoImpl("DEBUG", message)
     }
 
     companion object {

@@ -8,7 +8,7 @@ import me.anno.zauber.types.specialization.Specialization
 
 data class ResolutionContext(
     /**
-     * this should only be set if we look for a field/method on a specific base type;
+     * this must be set exactly iff we look for a field/method on a specific base type;
      * if this is specified, we MUST match it
      * if not, we can match any higher self, or imported/available objects
      * */
