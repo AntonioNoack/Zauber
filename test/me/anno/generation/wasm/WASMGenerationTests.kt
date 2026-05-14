@@ -68,7 +68,7 @@ class WASMGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, ::registerLib)
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("3\n", printed)
     }
 

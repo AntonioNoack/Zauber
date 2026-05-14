@@ -302,6 +302,23 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
+    // we cannot just quit -> removing try-catch
+    override fun appendMethods(
+        classScope: Scope, className: String,
+        methods: Collection<MethodSpecialization>, headerOnly: Boolean
+    ) {
+        for (method0 in methods) {
+            val method = method0.method
+            if (method !is Method) continue
+            if (method.scope.parent != classScope) {
+                // an inherited method -> skip, because it's already defined in the parent
+                continue
+            }
+
+            appendMethod(classScope, className, method0, headerOnly)
+        }
+    }
+
     fun appendMethodHeader(typeIndex: Int, methodName: String, method0: MethodSpecialization, export: Boolean) {
         val method = method0.method
         val functionIndex = functionIndexMap[method0]!!
@@ -371,7 +388,8 @@ class WASMSourceGenerator : CSourceGenerator() {
 
             if (method is Constructor) {
                 // return is typically missing
-                appendGetObjectInstance(Types.Unit.clazz, method.scope)
+                if (method.ownerScope == Types.Unit.clazz) appendGetThis() // todo why is this not working???
+                else appendGetObjectInstance(Types.Unit.clazz, method.scope)
             }
 
             // close body
@@ -429,47 +447,27 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
-        try {
-            val method1 = MethodSpecialization(method, context.specialization)
-            val graph = ASTSimplifier.simplify(method1)
-            if (skipSuperCall) graph.removeSuperCalls()
+        val method1 = MethodSpecialization(method, context.specialization)
+        val graph = ASTSimplifier.simplify(method1)
+        if (skipSuperCall) graph.removeSuperCalls()
 
-            CodeReconstruction.createCodeFromGraph(graph)
+        CodeReconstruction.createCodeFromGraph(graph)
 
-            for ((self, dst) in graph.thisFields) {
-                val (scope, explicit) = self
-                if (explicit) {
-                    TODO("Somehow get explicit self...")
-                } else {
-                    if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
-                        TODO("Declare $self in $dst for $method")
-                    } // else not needed
-                }
+        for ((self, dst) in graph.thisFields) {
+            val (scope, explicit) = self
+            if (explicit) {
+                TODO("Somehow get explicit self...")
+            } else {
+                if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
+                    TODO("Declare $self in $dst for $method")
+                } // else not needed
             }
-
-            declareLocalFieldsAsVariables(graph)
-
-            /*if (method is Constructor && method.ownerScope.isObjectLike()) {
-                val objectAddr = getObjectAddress(method.ownerScope)
-                builder.append(pointerType.wasmName).append(".const ").append(objectAddr)
-                builder.append(" i32.const 1 i32.store")
-                nextLine()
-            }*/
-
-            // write all code
-            appendSimplifiedAST(graph, graph.startBlock)
-
-        } catch (e: Throwable) {
-            e.printStackTrace()
-            comment {
-                builder.append(
-                    "[${e.javaClass.simpleName}: ${e.message}] $body"
-                        .replace("/*", "[")
-                        .replace("*/", "]")
-                )
-            }
-            nextLine()
         }
+
+        declareLocalFieldsAsVariables(graph)
+
+        // write all code
+        appendSimplifiedAST(graph, graph.startBlock)
     }
 
     fun declareLocalFieldsAsVariablesForObjectGetter() {
@@ -514,11 +512,13 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     lateinit var mutableFields: Map<Field, Int>
-    lateinit var mutableFieldsList: List<Field>
 
     fun collectMutableFields(graph: SimpleGraph, offset: Int): List<Field> {
         val fieldMap = HashMap<Field, Int>()
         val fieldList = ArrayList<Field>()
+        val offset = offset + graph.fields.size
+        val parameters = graph.method.valueParameters
+        val thisOffset = 1 + if (graph.method.explicitSelfType) 1 else 0
         for (block in graph.nodes) {
             for (expr in block.instructions) {
                 when (expr) {
@@ -534,16 +534,21 @@ class WASMSourceGenerator : CSourceGenerator() {
                                 is SimpleSetField -> expr.field
                                 else -> error("Unreachable")
                             }
+
+                            val parameterIndex = parameters.indexOf(field.byParameter)
                             fieldMap.getOrPut(field) {
-                                fieldList.add(field)
-                                fieldMap.size + offset
+                                if (parameterIndex >= 0) {
+                                    parameterIndex + thisOffset
+                                } else {
+                                    fieldList.add(field)
+                                    fieldList.lastIndex + offset
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        mutableFieldsList = fieldList
         mutableFields = fieldMap
         return fieldList
     }
@@ -565,6 +570,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
+        // todo remove non-read fields from graph
         builder.append("local.set \$tmp").append(expression.dst.id)
         binary.localSet(expression.dst.id + getLocalFieldOffset(graph))
         nextLine()
@@ -717,8 +723,8 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun getLocalFieldOffset(graph: SimpleGraph): Int {
-        var offset = 1
-        if (graph.method.explicitSelfType) offset++
+        var offset = 1 // 'this'
+        if (graph.method.explicitSelfType) offset++ // 'self'
         val numParams = graph.method.valueParameters.size
         return offset + numParams
     }
@@ -931,10 +937,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                     nextLine()
                 }
             }
-            else -> {
-                super.appendInstrImpl(graph, expr)
-                nextLine()
-            }
+            else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }
     }
 

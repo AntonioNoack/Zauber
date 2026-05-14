@@ -412,7 +412,7 @@ open class JavaSourceGenerator : Generator() {
         nextLine()
     }
 
-    fun appendMethods(
+    open fun appendMethods(
         classScope: Scope, className: String,
         methods: Collection<MethodSpecialization>,
         headerOnly: Boolean
@@ -673,7 +673,7 @@ open class JavaSourceGenerator : Generator() {
                 e.printStackTrace()
                 comment {
                     builder.append(
-                        "[${e.javaClass.simpleName}: ${e.message}] $body"
+                        "[${e.javaClass.simpleName}: ${e.stackTrace ?: "no-st"}] $body"
                             .replace("/*", "[")
                             .replace("*/", "]")
                     )
