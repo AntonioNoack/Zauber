@@ -1,6 +1,5 @@
 package me.anno.support.java.ast
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.sym
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
@@ -310,8 +309,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val scopeName = currPackage.generateName(name, origin)
         val keywords = packFlags()
         pushScope(scopeName, ScopeType.METHOD) { scope ->
-            scope.typeParameters = typeParameters
-            scope.hasTypeParameters = true
+            scope.setTypeParams(typeParameters)
 
             val valueParameters = pushCall { readParameterDeclarations(null, emptyList()) }
             skipThrowList()
@@ -620,8 +618,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val origin = origin(i)
         val name = currPackage.generateName("inline", origin)
         val classScope = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
-        classScope.typeParameters = emptyList()
-        classScope.hasTypeParameters = true
+        classScope.setEmptyTypeParams()
         classScope.superCalls.add(SuperCall(type as ClassType, null, null, origin))
 
         readClassBody(name, Flags.NONE, ScopeType.INLINE_CLASS)

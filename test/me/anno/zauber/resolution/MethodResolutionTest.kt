@@ -1,8 +1,10 @@
 package me.anno.zauber.resolution
 
-import me.anno.zauber.resolution.FieldResolutionTest.Companion.findFieldType
 import me.anno.utils.ResolutionUtils.get
 import me.anno.utils.ResolutionUtils.typeResolveScope
+import me.anno.zauber.resolution.FieldResolutionTest.Companion.findFieldType
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -303,7 +305,7 @@ class MethodResolutionTest {
 
     @Test
     fun testMethodExtensionInner() {
-        // todo why is this failing parsing???
+        // todo this has a init-order bug :/
         val code = """
         fun Int.next() = 0f
         class Inner {
@@ -453,7 +455,12 @@ class MethodResolutionTest {
                 return tested
             }
             """.trimIndent()
-            typeResolveScope(code)
+            val scope = typeResolveScope(code)
+            fun recursivelyDiscover(scope: Scope) {
+                scope[ScopeInitType.CODE_GENERATION]
+                scope.children.forEach(::recursivelyDiscover)
+            }
+            recursivelyDiscover(scope)
         }
     }
 

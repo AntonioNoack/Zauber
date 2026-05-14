@@ -1,6 +1,5 @@
 package me.anno.zauber
 
-import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.NumberUtils.f3
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.CompileSources.buildASTs
@@ -8,14 +7,10 @@ import me.anno.zauber.CompileSources.printPackages
 import me.anno.zauber.CompileSources.tokenizeSources
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanAllClasses
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
-import java.io.File
 
 // todo convert JVM Bytecode AST into simplified AST...
 //  what about generics? we can either keep them generic, or specialize them... both would be good...
@@ -51,7 +46,14 @@ object Compile {
     private val LOGGER = LogManager.getLogger(Compile::class)
 
     const val STDLIB_NAME = "zauber"
-    val root by threadLocal { Scope("*") }
+    val root by threadLocal {
+        Scope("*").apply {
+            // ensure zauber is a package
+            getOrPut(STDLIB_NAME, ScopeType.PACKAGE).apply {
+                setEmptyTypeParams()
+            }
+        }
+    }
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -77,15 +79,15 @@ object Compile {
         if (false) printPackages(root, 0)
 
         // todo find out where/what our main method/entry-points is ...
-       /* val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
-        Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))
+        /* val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
+         Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))
 
-        val (classes, methods) = Dependencies.collectClassesAndMethods()
-        printDependencies(classes, methods)
+         val (classes, methods) = Dependencies.collectClassesAndMethods()
+         printDependencies(classes, methods)
 
-        step("Resolution & Creating Java-Code") {
-            JavaSourceGenerator.generateCode(File("./out/java"), root)
-        }*/
+         step("Resolution & Creating Java-Code") {
+             JavaSourceGenerator.generateCode(File("./out/java"), root)
+         }*/
 
         printStats()
     }

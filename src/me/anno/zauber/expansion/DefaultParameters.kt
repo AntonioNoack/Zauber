@@ -58,8 +58,7 @@ object DefaultParameters {
             val origin = self.origin
 
             val scope = scopeParent.generate("f:${self.name}", ScopeType.METHOD)
-            scope.typeParameters = self.typeParameters
-            scope.hasTypeParameters = true
+            scope.setTypeParams(self.typeParameters)
 
             val subValueParameters = self.valueParameters.subList(0, i).map { it.clone(scope) }
             subValueParameters.forEach { param -> param.getOrCreateField(null, Flags.NONE) }
@@ -131,7 +130,7 @@ object DefaultParameters {
 
             val scopeName = classScope.generateName("synthetic:constructor")
             val scope = classScope.getOrPut(scopeName, ScopeType.CONSTRUCTOR)
-            scope.typeParameters = self.typeParameters
+            scope.setTypeParams(self.typeParameters)
 
             val origin = self.origin
             val newValueParameters = self.valueParameters.mapIndexed { index, parameter ->

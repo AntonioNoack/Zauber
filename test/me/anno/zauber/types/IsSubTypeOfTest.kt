@@ -10,9 +10,9 @@ import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
@@ -146,8 +146,7 @@ class IsSubTypeOfTest {
         val anyOrNullGeneric = GenericType(scope, "V")
         val anyOrNullParameter = Parameter(0, "V", Types.NullableAny, scope, -1)
         scope.hasTypeParameters = false // this is a hack!
-        scope.typeParameters = listOf(anyOrNullParameter)
-        scope.hasTypeParameters = true
+        scope.setTypeParams(listOf(anyOrNullParameter))
 
         // parameter is available, writable -> true
         assertTrue(
@@ -188,7 +187,7 @@ class IsSubTypeOfTest {
         // now check generics with bounds
         val floatGeneric = GenericType(scope, "F")
         val floatParameter = Parameter(0, "F", Types.Float, scope, -1)
-        scope.typeParameters = listOf(floatParameter)
+        scope.setTypeParams(listOf(floatParameter))
 
         // even the strong mode must respect type bounds
         assertFalse(

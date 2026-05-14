@@ -6,7 +6,8 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType

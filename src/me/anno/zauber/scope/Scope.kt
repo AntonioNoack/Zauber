@@ -167,6 +167,16 @@ class Scope(val name: String, val parent: Scope? = null) {
             field = value
         }
 
+    fun setEmptyTypeParams() {
+        typeParameters = emptyList()
+        hasTypeParameters = true
+    }
+
+    fun setTypeParams(params: List<Parameter>) {
+        typeParameters = params
+        hasTypeParameters = true
+    }
+
     var hasTypeParameters = false
 
     @Deprecated("There is few cases, where we don't need or don't have generic parameters")
@@ -212,8 +222,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (old != null) return old
 
         val scope = getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-        scope.typeParameters = emptyList()
-        scope.hasTypeParameters = true
+        scope.setEmptyTypeParams()
         return scope
     }
 
@@ -232,8 +241,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun getOrCreatePrimaryConstructorScope(): Scope {
         return primaryConstructorScope ?: run {
             val scope = getOrPut("prim", ScopeType.CONSTRUCTOR)
-            scope.typeParameters = emptyList()
-            scope.hasTypeParameters = true
+            scope.setEmptyTypeParams()
 
             primaryConstructorScope = scope
             scope.selfAsConstructor = Constructor(

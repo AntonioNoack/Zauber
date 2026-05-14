@@ -25,8 +25,7 @@ object EnumProperties {
         val enumScope = currPackage
 
         val companionScope = enumScope.getOrPut("Companion", ScopeType.COMPANION_OBJECT)
-        companionScope.typeParameters = emptyList()
-        companionScope.hasTypeParameters = true
+        companionScope.setEmptyTypeParams()
 
         // val needsPrimaryConstructor = companionScope.primaryConstructorScope == null
         val primaryConstructorScope = companionScope.getOrCreatePrimaryConstructorScope()

@@ -103,17 +103,10 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             return generics to superClasses
         }
 
-        fun parseMethodSignature(
-            scope: Scope,
-            signature: String,
-            addToScope: Boolean
-        ): MethodSignature {
+        fun parseMethodSignature(scope: Scope, signature: String, addToScope: Boolean): MethodSignature {
             val reader = SignatureReader(signature, scope)
             val typeParameters = reader.readGenerics()
-            if (addToScope) {
-                scope.typeParameters = typeParameters
-                scope.hasTypeParameters = true
-            }
+            if (addToScope) scope.setTypeParams(typeParameters)
 
             reader.consume('(')
             val valueParameters = ArrayList<Parameter>()
@@ -170,8 +163,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         }
 
         val (typeParameters, superTypesWithGenerics) = parseClassSignature(classScope, signature)
-        classScope.typeParameters = typeParameters
-        classScope.hasTypeParameters = true
+        classScope.setTypeParams(typeParameters)
 
         if (superName != null) {
             val superScope = getScope(superName, ScopeType.NORMAL_CLASS)

@@ -563,8 +563,7 @@ class ZauberASTBuilder(
 
         val name = currPackage.generateName("inline", origin)
         val classScope = currPackage.getOrPut(name, tokens.fileName, ScopeType.INLINE_CLASS)
-        classScope.typeParameters = getNextOuterTypeParams()
-        classScope.hasTypeParameters = true
+        classScope.setTypeParams(getNextOuterTypeParams())
 
         readSuperCalls(classScope, true)
 

@@ -680,11 +680,9 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
     }
 
     override fun readClass(scopeType: ScopeType) {
-        val origin = origin(i)
         val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
         pushScope(name, ScopeType.NORMAL_CLASS) { classScope ->
-            classScope.typeParameters = emptyList()
-            classScope.hasTypeParameters = true
+            classScope.setEmptyTypeParams()
 
             if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 pushCall {

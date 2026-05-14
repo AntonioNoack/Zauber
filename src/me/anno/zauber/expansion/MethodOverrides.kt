@@ -122,8 +122,7 @@ object MethodOverrides {
 
                 // somehow create a new method linking to the old one
                 val newScope = scope.generate("f:${superMethod.name}", ScopeType.METHOD)
-                newScope.typeParameters = superMethod.typeParameters
-                newScope.hasTypeParameters = true
+                newScope.setTypeParams(superMethod.typeParameters)
                 newScope.selfAsMethod = superMethod
 
             } else {

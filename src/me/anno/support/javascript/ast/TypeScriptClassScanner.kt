@@ -123,8 +123,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         pushScope(methodScope) {
 
             val typeParams = emptyList<Parameter>()
-            methodScope.typeParameters = typeParams
-            methodScope.hasTypeParameters = true
+            methodScope.setTypeParams(typeParams)
 
             val indexParameter = readParameterDeclaration(ownerScope.typeWithArgs, 0)
             consume(TokenType.CLOSE_ARRAY)
@@ -164,8 +163,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         pushScope(methodScope) {
 
             val typeParameters = readTypeParameters()
-            methodScope.typeParameters = typeParameters
-            methodScope.hasTypeParameters = true
+            methodScope.setTypeParams(typeParameters)
 
             val valueParameters = readParameterDeclarations(ownerScope.typeWithArgs, emptyList())
 
@@ -203,8 +201,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         pushScope(methodScope) {
 
             val typeParameters = readTypeParameters()
-            methodScope.typeParameters = typeParameters
-            methodScope.hasTypeParameters = true
+            methodScope.setTypeParams(typeParameters)
 
             val valueParameters = readParameterDeclarations(ownerScope.typeWithArgs, emptyList())
 
@@ -254,8 +251,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
     ) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
             val typeParams = readTypeParameters()
-            classScope.typeParameters = typeParams
-            classScope.hasTypeParameters = true
+            classScope.setTypeParams(typeParams)
 
             readSuperCalls(classScope, readBody)
             readClassBody(classScope, readBody)
@@ -334,8 +330,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         pushScope(methodScope) {
 
             val typeParams = readTypeParameters()
-            methodScope.typeParameters = typeParams
-            methodScope.hasTypeParameters = true
+            methodScope.setTypeParams(typeParams)
 
             val params = readParameterDeclarations(owner.typeWithArgs, emptyList())
 
@@ -437,8 +432,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
     override fun readTypeAlias() {
         val newName = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val aliasScope = currPackage.getOrPut(newName, tokens.fileName, ScopeType.TYPE_ALIAS)
-        aliasScope.typeParameters = readTypeParameterDeclarations(aliasScope, true)
-        aliasScope.hasTypeParameters = true
+        aliasScope.setTypeParams(readTypeParameterDeclarations(aliasScope, true))
 
         consume("=")
 

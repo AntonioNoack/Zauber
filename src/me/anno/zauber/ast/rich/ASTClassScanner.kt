@@ -237,8 +237,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val (path, ni) = tokens.readPath(i)
         currPackage = path
         path.mergeScopeTypes(ScopeType.PACKAGE)
-        path.typeParameters = emptyList()
-        path.hasTypeParameters = true
+        path.setEmptyTypeParams()
         i = ni
     }
 
@@ -522,8 +521,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val origin = origin(i - 1)
         val classScope = currPackage[ScopeInitType.AFTER_DISCOVERY]
         val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
-        constrScope.typeParameters = emptyList()
-        constrScope.hasTypeParameters = true
+        constrScope.setEmptyTypeParams()
         constrScope.flags = constrScope.flags or packFlags()
 
         pushScope(constrScope) {
