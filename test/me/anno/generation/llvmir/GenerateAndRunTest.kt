@@ -1,184 +1,60 @@
 package me.anno.generation.llvmir
 
+import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalLLVMCompiler
+import me.anno.generation.CodeGenerationTests
+import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class GenerateAndRunTest {
+class GenerateAndRunTest : CodeGenerationTests() {
 
-    private fun registerLib() {
+    override fun registerLib() {
         register(
             langScope, "println", listOf(Types.Int),
             "System.out.println(arg0)" // todo adjust this
         )
     }
 
+    override fun generator(): MinimalCompiler = MinimalLLVMCompiler()
+
+    @BeforeEach
+    fun init() {
+        disableCompileLoggers()
+    }
+
     @Test
     fun testSimpleAddition() {
-        val code = """
-            val x = 1 + 2
-            fun main() {
-                println(x)
-            }
-            
-            package zauber
-            class Any
-            object Unit
-            class Int {
-                external operator fun plus(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, true) {
-                register(
-                    langScope, "println", listOf(Types.Int),
-                    "System.out.println(arg0)" // todo adjust this
-                )
-            }
-        assertEquals("3\n", printed)
-
+        testSimpleAdditionImpl()
     }
 
     @Test
     fun testMethodCall() {
-        val code = """
-            fun calc(x: Int) = x+1
-            
-            fun main() {
-                println(calc(2))
-            }
-            
-            package zauber
-            class Any
-            object Unit
-            class Int {
-                external operator fun plus(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("3\n", printed)
+        testMethodCallImpl()
     }
 
     @Test
     fun testDataClassAndAllocation() {
-        val code = """
-            data class Vector(val x: Int, val y: Int, val z: Int)
-            
-            fun main() {
-                println(Vector(1, 2, 3).hashCode())
-            }
-            
-            package zauber
-            class Any
-            object Unit
-            class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
+        testDataClassAndAllocationImpl()
     }
 
     @Test
     fun testGenericClass() {
-        val code = """
-            class Vector<V>(val x: V)
-            
-            fun main() {
-                println(Vector(1).x)
-            }
-            
-            package zauber
-            class Any
-            object Unit
-            class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, true, ::registerLib)
-        assertEquals("1\n", printed)
+        testGenericClassImpl()
     }
 
     @Test
     fun testValueClassFieldIsWritable() {
-        val code = """
-            value class Vector(val x: Int, val y: Int, val z: Int)
-            
-            fun main() {
-                var v = Vector(1,2,3)
-                v.x += v.y * v.z
-                println(v.x)
-            }
-            
-            package zauber
-            class Any
-            object Unit
-            class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("7\n", printed)
+        testValueClassFieldIsWritableImpl()
     }
 
     @Test
     fun testValueIsPassedByCopy() {
-        val code = """
-            value class Vector(val x: Int)
-            
-            fun dontModify(v: Vector) {
-                var w = v
-                w.x = 0
-            }
-            
-            fun main() {
-                val v = Vector(1)
-                dontModify(v)
-                println(v.x)
-            }
-            
-            package zauber
-            class Any
-            object Unit
-            class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        val printed = MinimalLLVMCompiler()
-            .testCompileMainAndRun(code, true, ::registerLib)
-        assertEquals("1\n", printed)
+        testValueIsPassedByCopyImpl()
     }
-
-    // todo add .copy(name=value) as a special function on data classes
 
     // todo implement value classes being copied when written / passed as parameter
     // todo implement and test value classes being inlined

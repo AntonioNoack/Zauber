@@ -1,33 +1,19 @@
-package me.anno.generation.javascript
+package me.anno.generation
 
-import me.anno.compilation.MinimalJavaScriptCompiler
+import me.anno.compilation.MinimalCompiler
 import me.anno.generation.LoggerUtils.disableCompileLoggers
-import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.utils.assertEquals
-import me.anno.zauber.typeresolution.TypeResolution.langScope
-import me.anno.zauber.types.Types
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~0.5s for all
+ * execution time: 2s,
+ * main cost is loading Node via NVM, I think
  * */
-class GenerateAndRunTests {
+abstract class CodeGenerationTests {
 
-    private fun registerLib() {
-        register(
-            langScope, "println", listOf(Types.Int),
-            "console.log(arg0)"
-        )
-    }
+    abstract fun registerLib()
+    abstract fun generator(): MinimalCompiler
 
-    @BeforeEach
-    fun init() {
-        disableCompileLoggers()
-    }
-
-    @Test
-    fun testSimpleAddition() {
+    fun testSimpleAdditionImpl() {
         val code = """
             val x = 1 + 2
             fun main() {
@@ -44,13 +30,12 @@ class GenerateAndRunTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalJavaScriptCompiler()
+        val printed = generator()
             .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("3\n", printed)
     }
 
-    @Test
-    fun testMethodCall() {
+    fun testMethodCallImpl() {
         val code = """
             fun calc(x: Int) = x+1
             
@@ -68,13 +53,12 @@ class GenerateAndRunTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalJavaScriptCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
+        val printed = generator()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("3\n", printed)
     }
 
-    @Test
-    fun testDataClassAndAllocation() {
+    fun testDataClassAndAllocationImpl() {
         val code = """
             data class Vector(val x: Int, val y: Int, val z: Int)
             
@@ -94,13 +78,12 @@ class GenerateAndRunTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalJavaScriptCompiler()
-            .testCompileMainAndRun(code, ::registerLib)
+        val printed = generator()
+            .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
-    @Test
-    fun testGenericClass() {
+    fun testGenericClassImpl() {
         val code = """
             class Vector<V>(val x: V)
             
@@ -119,13 +102,12 @@ class GenerateAndRunTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalJavaScriptCompiler()
+        val printed = generator()
             .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }
 
-    @Test
-    fun testValueClassFieldIsWritable() {
+    fun testValueClassFieldIsWritableImpl() {
         val code = """
             value class Vector(val x: Int, val y: Int, val z: Int)
             
@@ -146,13 +128,12 @@ class GenerateAndRunTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalJavaScriptCompiler()
+        val printed = generator()
             .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("7\n", printed)
     }
 
-    @Test
-    fun testValueIsPassedByCopy() {
+    fun testValueIsPassedByCopyImpl() {
         disableCompileLoggers()
         val code = """
             value class Vector(val x: Int)
@@ -179,7 +160,7 @@ class GenerateAndRunTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        val printed = MinimalJavaScriptCompiler()
+        val printed = generator()
             .testCompileMainAndRun(code, true, ::registerLib)
         assertEquals("1\n", printed)
     }

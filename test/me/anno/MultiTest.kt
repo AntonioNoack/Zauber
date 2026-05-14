@@ -1,5 +1,9 @@
 package me.anno
 
+import me.anno.generation.cpp.CppGenerationTests
+import me.anno.generation.java.JavaGenerationTests
+import me.anno.generation.javascript.JavaScriptGenerationTests
+import me.anno.generation.wasm.WASMGenerationTests
 import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Instance
@@ -9,6 +13,16 @@ import org.junit.jupiter.api.Assertions.assertEquals
 class MultiTest {
 
     private val runnables = HashMap<String, () -> Unit>()
+
+    companion object {
+        // languages, that work pretty well
+        val languages = listOf(
+            "c++" to CppGenerationTests(),
+            "java" to JavaGenerationTests(),
+            "js" to JavaScriptGenerationTests(),
+            "wasm" to WASMGenerationTests(),
+        )
+    }
 
     fun or(name: String, runnable: () -> Unit): MultiTest {
         runnables[name] = runnable
@@ -29,7 +43,21 @@ class MultiTest {
         }
     }
 
+    fun compile(code: String, expected: String): MultiTest {
+        val codeWithMain = if ("fun main(" in code) code else "fun main() { println(tested) }\n$code"
+        for ((name, value) in languages) {
+            or(name) {
+                val actual = value.generator()
+                    .testCompileMainAndRun(codeWithMain, true, value::registerLib)
+                assertEquals(expected, actual)
+            }
+        }
+        return this
+    }
+
     fun run(name: String) {
-        runnables[name]!!()
+        val runnable = runnables[name]
+            ?: throw IllegalStateException("Missing '$name'")
+        runnable()
     }
 }

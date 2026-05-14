@@ -1,6 +1,7 @@
-package me.anno.generation.rust
+package me.anno.generation.javascript
 
-import me.anno.compilation.MinimalRustCompiler
+import me.anno.compilation.MinimalCompiler
+import me.anno.compilation.MinimalJavaScriptCompiler
 import me.anno.generation.CodeGenerationTests
 import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
@@ -10,18 +11,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~10s for all
+ * execution time: ~0.5s for all
  * */
-class GenerateAndRunTests : CodeGenerationTests() {
+class JavaScriptGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
         register(
             langScope, "println", listOf(Types.Int),
-            "println!(\"{}\", arg0)"
+            "console.log(arg0)"
         )
     }
 
-    override fun generator() = MinimalRustCompiler()
+    override fun generator(): MinimalCompiler = MinimalJavaScriptCompiler()
 
     @BeforeEach
     fun init() {
@@ -45,7 +46,7 @@ class GenerateAndRunTests : CodeGenerationTests() {
 
     @Test
     fun testGenericClass() {
-        testGenericClassImpl()
+       testGenericClassImpl()
     }
 
     @Test

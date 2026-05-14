@@ -20,22 +20,23 @@ const imports = {
             console.log(value);
             return lib["obj_zauber_Unit"]()
         },
-        'zauber_Int_plus_rtgkvs': () => {},
-        'zauber_Int_times_rtgkvs': () => {},
+        'zauber_Int_plus_rtgkvs': () => {
+        },
+        'zauber_Int_times_rtgkvs': () => {
+        },
     }
 };
 
-async function main() {
+async function loadAndRun() {
     // Instantiate the module
     const wasmModule = await WebAssembly.instantiate(wasmBytes, imports);
 
     // Access exported functions
-    const { test0_main_0, obj_test0 } = lib = wasmModule.instance.exports;
+    const { main} = lib = wasmModule.instance.exports;
 
     // Call the wasm function
-    let instance = obj_test0()
-    test0_main_0(instance);
+    main();
 }
 
 // cannot use await here
-main();
+loadAndRun();

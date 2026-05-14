@@ -305,7 +305,8 @@ class Scope(val name: String, val parent: Scope? = null) {
             ScopeType.MACRO,
             ScopeType.LAMBDA,
             ScopeType.WHEN_CASES,
-            ScopeType.WHEN_ELSE -> 6
+            ScopeType.WHEN_ELSE,
+            ScopeType.VIRTUAL_CLASS -> 6
             ScopeType.TYPE_ALIAS -> 7
         }
     }

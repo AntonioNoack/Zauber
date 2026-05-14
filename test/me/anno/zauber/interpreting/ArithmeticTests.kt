@@ -10,63 +10,69 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class ArithmeticTests {
 
+    private val stdlib = "\n" + """
+        package zauber
+        class Int(val content: Int) {
+            external fun plus(other: Int): Int
+            external fun times(other: Int): Int
+            fun inc(): Int = content + 1
+       }
+       class Any
+       object Unit
+       external fun println(arg0: Int)
+    """.trimIndent()
+
     @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime"])
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testSimpleIntCalculation(type: String) {
-        val code = """
-            val tested = 1+3*7
-            
-            package zauber
-            class Int {
-                external fun plus(other: Int): Int
-                external fun times(other: Int): Int
-            }
-        """.trimIndent()
+        val code = "val tested = 1+3*7$stdlib"
         MultiTest()
             .type(code) { Types.Int }
             .runtime(code) { value ->
                 assertEquals(22, value.castToInt())
-            }.run(type)
+            }
+            .compile(code, "22\n")
+            .run(type)
     }
 
-    @Test
-    fun testSimpleIntCalculationWithIntermediate() {
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    fun testSimpleIntCalculationWithIntermediate(type: String) {
         val code = """
             val tested: Int
                 get() {
                     var tmp = 1 + 6
                     return tmp * 3
                 }
-            
-            package zauber
-            class Int {
-                external fun plus(other: Int): Int
-                external fun times(other: Int): Int
+        """.trimIndent() + stdlib
+        MultiTest()
+            .type(code) { Types.Int }
+            .runtime(code) { value ->
+                assertEquals(21, value.castToInt())
             }
-        """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(21, value.castToInt())
+            .compile(code, "21\n")
+            .run(type)
     }
 
-    @Test
-    fun testSimpleIntCalculationWithIntermediateAndInc() {
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime"])
+    fun testSimpleIntCalculationWithIntermediateAndInc(type: String) {
+        // todo this cannot be properly compiled yet :/
         val code = """
             val tested: Int
                 get() {
-                    var tmp = 1+6
+                    var tmp = 1 + 6
                     tmp++
                     return tmp * 3
                 }
-            
-            package zauber
-            class Int {
-                external fun plus(other: Int): Int
-                external fun times(other: Int): Int
-                fun inc() = this+1
+        """.trimIndent() + stdlib
+        MultiTest()
+            .type(code) { Types.Int }
+            .runtime(code) { value ->
+                assertEquals(24, value.castToInt())
             }
-        """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(24, value.castToInt())
+            .compile(code, "24\n")
+            .run(type)
     }
 
     @Test

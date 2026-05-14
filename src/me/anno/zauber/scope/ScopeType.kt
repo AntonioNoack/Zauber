@@ -17,6 +17,12 @@ enum class ScopeType {
     OBJECT,
     COMPANION_OBJECT,
 
+    /**
+     * inside methods: for yields
+     * inside classes: to change value/ref classes
+     * */
+    VIRTUAL_CLASS,
+
     // methods
     /**
      * definition space for method arguments
@@ -41,7 +47,7 @@ enum class ScopeType {
     fun isClass(): Boolean {
         return when (this) {
             NORMAL_CLASS, ENUM_CLASS, INNER_CLASS, INLINE_CLASS,
-            INTERFACE -> true
+            INTERFACE, VIRTUAL_CLASS -> true
             else -> false
         }
     }

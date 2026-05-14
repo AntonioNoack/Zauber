@@ -22,11 +22,25 @@ import me.anno.zauber.types.specialization.Specialization.Companion.noSpecializa
 class ZClass(val type: Type) {
 
     companion object {
+
         private val LOGGER = LogManager.getLogger(ZClass::class)
+
+        // types, which may contain the 'content' field
+        // to differentiate instance and native field
+        val nativeTypes = listOf(
+            Types.Byte, Types.UByte,
+            Types.UShort, Types.UShort, Types.Char,
+            Types.Int, Types.UInt,
+            Types.Long, Types.ULong,
+            Types.Float, Types.Double
+        )
 
         fun collectFields(type: Type): List<Field> {
             if (type !is ClassType) {
                 if (type != NullType) LOGGER.warn("type $type is not a ClassType")
+                return emptyList()
+            }
+            if (type in nativeTypes) {
                 return emptyList()
             }
             val fields = type.clazz[ScopeInitType.AFTER_DISCOVERY].fields.filter { field ->

@@ -1,6 +1,6 @@
-package me.anno.generation.rust
+package me.anno.generation.java
 
-import me.anno.compilation.MinimalRustCompiler
+import me.anno.compilation.MinimalJavaCompiler
 import me.anno.generation.CodeGenerationTests
 import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
@@ -10,18 +10,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~10s for all
+ * execution time: ~7s
  * */
-class GenerateAndRunTests : CodeGenerationTests() {
+class JavaGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
         register(
             langScope, "println", listOf(Types.Int),
-            "println!(\"{}\", arg0)"
+            "System.out.println(arg0)"
         )
     }
 
-    override fun generator() = MinimalRustCompiler()
+    override fun generator() = MinimalJavaCompiler()
 
     @BeforeEach
     fun init() {
@@ -57,5 +57,13 @@ class GenerateAndRunTests : CodeGenerationTests() {
     fun testValueIsPassedByCopy() {
         testValueIsPassedByCopyImpl()
     }
+
+    // todo add .copy(name=value) as a special function on data classes
+
+    // todo implement and test value classes being inlined:
+    //  we explode them, and must make their body-functions static...
+
+    // todo implement and test working with strings
+    // todo test specialized classes being usable
 
 }

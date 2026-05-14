@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
+import me.anno.zauber.interpreting.ZClass.Companion.nativeTypes
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -152,6 +153,13 @@ class Instance(
 
     operator fun get(field: Field): Instance {
         val fieldIndex = clazz.fields.indexOf(field)
+
+        if (fieldIndex == -1 &&
+            field.scope == (clazz.type as ClassType).clazz &&
+            field.name == "content" &&
+            clazz.type in nativeTypes
+        ) return this
+
         check(fieldIndex != -1) { "Instance $this does not have field $field (${field.scope})" }
 
         if (fieldIndex >= fields.size) {

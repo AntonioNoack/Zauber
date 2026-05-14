@@ -4,6 +4,7 @@ import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.ListOfByteArrays
+import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
@@ -28,13 +29,24 @@ import me.anno.zauber.types.specialization.Specialization.Companion.noSpecializa
 import java.io.File
 
 /**
- * todo as the next step, we need a function for JS to get the Unit-instance,
- *   and also, all get-object-instance calls should be wrapped, because they are pretty big and appear everywhere
+ * todo yield can be implemented by modifying graph + virtual class, and I think we can do that
+ *
+ * todo extend tests to have code-gen stages
+ *
+ * todo split value classes into their components (exploded local fields, exploded class properties)
+ * todo value class methods are two-fold: with reference, with just values
+ *
+ * todo copy/adjust this class into JVM-bytecode
+ * todo custom WASM-runtime, so we can execute code faster for testing
  *
  * directly encode binary WASM
  * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
  * */
 class WASMSourceGenerator : CSourceGenerator() {
+
+    companion object {
+        const val CLASS_INDEX_NAME = "_type"
+    }
 
     val functionTypes = HashMap<FunctionType, Int>()
     val typeList = ArrayList<WASMType2>()
@@ -49,12 +61,13 @@ class WASMSourceGenerator : CSourceGenerator() {
     val globalNames = ArrayList<String>()
     val globalStructs = ArrayList<WASMType.Ref>()
     val objectGlobals = HashMap<Scope, Int>()
+    lateinit var objectGetters: Map<Scope, Int>
+    lateinit var objects: List<ClassSpecialization>
 
     val bodies = ListOfByteArrays(binary.out)
-
     val structs = HashMap<Pair<ClassSpecialization, Boolean>, WASMStruct>()
 
-    fun registerMethods(data: DependencyData) {
+    fun registerMethods(data: DependencyData, mainMethod: Method) {
         // imported methods first
         functionIndexList.addAll(data.calledMethods)
         functionIndexList.partitionBy { method -> method.method.body != null }
@@ -72,10 +85,10 @@ class WASMSourceGenerator : CSourceGenerator() {
                 importList.add(methodName to funcType)
             }
         }
-    }
 
-    lateinit var objectGetters: Map<Scope, Int>
-    lateinit var objects: List<ClassSpecialization>
+        // register function type for main
+        getMainMethodType(mainMethod)
+    }
 
     fun defineObjectGetters(data: DependencyData) {
         // find constructed object-likes
@@ -90,7 +103,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
 
-        registerMethods(data)
+        registerMethods(data, mainMethod)
         defineObjectGetters(data)
         depth++
 
@@ -113,6 +126,8 @@ class WASMSourceGenerator : CSourceGenerator() {
         for (obj in objects) {
             appendObjectGetterCode(obj.clazz)
         }
+
+        appendMainMethodCode(mainMethod)
 
         depth--
 
@@ -137,7 +152,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         val functionTypes = functionIndexList.subList(importList.size, functionIndexList.size)
             .map { method -> getFunctionTypeIndex(method) }
         val objectGetterTypes = objects.map { getObjectGetterFunctionTypeIndex(it.clazz) }
-        val implFunctions = functionTypes + objectGetterTypes
+        val implFunctions = functionTypes + objectGetterTypes + getMainMethodType(mainMethod)
         check(implFunctions.size == bodies.size)
         binary.writeFunctionSection(implFunctions)
         binary.writeMemorySection()
@@ -145,6 +160,36 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.writeExportSection(exportList)
         binary.writeCodeSection(bodies)
         binary.out.removeSection(0, start)
+    }
+
+    fun getMainMethodType(mainMethod: Method): Int {
+        // could have args...
+        return getFunctionTypeIndex(FunctionType(emptyList(), emptyList()))
+    }
+
+    fun appendMainMethodCode(mainMethod: Method) {
+        val mainMethodIndex = functionIndexList.size + objects.size
+        exportList.add("main" to mainMethodIndex)
+
+        builder.append("(func main (export \"main\") (type $")
+            .append(getMainMethodType(mainMethod)).append(")")
+        depth++
+        nextLine()
+
+        declareFuncHasNoLocalFields()
+        appendGetObjectInstance(mainMethod.ownerScope, root)
+        callMethod(MethodSpecialization(mainMethod, noSpecialization))
+        nextLine()
+
+        appendDrop()
+
+        builder.setLength(builder.length - 2)
+        depth--
+        builder.append(")")
+        nextLine()
+
+        binary.u8(WASMOpcode.END)
+        bodies.finishBody()
     }
 
     override fun comment(body: () -> Unit) {
@@ -241,7 +286,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
             for (property in struct.properties) {
 
-                builder.append(" (field $").append(property.field.name)
+                builder.append(" (field $").append(property.field?.name ?: CLASS_INDEX_NAME)
                     .append(" ")
 
                 when (val t = property.wasmType) {
@@ -300,7 +345,9 @@ class WASMSourceGenerator : CSourceGenerator() {
             // todo throwing methods could return the value as an extra return value...
             //  or we finally use WASM exceptions :)
 
-            val returnTypes = listOf(getWASMType(method.returnType!!))
+            val returnType = method.returnType
+                ?: throw IllegalStateException("$method misses return type")
+            val returnTypes = listOf(getWASMType(returnType))
             val functionType = FunctionType(params, returnTypes)
             return getFunctionTypeIndex(functionType)
         }
@@ -626,6 +673,8 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
+    val classIndexProp = listOf(WASMProperty(null, WASMType.I32, 0))
+
     fun getStruct(classSpecialization: ClassSpecialization, isNullable: Boolean): WASMStruct {
         check(classSpecialization.clazz.isClassLike()) {
             "Invalid struct: $classSpecialization"
@@ -652,13 +701,13 @@ class WASMSourceGenerator : CSourceGenerator() {
                             field.valueType
                                 ?: throw IllegalStateException("Missing valueType for $field")
                         )
-                        WASMProperty(field, type, index)
+                        WASMProperty(field, type, classIndexProp.size + index)
                     }
 
                 val typeIndex = typeList.size
                 var typeName = getClassName(clazz, spec)
                 if (isNullable) typeName += "?"
-                val struct = WASMStruct(superType, typeIndex, typeName, props, isNullable)
+                val struct = WASMStruct(superType, typeIndex, typeName, classIndexProp + props, isNullable)
                 typeList.add(struct)
                 struct
             }
@@ -1074,7 +1123,13 @@ class WASMSourceGenerator : CSourceGenerator() {
         appendGetField(graph, expr.self)
         appendValueParams(graph, expr.valueParameters)
 
-        // todo do inheritance/method-res if necessary
+        if (expr.methods !is FullMap) {
+            if (expr.sample.ownerScope.isInterface()) {
+                TODO("interface method-res")
+            } else {
+                TODO("child-class method-res")
+            }
+        }
         callMethod(expr.methodSpec)
         nextLine()
     }
@@ -1090,7 +1145,8 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun callMethod(method: MethodSpecialization) {
-        val index = functionIndexMap.getValue(method)
+        val index = functionIndexMap[method]
+            ?: throw IllegalStateException("Missing $method, cannot call it")
         builder.append("call $").append(getMethodName(method))
         binary.call(index)
     }

@@ -9,6 +9,7 @@ data class WASMStruct(
     val properties: List<WASMProperty>,
     val isNullable: Boolean,
 ) : WASMType2() {
+
     private val mapping = properties.associateBy { it.field }
 
     fun getIndex(field: Field): Int {
