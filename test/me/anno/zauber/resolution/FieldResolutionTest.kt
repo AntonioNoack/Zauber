@@ -43,6 +43,7 @@ class FieldResolutionTest {
                 val tested = x
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
@@ -73,6 +74,7 @@ class FieldResolutionTest {
                 val tested = x
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
@@ -91,6 +93,7 @@ class FieldResolutionTest {
                 }
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
@@ -112,6 +115,7 @@ class FieldResolutionTest {
         object Helper {
             val x : Int = 0
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findField(scope)
@@ -136,6 +140,7 @@ class FieldResolutionTest {
         object Helper {
             val x : Float = 0
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
@@ -157,6 +162,7 @@ class FieldResolutionTest {
         object Helper {
             val y : Int = 0
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val tested0 = findFieldType(scope)
@@ -176,15 +182,21 @@ class FieldResolutionTest {
                 object NotInnerClassO {
                     val tested = x // must be Int
                 }
+                inner class InnerClass {
+                    val tested = x // must be Float
+                }
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val misleading = scope["Target"]["MisleadingNoInstance"]
         val tested0 = findFieldType(misleading["NotInnerClassC"])
         val tested1 = findFieldType(misleading["NotInnerClassO"])
+        val tested2 = findFieldType(misleading["InnerClass"])
         assertEquals(Types.Int, tested0)
         assertEquals(Types.Int, tested1)
+        assertEquals(Types.Float, tested2)
     }
 
     @Test
@@ -204,6 +216,7 @@ class FieldResolutionTest {
                 }
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val misleading = scope["Target"]["MisleadingNoInstance"]
@@ -232,6 +245,7 @@ class FieldResolutionTest {
                 }
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val misleading = scope["Target"]["MisleadingNoInstance"]
@@ -278,6 +292,8 @@ class FieldResolutionTest {
 
     @Test
     fun testTargetTypeMismatch() {
+        // todo why is this not failing?
+        //  selfType is explicit, so objects cannot be applied randomly
         assertThrows<IllegalStateException> {
             val scope = typeResolveScope(
                 """
@@ -288,6 +304,7 @@ class FieldResolutionTest {
                         val tested = 0.x
                     }
                 }
+                package zauber
                 """.trimIndent()
             )
             val actualType = findFieldType(scope).resolvedName
@@ -458,6 +475,7 @@ class FieldResolutionTest {
 
     @Test
     fun testCompanionBeingOptionalForImported() {
+        // todo why is helper005f.Wrapper.x a class-type?
         val code = """
         import helper005f.Wrapper.x
         class Inner {
@@ -470,9 +488,11 @@ class FieldResolutionTest {
                 val x = 0
             }
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
+        println(actualType.javaClass.simpleName)
         assertEquals(Types.Int, actualType)
     }
 
@@ -496,6 +516,7 @@ class FieldResolutionTest {
 
     @Test
     fun testFieldExtensionInner() {
+        // todo oh no, this has a dependency-order-issue
         val code = """
         val Int.next get() = 0f
         class Inner {
@@ -552,6 +573,7 @@ class FieldResolutionTest {
         val code = """
         val Int.target = 0
         val tested = 0.target
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
@@ -566,6 +588,7 @@ class FieldResolutionTest {
             val tested = 0.next
             return tested
         }
+        package zauber
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)

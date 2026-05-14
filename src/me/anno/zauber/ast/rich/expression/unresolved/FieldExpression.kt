@@ -25,6 +25,12 @@ class FieldExpression(
         private val LOGGER = LogManager.getLogger(FieldExpression::class)
     }
 
+    init {
+        check(scope.isVisibleFrom(field.ownerScope)) {
+            "$field is not visible from $scope, expr cannot be created"
+        }
+    }
+
     override fun toStringImpl(depth: Int): String = field.toString(depth)
     override fun clone(scope: Scope) = FieldExpression(field, scope, origin)
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
@@ -32,7 +38,7 @@ class FieldExpression(
     override fun needsBackingField(methodScope: Scope): Boolean = field.isBackingField(methodScope)
 
     override fun resolveField(context: ResolutionContext): ResolvedField {
-        if (LOGGER.isInfoEnabled) LOGGER.info("FieldExpr.findGenerics(${field.selfType}.${field.name} in context), must return non-null")
+        if (LOGGER.isInfoEnabled) LOGGER.info("FieldExpr.findGenerics(${field.selfType ?: field.ownerScope}.${field.name} in context), must return non-null")
         val scopeSelfType = TypeResolution.getSelfType(scope)
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
         return FieldResolver.findMemberMatch(

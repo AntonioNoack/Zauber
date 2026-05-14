@@ -30,7 +30,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     ): ResolvedField? {
         scope ?: return null
 
-        // println("Searching for '$name' in $scope")
+        // println("Searching for '$name' in $scope, from ${resolveOrigin(origin)}")
 
         val selfType = context.selfType
         val returnType = context.targetType
