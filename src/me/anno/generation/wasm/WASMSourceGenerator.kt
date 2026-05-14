@@ -49,7 +49,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     val functionTypes = HashMap<FunctionType, Int>()
-    val typeList = ArrayList<WASMType2>()
+    val typeList = ArrayList<WASMFuncTypeOrStruct>()
 
     val binary = WASMBinaryWriter()
     val importList = ArrayList<Pair<String, Int>>()

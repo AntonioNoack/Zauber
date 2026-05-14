@@ -1,8 +1,8 @@
 package me.anno.zauber.resolution
 
-import me.anno.zauber.ast.rich.Field
 import me.anno.utils.ResolutionUtils.get
 import me.anno.utils.ResolutionUtils.typeResolveScope
+import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -15,14 +15,15 @@ import org.junit.jupiter.api.assertThrows
 class FieldResolutionTest {
 
     companion object {
+
         fun findField(scope: Scope, name: String = "tested"): Field =
             tryFindField(scope, name) ?: throw IllegalStateException("Missing field '$name' in scope '$scope'")
 
         fun findFieldType(scope: Scope, name: String = "tested"): Type =
-            findField(scope,name).resolveValueType(ResolutionContext.minimal)
+            findField(scope, name).resolveValueType(ResolutionContext.minimal)
 
         fun tryFindField(scope: Scope, name: String): Field? {
-            val field = scope[ScopeInitType.AFTER_DISCOVERY]
+            val field = scope[ScopeInitType.AFTER_RESOLVE_METHOD_BODY]
                 .fields.firstOrNull { it.name == name }
             if (field != null) return field
             for (child in scope.children) {

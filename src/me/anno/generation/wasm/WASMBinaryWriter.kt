@@ -156,7 +156,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         endSection(t)
     }
 
-    fun writeTypeSection(types: List<WASMType2>) {
+    fun writeTypeSection(types: List<WASMFuncTypeOrStruct>) {
         u8(0x01) // type section
 
         val t = WASMBinaryWriter()

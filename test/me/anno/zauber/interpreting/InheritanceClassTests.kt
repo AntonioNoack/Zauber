@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test
 // todo most relevant topics:
 //  lambda-capturing fields, var->Wrapper vs val->ConstructorParam
 //  yielding
-//  Java code gen for good real performance
 //  Python parser
 
 class InheritanceClassTests {

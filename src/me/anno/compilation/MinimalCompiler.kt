@@ -64,6 +64,9 @@ abstract class MinimalCompiler {
     }
 
     fun testCompileMainAndRun(code: String, debug: Boolean, registerMethods: () -> Unit): String {
+
+        LOGGER.info("Starting compilation")
+
         val testScope = ResolutionUtils.typeResolveScope(code)
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
         Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))

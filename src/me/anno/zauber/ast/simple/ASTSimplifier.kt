@@ -371,7 +371,7 @@ object ASTSimplifier {
             val method0 = ResolvedMethod(
                 ownerTypes, field.getter ?: throw IllegalStateException("Missing getter for $field"),
                 ParameterList.emptyParameterList(),
-                context, expr.scope, MatchScore(0)
+                context, expr.scope, MatchScore(0), expr.origin
             )
             return simplifyCall(
                 block1v.block, block1, self, expr.self,
@@ -466,7 +466,7 @@ object ASTSimplifier {
             val method0 = ResolvedMethod(
                 ownerTypes, field.setter ?: throw IllegalStateException("Missing setter for $field"),
                 ParameterList.emptyParameterList(),
-                context, expr.scope, MatchScore(0)
+                context, expr.scope, MatchScore(0), expr.origin
             )
             return simplifyCall(
                 block2v.block, block2, self, expr.self,

@@ -8,7 +8,7 @@ data class WASMStruct(
     val typeName: String,
     val properties: List<WASMProperty>,
     val isNullable: Boolean,
-) : WASMType2() {
+) : WASMFuncTypeOrStruct() {
 
     private val mapping = properties.associateBy { it.field }
 

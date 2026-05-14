@@ -24,7 +24,9 @@ import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.arithmetic.UnionType
 
 class LambdaExpression(
     var variables: List<LambdaVariable>?,
@@ -60,7 +62,14 @@ class LambdaExpression(
         val bodyContext = context
             .withTargetType(null)
 
-        when (val targetLambdaType = context.targetType) {
+        var targetLambdaType = context.targetType
+            ?.specialize(context)
+
+        /*while (targetLambdaType is GenericType) {
+            targetLambdaType = targetLambdaType.superBounds
+        }*/
+
+        when (targetLambdaType) {
             is LambdaType -> {
                 // automatically add it...
                 if (variables == null) {
@@ -102,18 +111,18 @@ class LambdaExpression(
                 }
                 return LambdaType(newScopeType, newParameters, newReturnType)
             }
-            is ClassType -> {
+            /*is ClassType, is UnionType -> {
                 // is this ok??? OMG, looks like it is fine
                 return targetLambdaType
-            }
-            null -> {
+            }*/
+           else -> {
                 // else 'it' is not defined
                 val returnType = TypeResolution.resolveType(bodyContext, body)
                 return LambdaType(null, ensureVariables().map {
                     LambdaParameter(it.name, it.type!!)
                 }, returnType)
             }
-            else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
+           // else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
         }
     }
 
@@ -200,7 +209,7 @@ class LambdaExpression(
         val method = ResolvedConstructor(
             ParameterList.emptyParameterList(),
             classConstructor.selfAsConstructor!!, context, scope,
-            MatchScore(0)
+            MatchScore(0), origin
         )
         val params = listOf(selfMethod).map { it.resolve(context) }
         return ResolvedCallExpression(null, method, params, scope, origin)

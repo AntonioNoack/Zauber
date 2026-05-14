@@ -16,6 +16,7 @@ enum class ScopeInitType {
     AFTER_OVERRIDES,
 
     RESOLVE_METHOD_BODY,
+    AFTER_RESOLVE_METHOD_BODY,
 
     CODE_GENERATION,
 }

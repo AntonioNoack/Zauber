@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.Member
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.scope.Scope
@@ -18,12 +19,21 @@ abstract class ResolvedMember<V : Member>(
     val resolved: V,
     val context: ResolutionContext,
     val codeScope: Scope,
-    val matchScore: MatchScore
+    val matchScore: MatchScore,
+    origin: Int
 ) {
 
     init {
-        check(!selfTypeParameters.containsNull()) { "All self-type-params within $this must be resolved" }
-        check(!callTypeParameters.containsNull()) { "All call-type-params within $this must be resolved" }
+        check(!selfTypeParameters.containsNull()) {
+            "All self-type-params must be resolved,\n" +
+                    "  within $this,\n" +
+                    "  at ${resolveOrigin(origin)}"
+        }
+        check(!callTypeParameters.containsNull()) {
+            "All call-type-params must be resolved,\n" +
+                    "  within $this,\n" +
+                    "  at ${resolveOrigin(origin)}"
+        }
     }
 
     val selfType get() = context.selfType

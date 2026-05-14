@@ -172,7 +172,7 @@ class DotExpression(
                         val valueParam0 = listOf(ValueParameterImpl(SpecialFieldNames.OUTER_FIELD_NAME, baseTypeI, false))
                         ConstructorResolver.findMemberInScopeImpl(
                             innerClass, base.name,
-                            typeParameters, valueParam0 + valueParameters, context1
+                            typeParameters, valueParam0 + valueParameters, context1, origin
                         )
                     } else null
                 } else null
@@ -207,7 +207,7 @@ class DotExpression(
             return ResolvedField(
                 ParameterList.emptyParameterList(),
                 field, ParameterList.emptyParameterList(), context, scope,
-                false, MatchScore(0)
+                false, MatchScore(0), origin
             )
         } else {
             TODO("return class-like instance")

@@ -3,10 +3,10 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
@@ -14,7 +14,11 @@ class ResolvedMethod(
     ownerTypes: ParameterList, method: Method, callTypes: ParameterList,
     context: ResolutionContext, codeScope: Scope,
     matchScore: MatchScore, // selfType, then all parameters
-) : ResolvedMember<Method>(ownerTypes, callTypes, method, context, codeScope, matchScore) {
+    origin: Int,
+) : ResolvedMember<Method>(
+    ownerTypes, callTypes,
+    method, context, codeScope, matchScore, origin
+) {
 
     val returnType get() = resolved.returnType?.specialize(specialization)
 

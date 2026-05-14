@@ -64,7 +64,7 @@ class EnsureNotNullExpression(
         val fieldR = ResolvedField(
             ParameterList.emptyParameterList(), field,
             ParameterList.emptyParameterList(), contextI, scope, true,
-            MatchScore(0)
+            MatchScore(0), origin
         )
         val fieldExpr = ResolvedGetFieldExpression(ownerR, fieldR, scope, origin)
         val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
@@ -73,7 +73,7 @@ class EnsureNotNullExpression(
         val thrownScope = Types.NullPointerException.clazz
         val thrownConstr = ConstructorResolver.findMemberInScopeImpl(
             thrownScope, "NullPointerException", emptyList(),
-            listOf(ValueParameterImpl(null, Types.String, false)), contextI
+            listOf(ValueParameterImpl(null, Types.String, false)), contextI, origin
         ) ?: throw IllegalStateException("Missing constructor NullPointerException(String)")
         val thrownExpr = ResolvedCallExpression(null, thrownConstr, listOf(messageExpr), scope, origin)
         val throwExpr = ThrowExpression(thrownExpr, scope, origin)

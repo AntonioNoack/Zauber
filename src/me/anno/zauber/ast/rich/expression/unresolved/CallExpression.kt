@@ -92,7 +92,7 @@ class CallExpression(
 
                 val constructor = ConstructorResolver.findMemberInScopeImpl(
                     baseScope, baseScope.name,
-                    typeParameters, valueParameters, context
+                    typeParameters, valueParameters, context, origin
                 )
 
                 constructor

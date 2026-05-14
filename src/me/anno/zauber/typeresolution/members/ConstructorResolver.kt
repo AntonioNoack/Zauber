@@ -29,7 +29,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         LOGGER.info("Checking scope '$scope' for constructor '$name'")
         scope ?: return null
         if (scope.name == name) {
-            val constructor = findMemberInScopeImpl(scope, name, typeParameters, valueParameters, context)
+            val constructor = findMemberInScopeImpl(scope, name, typeParameters, valueParameters, context, origin)
             if (constructor != null) return constructor
         }
         LOGGER.info("  children: ${scope.children.map { it.name }}")
@@ -37,11 +37,8 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             if (child.name == name/* && child.scopeType?.isClassType() == true*/) {
                 LOGGER.info("Found constructor-name pre-match: $child")
                 val constructor = findMemberInScopeImpl(
-                    child[ScopeInitType.AFTER_OVERRIDES],
-                    name,
-                    typeParameters,
-                    valueParameters,
-                    context
+                    child[ScopeInitType.AFTER_OVERRIDES], name,
+                    typeParameters, valueParameters, context, origin
                 )
                 if (constructor != null) return constructor
             }
@@ -53,7 +50,8 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         scope: Scope, name: String,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        context: ResolutionContext
+        context: ResolutionContext,
+        origin: Int
     ): ResolvedConstructor? {
 
         check(scope.name == name) {
@@ -61,7 +59,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         }
 
         if (scope.scopeType == ScopeType.TYPE_ALIAS) {
-            return getByTypeAlias(scope, typeParameters, valueParameters, context)
+            return getByTypeAlias(scope, typeParameters, valueParameters, context, origin)
         }
 
         val children = scope.children
@@ -76,7 +74,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             val match = findMemberMatch(
                 constructor, constructor.selfType, returnType,
                 typeParameters, valueParameters,
-                /* todo is this ok?? */scope,
+                /* todo is this ok?? */scope, origin
             )
             LOGGER.info("Match($constructor): $match")
             if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {
@@ -90,7 +88,8 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         scope: Scope,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        context: ResolutionContext
+        context: ResolutionContext,
+        origin: Int
     ): ResolvedConstructor? {
 
         // this can still happen during type-resolution,
@@ -113,7 +112,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         return findMemberInScopeImpl(
             scope, scope.name,
             typeParameters2, valueParameters,
-            context
+            context, origin
         )
     }
 
@@ -126,6 +125,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         codeScope: Scope,
+        origin: Int
     ): ResolvedConstructor? {
 
         val typeParameters = typeParameters
@@ -144,7 +144,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             constructor.selfType, Specialization(generics),
             false, returnType
         )
-        return ResolvedConstructor(generics, constructor, context, codeScope, matchScore)
+        return ResolvedConstructor(generics, constructor, context, codeScope, matchScore, origin)
     }
 
     fun List<Type>.toParameterList(generics: List<Parameter>): ParameterList {

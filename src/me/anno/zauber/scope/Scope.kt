@@ -562,13 +562,22 @@ class Scope(val name: String, val parent: Scope? = null) {
             } else null
         }
 
+    fun isVisibleFrom(childScope: Scope): Boolean {
+        var self = this
+        while (true) {
+            if (self == childScope) return true
+            self = self.parentIfSameFileAndVisible ?: break
+        }
+        return false
+    }
+
     fun isVisible(ownScopeType: ScopeType, parentScopeType: ScopeType?): Boolean {
         if (ownScopeType == ScopeType.PACKAGE) return false
-        if (parentScopeType == null || parentScopeType.isObject()) return true
+        if (parentScopeType == null || parentScopeType.isObjectLike()) return true
         if (ownScopeType == ScopeType.INNER_CLASS) return true
         if (ownScopeType.isClassLike()) return false
         if (ownScopeType.isInsideExpression()) return true
-        TODO("isVisible? $ownScopeType > $parentScopeType")
+        throw NotImplementedError("isVisible? $ownScopeType > $parentScopeType")
     }
 
     fun createImmutableField(initialValue: Expression): Field {

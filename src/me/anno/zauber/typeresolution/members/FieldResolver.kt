@@ -148,7 +148,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             // println("Generics for resolved field/2: $field, $selfType -> $ownerTypes, $generics, ctx: ${context.specialization}")
             return ResolvedField(
                 ownerTypes, field, generics,
-                context, codeScope, isBackingField, matchScore
+                context, codeScope, isBackingField, matchScore, origin
             )
         } else {
 
@@ -185,7 +185,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             return ResolvedField(
                 generics.subList(0, fieldSelfParams.size), field,
                 generics.subList(fieldSelfParams.size, generics.size),
-                context, codeScope, isBackingField, matchScore
+                context, codeScope, isBackingField, matchScore, origin
             )
         }
     }

@@ -210,16 +210,13 @@ object CallWithNames {
         return createArrayOfExpr(context, instanceType, values.map { it.value }, scope, origin)
     }
 
-    private fun isUnknownGenericType(instanceType: Type?): Boolean {
-        return instanceType == null || instanceType !is GenericType ||
-                (instanceType.scope.parent?.pathStr == "zauber" && run {
-                    val name = instanceType.scope.selfAsMethod?.name
-                    name == "arrayOf" || name == "listOf"
-                })
+    private fun isUnknownGenericType(instanceType: Type?, scope: Scope): Boolean {
+        return instanceType is GenericType &&
+                instanceType.scope.isVisibleFrom(scope)
     }
 
-    private fun Type?.nullIfUnknown(): Type? {
-        return if (isUnknownGenericType(this)) null else this
+    private fun Type?.nullIfUnknown(scope: Scope): Type? {
+        return if (isUnknownGenericType(this, scope)) null else this
     }
 
     fun createArrayOfExpr(
@@ -228,27 +225,22 @@ object CallWithNames {
         scope: Scope, origin: Int,
     ): Expression {
 
-        val instanceType = instanceType0?.nullIfUnknown()
+        val instanceType = instanceType0?.nullIfUnknown(scope)
             ?: run {
                 val tt = context.targetType
-                if (tt is ClassType && tt.clazz.pathStr == "zauber.Array") tt.typeParameters?.first()?.nullIfUnknown()
+                if (tt is ClassType && tt.clazz.pathStr == "zauber.Array") tt.typeParameters?.first()?.nullIfUnknown(scope)
                 else null
             } ?: run {
                 val types = values.map { it.resolveReturnType(context.withTargetType(null)) }
                 if (types.isNotEmpty()) unionTypes(types) else null
-            }
+            } ?: throw IllegalStateException(
+                "Unknown instance type for createArrayOfExpr (this will fail to resolve), " +
+                        "at ${resolveOrigin(origin)}"
+            )
 
-        val typeParameters =
-            if (instanceType != null && isUnknownGenericType(instanceType)) listOf(instanceType) else null
+        val typeParameters = listOf(instanceType)
 
         LOGGER.info("createArrayOfExpr($values, $typeParameters by $instanceType), spec: ${Specializations.specialization}")
-        if (instanceType is GenericType) LOGGER.warn(
-            "Unknown instance type: $instanceType, ${
-                isUnknownGenericType(
-                    instanceType
-                )
-            }, ${instanceType.scope.selfAsMethod?.name}"
-        )
 
         // this shall be the implementation of ArrayOf():
         //  create an Array-instance,

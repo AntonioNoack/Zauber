@@ -117,7 +117,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val context = ResolutionContext(null, false, returnType, emptyMap())
             ResolvedMethod(
                 emptyParameterList(), method, generics,
-                context, codeScope, matchScore
+                context, codeScope, matchScore, origin
             )
         } else {
 
@@ -142,7 +142,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             ResolvedMethod(
                 generics.subList(0, methodSelfParams.size), method,
                 generics.subList(methodSelfParams.size, generics.size),
-                context, codeScope, matchScore
+                context, codeScope, matchScore, origin
             )
         }
     }
@@ -251,7 +251,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
         val importedConstructor = ConstructorResolver.findMemberInScopeImpl(
             nameAsImport, nameAsImport.name,
-            typeParameters, valueParameters, context
+            typeParameters, valueParameters, context, origin
         )
         if (importedConstructor != null) return importedConstructor
 

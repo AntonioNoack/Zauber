@@ -3,6 +3,7 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
@@ -38,8 +39,12 @@ class ResolvedField(
     ownerTypes: ParameterList,
     field: Field, callTypes: ParameterList,
     context: ResolutionContext, codeScope: Scope,
-    val isBackingField: Boolean, matchScore: MatchScore
-) : ResolvedMember<Field>(ownerTypes, callTypes, field, context, codeScope, matchScore) {
+    val isBackingField: Boolean, matchScore: MatchScore,
+    origin: Int,
+) : ResolvedMember<Field>(
+    ownerTypes, callTypes,
+    field, context, codeScope, matchScore, origin
+) {
 
     companion object {
         private val LOGGER = LogManager.getLogger(ResolvedField::class)
@@ -152,9 +157,10 @@ class ResolvedField(
     }
 
     init {
-        val ownerNames = field.selfTypeTypeParams(context.selfType)
-        check(ownerNames.size == ownerTypes.size) {
-            "Expected $ownerNames.size to be $ownerTypes.size for field $field"
+        val expectedOwnerTypes = field.selfTypeTypeParams(context.selfType)
+        check(expectedOwnerTypes.size == ownerTypes.size) {
+            "Expected $expectedOwnerTypes.size to be $ownerTypes.size for field $field,\n  " +
+                    "at ${resolveOrigin(origin)}"
         }
         check(field.typeParameters.size == callTypes.size)
     }

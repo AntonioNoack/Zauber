@@ -46,51 +46,74 @@ object MethodOverrides {
         if (!scope.isClassLike() || scope.scopeType == ScopeType.PACKAGE) return
         if (!processedScopes.add(scope)) return
 
+        scope[ScopeInitType.ADD_OVERRIDES]
+
+        val selfMethods0 = scope.methods0
+        val selfMethods = selfMethods0.groupBy { it.name }
+        val foundMethods = HashSet<Method>()
+
+        val selfFields0 = scope.fields
+        val foundFields = HashSet<Field>()
+
         for (superCall in scope.superCalls) {
             val superScope = superCall.type.clazz
             resolveOverrides(superScope)
-            addAllMethodOverrides(scope, superCall, superScope)
-            addAllFieldOverrides(scope, superScope)
+            addAllMethodOverrides(scope, superCall, superScope, selfMethods, foundMethods)
+            addAllFieldOverrides(scope, superScope, selfFields0, foundFields)
+        }
+
+        // check that all methods with override-flag have found their partner
+        for (method in selfMethods0) {
+            if (method.flags.hasFlag(Flags.OVERRIDE) && method !in foundMethods) {
+                LOGGER.warn("No base-method found for $scope: $method, found: $foundMethods")
+            }
+        }
+
+        for (field in selfFields0) {
+            if (field.flags.hasFlag(Flags.OVERRIDE) && field !in foundFields) {
+                LOGGER.warn("No base-field found for $field in $scope")
+            }
         }
     }
 
-    private fun addAllMethodOverrides(scope: Scope, superCall: SuperCall, superScope: Scope) {
-        val selfMethods0 = scope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.explicitSelfType }
-        val selfMethods = selfMethods0.groupBy { it.name }
-
-        val foundMethods = HashSet<Method>()
-        // todo check that all methods with override-flag have found their partner
+    private fun addAllMethodOverrides(
+        scope: Scope, superCall: SuperCall, superScope: Scope,
+        selfMethods: Map<String, List<Method>>,
+        foundMethods: HashSet<Method>
+    ) {
         val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.explicitSelfType }
-        for (method in superMethods) {
-            if (method.isPrivate()) continue
+        for (superMethod in superMethods) {
+            if (superMethod.isPrivate()) continue
 
             // find match
-            val selfType = method.selfType ?: scope.typeWithArgs
-            val methodTypeParameters = method.typeParameters.map { parameter ->
+            val selfType = superMethod.selfType ?: scope.typeWithArgs
+            val methodTypeParameters = superMethod.typeParameters.map { parameter ->
                 superCall.type.typeParameters
                     .resolveGenerics(selfType, parameter.type)
                     .resolve(scope)
             }
 
-            val methodValueParameters = method.valueParameters.map { parameter ->
+            val methodValueParameters = superMethod.valueParameters.map { parameter ->
                 superCall.type.typeParameters
                     .resolveGenerics(selfType, parameter.type)
                     .resolve(scope)
             }
 
-            val selfMethods = (selfMethods[method.name] ?: emptyList())
+            val selfMethods = (selfMethods[superMethod.name] ?: emptyList())
                 .filter {
                     sameParameters(scope, it.typeParameters, methodTypeParameters) &&
                             sameParameters(scope, it.valueParameters, methodValueParameters)
                 }
+
             if (selfMethods.size > 1) {
-                LOGGER.warn("Expected only one candidate for $method in $scope, but found $selfMethods")
+                LOGGER.warn("Expected only one candidate for $superMethod in $scope, but found $selfMethods")
             }
 
-            val isOpen = method.flags.hasFlag(Flags.OPEN) ||
-                    method.flags.hasFlag(Flags.OVERRIDE) ||
+            val isOpen = superMethod.flags.hasFlag(Flags.OPEN) ||
+                    superMethod.flags.hasFlag(Flags.OVERRIDE) ||
                     superScope.isInterface()
-            val isExplicitlyClosed = method.flags.hasFlag(Flags.FINAL)
+
+            val isExplicitlyClosed = superMethod.flags.hasFlag(Flags.FINAL)
 
             val selfMethod = selfMethods.firstOrNull()
             if (selfMethod == null) {
@@ -98,66 +121,59 @@ object MethodOverrides {
                 // println("adding ${method.name} from $superScope to $scope, options: ${scope.methods0.map { it.name }}")
 
                 // somehow create a new method linking to the old one
-                val newScope = scope.generate("f:${method.name}", ScopeType.METHOD)
-                newScope.typeParameters = method.typeParameters
+                val newScope = scope.generate("f:${superMethod.name}", ScopeType.METHOD)
+                newScope.typeParameters = superMethod.typeParameters
                 newScope.hasTypeParameters = true
-                newScope.selfAsMethod = method
+                newScope.selfAsMethod = superMethod
 
             } else {
+
                 foundMethods.add(selfMethod)
+
                 if (false) check(selfMethod.flags.hasFlag(Flags.OVERRIDE)) {
-                    "Expected $scope.$selfMethod to have override flag for $superScope.$method"
+                    "Expected $scope.$selfMethod to have override flag for $superScope.$superMethod"
                 }
                 if (false) check(isOpen && !isExplicitlyClosed) {
                     "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)}"
                 }
 
-                method.overriddenFor += selfMethod
-                selfMethod.overriddenBy += method
-            }
-        }
-        for (method in selfMethods0) {
-            if (method.flags.hasFlag(Flags.OVERRIDE) && method !in foundMethods) {
-                LOGGER.warn("No base-method found for $method in $scope")
+                superMethod.overriddenFor += selfMethod
+                selfMethod.overriddenBy += superMethod
             }
         }
     }
 
-    private fun addAllFieldOverrides(scope: Scope, superScope: Scope) {
-        val selfFields0 = scope.fields.filter { !it.explicitSelfType }
-        val foundFields = HashSet<Field>()
-        // todo check that all methods with override-flag have found their partner
+    private fun addAllFieldOverrides(
+        scope: Scope, superScope: Scope,
+        selfFields0: List<Field>,
+        foundFields: HashSet<Field>
+    ) {
         val superFields = superScope.fields.filter { !it.explicitSelfType }
-        for (field in superFields) {
-            if (field.isPrivate()) continue
+        for (superField in superFields) {
+            if (superField.isPrivate()) continue
 
             // find match
-            val selfField = selfFields0.firstOrNull { it.name == field.name }
+            val selfField = selfFields0.firstOrNull { it.name == superField.name }
 
-            val isOpen = field.flags.hasFlag(Flags.OPEN) ||
-                    field.flags.hasFlag(Flags.OVERRIDE) ||
+            val isOpen = superField.flags.hasFlag(Flags.OPEN) ||
+                    superField.flags.hasFlag(Flags.OVERRIDE) ||
                     superScope.isInterface()
-            val isExplicitlyClosed = field.flags.hasFlag(Flags.FINAL)
+            val isExplicitlyClosed = superField.flags.hasFlag(Flags.FINAL)
 
             if (selfField == null) {
                 // somehow create a new method linking to the old one
-                scope.addField(field)
+                scope.addField(superField)
             } else {
                 foundFields.add(selfField)
                 if (false) check(selfField.flags.hasFlag(Flags.OVERRIDE)) {
-                    "Expected $scope.$selfField to have override flag for $superScope.$field"
+                    "Expected $scope.$selfField to have override flag for $superScope.$superField"
                 }
                 if (false) check(isOpen && !isExplicitlyClosed) {
                     "$scope.$selfField cannot both be open and closed, got ${Flags.toString(selfField.flags)}"
                 }
 
-                field.overriddenFor += selfField
-                selfField.overriddenBy += field
-            }
-        }
-        for (field in selfFields0) {
-            if (field.flags.hasFlag(Flags.OVERRIDE) && field !in foundFields) {
-                LOGGER.warn("No base-method found for $field in $scope")
+                superField.overriddenFor += selfField
+                selfField.overriddenBy += superField
             }
         }
     }

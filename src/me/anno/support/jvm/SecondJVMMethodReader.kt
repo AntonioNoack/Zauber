@@ -364,7 +364,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val method1 = ResolvedMethod(
             ParameterList.emptyParameterList(), method,
             ParameterList.emptyParameterList(), ResolutionContext.minimal,
-            methodScope, MatchScore(0)
+            methodScope, MatchScore(0), origin
         )
         block.add(JVMSimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
         stack.add(dst)
@@ -885,7 +885,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         return ResolvedConstructor(
             ownerTypes, method,
             ResolutionContext.minimal, scope,
-            MatchScore(0)
+            MatchScore(0), origin
         )
     }
 
@@ -905,7 +905,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     ParameterList.emptyParameterList(), method,
                     ParameterList.emptyParameterList(),
                     ResolutionContext.minimal, scope,
-                    MatchScore(0)
+                    MatchScore(0), origin
                 )
             }
 

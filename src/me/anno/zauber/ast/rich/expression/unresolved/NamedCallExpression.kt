@@ -92,7 +92,7 @@ class NamedCallExpression(
                 val selfValueParameter = ValueParameterImpl(OUTER_FIELD_NAME, baseType, false)
                 ConstructorResolver.findMemberInScopeImpl(
                     innerClass, name, typeParameters,
-                    listOf(selfValueParameter) + valueParameters, context
+                    listOf(selfValueParameter) + valueParameters, context, origin
                 )
             } else null
         } else null
