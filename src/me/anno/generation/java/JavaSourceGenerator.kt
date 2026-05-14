@@ -213,12 +213,14 @@ open class JavaSourceGenerator : Generator() {
         return File(dst, packageScope.path.joinToString("/") + "/$name.$extension")
     }
 
-    fun createClassName(scope: Scope, specialization: Specialization): String {
+    open fun getClassName(scope: Scope, specialization: Specialization): String {
         return scope.name + createSpecializationSuffix(specialization)
     }
 
-    fun createPackageName(scope: Scope, specialization: Specialization): String {
-        return scope.name.capitalize() + "Kt" + createSpecializationSuffix(specialization)
+    open fun getPackageName(scope: Scope, specialization: Specialization): String {
+        check(scope.isPackage()) { "Expected scope for packageName to be package" }
+        check(specialization == Specialization.noSpecialization) { "Expected package to have empty specialization" }
+        return scope.name.capitalize() + "Kt"
     }
 
     open fun generateClassForScope(
@@ -237,10 +239,10 @@ open class JavaSourceGenerator : Generator() {
         val packageScope: Scope
         if (scope.scopeType == ScopeType.PACKAGE) {
             // we need some package helper
-            name = createPackageName(scope, specialization)
+            name = getPackageName(scope, specialization)
             packageScope = scope
         } else {
-            name = createClassName(scope, specialization)
+            name = getClassName(scope, specialization)
             packageScope = scope.parent!!
         }
         return name to packageScope
@@ -914,7 +916,7 @@ open class JavaSourceGenerator : Generator() {
                 appendFieldName(graph, expr.value)
 
                 val needsCopy = expr.value.type.needsCopy()
-                if (needsCopy) appendCopy()
+                if (needsCopy) appendCopy(graph, expr)
             }
             is SimpleCompare -> {
                 appendFieldName(graph, expr.left)
@@ -1085,7 +1087,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendCopy() {
+    open fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
         builder.append(".copy()")
     }
 
@@ -1245,13 +1247,15 @@ open class JavaSourceGenerator : Generator() {
 
     fun appendClassType(type: Scope, specialization: Specialization) {
 
-        check(type.scopeType != ScopeType.TYPE_ALIAS)
+        check(!type.isTypeAlias()) {
+            "Resolved type $type cannot be a type-alias"
+        }
 
-        val className = createClassName(type, specialization)
+        val className = getClassName(type, specialization)
         val path0 = type.parent!!.path + className
 
-        val path1 = if (type.scopeType == ScopeType.PACKAGE) {
-            val extraName = createPackageName(type, specialization)
+        val path1 = if (type.isPackage()) {
+            val extraName = getPackageName(type, specialization)
             path0 + extraName
         } else path0
 

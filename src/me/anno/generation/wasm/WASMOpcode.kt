@@ -64,5 +64,7 @@ object WASMOpcode {
 
     const val REF_NULL = 0xd0
     const val REF_IS_NULL = 0xd1
+    const val REF_AS_NON_NULL = 0xd4
+    // there are also nullability-jumps
 
 }

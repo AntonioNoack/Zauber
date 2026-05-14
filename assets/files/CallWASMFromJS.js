@@ -21,6 +21,7 @@ const imports = {
             return lib["obj_zauber_Unit"]()
         },
         'zauber_Int_plus_rtgkvs': () => {},
+        'zauber_Int_times_rtgkvs': () => {},
     }
 };
 

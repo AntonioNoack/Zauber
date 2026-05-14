@@ -17,6 +17,7 @@ import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -504,8 +505,8 @@ class RustSourceGenerator : CSourceGenerator() {
         }
     }
 
-    override fun appendCopy() {
-        // not necessary
+    override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
+        // not necessary, this is done by the owner-ship types
     }
 
     override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {

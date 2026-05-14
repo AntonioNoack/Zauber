@@ -17,6 +17,7 @@ import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -307,7 +308,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         appendValueParams(graph, expr.valueParameters)
     }
 
-    override fun appendCopy() {
+    override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
         builder.append(".copy_0()")
     }
 

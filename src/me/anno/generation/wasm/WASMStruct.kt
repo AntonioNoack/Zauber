@@ -3,6 +3,7 @@ package me.anno.generation.wasm
 import me.anno.zauber.ast.rich.Field
 
 data class WASMStruct(
+    val superType: WASMStruct?,
     val typeIndex: Int,
     val typeName: String,
     val properties: List<WASMProperty>,

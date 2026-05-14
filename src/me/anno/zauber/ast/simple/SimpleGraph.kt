@@ -6,6 +6,7 @@ import me.anno.zauber.ast.simple.SimpleNode.Companion.getOwnership
 import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 class SimpleGraph(val method: MethodLike) {
 
@@ -66,6 +67,31 @@ class SimpleGraph(val method: MethodLike) {
             block.instructions.removeIf {
                 it is SimpleSelfConstructor
             }
+        }
+    }
+
+    fun removeWriteOnlyFields(alsoObjects: Boolean, alsoThis: Boolean) {
+        if (alsoThis) removeFieldIf { it in thisFields.values }
+        if (alsoObjects) removeFieldIf {
+            val type = it.type
+            type is ClassType && type.clazz.isObjectLike()
+        }
+        removeFieldIf { it.numReads == 0 }
+        renumberFields()
+    }
+
+    fun removeFieldIf(condition: (SimpleField) -> Boolean) {
+        fields.removeIf {
+            if (condition(it)) {
+                it.id = Int.MIN_VALUE
+                true
+            } else false
+        }
+    }
+
+    fun renumberFields() {
+        for (i in fields.indices) {
+            fields[i].id = i
         }
     }
 }

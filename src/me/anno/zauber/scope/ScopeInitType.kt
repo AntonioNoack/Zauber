@@ -8,6 +8,7 @@ enum class ScopeInitType {
     // todo in this resolveTypes step, we could resolve all method types...
     //  and when reading expressions, we can immediately read the proper types everywhere :)
     RESOLVE_TYPES,
+    AFTER_RESOLVE_TYPES,
 
     DEFAULT_PARAMETERS,
     ADD_OVERRIDES,

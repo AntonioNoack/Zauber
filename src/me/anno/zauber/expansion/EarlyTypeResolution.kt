@@ -4,6 +4,8 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInit
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.specialization.Specialization
 
 /**
  * Resolved/replaces method/field/class types, so we don't have to do it later on again
@@ -60,7 +62,17 @@ object EarlyTypeResolution {
 
     private fun replaceUnresolvedTypesForField(field: Field, selfScope: Scope?) {
         field.selfType = field.selfType?.resolve(selfScope)
-        field.valueType = field.valueType?.resolve(selfScope)
+        field.valueType = field.valueType?.resolve(selfScope) ?: run {
+            // todo define proper resolution context
+            // todo we need knownLambdas and extensionThis -> this should already happen in the method
+            val selfType = null
+            field.resolveValueType(
+                ResolutionContext(
+                    selfType, Specialization.noSpecialization,
+                    false, null, emptyMap(), emptyList()
+                )
+            )
+        }
     }
 
 }

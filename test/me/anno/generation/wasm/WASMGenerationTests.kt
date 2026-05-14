@@ -9,6 +9,10 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
+/**
+ * execution time: 2s,
+ * main cost is loading Node via NVM, I think
+ * */
 class WASMGenerationTests {
 
     private fun registerLib() {

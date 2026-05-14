@@ -166,8 +166,13 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         for (type in types) {
             when (type) {
                 is WASMStruct -> {
-                    t.u8(0x4e) // rec
-                    t.u32(1)
+                    t.u8(0x50) // subtype
+                    if (type.superType != null) {
+                        t.u32(1) // one supertype
+                        t.u32(type.superType.typeIndex)
+                    } else {
+                        t.u8(0x00) // no supertype
+                    }
 
                     t.u8(0x5f) // struct
 
