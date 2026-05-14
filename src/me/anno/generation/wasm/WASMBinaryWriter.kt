@@ -2,7 +2,6 @@ package me.anno.generation.wasm
 
 import me.anno.utils.ByteArrayOutputStream2
 import me.anno.utils.ListOfByteArrays
-import me.anno.zauber.types.specialization.MethodSpecialization
 
 class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2()) {
 
@@ -147,15 +146,12 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         le32(1) // version 1
     }
 
-    fun writeFunctionSection(
-        functions: List<MethodSpecialization>,
-        getFunctionType: (MethodSpecialization) -> Int,
-    ) {
+    fun writeFunctionSection(functionTypes: List<Int>) {
         u8(0x03) // Function section id
         val t = WASMBinaryWriter()
-        t.u32(functions.size)
-        for (fn in functions) {
-            t.u32(getFunctionType(fn))
+        t.u32(functionTypes.size)
+        for (fn in functionTypes) {
+            t.u32(fn)
         }
         endSection(t)
     }

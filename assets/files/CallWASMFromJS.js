@@ -8,6 +8,8 @@ const memory = new WebAssembly.Memory({
     initial: 64
 });
 
+let lib = {}
+
 // Declare imported functions
 const imports = {
     js: {
@@ -16,7 +18,7 @@ const imports = {
     env: {
         'zauber_println_wjpkxu': (self, value) => {
             console.log(value);
-            return self // todo we need unit from somewhere...
+            return lib["obj_zauber_Unit"]()
         },
         'zauber_Int_plus_rtgkvs': () => {},
     }
@@ -27,10 +29,11 @@ async function main() {
     const wasmModule = await WebAssembly.instantiate(wasmBytes, imports);
 
     // Access exported functions
-    const { test0_main_0 } = wasmModule.instance.exports;
+    const { test0_main_0, obj_test0 } = lib = wasmModule.instance.exports;
 
     // Call the wasm function
-    test0_main_0(0);
+    let instance = obj_test0()
+    test0_main_0(instance);
 }
 
 // cannot use await here

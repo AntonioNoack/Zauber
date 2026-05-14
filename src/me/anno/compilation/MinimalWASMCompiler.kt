@@ -21,7 +21,7 @@ class MinimalWASMCompiler : MinimalCompiler() {
             val command = $$"""
                 export NVM_DIR="$HOME/.nvm"
                 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-                nvm use $$nodeVersion
+                nvm use $$nodeVersion > /dev/null
                 node $$fileName
             """.trimIndent()
 

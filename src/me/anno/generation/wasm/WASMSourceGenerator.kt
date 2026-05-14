@@ -7,10 +7,7 @@ import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
@@ -26,6 +23,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.ClassSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import java.io.File
 
 /**
@@ -57,6 +55,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     val uniqueStructs = HashMap<List<WASMProperty>, WASMStruct>()
 
     fun registerMethods(data: DependencyData) {
+        // imported methods first
         functionIndexList.addAll(data.calledMethods)
         functionIndexList.partitionBy { method -> method.method.body != null }
 
@@ -69,15 +68,30 @@ class WASMSourceGenerator : CSourceGenerator() {
             } else {
                 check(!hadImpl) { "Imports must be first" }
                 val methodName = getMethodName(method)
-                val funcType = getFunctionType(method)
+                val funcType = getFunctionTypeIndex(method)
                 importList.add(methodName to funcType)
             }
         }
     }
 
+    lateinit var objectGetters: Map<Scope, Int>
+    lateinit var objects: List<ClassSpecialization>
+
+    fun defineObjectGetters(data: DependencyData) {
+        // find constructed object-likes
+        val objects = data.createdClasses.filter { it.clazz.isObjectLike() }
+        val getters = HashMap<Scope, Int>(objects.size)
+        for (i in objects.indices) {
+            getters[objects[i].clazz] = i
+        }
+        this.objects = objects
+        objectGetters = getters
+    }
+
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
 
         registerMethods(data)
+        defineObjectGetters(data)
         depth++
 
         for (method in functionIndexList) {
@@ -87,11 +101,14 @@ class WASMSourceGenerator : CSourceGenerator() {
 
         val methodImports = builder.toString()
         builder.clear()
-        indent()
 
         for (method in functionIndexList) {
             if (method.method.body == null) continue
             appendMethodCode(method)
+        }
+
+        for (obj in objects) {
+            appendObjectGetterCode(obj.clazz)
         }
 
         depth--
@@ -114,9 +131,12 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.writeModuleHeader()
         binary.writeTypeSection(typeList)
         binary.writeImportSection(importList)
-        val implFunctions = functionIndexList.subList(importList.size, functionIndexList.size)
+        val functionTypes = functionIndexList.subList(importList.size, functionIndexList.size)
+            .map { method -> getFunctionTypeIndex(method) }
+        val objectGetterTypes = objects.map { getObjectGetterFunctionTypeIndex(it.clazz) }
+        val implFunctions = functionTypes + objectGetterTypes
         check(implFunctions.size == bodies.size)
-        binary.writeFunctionSection(implFunctions, ::getFunctionType)
+        binary.writeFunctionSection(implFunctions)
         binary.writeMemorySection()
         binary.writeGlobalSection(globalStructs)
         binary.writeExportSection(exportList)
@@ -244,7 +264,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun getFunctionType(method: MethodSpecialization): Int {
+    fun getFunctionTypeIndex(method: MethodSpecialization): Int {
         method.specialization.use {
             val method = method.method
             method.scope[ScopeInitType.CODE_GENERATION]
@@ -271,40 +291,59 @@ class WASMSourceGenerator : CSourceGenerator() {
 
             val returnTypes = listOf(getWASMType(method.returnType!!))
             val functionType = FunctionType(params, returnTypes)
-            return functionTypes.getOrPut(functionType) {
-                typeList.add(functionType)
-                typeList.lastIndex
-            }
+            return getFunctionTypeIndex(functionType)
+        }
+    }
+
+    fun getFunctionTypeIndex(functionType: FunctionType): Int {
+        return functionTypes.getOrPut(functionType) {
+            typeList.add(functionType)
+            typeList.lastIndex
         }
     }
 
     fun appendMethodHeader(typeIndex: Int, methodName: String, method0: MethodSpecialization, export: Boolean) {
         val method = method0.method
+        val functionIndex = functionIndexMap[method0]!!
+        appendMethodHeader(
+            typeIndex, methodName, functionIndex, method.explicitSelfType,
+            method.valueParameters, export
+        )
+    }
+
+    fun appendMethodHeader(
+        typeIndex: Int, methodName: String, functionIndex: Int,
+        explicitSelfType: Boolean, valueParameters: List<Parameter>,
+        isExportedFunction: Boolean
+    ) {
         val type = typeList[typeIndex] as FunctionType
 
         builder.append("(func $").append(methodName)
 
-        if (export) {
+        if (isExportedFunction) {
             builder.append(" (export \"").append(methodName).append("\")")
-            exportList.add(methodName to functionIndexMap[method0]!!)
+            exportList.add(methodName to functionIndex)
         }
 
         builder.append(" (type \$t").append(typeIndex).append(")")
-        appendParamWithName(type.params[0], "this")
-        var j = 1
-        if (method.explicitSelfType) {
-            appendParamWithName(type.params[1], "__self")
-            j++
-        }
-        for (i in method.valueParameters.indices) {
-            val param = method.valueParameters[i]
-            appendParamWithName(type.params[j + i], param.name)
-        }
+        if (type.params.isNotEmpty()) {
+            appendParamWithName(type.params[0], "this")
+            var j = 1
+            if (explicitSelfType) {
+                appendParamWithName(type.params[1], "__self")
+                j++
+            }
+            for (i in valueParameters.indices) {
+                val param = valueParameters[i]
+                appendParamWithName(type.params[j + i], param.name)
+            }
+        } // else object getter
 
         // return types
-        val returnType = method.returnType!!
-        builder.append(" (result ").append(getWASMType(returnType).wasmName)
-            .append(")")
+        for (resultType in type.results) {
+            builder.append(" (result ").append(resultType.wasmName)
+                .append(")")
+        }
 
         depth++
         nextLine()
@@ -320,14 +359,13 @@ class WASMSourceGenerator : CSourceGenerator() {
         return "${method.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method)}"
     }
 
-    fun appendMethodCode(method: MethodSpecialization) {
-        val type = getFunctionType(method)
-        method.specialization.use {
-            appendMethodHeader(type, getMethodName(method), method, true)
+    fun appendMethodCode(method0: MethodSpecialization) {
+        val type = getFunctionTypeIndex(method0)
+        val (method, spec) = method0
+        spec.use {
+            appendMethodHeader(type, getMethodName(method0), method0, true)
 
-            val (method, spec) = method
             val body = method.body!!
-
             val context = ResolutionContext(method.selfType, spec, true, null)
             appendCode(context, method, body, false)
 
@@ -347,9 +385,38 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
+    fun getObjectGetterFunctionTypeIndex(objectScope: Scope): Int {
+        val returnType = objectScope.typeWithArgs
+        val functionType = FunctionType(emptyList(), listOf(getWASMType(returnType)))
+        return getFunctionTypeIndex(functionType)
+    }
+
+    fun appendObjectGetterCode(objectScope: Scope) {
+        val type = getObjectGetterFunctionTypeIndex(objectScope)
+        noSpecialization.use {
+            appendMethodHeader(
+                type, getObjectGetterName(objectScope),
+                getObjectGetterFunctionIndex(objectScope), false,
+                emptyList(), true
+            )
+
+            declareLocalFieldsAsVariablesForObjectGetter()
+            appendGetObjectInstanceImpl(objectScope)
+
+            // close body
+            builder.setLength(builder.length - 2)
+            builder.append(")")
+            binary.u8(WASMOpcode.END)
+            depth--
+            nextLine()
+
+            bodies.finishBody()
+        }
+    }
+
     fun appendMethodImport(method: MethodSpecialization) {
         // (import "env" "print_i32" (func $print_i32 (param i32)))
-        val type = getFunctionType(method)
+        val type = getFunctionTypeIndex(method)
         method.specialization.use {
             val methodName = getMethodName(method)
             builder.append("(import \"env\" \"").append(methodName).append("\" ")
@@ -403,6 +470,10 @@ class WASMSourceGenerator : CSourceGenerator() {
             }
             nextLine()
         }
+    }
+
+    fun declareLocalFieldsAsVariablesForObjectGetter() {
+        binary.u32(0)
     }
 
     fun declareLocalFieldsAsVariables(graph: SimpleGraph) {
@@ -553,9 +624,8 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-
-        val struct = getStruct(ClassSpecialization(objectScope, Specialization.noSpecialization))
+    fun appendGetObjectInstanceImpl(objectScope: Scope) {
+        val struct = getStruct(ClassSpecialization(objectScope, noSpecialization))
         val globalIndex = objectGlobals.getOrPut(objectScope) {
             globalNames.add("global_${objectScope.pathStr.replace('.', '_')}")
             globalStructs.add(struct.type)
@@ -584,13 +654,27 @@ class WASMSourceGenerator : CSourceGenerator() {
             .getOrCreatePrimaryConstructorScope()
             .selfAsConstructor!!
 
-        callMethod(MethodSpecialization(constructor, Specialization.noSpecialization))
+        callMethod(MethodSpecialization(constructor, noSpecialization))
         nextLine()
 
         appendDrop()
         emptyResultEnd()
 
         globalGet(globalIndex)
+        nextLine()
+    }
+
+    fun getObjectGetterName(objectScope: Scope): String {
+        return "obj_${objectScope.pathStr.replace('.', '_')}"
+    }
+
+    fun getObjectGetterFunctionIndex(objectScope: Scope): Int {
+        return functionIndexList.size + objectGetters[objectScope]!!
+    }
+
+    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
+        builder.append("call $").append(getObjectGetterName(objectScope))
+        binary.call(getObjectGetterFunctionIndex(objectScope))
         nextLine()
     }
 
