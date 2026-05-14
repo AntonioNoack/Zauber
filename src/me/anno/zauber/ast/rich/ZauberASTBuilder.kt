@@ -4,6 +4,7 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
 import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
@@ -239,7 +240,12 @@ class ZauberASTBuilder(
     }
 
     override fun readFileLevel() {
-        ZauberASTClassScanner(tokens).readFileLevel()
+        val size = tokens.size
+        val helper = ZauberASTClassScanner(tokens)
+        helper.i = i // we must start where we currently are, not from the start again
+        helper.readFileLevel()
+        assertEquals(size, helper.i)
+        i = helper.i
     }
 
     override fun readAnnotation(): Annotation {

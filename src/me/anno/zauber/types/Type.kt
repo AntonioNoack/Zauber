@@ -14,8 +14,6 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.arithmetic.*
 import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.zauber.types.impl.memory.RefType
-import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.impl.unresolved.UnresolvedAndType
 import me.anno.zauber.types.impl.unresolved.UnresolvedNotType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
@@ -153,7 +151,7 @@ abstract class Type {
             is UnresolvedNotType -> type.resolve(selfScope).not()
             is UnresolvedUnionType -> unionTypes(types.map { it.resolve(selfScope) })
             is UnresolvedAndType -> andTypes(types.map { it.resolve(selfScope) })
-            is NotType, is ValueType, is RefType -> withType(type.resolve(selfScope))
+            is NotType -> withType(type.resolve(selfScope))
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
         }
     }

@@ -305,14 +305,19 @@ class MethodResolutionTest {
 
     @Test
     fun testMethodExtensionInner() {
-        // todo this has a init-order bug :/
+        // todo why is tested not found???
         val code = """
         fun Int.next() = 0f
+        val inTestScope = 0
         class Inner {
+            val inInner = 0
             fun <V: Int> V.test(): Int {
+                val inTestMethod = 0
                 class Tested {
+                    val inTested = 0
                     val tested = next()
                 }
+                return Tested().inTested
             }
         }
         package zauber

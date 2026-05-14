@@ -39,8 +39,6 @@ import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.arithmetic.NullType.typeOrNull
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.impl.arithmetic.UnknownType
-import me.anno.zauber.types.impl.memory.RefType
-import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.impl.unresolved.UnresolvedSubType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import kotlin.math.min
@@ -357,19 +355,6 @@ abstract class ZauberASTBuilderBase(
         isAndType: Boolean, insideTypeParams: Boolean
     ): Type? {
         val i0 = i
-        if (language == Language.ZAUBER) {
-            if (consumeIf("value")) {
-                val base = readType(selfType, allowSubTypes, isAndType, insideTypeParams)
-                    ?: return null
-                return ValueType(base)
-            }
-            if (consumeIf("ref")) {
-                val base = readType(selfType, allowSubTypes, isAndType, insideTypeParams)
-                    ?: return null
-                return RefType(base)
-            }
-        }
-
         val negate = consumeIf("!", VSCodeType.OPERATOR, 0)
         if (consumeIf("*", VSCodeType.TYPE, 0)) {
             return UnknownType
@@ -791,7 +776,7 @@ abstract class ZauberASTBuilderBase(
 
         val name = consumeName(vsCodeType, VSCodeModifier.DECLARATION.flag)
 
-        val keywords = packFlags()
+        val flags = packFlags()
         val classScope = currPackage.getOrPut(name, tokens.fileName, scopeType)
 
         readTypeParameterDeclarations(classScope, true)
@@ -803,6 +788,10 @@ abstract class ZauberASTBuilderBase(
 
         val constructorOrigin = origin(i)
         val constructorParams = readPrimaryConstructorParameters(classScope)
+        if (flags.hasFlag(Flags.VALUE)) {
+            validateValueClassParameters(name, constructorParams)
+        }
+
         val constructorBody = createAssignmentInstructionsForPrimaryConstructor(
             classScope, constructorParams, constructorOrigin
         )
@@ -826,8 +815,20 @@ abstract class ZauberASTBuilderBase(
         )
         primConstructorScope.selfAsConstructor = primaryConstructor
 
-        readClassBody(name, keywords, scopeType)
+        readClassBody(name, flags, scopeType)
         popGenericParams()
+    }
+
+    fun validateValueClassParameters(name: String, constructorParams: List<Parameter>?) {
+        check(constructorParams != null) {
+            "Value class '$name' must have a primary constructor, at ${tokens.err(i - 1)}"
+        }
+        check(constructorParams.isNotEmpty()) {
+            "Value class '$name' must have at least one field, at ${tokens.err(i - 1)}"
+        }
+        check(constructorParams.all { it.isVal }) {
+            "All value class '$name' fields must be immutable, use 'val', at ${tokens.err(i - 1)}"
+        }
     }
 
     fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {

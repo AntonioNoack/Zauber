@@ -17,7 +17,6 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
-import me.anno.zauber.types.impl.memory.ValueType
 import me.anno.zauber.types.specialization.Specialization
 
 class SimpleNode(val graph: SimpleGraph) {
@@ -246,7 +245,7 @@ class SimpleNode(val graph: SimpleGraph) {
         }
 
         fun Type.needsCopy(): Boolean {
-            return (this is ValueType) || (this is ClassType && clazz.isValueType())
+            return this is ClassType && clazz.isValueType()
         }
 
         fun Type.isNullable(): Boolean {

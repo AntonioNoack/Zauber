@@ -1,9 +1,11 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsMessage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class ValueClassTest {
 
@@ -54,6 +56,48 @@ class ValueClassTest {
                 external operator fun plus(other: Int): Int
             }
         """.trimIndent()
+            testExecute(code)
+        }
+    }
+
+    @Test
+    fun testValueClassMustHavePrimaryConstructor() {
+        assertThrowsContains<IllegalStateException>("must have at least one field") {
+            val code = """
+                value class Vector
+                val tested: Int = Vector()
+                
+                package zauber
+                class Any
+            """.trimIndent()
+            testExecute(code)
+        }
+    }
+
+    @Test
+    fun testValueClassMustHaveAtLeastOneParameter() {
+        assertThrowsContains<IllegalStateException>("must have at least one field") {
+            val code = """
+                value class Vector()
+                val tested: Int = Vector()
+                
+                package zauber
+                class Any
+            """.trimIndent()
+            testExecute(code)
+        }
+    }
+
+    @Test
+    fun testValueClassMustHaveValueParameters() {
+        assertThrowsContains<IllegalStateException>("fields must be immutable") {
+            val code = """
+                value class Vector(var x: Int)
+                val tested: Int = Vector(3)
+                
+                package zauber
+                class Any
+            """.trimIndent()
             testExecute(code)
         }
     }

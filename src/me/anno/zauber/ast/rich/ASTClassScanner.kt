@@ -75,6 +75,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val classScope = parentScope.getOrPut(name, scopeType)
         classScope.addFlags(listenType or packFlags())
         classScope.fileName = tokens.fileName
+
         classScope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
 
             // store old state
@@ -121,6 +122,10 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                     val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                         readParameterDeclarations(selfType, extra)
                     } else extra
+
+                    if (classScope.flags.hasFlag(Flags.VALUE)) {
+                        validateValueClassParameters(name, valueParameters)
+                    }
 
                     val instr = createAssignmentInstructionsForPrimaryConstructor(classScope, valueParameters, origin)
                     constructorScope.selfAsConstructor = Constructor(
