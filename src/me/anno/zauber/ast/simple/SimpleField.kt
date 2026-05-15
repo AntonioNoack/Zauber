@@ -1,9 +1,9 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
 
-class SimpleField(val type: Type, val ownership: Ownership, var id: Int) {
+class SimpleField(val type: Type, var id: Int, val constantRef: Expression?) {
 
     var numReads = 0
     var mergeInfo: SimpleMerge? = null

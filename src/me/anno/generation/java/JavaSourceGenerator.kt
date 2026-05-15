@@ -16,8 +16,8 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
-import me.anno.zauber.ast.simple.SimpleNode.Companion.isNullable
-import me.anno.zauber.ast.simple.SimpleNode.Companion.needsCopy
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
@@ -670,7 +670,7 @@ open class JavaSourceGenerator : Generator() {
                 }
 
                 // todo simplify all entry points as methods...
-                appendSimplifiedAST(graph, graph.startBlock)
+                appendSimpleBlock(graph, graph.startBlock)
             } catch (e: Throwable) {
                 e.printStackTrace()
                 comment {
@@ -798,14 +798,14 @@ open class JavaSourceGenerator : Generator() {
 
     // todo we have converted SimpleBlock into a complex graph,
     //  before we can use it, we must convert it back
-    open fun appendSimplifiedAST(
-        graph: SimpleGraph, expr: SimpleNode,
+    open fun appendSimpleBlock(
+        graph: SimpleGraph, expr: SimpleBlock,
         // loop: SimpleLoop? = null
     ) {
         val instructions = expr.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
-            appendSimplifiedAST(graph, instr /*loop*/)
+            appendSimpleInstruction(graph, instr /*loop*/)
             if (instr is SimpleAssignment &&
                 instr.dst.type == Types.Nothing
             ) break
@@ -813,7 +813,7 @@ open class JavaSourceGenerator : Generator() {
         if (expr.branchCondition == null) {
             val next = expr.nextBranch
             if (next != null) {
-                appendSimplifiedAST(graph, next)
+                appendSimpleBlock(graph, next)
             }
         } else {
             // todo this may or may not be simply be possible...
@@ -850,7 +850,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendSimplifiedAST(
+    open fun appendSimpleInstruction(
         graph: SimpleGraph, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
@@ -867,19 +867,19 @@ open class JavaSourceGenerator : Generator() {
                 appendFieldName(graph, expr.condition)
                 builder.append(')')
                 writeBlock {
-                    appendSimplifiedAST(graph, expr.ifTrue)
+                    appendSimpleBlock(graph, expr.ifTrue)
                 }
                 trimWhitespaceAtEnd()
                 builder.append(" else ")
                 writeBlock {
-                    appendSimplifiedAST(graph, expr.ifFalse)
+                    appendSimpleBlock(graph, expr.ifFalse)
                 }
             }
             is SimpleLoop -> {
                 builder.append("b").append(expr.body.blockId)
                 builder.append(": while (true)")
                 writeBlock {
-                    appendSimplifiedAST(graph, expr.body)
+                    appendSimpleBlock(graph, expr.body)
                 }
             }
             /*is SimpleGoto -> {

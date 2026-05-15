@@ -652,6 +652,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isInterface(): Boolean = scopeType == ScopeType.INTERFACE
     fun isValueType(): Boolean = flags.hasFlag(Flags.VALUE)
     fun isPackage(): Boolean = scopeType == ScopeType.PACKAGE
+    fun isInnerClass(): Boolean = scopeType == ScopeType.INNER_CLASS
 
     fun addFlags(flags: FlagSet) {
         this.flags = this.flags or flags

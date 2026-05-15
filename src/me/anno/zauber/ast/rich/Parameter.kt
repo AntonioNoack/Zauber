@@ -10,15 +10,19 @@ import me.anno.zauber.types.Type
  * */
 class Parameter(
     val index: Int,
-    val isVar: Boolean,
-    val isVal: Boolean,
-    val isVararg: Boolean,
+    val mutability: ParameterMutability,
+    val expansion: ParameterExpansion,
     val name: String,
     var type: Type,
     val defaultValue: Expression?,
     val scope: Scope,
     val origin: Int
 ) {
+
+    val isVar get() = mutability == ParameterMutability.VAR
+    val isVal get() = mutability == ParameterMutability.VAL
+    val isConst get() = mutability == ParameterMutability.CONST
+    val isVararg get() = expansion == ParameterExpansion.VARARG
 
     fun getOrCreateField(selfType: Type?, keywords: FlagSet): Field {
         // automatically gets added to fieldScope
@@ -33,7 +37,10 @@ class Parameter(
     var field: Field? = null
 
     constructor(index: Int, name: String, type: Type, scope: Scope, origin: Int) :
-            this(index, false, true, false, name, type, null, scope, origin)
+            this(index, ParameterMutability.DEFAULT, ParameterExpansion.NONE, name, type, null, scope, origin)
+
+    constructor(index: Int, name: String, mutability: ParameterMutability, type: Type, scope: Scope, origin: Int) :
+            this(index, mutability, ParameterExpansion.NONE, name, type, null, scope, origin)
 
     override fun toString(): String {
         return "${if (isVar) "var " else ""}${if (isVal) "val " else ""}${scope.pathStr}.$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
@@ -53,16 +60,8 @@ class Parameter(
 
     fun clone(scope: Scope): Parameter {
         return Parameter(
-            index, isVar, isVal, isVararg, name, type,
+            index, mutability, expansion, name, type,
             defaultValue?.clone(scope), scope, origin
         )
     }
-
-    fun shift(i: Int): Parameter {
-        return Parameter(
-            index + i, isVar, isVal, isVararg, name, type,
-            defaultValue, scope, origin
-        )
-    }
-
 }

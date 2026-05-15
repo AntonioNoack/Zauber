@@ -404,7 +404,8 @@ class TypeScriptClassScanner(tokens: TokenList) :
         } else null
 
         return Parameter(
-            index, false, false, isVararg,
+            index, ParameterMutability.DEFAULT,
+            if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
             name, type, defaultValue,
             currPackage, origin
         )

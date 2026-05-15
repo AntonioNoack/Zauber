@@ -3,12 +3,12 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.Compile.root
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
-data class Flow(val value: SimpleField, val block: SimpleNode) {
+data class Flow(val value: SimpleField, val block: SimpleBlock) {
     override fun toString(): String {
         return "Flow(value=$value, block=${block.blockId})"
     }
 
-    private fun joinFields(other: Flow, joinedBlock: SimpleNode): SimpleField {
+    private fun joinFields(other: Flow, joinedBlock: SimpleBlock): SimpleField {
         if (value == other.value) return value
 
         val joinedType = unionTypes(value.type, other.value.type)
@@ -32,7 +32,7 @@ data class Flow(val value: SimpleField, val block: SimpleNode) {
             return Flow(joinFields(other, joinedBlock), joinedBlock)
         }
 
-        fun Flow?.join(other: SimpleField, otherNode: SimpleNode): Flow {
+        fun Flow?.join(other: SimpleField, otherNode: SimpleBlock): Flow {
             if (this == null) return Flow(other, otherNode)
 
             val joinedBlock = block.graph.addNode()

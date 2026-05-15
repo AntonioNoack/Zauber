@@ -192,6 +192,16 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
             while (true) {
                 result.addAll(scope.typeParameters)
 
+                if (scope.isClass()) {
+                    val constr = scope.getOrCreatePrimaryConstructorScope()
+                        .selfAsConstructor!!
+                    for (param in constr.valueParameters) {
+                        if (param.isConst) {
+                            result.add(param)
+                        }
+                    }
+                }
+
                 if (scope.isObjectLike()) break
                 if (scope.isClass() &&
                     scope.scopeType != ScopeType.INNER_CLASS &&
@@ -205,6 +215,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         }
 
         fun filterSpecialization(type: Type, generic: Parameter): Type {
+            if (generic.isVal) return type
             return when (type) {
                 in ZClass.nativeTypes -> type
                 is ClassType if type.clazz.isValueType() -> type

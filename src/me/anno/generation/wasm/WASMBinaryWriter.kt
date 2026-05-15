@@ -6,7 +6,10 @@ import me.anno.utils.ListOfByteArrays
 class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2()) {
 
     fun u8(v: Int) = out.write(v)
-    fun u32(v: Int) = writeVarUInt(v.toLong())
+    fun u32(v: Int) {
+        if (v < 0) throw IllegalArgumentException("Unsigned must be non-negative, got $v")
+        writeVarUInt(v.toLong())
+    }
 
     fun f32(v: Float) {
         val encoded = v.toRawBits()

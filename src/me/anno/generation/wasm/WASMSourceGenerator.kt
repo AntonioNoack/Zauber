@@ -10,9 +10,10 @@ import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.*
-import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
-import me.anno.zauber.ast.simple.SimpleNode.Companion.needsCopy
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.expansion.DependencyData
@@ -513,7 +514,11 @@ class WASMSourceGenerator : CSourceGenerator() {
         val method1 = MethodSpecialization(method, context.specialization)
         val graph = ASTSimplifier.simplify(method1)
         if (skipSuperCall) graph.removeSuperCalls()
-        graph.removeWriteOnlyFields(alsoObjects = true, alsoThis = true)
+        graph.removeWriteOnlyFields()
+        graph.removeThisFields()
+        graph.removeObjectFields()
+        graph.removeConstantFields()
+        graph.renumberFields()
 
         CodeReconstruction.createCodeFromGraph(graph)
 
@@ -531,7 +536,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         declareLocalFieldsAsVariables(graph)
 
         // write all code
-        appendSimplifiedAST(graph, graph.startBlock)
+        appendSimpleBlock(graph, graph.startBlock)
     }
 
     fun declareFuncHasNoLocalFields() {
@@ -588,7 +593,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         val offset = offset + graph.fields.size
         val parameters = graph.method.valueParameters
         val thisOffset = 1 + if (graph.method.explicitSelfType) 1 else 0
-        for (block in graph.nodes) {
+        for (block in graph.blocks) {
             for (expr in block.instructions) {
                 when (expr) {
                     is SimpleGetField, is SimpleSetField -> {
@@ -639,7 +644,6 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
-        // todo remove non-read fields from graph
         builder.append("local.set \$tmp").append(expression.dst.id)
         binary.localSet(expression.dst.id + getLocalFieldOffset(graph))
         nextLine()
@@ -647,9 +651,9 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     override fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
-            val notNeeded = expr.dst.numReads == 0
+            val notNeeded = expr.dst.id < 0
             if (notNeeded) {
-                comment { appendAssign(graph, expr) }
+                comment { builder.append("%tmp[${expr.dst.id}] =") }
                 appendDrop()
             } else appendAssign(graph, expr)
         }
@@ -661,7 +665,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     fun writeObjectGlobals() {
         comment { builder.append("globals") }
         for ((scope, index) in objectGlobals.entries.sortedBy { it.value }) {
-            val struct = getStruct(ClassSpecialization(scope, noSpecialization), true)
+            val struct = getStruct(ClassSpecialization.fromSimple(scope), true)
             builder.append("(global $")
                 .append(globalNames[index])
                 .append(" (mut (ref null $")
@@ -719,7 +723,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun appendGetObjectInstanceImpl(objectScope: Scope) {
-        val structNullable = getStruct(ClassSpecialization(objectScope, noSpecialization), isNullable = true)
+        val structNullable = getStruct(ClassSpecialization.fromSimple(objectScope), isNullable = true)
         val globalIndex = objectGlobals.getOrPut(objectScope) {
             globalNames.add("global_${objectScope.pathStr.replace('.', '_')}")
             globalStructs.add(structNullable.type)
@@ -847,10 +851,27 @@ class WASMSourceGenerator : CSourceGenerator() {
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
-            builder.append("local.get \$tmp").append(field.id)
-            binary.localGet(field.id + getLocalFieldOffset(graph))
-            nextLine()
+            when (val expr = field.constantRef) {
+                is NumberExpression -> appendNumber(field.type, expr)
+                null -> {
+                    builder.append("local.get \$tmp").append(field.id)
+                    binary.localGet(field.id + getLocalFieldOffset(graph))
+                    nextLine()
+                }
+                else -> TODO("Implement constant field")
+            }
         }
+    }
+
+    fun appendNumber(type: Type, expr: NumberExpression) {
+        when (type) {
+            Types.Int, Types.UInt -> i32Const(expr.asInt.toInt())
+            Types.Long, Types.ULong -> i64Const(expr.asInt)
+            Types.Float, Types.Half -> f32Const(expr.asFloat.toFloat())
+            Types.Double -> f64Const(expr.asFloat)
+            else -> TODO("Implement $type")
+        }
+        nextLine()
     }
 
     fun i32Const(value: Int) {
@@ -878,19 +899,15 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.ret()
     }
 
+    override fun appendSimpleInstruction(graph: SimpleGraph, expr: SimpleInstruction) {
+        // removed, just a constant to be inlined
+        if (expr is SimpleAssignment && expr.dst.id < 0 && expr.dst.constantRef != null) return
+        super.appendSimpleInstruction(graph, expr)
+    }
+
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
-            is SimpleNumber -> {
-                when (expr.dst.type) {
-                    Types.Byte, Types.UByte, Types.Short, Types.UShort,
-                    Types.Int, Types.UInt -> i32Const(expr.base.asInt.toInt())
-                    Types.Long, Types.ULong -> i64Const(expr.base.asInt)
-                    Types.Float, Types.Half -> f32Const(expr.base.asFloat.toFloat())
-                    Types.Double -> f64Const(expr.base.asFloat)
-                    else -> throw NotImplementedError("Append $expr")
-                }
-                nextLine()
-            }
+            is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
             is SimpleDeclaration -> {
                 // is this supported in wasm??? obviously not
                 /*builder.append("(local $").append(expr.name)
@@ -902,9 +919,9 @@ class WASMSourceGenerator : CSourceGenerator() {
             is SimpleBranch -> {
                 appendGetField(graph, expr.condition)
                 emptyResultIf()
-                /**/appendSimplifiedAST(graph, expr.ifTrue)
+                /**/appendSimpleBlock(graph, expr.ifTrue)
                 emptyResultElse()
-                /**/appendSimplifiedAST(graph, expr.ifFalse)
+                /**/appendSimpleBlock(graph, expr.ifFalse)
                 emptyResultEnd()
             }
             is SimpleLoop -> {

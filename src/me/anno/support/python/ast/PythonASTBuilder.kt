@@ -554,7 +554,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         var mustBeNamed = false
         loop@ while (i < tokens.size) {
 
-            val isVararg = consumeIf("*")
+            val isVarDict = consumeIf("*")
             if (consumeIf(",")) {
                 mustBeNamed = true
                 continue
@@ -572,7 +572,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 if (consumeIf(":")) readTypeNotNull(selfType, true)
                 else pythonInstanceType
 
-            if (isVararg) {
+            if (isVarDict) {
+                // todo not really an array, but a dictionary
                 type = Types.Array.withTypeParameter(type)
             }
 
@@ -584,8 +585,10 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
             val keywords = packFlags()
             val parameter = Parameter(
-                parameters.size, !isVal, isVal, isVararg, name, type,
-                defaultValue, currPackage, origin
+                parameters.size,
+                if (isVal) ParameterMutability.VAL else ParameterMutability.VAR,
+                if (isVarDict) ParameterExpansion.VARDICT else ParameterExpansion.NONE,
+                name, type, defaultValue, currPackage, origin
             )
             parameter.getOrCreateField(selfType, keywords)
             parameters.add(parameter)

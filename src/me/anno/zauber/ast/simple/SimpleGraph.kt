@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
-import me.anno.zauber.ast.simple.SimpleNode.Companion.getOwnership
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
@@ -11,8 +11,8 @@ import me.anno.zauber.types.impl.ClassType
 class SimpleGraph(val method: MethodLike) {
 
     private var numFields = 0
-    val nodes = ArrayList<SimpleNode>()
-    val startBlock = SimpleNode(this)
+    val blocks = ArrayList<SimpleBlock>()
+    val startBlock = SimpleBlock(this)
     val fields = ArrayList<SimpleField>()
 
     // todo in methods within classes, always request self at the start,
@@ -21,8 +21,8 @@ class SimpleGraph(val method: MethodLike) {
 
     val capturedFields = HashMap<Capture, SimpleField>()
 
-    val continueLabels = HashMap<Scope, SimpleNode>()
-    val breakLabels = HashMap<Scope, SimpleNode>()
+    val continueLabels = HashMap<Scope, SimpleBlock>()
+    val breakLabels = HashMap<Scope, SimpleBlock>()
 
     var unitField: SimpleField? = null
 
@@ -30,17 +30,17 @@ class SimpleGraph(val method: MethodLike) {
 
     init {
         startBlock.isEntryPoint = true
-        nodes.add(startBlock)
+        blocks.add(startBlock)
     }
 
-    fun addNode(): SimpleNode {
-        val node = SimpleNode(this)
-        nodes.add(node)
+    fun addNode(): SimpleBlock {
+        val node = SimpleBlock(this)
+        blocks.add(node)
         return node
     }
 
-    fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField {
-        val field = SimpleField(type, ownership, numFields++)
+    fun field(type: Type, constantRef: Expression? = null): SimpleField {
+        val field = SimpleField(type, numFields++, constantRef)
         fields.add(field)
         return field
     }
@@ -56,28 +56,47 @@ class SimpleGraph(val method: MethodLike) {
     }
 
     override fun toString(): String {
-        return "Graph[${nodes.size} nodes, $numFields fields]\n" +
+        return "Graph[${blocks.size} nodes, $numFields fields]\n" +
                 "unit: $unitField\n" +
                 "this: ${thisFields.map { "\n  %${it.value.id} = ${it.key.scope}" }}\n" +
-                nodes.joinToString("\n") { it.toString() }
+                blocks.joinToString("\n") { it.toString() }
     }
 
     fun removeSuperCalls() {
-        for (block in nodes) {
+        for (block in blocks) {
             block.instructions.removeIf {
                 it is SimpleSelfConstructor
             }
         }
     }
 
-    fun removeWriteOnlyFields(alsoObjects: Boolean, alsoThis: Boolean) {
-        if (alsoThis) removeFieldIf { it in thisFields.values }
-        if (alsoObjects) removeFieldIf {
+    fun removeConstantFields() {
+        removeFieldIf { it.constantRef != null }
+    }
+
+    fun removeThisFields() {
+        removeFieldIf { it in thisFields.values }
+    }
+
+    fun removeObjectFields() {
+        removeFieldIf {
             val type = it.type
             type is ClassType && type.clazz.isObjectLike()
         }
+    }
+
+    fun removeWriteOnlyFields() {
         removeFieldIf { it.numReads == 0 }
-        renumberFields()
+    }
+
+    fun replaceYieldsByInnerClass() {
+        // todo if inner classes/methods reference a mutable field,
+        //  create an inner class, too
+        TODO()
+    }
+
+    fun inlineValueClasses() {
+        TODO()
     }
 
     fun removeFieldIf(condition: (SimpleField) -> Boolean) {

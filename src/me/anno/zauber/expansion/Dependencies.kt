@@ -4,7 +4,7 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.simple.ASTSimplifier
-import me.anno.zauber.ast.simple.SimpleNode.Companion.needsCopy
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList
@@ -74,7 +74,7 @@ object Dependencies {
         if (method.method.isExternal() || method.method.isAbstract()) return
 
         val simplified = ASTSimplifier.simplify(method)
-        for (node in simplified.nodes) {
+        for (node in simplified.blocks) {
             for (instr in node.instructions) {
 
                 // if the dstType is a value class, we need the copy-instruction

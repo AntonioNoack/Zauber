@@ -13,7 +13,6 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
-import me.anno.zauber.ast.simple.Ownership
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.*
 import me.anno.zauber.interpreting.RuntimeCreate.createString
@@ -198,7 +197,7 @@ object Macro {
 
         val valueParameters1 = valueParameters + runtime.getObjectInstance(macroContextParam)
         val valueParameters2 = valueParameters1.mapIndexed { index, instance ->
-            SimpleField(instance.clazz.type, Ownership.SHARED, index)
+            SimpleField(instance.clazz.type, index, null)
         }
 
         for (i in valueParameters2.indices) {

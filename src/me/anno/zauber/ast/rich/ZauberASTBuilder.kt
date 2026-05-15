@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
+import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
@@ -303,7 +304,6 @@ class ZauberASTBuilder(
                     consumeIf("protected") -> Flags.PROTECTED
                     consumeIf("override") -> Flags.OVERRIDE
                     consumeIf("open") -> Flags.OPEN
-                    consumeIf("value") -> Flags.VALUE
                     consumeIf("crossinline") -> Flags.CROSS_INLINE
                     else -> break
                 }
@@ -311,9 +311,15 @@ class ZauberASTBuilder(
                 setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }
 
+            val i0 = i
             val isVararg = consumeIf("vararg", VSCodeType.KEYWORD, 0)
+            val isConst = consumeIf("const", VSCodeType.KEYWORD, 0)
             val isVar = consumeIf("var", VSCodeType.KEYWORD, 0)
             val isVal = consumeIf("val", VSCodeType.KEYWORD, 0)
+
+            check(isConst.toInt() + isVar.toInt() + isVal.toInt() <= 1) {
+                "Only one of 'var', 'val' and 'const' must be present at ${tokens.err(i0)}"
+            }
 
             val origin = origin(i)
             val name = consumeName(VSCodeType.PARAMETER, 0)
@@ -328,8 +334,14 @@ class ZauberASTBuilder(
 
             val keywords = packFlags()
             val parameter = Parameter(
-                parameters.size, isVar, isVal, isVararg, name, type,
-                initialValue, currPackage, origin
+                parameters.size,
+                when {
+                    isVar -> ParameterMutability.VAR
+                    isVal -> ParameterMutability.VAL
+                    else -> ParameterMutability.DEFAULT
+                },
+                if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
+                name, type, initialValue, currPackage, origin
             )
             parameter.getOrCreateField(null, keywords)
             parameters.add(parameter)

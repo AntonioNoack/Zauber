@@ -19,7 +19,7 @@ import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.specialization.Specialization
 
-class SimpleNode(val graph: SimpleGraph) {
+class SimpleBlock(val graph: SimpleGraph) {
 
     var isEntryPoint = false
 
@@ -29,14 +29,14 @@ class SimpleNode(val graph: SimpleGraph) {
             field = value
         }
 
-    var ifBranch: SimpleNode? = null
+    var ifBranch: SimpleBlock? = null
         set(value) {
             unlinkTo(field)
             field = value
             linkTo(value)
         }
 
-    var elseBranch: SimpleNode? = null
+    var elseBranch: SimpleBlock? = null
         set(value) {
             unlinkTo(field)
             field = value
@@ -45,22 +45,22 @@ class SimpleNode(val graph: SimpleGraph) {
 
     val isBranch get() = branchCondition != null && ifBranch != elseBranch
 
-    private fun linkTo(value: SimpleNode?) {
+    private fun linkTo(value: SimpleBlock?) {
         value ?: return
         value.inputNodes.add(this)
         outputNodes.add(value)
     }
 
-    private fun unlinkTo(value: SimpleNode?) {
+    private fun unlinkTo(value: SimpleBlock?) {
         value ?: return
         value.inputNodes.remove(this)
         outputNodes.remove(value)
     }
 
-    val inputNodes = ArrayList<SimpleNode>(4)
-    val outputNodes = ArrayList<SimpleNode>(2)
+    val inputNodes = ArrayList<SimpleBlock>(4)
+    val outputNodes = ArrayList<SimpleBlock>(2)
 
-    var nextBranch: SimpleNode?
+    var nextBranch: SimpleBlock?
         get() = ifBranch
         set(value) {
             ifBranch = value
@@ -81,15 +81,15 @@ class SimpleNode(val graph: SimpleGraph) {
         outputNodes.clear()
     }
 
-    fun isOnlyInput(input: SimpleNode): Boolean {
+    fun isOnlyInput(input: SimpleBlock): Boolean {
         return !isEntryPoint && inputNodes.all { it == input }
     }
 
-    fun isOnlyOutput(output: SimpleNode?): Boolean {
+    fun isOnlyOutput(output: SimpleBlock?): Boolean {
         return (output == ifBranch || ifBranch == null) && (output == elseBranch || elseBranch == null)
     }
 
-    val blockId = graph.nodes.size
+    val blockId = graph.blocks.size
     val instructions = ArrayList<SimpleInstruction>()
 
     fun add(expr: SimpleInstruction) {
@@ -100,8 +100,8 @@ class SimpleNode(val graph: SimpleGraph) {
         instructions.add(0, expr)
     }
 
-    fun field(type: Type, ownership: Ownership = getOwnership(type)): SimpleField =
-        graph.field(type, ownership)
+    fun field(type: Type, constantRef: Expression? = null): SimpleField =
+        graph.field(type, constantRef)
 
     fun thisField(
         type: Type, thisScope: Scope, scope: Scope, origin: Int,
@@ -111,7 +111,7 @@ class SimpleNode(val graph: SimpleGraph) {
         thisScope[ScopeInitType.AFTER_DISCOVERY]
         if (thisScope.isObjectLike()) {
             // are objects comptime? yes
-            val dst = field(thisScope.typeWithArgs, Ownership.COMPTIME)
+            val dst = field(thisScope.typeWithArgs)
             add(SimpleGetObject(dst, thisScope, scope, origin))
             return dst
         } else {
@@ -222,7 +222,7 @@ class SimpleNode(val graph: SimpleGraph) {
                 instructions.isEmpty()
     }
 
-    fun nextOrSelfIfEmpty(): SimpleNode {
+    fun nextOrSelfIfEmpty(): SimpleBlock {
         if (isEmpty()) return this
         val next = graph.addNode()
         nextBranch = next
@@ -230,11 +230,6 @@ class SimpleNode(val graph: SimpleGraph) {
     }
 
     companion object {
-
-        fun getOwnership(type: Type): Ownership {
-            return if (type.isValue()) Ownership.VALUE
-            else Ownership.SHARED
-        }
 
         fun Type.isValue(): Boolean {
             return needsCopy() || isNative()

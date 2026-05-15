@@ -16,8 +16,8 @@ import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
-import me.anno.zauber.ast.simple.SimpleNode.Companion.isNullable
-import me.anno.zauber.ast.simple.SimpleNode.Companion.isValue
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall

@@ -266,7 +266,7 @@ class Runtime {
         return getClass(type).getOrCreateObjectInstance()
     }
 
-    fun executeBlock(block0: SimpleNode): BlockReturn? {
+    fun executeBlock(block0: SimpleBlock): BlockReturn? {
         var block = block0
         loop@ while (true) {
 

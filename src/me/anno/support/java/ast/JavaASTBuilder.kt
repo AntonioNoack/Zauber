@@ -395,8 +395,10 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
             val keywords = packFlags()
             val parameter = Parameter(
-                parameters.size, !isVal, isVal, isVararg, name, type,
-                null, currPackage, origin
+                parameters.size,
+                if (isVal) ParameterMutability.VAL else ParameterMutability.VAR,
+                if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
+                name, type, null, currPackage, origin
             )
             parameter.getOrCreateField(selfType, keywords)
             parameters.add(parameter)

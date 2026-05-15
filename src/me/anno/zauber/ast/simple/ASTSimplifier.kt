@@ -41,7 +41,6 @@ object ASTSimplifier {
     private val LOGGER = LogManager.getLogger(ASTSimplifier::class)
 
     val voidResult = FlowResult(null, null, null)
-    val booleanOwnership = Ownership.COMPTIME
 
     private val cache by threadLocal { HashMap<MethodSpecialization, SimpleGraph>() }
 
@@ -117,7 +116,7 @@ object ASTSimplifier {
 
     private fun simplifyImpl(
         context: ResolutionContext, expr: Expression,
-        block0: SimpleNode, flow0: FlowResult, needsValue: Boolean,
+        block0: SimpleBlock, flow0: FlowResult, needsValue: Boolean,
         contextExpr: Expression? = null // for ThisExpression
     ): FlowResult {
         when (expr) {
@@ -152,7 +151,7 @@ object ASTSimplifier {
                     SpecialValue.NULL -> NullType
                     SpecialValue.TRUE, SpecialValue.FALSE -> Types.Boolean
                 }
-                val dst = block0.field(type)
+                val dst = block0.field(type, expr)
                 block0.add(SimpleSpecialValue(dst, expr.type, expr.scope, expr.origin))
                 return flow0.withValue(dst, block0)
             }
@@ -179,13 +178,13 @@ object ASTSimplifier {
 
             is NumberExpression -> {
                 val type = TypeResolution.resolveType(context, expr)
-                val dst = block0.field(type)
+                val dst = block0.field(type, expr)
                 block0.add(SimpleNumber(dst, expr))
                 return flow0.withValue(dst, block0)
             }
 
             is StringExpression -> {
-                val dst = block0.field(Types.String, Ownership.COMPTIME)
+                val dst = block0.field(Types.String, expr)
                 block0.add(SimpleString(dst, expr))
                 return flow0.withValue(dst, block0)
             }
@@ -193,13 +192,13 @@ object ASTSimplifier {
             is IsInstanceOfExpr -> {
                 val block1 = simplifyImpl(context, expr.value, block0, flow0, true)
                 val block1v = block1.value ?: return block1
-                val dst = block1v.block.field(Types.Boolean, booleanOwnership)
+                val dst = block1v.block.field(Types.Boolean)
                 block1v.block.add(createSimpleInstanceOf(dst, block1v.value.use(), expr.type, expr.scope, expr.origin))
                 return block1.withValue(dst, block1v.block)
             }
 
             is GetClassFromTypeExpression -> {
-                val dst = block0.field(expr.resolveReturnType(context), Ownership.COMPTIME)
+                val dst = block0.field(expr.resolveReturnType(context))
                 block0.add(SimpleGetTypeInstance(dst, expr.type, expr.scope, expr.origin))
                 return flow0.withValue(dst, block0)
             }
@@ -207,7 +206,7 @@ object ASTSimplifier {
             is GetClassFromValueExpression -> {
                 val block1 = simplifyImpl(context, expr.value, block0, flow0, true)
                 val block1v = block1.value ?: return block1
-                val dst = block0.field(expr.resolveReturnType(context), Ownership.COMPTIME)
+                val dst = block0.field(expr.resolveReturnType(context))
                 block0.add(SimpleGetTypeFromInstance(dst, block1v.value.use(), expr.scope, expr.origin))
                 return flow0.withValue(dst, block0)
             }
@@ -232,7 +231,7 @@ object ASTSimplifier {
         }
     }
 
-    private fun simplifyJump(expr: Expression, flow0: FlowResult, target: SimpleNode?): FlowResult {
+    private fun simplifyJump(expr: Expression, flow0: FlowResult, target: SimpleBlock?): FlowResult {
         val block0 = flow0.value ?: return flow0
         check(target != null) { "Failed to resolve jump target to $expr" }
         block0.block.nextBranch = target
@@ -242,7 +241,7 @@ object ASTSimplifier {
     private fun simplifyList(
         context: ResolutionContext,
         expr: ExpressionList,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
         needsValue: Boolean
     ): FlowResult {
@@ -272,7 +271,7 @@ object ASTSimplifier {
     private fun simplifyDynamicMacro(
         context: ResolutionContext,
         expr: DynamicMacroExpression,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
         // (base, block1)
@@ -302,7 +301,7 @@ object ASTSimplifier {
     private fun simplifyCall(
         context: ResolutionContext,
         expr: ResolvedCallExpression,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
 
@@ -332,7 +331,7 @@ object ASTSimplifier {
     private fun simplifyGetField(
         context: ResolutionContext,
         expr: ResolvedGetFieldExpression,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
         val field = expr.field.resolved
@@ -430,7 +429,7 @@ object ASTSimplifier {
     private fun simplifySetField(
         context: ResolutionContext,
         expr: ResolvedSetFieldExpression,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
 
@@ -490,7 +489,7 @@ object ASTSimplifier {
     private fun simplifyCompareOp(
         context: ResolutionContext,
         expr: ResolvedCompareOp,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
         val block1 = simplifyImpl(context, expr.left, block0, flow0, true)
@@ -516,7 +515,7 @@ object ASTSimplifier {
         )
         val block3v = block3.value ?: return block3
 
-        val dst = block3v.block.field(Types.Boolean, booleanOwnership)
+        val dst = block3v.block.field(Types.Boolean)
         val instr = SimpleCompare(
             dst, left.use(), right.use(), expr.type,
             tmp.use(), expr.scope, expr.origin
@@ -528,7 +527,7 @@ object ASTSimplifier {
     private fun simplifyCheckEqualsOp(
         context: ResolutionContext,
         expr: CheckEqualsOp,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
     ): FlowResult {
         val block1 = simplifyImpl(context, expr.left, block0, flow0, true)
@@ -537,7 +536,7 @@ object ASTSimplifier {
         val block2 = simplifyImpl(context, expr.right, block1, true)
         val block2v = block2.value ?: return block2
 
-        val dst = block2v.block.field(Types.Boolean, booleanOwnership)
+        val dst = block2v.block.field(Types.Boolean)
         val left = block1v.value
         val right = block2v.value
         val call = if (expr.byPointer) {
@@ -568,7 +567,7 @@ object ASTSimplifier {
     private fun simplifyTryCatch(
         context: ResolutionContext,
         expr: TryCatchBlock,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
         needsValue: Boolean
     ): FlowResult {
@@ -603,7 +602,7 @@ object ASTSimplifier {
         val block0b = block0.block
 
         val thrownType = catch.parameter.type
-        val instanceOfField = block0b.field(Types.Boolean, booleanOwnership)
+        val instanceOfField = block0b.field(Types.Boolean)
         val instanceCheck = createSimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
 
         val alwaysHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.TRUE
@@ -636,7 +635,7 @@ object ASTSimplifier {
         catch: Catch,
         needsValue: Boolean,
         block0: Flow,
-        ifBlock: SimpleNode,
+        ifBlock: SimpleBlock,
     ): FlowResult {
         val ifFlow = FlowResult(Flow(unitInstance(ifBlock.graph, expr), ifBlock), null, null)
         val methodType = catch.parameter.scope.typeWithArgs
@@ -652,7 +651,7 @@ object ASTSimplifier {
     private fun simplifyCatchContinueBranch(
         flow0: FlowResult,
         block0: Flow,
-        elseBlock: SimpleNode,
+        elseBlock: SimpleBlock,
     ): FlowResult {
         return flow0.withThrown(block0.value, elseBlock)
     }
@@ -693,7 +692,7 @@ object ASTSimplifier {
     private fun simplifyWhile(
         context: ResolutionContext,
         expr: WhileLoop,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
     ): FlowResult {
 
@@ -736,7 +735,7 @@ object ASTSimplifier {
     private fun simplifyDoWhile(
         context: ResolutionContext,
         expr: DoWhileLoop,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
     ): FlowResult {
 
@@ -775,7 +774,7 @@ object ASTSimplifier {
     private fun simplifyBranch(
         context: ResolutionContext,
         expr: IfElseBranch,
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
         needsValue: Boolean,
     ): FlowResult {
@@ -812,7 +811,7 @@ object ASTSimplifier {
     }
 
     private fun simplifyCall(
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
 
         selfField: SimpleField?,
@@ -849,7 +848,7 @@ object ASTSimplifier {
     }
 
     private fun createConstructorInvocation(
-        block0: SimpleNode,
+        block0: SimpleBlock,
         flow0: FlowResult,
 
         method: Constructor,
@@ -895,7 +894,7 @@ object ASTSimplifier {
     }
 
     fun handleThrown(
-        block0: SimpleNode, flow0: FlowResult,
+        block0: SimpleBlock, flow0: FlowResult,
         result: SimpleField, callable: SimpleCallable, thrownType: Type
     ): FlowResult {
 

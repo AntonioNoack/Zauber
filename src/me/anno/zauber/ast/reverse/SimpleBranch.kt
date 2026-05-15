@@ -3,11 +3,10 @@ package me.anno.zauber.ast.reverse
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
-import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.Runtime
 
-class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleNode, val ifFalse: SimpleNode) :
+class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFalse: SimpleBlock) :
     SimpleInstruction(root, -1) {
 
     override fun execute(): BlockReturn? {

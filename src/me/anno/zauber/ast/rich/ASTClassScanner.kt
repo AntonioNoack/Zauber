@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
+import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
@@ -756,11 +757,17 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                     }
                 }
 
+                val i0 = i
+                val paramOrigin = origin(i)
+                val isConst = consumeIf("const")
                 val isVararg = consumeIf("vararg")
                 val isVal = consumeIf("val")
                 val isVar = consumeIf("var")
 
-                val paramOrigin = origin(i)
+                check(isConst.toInt() + isVar.toInt() + isVal.toInt() <= 1) {
+                    "Only one of 'var', 'val' and 'const' must be present at ${tokens.err(i0)}"
+                }
+
                 val name = consumeName(VSCodeType.PARAMETER, 0)
                 consume(":")
 
@@ -770,7 +777,14 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
                 if (isVararg) type = Types.Array.withTypeParameter(type)
                 val parameter = Parameter(
-                    parameters.size, isVar, isVal, isVararg,
+                    parameters.size,
+                    when {
+                        isVar -> ParameterMutability.VAR
+                        isVal -> ParameterMutability.VAL
+                        isConst -> ParameterMutability.CONST
+                        else -> ParameterMutability.DEFAULT
+                    },
+                    if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
                     name, type, defaultValue,
                     currPackage, paramOrigin
                 )

@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.reverse
 
 import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.SimpleNode
+import me.anno.zauber.ast.simple.SimpleBlock
 
 /**
  * Converts an arbitrary graph back into if-else and while-blocks.
@@ -23,8 +23,8 @@ object CodeReconstruction {
 
     private fun simplifySequence(graph: SimpleGraph): Boolean {
         var changed = false
-        for (i in graph.nodes.indices) {
-            val curr = graph.nodes[i]
+        for (i in graph.blocks.indices) {
+            val curr = graph.blocks[i]
             val next = curr.nextBranch
             if (!curr.isBranch &&
                 next != null && next.isOnlyInput(curr)
@@ -42,8 +42,8 @@ object CodeReconstruction {
 
     private fun simplifyBranch(graph: SimpleGraph): Boolean {
         var changed = false
-        for (i in graph.nodes.indices) {
-            val curr = graph.nodes[i]
+        for (i in graph.blocks.indices) {
+            val curr = graph.blocks[i]
             val nextT = curr.ifBranch
             val nextF = curr.elseBranch
             val after = nextT?.nextBranch
@@ -66,8 +66,8 @@ object CodeReconstruction {
     }
 
     private fun simplifyLoop(graph: SimpleGraph): Boolean {
-        for (i in graph.nodes.indices) {
-            val curr = graph.nodes[i]
+        for (i in graph.blocks.indices) {
+            val curr = graph.blocks[i]
             val nextT = curr.ifBranch
             val nextF = curr.elseBranch
             val after = nextF?.nextBranch
@@ -86,7 +86,7 @@ object CodeReconstruction {
     }
 
     private fun breakAtStrongestKnot(graph: SimpleGraph): Boolean {
-        val bestNode = graph.nodes
+        val bestNode = graph.blocks
             .filter { !it.isEntryPoint }
             .maxBy { it.inputNodes.size }
 
@@ -109,14 +109,14 @@ object CodeReconstruction {
         return true
     }
 
-    private fun SimpleGraph.createTailCall(target: SimpleNode): SimpleNode {
+    private fun SimpleGraph.createTailCall(target: SimpleBlock): SimpleBlock {
         val node = addNode()
         node.instructions.add(SimpleTailCall(target))
         return node
     }
 
     private fun isSolved(graph: SimpleGraph): Boolean {
-        return graph.nodes.all {
+        return graph.blocks.all {
             it.branchCondition == null &&
                     it.ifBranch == null &&
                     it.elseBranch == null

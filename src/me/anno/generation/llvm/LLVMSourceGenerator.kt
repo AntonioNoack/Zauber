@@ -12,7 +12,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
-import me.anno.zauber.ast.simple.SimpleNode.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
@@ -107,7 +107,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         CodeReconstruction.createCodeFromGraph(graph)
 
         writeBlock {
-            appendSimplifiedAST(graph, graph.startBlock)
+            appendSimpleBlock(graph, graph.startBlock)
         }
     }
 
@@ -145,11 +145,11 @@ class LLVMSourceGenerator : CSourceGenerator() {
         builder.append(forFieldAccess)
     }
 
-    override fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleNode) {
+    override fun appendSimpleBlock(graph: SimpleGraph, expr: SimpleBlock) {
         val instructions = expr.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
-            appendSimplifiedAST(graph, instr /*loop*/)
+            appendSimpleInstruction(graph, instr /*loop*/)
             if (instr is SimpleAssignment &&
                 instr.dst.type == Types.Nothing
             ) break
@@ -157,7 +157,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         if (expr.branchCondition == null) {
             val next = expr.nextBranch
             if (next != null) {
-                appendSimplifiedAST(graph, next)
+                appendSimpleBlock(graph, next)
             }
         } else {
             // todo this may or may not be simply be possible...
@@ -179,7 +179,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    override fun appendSimplifiedAST(graph: SimpleGraph, expr: SimpleInstruction) {
+    override fun appendSimpleInstruction(graph: SimpleGraph, expr: SimpleInstruction) {
         if (expr is SimpleGetObject) return
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
             val notNeeded = expr.dst.numReads == 0
@@ -192,19 +192,19 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 appendFieldName(graph, expr.condition)
                 builder.append(')')
                 writeBlock {
-                    appendSimplifiedAST(graph, expr.ifTrue)
+                    appendSimpleBlock(graph, expr.ifTrue)
                 }
                 trimWhitespaceAtEnd()
                 builder.append(" else ")
                 writeBlock {
-                    appendSimplifiedAST(graph, expr.ifFalse)
+                    appendSimpleBlock(graph, expr.ifFalse)
                 }
             }
             is SimpleLoop -> {
                 builder.append("b").append(expr.body.blockId)
                 builder.append(": while (true)")
                 writeBlock {
-                    appendSimplifiedAST(graph, expr.body)
+                    appendSimpleBlock(graph, expr.body)
                 }
             }
             is SimpleDeclaration -> {

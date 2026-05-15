@@ -4,11 +4,11 @@ import me.anno.zauber.ast.simple.Flow.Companion.join
 
 data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) {
 
-    fun withValue(field: SimpleField, block: SimpleNode): FlowResult {
+    fun withValue(field: SimpleField, block: SimpleBlock): FlowResult {
         return FlowResult(Flow(field, block), returned, thrown)
     }
 
-    fun withThrown(field: SimpleField, block: SimpleNode): FlowResult {
+    fun withThrown(field: SimpleField, block: SimpleBlock): FlowResult {
         return FlowResult(value, returned, Flow(field, block))
     }
 
@@ -31,12 +31,12 @@ data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) 
         return FlowResult(null, returned, thrown.join(other))
     }
 
-    fun joinReturnNoValue(newReturnValue: SimpleField, newReturnBlock: SimpleNode): FlowResult {
+    fun joinReturnNoValue(newReturnValue: SimpleField, newReturnBlock: SimpleBlock): FlowResult {
         val joinedValue = returned.join(newReturnValue, newReturnBlock)
         return FlowResult(null, joinedValue, thrown)
     }
 
-    fun joinThrownNoValue(newThrownValue: SimpleField, newThrownBlock: SimpleNode): FlowResult {
+    fun joinThrownNoValue(newThrownValue: SimpleField, newThrownBlock: SimpleBlock): FlowResult {
         val joinedValue = thrown.join(newThrownValue, newThrownBlock)
         return FlowResult(null, returned, joinedValue)
     }

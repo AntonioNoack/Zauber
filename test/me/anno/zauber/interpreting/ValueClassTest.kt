@@ -5,7 +5,12 @@ import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContain
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsMessage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+
+// todo make sure that:
+//  value classes can only extend value classes or Any
+//  value classes cannot self-reference
+// todo should we make Int a value class? theoretically, it is, or something special...
+// should we make String a value class? no, too heavy, but we could add ShortString like in C++ (u8x8, \0 = end)
 
 class ValueClassTest {
 
