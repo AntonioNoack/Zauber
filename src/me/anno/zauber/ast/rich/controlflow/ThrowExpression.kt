@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
-class ThrowExpression(value: Expression, scope: Scope, origin: Int) :
+class ThrowExpression(value: Expression, scope: Scope, origin: Long) :
     ExitExpression(value, null, scope, origin) {
 
     override fun toStringImpl(depth: Int): String {

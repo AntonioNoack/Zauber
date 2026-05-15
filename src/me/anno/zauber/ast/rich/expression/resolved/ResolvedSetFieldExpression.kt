@@ -13,7 +13,7 @@ class ResolvedSetFieldExpression(
     owner: Expression,
     field: ResolvedField,
     val value: Expression,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : ResolvedFieldExpression(owner, field, scope, origin) {
 
     override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)

@@ -14,7 +14,7 @@ class SimpleSetField(
     val field: Field,
     val value: SimpleField,
     val specialization: Specialization,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleInstruction(scope, origin) {
 
     companion object {

@@ -12,11 +12,12 @@ class Parameter(
     val index: Int,
     val mutability: ParameterMutability,
     val expansion: ParameterExpansion,
+    val parameterType: ParameterType,
     val name: String,
     var type: Type,
     val defaultValue: Expression?,
     val scope: Scope,
-    val origin: Int
+    val origin: Long
 ) {
 
     val isVar get() = mutability == ParameterMutability.VAR
@@ -36,11 +37,21 @@ class Parameter(
 
     var field: Field? = null
 
-    constructor(index: Int, name: String, type: Type, scope: Scope, origin: Int) :
-            this(index, ParameterMutability.DEFAULT, ParameterExpansion.NONE, name, type, null, scope, origin)
+    constructor(
+        index: Int, name: String, parameterType: ParameterType,
+        type: Type, scope: Scope, origin: Long
+    ) : this(
+        index, ParameterMutability.DEFAULT, ParameterExpansion.NONE,
+        parameterType, name, type, null, scope, origin
+    )
 
-    constructor(index: Int, name: String, mutability: ParameterMutability, type: Type, scope: Scope, origin: Int) :
-            this(index, mutability, ParameterExpansion.NONE, name, type, null, scope, origin)
+    constructor(
+        index: Int, name: String, parameterType: ParameterType, mutability: ParameterMutability,
+        type: Type, scope: Scope, origin: Long
+    ) : this(
+        index, mutability, ParameterExpansion.NONE,
+        parameterType, name, type, null, scope, origin
+    )
 
     override fun toString(): String {
         return "${if (isVar) "var " else ""}${if (isVal) "val " else ""}${scope.pathStr}.$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
@@ -60,7 +71,7 @@ class Parameter(
 
     fun clone(scope: Scope): Parameter {
         return Parameter(
-            index, mutability, expansion, name, type,
+            index, mutability, expansion, parameterType, name, type,
             defaultValue?.clone(scope), scope, origin
         )
     }

@@ -5,7 +5,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, origin: Int) :
+class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
     val symbol: String get() = "is"

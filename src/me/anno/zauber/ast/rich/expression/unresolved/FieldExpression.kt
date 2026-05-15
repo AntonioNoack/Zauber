@@ -18,7 +18,7 @@ import me.anno.zauber.types.Type
  * */
 class FieldExpression(
     val field: Field,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin), FieldResolvable {
 
     companion object {
@@ -43,7 +43,7 @@ class FieldExpression(
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
         return FieldResolver.findMemberMatch(
             field, fieldReturnType, context.targetType,
-            scopeSelfType, null, emptyList(), scope, origin
+            scopeSelfType, null, emptyList(), context.specialization, scope, origin
         ) ?: throw IllegalStateException(
             "Generics could not be resolved for $field at " +
                     TokenListIndex.resolveOrigin(origin)

@@ -44,7 +44,7 @@ object ASTSimplifier {
 
     private val cache by threadLocal { HashMap<MethodSpecialization, SimpleGraph>() }
 
-    fun unitInstance(graph: SimpleGraph, scope: Scope, origin: Int): SimpleField {
+    fun unitInstance(graph: SimpleGraph, scope: Scope, origin: Long): SimpleField {
         var field = graph.unitField
         if (field != null) return field
         val block = graph.startBlock
@@ -822,7 +822,7 @@ object ASTSimplifier {
         selfIfInsideConstructor: Boolean?,
 
         scope: Scope,
-        origin: Int
+        origin: Long
     ): FlowResult {
         for (param in valueParameters) param.use()
         return when (val method = method0.resolved) {
@@ -858,7 +858,7 @@ object ASTSimplifier {
         selfIfInsideConstructor: Boolean?,
 
         scope: Scope,
-        origin: Int
+        origin: Long
     ): FlowResult {
         return if (selfIfInsideConstructor != null) {
             val graph = block0.graph
@@ -917,7 +917,7 @@ object ASTSimplifier {
     fun reorderResolveParameters(
         context: ResolutionContext,
         src: List<NamedParameter>, targetParams: List<Parameter>,
-        scope: Scope, origin: Int
+        scope: Scope, origin: Long
     ): List<Expression> {
         return reorderParameters(src, targetParams, scope, origin).mapIndexed { index, param ->
             param.resolve(context.withTargetType(targetParams[index].type))
@@ -926,7 +926,7 @@ object ASTSimplifier {
 
     fun reorderParameters(
         src: List<NamedParameter>, dst: List<Parameter>,
-        scope: Scope, origin: Int
+        scope: Scope, origin: Long
     ): List<Expression> {
         return resolveNamedParameters(dst, src, scope, origin)
             ?: throw IllegalStateException("Failed to fill in call parameters at ${resolveOrigin(origin)}")

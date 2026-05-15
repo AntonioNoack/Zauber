@@ -25,7 +25,7 @@ class GetMethodFromValueExpression(
     val self: Expression,
     val name: String,
     val nameAsImport: List<Import>,
-    origin: Int
+    origin: Long
 ) : Expression(self.scope, origin) {
 
     companion object {

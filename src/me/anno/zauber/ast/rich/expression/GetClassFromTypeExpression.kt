@@ -7,7 +7,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 
-class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Int) : Expression(scope, origin) {
+class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
         return "${type.toString(depth)}::class"

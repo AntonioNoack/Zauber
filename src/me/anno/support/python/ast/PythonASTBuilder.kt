@@ -400,7 +400,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return buildFString(parts, origin)
     }
 
-    private fun buildFString(parts: List<Expression>, origin: Int): Expression {
+    private fun buildFString(parts: List<Expression>, origin: Long): Expression {
         if (parts.isEmpty()) return StringExpression("", currPackage, origin)
 
         var result = parts[0]
@@ -507,15 +507,15 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }
     }
 
-    private fun namedCall(name: String, expr: Expression, origin: Int): Expression {
+    private fun namedCall(name: String, expr: Expression, origin: Long): Expression {
         return namedCall(name, listOf(expr), origin)
     }
 
-    private fun namedCall(name: String, expr: List<Expression>, origin: Int): Expression {
+    private fun namedCall(name: String, expr: List<Expression>, origin: Long): Expression {
         return namedCall1(name, expr.map { NamedParameter(null, it) }, origin)
     }
 
-    private fun namedCall1(name: String, expr: List<NamedParameter>, origin: Int): Expression {
+    private fun namedCall1(name: String, expr: List<NamedParameter>, origin: Long): Expression {
         val nameExpr = UnresolvedFieldExpression(name, emptyList(), currPackage, origin)
         return CallExpression(nameExpr, emptyList(), expr, origin)
     }
@@ -525,7 +525,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         consume("def")
         val name = consumeName(VSCodeType.METHOD, 0)
         val valueParameters = pushCall {
-            readParameterDeclarations(currPackage.typeWithArgs, emptyList())
+            readParameterDeclarations(currPackage.typeWithArgs, emptyList(), ParameterType.VALUE_PARAMETER)
         }
         val returnType = if (consumeIf("->")) {
             readTypeNotNull(currPackage.typeWithArgs, true)
@@ -549,7 +549,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return ExpressionList(body, methodScope, bodyOrigin)
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>, parameterType: ParameterType): List<Parameter> {
         val parameters = ArrayList<Parameter>(extra)
         var mustBeNamed = false
         loop@ while (i < tokens.size) {
@@ -588,7 +588,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 parameters.size,
                 if (isVal) ParameterMutability.VAL else ParameterMutability.VAR,
                 if (isVarDict) ParameterExpansion.VARDICT else ParameterExpansion.NONE,
-                name, type, defaultValue, currPackage, origin
+                parameterType, name, type, defaultValue, currPackage, origin
             )
             parameter.getOrCreateField(selfType, keywords)
             parameters.add(parameter)
@@ -657,7 +657,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     readTypeNotNull(null, true)
                 }.apply { i-- }
             } else pythonInstanceType
-            val parameter = Parameter(0, "?", typeName, currPackage, origin)
+            val parameter = Parameter(0, "?", ParameterType.VALUE_PARAMETER, typeName, currPackage, origin)
             consume(":")
             pushPythonBlock(ScopeType.METHOD_BODY, "catch") {
                 val handler = readMethodBody()

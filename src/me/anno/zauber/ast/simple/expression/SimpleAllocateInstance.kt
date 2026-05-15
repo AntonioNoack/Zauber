@@ -11,7 +11,7 @@ class SimpleAllocateInstance(
     dst: SimpleField,
     val allocatedType: ClassType,
     val paramsForLater: List<SimpleField>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {

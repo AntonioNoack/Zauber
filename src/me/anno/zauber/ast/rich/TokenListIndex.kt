@@ -46,14 +46,16 @@ object TokenListIndex {
         return tokenLists[idx]
     }
 
-    fun resolveOrigin(i: Int): String {
+    fun resolveOrigin(i: Long): String {
         if (i < 0) return i.toString()
+        val i = i.shr(32).toInt()
         val tl = findTokenList(i)
         return tl.err(i - tl.tliIndex)
     }
 
-    fun resolveOriginShort(i: Int): String {
+    fun resolveOriginShort(i: Long): String {
         if (i < 0) return i.toString()
+        val i = i.shr(32).toInt()
         val tl = findTokenList(i)
         return tl.errShort(i - tl.tliIndex)
     }

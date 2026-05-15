@@ -6,7 +6,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scope, origin: Int) :
+class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {

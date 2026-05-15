@@ -17,7 +17,7 @@ class DynamicMacroExpression(
     val valueParameters: List<Expression>,
     val imports: List<Import>,
     val generics: HashMap<String, GenericType>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     override fun isResolved(): Boolean = self.isResolved() && valueParameters.all { it.isResolved() }

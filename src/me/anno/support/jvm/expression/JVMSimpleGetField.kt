@@ -9,7 +9,7 @@ class JVMSimpleGetField(
     val dst: SimpleFieldExpr,
     val self: SimpleFieldExpr,
     val field: Field,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveReturnType(context: ResolutionContext): Type = dst.type
 }

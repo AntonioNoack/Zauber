@@ -207,7 +207,7 @@ class Scope(val name: String, val parent: Scope? = null) {
      * */
     var objectField: Field? = null
 
-    fun getOrCreateObjectField(origin: Int): Field {
+    fun getOrCreateObjectField(origin: Long): Field {
         check(isObjectLike()) { "Expected $this to be object-like, got $scopeType" }
         if (objectField == null) objectField = addField(
             null, false, isMutable = false, null, OBJECT_FIELD_NAME,
@@ -264,7 +264,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         valueType: Type?,
         initialValue: Expression?,
         keywords: FlagSet,
-        origin: Int
+        origin: Long
     ): Field {
         check((selfType != null) == explicitSelfType)
 
@@ -334,7 +334,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         return put(name, scopeType)
     }
 
-    fun generate(prefix: String, origin: Int, scopeType: ScopeType): Scope {
+    fun generate(prefix: String, origin: Long, scopeType: ScopeType): Scope {
         val name = generateName(prefix, origin)
         return put(name, scopeType)
     }
@@ -542,7 +542,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     /**
      * for inner classes and methods, the origin should be that of the first class-defining keyword, e.g. 'object'
      * */
-    fun generateName(prefix: String, uniqueOrigin: Int): String {
+    fun generateName(prefix: String, uniqueOrigin: Long): String {
         return "$${prefix}_o$uniqueOrigin"
     }
 

@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich
 
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
+import me.anno.utils.NumberUtils.pack64
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -56,8 +57,9 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
         return value
     }
 
-    fun origin(i: Int): Int {
-        return TokenListIndex.getIndex(tokens, i)
+    fun origin(i: Int): Long {
+        val ptr = TokenListIndex.getIndex(tokens, i)
+        return pack64(ptr, ptr)
     }
 
     inline fun <R> pushBlockLike(

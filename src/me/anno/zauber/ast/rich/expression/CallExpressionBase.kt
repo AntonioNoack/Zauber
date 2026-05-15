@@ -33,7 +33,7 @@ abstract class CallExpressionBase(
     val self: Expression,
     val typeParameters: List<Type>?,
     val valueParameters: List<NamedParameter>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     companion object {

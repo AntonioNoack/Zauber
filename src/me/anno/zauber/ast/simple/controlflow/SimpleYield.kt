@@ -10,7 +10,7 @@ import me.anno.zauber.scope.Scope
 class SimpleYield(
     field: SimpleField,
     val continueBlock: SimpleBlock,
-    scope: Scope, origin: Int,
+    scope: Scope, origin: Long,
 ) : SimpleExit(field, scope, origin) {
     override val returnType: ReturnType get() = ReturnType.YIELD
 }

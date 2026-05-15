@@ -15,7 +15,7 @@ class SimpleSelfConstructor(
     val method: Constructor,
     specialization: Specialization,
     val valueParameters: List<SimpleField>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleCallable(unusedDst, self, method, specialization, scope, origin) {
 
     init {

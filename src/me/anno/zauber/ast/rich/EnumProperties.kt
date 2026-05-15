@@ -83,7 +83,7 @@ fun ZauberASTBuilderBase.readEnumBody(): Int {
     return endIndex
 }
 
-fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Int) {
+fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Long) {
 
     companionScope.hasTypeParameters = true
 

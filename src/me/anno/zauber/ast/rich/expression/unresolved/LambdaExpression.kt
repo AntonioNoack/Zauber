@@ -1,9 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.SuperCall
+import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.Expression
@@ -59,12 +56,8 @@ class LambdaExpression(
         val bodyContext = context
             .withTargetType(null)
 
-        var targetLambdaType = context.targetType
+        val targetLambdaType = context.targetType
             ?.specialize(context)
-
-        /*while (targetLambdaType is GenericType) {
-            targetLambdaType = targetLambdaType.superBounds
-        }*/
 
         when (targetLambdaType) {
             is LambdaType -> {
@@ -174,7 +167,10 @@ class LambdaExpression(
 
         val selfMethodType = findSelfType(context)
         // todo if selfType != null, we need a second self-parameter
-        val methodParameter = Parameter(0, "self", selfMethodType, classConstructor, origin)
+        val methodParameter = Parameter(
+            0, "self", ParameterType.VALUE_PARAMETER,
+            selfMethodType, classConstructor, origin
+        )
         val methodField = classScope.addField(
             null, false, false, methodParameter, "self", selfMethodType,
             null, Flags.SYNTHETIC, 0,

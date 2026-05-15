@@ -12,7 +12,7 @@ abstract class SimpleCallable(
     val self: SimpleField,
     val sample: MethodLike,
     val specialization: Specialization,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     val methodSpec = MethodSpecialization(sample, specialization)

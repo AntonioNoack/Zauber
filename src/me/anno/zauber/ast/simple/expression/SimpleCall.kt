@@ -34,7 +34,7 @@ class SimpleCall(
     val typeParameters: List<SimpleField>,
     val valueParameters: List<SimpleField>,
     val scopeBridgingParameters: List<SimpleField>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleCallable(dst, self, sample, specialization, scope, origin) {
 
     companion object {
@@ -102,7 +102,7 @@ class SimpleCall(
         typeParameters: List<SimpleField>,
         valueParameters: List<SimpleField>,
         scopeBridgingParameters: List<SimpleField>,
-        scope: Scope, origin: Int
+        scope: Scope, origin: Long
     ) : this(
         dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method), method, self,
         specialization, typeParameters, valueParameters, scopeBridgingParameters, scope, origin
@@ -114,7 +114,7 @@ class SimpleCall(
         self: SimpleField,
         specialization: Specialization,
         valueParameters: List<SimpleField>,
-        scope: Scope, origin: Int
+        scope: Scope, origin: Long
     ) : this(
         dst, method, self, specialization,
         emptyList(), valueParameters, emptyList(),
@@ -128,7 +128,7 @@ class SimpleCall(
         self: SimpleField,
         specialization: Specialization,
         valueParameters: List<SimpleField>,
-        scope: Scope, origin: Int
+        scope: Scope, origin: Long
     ) : this(
         dst, (method as? Method)?.name ?: "?", methodMap, method, self, specialization,
         emptyList(), valueParameters, emptyList(),

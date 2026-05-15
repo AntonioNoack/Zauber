@@ -13,13 +13,14 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.specialization.Specialization
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
     private val LOGGER = LogManager.getLogger(MethodResolver::class)
 
     override fun findMemberInScope(
-        scope: Scope?, origin: Int, name: String,
+        scope: Scope?, origin: Long, name: String,
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
@@ -54,7 +55,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val match = findMemberMatch(
                 method, methodReturnType1, returnType,
                 selfType, typeParameters, valueParameters,
-                /* todo is this fine??? */scope, origin
+                context.specialization,/* todo is this fine??? */scope, origin
             )
             if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {
                 bestMatch = match
@@ -82,13 +83,14 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
         typeParameters: List<Type>?,
         actualValueParameters: List<ValueParameter>,
-        codeScope: Scope, origin: Int
+        ctxSpec: Specialization,
+        codeScope: Scope, origin: Long
     ): ResolvedMethod? {
         return FieldMethodResolver.findMemberMatch(
             method, methodReturnType,
             returnType, selfType,
             typeParameters, actualValueParameters,
-            codeScope, origin
+            ctxSpec, codeScope, origin
         ) as? ResolvedMethod
     }
 
@@ -98,7 +100,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         constructor: ResolvedMember<*>?,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        origin: Int
+        origin: Long
     ): ResolvedMember<*>? {
         return constructor
             ?: resolveMethod(
@@ -134,7 +136,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        origin: Int
+        origin: Long
     ): ResolvedMember<*>? {
         return resolveInCodeScope(context, codeScope) { scope, selfType ->
             findMemberInScope(
@@ -152,7 +154,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        origin: Int
+        origin: Long
     ): ResolvedMember<*>? {
         for (import in nameAsImport) {
             if (import.name != name) continue
@@ -170,7 +172,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         nameAsImport: Scope,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        origin: Int
+        origin: Long
     ): ResolvedMember<*>? {
 
         val methodOwner = nameAsImport.parent

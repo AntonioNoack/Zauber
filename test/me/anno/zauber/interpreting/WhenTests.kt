@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

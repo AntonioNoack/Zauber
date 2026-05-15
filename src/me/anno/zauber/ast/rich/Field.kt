@@ -31,7 +31,7 @@ class Field(
     val initialValue: Expression?,
 
     flags: FlagSet,
-    origin: Int
+    origin: Long
 ) : Member(
     selfType, explicitSelfType,
     name, scope, flags,

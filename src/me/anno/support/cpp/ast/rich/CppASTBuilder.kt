@@ -158,7 +158,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return field
     }
 
-    private fun readParameters(): List<Parameter> {
+    private fun readParameters(parameterType: ParameterType): List<Parameter> {
         // special case for a list without arguments
         if (i + 1 == tokens.size && consumeIf("void")) {
             return emptyList()
@@ -177,7 +177,12 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             }
             val origin = origin(i)
             val field = readField(end, false)
-            parameters.add(Parameter(parameters.size, field.name, field.valueType!!, currPackage, origin))
+            parameters.add(
+                Parameter(
+                    parameters.size, field.name, parameterType,
+                    field.valueType!!, currPackage, origin
+                )
+            )
             readComma()
         }
         return parameters
@@ -190,7 +195,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         val methodScope = currPackage.getOrPut(genName, ScopeType.METHOD)
         val keywords = packFlags()
         val arguments = pushScope(methodScope) {
-            pushCall { readParameters() }
+            pushCall { readParameters(ParameterType.VALUE_PARAMETER) }
         }
         val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
             pushBlock(methodScope) {
@@ -496,18 +501,18 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         }
     }
 
-    private fun handleDot(expr: Expression, origin: Int): Expression {
+    private fun handleDot(expr: Expression, origin: Long): Expression {
         val name = tokens.toString(i++)
         val rhs = UnresolvedFieldExpression(name, nameAsImport(name), expr.scope, origin)
         return DotExpression(expr, null, rhs, expr.scope, origin)
     }
 
-    private fun handleArrow(expr: Expression, origin: Int): Expression {
+    private fun handleArrow(expr: Expression, origin: Long): Expression {
         val deref = NamedCallExpression(expr, "deref", expr.scope, origin)
         return handleDot(deref, origin)
     }
 
-    private fun handleScopeResolution(expr: Expression, origin: Int): Expression {
+    private fun handleScopeResolution(expr: Expression, origin: Long): Expression {
         val name = tokens.toString(i++)
         return GetMethodFromTypeExpression(
             (expr as UnresolvedFieldExpression).scope,

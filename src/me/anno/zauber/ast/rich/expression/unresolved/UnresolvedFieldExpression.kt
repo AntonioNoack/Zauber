@@ -15,7 +15,7 @@ import me.anno.zauber.types.impl.NonObjectClassType
 class UnresolvedFieldExpression(
     val name: String,
     val nameAsImport: List<Import>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin), FieldResolvable {
 
     override fun toStringImpl(depth: Int): String = name

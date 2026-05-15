@@ -8,7 +8,7 @@ class JVMSimpleCheckIdentical(
     val dst: SimpleFieldExpr,
     val p0: SimpleFieldExpr, val p1: SimpleFieldExpr,
     val negated: Boolean,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveReturnType(context: ResolutionContext): Type = dst.type
 }

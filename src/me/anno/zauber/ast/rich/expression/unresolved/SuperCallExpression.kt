@@ -20,7 +20,7 @@ class SuperCallExpression(
     base: SuperExpression,
     typeParameters: List<Type>?,
     valueParameters: List<NamedParameter>,
-    origin: Int
+    origin: Long
 ) : CallExpressionBase(
     base, typeParameters,
     valueParameters, base.scope, origin

@@ -16,7 +16,7 @@ class SimpleInstanceOf private constructor(
     dst: SimpleField,
     val value: SimpleField,
     val type: Type,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
@@ -40,7 +40,7 @@ class SimpleInstanceOf private constructor(
             value: SimpleField,
             type: Type,
             scope: Scope,
-            origin: Int
+            origin: Long
         ): SimpleAssignment {
             val valueType = value.type
             if (!canInstanceBeBoth(valueType, type)) {

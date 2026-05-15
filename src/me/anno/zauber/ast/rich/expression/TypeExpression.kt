@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.NonObjectClassType
 
-class TypeExpression(val type: Type, scope: Scope, origin: Int) :
+class TypeExpression(val type: Type, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String = type.toString()

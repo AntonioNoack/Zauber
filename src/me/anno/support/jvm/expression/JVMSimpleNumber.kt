@@ -8,7 +8,7 @@ import me.anno.zauber.types.Type
 class JVMSimpleNumber(
     val dst: SimpleFieldExpr,
     val value: NumberExpression,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveReturnType(context: ResolutionContext): Type = dst.type
 }

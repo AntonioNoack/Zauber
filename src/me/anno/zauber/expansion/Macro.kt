@@ -39,19 +39,19 @@ object Macro {
 
     fun ZauberASTBuilderBase.evaluateMacro(
         namePath: Expression, typeParameters: List<Type>?,
-        valueParameters: List<NamedParameter>, origin: Int
+        valueParameters: List<NamedParameter>, origin: Long
     ): Expression {
         TODO("Resolve macro $namePath")
     }
 
-    fun ZauberASTBuilderBase.evaluateMacro(namePath: String, typeParameters: List<Type>?, origin: Int): Expression {
+    fun ZauberASTBuilderBase.evaluateMacro(namePath: String, i0: Int, typeParameters: List<Type>?, origin: Long): Expression {
 
-        val i0 = i - 1 // 'i0' is on name, 'i' is on virtual '('
+        val i1 = i - 1 // 'i0' is on name, 'i' is on virtual '('
         skipCall() // 'i' is now after call
 
-        val content = tokens.extractString(i0 + 2, i - 2)
+        val content = tokens.extractString(i1 + 2, i - 2)
         val valueParameters = listOf(Runtime.runtime.createString(content))
-        return evaluateMacroNow(namePath, typeParameters, valueParameters, origin)
+        return evaluateMacroNow(namePath, i0, typeParameters, valueParameters, origin)
     }
 
     private fun createContext(): ResolutionContext {
@@ -59,8 +59,8 @@ object Macro {
     }
 
     private fun ZauberASTBuilderBase.resolveMacroByName(
-        namePath: String, typeParameters: List<Type>?,
-        valueParameterTypes: List<Type>, origin: Int
+        namePath: String, i0: Int, typeParameters: List<Type>?,
+        valueParameterTypes: List<Type>, origin: Long
     ): ResolvedMethod {
         val scope = currPackage
         val context = createContext()
@@ -76,7 +76,7 @@ object Macro {
         )
 
         if (byMethodCall == null || byMethodCall.resolved !is Method) {
-            val base = nameExpression(namePath, origin, scope)
+            val base = nameExpression(namePath, i0, origin, scope)
             val tmpExpr = CallExpression(base, typeParameters, emptyList(), origin + 1)
             MethodResolver.printScopeForMissingMethod(context, tmpExpr, namePath, typeParameters, valueParameters1)
         }
@@ -114,13 +114,13 @@ object Macro {
     }
 
     fun ZauberASTBuilderBase.evaluateMacro(
-        namePath: String, typeParameters: List<Type>?,
-        valueParameters: List<NamedParameter>, scope: Scope, origin: Int
+        namePath: String, i0: Int, typeParameters: List<Type>?,
+        valueParameters: List<NamedParameter>, scope: Scope, origin: Long
     ): Expression {
         val context = createContext()
         val valueParameterTypes = valueParameters.map { it.value.resolveReturnType(context) }
         if (codeIsInsideAMacro(scope)) {
-            val macro = resolveMacroByName(namePath, typeParameters, valueParameterTypes, origin)
+            val macro = resolveMacroByName(namePath, i0, typeParameters, valueParameterTypes, origin)
             // todo how is self found inside CallExpression/NamedCallExpression???
             val self = ThisExpression(macro.resolved.scope.parent!!, scope, origin)
             val expected = macro.resolved.valueParameters
@@ -138,28 +138,28 @@ object Macro {
             val valueParameters = valueParameters.mapIndexed { index, parameter ->
                 instance.evaluateExpression(parameter.value, Flags.NONE, valueParameterTypes[index])
             }
-            return evaluateMacroNow(namePath, typeParameters, valueParameters, origin)
+            return evaluateMacroNow(namePath, i0, typeParameters, valueParameters, origin)
         }
     }
 
     fun ZauberASTBuilderBase.evaluateMacroNow(
-        namePath: String, typeParameters: List<Type>?,
-        valueParameters: List<Instance>, origin: Int
+        namePath: String, i0: Int, typeParameters: List<Type>?,
+        valueParameters: List<Instance>, origin: Long
     ): Expression {
         val valueParameterTypes = valueParameters.map { it.clazz.type }
-        val macro = resolveMacroByName(namePath, typeParameters, valueParameterTypes, origin)
+        val macro = resolveMacroByName(namePath, i0, typeParameters, valueParameterTypes, origin)
         return evaluateMacroNow(macro, valueParameters, origin)
     }
 
     fun ZauberASTBuilderBase.evaluateMacroNow(
         macro: ResolvedMethod,
-        valueParameters: List<Instance>, origin: Int,
+        valueParameters: List<Instance>, origin: Long,
     ): Expression = evaluateMacroNow(macro, valueParameters, imports, generics, currPackage, origin)
 
     fun evaluateMacroNow(
         macro: ResolvedMethod, valueParameters: List<Instance>,
         imports: List<Import>, generics: HashMap<String, GenericType>,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): Expression {
 
         macroCallDepth++
@@ -174,8 +174,10 @@ object Macro {
         val result = executeMacroInRuntime(method, macro, valueParameters)
         val tokenList = extractTokensFromRuntime(result, method, origin)
 
-        return LazyExpression.eval(tokenList, 0, tokenList.size, isBody = true,
-            scope, imports, generics).apply {
+        return LazyExpression.eval(
+            tokenList, 0, tokenList.size, isBody = true,
+            scope, imports, generics
+        ).apply {
             println("[$macroCallDepth] Finished macro '${macro.resolved.name}' using $valueParameters")
             macroCallDepth--
         }
@@ -211,7 +213,7 @@ object Macro {
         return result
     }
 
-    fun extractTokensFromRuntime(result: BlockReturn, method: Method, origin: Int): TokenList {
+    fun extractTokensFromRuntime(result: BlockReturn, method: Method, origin: Long): TokenList {
         val runtime = Runtime.runtime
         check(result.type == ReturnType.THROW) { "Failed calling $method at ${resolveOrigin(origin)}" }
         check(result.value.clazz == runtime.getClass(Types.MacroContext))

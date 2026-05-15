@@ -13,7 +13,7 @@ enum class ShortcutOperator {
 
 fun shortcutExpression(
     left: Expression, operator: ShortcutOperator, right: Expression,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ): Expression {
     // todo we should have created the new scope immediately
     val bodyScope = scope.generate("shortcut", ScopeType.METHOD_BODY)
@@ -23,7 +23,7 @@ fun shortcutExpression(
 
 fun shortcutExpressionI(
     left: Expression, operator: ShortcutOperator, rightWithScope: Expression,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ): Expression {
     return when (operator) {
         ShortcutOperator.AND -> {

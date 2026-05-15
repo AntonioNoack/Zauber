@@ -10,7 +10,7 @@ class JVMSimpleSetField(
     val self: SimpleFieldExpr,
     val field: Field,
     val value: SimpleFieldExpr,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveReturnType(context: ResolutionContext): Type = Types.Unit
 }

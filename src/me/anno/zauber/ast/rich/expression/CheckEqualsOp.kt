@@ -12,7 +12,7 @@ class CheckEqualsOp(
     val left: Expression, val right: Expression,
     val byPointer: Boolean, val negated: Boolean,
     val resolved: ResolvedCallExpression?,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     val symbol: String

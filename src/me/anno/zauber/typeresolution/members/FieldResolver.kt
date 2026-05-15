@@ -12,13 +12,14 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.specialization.Specialization
 
 object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
     private val LOGGER = LogManager.getLogger(FieldResolver::class)
 
     override fun findMemberInScope(
-        scope: Scope?, origin: Int, name: String,
+        scope: Scope?, origin: Long, name: String,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         context: ResolutionContext
@@ -42,7 +43,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
-                scope, origin
+                context.specialization, scope, origin
             )
             bestMatch = joinMatches(bestMatch, match)
         }
@@ -56,7 +57,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                     field, valueType,
                     returnType, selfType,
                     typeParameters, valueParameters,
-                    scope, origin
+                    context.specialization, scope, origin
                 )
                 bestMatch = joinMatches(bestMatch, match)
             }
@@ -78,7 +79,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
-                scope, origin
+                context.specialization, scope, origin
             )
             bestMatch = joinMatches(bestMatch, match)
         }
@@ -117,13 +118,14 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        codeScope: Scope, origin: Int
+        ctxSpec: Specialization,
+        codeScope: Scope, origin: Long
     ): ResolvedField? {
         return FieldMethodResolver.findMemberMatch(
             field0, byFieldExpectedType,
             byExprExpectedType, selfType,
             typeParameters, valueParameters,
-            codeScope, origin
+            ctxSpec, codeScope, origin
         ) as? ResolvedField
     }
 
@@ -131,7 +133,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
-        origin: Int,
+        origin: Long,
     ): ResolvedField? {
         val selfType = context.selfType
         LOGGER.info(
@@ -159,7 +161,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         context: ResolutionContext, codeScope: Scope,
         name: String, nameAsImport: List<Import>,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
-        origin: Int,
+        origin: Long,
     ): ResolvedField? {
         if (nameAsImport.isEmpty()) return null
 
@@ -189,7 +191,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         return null
     }
 
-    fun resolveFieldByPackages(context: ResolutionContext, name: String, origin: Int): ResolvedField? {
+    fun resolveFieldByPackages(context: ResolutionContext, name: String, origin: Long): ResolvedField? {
         if (context.selfType != null) return null
         val root = root[ScopeInitType.AFTER_DISCOVERY]
         return findMemberInScope(root, origin, name, null, emptyList(), context)
@@ -198,7 +200,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     fun resolveField(
         context: ResolutionContext, field: Field,
         typeParameters: List<Type>?, // if provided, typically not the case (I've never seen it)
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): ResolvedField? {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$field': $typeParameters, selfType: $selfType")
@@ -208,7 +210,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             field, valueType,
             context.targetType, selfType,
             typeParameters, emptyList(),
-            scope, origin
+            context.specialization, scope, origin
         )
     }
 

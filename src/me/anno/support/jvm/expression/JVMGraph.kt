@@ -6,7 +6,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
-class JVMGraph(scope: Scope, origin: Int) : Expression(scope, origin) {
+class JVMGraph(scope: Scope, origin: Long) : Expression(scope, origin) {
 
     val startBlock = addNode()
     val thisFields = HashMap<SimpleThis, SimpleFieldExpr>()

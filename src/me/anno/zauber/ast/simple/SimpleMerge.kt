@@ -12,7 +12,7 @@ class SimpleMerge(
     val dst: SimpleField,
     val ifField: SimpleField,
     val elseField: SimpleField,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleInstruction(scope, origin) {
 
     init {

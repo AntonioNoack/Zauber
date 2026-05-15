@@ -27,7 +27,7 @@ object FieldGetterSetter {
 
     fun createValueField(
         field: Field, fieldName: String,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): Field {
         return scope.addField(
             null, false, isMutable = false, /* todo we actually have a parameter */null,
@@ -36,7 +36,7 @@ object FieldGetterSetter {
         )
     }
 
-    fun createBackingField(field: Field, scope: Scope, origin: Int): Field {
+    fun createBackingField(field: Field, scope: Scope, origin: Long): Field {
         var value = field.initialValue ?: field.getterExpr
         var valueType = field.valueType
         if (value is DelegateExpression) {
@@ -73,7 +73,7 @@ object FieldGetterSetter {
 
     fun ZauberASTBuilderBase.createGetterMethod0(
         field: Field, expr0: Expression?,
-        getterScope: Scope, origin: Int
+        getterScope: Scope, origin: Long
     ): Method {
         val backingField = createBackingField(field, getterScope, origin)
         return createGetterMethod1(field, expr0, backingField, getterScope, origin)
@@ -81,7 +81,7 @@ object FieldGetterSetter {
 
     private fun ZauberASTBuilderBase.createGetterMethod1(
         field: Field, expr0: Expression?, backingField: Field,
-        getterScope: Scope, origin: Int
+        getterScope: Scope, origin: Long
     ): Method {
         var getterScope = getterScope
         while (getterScope.scopeType != ScopeType.FIELD_GETTER) {
@@ -121,7 +121,7 @@ object FieldGetterSetter {
 
     private fun createLateinitExpression(
         field: Field, getterScope: Scope,
-        backingFieldExpr: FieldExpression, origin: Int,
+        backingFieldExpr: FieldExpression, origin: Long,
     ): Expression {
         val nullExpr = SpecialValueExpression(SpecialValue.NULL, getterScope, origin)
         val condition = CheckEqualsOp(
@@ -138,13 +138,13 @@ object FieldGetterSetter {
         return IfElseBranch(condition, throwExpr, backingFieldExpr.clone(elseScope))
     }
 
-    private fun createDelegateGetter(getterScope: Scope, backingFieldExpr: Expression, origin: Int): Expression {
+    private fun createDelegateGetter(getterScope: Scope, backingFieldExpr: Expression, origin: Long): Expression {
         return NamedCallExpression(backingFieldExpr, "getValue", emptyList(), getterScope, origin)
     }
 
     private fun createDelegateSetter(
         setterScope: Scope, backingFieldExpr: FieldExpression,
-        valueExpr: Expression, origin: Int,
+        valueExpr: Expression, origin: Long,
     ): Expression {
         return NamedCallExpression(
             backingFieldExpr, "setValue", emptyList(),
@@ -154,7 +154,7 @@ object FieldGetterSetter {
 
     fun ZauberASTBuilderBase.createSetterMethod0(
         field: Field, expr0: Expression?, fieldName: String,
-        setterScope: Scope, origin: Int,
+        setterScope: Scope, origin: Long,
     ): Method {
         val backingField = createBackingField(field, setterScope, origin)
         val valueField = createValueField(field, fieldName, setterScope, origin)
@@ -164,7 +164,7 @@ object FieldGetterSetter {
     private fun ZauberASTBuilderBase.createSetterMethod1(
         field: Field, expr0: Expression?,
         backingField: Field, valueField: Field,
-        setterScope: Scope, origin: Int,
+        setterScope: Scope, origin: Long,
     ): Method {
         var setterScope = setterScope
         while (setterScope.scopeType != ScopeType.FIELD_SETTER) {
@@ -185,7 +185,10 @@ object FieldGetterSetter {
             } else null
         }
 
-        val parameter = Parameter(0, valueField.name, field.valueType ?: TypeOfField(field), setterScope, origin)
+        val parameter = Parameter(
+            0, valueField.name, ParameterType.VALUE_PARAMETER,
+            field.valueType ?: TypeOfField(field), setterScope, origin
+        )
         val method = Method(
             field.selfType, false, setterName(field.name), emptyList(),
             listOf(parameter), setterScope,

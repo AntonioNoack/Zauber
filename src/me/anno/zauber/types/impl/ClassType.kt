@@ -1,6 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -17,12 +18,12 @@ import me.anno.zauber.types.Types
  * */
 class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
-    constructor(clazz: Scope, typeParameters: List<Type>?, origin: Int) : this(
+    constructor(clazz: Scope, typeParameters: List<Type>?, origin: Long) : this(
         clazz, if (typeParameters == null) null
         else createParameterList(clazz, typeParameters, origin)
     )
 
-    constructor(clazz: Scope, typeParameters: List<Type>?, origin: Int, ignoreSIT: Boolean) : this(
+    constructor(clazz: Scope, typeParameters: List<Type>?, origin: Long, ignoreSIT: Boolean) : this(
         clazz, if (typeParameters == null) null
         else createParameterList(clazz, typeParameters, origin, ignoreSIT)
     )
@@ -72,7 +73,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
         fun createParameterList(
             clazz: Scope,
             typeParams: List<Type>,
-            origin: Int,
+            origin: Long,
             ignoreSIT: Boolean = false
         ): ParameterList {
             if (strictMode) {
@@ -97,7 +98,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
             } else {
                 val fallbackGenerics = List(typeParams.size) {
                     Parameter(
-                        it, ('A' + it).toString(),
+                        it, ('A' + it).toString(), ParameterType.VALUE_PARAMETER,
                         Types.NullableAny, clazz, -1
                     )
                 }

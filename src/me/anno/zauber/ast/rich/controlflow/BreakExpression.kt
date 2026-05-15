@@ -6,7 +6,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class BreakExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
+class BreakExpression(val label: Scope, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
         return "break@$label"

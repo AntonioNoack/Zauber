@@ -125,7 +125,10 @@ class TypeScriptClassScanner(tokens: TokenList) :
             val typeParams = emptyList<Parameter>()
             methodScope.setTypeParams(typeParams)
 
-            val indexParameter = readParameterDeclaration(ownerScope.typeWithArgs, 0)
+            val indexParameter = readParameterDeclaration(
+                ownerScope.typeWithArgs, 0,
+                ParameterType.VALUE_PARAMETER
+            )
             consume(TokenType.CLOSE_ARRAY)
 
             consume(":")
@@ -165,7 +168,10 @@ class TypeScriptClassScanner(tokens: TokenList) :
             val typeParameters = readTypeParameters()
             methodScope.setTypeParams(typeParameters)
 
-            val valueParameters = readParameterDeclarations(ownerScope.typeWithArgs, emptyList())
+            val valueParameters = readParameterDeclarations(
+                ownerScope.typeWithArgs, emptyList(),
+                ParameterType.VALUE_PARAMETER
+            )
 
             consume(":")
             val returnType = readType(ownerScope.typeWithArgs, true)
@@ -203,7 +209,10 @@ class TypeScriptClassScanner(tokens: TokenList) :
             val typeParameters = readTypeParameters()
             methodScope.setTypeParams(typeParameters)
 
-            val valueParameters = readParameterDeclarations(ownerScope.typeWithArgs, emptyList())
+            val valueParameters = readParameterDeclarations(
+                ownerScope.typeWithArgs, emptyList(),
+                ParameterType.VALUE_PARAMETER
+            )
 
             val returnType = if (consumeIf(":")) {
                 readType(ownerScope.typeWithArgs, true)
@@ -329,10 +338,13 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
         pushScope(methodScope) {
 
-            val typeParams = readTypeParameters()
-            methodScope.setTypeParams(typeParams)
+            val typeParameters = readTypeParameters()
+            methodScope.setTypeParams(typeParameters)
 
-            val params = readParameterDeclarations(owner.typeWithArgs, emptyList())
+            val valueParameters = readParameterDeclarations(
+                owner.typeWithArgs, emptyList(),
+                ParameterType.VALUE_PARAMETER
+            )
 
             val returnType = if (consumeIf(":")) {
                 readTypeNotNull(null, true)
@@ -346,8 +358,8 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
             methodScope.selfAsMethod = Method(
                 null, false,
-                name, typeParams,
-                params,
+                name, typeParameters,
+                valueParameters,
                 methodScope, returnType,
                 emptyList(),
                 body, flags, origin
@@ -363,7 +375,10 @@ class TypeScriptClassScanner(tokens: TokenList) :
         val scope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
 
         pushScope(scope) {
-            val valueParameters = readParameterDeclarations(classScope.typeWithArgs, emptyList())
+            val valueParameters = readParameterDeclarations(
+                classScope.typeWithArgs, emptyList(),
+                ParameterType.VALUE_PARAMETER
+            )
 
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 readLazyBody()
@@ -373,18 +388,22 @@ class TypeScriptClassScanner(tokens: TokenList) :
         }
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+    override fun readParameterDeclarations(
+        selfType: Type?,
+        extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter> {
         val params = ArrayList<Parameter>()
         pushCall {
             while (i < tokens.size) {
-                params.add(readParameterDeclaration(selfType, params.size))
+                params.add(readParameterDeclaration(selfType, params.size, parameterType))
                 readComma()
             }
         }
         return params
     }
 
-    private fun readParameterDeclaration(selfType: Type?, index: Int): Parameter {
+    private fun readParameterDeclaration(selfType: Type?, index: Int, parameterType: ParameterType): Parameter {
         val origin = origin(i)
         val isVararg = consumeIf("...")
         val name = consumeName(VSCodeType.PARAMETER, 0)
@@ -406,8 +425,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         return Parameter(
             index, ParameterMutability.DEFAULT,
             if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
-            name, type, defaultValue,
-            currPackage, origin
+            parameterType, name, type, defaultValue, currPackage, origin
         )
     }
 
@@ -423,7 +441,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
                     KeyOfType(classType)
                 } else readTypeNotNull(null, true)
             } else Types.NullableAny
-            params.add(Parameter(params.size, name, type, currPackage, origin))
+            params.add(Parameter(params.size, name, ParameterType.TYPE_PARAMETER, type, currPackage, origin))
             if (!consumeIf(",")) break
         }
         consume(">")

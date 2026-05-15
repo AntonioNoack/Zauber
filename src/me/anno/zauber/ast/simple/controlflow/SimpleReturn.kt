@@ -4,6 +4,6 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.scope.Scope
 
-class SimpleReturn(field: SimpleField, scope: Scope, origin: Int) : SimpleExit(field, scope, origin) {
+class SimpleReturn(field: SimpleField, scope: Scope, origin: Long) : SimpleExit(field, scope, origin) {
     override val returnType: ReturnType get() = ReturnType.RETURN
 }

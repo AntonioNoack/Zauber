@@ -22,7 +22,7 @@ import me.anno.zauber.types.Type
  *   - and both return and throw are just special values that must call finish(),
  *   - dropping/GC-ing a Yieldable calls finish(), too
  * */
-class YieldExpression(value: Expression, scope: Scope, origin: Int) :
+class YieldExpression(value: Expression, scope: Scope, origin: Long) :
     ExitExpression(value, null, scope, origin) {
 
     override fun toStringImpl(depth: Int): String {

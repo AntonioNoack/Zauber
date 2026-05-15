@@ -12,7 +12,7 @@ class ResolvedGetFieldExpression(
      * */
     owner: Expression,
     field: ResolvedField,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : ResolvedFieldExpression(owner, field, scope, origin) {
 
     override fun resolveReturnType(context: ResolutionContext): Type = field.getValueType()

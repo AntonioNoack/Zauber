@@ -4,71 +4,48 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.specialization.Specialization
 
 object MergeTypeParams {
 
     private val LOGGER = LogManager.getLogger(MergeTypeParams::class)
 
-    fun mergeTypeParameters(
-        selfParams: List<Parameter>,
+    fun collectSpecialization(
+        expectedTypeParams: List<Parameter>,
         selfType: Type?,
 
-        callTypes: List<Parameter>,
-        callParams: List<Type>?,
-        origin: Int
+        actualTypeParams: ParameterList?,
+        ctxSpec: Specialization,
+        origin: Long
     ): ParameterList {
-        val selfPart = mergeSelfPart(selfType, selfParams, origin)
-        val callPart = mergeCallPart(callTypes, callParams, origin)
-        return selfPart + callPart
+        val pl = ParameterList(expectedTypeParams)
+        ctxSpec.typeParameters.fillInto(pl)
+        val selfType = selfType?.resolve()
+        if (selfType is ClassType) {
+            selfType.typeParameters?.fillInto(pl)
+        }
+        actualTypeParams?.fillInto(pl)
+        /*  val selfPart = mergeSelfPart(selfType, expectedTypeParams, origin)
+          val callPart = mergeCallPart(callTypes, callParams, origin)
+          return selfPart + callPart*/
+        LOGGER.info(
+            "Combined $selfType,$actualTypeParams,$ctxSpec into $pl for ${
+                expectedTypeParams.map { "${it.scope}.${it.name}" }
+            },\n  at ${resolveOrigin(origin)}"
+        )
+        return pl
     }
 
-    fun mergeSelfPart(
-        actualSelfType: Type?,
-        expectedSelfParams: List<Parameter>,
-        origin: Int
-    ): ParameterList {
-
-        if (actualSelfType !is ClassType || actualSelfType.typeParameters == null) {
-            if (expectedSelfParams.isEmpty()) return emptyParameterList()
-            return ParameterList(expectedSelfParams)
+    fun ParameterList.fillInto(dst: ParameterList) {
+        for (srcI in generics.indices) {
+            val type = types[srcI] ?: continue
+            val g = generics[srcI]
+            val dstI = dst.generics.indexOf(g)
+            if (dstI >= 0) {
+                dst.set(dstI, type, insertModes[srcI])
+            }
         }
-
-        val numExpectedSelfParams = expectedSelfParams.size
-        val numActualSelfParams = actualSelfType.typeParameters.size
-        if (numActualSelfParams != numExpectedSelfParams) {
-            LOGGER.warn(
-                "Mismatch in number of self-typeParameters: " +
-                        "$expectedSelfParams vs $actualSelfType at ${resolveOrigin(origin)}"
-            )
-            return ParameterList(expectedSelfParams)
-        }
-
-        if (numActualSelfParams == 0) return emptyParameterList()
-        return actualSelfType.typeParameters
     }
-
-    fun mergeCallPart(
-        callTypes: List<Parameter>,
-        callParams: List<Type>?,
-        origin: Int
-    ): ParameterList {
-
-        if (callParams == null) {
-            return ParameterList(callTypes)
-        }
-
-        val expectedCallParams = callTypes.size
-        val actualCallParams = callParams.size
-        check(actualCallParams == expectedCallParams) {
-            "Expected same number of call parameters, " +
-                    "but got $actualCallParams instead of $expectedCallParams at ${resolveOrigin(origin)}"
-        }
-
-        if (callParams is ParameterList) return callParams
-        return ParameterList(callTypes, callParams)
-    }
-
 }

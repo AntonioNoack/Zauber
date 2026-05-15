@@ -10,7 +10,7 @@ import me.anno.zauber.scope.ScopeInitType
 class SimpleGetObject(
     dst: SimpleField,
     val objectScope: Scope,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     init {

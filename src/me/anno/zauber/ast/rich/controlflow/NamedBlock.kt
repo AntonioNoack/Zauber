@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.scope.Scope
 
-fun createNamedBlock(body: Expression, label: String?, scope: Scope, origin: Int):
+fun createNamedBlock(body: Expression, label: String?, scope: Scope, origin: Long):
         DoWhileLoop {
     val falseExpr = SpecialValueExpression(SpecialValue.FALSE, scope, origin)
     return DoWhileLoop(body = body, condition = falseExpr, label)

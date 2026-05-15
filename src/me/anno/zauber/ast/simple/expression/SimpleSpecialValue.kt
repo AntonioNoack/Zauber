@@ -7,7 +7,7 @@ import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
-class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope, origin: Int) :
+class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope, origin: Long) :
     SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {

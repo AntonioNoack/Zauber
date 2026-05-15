@@ -16,7 +16,7 @@ abstract class Member(
     val valueParameters: List<Parameter>,
     var returnType: Type?,
 
-    val origin: Int
+    val origin: Long
 ) {
 
     init {
@@ -24,7 +24,7 @@ abstract class Member(
     }
 
     val explicitSelfType get() = selfType != null
-    val hasVarargParameter = valueParameters.any { it.isVararg }
+    val hasExpandingParameter = valueParameters.any { it.expansion != ParameterExpansion.NONE }
 
     fun addFlags(flags: FlagSet) {
         this.flags = this.flags or flags

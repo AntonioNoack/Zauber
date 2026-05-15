@@ -17,7 +17,7 @@ class ConstructorExpression(
     val typeParameters: List<Type>?,
     val valueParameters: List<NamedParameter>,
     val selfIfInsideConstructor: Boolean?,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {

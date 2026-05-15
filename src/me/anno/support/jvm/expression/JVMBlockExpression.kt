@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 
 // todo we somehow need a mix of SimpleInstr and Expression...
 
-class JVMBlockExpression(val graph: JVMGraph, scope: Scope, origin: Int) : Expression(scope, origin) {
+class JVMBlockExpression(val graph: JVMGraph, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     var ifBranch: JVMBlockExpression? = null
     var elseBranch: JVMBlockExpression? = null

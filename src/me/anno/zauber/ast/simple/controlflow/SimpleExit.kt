@@ -7,7 +7,7 @@ import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
-abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Int) : SimpleInstruction(scope, origin) {
+abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Long) : SimpleInstruction(scope, origin) {
 
     abstract val returnType: ReturnType
 

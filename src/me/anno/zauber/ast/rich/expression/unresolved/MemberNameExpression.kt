@@ -18,15 +18,15 @@ import me.anno.zauber.types.Type
 class MemberNameExpression(
     val name: String,
     val nameAsImport: List<Import>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin), FieldResolvable {
 
     companion object {
-        fun ASTBuilderBase.nameExpression(name: String, origin: Int, scope: Scope): Expression {
+        fun ASTBuilderBase.nameExpression(name: String, i: Int, origin: Long, scope: Scope): Expression {
             // check whether something is in front (some sort of period/accessor)
             val isChild = when {
-                tokens.equals(origin - 1, ".") ||
-                        tokens.equals(origin - 1, "?.") -> true
+                tokens.equals(i - 1, ".") ||
+                        tokens.equals(i - 1, "?.") -> true
                 else -> false
             }
             return if (isChild) {

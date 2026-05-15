@@ -7,7 +7,7 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveThisType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class ThisExpression(val label: Scope, scope: Scope, origin: Int) : Expression(scope, origin) {
+class ThisExpression(val label: Scope, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String = "this@$label"
     override fun resolveReturnType(context: ResolutionContext): Type {

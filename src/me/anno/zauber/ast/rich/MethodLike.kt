@@ -25,7 +25,7 @@ open class MethodLike(
     scope: Scope, name: String,
     var body: Expression?,
     flags: FlagSet,
-    origin: Int
+    origin: Long
 ) : Member(
     selfType, explicitSelfType, name, scope, flags,
     typeParameters, valueParameters, returnType, origin
@@ -57,6 +57,7 @@ open class MethodLike(
     fun getSpecializedBody(specialization: Specialization): Expression? {
         val body = body ?: return null
         val specialization = specialization.withScope(scope)
+        println("applying $specialization to $this")
 
         return specializations.getOrPut(specialization) {
             specialization.use {

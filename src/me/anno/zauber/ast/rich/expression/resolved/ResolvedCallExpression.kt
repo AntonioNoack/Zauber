@@ -16,7 +16,7 @@ class ResolvedCallExpression(
     self: Expression?,
     val callable: ResolvedMember<*>,
     val valueParameters: List<Expression>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     val self: Expression? =

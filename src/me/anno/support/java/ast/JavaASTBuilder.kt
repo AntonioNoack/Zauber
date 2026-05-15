@@ -268,7 +268,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             val extra = getSyntheticParameters(classScope, constrScope, origin)
             val valueParameters =
                 if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                    pushCall { readParameterDeclarations(null, extra) }
+                    pushCall { readParameterDeclarations(null, extra, ParameterType.VALUE_PARAMETER) }
                 } else extra
             skipThrowList()
             var superCall: InnerSuperCall? = null
@@ -309,7 +309,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         pushScope(scopeName, ScopeType.METHOD) { scope ->
             scope.setTypeParams(typeParameters)
 
-            val valueParameters = pushCall { readParameterDeclarations(null, emptyList()) }
+            val valueParameters = pushCall {
+                readParameterDeclarations(null, emptyList(), ParameterType.VALUE_PARAMETER)
+            }
             skipThrowList()
             val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                 readBodyOrExpression(null)
@@ -359,7 +361,10 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         return Annotation(path, params)
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+    override fun readParameterDeclarations(
+        selfType: Type?, extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter> {
         val parameters = ArrayList<Parameter>(extra)
         loop@ while (i < tokens.size) {
 
@@ -396,7 +401,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 parameters.size,
                 if (isVal) ParameterMutability.VAL else ParameterMutability.VAR,
                 if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
-                name, type, null, currPackage, origin
+                parameterType, name, type, null, currPackage, origin
             )
             parameter.getOrCreateField(selfType, keywords)
             parameters.add(parameter)
@@ -538,6 +543,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                     readLambda(i)
                 } else {
                     val origin = origin(i)
+                    val i0 = i
                     val vsCodeType =
                         if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
                             VSCodeType.METHOD
@@ -547,9 +553,9 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                     // println("reading a call, $namePath, $typeArgs")
                     if (tokens.equals(i, TokenType.OPEN_CALL)) {
                         // constructor or function call with type args
-                        readNamedCall(namePath, typeArgs, origin)
+                        readNamedCall(namePath, i0, typeArgs, origin)
                     } else {
-                        nameExpression(namePath, origin, currPackage)
+                        nameExpression(namePath, i0, origin, currPackage)
                     }
                 }
             }
@@ -580,9 +586,10 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             }
             tokens.equals(i, "<") -> {
                 val typeParameters = readTypeParameters(null)
+                val i0 = i
                 val methodName = consumeName(VSCodeType.METHOD, 0)
                 val valueParameters = readValueParameters()
-                val base = nameExpression(methodName, origin, currPackage)
+                val base = nameExpression(methodName, i0, origin, currPackage)
                 CallExpression(base, typeParameters, valueParameters, origin)
             }
             // apparently, inline record classes are allowed
@@ -672,7 +679,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         }
     }
 
-    private fun readCastExpression(type: Type, origin: Int): Expression {
+    private fun readCastExpression(type: Type, origin: Long): Expression {
         val rhs = readExpression()
         return createCastExpression(rhs, currPackage, origin, type) { ifFalseScope ->
             val debugInfoExpr = StringExpression(rhs.toString(), ifFalseScope, origin)

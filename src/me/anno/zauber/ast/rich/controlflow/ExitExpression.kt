@@ -7,7 +7,7 @@ import me.anno.zauber.scope.Scope
 /**
  * Return | Throw | Yield: anything stopping or exiting execution
  * */
-abstract class ExitExpression(val value: Expression, val label: String?, scope: Scope, origin: Int) :
+abstract class ExitExpression(val value: Expression, val label: String?, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // type is known: Nothing / Unit

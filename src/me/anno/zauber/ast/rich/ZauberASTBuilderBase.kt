@@ -163,7 +163,7 @@ abstract class ZauberASTBuilderBase(
                     readType(null, true)
                 }
 
-                parameters.add(Parameter(parameters.size, name, type, classScope, origin))
+                parameters.add(Parameter(parameters.size, name, ParameterType.TYPE_PARAMETER, type, classScope, origin))
                 readComma()
             }
         }
@@ -216,7 +216,7 @@ abstract class ZauberASTBuilderBase(
         return parameters
     }
 
-    fun createLambdaVariable(type: Type?, name: String, origin: Int): LambdaVariable {
+    fun createLambdaVariable(type: Type?, name: String, origin: Long): LambdaVariable {
         // to do we neither know type nor initial value :/, both come from the called function/set variable
         val field = currPackage.addField( // this is more of a parameter...
             null, false, isMutable = false, null,
@@ -245,7 +245,7 @@ abstract class ZauberASTBuilderBase(
 
     fun handleShortcutOperator(
         expr: Expression, symbol: String, op: Operator,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): Expression {
         val name = currPackage.generateName("shortcut", origin)
         val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
@@ -304,7 +304,11 @@ abstract class ZauberASTBuilderBase(
         return DoWhileLoop(body = body, condition = condition, label)
     }
 
-    abstract fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter>
+    abstract fun readParameterDeclarations(
+        selfType: Type?,
+        extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter>
 
     open fun readTryCatch(): Expression {
         // try with resource
@@ -331,7 +335,9 @@ abstract class ZauberASTBuilderBase(
             check(tokens.equals(i, TokenType.OPEN_CALL))
             val catchName = currPackage.generateName("catch", origin)
             pushScope(catchName, ScopeType.METHOD_BODY) {
-                val params = pushCall { readParameterDeclarations(null, emptyList()) }
+                val params = pushCall {
+                    readParameterDeclarations(null, emptyList(), ParameterType.VALUE_PARAMETER)
+                }
                 check(params.size == 1)
                 val handler = readBodyOrExpression(null)
                 catches.add(Catch(params[0], handler, origin))
@@ -785,7 +791,7 @@ abstract class ZauberASTBuilderBase(
         consumeIf("constructor")
 
         val constructorOrigin = origin(i)
-        val constructorParams = readPrimaryConstructorParameters(classScope)
+        val constructorParams = readPrimaryConstructorValueParameters(classScope)
         if (flags.hasFlag(Flags.VALUE)) {
             validateValueClassParameters(name, constructorParams)
         }
@@ -829,7 +835,7 @@ abstract class ZauberASTBuilderBase(
         }
     }
 
-    fun readPrimaryConstructorParameters(classScope: Scope): List<Parameter>? {
+    fun readPrimaryConstructorValueParameters(classScope: Scope): List<Parameter>? {
         val scopeType = classScope.scopeType
         val constructorOrigin = origin(i)
         // println("reading primary constructor parameters at ${tokens.err(i)}")
@@ -838,7 +844,7 @@ abstract class ZauberASTBuilderBase(
             pushScope(constructorScope) {
                 val selfType = ClassType(classScope, null)
                 val extra = getSyntheticParameters(classScope, constructorScope, constructorOrigin)
-                pushCall { readParameterDeclarations(selfType, extra) }
+                pushCall { readParameterDeclarations(selfType, extra, ParameterType.VALUE_PARAMETER) }
             }
         } else if (scopeType == ScopeType.ENUM_CLASS || scopeType == ScopeType.INNER_CLASS) {
             val constructorScope = classScope.getOrCreatePrimaryConstructorScope()
@@ -846,19 +852,20 @@ abstract class ZauberASTBuilderBase(
         } else null
     }
 
-    fun getSyntheticParameters(classScope: Scope, constructorScope: Scope, constructorOrigin: Int): List<Parameter> {
+    fun getSyntheticParameters(classScope: Scope, constructorScope: Scope, origin: Long): List<Parameter> {
+        val pt = ParameterType.VALUE_PARAMETER
         return when (classScope.scopeType) {
             ScopeType.ENUM_CLASS -> {
                 // enums additionally store their ID and name
                 listOf(
-                    Parameter(0, ENUM_ORDINAL_NAME, Types.Int, constructorScope, constructorOrigin),
-                    Parameter(1, ENUM_NAME_NAME, Types.String, constructorScope, constructorOrigin)
+                    Parameter(0, ENUM_ORDINAL_NAME, pt, Types.Int, constructorScope, origin),
+                    Parameter(1, ENUM_NAME_NAME, pt, Types.String, constructorScope, origin)
                 )
             }
             ScopeType.INNER_CLASS -> {
                 // inner classes store a reference to their outer class
                 val outerType = classScope.parent!!.typeWithArgs
-                listOf(Parameter(0, OUTER_FIELD_NAME, outerType, constructorScope, constructorOrigin))
+                listOf(Parameter(0, OUTER_FIELD_NAME, pt, outerType, constructorScope, origin))
             }
             else -> emptyList()
         }
@@ -875,7 +882,7 @@ abstract class ZauberASTBuilderBase(
         popGenericParams()
     }
 
-    fun skipTypeParametersToFindFunctionNameAndScope(origin: Int): Scope {
+    fun skipTypeParametersToFindFunctionNameAndScope(origin: Long): Scope {
         var j = i
         if (tokens.equals(j, "<")) {
             j = tokens.findBlockEnd(j, "<", ">") + 1
@@ -933,18 +940,18 @@ abstract class ZauberASTBuilderBase(
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
 
-    fun readNamedCall(namePath: String, typeParameters: List<Type>?, origin: Int): Expression {
+    fun readNamedCall(namePath: String, i0: Int, typeParameters: List<Type>?, origin: Long): Expression {
         // constructor or function call with type args
         val isTrueCall = tokens.equals(i, "(")
         val scope = currPackage
         if (isTrueCall) {
             val args = readValueParameters()
-            val base = nameExpression(namePath, origin, scope)
+            val base = nameExpression(namePath, i0, origin, scope)
             return CallExpression(base, typeParameters, args, origin + 1)
         } else {
             // todo parser bug: we don't support specifying the macro name with dots yet
             //  e.g. mypackage.macro!() doesn't work
-            return evaluateMacro(namePath, typeParameters, origin)
+            return evaluateMacro(namePath, i0, typeParameters, origin)
         }
     }
 

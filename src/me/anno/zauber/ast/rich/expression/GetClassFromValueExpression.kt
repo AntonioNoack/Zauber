@@ -5,7 +5,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class GetClassFromValueExpression(val value: Expression, scope: Scope, origin: Int) : Expression(scope, origin) {
+class GetClassFromValueExpression(val value: Expression, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
         return "${value.toString(depth)}::class"

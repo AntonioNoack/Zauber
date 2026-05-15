@@ -9,7 +9,7 @@ import me.anno.zauber.types.Types
 /**
  * ::callMeNow -> type is some lambda
  * */
-class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, origin: Int) :
+class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {

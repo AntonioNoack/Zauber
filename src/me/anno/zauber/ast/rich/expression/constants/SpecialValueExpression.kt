@@ -7,7 +7,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.NullType
 
-class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Int) : Expression(scope, origin) {
+class SpecialValueExpression(val type: SpecialValue, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String = type.name.lowercase()
     override fun resolveReturnType(context: ResolutionContext): Type {

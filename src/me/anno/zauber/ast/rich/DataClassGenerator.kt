@@ -36,7 +36,7 @@ object DataClassGenerator {
 
     private const val KEYWORDS = Flags.SYNTHETIC or Flags.OVERRIDE
 
-    class ExpressionBuilder(var scope: Scope, val origin: Int, val type: Type) {
+    class ExpressionBuilder(var scope: Scope, val origin: Long, val type: Type) {
         var expr: Expression? = null
 
         fun times(value: Expression) {
@@ -92,7 +92,7 @@ object DataClassGenerator {
 
     private fun ZauberASTBuilderBase.ensureHashCodeMethod(
         classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Int
+        context: ResolutionContext, origin: Long
     ) {
         val hashCodeMethod = MethodResolver.findMemberInScope(
             classScope, origin, "hashCode", Types.Int, classScope.typeWithArgs,
@@ -105,7 +105,7 @@ object DataClassGenerator {
 
     private fun ZauberASTBuilderBase.ensureToStringMethod(
         classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Int
+        context: ResolutionContext, origin: Long
     ) {
         val toStringMethod = MethodResolver.findMemberInScope(
             classScope, origin, "toString", Types.String, classScope.typeWithArgs,
@@ -118,7 +118,7 @@ object DataClassGenerator {
 
     private fun ZauberASTBuilderBase.ensureEqualsMethods(
         classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Int
+        context: ResolutionContext, origin: Long
     ) {
         val equalsAnyMethod = MethodResolver.findMemberInScope(
             classScope, origin, "equals", Types.Boolean, classScope.typeWithArgs,
@@ -142,7 +142,7 @@ object DataClassGenerator {
         }
     }
 
-    private fun ZauberASTBuilderBase.generateHashCodeMethod(primaryFields: List<Field>, origin: Int) {
+    private fun ZauberASTBuilderBase.generateHashCodeMethod(primaryFields: List<Field>, origin: Long) {
         lateinit var body: Expression
         val methodScope = pushScope("hashCode", ScopeType.METHOD) { scope ->
             scope.setEmptyTypeParams()
@@ -168,7 +168,7 @@ object DataClassGenerator {
     }
 
     private fun ZauberASTBuilderBase.generateToStringMethod(
-        classScope: Scope, origin: Int,
+        classScope: Scope, origin: Long,
         primaryFields: List<Field>
     ) {
         lateinit var body: Expression
@@ -195,7 +195,7 @@ object DataClassGenerator {
     }
 
     private fun ZauberASTBuilderBase.generateEqualsAnyMethod(
-        classScope: Scope, origin: Int,
+        classScope: Scope, origin: Long,
         primaryFields: List<Field>
     ) {
         lateinit var body: Expression
@@ -203,7 +203,10 @@ object DataClassGenerator {
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
             scope.setEmptyTypeParams()
 
-            parameter = Parameter(0, "other", Types.NullableAny, scope, origin)
+            parameter = Parameter(
+                0, "other", ParameterType.VALUE_PARAMETER,
+                Types.NullableAny, scope, origin,
+            )
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
             val builder = ExpressionBuilder(scope, origin, Types.Boolean)
@@ -233,7 +236,7 @@ object DataClassGenerator {
     }
 
     private fun ZauberASTBuilderBase.generateEqualsSelfMethod(
-        classScope: Scope, origin: Int,
+        classScope: Scope, origin: Long,
         primaryFields: List<Field>
     ) {
         lateinit var body: Expression
@@ -241,7 +244,10 @@ object DataClassGenerator {
         val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
             scope.setEmptyTypeParams()
 
-            parameter = Parameter(0, "other", classScope.typeWithArgs, scope, origin)
+            parameter = Parameter(
+                0, "other", ParameterType.VALUE_PARAMETER,
+                classScope.typeWithArgs, scope, origin
+            )
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
             val builder = ExpressionBuilder(scope, origin, Types.Boolean)
@@ -269,7 +275,7 @@ object DataClassGenerator {
 
     private fun ZauberASTBuilderBase.ensureCopyMethod(
         classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Int
+        context: ResolutionContext, origin: Long
     ) {
         val copyMethod = MethodResolver.findMemberInScope(
             classScope, origin, "copy", classScope.typeWithArgs, classScope.typeWithArgs,
@@ -281,7 +287,7 @@ object DataClassGenerator {
     }
 
     private fun ZauberASTBuilderBase.generateCopyMethod(
-        classScope: Scope, primaryFields: List<Field>, origin: Int,
+        classScope: Scope, primaryFields: List<Field>, origin: Long,
     ) {
         lateinit var body: Expression
         val methodScope = pushScope("copy", ScopeType.METHOD) { scope ->

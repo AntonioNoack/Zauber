@@ -21,7 +21,7 @@ class Method(
     val extraConditions: List<TypeCondition>,
     body: Expression?,
     flags: FlagSet,
-    origin: Int
+    origin: Long
 ) : MethodLike(
     selfType, explicitSelfType,
     typeParameters, valueParameters, returnType,

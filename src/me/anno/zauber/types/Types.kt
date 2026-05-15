@@ -3,6 +3,7 @@ package me.anno.zauber.types
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -65,7 +66,13 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
     } else {
         scope.typeParameters =
             if (numGenerics == 0) emptyList()
-            else List(numGenerics) { Parameter(it, genericNames[it].toString(), nat, scope, -1) }
+            else List(numGenerics) { index ->
+                val name = genericNames[index].toString()
+                Parameter(
+                    index, name, ParameterType.TYPE_PARAMETER,
+                    nat, scope, -1
+                )
+            }
         scope.hasTypeParameters = true
     }
 }

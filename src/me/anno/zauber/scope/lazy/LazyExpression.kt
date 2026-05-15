@@ -14,7 +14,7 @@ import me.anno.zauber.types.impl.GenericType
 class LazyExpression(
     val tokens: TokenSubList,
     val isBody: Boolean,
-    scope: Scope, origin: Int,
+    scope: Scope, origin: Long,
     val imports: List<Import>,
     val generics: HashMap<String, GenericType>
 ) : Expression(scope, origin) {

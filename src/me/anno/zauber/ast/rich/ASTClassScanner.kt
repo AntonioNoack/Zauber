@@ -119,7 +119,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                     val selfType = classScope.typeWithArgs
                     val extra = getSyntheticParameters(classScope, constructorScope, constrOrigin)
                     val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        readParameterDeclarations(selfType, extra)
+                        readParameterDeclarations(selfType, extra, ParameterType.VALUE_PARAMETER)
                     } else extra
 
                     if (classScope.flags.hasFlag(Flags.VALUE)) {
@@ -531,7 +531,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         pushScope(constrScope) {
             val selfType = classScope.typeWithArgs
             val extra = getSyntheticParameters(classScope, constrScope, origin)
-            val valueParameters = readParameterDeclarations(selfType, extra)
+            val valueParameters = readParameterDeclarations(selfType, extra, ParameterType.VALUE_PARAMETER)
             val superCall = if (consumeIf(":")) readInnerSuperCall() else null
 
             // add explicit super-invocation
@@ -594,7 +594,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 
-            val valueParameters = readParameterDeclarations(selfType, emptyList())
+            val valueParameters = readParameterDeclarations(selfType, emptyList(), ParameterType.VALUE_PARAMETER)
             val whereConditions = readWhereConditions()
 
             val returnType = if (consumeIf(":")) {
@@ -737,7 +737,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         throw NotImplementedError()
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>, parameterType: ParameterType): List<Parameter> {
         val parameters = ArrayList<Parameter>(extra)
         pushCall {
             while (i < tokens.size) {
@@ -783,8 +783,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                         else -> ParameterMutability.DEFAULT
                     },
                     if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
-                    name, type, defaultValue,
-                    currPackage, paramOrigin
+                    parameterType, name, type, defaultValue, currPackage, paramOrigin
                 )
                 parameters.add(parameter)
 

@@ -24,19 +24,19 @@ class NamedCallExpression(
     base: Expression,
     val name: String, val nameAsImport: List<Import>,
     typeParameters: List<Type>?, valueParameters: List<NamedParameter>,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : CallExpressionBase(
     base, typeParameters,
     valueParameters, scope, origin
 ) {
 
-    constructor(base: Expression, name: String, scope: Scope, origin: Int) :
+    constructor(base: Expression, name: String, scope: Scope, origin: Long) :
             this(base, name, emptyList(), null, emptyList(), scope, origin)
 
-    constructor(base: Expression, name: String, nameAsImport: List<Import>, scope: Scope, origin: Int) :
+    constructor(base: Expression, name: String, nameAsImport: List<Import>, scope: Scope, origin: Long) :
             this(base, name, nameAsImport, null, emptyList(), scope, origin)
 
-    constructor(base: Expression, name: String, other: Expression, scope: Scope, origin: Int) :
+    constructor(base: Expression, name: String, other: Expression, scope: Scope, origin: Long) :
             this(base, name, emptyList(), null, listOf(NamedParameter(null, other)), scope, origin)
 
     init {

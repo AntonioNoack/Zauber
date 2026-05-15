@@ -113,7 +113,12 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             var i = 0
             while (signature[reader.i] != ')') {
                 val type = reader.readType()
-                valueParameters.add(Parameter(valueParameters.size, "arg${i++}", type, scope, origin = -1))
+                valueParameters.add(
+                    Parameter(
+                        valueParameters.size, "arg${i++}",
+                        ParameterType.VALUE_PARAMETER, type, scope, origin = -1
+                    )
+                )
             }
             reader.consume(')')
 
@@ -213,7 +218,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         // todo should we lazy-read methods??? check performance...
         //  individually, or all at once?
 
-        val origin = -1
+        val origin = -1L
         val signature = signature ?: descriptor
         val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
         val methodScope = classScope.generate(name, ScopeType.METHOD)
@@ -261,7 +266,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         // todo visit fields and annotations...
         // println("Visiting field ${classScope.name}.$name, descriptor: $descriptor, signature: $signature, value: $value, access: $access")
         val valueType = descToType(signature ?: descriptor)
-        val origin = -1
+        val origin = -1L
         val initialValueForConst = when (value) {
             null -> null
             is Int -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Int }

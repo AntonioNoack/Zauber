@@ -31,7 +31,7 @@ class SubjectWhenCase(val conditions: List<SubjectCondition>?, val conditionScop
     }
 }
 
-fun lambdaTypeToClassType(lambdaType: LambdaType, origin: Int): ClassType {
+fun lambdaTypeToClassType(lambdaType: LambdaType, origin: Long): ClassType {
     val n = lambdaType.parameters.size + if (lambdaType.selfType != null) 1 else 0
     val base = root.getOrPut(getLambdaTypeName(n), ScopeType.INTERFACE)
     val typeParams = ArrayList<Type>(n)

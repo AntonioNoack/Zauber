@@ -12,11 +12,13 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.specialization.Specialization
 import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 class ZClass(val type: Type) {
@@ -86,10 +88,13 @@ class ZClass(val type: Type) {
                 null, ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {} // ok
                 else -> throw IllegalStateException("Cannot create object instance for $scope")
             }
+
             check(primaryConstructor.valueParameters.isEmpty()) {
                 "Object/package must not have valueParameters, found some in $scope"
             }
-            val method1 = MethodSpecialization(primaryConstructor, noSpecialization)
+
+            val spec = Specialization(primaryConstructor.scope, emptyParameterList())
+            val method1 = MethodSpecialization(primaryConstructor, spec)
             runtime.executeCall(objectInstance, method1, emptyList())
         }
         return objectInstance

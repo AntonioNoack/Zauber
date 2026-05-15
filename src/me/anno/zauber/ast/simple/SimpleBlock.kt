@@ -104,7 +104,7 @@ class SimpleBlock(val graph: SimpleGraph) {
         graph.field(type, constantRef)
 
     fun thisField(
-        type: Type, thisScope: Scope, scope: Scope, origin: Int,
+        type: Type, thisScope: Scope, scope: Scope, origin: Long,
         specialization: Specialization,
         contextExpr: Expression?
     ): SimpleField {
@@ -153,7 +153,7 @@ class SimpleBlock(val graph: SimpleGraph) {
 
     private fun createOuterFieldChain(
         innerScope: Scope, outerScope: Scope,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
         specialization: Specialization,
         contextExpr: Expression?
     ): SimpleField {

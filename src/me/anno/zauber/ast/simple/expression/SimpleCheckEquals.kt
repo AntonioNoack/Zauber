@@ -13,7 +13,7 @@ class SimpleCheckEquals(
     val left: SimpleField, val right: SimpleField,
     val negated: Boolean,
     val method: ResolvedMethod,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleCallable(dst, left, method.resolved, method.specialization, scope, origin) {
 
     override fun toString(): String {

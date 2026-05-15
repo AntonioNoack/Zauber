@@ -220,9 +220,8 @@ class ResolvedField(
 
             return MethodResolver.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
-                typeParameters, valueParameters, codeScope, resolved.origin
-            )
-                ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
+                typeParameters, valueParameters, specialization, codeScope, resolved.origin
+            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
@@ -230,7 +229,7 @@ class ResolvedField(
 
     val ownerScope get() = resolved.scope
 
-    fun resolveOwnerWithoutLeftSide(scope: Scope, origin: Int): Expression {
+    fun resolveOwnerWithoutLeftSide(scope: Scope, origin: Long): Expression {
         // println("Returning this for $resolved in $scope")
         return ThisExpression(ownerScope, scope, origin)
     }

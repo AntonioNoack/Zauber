@@ -11,7 +11,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 
 fun createCastExpression(
-    expr: Expression, scope: Scope, origin: Int, type: Type,
+    expr: Expression, scope: Scope, origin: Long, type: Type,
     ifFalseExpr: (Scope) -> Expression
 ): Expression {
     return createBranchExpression(expr, scope, origin, { fieldExpr ->
@@ -22,7 +22,7 @@ fun createCastExpression(
 }
 
 fun createBranchExpression(
-    expr: Expression, scope: Scope, origin: Int,
+    expr: Expression, scope: Scope, origin: Long,
     condition: (FieldExpression) -> Expression,
     ifTrueExpr: (FieldExpression, Scope) -> Expression,
     ifFalseExpr: (Scope) -> Expression,

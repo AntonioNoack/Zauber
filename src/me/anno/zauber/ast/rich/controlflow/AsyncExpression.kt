@@ -10,7 +10,7 @@ import me.anno.zauber.types.Types
  * Use this keyword to manually handle Yieldables (Promises).
  * All exceptions are caught. Return values may be available later or never.
  * */
-class AsyncExpression(val value: Expression, scope: Scope, origin: Int) : Expression(scope, origin) {
+class AsyncExpression(val value: Expression, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
         return "async ${value.toString(depth)}"

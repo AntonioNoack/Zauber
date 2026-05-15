@@ -1,12 +1,13 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
-import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
+import me.anno.zauber.types.specialization.Specialization
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,7 +42,9 @@ class BasicRuntimeTests {
                 ?: throw IllegalStateException("Missing getter for $field")
 
             createTestRuntime()
-            val getter1 = MethodSpecialization(getter, noSpecialization)
+
+            val specialization = Specialization(getter.scope, emptyParameterList())
+            val getter1 = MethodSpecialization(getter, specialization)
             val self = runtime.getObjectInstance(scope.typeWithArgs)
             val value = runtime.executeCall(self, getter1, emptyList())
             return value

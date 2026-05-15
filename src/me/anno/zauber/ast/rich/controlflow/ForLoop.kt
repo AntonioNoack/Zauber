@@ -16,7 +16,7 @@ fun ASTBuilderBase.iterableToIterator(iterable: Expression): NamedCallExpression
     )
 }
 
-fun ASTBuilderBase.iteratorToNext(iteratorFieldExpr: FieldExpression, scope: Scope, origin: Int): Expression {
+fun ASTBuilderBase.iteratorToNext(iteratorFieldExpr: FieldExpression, scope: Scope, origin: Long): Expression {
     return NamedCallExpression(
         iteratorFieldExpr,
         "next", nameAsImport("next"),
@@ -34,7 +34,7 @@ fun ASTBuilderBase.iterableToNextExpr(iterable: Expression): NamedCallExpression
     )
 }
 
-fun ASTBuilderBase.iteratorToHasNext(iteratorFieldExpr: FieldExpression, scope: Scope, origin: Int): NamedCallExpression {
+fun ASTBuilderBase.iteratorToHasNext(iteratorFieldExpr: FieldExpression, scope: Scope, origin: Long): NamedCallExpression {
     return NamedCallExpression(
         iteratorFieldExpr,
         "hasNext", nameAsImport("hasNext"),

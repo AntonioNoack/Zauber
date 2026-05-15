@@ -3,6 +3,7 @@ package me.anno.zauber.types
 import me.anno.utils.ResolutionUtils.ctr
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -144,7 +145,10 @@ class IsSubTypeOfTest {
 
         // first check without bounds
         val anyOrNullGeneric = GenericType(scope, "V")
-        val anyOrNullParameter = Parameter(0, "V", Types.NullableAny, scope, -1)
+        val anyOrNullParameter = Parameter(
+            0, "V", ParameterType.TYPE_PARAMETER,
+            Types.NullableAny, scope, -1
+        )
         scope.hasTypeParameters = false // this is a hack!
         scope.setTypeParams(listOf(anyOrNullParameter))
 
@@ -186,7 +190,7 @@ class IsSubTypeOfTest {
 
         // now check generics with bounds
         val floatGeneric = GenericType(scope, "F")
-        val floatParameter = Parameter(0, "F", Types.Float, scope, -1)
+        val floatParameter = Parameter(0, "F", ParameterType.TYPE_PARAMETER, Types.Float, scope, -1)
         scope.setTypeParams(listOf(floatParameter))
 
         // even the strong mode must respect type bounds

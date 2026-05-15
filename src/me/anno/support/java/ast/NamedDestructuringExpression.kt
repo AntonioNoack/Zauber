@@ -7,7 +7,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class NamedDestructuringExpression(val type: Type, val names: List<LambdaVariable?>, scope: Scope, origin: Int) :
+class NamedDestructuringExpression(val type: Type, val names: List<LambdaVariable?>, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
     override fun resolveReturnType(context: ResolutionContext): Type = Types.Boolean

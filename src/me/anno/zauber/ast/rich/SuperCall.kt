@@ -8,7 +8,7 @@ class SuperCall(
     val typeI: Type,
     val valueParameters: List<NamedParameter>?,
     val delegate: Expression?,
-    val origin: Int,
+    val origin: Long,
 ) {
 
     val type: ClassType

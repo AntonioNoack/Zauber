@@ -28,7 +28,7 @@ import me.anno.zauber.types.specialization.Specialization
  * */
 class EnsureNotNullExpression(
     val value: Expression,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     override fun clone(scope: Scope) = EnsureNotNullExpression(value.clone(scope), scope, origin)

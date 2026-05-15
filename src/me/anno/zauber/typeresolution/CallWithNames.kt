@@ -125,7 +125,7 @@ object CallWithNames {
     fun resolveNamedParameters(
         expectedParameters: List<Parameter>,
         actualParameters: List<NamedParameter>,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): List<Expression>? {
         val anyIsVararg = expectedParameters.any { it.isVararg }
         if (hasTooFewParameters(anyIsVararg, expectedParameters.size, actualParameters.size)) {
@@ -202,7 +202,7 @@ object CallWithNames {
     fun createArrayOfExpr(
         context: ResolutionContext,
         ev: Parameter, values: List<NamedParameter>,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): Expression {
         val arrayType = ev.type
         check(arrayType is ClassType && arrayType.clazz.pathStr == "zauber.Array")
@@ -222,7 +222,7 @@ object CallWithNames {
     fun createArrayOfExpr(
         context: ResolutionContext,
         instanceType0: Type?, values: List<Expression>,
-        scope: Scope, origin: Int,
+        scope: Scope, origin: Long,
     ): Expression {
 
         val instanceType = instanceType0?.nullIfUnknown(scope)

@@ -10,7 +10,7 @@ import me.anno.zauber.types.Type
 class SimpleGetTypeInstance(
     dst: SimpleField,
     val type: Type,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String = "$dst = $type::class"

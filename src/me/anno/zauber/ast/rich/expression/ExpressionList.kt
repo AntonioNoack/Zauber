@@ -6,7 +6,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class ExpressionList(val list: List<Expression>, scope: Scope, origin: Int) : Expression(scope, origin) {
+class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
         return "[${list.joinToString("; ") { it.toString(depth) }}]"

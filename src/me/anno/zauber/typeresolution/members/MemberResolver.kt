@@ -167,7 +167,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
      * finds a method, returns the method and any inserted type parameters
      * */
     fun findMemberInFile(
-        scope: Scope?, origin: Int, name: String,
+        scope: Scope?, origin: Long, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
@@ -191,7 +191,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
     }
 
     fun findMemberInScope(
-        scope: Scope?, origin: Int, name: String,
+        scope: Scope?, origin: Long, name: String,
 
         returnType: Type?, // sometimes, we know what to expect from the return type
         selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
@@ -207,7 +207,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
     )
 
     abstract fun findMemberInScope(
-        scope: Scope?, origin: Int,
+        scope: Scope?, origin: Long,
         name: String,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,

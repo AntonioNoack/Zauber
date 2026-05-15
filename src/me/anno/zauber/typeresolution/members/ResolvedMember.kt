@@ -28,7 +28,7 @@ abstract class ResolvedMember<V : Member>(
     abstract fun getTypeFromCall(): Type
     abstract fun getScopeOfResolved(): Scope
 
-    fun getBaseIfMissing(scope: Scope, origin: Int): Expression {
+    fun getBaseIfMissing(scope: Scope, origin: Long): Expression {
         val type = selfType?.resolve()
         if (type == null) {
             val resolvedScope = getScopeOfResolved()

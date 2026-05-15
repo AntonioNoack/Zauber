@@ -10,7 +10,7 @@ class JVMSimpleCompare(
     val p0: SimpleFieldExpr?, val p1: SimpleFieldExpr?,
     val type: CompareType,
     val tmp: SimpleFieldExpr,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveReturnType(context: ResolutionContext): Type = dst.type
 }

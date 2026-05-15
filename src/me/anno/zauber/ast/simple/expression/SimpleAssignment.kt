@@ -9,7 +9,7 @@ import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 
-abstract class SimpleAssignment(val dst: SimpleField, scope: Scope, origin: Int) :
+abstract class SimpleAssignment(val dst: SimpleField, scope: Scope, origin: Long) :
     SimpleInstruction(scope, origin) {
 
     companion object {

@@ -198,11 +198,10 @@ class ZauberASTBuilder(
             "Expected () for method call $selfType.$name, but found ${tokens.err(i)}"
         }
 
-        lateinit var parameters: List<Parameter>
-        pushScope(methodScope) {
-            parameters = pushCall {
+        val valueParameters = pushScope(methodScope) {
+            pushCall {
                 val selfType = classScopeIfInClass?.typeWithArgs
-                readParameterDeclarations(selfType, emptyList())
+                readParameterDeclarations(selfType, emptyList(), ParameterType.VALUE_PARAMETER)
             }
         }
 
@@ -216,7 +215,7 @@ class ZauberASTBuilder(
         val extraConditions = readWhereConditions()
 
         val method = Method(
-            selfType0, selfType0 != null, name, typeParameters, parameters, methodScope,
+            selfType0, selfType0 != null, name, typeParameters, valueParameters, methodScope,
             returnType, extraConditions, null, keywords, origin
         )
         methodScope.selfAsMethod = method
@@ -288,7 +287,10 @@ class ZauberASTBuilder(
         }
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>): List<Parameter> {
+    override fun readParameterDeclarations(
+        selfType: Type?, extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter> {
         val parameters = ArrayList<Parameter>(extra)
         loop@ while (i < tokens.size) {
 
@@ -340,7 +342,7 @@ class ZauberASTBuilder(
                     else -> ParameterMutability.DEFAULT
                 },
                 if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
-                name, type, initialValue, currPackage, origin
+                parameterType, name, type, initialValue, currPackage, origin
             )
             parameter.getOrCreateField(null, keywords)
             parameters.add(parameter)
@@ -496,17 +498,18 @@ class ZauberASTBuilder(
                 val vsCodeType = if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK))
                     VSCodeType.METHOD else VSCodeType.VARIABLE
 
+                val i0 = i
                 val namePath = consumeName(vsCodeType, 0)
                 val typeParameters = readTypeParameters(null)
 
                 if (tokens.equals(i, TokenType.OPEN_CALL) && tokens.isSameLine(i - 1, i)) {
                     // call or implicit macro
-                    readNamedCall(namePath, typeParameters, origin)
+                    readNamedCall(namePath, i0, typeParameters, origin)
                 } else if (tokens.equals(i, "!") && tokens.equals(i + 1, TokenType.OPEN_CALL)) {
                     // explicit macro
                     consume("!")
                     val valueParameters = readValueParameters()
-                    evaluateMacro(namePath, typeParameters, valueParameters, currPackage, origin)
+                    evaluateMacro(namePath, i0, typeParameters, valueParameters, currPackage, origin)
                 } else if (
                 // todo validate that we have nothing before us...
                     tokens.equals(i, "::") && tokens.equals(i + 1, "class")) {
@@ -519,8 +522,7 @@ class ZauberASTBuilder(
                         check(i == i0)
                         GetClassFromTypeExpression(type, currPackage, origin)
                     } else {
-                        val type = nameExpression(namePath, origin, currPackage)
-                        i++ // skip name
+                        val type = nameExpression(namePath, i++ /* skip name */, origin, currPackage)
                         consume("::")
                         consume("class")
                         check(i == i0)
@@ -529,14 +531,14 @@ class ZauberASTBuilder(
                 } else if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
                     // e.g. run { ... }
                     val lambda = readLambdaBlock(null)
-                    val nameExpr = nameExpression(namePath, origin, currPackage)
+                    val nameExpr = nameExpression(namePath, i0, origin, currPackage)
                     CallExpression(
                         nameExpr, typeParameters,
                         listOf(NamedParameter(null, lambda)), origin
                     )
                 } else {
                     check(typeParameters == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
-                    nameExpression(namePath, origin, currPackage)
+                    nameExpression(namePath, i0, origin, currPackage)
                 }
             }
             // just something in brackets
@@ -799,11 +801,11 @@ class ZauberASTBuilder(
         }
     }
 
-    private fun nullExpr(scope: Scope, origin: Int): SpecialValueExpression {
+    private fun nullExpr(scope: Scope, origin: Long): SpecialValueExpression {
         return SpecialValueExpression(SpecialValue.NULL, scope, origin)
     }
 
-    private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Int): Expression {
+    private fun isNotNullCondition(expr: Expression, scope: Scope, origin: Long): Expression {
         val nullExpr = nullExpr(scope, origin)
         return CheckEqualsOp(expr, nullExpr, byPointer = true, negated = true, null, scope, origin)
     }
@@ -1122,7 +1124,7 @@ class ZauberASTBuilder(
     /**
      * convert defer into try { remainder } finally { action }
      * */
-    private fun readDefer(result: ArrayList<Expression>, origin: Int) {
+    private fun readDefer(result: ArrayList<Expression>, origin: Long) {
         // todo constructor calls on values are defers, too
         //  detect them immediately or when flattening the AST?
         val action = readExpression()
@@ -1152,7 +1154,7 @@ class ZauberASTBuilder(
     /**
      * convert errdefer into try { body } catch { action; throw e }
      * */
-    private fun readErrdefer(result: ArrayList<Expression>, origin: Int) {
+    private fun readErrdefer(result: ArrayList<Expression>, origin: Long) {
         val action = readExpression()
         val scope = currPackage
         val newScope = scope.generate("errdefer", ScopeType.METHOD_BODY)
@@ -1164,7 +1166,7 @@ class ZauberASTBuilder(
             forTryBody.addAll(remainder.list)
             result.clear()
 
-            val parameter = Parameter(0, "e", Types.Throwable, errCatch, origin)
+            val parameter = Parameter(0, "e", ParameterType.VALUE_PARAMETER, Types.Throwable, errCatch, origin)
             val exceptionField = parameter.getOrCreateField(null, Flags.NONE)
             val throwImpl = ThrowExpression(FieldExpression(exceptionField, errCatch, origin), errCatch, origin)
 

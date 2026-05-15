@@ -92,7 +92,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     val methodScope get() = method.scope
     val classScope = methodScope.parent!!
 
-    val origin = -1
+    val origin = -1L
     val graph = JVMGraph(methodScope, origin)
     val stack = ArrayList<SimpleFieldExpr>()
     var block = graph.startBlock

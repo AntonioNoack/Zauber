@@ -29,7 +29,7 @@ class DotExpression(
     val left: Expression,
     val typeParameters: List<Type>?,
     val right: Expression,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     companion object {

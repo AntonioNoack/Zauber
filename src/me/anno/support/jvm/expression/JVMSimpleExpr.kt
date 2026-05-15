@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 
-abstract class JVMSimpleExpr(scope: Scope, origin: Int) : Expression(scope, origin) {
+abstract class JVMSimpleExpr(scope: Scope, origin: Long) : Expression(scope, origin) {
     override fun clone(scope: Scope): Expression = this
     override fun toStringImpl(depth: Int): String = this.javaClass.simpleName
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

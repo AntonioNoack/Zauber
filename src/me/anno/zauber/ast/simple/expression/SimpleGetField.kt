@@ -15,7 +15,7 @@ class SimpleGetField(
     val self: SimpleField,
     val field: Field,
     val specialization: Specialization,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     companion object {

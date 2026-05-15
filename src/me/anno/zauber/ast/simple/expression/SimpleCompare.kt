@@ -11,7 +11,7 @@ class SimpleCompare(
     dst: SimpleField,
     val left: SimpleField, val right: SimpleField, val type: CompareType,
     val tmp: SimpleField,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {

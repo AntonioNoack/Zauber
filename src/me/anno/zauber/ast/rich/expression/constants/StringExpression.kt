@@ -6,7 +6,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class StringExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
+class StringExpression(val value: String, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     init {
         resolvedType = Types.String

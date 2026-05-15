@@ -2,6 +2,7 @@ package me.anno.support.jvm
 
 import me.anno.support.jvm.FirstJVMClassReader.Companion.getScope
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
@@ -17,7 +18,7 @@ class SignatureReader(val signature: String, val scope: Scope) {
     }
 
     var i = 0
-    val origin = -1
+    val origin = -1L
 
     fun consume(c: Char) {
         check(signature[i] == c) {
@@ -119,7 +120,7 @@ class SignatureReader(val signature: String, val scope: Scope) {
                 // the first colon thingy is an object (extends), the second and so forth are interfaces...
                 if (signature[i] == ':') i++ // hack
                 val type = readType()
-                generics.add(Parameter(generics.size, name, type, scope, origin))
+                generics.add(Parameter(generics.size, name, ParameterType.TYPE_PARAMETER, type, scope, origin))
             }
             i++ // skip '>'
             return generics

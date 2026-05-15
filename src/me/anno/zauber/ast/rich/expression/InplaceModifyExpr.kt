@@ -12,16 +12,16 @@ enum class InplaceModifyType(val symbol: String, val methodName: String) {
     DECREMENT("--", "dec")
 }
 
-fun ASTBuilderBase.createPrefixExpression(type: InplaceModifyType, origin: Int, base: Expression): Expression {
+fun ASTBuilderBase.createPrefixExpression(type: InplaceModifyType, origin: Long, base: Expression): Expression {
     return createPrePostfixExpression(base, type, origin, false)
 }
 
-fun ASTBuilderBase.createPostfixExpression(base: Expression, type: InplaceModifyType, origin: Int): Expression {
+fun ASTBuilderBase.createPostfixExpression(base: Expression, type: InplaceModifyType, origin: Long): Expression {
     return createPrePostfixExpression(base, type, origin, true)
 }
 
 private fun ASTBuilderBase.createPrePostfixExpression(
-    base0: Expression, type: InplaceModifyType, origin: Int,
+    base0: Expression, type: InplaceModifyType, origin: Long,
     returnBeforeChange: Boolean
 ): Expression {
     val scope = base0.scope

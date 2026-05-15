@@ -9,7 +9,7 @@ import me.anno.zauber.types.impl.ClassType
 class JVMSimpleCheckCast(
     val value: SimpleFieldExpr,
     val type: ClassType,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveReturnType(context: ResolutionContext): Type = Types.Boolean
 }

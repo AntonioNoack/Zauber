@@ -11,7 +11,7 @@ class Constructor(
     val superCall: InnerSuperCall?,
     body: Expression?,
     flags: FlagSet,
-    origin: Int
+    origin: Long
 ) : MethodLike(
     null, false,
     scope.typeParameters, valueParameters,

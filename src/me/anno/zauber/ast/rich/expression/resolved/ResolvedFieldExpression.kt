@@ -11,7 +11,7 @@ abstract class ResolvedFieldExpression(
      * */
     val self: Expression,
     val field: ResolvedField,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     val context get() = field.context

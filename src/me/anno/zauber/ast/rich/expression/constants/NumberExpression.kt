@@ -11,7 +11,7 @@ import kotlin.math.min
 import kotlin.math.pow
 
 // todo the "true" type of this also could be "ComptimeValue", because it is :)
-class NumberExpression(val value: String, scope: Scope, origin: Int) : Expression(scope, origin) {
+class NumberExpression(val value: String, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     companion object {
 

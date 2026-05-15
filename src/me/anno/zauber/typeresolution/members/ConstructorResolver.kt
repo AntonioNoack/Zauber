@@ -21,7 +21,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
     private val LOGGER = LogManager.getLogger(ConstructorResolver::class)
 
     override fun findMemberInScope(
-        scope: Scope?, origin: Int, name: String,
+        scope: Scope?, origin: Long, name: String,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         context: ResolutionContext
@@ -51,7 +51,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         context: ResolutionContext,
-        origin: Int
+        origin: Long
     ): ResolvedConstructor? {
 
         check(scope.name == name) {
@@ -89,7 +89,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         context: ResolutionContext,
-        origin: Int
+        origin: Long
     ): ResolvedConstructor? {
 
         // this can still happen during type-resolution,
@@ -125,7 +125,7 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
         codeScope: Scope,
-        origin: Int
+        origin: Long
     ): ResolvedConstructor? {
 
         val typeParameters = typeParameters

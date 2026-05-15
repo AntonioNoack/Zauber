@@ -14,14 +14,16 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
     private val knownWarnings = HashSet<String>()
 
     private fun infoImpl(prefix: String, message: String) {
+        val time = style(getTime(), timeStyle)
+        val prefix = "[$time,$name:$prefix] "
         if ('\n' !in message) {
-            val time = style(getTime(), timeStyle)
-            println("[$time,$name:$prefix] $message")
+            print(prefix)
+            println(message)
         } else {
             val lines = message.split('\n')
-            infoImpl(prefix, lines.first())
-            for (i in 1 until lines.size) {
-                println("    " + lines[i])
+            for (i in lines.indices) {
+                print(prefix)
+                println(lines[i])
             }
         }
     }

@@ -9,7 +9,7 @@ import me.anno.zauber.scope.Scope
 class SimpleCheckIdentical(
     dst: SimpleField, val left: SimpleField, val right: SimpleField,
     val negated: Boolean,
-    scope: Scope, origin: Int
+    scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {

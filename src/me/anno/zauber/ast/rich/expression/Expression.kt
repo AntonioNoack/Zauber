@@ -7,7 +7,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-abstract class Expression(val scope: Scope, val origin: Int) {
+abstract class Expression(val scope: Scope, val origin: Long) {
 
     /**
      * cached for faster future resolution and for checking in from later stages

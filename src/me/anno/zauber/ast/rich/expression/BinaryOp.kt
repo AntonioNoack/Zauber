@@ -17,7 +17,7 @@ private val LOGGER = LogManager.getLogger("BinaryOp")
 @Suppress("IntroduceWhenSubject") // this feature is experimental, why is it recommended???
 fun ASTBuilderBase.binaryOp(
     scope: Scope, left: Expression, symbol: String, right: Expression,
-    origin: Int = left.origin
+    origin: Long = left.origin
 ): Expression {
     return when (symbol) {
         "<=" -> CompareOp(left, right, CompareType.LESS_EQUALS)
@@ -134,7 +134,7 @@ fun ASTBuilderBase.binaryOp(
     }
 }
 
-fun lookupBinaryOp(symbol: String, origin: Int): String {
+fun lookupBinaryOp(symbol: String, origin: Long): String {
     return when (symbol) {
         "+" -> "plus"
         "-" -> "minus"

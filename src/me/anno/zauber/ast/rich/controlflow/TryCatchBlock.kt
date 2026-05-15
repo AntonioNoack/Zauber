@@ -11,7 +11,7 @@ import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class TryCatchBlock(
     val tryBody: Expression, val catches: List<Catch>,
-    val finally: Expression?, scope: Scope, origin: Int
+    val finally: Expression?, scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
     override fun resolveReturnType(context: ResolutionContext): Type {
