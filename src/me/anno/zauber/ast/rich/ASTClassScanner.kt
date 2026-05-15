@@ -6,13 +6,11 @@ import me.anno.support.Language
 import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.FlagSet
-import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.FieldGetterSetter.createGetterMethod0
 import me.anno.zauber.ast.rich.FieldGetterSetter.createSetterMethod0
 import me.anno.zauber.ast.rich.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
-import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.DelegateExpression
 import me.anno.zauber.ast.rich.expression.Expression

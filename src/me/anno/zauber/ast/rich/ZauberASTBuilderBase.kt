@@ -13,9 +13,7 @@ import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
 import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
-import me.anno.zauber.ast.rich.ConstructorHelper.createAssignmentInstructionsForPrimaryConstructor
 import me.anno.zauber.ast.rich.DataClassGenerator.finishDataClass
-import me.anno.zauber.ast.rich.EnumProperties.readEnumBody
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression

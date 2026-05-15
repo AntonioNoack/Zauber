@@ -6,9 +6,6 @@ import me.anno.support.Language
 import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.assertEquals
-import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
-import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
-import me.anno.zauber.ast.rich.WhereConditions.readWhereConditions
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -213,6 +210,8 @@ class ZauberASTBuilder(
         var returnType =
             if (!tokens.equals(i, "=", ":")) Types.Unit // todo if there is a where, we first need to skip it
             else readTypeOrNull(selfType)
+
+        // todo we can make yields and throws explicit to improve compiler performance and help programmers understand :)
 
         val extraConditions = readWhereConditions()
 

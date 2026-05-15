@@ -9,8 +9,6 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.ScopeSplit.shouldSplitIntoSubScope
-import me.anno.zauber.ast.rich.ScopeSplit.splitIntoSubScope
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*

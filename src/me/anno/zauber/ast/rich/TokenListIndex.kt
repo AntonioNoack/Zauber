@@ -4,6 +4,9 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.tokenizer.TokenList
 import kotlin.math.max
 
+/**
+ * stores all global tokens, s.t. we can store code locations in a single Int
+ * */
 object TokenListIndex {
 
     private val LOGGER = LogManager.getLogger(TokenListIndex::class)
