@@ -208,7 +208,7 @@ class DotExpression(
                 ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
             return ResolvedField(
                 field, context.withSpec(Specialization(field.scope, ParameterList.emptyParameterList())),
-                scope, MatchScore(0),
+                scope, MatchScore.zero,
             )
         } else {
             TODO("return class-like instance")

@@ -142,15 +142,15 @@ open class JavaSourceGenerator : Generator() {
 
     fun generateCodeImpl(dst: File, data: DependencyData, writer: FileWithImportsWriter) {
         val methodsByClass = data.calledMethods.groupBy {
-            (it.method.ownerScope to it.specialization)
+            (it.method.ownerScope to it.specialization.typeParameters)
         }
 
         val fieldsByClass = (data.getFields + data.setFields).groupBy {
-            (it.field.ownerScope to it.specialization)
+            (it.field.ownerScope to it.specialization.typeParameters)
         }
 
         val classes1 = data.createdClasses.map {
-            it.clazz to it.specialization
+            it.clazz to it.specialization.typeParameters
         }
 
         val classes = (methodsByClass.keys + fieldsByClass.keys + classes1)
@@ -159,9 +159,10 @@ open class JavaSourceGenerator : Generator() {
         for (clazz in classes) {
             val methods = methodsByClass[clazz] ?: emptyList()
             val fields = fieldsByClass[clazz] ?: emptyList()
-            val classSpec = clazz.second
-            clazz.first[ScopeInitType.CODE_GENERATION]
-            generateClassForScope(clazz.first, dst, writer, classSpec, methods, fields)
+            val (scope, typeParameters) = clazz
+            val classSpec = Specialization(scope, typeParameters)
+            scope[ScopeInitType.CODE_GENERATION]
+            generateClassForScope(scope, dst, writer, classSpec, methods, fields)
         }
     }
 
@@ -228,7 +229,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun getPackageName(scope: Scope, specialization: Specialization): String {
         check(scope.isPackage()) { "Expected scope for packageName to be package" }
-        check(specialization == Specialization.noSpecialization) { "Expected package to have empty specialization" }
+        check(specialization.typeParameters.isEmpty()) { "Expected package to have empty specialization" }
         return scope.name.capitalize() + "Kt"
     }
 
@@ -312,7 +313,7 @@ open class JavaSourceGenerator : Generator() {
     fun appendSpecializationInfoComment() {
         if (specialization.isNotEmpty()) {
             comment {
-                builder.append("Specialization: ")
+                builder.append("Specialization[${specialization.scope}]: ")
                 val params = specialization.typeParameters
                 for (i in params.indices) {
                     if (!builder.endsWith(": ")) builder.append(", ")
@@ -656,7 +657,12 @@ open class JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
-    open fun appendCode(context: ResolutionContext, method1: MethodSpecialization, body: Expression, skipSuperCall: Boolean) {
+    open fun appendCode(
+        context: ResolutionContext,
+        method1: MethodSpecialization,
+        body: Expression,
+        skipSuperCall: Boolean
+    ) {
         writeBlock {
             try {
                 val method = method1.method

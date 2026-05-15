@@ -368,13 +368,12 @@ object ASTSimplifier {
         val dst = block1v.block.field(valueType)
         if (useGetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
-            val method0 = ResolvedMethod(
-                field.getter ?: throw IllegalStateException("Missing getter for $field"),
-                context.withSpec(Specialization(field.scope, ownerTypes)), expr.scope, MatchScore(0),
-            )
+            val getter = field.getter ?: throw IllegalStateException("Missing getter for $field")
+            val newContext = context.withSpec(Specialization(getter.scope, ownerTypes))
+            val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
                 block1v.block, block1, self, expr.self,
-                emptyList(), method0,
+                emptyList(), resolvedGetter,
                 null, expr.scope, expr.origin
             )
         } else {
@@ -462,13 +461,12 @@ object ASTSimplifier {
 
         if (useSetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
-            val method0 = ResolvedMethod(
-                field.setter ?: throw IllegalStateException("Missing setter for $field"),
-                context.withSpec(Specialization(field.scope, ownerTypes)), expr.scope, MatchScore(0),
-            )
+            val setter = field.setter ?: throw IllegalStateException("Missing setter for $field")
+            val newContext = context.withSpec(Specialization(setter.scope, ownerTypes))
+            val resolvedSetter = ResolvedMethod(setter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
                 block2v.block, block2, self, expr.self,
-                listOf(value), method0,
+                listOf(value), resolvedSetter,
                 null, expr.scope, expr.origin
             )
         } else {

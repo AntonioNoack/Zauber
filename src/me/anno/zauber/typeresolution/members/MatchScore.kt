@@ -2,6 +2,10 @@ package me.anno.zauber.typeresolution.members
 
 import kotlin.math.min
 
+/**
+ * selfType, then all parameters, then returnType;
+ * represents how well a method matches a given call
+ * */
 class MatchScore(size: Int) : Comparable<MatchScore> {
 
     val entries = IntArray(size)
@@ -25,5 +29,9 @@ class MatchScore(size: Int) : Comparable<MatchScore> {
             if (c != 0) return c
         }
         return a.size.compareTo(b.size)
+    }
+
+    companion object {
+        val zero = MatchScore(0)
     }
 }

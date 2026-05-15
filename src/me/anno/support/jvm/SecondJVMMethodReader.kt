@@ -364,7 +364,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val method = findMethod(type.clazz, "equals", type) as Method
         val method1 = ResolvedMethod(
             method, ResolutionContext.minimal, // todo this content is incorrect...
-            methodScope, MatchScore(0)
+            methodScope, MatchScore.zero
         )
         block.add(JVMSimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
         stack.add(dst)
@@ -887,7 +887,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             ResolutionContext.minimal.withSpec(
                 Specialization(method.scope, ownerTypes)
             ),
-            methodScope, MatchScore(0),
+            methodScope, MatchScore.zero,
         )
     }
 
@@ -907,7 +907,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     method,
                     ResolutionContext.minimal.withSpec(
                         Specialization(method.scope, ParameterList(typeParameters + valueParameters))
-                    ), methodScope, MatchScore(0)
+                    ), methodScope, MatchScore.zero
                 )
             }
 

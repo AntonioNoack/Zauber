@@ -202,7 +202,7 @@ class LambdaExpression(
         val method = ResolvedConstructor(
             classConstructor.selfAsConstructor!!,
             context.withSpec(context.specialization.withScope(classConstructor)),
-            scope, MatchScore(0),
+            scope, MatchScore.zero,
         )
         val params = listOf(selfMethod).map { it.resolve(context) }
         return ResolvedCallExpression(null, method, params, scope, origin)

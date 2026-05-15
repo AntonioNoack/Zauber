@@ -9,11 +9,8 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
-class ResolvedMethod(
-    method: Method,
-    context: ResolutionContext, codeScope: Scope,
-    matchScore: MatchScore, // selfType, then all parameters
-) : ResolvedMember<Method>(method, context, codeScope, matchScore) {
+class ResolvedMethod(method: Method, context: ResolutionContext, codeScope: Scope, matchScore: MatchScore) :
+    ResolvedMember<Method>(method, context, codeScope, matchScore) {
 
     val returnType get() = resolved.returnType?.specialize(specialization)
 

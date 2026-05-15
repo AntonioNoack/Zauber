@@ -90,13 +90,10 @@ class CallExpression(
                     valueParameters = listOf(selfParam) + valueParameters
                 }
 
-                val constructor = ConstructorResolver.findMemberInScopeImpl(
+                ConstructorResolver.findMemberInScopeImpl(
                     baseScope, baseScope.name,
                     typeParameters, valueParameters, context, origin
-                )
-
-                constructor
-                    ?: throw IllegalStateException("Missing constructor for $baseType<$typeParameters>($valueParameters)")
+                ) ?: throw IllegalStateException("Missing constructor for $baseType<$typeParameters>($valueParameters)")
             }
             else -> throw IllegalStateException(
                 "Resolve field/method in Callable for ${self.javaClass} ($self) " +

@@ -15,7 +15,6 @@ import me.anno.zauber.types.specialization.ClassSpecialization
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 
 /**
  * Given a set of entry points,
@@ -93,7 +92,11 @@ object Dependencies {
                         val method = dstType.clazz.methods0
                             .firstOrNull { it.name == "copy" && it.valueParameters.isEmpty() }
                             ?: throw IllegalStateException("Missing .copy() in value-type $dstType")
-                        addMethod(MethodSpecialization(method, Specialization(dstType)))
+                        val spec = Specialization(
+                            method.scope, dstType.typeParameters
+                                ?: emptyParameterList()
+                        )
+                        addMethod(MethodSpecialization(method, spec))
                     }
                 }
 

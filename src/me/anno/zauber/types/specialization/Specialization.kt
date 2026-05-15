@@ -69,6 +69,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     override fun equals(other: Any?): Boolean {
         return other is Specialization &&
+                scope == other.scope &&
                 typeParameters == other.typeParameters
     }
 

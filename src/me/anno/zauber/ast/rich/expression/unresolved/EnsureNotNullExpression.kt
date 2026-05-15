@@ -64,7 +64,7 @@ class EnsureNotNullExpression(
         val ownerR = ThisExpression(field.ownerScope, scope, origin)
         val fieldR = ResolvedField(
             field, contextI.withSpec(Specialization(field.scope, ParameterList.emptyParameterList())),
-            scope, MatchScore(0)
+            scope, MatchScore.zero
         )
         val fieldExpr = ResolvedGetFieldExpression(ownerR, fieldR, scope, origin)
         val nullExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)

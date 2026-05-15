@@ -2,7 +2,6 @@ package me.anno.generation.cpp
 
 import me.anno.compilation.MinimalCppCompiler
 import me.anno.generation.CodeGenerationTests
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
@@ -26,7 +25,7 @@ class CppGenerationTests : CodeGenerationTests() {
 
     @BeforeEach
     fun init() {
-        disableCompileLoggers()
+        // disableCompileLoggers()
     }
 
     @Test
