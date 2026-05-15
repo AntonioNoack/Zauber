@@ -20,6 +20,7 @@ import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -28,7 +29,6 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
 import java.io.File
 
 /**
@@ -82,7 +82,8 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         mainMethod: Method, className: String
     ): FileEntry {
         val needsArgs = mainMethod.valueParameters.isNotEmpty()
-        val methodName = getMethodName(MethodSpecialization(mainMethod, noSpecialization))
+        val spec = Specialization(mainMethod.methodScope, emptyParameterList())
+        val methodName = getMethodName(MethodSpecialization(mainMethod, spec))
         return FileEntry(emptyList(), this)
             .apply {
                 content.append(
@@ -209,15 +210,15 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }
 
-    override fun appendMethodBody(method: Method, spec: Specialization, headerOnly: Boolean) {
-        val nativeImpl = getNativeImplementation(method)
-        val body = method.body
+    override fun appendMethodBody(method: MethodSpecialization, headerOnly: Boolean) {
+        val nativeImpl = getNativeImplementation(method.method)
+        val body = method.method.body
 
         if (body != null) {
-            val context = ResolutionContext(method.selfType, spec, true, null)
+            val context = ResolutionContext(method.method.selfType, method.specialization, true, null)
             appendCode(context, method, body, false)
         } else if (nativeImpl != null) {
-            appendNativeImplementation(nativeImpl, method)
+            appendNativeImplementation(nativeImpl, method.method)
         } else {
             writeBlock {
                 builder.append("throw 'Missing implementation for $method';")

@@ -450,9 +450,11 @@ open class JavaSourceGenerator : Generator() {
         methods: Collection<MethodSpecialization>,
         headerOnly: Boolean
     ) {
-        for ((constructor) in methods) {
+        for ((constructor, spec) in methods) {
             if (constructor !is Constructor) continue
-            appendConstructor(classScope, className, constructor, headerOnly)
+            spec.use {
+                appendConstructor(classScope, className, constructor, headerOnly)
+            }
         }
     }
 
@@ -465,14 +467,11 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendMethod(classScope: Scope, className: String, method0: MethodSpecialization, headerOnly: Boolean) {
-        val (method, spec) = method0
-        method as Method
-
         // some spacing
         nextLine()
 
         appendMethodHeader(classScope, className, method0, headerOnly)
-        appendMethodBody(method, spec, headerOnly)
+        appendMethodBody(method0, headerOnly)
     }
 
     fun assignSelfType(classScope: Scope, method: Method) {
@@ -503,15 +502,15 @@ open class JavaSourceGenerator : Generator() {
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }
 
-    open fun appendMethodBody(method: Method, spec: Specialization, headerOnly: Boolean) {
-        val nativeImpl = getNativeImplementation(method)
-        val body = method.body
+    open fun appendMethodBody(method: MethodSpecialization, headerOnly: Boolean) {
+        val nativeImpl = getNativeImplementation(method.method)
+        val body = method.method.body
 
         if (body != null) {
-            val context = ResolutionContext(method.selfType, spec, true, null)
+            val context = ResolutionContext(method.method.selfType, method.specialization, true, null)
             appendCode(context, method, body, false)
         } else if (nativeImpl != null) {
-            appendNativeImplementation(nativeImpl, method)
+            appendNativeImplementation(nativeImpl, method.method)
         } else {
             builder.append(";")
             nextLine()
@@ -573,7 +572,7 @@ open class JavaSourceGenerator : Generator() {
 
     }
 
-    fun getNativeImplementation(method: Method): String? {
+    fun getNativeImplementation(method: MethodLike): String? {
         val classScope = method.ownerScope
         return if (method.flags.hasFlag(Flags.EXTERNAL)) {
             val valueParameterTypes = method.valueParameters.map { it.type.resolve(classScope) }
@@ -596,10 +595,8 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendConstructorBody(
-        classScope: Scope,
-        className: String,
-        constructor: Constructor,
-        headerOnly: Boolean
+        classScope: Scope, className: String,
+        constructor: Constructor, headerOnly: Boolean
     ) {
         val body = constructor.body
         val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
@@ -611,7 +608,8 @@ open class JavaSourceGenerator : Generator() {
             }
 
             if (body != null) {
-                appendCode(context, constructor, body, true)
+                val tmp = MethodSpecialization(constructor, specialization)
+                appendCode(context, tmp, body, true)
             }
         }
     }
@@ -658,10 +656,10 @@ open class JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
-    open fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
+    open fun appendCode(context: ResolutionContext, method1: MethodSpecialization, body: Expression, skipSuperCall: Boolean) {
         writeBlock {
             try {
-                val method1 = MethodSpecialization(method, context.specialization)
+                val method = method1.method
                 val graph = ASTSimplifier.simplify(method1)
                 if (skipSuperCall) graph.removeSuperCalls()
 

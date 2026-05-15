@@ -446,7 +446,7 @@ class WASMSourceGenerator : CSourceGenerator() {
             if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
                 val body = method.body!!
                 val context = ResolutionContext(method.selfType, spec, true, null)
-                appendCode(context, method, body, false)
+                appendCode(context, method0, body, false)
             } else {
                 // we would get issues, if we tried to call super(), because 'this' is not a reference
                 declareFuncHasNoLocalFields()
@@ -512,8 +512,12 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    override fun appendCode(context: ResolutionContext, method: MethodLike, body: Expression, skipSuperCall: Boolean) {
-        val method1 = MethodSpecialization(method, context.specialization)
+    override fun appendCode(
+        context: ResolutionContext,
+        method1: MethodSpecialization,
+        body: Expression,
+        skipSuperCall: Boolean
+    ) {
         val graph = ASTSimplifier.simplify(method1)
         if (skipSuperCall) graph.removeSuperCalls()
         graph.removeWriteOnlyFields()
@@ -529,6 +533,7 @@ class WASMSourceGenerator : CSourceGenerator() {
             if (explicit) {
                 TODO("Somehow get explicit self...")
             } else {
+                val method = method1.method
                 if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
                     TODO("Declare $self in $dst for $method")
                 } // else not needed

@@ -428,12 +428,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
-    override fun appendMethodBody(method: Method, spec: Specialization, headerOnly: Boolean) {
+    override fun appendMethodBody(method: MethodSpecialization, headerOnly: Boolean) {
         if (headerOnly) {
             builder.append(";")
             nextLine()
         } else {
-            super.appendMethodBody(method, spec, false)
+            super.appendMethodBody(method, false)
         }
     }
 
