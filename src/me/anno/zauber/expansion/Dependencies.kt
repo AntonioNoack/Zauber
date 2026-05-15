@@ -8,6 +8,7 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.specialization.ClassSpecialization
@@ -38,7 +39,8 @@ object Dependencies {
             val ownerConstructor = type.clazz
                 .getOrCreatePrimaryConstructorScope()
                 .selfAsConstructor!!
-            addMethod(MethodSpecialization(ownerConstructor, noSpecialization))
+            val spec = Specialization(ownerConstructor.methodScope, emptyParameterList())
+            addMethod(MethodSpecialization(ownerConstructor, spec))
         }
     }
 
@@ -105,7 +107,8 @@ object Dependencies {
                         addClass(scope.typeWithArgs)
                         val constr = scope.primaryConstructorScope?.selfAsConstructor
                         if (constr != null) {
-                            addMethod(MethodSpecialization(constr, Specialization.noSpecialization))
+                            val spec = Specialization(constr.methodScope, emptyParameterList())
+                            addMethod(MethodSpecialization(constr, spec))
                         }
                     }
                     is SimpleGetTypeInstance -> addClass(instr.dst.type as ClassType)

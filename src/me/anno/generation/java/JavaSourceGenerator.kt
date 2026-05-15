@@ -35,7 +35,6 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
-import me.anno.zauber.types.specialization.ClassSpecialization
 import me.anno.zauber.types.specialization.FieldSpecialization
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
@@ -134,25 +133,35 @@ open class JavaSourceGenerator : Generator() {
             defineNullableAnnotation(dst, writer)
             defineMainMethodCall(dst, writer, mainMethod)
 
-            val methodsByClass = data.calledMethods.groupBy {
-                ClassSpecialization(it.method.ownerScope, it.specialization)
-            }
+            generateCodeImpl(dst, data, writer)
 
-            val fieldsByClass = (data.getFields + data.setFields).groupBy {
-                ClassSpecialization(it.field.ownerScope, it.specialization)
-            }
-
-            val classes = (methodsByClass.keys + fieldsByClass.keys + data.createdClasses)
-                .filter { it.clazz.isClassLike() }
-            for (clazz in classes) {
-                val methods = methodsByClass[clazz] ?: emptyList()
-                val fields = fieldsByClass[clazz] ?: emptyList()
-                val classSpec = clazz.specialization
-                clazz.clazz[ScopeInitType.CODE_GENERATION]
-                generateClassForScope(clazz.clazz, dst, writer, classSpec, methods, fields)
-            }
         } finally {
             writer.finish()
+        }
+    }
+
+    fun generateCodeImpl(dst: File, data: DependencyData, writer: FileWithImportsWriter) {
+        val methodsByClass = data.calledMethods.groupBy {
+            (it.method.ownerScope to it.specialization)
+        }
+
+        val fieldsByClass = (data.getFields + data.setFields).groupBy {
+            (it.field.ownerScope to it.specialization)
+        }
+
+        val classes1 = data.createdClasses.map {
+            it.clazz to it.specialization
+        }
+
+        val classes = (methodsByClass.keys + fieldsByClass.keys + classes1)
+            .filter { it.first.isClassLike() }
+
+        for (clazz in classes) {
+            val methods = methodsByClass[clazz] ?: emptyList()
+            val fields = fieldsByClass[clazz] ?: emptyList()
+            val classSpec = clazz.second
+            clazz.first[ScopeInitType.CODE_GENERATION]
+            generateClassForScope(clazz.first, dst, writer, classSpec, methods, fields)
         }
     }
 

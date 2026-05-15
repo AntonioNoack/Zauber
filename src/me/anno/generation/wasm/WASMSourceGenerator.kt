@@ -19,6 +19,7 @@ import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -179,7 +180,8 @@ class WASMSourceGenerator : CSourceGenerator() {
 
         declareFuncHasNoLocalFields()
         appendGetObjectInstance(mainMethod.ownerScope, root)
-        callMethod(MethodSpecialization(mainMethod, noSpecialization))
+        val spec = Specialization(mainMethod.methodScope, emptyParameterList())
+        callMethod(MethodSpecialization(mainMethod, spec))
         nextLine()
 
         appendDrop()
@@ -753,7 +755,8 @@ class WASMSourceGenerator : CSourceGenerator() {
             .selfAsConstructor!!
 
         castNonNull()
-        callMethod(MethodSpecialization(constructor, noSpecialization))
+        val spec = Specialization(constructor.methodScope, emptyParameterList())
+        callMethod(MethodSpecialization(constructor, spec))
         nextLine()
 
         appendDrop()

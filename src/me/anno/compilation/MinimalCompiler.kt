@@ -8,6 +8,7 @@ import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.specialization.MethodSpecialization
 import me.anno.zauber.types.specialization.Specialization
 import java.io.File
@@ -69,7 +70,7 @@ abstract class MinimalCompiler {
 
         val testScope = ResolutionUtils.typeResolveScope(code)
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
-        Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))
+        Dependencies.addMethod(MethodSpecialization(method, Specialization(method.methodScope, emptyParameterList())))
 
         val dependencies = Dependencies.collectClassesAndMethods()
         printDependencies(dependencies)
