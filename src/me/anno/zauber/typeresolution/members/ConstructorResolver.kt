@@ -14,7 +14,6 @@ import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.Specialization
 
 object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() {
 
@@ -71,11 +70,12 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
                 LOGGER.info("Given $constructor in $context, can we deduct any generics from that?")
             }
             val returnType = context.targetType
-            val match = findMemberMatch(
+            val match = FindMemberMatch.findMemberMatch(
                 constructor, constructor.selfType, returnType,
+                null,
                 typeParameters, valueParameters,
-                /* todo is this ok?? */scope, origin
-            )
+                context.specialization,/* todo is this ok?? */scope, origin
+            ) as? ResolvedConstructor
             LOGGER.info("Match($constructor): $match")
             if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {
                 bestMatch = match
@@ -114,37 +114,6 @@ object ConstructorResolver : MemberResolver<Constructor, ResolvedConstructor>() 
             typeParameters2, valueParameters,
             context, origin
         )
-    }
-
-    private fun findMemberMatch(
-        constructor: Constructor,
-        memberReturnType: Type?,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-
-        typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>,
-        codeScope: Scope,
-        origin: Long
-    ): ResolvedConstructor? {
-
-        val typeParameters = typeParameters
-            ?.toParameterList(constructor.selfTypeI.clazz.typeParameters)
-
-        LOGGER.info("Resolving generics for constructor $constructor")
-        val matchScore = MatchScore(constructor.valueParameters.size + 2)
-        val tmpSelfType = constructor.selfTypeI.withTypeParameters(typeParameters)
-        val generics = findGenericsForMatch(
-            tmpSelfType, tmpSelfType,
-            memberReturnType, returnType,
-            constructor.selfTypeI.clazz.typeParameters, typeParameters,
-            constructor.valueParameters, valueParameters, matchScore
-        ) ?: return null
-        val context = ResolutionContext(
-            constructor.selfType, Specialization(constructor.scope, generics),
-            false, returnType
-        )
-        return ResolvedConstructor(constructor, context, codeScope, matchScore)
     }
 
     fun List<Type>.toParameterList(generics: List<Parameter>): ParameterList {

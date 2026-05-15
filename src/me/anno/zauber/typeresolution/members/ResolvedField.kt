@@ -218,10 +218,10 @@ class ResolvedField(
             println("  lambda-params: ${baseType.parameters}")
             println("  lambda-returnType: ${baseType.returnType}")*/
 
-            return MethodResolver.findMemberMatch(
+            return FindMemberMatch.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, specialization, codeScope, resolved.origin
-            ) ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
+            ) as? ResolvedMethod ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")

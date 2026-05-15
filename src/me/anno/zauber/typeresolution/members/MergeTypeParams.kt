@@ -27,10 +27,7 @@ object MergeTypeParams {
             selfType.typeParameters?.fillInto(pl)
         }
         actualTypeParams?.fillInto(pl)
-        /*  val selfPart = mergeSelfPart(selfType, expectedTypeParams, origin)
-          val callPart = mergeCallPart(callTypes, callParams, origin)
-          return selfPart + callPart*/
-        LOGGER.info(
+        if (false) LOGGER.info(
             "Combined $selfType,$actualTypeParams,$ctxSpec into $pl for ${
                 expectedTypeParams.map { "${it.scope}.${it.name}" }
             },\n  at ${resolveOrigin(origin)}"

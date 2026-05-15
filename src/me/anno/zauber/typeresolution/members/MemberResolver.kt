@@ -193,8 +193,8 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
     fun findMemberInScope(
         scope: Scope?, origin: Long, name: String,
 
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
+        hintedReturnType: Type?, // sometimes, we know what to expect from the return type
+        explicitSelfType: Type?, // constructors of inner classes have this defined, others not
 
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
@@ -202,8 +202,8 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
     ): Resolved? = findMemberInScope(
         scope, origin, name,
         typeParameters, valueParameters,
-        context.withSelfType(selfType)
-            .withTargetType(returnType),
+        context.withSelfType(explicitSelfType)
+            .withTargetType(hintedReturnType),
     )
 
     abstract fun findMemberInScope(

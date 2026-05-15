@@ -12,11 +12,6 @@ class UnderdefinedCallTests {
 
     @Test
     fun testArrayOf() {
-        LogManager.disableLoggers("" +
-                "TypeResolution,CallExpression,ConstructorResolver,MemberResolver," +
-                "Inheritance,CallWithNames,FieldResolver,MethodResolver,FieldExpression," +
-                "ResolvedField,ResolvedMethod,Field,ASTSimplifier,Runtime," +
-                "SimpleGetField,SimpleSetField")
         val valueT = testExecute(
             """
             val tested = arrayOf(1, 2, 3)

@@ -1,6 +1,7 @@
 package me.anno.zauber.expansion
 
 import me.anno.generation.Specializations
+import me.anno.utils.NumberUtils.pack64
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
@@ -44,7 +45,12 @@ object Macro {
         TODO("Resolve macro $namePath")
     }
 
-    fun ZauberASTBuilderBase.evaluateMacro(namePath: String, i0: Int, typeParameters: List<Type>?, origin: Long): Expression {
+    fun ZauberASTBuilderBase.evaluateMacro(
+        namePath: String,
+        i0: Int,
+        typeParameters: List<Type>?,
+        origin: Long
+    ): Expression {
 
         val i1 = i - 1 // 'i0' is on name, 'i' is on virtual '('
         skipCall() // 'i' is now after call
@@ -77,7 +83,7 @@ object Macro {
 
         if (byMethodCall == null || byMethodCall.resolved !is Method) {
             val base = nameExpression(namePath, i0, origin, scope)
-            val tmpExpr = CallExpression(base, typeParameters, emptyList(), origin + 1)
+            val tmpExpr = CallExpression(base, typeParameters, emptyList(), origin)
             MethodResolver.printScopeForMissingMethod(context, tmpExpr, namePath, typeParameters, valueParameters1)
         }
 

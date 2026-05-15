@@ -131,20 +131,26 @@ class TokenList(val source: CharSequence, val fileName: String) {
         tokenTypes[i] = keyword.ordinal.toByte()
     }
 
-    fun err(i: Int): String {
-        val i = clamp(i, 0, size - 1)
-        val ix = getI0(i)
+    fun err(startI: Int, endI: Int = startI): String {
+        val startI = clamp(startI, 0, size - 1)
+        val endI = clamp(endI, 0, size - 1)
+
+        val ix = getI0(startI)
         val lineNumber = countLines(0, ix)
         val lastLineBreak = source.lastIndexOf('\n', ix)
         val i0 = ix - lastLineBreak
-        val i1 = getI1(i) - lastLineBreak
+        val i1 = getI1(endI) - lastLineBreak
         // show position in line, and surroundings with arrow ^^^^ for the respective token
-        val type = getTypeUnsafe(i)
         return "${lineNumberStr(lineNumber)}, " +
-                "${style("${i0}-${i1}", StringStyles.TEXT)}, " +
-                "${style(type.toString(), type.style)}, " +
-                "'${style(toStringUnsafe(i), type.style)}'\n" +
-                getLinePosString(i, i0, i1, lineNumber, lastLineBreak)
+                style("${i0}-${i1}", StringStyles.TEXT) +
+                if (startI == endI) {
+                    val type = getTypeUnsafe(startI)
+                    ", ${style(type.toString(), type.style)}" +
+                            ", '${style(toStringUnsafe(startI), type.style)}'\n"
+                } else {
+                    "\n"
+                } +
+                getLinePosString(startI, i0, i1, lastLineBreak)
     }
 
     fun errShort(i: Int): String {
@@ -173,7 +179,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return true
     }
 
-    private fun getLinePosString(i: Int, i0: Int, i1: Int, lineNumber: Int, lastLineBreak: Int): String {
+    private fun getLinePosString(tokenIndex0: Int, i0: Int, i1: Int, lastLineBreak: Int): String {
         var start = source.lastIndexOf('\n', max(lastLineBreak - 1, 0)) + 1
         val isSingleLine = source.isAllWhitespace(start, max(lastLineBreak, 0))
         if (isSingleLine) start = lastLineBreak + 1
@@ -189,21 +195,21 @@ class TokenList(val source: CharSequence, val fileName: String) {
                 i0--
             }
 
-            return "${buildStyledSubString(i, start, end)}\n" +
+            return "${buildStyledSubString(tokenIndex0, start, end)}\n" +
                     " ".repeat(i0 - 1) +
                     style("^".repeat(tokenLength), StringStyles.YELLOW)
         }
 
         // todo nicely formatted line numbers before it
         // todo trim the lines
-        return "${buildStyledSubString(i, start, end)}\n" +
+        return "${buildStyledSubString(tokenIndex0, start, end)}\n" +
                 " ".repeat(i0 - 1) +
                 style("^".repeat(tokenLength), StringStyles.YELLOW)
     }
 
-    private fun buildStyledSubString(i: Int, si0: Int, si1: Int): CharSequence {
+    private fun buildStyledSubString(tokenIndex0: Int, si0: Int, si1: Int): CharSequence {
 
-        var tokenIndex = i
+        var tokenIndex = tokenIndex0
         while (tokenIndex > 0 && getI1(tokenIndex - 1) >= si0) tokenIndex--
 
         val result = StringBuilder()

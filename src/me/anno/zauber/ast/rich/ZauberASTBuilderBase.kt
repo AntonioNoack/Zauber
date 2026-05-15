@@ -9,6 +9,7 @@ import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.javascript.ast.FieldOfType
 import me.anno.support.javascript.ast.TypeScriptClassScanner
+import me.anno.utils.NumberUtils.pack64
 import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
 import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
@@ -947,7 +948,7 @@ abstract class ZauberASTBuilderBase(
         if (isTrueCall) {
             val args = readValueParameters()
             val base = nameExpression(namePath, i0, origin, scope)
-            return CallExpression(base, typeParameters, args, origin + 1)
+            return CallExpression(base, typeParameters, args, origin)
         } else {
             // todo parser bug: we don't support specifying the macro name with dots yet
             //  e.g. mypackage.macro!() doesn't work

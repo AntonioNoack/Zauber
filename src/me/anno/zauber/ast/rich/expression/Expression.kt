@@ -9,6 +9,12 @@ import me.anno.zauber.types.Types
 
 abstract class Expression(val scope: Scope, val origin: Long) {
 
+    init {
+        val high = origin.shr(32).toInt()
+        val low = origin.toInt()
+        check(high == low)
+    }
+
     /**
      * cached for faster future resolution and for checking in from later stages
      * */

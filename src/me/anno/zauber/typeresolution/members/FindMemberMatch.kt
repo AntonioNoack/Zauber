@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
+import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Member
 import me.anno.zauber.ast.rich.Method
@@ -13,33 +14,38 @@ import me.anno.zauber.typeresolution.members.MergeTypeParams.collectSpecializati
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.specialization.Specialization
 
-object FieldMethodResolver {
+object FindMemberMatch {
 
-    private val LOGGER = LogManager.getLogger(FieldMethodResolver::class)
+    private val LOGGER = LogManager.getLogger(FindMemberMatch::class)
 
-    private fun findOwnerClass(scope: Scope): Scope? {
+    private fun findOwnerClass(scope: Scope): Scope {
         var scope = scope
         while (true) {
-            if (scope.isObjectLike()) return null
-            if (scope.isClass()) return scope
+            if (scope.isClassLike()) return scope
             scope = scope.parent!!
         }
     }
 
     fun <M : Member> findMemberMatch(
         member: M,
-        methodReturnType: Type?,
+        memberReturnType: Type?, // refined, if we have context hints
 
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
+        hintedReturnType: Type?, // sometimes, we know what to expect from the return type
+        explicitSelfType: Type?, // e.g. for a.x, we get typeOf(a), else null
 
-        actualTypeParameters: List<Type>?,
-        actualValueParameters: List<ValueParameter>,
+        explicitTypeParameters: List<Type>?,
+        explicitValueParameters: List<ValueParameter>,
         ctxSpec: Specialization,
         codeScope: Scope, origin: Long
     ): ResolvedMember<*>? {
 
-        val avp = actualValueParameters.size
+        var explicitSelfType = explicitSelfType
+        if (explicitSelfType == null && member is Constructor) {
+            // hack: selfType is typically not set for constructors, only for inner classes
+            explicitSelfType = member.ownerScope.typeWithArgs
+        }
+
+        val avp = explicitValueParameters.size
         val mvp = member.valueParameters.size
         if (if (member.hasExpandingParameter) avp + 1 < mvp else avp < mvp) {
             LOGGER.info("Rejecting $member, not enough value parameters")
@@ -49,22 +55,32 @@ object FieldMethodResolver {
             LOGGER.info("Rejecting $member, too many value parameters")
             return null
         }
-        if (actualTypeParameters != null && actualTypeParameters.size != member.typeParameters.size) {
+
+        val targetTypeParams = if (member is Constructor) member.ownerScope.typeParameters else member.typeParameters
+        if (explicitTypeParameters != null && explicitTypeParameters.size != targetTypeParams.size) {
             LOGGER.info("Rejecting $member, mismatch in number of type parameters")
             return null
         }
 
         val matchScore = MatchScore(member.valueParameters.size + 2)
         val memberSelfType = member.selfType?.resolvedName
-            ?: findOwnerClass(member.scope)?.typeWithArgs
+            ?: findOwnerClass(member.scope).typeWithArgs
 
-        println("OwnerScope[$member]: ${member.scope}[${member.scope.scopeType}] -> $memberSelfType")
+        if (member.ownerScope.isMethodLike() || member.ownerScope.isInsideExpression()) {
+            // hack: we assume we have access, because the scope was somehow discovered
+            explicitSelfType = memberSelfType
+        }
+
+        if (explicitSelfType == null) {
+            LOGGER.info("Rejecting $member, selfType is missing")
+            return null
+        }
 
         val expectedTypeParams = Specialization.collectGenerics(member.scope)
         val actualTypeParams = collectSpecialization(
-            expectedTypeParams, selfType,
-            if (actualTypeParameters != null) {
-                ParameterList(member.typeParameters, actualTypeParameters)
+            expectedTypeParams, explicitSelfType,
+            if (explicitTypeParameters != null) {
+                ParameterList(targetTypeParams, explicitTypeParameters)
             } else null,
             ctxSpec, origin
         )
@@ -72,19 +88,20 @@ object FieldMethodResolver {
         if (LOGGER.isInfoEnabled) LOGGER.info("Resolving generics for $member")
         // println("Resolving generics for $method")
         val generics = findGenericsForMatch(
-            memberSelfType, selfType,
-            methodReturnType, returnType,
+            memberSelfType, explicitSelfType,
+            memberReturnType, hintedReturnType,
             expectedTypeParams, actualTypeParams,
-            member.valueParameters, actualValueParameters, matchScore
+            member.valueParameters, explicitValueParameters, matchScore
         ) ?: return null
 
-        val selfType1 = selfType ?: memberSelfType
+        val selfType1 = explicitSelfType ?: memberSelfType
         val specialization = Specialization(member.scope, generics)
-        val context = ResolutionContext(selfType1, specialization, false, returnType)
+        val context = ResolutionContext(selfType1, specialization, false, hintedReturnType)
         return when (member) {
             is Method -> ResolvedMethod(member, context, codeScope, matchScore)
             is Field -> ResolvedField(member, context, codeScope, matchScore)
-            else -> throw NotImplementedError()
+            is Constructor -> ResolvedConstructor(member, context, codeScope, matchScore)
+            else -> throw IllegalStateException("Unknown member type: $member")
         }
     }
 

@@ -12,7 +12,6 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.specialization.Specialization
 
 object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
@@ -39,12 +38,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
                 LOGGER.info("Given $field on $selfType, with target $returnType, can we deduct any generics from that?")
             }
             val valueType = getFieldReturnType(scopeSelfType, field, returnType)
-            val match = findMemberMatch(
+            val match = FindMemberMatch.findMemberMatch(
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
                 context.specialization, scope, origin
-            )
+            ) as? ResolvedField
             bestMatch = joinMatches(bestMatch, match)
         }
 
@@ -53,12 +52,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             if (scope.name == name) {
                 val field = companion.getOrCreateObjectField(-1)
                 val valueType = getFieldReturnType(scopeSelfType, field, returnType)
-                val match = findMemberMatch(
+                val match = FindMemberMatch.findMemberMatch(
                     field, valueType,
                     returnType, selfType,
                     typeParameters, valueParameters,
                     context.specialization, scope, origin
-                )
+                ) as? ResolvedField
                 bestMatch = joinMatches(bestMatch, match)
             }
             val match = findMemberInScope(
@@ -75,12 +74,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
 
             val field = child.getOrCreateObjectField(-1)
             val valueType = getFieldReturnType(scopeSelfType, field, returnType)
-            val match = findMemberMatch(
+            val match = FindMemberMatch.findMemberMatch(
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
                 context.specialization, scope, origin
-            )
+            ) as? ResolvedField
             bestMatch = joinMatches(bestMatch, match)
         }
         return bestMatch
@@ -107,26 +106,6 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             field.valueType = resolveType(context, expr)
         }
         return field.valueType
-    }
-
-    fun findMemberMatch(
-        field0: Field,
-        byFieldExpectedType: Type?,
-
-        byExprExpectedType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, //  this is non-null, iff the access is explicit (this.x, not just x)
-
-        typeParameters: List<Type>?,
-        valueParameters: List<ValueParameter>,
-        ctxSpec: Specialization,
-        codeScope: Scope, origin: Long
-    ): ResolvedField? {
-        return FieldMethodResolver.findMemberMatch(
-            field0, byFieldExpectedType,
-            byExprExpectedType, selfType,
-            typeParameters, valueParameters,
-            ctxSpec, codeScope, origin
-        ) as? ResolvedField
     }
 
     fun resolveField(
@@ -206,12 +185,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         LOGGER.info("TypeParams for field '$field': $typeParameters, selfType: $selfType")
 
         val valueType = getFieldReturnType(context.selfType, field, context.targetType)
-        return findMemberMatch(
+        return FindMemberMatch.findMemberMatch(
             field, valueType,
             context.targetType, selfType,
             typeParameters, emptyList(),
             context.specialization, scope, origin
-        )
+        ) as? ResolvedField
     }
 
 }

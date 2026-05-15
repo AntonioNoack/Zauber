@@ -75,7 +75,7 @@ object ASTSimplifier {
             graph.endFlow = flow1
             finishFlows(flow1, method, expr)
 
-            LOGGER.info("Simplified $flow1 to $graph for $method")
+            LOGGER.info("Simplified $method:\n  $flow1\n  to $graph")
             graph
         }
     }

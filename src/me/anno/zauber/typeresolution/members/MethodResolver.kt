@@ -13,7 +13,6 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.specialization.Specialization
 
 object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
@@ -52,11 +51,11 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             val methodReturnType1 = methodReturnType0?.specialize(context)
             val selfType = context.selfType?.specialize(context)
             if (LOGGER.isInfoEnabled) LOGGER.info("MethodReturnType: $methodReturnType1 -> $returnType, selfType: $selfType")
-            val match = findMemberMatch(
+            val match = FindMemberMatch.findMemberMatch(
                 method, methodReturnType1, returnType,
                 selfType, typeParameters, valueParameters,
                 context.specialization,/* todo is this fine??? */scope, origin
-            )
+            ) as? ResolvedMethod
             if (match != null && (bestMatch == null || match.matchScore < bestMatch.matchScore)) {
                 bestMatch = match
             }
@@ -72,26 +71,6 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
             method.returnType = method.resolveReturnType(context)
         }
         return method.returnType
-    }
-
-    fun findMemberMatch(
-        method: Method,
-        methodReturnType: Type?,
-
-        returnType: Type?, // sometimes, we know what to expect from the return type
-        selfType: Type?, // if inside Companion/Object/Class/Interface, this is defined; else null
-
-        typeParameters: List<Type>?,
-        actualValueParameters: List<ValueParameter>,
-        ctxSpec: Specialization,
-        codeScope: Scope, origin: Long
-    ): ResolvedMethod? {
-        return FieldMethodResolver.findMemberMatch(
-            method, methodReturnType,
-            returnType, selfType,
-            typeParameters, actualValueParameters,
-            ctxSpec, codeScope, origin
-        ) as? ResolvedMethod
     }
 
     fun resolveCallable(
