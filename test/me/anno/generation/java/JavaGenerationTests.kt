@@ -1,6 +1,6 @@
 package me.anno.generation.java
 
-import me.anno.compilation.MinimalJavaCompiler
+import me.anno.compilation.MinimalJavaBuildCompiler
 import me.anno.generation.CodeGenerationTests
 import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~7s
+ * execution time: ~7s -> ~0.7s by not using Maven
  * */
 class JavaGenerationTests : CodeGenerationTests() {
 
@@ -21,7 +21,7 @@ class JavaGenerationTests : CodeGenerationTests() {
         )
     }
 
-    override fun generator() = MinimalJavaCompiler()
+    override fun generator() = MinimalJavaBuildCompiler()
 
     @BeforeEach
     fun init() {

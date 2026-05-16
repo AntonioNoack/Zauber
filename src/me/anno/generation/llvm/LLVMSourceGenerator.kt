@@ -104,7 +104,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         builder.append(")")
 
         val graph = ASTSimplifier.simplify(method0)
-        CodeReconstruction.createCodeFromGraph(graph)
+        prepareGraph(graph)
 
         writeBlock {
             appendSimpleBlock(graph, graph.startBlock)

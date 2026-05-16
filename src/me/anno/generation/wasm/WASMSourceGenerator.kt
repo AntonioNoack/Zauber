@@ -522,13 +522,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     ) {
         val graph = ASTSimplifier.simplify(method1)
         if (skipSuperCall) graph.removeSuperCalls()
-        graph.removeWriteOnlyFields()
-        graph.removeThisFields()
-        graph.removeObjectFields()
-        graph.removeConstantFields()
-        graph.renumberFields()
-
-        CodeReconstruction.createCodeFromGraph(graph)
+        prepareGraph(graph)
 
         for ((self, dst) in graph.thisFields) {
             val (scope, explicit) = self
@@ -867,18 +861,18 @@ class WASMSourceGenerator : CSourceGenerator() {
                     binary.localGet(field.id + getLocalFieldOffset(graph))
                     nextLine()
                 }
-                else -> TODO("Implement constant field")
+                else -> throw NotImplementedError("Append constant field $expr")
             }
         }
     }
 
-    fun appendNumber(type: Type, expr: NumberExpression) {
+    override fun appendNumber(type: Type, expr: NumberExpression) {
         when (type) {
             Types.Int, Types.UInt -> i32Const(expr.asInt.toInt())
             Types.Long, Types.ULong -> i64Const(expr.asInt)
             Types.Float, Types.Half -> f32Const(expr.asFloat.toFloat())
             Types.Double -> f64Const(expr.asFloat)
-            else -> TODO("Implement $type")
+            else -> throw NotImplementedError("Append number of type $type")
         }
         nextLine()
     }
@@ -906,12 +900,6 @@ class WASMSourceGenerator : CSourceGenerator() {
     fun ret() {
         builder.append("return")
         binary.ret()
-    }
-
-    override fun appendSimpleInstruction(graph: SimpleGraph, expr: SimpleInstruction) {
-        // removed, just a constant to be inlined
-        if (expr is SimpleAssignment && expr.dst.id < 0 && expr.dst.constantRef != null) return
-        super.appendSimpleInstruction(graph, expr)
     }
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {

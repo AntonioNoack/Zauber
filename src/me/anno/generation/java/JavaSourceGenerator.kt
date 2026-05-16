@@ -13,6 +13,7 @@ import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
@@ -662,6 +663,16 @@ open class JavaSourceGenerator : Generator() {
         builder.append(')')
     }
 
+    open fun prepareGraph(graph: SimpleGraph) {
+        graph.removeWriteOnlyFields()
+        graph.removeThisFields()
+        graph.removeObjectFields()
+        graph.removeConstantFields()
+        graph.renumberFields()
+
+        CodeReconstruction.createCodeFromGraph(graph)
+    }
+
     open fun appendCode(
         context: ResolutionContext,
         method1: Specialization,
@@ -673,8 +684,7 @@ open class JavaSourceGenerator : Generator() {
                 val method = method1.method
                 val graph = ASTSimplifier.simplify(method1)
                 if (skipSuperCall) graph.removeSuperCalls()
-
-                CodeReconstruction.createCodeFromGraph(graph)
+                prepareGraph(graph)
 
                 for ((self, dst) in graph.thisFields) {
                     val (scope, explicit) = self
@@ -787,6 +797,16 @@ open class JavaSourceGenerator : Generator() {
         builder.append('.').append(OBJECT_FIELD_NAME)
     }
 
+    open fun appendNumber(type: Type, expr: NumberExpression) {
+        when (type) {
+            Types.Int, Types.UInt,
+            Types.Long, Types.ULong -> builder.append(expr.asInt)
+            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat())
+            Types.Double -> builder.append(expr.asFloat)
+            else -> throw NotImplementedError("Append number of type $type")
+        }
+    }
+
     open fun appendFieldName(
         graph: SimpleGraph, field: SimpleField,
         forFieldAccess: String = ""
@@ -801,7 +821,11 @@ open class JavaSourceGenerator : Generator() {
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
-            builder.append("tmp").append(field.id)
+            when (val expr = field.constantRef) {
+                is NumberExpression -> appendNumber(field.type, expr)
+                null -> builder.append("tmp").append(field.id)
+                else -> throw NotImplementedError("Append constant field $expr")
+            }
         }
         builder.append(forFieldAccess)
     }

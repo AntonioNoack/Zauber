@@ -5,10 +5,10 @@ import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-class MinimalJavaCompiler : MinimalCompiler() {
+class MinimalJavaMavenCompiler : MinimalCompiler() {
     companion object {
         val minimalPom by lazy {
-            MinimalJavaCompiler::class.java
+            MinimalJavaMavenCompiler::class.java
                 .classLoader.getResourceAsStream("./files/minimal.pom")!!
                 .readBytes()
         }

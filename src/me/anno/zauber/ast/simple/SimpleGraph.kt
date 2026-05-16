@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
@@ -72,6 +73,12 @@ class SimpleGraph(val method: MethodLike) {
 
     fun removeConstantFields() {
         removeFieldIf { it.constantRef != null }
+        for (block in blocks) {
+            block.instructions.removeIf {
+                it is SimpleAssignment &&
+                        it.dst.constantRef != null
+            }
+        }
     }
 
     fun removeThisFields() {

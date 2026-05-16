@@ -80,7 +80,7 @@ object GraphToClass {
         val graph = SimpleGraph(method)
         graph.startBlock.instructions.addAll(block.instructions)
         replaceFields(block, fields)
-        if (true) TODO("We must also convert all shared SimpleFields into fields...")
+        if (true) TODO("We must also convert all shared SimpleFields [belongs to multiple methods] into fields...")
         return graph
     }
 
