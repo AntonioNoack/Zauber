@@ -552,7 +552,8 @@ class ZauberASTBuilder(
     }
 
     private fun readLambdaBlock(selfType: Type?): Expression {
-        return pushBlock(ScopeType.LAMBDA, null) { lambdaScope ->
+        val scopeName = currPackage.generateName("lambda", origin(i))
+        return pushBlock(ScopeType.LAMBDA, scopeName) { lambdaScope ->
             val origin = origin(i)
             val lambda = readLambda(selfType)
             lambdaScope.selfAsMethod = Method(

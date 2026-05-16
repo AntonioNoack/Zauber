@@ -30,6 +30,12 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
             var result = 0.0
             var i = 0
             if (value.startsWith('-')) i++ // skip sign
+            if (value.startsWith("0x", i, true) ||
+                value.startsWith("0b", i, true)
+            ) {
+                check(basis != 10)
+                i += 2
+            }
             while (i < value.length) {
                 val char = value[i++]
                 if (char == '_') continue
@@ -101,8 +107,10 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 if (isNegative) exponent = -exponent
                 result *= 10.0.pow(exponent)
             }
-            if (i < value.length && value[i] in "fFdD") i++
-            check(i == value.length)
+            if (i < value.length && value[i] in "fFdDlLuU") i++
+            check(i == value.length) {
+                "Missed reading float part '${value[i]}' @$i in '$value'"
+            }
             return if (value.startsWith('-')) -result else +result
         }
 
@@ -111,6 +119,12 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
             var i = 0
             val isNegative = value.startsWith('-')
             if (isNegative) i++ // skip sign
+            if (value.startsWith("0x", i, true) ||
+                value.startsWith("0b", i, true)
+            ) {
+                check(basis != 10)
+                i += 2
+            }
             while (i < value.length) {
                 val char = value[i++]
                 if (char == '_') continue
@@ -124,7 +138,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 result = Math.subtractExact(result, digit.toLong())
             }
             if (i < value.length && value[i] in "lLuU") i++
-            check(i == value.length)
+            check(i == value.length) {
+                "Missed reading int part '${value[i]}' @$i in '$value'"
+            }
             if (!isNegative && result == Long.MIN_VALUE) {
                 throw ArithmeticException("long overflow")
             }

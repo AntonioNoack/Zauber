@@ -657,7 +657,8 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
     }
 
     private fun readLambda(end: Int): Expression {
-        return pushScope(ScopeType.LAMBDA, "lambda") { lambdaScope ->
+        val scopeName = currPackage.generateName("lambda", origin(i))
+        return pushScope(ScopeType.LAMBDA, scopeName) { lambdaScope ->
             val origin = origin(i)
             val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
                 pushCall { readLambdaVariables() }

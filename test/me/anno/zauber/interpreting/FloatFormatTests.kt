@@ -96,4 +96,13 @@ class FloatFormatTests {
         val double = testExecute("val tested = 0b1011p+5")
         assertEquals(0b1011 * 2.0.pow(5), double.castToDouble())
     }
+
+    @Test
+    fun testLargeBasis() {
+        val float = testExecute("val tested = 1e1" + "0".repeat(20) + "f")
+        assertEquals(Float.POSITIVE_INFINITY, float.castToFloat())
+
+        val double = testExecute("val tested = 1e1" + "0".repeat(20))
+        assertEquals(Double.POSITIVE_INFINITY, double.castToDouble())
+    }
 }
