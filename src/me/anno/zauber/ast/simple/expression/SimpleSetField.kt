@@ -22,7 +22,9 @@ class SimpleSetField(
     }
 
     init {
-        check(specialization.scope == field.fieldScope)
+        check(specialization.scope == field.fieldScope) {
+            "Expected specialization to belong to $field (${field.fieldScope}), but got ${specialization.scope}"
+        }
         check(!field.ownerScope.isInterface()) {
             "Cannot just set field of an interface, must use getter, $field"
         }

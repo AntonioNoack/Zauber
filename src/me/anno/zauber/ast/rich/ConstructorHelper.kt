@@ -21,6 +21,7 @@ fun ZauberASTBuilderBase.createAssignmentInstructionsForPrimaryConstructor(
 
             val originI = parameter.origin
             val parameterField = parameter.getOrCreateField(null, Flags.NONE)
+
             val classField = classScope.addField(
                 null, false, isMutable = parameter.isVar,
                 parameter, parameter.name, parameter.type, null, Flags.SYNTHETIC, originI

@@ -180,6 +180,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             parameters.add(
                 Parameter(
                     parameters.size, field.name, parameterType,
+                    ParameterMutability.DEFAULT,
                     field.valueType!!, currPackage, origin
                 )
             )

@@ -116,7 +116,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
                 valueParameters.add(
                     Parameter(
                         valueParameters.size, "arg${i++}",
-                        ParameterType.VALUE_PARAMETER, type, scope, origin = -1
+                        ParameterType.VALUE_PARAMETER, ParameterMutability.DEFAULT,
+                        type, scope, origin = -1
                     )
                 )
             }

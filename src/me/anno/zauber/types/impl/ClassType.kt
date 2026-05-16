@@ -1,6 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ParameterMutability
 import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.scope.Scope
@@ -99,6 +100,7 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
                 val fallbackGenerics = List(typeParams.size) {
                     Parameter(
                         it, ('A' + it).toString(), ParameterType.VALUE_PARAMETER,
+                        ParameterMutability.DEFAULT,
                         Types.NullableAny, clazz, -1
                     )
                 }

@@ -39,12 +39,14 @@ class Parameter(
 
     var field: Field? = null
 
+    @Deprecated("Describe mutability yourself")
     constructor(
         index: Int, name: String, parameterType: ParameterType,
         type: Type, scope: Scope, origin: Long
     ) : this(
-        index, ParameterMutability.DEFAULT, ParameterExpansion.NONE,
-        parameterType, name, type, null, scope, origin
+        index, name, parameterType,
+        ParameterMutability.DEFAULT,
+        type, scope, origin
     )
 
     constructor(

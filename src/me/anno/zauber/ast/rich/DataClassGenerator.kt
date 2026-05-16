@@ -206,6 +206,7 @@ object DataClassGenerator {
 
             parameter = Parameter(
                 0, "other", ParameterType.VALUE_PARAMETER,
+                ParameterMutability.DEFAULT,
                 Types.NullableAny, scope, origin,
             )
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
@@ -247,6 +248,7 @@ object DataClassGenerator {
 
             parameter = Parameter(
                 0, "other", ParameterType.VALUE_PARAMETER,
+                ParameterMutability.DEFAULT,
                 classScope.typeWithArgs, scope, origin
             )
             val otherField = parameter.getOrCreateField(null, Flags.NONE)
@@ -315,6 +317,7 @@ object DataClassGenerator {
             valueParams = if (setField == null) emptyList() else listOf(
                 Parameter(
                     0, setField.name, ParameterType.VALUE_PARAMETER,
+                    ParameterMutability.DEFAULT,
                     setField.valueType!!, methodScope, origin
                 ).apply { mustBeNamed = true }
             )

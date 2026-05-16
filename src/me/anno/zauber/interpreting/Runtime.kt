@@ -198,7 +198,8 @@ class Runtime {
                 ?: throw IllegalStateException(
                     "Method $method in ${method.ownerScope} needs at least as many fields as parameters, " +
                             "fields: ${(methodScopeInstance.clazz.type as ClassType).clazz.fields} -> " +
-                            "properties: ${methodScopeInstance.clazz.fields}"
+                            "properties: ${methodScopeInstance.clazz.fields}, " +
+                            "required: $valueParameters"
                 )
             check(field.name == method.valueParameters[i].name) {
                 "Unexpected field order, " +

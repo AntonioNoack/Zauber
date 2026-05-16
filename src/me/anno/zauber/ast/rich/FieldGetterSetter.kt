@@ -189,7 +189,7 @@ object FieldGetterSetter {
         }
 
         val parameter = Parameter(
-            0, valueField.name, ParameterType.VALUE_PARAMETER,
+            0, valueField.name, ParameterType.VALUE_PARAMETER, ParameterMutability.DEFAULT,
             field.valueType ?: TypeOfField(field), setterScope, origin
         )
         val method = Method(

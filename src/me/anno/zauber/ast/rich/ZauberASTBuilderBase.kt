@@ -855,18 +855,19 @@ abstract class ZauberASTBuilderBase(
 
     fun getSyntheticParameters(classScope: Scope, constructorScope: Scope, origin: Long): List<Parameter> {
         val pt = ParameterType.VALUE_PARAMETER
+        val pm = ParameterMutability.VAL
         return when (classScope.scopeType) {
             ScopeType.ENUM_CLASS -> {
                 // enums additionally store their ID and name
                 listOf(
-                    Parameter(0, ENUM_ORDINAL_NAME, pt, Types.Int, constructorScope, origin),
-                    Parameter(1, ENUM_NAME_NAME, pt, Types.String, constructorScope, origin)
+                    Parameter(0, ENUM_ORDINAL_NAME, pt, pm, Types.Int, constructorScope, origin),
+                    Parameter(1, ENUM_NAME_NAME, pt, pm, Types.String, constructorScope, origin)
                 )
             }
             ScopeType.INNER_CLASS -> {
                 // inner classes store a reference to their outer class
                 val outerType = classScope.parent!!.typeWithArgs
-                listOf(Parameter(0, OUTER_FIELD_NAME, pt, outerType, constructorScope, origin))
+                listOf(Parameter(0, OUTER_FIELD_NAME, pt, pm, outerType, constructorScope, origin))
             }
             else -> emptyList()
         }

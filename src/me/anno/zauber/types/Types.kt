@@ -3,6 +3,7 @@ package me.anno.zauber.types
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.ParameterMutability
 import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -70,6 +71,7 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
                 val name = genericNames[index].toString()
                 Parameter(
                     index, name, ParameterType.TYPE_PARAMETER,
+                    ParameterMutability.DEFAULT,
                     nat, scope, -1
                 )
             }

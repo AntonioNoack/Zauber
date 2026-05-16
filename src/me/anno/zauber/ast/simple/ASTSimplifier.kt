@@ -23,6 +23,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.MatchScore
@@ -30,7 +31,6 @@ import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Specialization
-import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -684,7 +684,8 @@ object ASTSimplifier {
             context.specialization, null
         )
         val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
-        ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, noSpecialization, expr.scope, expr.origin))
+        val spec = Specialization(thrownField.fieldScope, emptyParameterList())
+        ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, spec, expr.scope, expr.origin))
         return simplifyImpl(context, catch.body, ifBlock, ifFlow, needsValue)
     }
 
