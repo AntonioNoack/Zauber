@@ -14,7 +14,7 @@ fun main() {
 
     val runs = 1000
     repeat(runs) {
-        instance.testFactorialAsWhileLoop()
+        instance.testFactorialAsWhileLoop("runtime")
     }
     val t1 = System.nanoTime()
     println("Took ${((t1 - t0) / (1e6f * runs))} ms / run")

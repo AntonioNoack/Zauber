@@ -112,11 +112,7 @@ class ZauberASTBuilder(
             i = endIndex // index of {
         }
 
-        if (readBody && classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
-            val origin = origin(i - 1) // fine?
-            println("Adding super-Any to $classScope")
-            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
-        }
+        addAnySuperCallIfNoneIsProvided(classScope, readBody)
     }
 
     /**

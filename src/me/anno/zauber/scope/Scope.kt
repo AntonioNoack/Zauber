@@ -592,6 +592,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (ownScopeType.isClassLike()) return false
         if (ownScopeType.isInsideExpression()) return true
         if (ownScopeType.isMethodLike()) return true
+        if (ownScopeType == ScopeType.FIELD) return true
         throw NotImplementedError("isVisible? $ownScopeType > $parentScopeType")
     }
 

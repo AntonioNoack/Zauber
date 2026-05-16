@@ -1,7 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.MultiTest
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
@@ -88,7 +87,6 @@ class JumpToLabelTests {
 
     @Test
     fun testContinueToNamedDoWhile() {
-        disableCompileLoggers()
         LogManager.enable("ASTSimplifier")
 
         val code = """
@@ -109,9 +107,8 @@ class JumpToLabelTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [/*"type", "runtime", "js", "java", "c++",*/ "wasm"])
+    @ValueSource(strings = ["type", /*"runtime", "js", "java", "c++",*/ "wasm"])
     fun testContinueToFor(type: String) {
-        disableCompileLoggers()
         val code = """
             fun call(): Int {
                 var x = 1
@@ -126,12 +123,12 @@ class JumpToLabelTests {
             val tested = call()
         """.trimIndent() + stdlib
 
-        MultiTest()
-            .type(code) { Types.Int }
-            .runtime(code) { value ->
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value ->
                 assertEquals(16, value.castToInt())
             }
-            .compile(code, "16\n")
+            .compile("16\n")
             .runTest(type)
     }
 

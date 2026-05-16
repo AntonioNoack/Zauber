@@ -1,10 +1,16 @@
 package me.anno.zauber.logging
 
+import me.anno.zauber.logging.LoggerUtils.disableCompileLoggers
 import kotlin.reflect.KClass
 
 object LogManager {
 
     private val loggers = HashMap<String, Logger>()
+
+    init {
+        // by default, we usually don't want these to print
+        disableCompileLoggers()
+    }
 
     fun getLogger(name: String, debug: Boolean = false): Logger {
         return loggers.getOrPut(name) { Logger(name, debug) }

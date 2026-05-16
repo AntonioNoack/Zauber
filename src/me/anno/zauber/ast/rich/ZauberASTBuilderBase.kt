@@ -9,7 +9,6 @@ import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.javascript.ast.FieldOfType
 import me.anno.support.javascript.ast.TypeScriptClassScanner
-import me.anno.utils.NumberUtils.pack64
 import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
 import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
@@ -953,6 +952,18 @@ abstract class ZauberASTBuilderBase(
             // todo parser bug: we don't support specifying the macro name with dots yet
             //  e.g. mypackage.macro!() doesn't work
             return evaluateMacro(namePath, i0, typeParameters, origin)
+        }
+    }
+
+    fun addAnySuperCallIfNoneIsProvided(classScope: Scope, readBody: Boolean) {
+        if (readBody && classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+            val origin = origin(i - 1) // fine?
+            // println("Adding super-Any to $classScope")
+
+            classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
+
+            val constructor = classScope.getOrCreatePrimaryConstructorScope().selfAsConstructor!!
+            constructor.superCall = InnerSuperCall(InnerSuperCallTarget.SUPER, emptyList(), origin)
         }
     }
 

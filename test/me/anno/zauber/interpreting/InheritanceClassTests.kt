@@ -1,7 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.MultiTest
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -26,25 +25,23 @@ external fun println(arg0: Int)
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime",/* "js", "java",*/ "c++" /*"wasm"*/])
     fun testFieldInSuperClassIsAssigned(type: String) {
-        disableCompileLoggers()
         val code = """
             open class Parent(val y: Int)
             class Child(x: Int): Parent(x)
             val tested = Child(3).y
         """.trimIndent() + stdlib
-        MultiTest()
-            .type(code) { Types.Int }
-            .runtime(code) { value ->
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value ->
                 assertEquals(3, value.castToInt())
             }
-            .compile(code, "3\n")
+            .compile("3\n")
             .runTest(type)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testCallChildMethod(type: String) {
-        disableCompileLoggers()
         val code = """
             open class Parent {
                 open fun x() = 0
@@ -55,12 +52,12 @@ external fun println(arg0: Int)
             fun runTest(p: Parent): Int = p.x()
             val tested = runTest(Child())
         """.trimIndent() + stdlib
-        MultiTest()
-            .type(code) { Types.Int }
-            .runtime(code) { value ->
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value ->
                 assertEquals(1, value.castToInt())
             }
-            .compile(code, "1\n")
+            .compile("1\n")
             .runTest(type)
     }
 

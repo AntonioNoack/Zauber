@@ -1,7 +1,6 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.utils.assertEquals
 
 /**
@@ -134,7 +133,6 @@ abstract class CodeGenerationTests {
     }
 
     fun testValueIsPassedByCopyImpl() {
-        disableCompileLoggers()
         val code = """
             value class Vector(val x: Int)
             

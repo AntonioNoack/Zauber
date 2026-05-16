@@ -1,6 +1,4 @@
-package me.anno.generation
-
-import me.anno.zauber.logging.LogManager
+package me.anno.zauber.logging
 
 object LoggerUtils {
     fun disableCompileLoggers() {

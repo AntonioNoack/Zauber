@@ -135,9 +135,9 @@ class GetMethodFromValueExpression(
                 )
                 LambdaVariable(type, field)
             }
-            val base = FieldExpression(variables[0].field, scope, origin)
+            val base = FieldExpression(variables[0].field, tmpScope, origin)
             val valueParameters = variables.subList(1, variables.size).map {
-                NamedParameter(null, FieldExpression(it.field, scope, origin))
+                NamedParameter(null, FieldExpression(it.field, it.field.fieldScope, origin))
             }
             return LambdaExpression(
                 variables, tmpScope,

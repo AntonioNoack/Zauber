@@ -3,11 +3,9 @@ package me.anno.generation.llvmir
 import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalLLVMCompiler
 import me.anno.generation.CodeGenerationTests
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class LLVMGenerationTests : CodeGenerationTests() {
@@ -20,11 +18,6 @@ class LLVMGenerationTests : CodeGenerationTests() {
     }
 
     override fun generator(): MinimalCompiler = MinimalLLVMCompiler()
-
-    @BeforeEach
-    fun init() {
-        disableCompileLoggers()
-    }
 
     @Test
     fun testSimpleAddition() {

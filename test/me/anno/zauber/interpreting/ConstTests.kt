@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import me.anno.zauber.logging.LogManager
@@ -44,7 +43,6 @@ class ConstTests {
 
     @Test
     fun testCanWriteNonConstValue() {
-        disableCompileLoggers()
         LogManager.enable("ASTSimplifier,Runtime")
         val value = testExecute(
             """

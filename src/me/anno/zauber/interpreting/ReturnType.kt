@@ -5,5 +5,7 @@ enum class ReturnType(val symbol: String) {
     THROW("throw"),
     YIELD("yield"),
 
-    VALUE("")
+    VALUE("");
+
+    fun isValue() = this == VALUE || this == RETURN
 }

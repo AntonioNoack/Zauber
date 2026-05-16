@@ -177,13 +177,14 @@ class LambdaExpression(
         )
 
         val constructorBody = ArrayList<Expression>()
+        val mpf = methodParameter.getOrCreateField(null, Flags.SYNTHETIC)
         constructorBody.add(
             AssignmentExpression(
                 DotExpression(
                     ThisExpression(classScope, scope, origin), emptyList(),
-                    FieldExpression(methodField, scope, origin), scope, origin
+                    FieldExpression(methodField, methodField.scope, origin), scope, origin
                 ),
-                FieldExpression(methodParameter.getOrCreateField(null, Flags.SYNTHETIC), scope, origin)
+                FieldExpression(mpf, classConstructor, origin)
             )
         )
         classConstructor.selfAsConstructor = Constructor(

@@ -1,14 +1,19 @@
 package me.anno.zauber.interpreting
 
+import me.anno.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.logging.LogManager
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class FactorialTests {
 
-    @Test
-    fun testFactorialAsRecursiveFunction() {
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js"/*, "java", "c++", "wasm"*/])
+    fun testFactorialAsRecursiveFunction(type: String) {
+        // todo for this to work, we must implement SimpleCompare in all targets
         val code = """
             fun fac(i: Int): Int {
                 if (i <= 1) return 1
@@ -35,13 +40,18 @@ class FactorialTests {
                 external operator fun set(index: Int, value: V)
             }
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
+            external fun println(arg0: Int)
         """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(5 * 4 * 3 * 2, value.castToInt())
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value -> assertEquals(5 * 4 * 3 * 2, value.castToInt()) }
+            .compile("120\n")
+            .runTest(type)
     }
 
-    @Test
-    fun testFactorialAsWhileLoop() {
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js"/*, "java", "c++", "wasm"*/])
+    fun testFactorialAsWhileLoop(type: String) {
         val code = """
             fun fac(i: Int): Int {
                 var f = 1
@@ -74,18 +84,19 @@ class FactorialTests {
                 external operator fun set(index: Int, value: V)
             }
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
+            external fun println(arg0: Int)
         """.trimIndent()
-        val value = testExecute(code)
-        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, value.castToInt())
+        val value1 = 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value -> assertEquals(value1, value.castToInt()) }
+            .compile("$value1\n")
+            .runTest(type)
     }
 
-    @Test
-    fun testFactorialAsForLoop() {
-        LogManager.disableLoggers(
-            "Inheritance,MemberResolver,MemberResolver,FieldExpression,FieldResolver,TypeResolution," +
-                    "CallExpression,ConstructorResolver,ResolvedMethod,MethodResolver,ResolvedField,Field"
-        )
-        LogManager.enableDebug("Runtime")
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js"/*, "java", "c++", "wasm"*/])
+    fun testFactorialAsForLoop(type: String) {
         val stdlib = """
             package zauber
             class Any
@@ -121,6 +132,7 @@ class FactorialTests {
                 external operator fun get(i: Int)
                 external operator fun set(i: Int, value: V)
             }
+            external fun println(arg0: Int)
         """.trimIndent()
         val code = """
             fun fac(n: Int): Int {
@@ -132,8 +144,15 @@ class FactorialTests {
             }
             val tested = fac(10)
         """.trimIndent() + stdlib
-        val value = testExecute(code)
-        assertEquals(10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2, value.castToInt())
+
+        // todo bug: why is the generated source code pretty much ending after the iterator call?
+
+        val value1 = 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value -> assertEquals(value1, value.castToInt()) }
+            .compile("$value1\n")
+            .runTest(type)
     }
 
 }

@@ -180,7 +180,10 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     fun withScope(scope: Scope): Specialization {
         return if (this.scope == scope) this
-        else Specialization(scope, typeParameters)
+        else {
+            val expected = collectGenerics(scope)
+            Specialization(scope, typeParameters.filterByGenerics { it in expected })
+        }
     }
 
     val superType: Specialization?

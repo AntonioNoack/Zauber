@@ -567,28 +567,24 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val right = block2v.value
 
-        val tmp = block2v.block.field(Types.Int)
-        val method = expr.callable.resolved
-        val specialization = expr.callable.specialization
-        val call = SimpleCall(
-            tmp, method, left.use(), specialization,
-            emptyList(), listOf(right.use()), emptyList(),
-            expr.scope, expr.origin
-        )
+        // val tmp = block2v.block.field(Types.Int)
+        val method = expr.callable
+        // val specialization = expr.callable.specialization
 
-        val block3 = handleThrown(
+        /*val block3 = handleThrown(
             block2v.block, block2,
             tmp, call, method.getThrownType(specialization)
         )
-        val block3v = block3.value ?: return block3
+        val block3v = block3.value ?: return block3*/
 
-        val dst = block3v.block.field(Types.Boolean)
+        val dst = block2v.block.field(Types.Boolean)
         val instr = SimpleCompare(
             dst, left.use(), right.use(), expr.type,
-            tmp.use(), expr.scope, expr.origin
+            method, expr.scope, expr.origin
         )
-        block3v.block.add(instr)
-        return block3.withValue(dst)
+        // todo handle thrown...
+        block2v.block.add(instr)
+        return block2.withValue(dst)
     }
 
     private fun simplifyCheckEqualsOp(

@@ -33,9 +33,9 @@ class UnderdefinedCallTests {
             external fun println(arg0: Int)
         """.trimIndent()
 
-        MultiTest()
-            .type(code) { Types.Array.withTypeParameter(Types.Int) }
-            .runtime(code) {
+        MultiTest(code)
+            .type { Types.Array.withTypeParameter(Types.Int) }
+            .runtime {
                 val valueT = testExecute(code)
                 val expectedType = runtime.getClass(Types.Array.withTypeParameter(Types.Int))
                 assertEquals(expectedType, valueT.clazz)
@@ -43,7 +43,7 @@ class UnderdefinedCallTests {
                 assertInstanceOf<IntArray>(contents)
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
-            .compile(code, "1\n")
+            .compile("1\n")
             .runTest(type)
     }
 

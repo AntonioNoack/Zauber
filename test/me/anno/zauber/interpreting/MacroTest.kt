@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -21,7 +20,6 @@ class MacroTest {
 
     @Test
     fun testParsingXMLAtCompileTime() {
-        disableCompileLoggers()
         val value = testExecute(
             $$"""
 class XMLNode(val type: String) {
@@ -78,8 +76,6 @@ class String {
 
     @Test
     fun testCreatingSerializerAtCompileTime() {
-        disableCompileLoggers()
-
         // todo serialization seems to be correct, but why is the method then returning Unit??
 
         val sourceCode = $$"""

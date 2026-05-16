@@ -25,32 +25,32 @@ class ArithmeticTests {
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testSimpleIntCalculation(type: String) {
-        val code = "val tested = 1+3*7$stdlib"
-        MultiTest()
-            .type(code) { Types.Int }
-            .runtime(code) { value ->
+        MultiTest("val tested = 1+3*7$stdlib")
+            .type { Types.Int }
+            .runtime { value ->
                 assertEquals(22, value.castToInt())
             }
-            .compile(code, "22\n")
+            .compile("22\n")
             .runTest(type)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testSimpleIntCalculationWithIntermediate(type: String) {
-        val code = """
+        MultiTest(
+            """
             val tested: Int
                 get() {
                     var tmp = 1 + 6
                     return tmp * 3
                 }
         """.trimIndent() + stdlib
-        MultiTest()
-            .type(code) { Types.Int }
-            .runtime(code) { value ->
+        )
+            .type { Types.Int }
+            .runtime { value ->
                 assertEquals(21, value.castToInt())
             }
-            .compile(code, "21\n")
+            .compile("21\n")
             .runTest(type)
     }
 
@@ -58,7 +58,8 @@ class ArithmeticTests {
     @ValueSource(strings = ["type", "runtime"])
     fun testSimpleIntCalculationWithIntermediateAndInc(type: String) {
         // todo this cannot be properly compiled yet :/
-        val code = """
+        MultiTest(
+            """
             val tested: Int
                 get() {
                     var tmp = 1 + 6
@@ -66,12 +67,12 @@ class ArithmeticTests {
                     return tmp * 3
                 }
         """.trimIndent() + stdlib
-        MultiTest()
-            .type(code) { Types.Int }
-            .runtime(code) { value ->
+        )
+            .type { Types.Int }
+            .runtime { value ->
                 assertEquals(24, value.castToInt())
             }
-            .compile(code, "24\n")
+            .compile("24\n")
             .runTest(type)
     }
 

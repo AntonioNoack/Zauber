@@ -3,6 +3,7 @@ package me.anno.generation.java
 import me.anno.generation.*
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
+import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -600,6 +601,35 @@ open class JavaSourceGenerator : Generator() {
         appendConstructorBody(classScope, className, constructor, headerOnly)
     }
 
+    open fun appendSuperCall0(
+        classScope: Scope, className: String,
+        constructor: Constructor,
+    ) {
+        // interfaces don't need super calls :)
+        val superCall = constructor.superCall
+        val superType = classScope.superCalls
+            .firstOrNull { it.isClassCall }?.typeI
+        if (superCall != null) {
+            appendSuperCall0Name(
+                classScope, className, constructor,
+                superType!!, superCall
+            )
+
+            val context = ResolutionContext(null, specialization, true, null)
+            appendSuperCallParams(context, superCall)
+        } else {
+            comment { builder.append("superCall is null") }
+        }
+    }
+
+    open fun appendSuperCall0Name(
+        classScope: Scope, className: String, constructor: Constructor,
+        superType: Type, superCall: InnerSuperCall,
+    ) {
+        val name = if (superCall.target == InnerSuperCallTarget.THIS) "this" else "super"
+        builder.append(name)
+    }
+
     open fun appendConstructorBody(
         classScope: Scope, className: String,
         constructor: Constructor, headerOnly: Boolean
@@ -801,7 +831,7 @@ open class JavaSourceGenerator : Generator() {
         when (type) {
             Types.Int, Types.UInt,
             Types.Long, Types.ULong -> builder.append(expr.asInt)
-            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat())
+            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()).append('f')
             Types.Double -> builder.append(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type")
         }
@@ -963,9 +993,12 @@ open class JavaSourceGenerator : Generator() {
                 if (needsCopy) appendCopy(graph, expr)
             }
             is SimpleCompare -> {
+                // todo if this is not native, we must append a call
                 appendFieldName(graph, expr.left)
                 builder.append(' ')
-                builder.append(expr.type.symbol).append(" 0")
+                builder.append(expr.type.symbol)
+                builder.append(' ')
+                appendFieldName(graph, expr.right)
             }
             is SimpleInstanceOf -> {
                 // todo if type is ClassType, this is easy, else we need to build an expression...

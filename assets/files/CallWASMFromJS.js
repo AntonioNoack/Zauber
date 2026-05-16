@@ -24,6 +24,8 @@ const imports = {
         },
         'zauber_Int_times_rtgkvs': () => {
         },
+        'zauber_Int_div_rtgkvs': () => {
+        }
     }
 };
 
@@ -32,7 +34,7 @@ async function loadAndRun() {
     const wasmModule = await WebAssembly.instantiate(wasmBytes, imports);
 
     // Access exported functions
-    const { main} = lib = wasmModule.instance.exports;
+    const {main} = lib = wasmModule.instance.exports;
 
     // Call the wasm function
     main();

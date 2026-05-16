@@ -178,8 +178,11 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
-        if (!consumeIf(":")) return
-        return readSuperCallsImpl(classScope, readBody)
+        if (consumeIf(":")) {
+            readSuperCallsImpl(classScope, readBody)
+        }
+
+        addAnySuperCallIfNoneIsProvided(classScope, readBody)
     }
 
     fun readSuperCallsImpl(classScope: Scope, readBody: Boolean) {

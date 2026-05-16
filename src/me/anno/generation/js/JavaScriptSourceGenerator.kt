@@ -7,10 +7,12 @@ import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.cpp.CppSourceGenerator.Companion.appendRelativePath
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
@@ -19,14 +21,17 @@ import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.ValueParameterImpl
+import me.anno.zauber.typeresolution.members.ConstructorResolver
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.Specialization
 import java.io.File
 
 /**
@@ -138,6 +143,15 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         }
     }
 
+    override fun appendSuperTypes(scope: Scope) {
+        for (superCall in scope.superCalls) {
+            if (superCall.isInterfaceCall) continue
+            val type = superCall.type
+            builder.append(" extends ")
+            appendType(type, scope, true)
+        }
+    }
+
     override fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
         if (field == classScope.objectField) builder.append("static ")
     }
@@ -166,6 +180,71 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
         appendConstructorHeader(classScope, className, constructor, headerOnly)
         appendConstructorBody(classScope, className, constructor, headerOnly)
+    }
+
+    override fun appendConstructorBody(
+        classScope: Scope, className: String,
+        constructor: Constructor, headerOnly: Boolean
+    ) {
+        val body = constructor.body
+        val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+
+        writeBlock {
+
+            appendSuperCall0(classScope, className, constructor)
+            builder.append(';')
+            nextLine()
+
+            if (body != null) {
+                val methodSpec = specialization
+                check(methodSpec.method === constructor)
+                appendCode(context, methodSpec, body, true)
+            }
+        }
+    }
+
+    override fun appendSuperCall0(classScope: Scope, className: String, constructor: Constructor) {
+        // interfaces don't need super calls :)
+        val superCall = constructor.superCall
+        val superType = classScope.superCalls
+            .firstOrNull { it.isClassCall }?.typeI
+        if (superCall != null) {
+            appendSuperCall0Name(
+                classScope, className, constructor,
+                superType as ClassType, superCall
+            )
+
+            if (!classScope.isObjectLike()) {
+                // find out hash of super-call...
+                val context = ResolutionContext(null, specialization, true, null)
+                val valueParams = superCall.valueParameters.map {
+                    val type = it.value.resolveReturnType(context)
+                    ValueParameterImpl(it.name, type, false)
+                }
+                val foundConstructor = ConstructorResolver.findMemberInScope(
+                    superType.clazz, superCall.origin, superType.clazz.name,
+                    null, valueParams, context
+                ) ?: throw IllegalStateException("Missing $superCall in $superType for $className, valueParams: $valueParams")
+                builder.append(".__init__")
+                    .append(hashMethodParameters(foundConstructor.specialization))
+            }
+
+            val context = ResolutionContext(null, specialization, true, null)
+            appendSuperCallParams(context, superCall)
+        } else {
+            comment { builder.append("superCall is null") }
+        }
+    }
+
+    override fun appendSuperCall0Name(
+        classScope: Scope, className: String, constructor: Constructor,
+        superType: Type, superCall: InnerSuperCall
+    ) {
+        if (superCall.target == InnerSuperCallTarget.THIS) {
+            builder.append("this") // is this supported? yes
+        } else {
+            builder.append("super")
+        }
     }
 
     override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
@@ -306,6 +385,16 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         builder.append(" }).")
         builder.append(getMethodName(expr.methodSpec))
         appendValueParams(graph, expr.valueParameters)
+    }
+
+    override fun appendNumber(type: Type, expr: NumberExpression) {
+        when (type) {
+            Types.Int, Types.UInt,
+            Types.Long, Types.ULong -> builder.append(expr.asInt)
+            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()) // f is not supported
+            Types.Double -> builder.append(expr.asFloat)
+            else -> throw NotImplementedError("Append number of type $type")
+        }
     }
 
     override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {

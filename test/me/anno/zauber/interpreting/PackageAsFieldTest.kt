@@ -1,7 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.MultiTest
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.utils.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -19,7 +18,6 @@ external fun println(arg0: Int)
     @ParameterizedTest
     @ValueSource(strings = ["runtime", "js", "java", "c++", "wasm", "rust"])
     fun testPackageAsField(type: String) {
-        disableCompileLoggers()
         val code = """
             fun calculate(): Int {
                 var tmp = helper020
@@ -31,18 +29,17 @@ external fun println(arg0: Int)
             package helper020
             var x = 5
         """.trimIndent() + stdlib
-        MultiTest()
-            .runtime(code) {
+        MultiTest(code)
+            .runtime {
                 assertEquals(5, it.castToInt())
             }
-            .compile(code, "5\n")
+            .compile("5\n")
             .runTest(type)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["runtime", "js", "java", "c++", "wasm", "rust"])
     fun testNestedPackageAsField(type: String) {
-        disableCompileLoggers()
         val code = """
             fun calculate(): Int {
                 var leSub = helper020.sub
@@ -54,11 +51,11 @@ external fun println(arg0: Int)
             package helper020.sub
             var x = 5
         """.trimIndent() + stdlib
-        MultiTest()
-            .runtime(code) {
+        MultiTest(code)
+            .runtime {
                 assertEquals(5, it.castToInt())
             }
-            .compile(code, "5\n")
+            .compile("5\n")
             .runTest(type)
     }
 }

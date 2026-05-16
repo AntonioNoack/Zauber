@@ -41,7 +41,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val protectedCppTypes by threadLocal {
             Types.run {
                 mapOf(
-                    Boolean to BoxedType("Boolean", "boolean"),
+                    Boolean to BoxedType("Boolean", "bool"),
                     Byte to BoxedType("Byte", "byte"),
                     Short to BoxedType("Short", "short"),
                     Int to BoxedType("Int", "int"),
@@ -389,23 +389,19 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             builder.append(className).append("::").append(className)
             appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
 
-            // interfaces don't need super calls :)
-            val superCall = constructor.superCall
-            val superType = classScope.superCalls
-                .firstOrNull { it.isClassCall }?.typeI
-            if (superCall != null) {
-                builder.append(" : ")
-                if (superCall.target == InnerSuperCallTarget.THIS) {
-                    builder.append(className) // is this supported? yes
-                } else {
-                    appendType(superType!!, constructor.scope, false)
-                }
+            appendSuperCall0(classScope, className, constructor)
+        }
+    }
 
-                val context = ResolutionContext(null, specialization, true, null)
-                appendSuperCallParams(context, superCall)
-            } else {
-                comment { builder.append("superCall is null") }
-            }
+    override fun appendSuperCall0Name(
+        classScope: Scope, className: String, constructor: Constructor,
+        superType: Type, superCall: InnerSuperCall
+    ) {
+        builder.append(" : ")
+        if (superCall.target == InnerSuperCallTarget.THIS) {
+            builder.append(className) // is this supported? yes
+        } else {
+            appendType(superType, constructor.scope, false)
         }
     }
 

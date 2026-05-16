@@ -2,11 +2,9 @@ package me.anno.generation.wasm
 
 import me.anno.compilation.MinimalWASMCompiler
 import me.anno.generation.CodeGenerationTests
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
@@ -23,11 +21,6 @@ class WASMGenerationTests : CodeGenerationTests() {
     }
 
     override fun generator() = MinimalWASMCompiler()
-
-    @BeforeEach
-    fun init() {
-        disableCompileLoggers()
-    }
 
     @Test
     fun testSimpleAddition() {

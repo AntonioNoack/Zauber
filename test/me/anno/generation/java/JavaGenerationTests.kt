@@ -2,11 +2,9 @@ package me.anno.generation.java
 
 import me.anno.compilation.MinimalJavaBuildCompiler
 import me.anno.generation.CodeGenerationTests
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
@@ -22,11 +20,6 @@ class JavaGenerationTests : CodeGenerationTests() {
     }
 
     override fun generator() = MinimalJavaBuildCompiler()
-
-    @BeforeEach
-    fun init() {
-        disableCompileLoggers()
-    }
 
     @Test
     fun testSimpleAddition() {

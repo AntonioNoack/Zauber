@@ -12,7 +12,7 @@ import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.types.Type
 import org.junit.jupiter.api.Assertions.assertEquals
 
-class MultiTest {
+class MultiTest(val code: String) {
 
     private val runnables = HashMap<String, () -> Unit>()
 
@@ -33,21 +33,21 @@ class MultiTest {
         return this
     }
 
-    fun type(code: String, getType: () -> Type): MultiTest {
+    fun type(getType: () -> Type): MultiTest {
         return or("type") {
             val actual = testTypeResolution(code, reset = true)
             assertEquals(getType(), actual)
         }
     }
 
-    fun runtime(code: String, validateInstance: (Instance) -> Unit): MultiTest {
+    fun runtime(validateInstance: (Instance) -> Unit): MultiTest {
         return or("runtime") {
             val instance = testExecute(code)
             validateInstance(instance)
         }
     }
 
-    fun compile(code: String, expected: String): MultiTest {
+    fun compile(expected: String): MultiTest {
         // todo some languages like Rust should get a per-test folder, or at least per-Rust, so we can cache the dependency builds
         val codeWithMain = if ("fun main(" in code) code else "fun main() { println(tested) }\n$code"
         for ((name, value) in languages) {

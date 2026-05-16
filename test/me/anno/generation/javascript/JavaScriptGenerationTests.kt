@@ -3,11 +3,9 @@ package me.anno.generation.javascript
 import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalJavaScriptCompiler
 import me.anno.generation.CodeGenerationTests
-import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
@@ -23,11 +21,6 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
     }
 
     override fun generator(): MinimalCompiler = MinimalJavaScriptCompiler()
-
-    @BeforeEach
-    fun init() {
-        disableCompileLoggers()
-    }
 
     @Test
     fun testSimpleAddition() {
@@ -46,7 +39,7 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testGenericClass() {
-       testGenericClassImpl()
+        testGenericClassImpl()
     }
 
     @Test

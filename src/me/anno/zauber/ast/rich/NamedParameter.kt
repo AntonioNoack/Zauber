@@ -5,6 +5,7 @@ import me.anno.zauber.scope.Scope
 
 /**
  * Used in calls: a named parameter
+ * todo how does this represent varargs?
  * */
 class NamedParameter(val name: String?, val value: Expression) {
 
