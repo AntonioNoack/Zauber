@@ -818,12 +818,16 @@ object ASTSimplifier {
         val insideFlow0 = flow0.withValue(unit, bodyBlock)
         val insideBlock1 = simplifyImpl(context, expr.body, bodyBlock, insideFlow0, false)
         var flow1 = insideFlow0.joinError(insideBlock1)
-        if (insideBlock1.value != null) {
-            insideBlock1.value.block.nextBranch = conditionBlock
+        if (insideBlock1.value != null ||
+            afterBlock.inputNodes.isNotEmpty() || // there is a @break
+            conditionBlock.inputNodes.isNotEmpty() // there is a @continue
+        ) {
+            insideBlock1.value?.block?.nextBranch = conditionBlock
 
             // add condition and jump to insideBlock
             val flow1d = flow1.withValue(unit, conditionBlock)
             val decideBlock1i = simplifyImpl(context, expr.condition, conditionBlock, flow1d, true)
+
             if (decideBlock1i.value != null) {
                 val decideBlock1 = decideBlock1i.value.block
                 decideBlock1.branchCondition = decideBlock1i.value.value.use()

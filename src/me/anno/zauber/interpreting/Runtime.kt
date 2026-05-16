@@ -63,7 +63,7 @@ class Runtime {
 
     operator fun get(call: Call, field: SimpleField): Instance {
         val field = getMergedField(field)
-        LOGGER.info("Getting SimpleField $field")
+        // LOGGER.info("Getting SimpleField $field")
         return call.simpleFields[field]
             ?: throw IllegalStateException("Missing field $field, fields: ${call.simpleFields.entries.joinToString("") { (k, v) -> "\n  $k=$v" }}")
     }
@@ -321,10 +321,7 @@ class Runtime {
             } else {
                 LOGGER.info("Finished $block, next: ${block.nextBranch?.blockId}")
                 block.nextBranch
-            } ?: run {
-                LOGGER.info("Exited without return from ${block0.graph.method}")
-                return null
-            }
+            } ?: throw IllegalStateException("Exited without return from ${block0.graph.method}")
         }
     }
 
