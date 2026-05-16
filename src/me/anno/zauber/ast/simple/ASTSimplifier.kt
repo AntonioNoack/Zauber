@@ -32,9 +32,8 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 
 object ASTSimplifier {
 
@@ -42,7 +41,7 @@ object ASTSimplifier {
 
     val voidResult = FlowResult(null, null, null)
 
-    private val cache by threadLocal { HashMap<MethodSpecialization, SimpleGraph>() }
+    private val cache by threadLocal { HashMap</*Method*/Specialization, SimpleGraph>() }
 
     fun unitInstance(graph: SimpleGraph, scope: Scope, origin: Long): SimpleField {
         var field = graph.unitField
@@ -63,10 +62,11 @@ object ASTSimplifier {
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
-    fun simplify(method: MethodSpecialization): SimpleGraph {
+    fun simplify(method: Specialization): SimpleGraph {
+        check(method.isMethodLike())
         return cache.getOrPut(method) {
-            val context = ResolutionContext(null, method.specialization, true, null)
-            val expr = method.method.getSpecializedBody(method.specialization)
+            val context = ResolutionContext(null, method, true, null)
+            val expr = method.method.getSpecializedBody(method)
                 ?: throw IllegalStateException("Specialized body is null? For $method")
             LOGGER.info("Simplifying $expr")
             val graph = SimpleGraph(method.method)
@@ -80,7 +80,7 @@ object ASTSimplifier {
         }
     }
 
-    private fun finishFlows(flow1: FlowResult, method: MethodSpecialization, expr: Expression) {
+    private fun finishFlows(flow1: FlowResult, method: Specialization, expr: Expression) {
         val flow1v = flow1.value
         if (flow1v != null && method.method !is Constructor) {
             // missing return -> we do it ourselves

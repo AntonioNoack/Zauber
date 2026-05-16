@@ -8,7 +8,10 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.*
@@ -24,10 +27,8 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.ClassSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import java.io.File
 
 /**
@@ -57,17 +58,17 @@ class WASMSourceGenerator : CSourceGenerator() {
     val importList = ArrayList<Pair<String, Int>>()
     val exportList = ArrayList<Pair<String, Int>>()
 
-    val functionIndexMap = HashMap<MethodSpecialization, Int>()
-    val functionIndexList = ArrayList<MethodSpecialization>()
+    val functionIndexMap = HashMap<Specialization, Int>()
+    val functionIndexList = ArrayList<Specialization>()
 
     val globalNames = ArrayList<String>()
     val globalStructs = ArrayList<WASMType.Ref>()
     val objectGlobals = HashMap<Scope, Int>()
     lateinit var objectGetters: Map<Scope, Int>
-    lateinit var objects: List<ClassSpecialization>
+    lateinit var objects: List<Specialization>
 
     val bodies = ListOfByteArrays(binary.out)
-    val structs = HashMap<Pair<ClassSpecialization, Boolean>, WASMStruct>()
+    val structs = HashMap<Pair<Specialization, Boolean>, WASMStruct>()
 
     fun registerMethods(data: DependencyData, mainMethod: Method) {
         // imported methods first
@@ -153,7 +154,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.writeImportSection(importList)
         val functionTypes = functionIndexList.subList(importList.size, functionIndexList.size)
             .map { method -> getFunctionTypeIndex(method) }
-        val objectGetterTypes = objects.map { getObjectGetterFunctionTypeIndex(it.clazz) }
+        val objectGetterTypes = objects.map { getObjectGetterFunctionTypeIndex(it.scope!!) }
         val implFunctions = functionTypes + objectGetterTypes + getMainMethodType(mainMethod)
         check(implFunctions.size == bodies.size)
         binary.writeFunctionSection(implFunctions)
@@ -180,8 +181,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
         declareFuncHasNoLocalFields()
         appendGetObjectInstance(mainMethod.ownerScope, root)
-        val spec = Specialization(mainMethod.methodScope, emptyParameterList())
-        callMethod(MethodSpecialization(mainMethod, spec))
+        callMethod(Specialization(mainMethod.memberScope, emptyParameterList()))
         nextLine()
 
         appendDrop()
@@ -318,13 +318,13 @@ class WASMSourceGenerator : CSourceGenerator() {
             Types.Float, Types.Half -> WASMType.F32
             Types.Double -> WASMType.F64
 
-            is ClassType -> getStruct(ClassSpecialization(type), false).type
+            is ClassType -> getStruct(Specialization(type), false).type
             else -> anyRef
         }
     }
 
-    fun getFunctionTypeIndex(method: MethodSpecialization): Int {
-        method.specialization.use {
+    fun getFunctionTypeIndex(method: Specialization): Int {
+        method.use {
             val method = method.method
             method.scope[ScopeInitType.CODE_GENERATION]
 
@@ -366,7 +366,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     // we cannot just quit -> removing try-catch
     override fun appendMethods(
         classScope: Scope, className: String,
-        methods: Collection<MethodSpecialization>, headerOnly: Boolean
+        methods: Collection<Specialization>, headerOnly: Boolean
     ) {
         for (method0 in methods) {
             val method = method0.method
@@ -380,7 +380,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun appendMethodHeader(typeIndex: Int, methodName: String, method0: MethodSpecialization, export: Boolean) {
+    fun appendMethodHeader(typeIndex: Int, methodName: String, method0: Specialization, export: Boolean) {
         val method = method0.method
         val functionIndex = functionIndexMap[method0]!!
         appendMethodHeader(
@@ -432,20 +432,20 @@ class WASMSourceGenerator : CSourceGenerator() {
             .append(' ').append(type.wasmName).append(")")
     }
 
-    override fun getMethodName(method: MethodSpecialization): String {
+    override fun getMethodName(method: Specialization): String {
         val base = if (method.method is Constructor) "_init_" else super.getMethodName0(method)
         return "${method.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method)}"
     }
 
-    fun appendMethodCode(method0: MethodSpecialization) {
+    fun appendMethodCode(method0: Specialization) {
         val type = getFunctionTypeIndex(method0)
-        val (method, spec) = method0
-        spec.use {
+        val method = method0.method
+        method0.use {
             appendMethodHeader(type, getMethodName(method0), method0, true)
 
             if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
                 val body = method.body!!
-                val context = ResolutionContext(method.selfType, spec, true, null)
+                val context = ResolutionContext(method.selfType, method0, true, null)
                 appendCode(context, method0, body, false)
             } else {
                 // we would get issues, if we tried to call super(), because 'this' is not a reference
@@ -498,10 +498,10 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun appendMethodImport(method: MethodSpecialization) {
+    fun appendMethodImport(method: Specialization) {
         // (import "env" "print_i32" (func $print_i32 (param i32)))
         val type = getFunctionTypeIndex(method)
-        method.specialization.use {
+        method.use {
             val methodName = getMethodName(method)
             builder.append("(import \"env\" \"").append(methodName).append("\" ")
             appendMethodHeader(type, methodName, method, false)
@@ -513,10 +513,8 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendCode(
-        context: ResolutionContext,
-        method1: MethodSpecialization,
-        body: Expression,
-        skipSuperCall: Boolean
+        context: ResolutionContext, method1: Specialization,
+        body: Expression, skipSuperCall: Boolean
     ) {
         val graph = ASTSimplifier.simplify(method1)
         if (skipSuperCall) graph.removeSuperCalls()
@@ -672,7 +670,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     fun writeObjectGlobals() {
         comment { builder.append("globals") }
         for ((scope, index) in objectGlobals.entries.sortedBy { it.value }) {
-            val struct = getStruct(ClassSpecialization.fromSimple(scope), true)
+            val struct = getStruct(Specialization.fromSimple(scope), true)
             builder.append("(global $")
                 .append(globalNames[index])
                 .append(" (mut (ref null $")
@@ -686,13 +684,13 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     val classIndexProp = listOf(WASMProperty(null, WASMType.I32, 0))
 
-    fun getStruct(classSpecialization: ClassSpecialization, isNullable: Boolean): WASMStruct {
+    fun getStruct(classSpecialization: Specialization, isNullable: Boolean): WASMStruct {
         check(classSpecialization.clazz.isClassLike()) {
             "Invalid struct: $classSpecialization"
         }
         return structs.getOrPut(classSpecialization to isNullable) {
-            val (clazz, spec) = classSpecialization
-            spec.use {
+            val clazz = classSpecialization.clazz
+            classSpecialization.use {
 
                 val superType = run {
                     if (isNullable) {
@@ -716,7 +714,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                     }
 
                 val typeIndex = typeList.size
-                var typeName = getClassName(clazz, spec)
+                var typeName = getClassName(clazz, classSpecialization)
                 if (isNullable) typeName += "?"
                 val struct = WASMStruct(superType, typeIndex, typeName, classIndexProp + props, isNullable)
                 typeList.add(struct)
@@ -730,7 +728,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun appendGetObjectInstanceImpl(objectScope: Scope) {
-        val structNullable = getStruct(ClassSpecialization.fromSimple(objectScope), isNullable = true)
+        val structNullable = getStruct(Specialization.fromSimple(objectScope), isNullable = true)
         val globalIndex = objectGlobals.getOrPut(objectScope) {
             globalNames.add("global_${objectScope.pathStr.replace('.', '_')}")
             globalStructs.add(structNullable.type)
@@ -760,8 +758,7 @@ class WASMSourceGenerator : CSourceGenerator() {
             .selfAsConstructor!!
 
         castNonNull()
-        val spec = Specialization(constructor.methodScope, emptyParameterList())
-        callMethod(MethodSpecialization(constructor, spec))
+        callMethod(Specialization(constructor.memberScope, emptyParameterList()))
         nextLine()
 
         appendDrop()
@@ -946,7 +943,7 @@ class WASMSourceGenerator : CSourceGenerator() {
             is SimpleAllocateInstance -> {
                 // todo test nullable variables
                 // this allocation is a ClassType, so it cannot be null ever
-                val struct = getStruct(ClassSpecialization(expr.allocatedType), false)
+                val struct = getStruct(Specialization(expr.allocatedType), false)
                 if (!expr.allocatedType.isValue()) {
                     /*for (param in expr.paramsForLater) {
                         appendGetField(graph, param)
@@ -1028,7 +1025,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
                     val selfType = expr.self.type as ClassType
                     if (selfType !in nativeNumbers) {
-                        val struct = getStruct(ClassSpecialization(selfType), isNullable = false)
+                        val struct = getStruct(Specialization(selfType), isNullable = false)
                         val fieldIndex = struct.getIndex(expr.field)
                         builder.append("struct.get $")
                             .append(struct.typeName).append(' ')
@@ -1058,7 +1055,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                     if (needsCopy) appendCopy(graph, expr)
 
                     val selfType = expr.self.type as ClassType
-                    val struct = getStruct(ClassSpecialization(selfType), isNullable = false)
+                    val struct = getStruct(Specialization(selfType), isNullable = false)
 
                     val fieldIndex = struct.getIndex(expr.field)
                     builder.append("struct.set $")
@@ -1075,8 +1072,8 @@ class WASMSourceGenerator : CSourceGenerator() {
     override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
         val valueType = expr.value.type as ClassType
         val method = valueType.clazz.methods0.first { it.name == "copy" && it.valueParameters.isEmpty() }
-        val spec = Specialization(valueType)
-        callMethod(MethodSpecialization(method, spec))
+        val methodSpec = Specialization(method.scope, valueType.typeParameters ?: emptyParameterList())
+        callMethod(methodSpec)
         nextLine()
     }
 
@@ -1155,7 +1152,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                 TODO("child-class method-res")
             }
         }
-        callMethod(expr.methodSpec)
+        callMethod(expr.specialization)
         nextLine()
     }
 
@@ -1163,15 +1160,15 @@ class WASMSourceGenerator : CSourceGenerator() {
         appendGetField(graph, expr.self)
         appendValueParams(graph, expr.valueParameters)
 
-        callMethod(expr.methodSpec)
+        callMethod(expr.specialization)
         nextLine()
 
         appendDrop()
     }
 
-    fun callMethod(method: MethodSpecialization) {
+    fun callMethod(method: Specialization) {
         val index = functionIndexMap[method]
-            ?: throw IllegalStateException("Missing $method, cannot call it")
+            ?: throw IllegalStateException("Missing ${method.method} @${method}, cannot call it")
         builder.append("call $").append(getMethodName(method))
         binary.call(index)
     }

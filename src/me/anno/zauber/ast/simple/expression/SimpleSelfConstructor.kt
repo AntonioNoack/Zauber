@@ -6,7 +6,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 class SimpleSelfConstructor(
     unusedDst: SimpleField,

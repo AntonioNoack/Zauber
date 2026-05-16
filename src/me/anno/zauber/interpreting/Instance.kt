@@ -10,12 +10,12 @@ import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.interpreting.ZClass.Companion.nativeTypes
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 class Instance(
     val clazz: ZClass,
@@ -205,7 +205,7 @@ class Instance(
             flags, value.origin
         )
 
-        val methodSpec = MethodSpecialization(method, Specialization.noSpecialization)
+        val methodSpec = Specialization(method.scope, emptyParameterList())
         return runtime.executeCall(this, methodSpec, emptyList())
     }
 

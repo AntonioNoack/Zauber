@@ -18,7 +18,6 @@ import me.anno.zauber.types.impl.unresolved.UnresolvedAndType
 import me.anno.zauber.types.impl.unresolved.UnresolvedNotType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import me.anno.zauber.types.impl.unresolved.UnresolvedUnionType
-import me.anno.zauber.types.specialization.Specialization
 
 abstract class Type {
 

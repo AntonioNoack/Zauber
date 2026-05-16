@@ -1,13 +1,17 @@
-package me.anno.zauber.types.specialization
+package me.anno.zauber.types
 
-import me.anno.generation.Specializations.specializations
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.generation.Specializations
+import me.anno.utils.ResetThreadLocal
+import me.anno.zauber.Compile
+import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.SuperCall
 import me.anno.zauber.interpreting.ZClass
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
-import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
@@ -31,11 +35,11 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     inline fun <R> use(runnable: () -> R): R {
         return try {
-            specializations.add(this)
+            Specializations.specializations.add(this)
             runnable()
         } finally {
             @Suppress("Since15")
-            specializations.removeLast()
+            Specializations.specializations.removeLast()
         }
     }
 
@@ -179,13 +183,89 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         else Specialization(scope, typeParameters)
     }
 
+    val superType: Specialization?
+        get() {
+
+            val clazz = scope!!
+            check(clazz.isClassLike())
+
+            if (clazz.isPackage()) {
+                return fromSimple(Types.Any.clazz)
+            }
+
+            val superCall = clazz[ScopeInitType.AFTER_DISCOVERY]
+                .superCalls.firstOrNull { superCall -> superCall.isClassCall }
+                ?: return null
+
+            return getSuperType(superCall)
+        }
+
+    fun getSuperType(superCall: SuperCall): Specialization {
+
+        val clazz = scope!!
+        check(clazz.isClassLike())
+
+        if (clazz.isPackage()) {
+            return fromSimple(Types.Any.clazz)
+        }
+
+        val superScope = superCall.type.clazz
+
+        // todo we must also check const value-params
+        val generics = superScope.typeParameters
+        if (generics.isEmpty() && !superScope.isInnerClass()) {
+            return fromSimple(superScope)
+        }
+
+        // todo we must also check const value-params
+        val typeParams = superCall.type.typeParameters ?: emptyList()
+        val superTypeParams = typeParams.map { type -> type.specialize(this) }
+        return Specialization(superScope, ParameterList(generics, superTypeParams))
+    }
+
+    val clazz: Scope
+        get() {
+            check(scope != null)
+            check(scope.isClassLike()) {
+                "$scope is not class-like: ${scope.scopeType}"
+            }
+            return scope
+        }
+
+    val method: MethodLike
+        get() {
+            check(scope != null)
+            check(scope.isMethodLike())
+            return scope.selfAsMethod ?: scope.selfAsConstructor!!
+        }
+
+    val field: Field
+        get() {
+            check(scope != null)
+            check(scope.scopeType == ScopeType.FIELD)
+            return scope.selfAsField!!
+        }
+
+    fun isClassLike() = scope != null && scope.isClassLike()
+    fun isMethodLike() = scope != null && scope.isMethodLike()
+
     companion object {
+
         class Data {
             val uniqueNames = HashMap<Specialization, String>()
             val knownNames = HashSet<String>()
         }
 
-        private val data by threadLocal { Data() }
+        private val data by ResetThreadLocal.threadLocal { Data() }
+        private val cache by ResetThreadLocal.threadLocal { HashMap<Scope, Specialization>() }
+
+        fun fromSimple(scope: Scope): Specialization {
+            check(scope.typeParameters.isEmpty())
+            check(scope.isClassLike() || scope.isMethodLike())
+            return cache.getOrPut(scope) {
+                Specialization(scope, ParameterList.emptyParameterList())
+            }
+        }
 
         fun collectGenerics(scope: Scope): List<Parameter> {
             var scope = scope
@@ -224,6 +304,8 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
             }
         }
 
-        val noSpecialization = Specialization(null, ParameterList.emptyParameterList())
+        val noSpecialization by ResetThreadLocal.threadLocal {
+            Specialization(Compile.root, ParameterList.emptyParameterList())
+        }
     }
 }

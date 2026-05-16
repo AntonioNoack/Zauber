@@ -7,9 +7,9 @@ import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer
-import me.anno.zauber.types.specialization.FieldSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -35,8 +35,8 @@ class GenerationTest {
             val builder = gen.builder
             gen.appendClass(
                 testClassName, testClass, noSpecialization,
-                testClass.methods0.map { MethodSpecialization(it, noSpecialization) },
-                testClass.fields.map { FieldSpecialization(it, noSpecialization) }, false
+                testClass.methods0.map { Specialization(it.memberScope, emptyParameterList()) },
+                testClass.fields.map { Specialization(it.fieldScope, emptyParameterList()) }, false
             )
             if (builder.endsWith('\n')) builder.setLength(builder.length - 1)
             return gen.finish()

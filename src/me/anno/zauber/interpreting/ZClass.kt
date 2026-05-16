@@ -17,9 +17,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
-import me.anno.zauber.types.specialization.Specialization.Companion.noSpecialization
+import me.anno.zauber.types.Specialization
 
 class ZClass(val type: Type) {
 
@@ -94,8 +92,7 @@ class ZClass(val type: Type) {
             }
 
             val spec = Specialization(primaryConstructor.scope, emptyParameterList())
-            val method1 = MethodSpecialization(primaryConstructor, spec)
-            runtime.executeCall(objectInstance, method1, emptyList())
+            runtime.executeCall(objectInstance, spec, emptyList())
         }
         return objectInstance
     }

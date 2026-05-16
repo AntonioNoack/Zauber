@@ -153,6 +153,12 @@ class Scope(val name: String, val parent: Scope? = null) {
             selfAs = value
         }
 
+    var selfAsField: Field?
+        get() = selfAs as? Field
+        set(value) {
+            selfAs = value
+        }
+
     /**
      * this is "" or labeled, wherever we can break/continue to.
      * this is null, if you cannot jump there (e.g. if/else)
@@ -315,7 +321,7 @@ class Scope(val name: String, val parent: Scope? = null) {
             ScopeType.WHEN_CASES,
             ScopeType.WHEN_ELSE,
             ScopeType.VIRTUAL_CLASS -> 6
-            ScopeType.TYPE_ALIAS -> 7
+            ScopeType.TYPE_ALIAS, ScopeType.FIELD -> 7
         }
     }
 

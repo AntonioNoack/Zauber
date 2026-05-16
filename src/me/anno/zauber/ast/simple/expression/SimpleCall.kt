@@ -18,8 +18,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 class SimpleCall(
     dst: SimpleField,
@@ -182,7 +181,7 @@ class SimpleCall(
 
         initializeArrayIfNeeded(self, method)
 
-        val method1 = MethodSpecialization(method, specialization)
+        val method1 = Specialization(method.memberScope, specialization.typeParameters)
         return runtime.executeCall(self, method1, valueParameters).retToVal()
     }
 

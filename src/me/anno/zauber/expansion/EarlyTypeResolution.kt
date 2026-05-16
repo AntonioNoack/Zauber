@@ -5,7 +5,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInit
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 /**
  * Resolved/replaces method/field/class types, so we don't have to do it later on again

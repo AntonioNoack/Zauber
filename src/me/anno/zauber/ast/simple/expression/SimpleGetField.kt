@@ -8,7 +8,7 @@ import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 class SimpleGetField(
     dst: SimpleField,

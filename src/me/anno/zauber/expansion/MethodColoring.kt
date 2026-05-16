@@ -1,6 +1,5 @@
 package me.anno.zauber.expansion
 
-import me.anno.generation.Specializations
 import me.anno.support.jvm.expression.JVMSimpleCall
 import me.anno.support.jvm.expression.JVMSimpleExpr
 import me.anno.zauber.ast.rich.controlflow.*
@@ -11,23 +10,24 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.lazy.LazyExpression
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.Specialization
 
-abstract class MethodColoring<Color : Any> : GraphColoring<MethodSpecialization, Color>() {
+abstract class MethodColoring<Color : Any> : GraphColoring<Specialization, Color>() {
 
-    override fun getDependencies(key: MethodSpecialization) =
+    override fun getDependencies(key: Specialization) =
         getMethodDependencies(key)
 
     companion object {
         private val LOGGER = LogManager.getLogger(MethodColoring::class)
 
-        fun getMethodDependencies(method: MethodSpecialization): List<MethodSpecialization> {
+        fun getMethodDependencies(method: Specialization): List<Specialization> {
             // check for method calls...
-            val body = method.method.getSpecializedBody(method.specialization) ?: return emptyList()
-            val result = ArrayList<MethodSpecialization>()
+            val body = method.method.getSpecializedBody(method) ?: return emptyList()
+            val result = ArrayList<Specialization>()
             body.forEachExpressionRecursively { expr ->
                 when (expr) { // only top-level needs to be checked
                     is YieldExpression, is ReturnExpression, is ThrowExpression,
@@ -41,9 +41,7 @@ abstract class MethodColoring<Color : Any> : GraphColoring<MethodSpecialization,
                     is ResolvedCallExpression -> {
                         when (val method1 = expr.callable) {
                             is ResolvedMethod,
-                            is ResolvedConstructor ->
-                                result.add(MethodSpecialization(method1.resolved, method1.specialization))
-
+                            is ResolvedConstructor -> result.add(method1.specialization)
                             is ResolvedField -> {
                                 TODO("get call-dependencies from call on field")
                             }
@@ -51,25 +49,25 @@ abstract class MethodColoring<Color : Any> : GraphColoring<MethodSpecialization,
                     }
                     is JVMSimpleCall -> {
                         val method1 = expr.method
-                        result.add(MethodSpecialization(method1, Specializations.specialization))
+                        result.add(Specialization(method1.memberScope, emptyParameterList()))
                     }
                     is JVMSimpleExpr -> {}
                     is ResolvedCompareOp -> {
                         val method1 = expr.callable
-                        result.add(MethodSpecialization(method1.resolved, method1.specialization))
+                        result.add(method1.specialization)
                     }
                     is ResolvedGetFieldExpression -> {
                         val field = expr.field.resolved
                         val getter = field.getter
                         if (getter != null && (field.hasCustomGetter || field.isLateinit())) {
-                            result.add(MethodSpecialization(getter, expr.field.specialization))
+                            result.add(Specialization(getter.memberScope, expr.field.specialization.typeParameters))
                         }
                     }
                     is ResolvedSetFieldExpression -> {
                         val field = expr.field.resolved
                         val setter = field.setter
                         if (setter != null && field.hasCustomSetter) {
-                            result.add(MethodSpecialization(setter, expr.field.specialization))
+                            result.add(Specialization(setter.memberScope, expr.field.specialization.typeParameters))
                         }
                     }
                     else -> {

@@ -1,7 +1,7 @@
 package me.anno.generation.c
 
 import me.anno.generation.cpp.CppSourceGenerator
-import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.Specialization
 
 /**
  * this is more custom than C++:
@@ -11,12 +11,13 @@ import me.anno.zauber.types.specialization.MethodSpecialization
 open class CSourceGenerator : CppSourceGenerator() {
 
     companion object {
-        fun hashMethodParameters(method: MethodSpecialization): String {
+        fun hashMethodParameters(method: Specialization): String {
+            check(method.isMethodLike())
             if (method.method.valueParameters.isEmpty()) {
                 // we rely on this special behaviour -> make it explicit
                 return "0"
             }
-            return method.specialization.use {
+            return method.use {
                 val hash = method.method.valueParameters.joinToString {
                     "${it.name}: ${resolveType(it.type)}"
                 }.hashCode()
@@ -25,7 +26,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         }
     }
 
-    override fun getMethodName(method: MethodSpecialization): String {
+    override fun getMethodName(method: Specialization): String {
         val base = super.getMethodName0(method)
         return "${base}_${hashMethodParameters(method)}"
     }

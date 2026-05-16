@@ -1,7 +1,6 @@
 package me.anno.zauber.expansion
 
 import me.anno.generation.Specializations
-import me.anno.utils.NumberUtils.pack64
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.Method
@@ -31,7 +30,6 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.specialization.MethodSpecialization
 
 object Macro {
 
@@ -198,7 +196,8 @@ object Macro {
         val ownerScope = method.scope.parent
         check(ownerScope != null && ownerScope.isObjectLike())
         val owner = runtime.getObjectInstance(ownerScope.typeWithArgs)
-        val method1 = MethodSpecialization(method, byMethodCall.specialization)
+        val method1 = byMethodCall.specialization
+        check(byMethodCall.resolved == method1)
 
         val callForFields = Call(method)
         runtime.callStack.add(callForFields)

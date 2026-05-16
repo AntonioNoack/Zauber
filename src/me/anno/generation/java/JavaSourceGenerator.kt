@@ -29,15 +29,13 @@ import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
-import me.anno.zauber.types.specialization.FieldSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
 import java.io.File
 
 /**
@@ -141,16 +139,18 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun generateCodeImpl(dst: File, data: DependencyData, writer: FileWithImportsWriter) {
-        val methodsByClass = data.calledMethods.groupBy {
-            (it.method.ownerScope to it.specialization.typeParameters)
+        val methodsByClass = data.calledMethods.groupBy { methodSpec ->
+            val owner = methodSpec.method.ownerScope
+            owner to methodSpec.typeParameters.filterByGenerics { it.scope == owner }
         }
 
-        val fieldsByClass = (data.getFields + data.setFields).groupBy {
-            (it.field.ownerScope to it.specialization.typeParameters)
+        val fieldsByClass = (data.getFields + data.setFields).groupBy { fieldSpec ->
+            val owner = fieldSpec.field.ownerScope
+            owner to fieldSpec.typeParameters.filterByGenerics { it.scope == owner }
         }
 
         val classes1 = data.createdClasses.map {
-            it.clazz to it.specialization.typeParameters
+            it.clazz to it.typeParameters
         }
 
         val classes = (methodsByClass.keys + fieldsByClass.keys + classes1)
@@ -235,7 +235,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun generateClassForScope(
         scope: Scope, dst: File, writer: FileWithImportsWriter, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
+        methods: Collection<Specialization>, fields: Collection<Specialization>
     ) {
         val (name, packageScope) = getNameAndScope(scope, specialization)
         appendClass(name, scope, specialization, methods, fields, false)
@@ -352,7 +352,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
+        methods: Collection<Specialization>, fields: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
@@ -373,8 +373,8 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendClassBody(
         classScope: Scope, className: String,
-        methods: Collection<MethodSpecialization>,
-        fields: Collection<FieldSpecialization>,
+        methods: Collection<Specialization>,
+        fields: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         writeBlock {
@@ -393,13 +393,16 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun appendFields(
-        classScope: Scope, fields: Collection<FieldSpecialization>, allowFinal: Boolean,
+        classScope: Scope, fields: Collection<Specialization>, allowFinal: Boolean,
         headerOnly: Boolean
     ) {
         if (classScope.scopeType == ScopeType.INTERFACE) return // no backing fields
-        for ((field) in fields) {
+        for (fieldSpec in fields) {
+            val field = fieldSpec.field
             if (isStoredField(field)) {
-                appendBackingField(classScope, field, allowFinal, headerOnly)
+                fieldSpec.use {
+                    appendBackingField(classScope, field, allowFinal, headerOnly)
+                }
             }
         }
     }
@@ -426,7 +429,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendMethods(
         classScope: Scope, className: String,
-        methods: Collection<MethodSpecialization>,
+        methods: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         for (method0 in methods) {
@@ -448,10 +451,11 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendConstructors(
         classScope: Scope, className: String,
-        methods: Collection<MethodSpecialization>,
+        methods: Collection<Specialization>,
         headerOnly: Boolean
     ) {
-        for ((constructor, spec) in methods) {
+        for (spec in methods) {
+            val constructor = spec.method
             if (constructor !is Constructor) continue
             spec.use {
                 appendConstructor(classScope, className, constructor, headerOnly)
@@ -467,7 +471,7 @@ open class JavaSourceGenerator : Generator() {
                 )
     }
 
-    open fun appendMethod(classScope: Scope, className: String, method0: MethodSpecialization, headerOnly: Boolean) {
+    open fun appendMethod(classScope: Scope, className: String, method0: Specialization, headerOnly: Boolean) {
         // some spacing
         nextLine()
 
@@ -488,7 +492,7 @@ open class JavaSourceGenerator : Generator() {
     open fun appendMethodHeader(
         classScope: Scope,
         className: String,
-        method0: MethodSpecialization,
+        method0: Specialization,
         headerOnly: Boolean
     ) {
         val method = method0.method as Method
@@ -503,15 +507,15 @@ open class JavaSourceGenerator : Generator() {
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }
 
-    open fun appendMethodBody(method: MethodSpecialization, headerOnly: Boolean) {
-        val nativeImpl = getNativeImplementation(method.method)
-        val body = method.method.body
+    open fun appendMethodBody(methodSpec: Specialization, headerOnly: Boolean) {
+        val nativeImpl = getNativeImplementation(methodSpec.method)
+        val body = methodSpec.method.body
 
         if (body != null) {
-            val context = ResolutionContext(method.method.selfType, method.specialization, true, null)
-            appendCode(context, method, body, false)
+            val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
+            appendCode(context, methodSpec, body, false)
         } else if (nativeImpl != null) {
-            appendNativeImplementation(nativeImpl, method.method)
+            appendNativeImplementation(nativeImpl, methodSpec.method)
         } else {
             builder.append(";")
             nextLine()
@@ -536,14 +540,14 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun getMethodName(method: MethodSpecialization): String {
+    open fun getMethodName(method: Specialization): String {
         return getMethodName0(method)
     }
 
-    fun getMethodName0(method: MethodSpecialization): String {
-        val (method, specForName) = method
-        return if (specForName.isNotEmpty()) {
-            "${method.name}_${specForName.hash}"
+    fun getMethodName0(methodSpec: Specialization): String {
+        val method = methodSpec.method
+        return if (methodSpec.isNotEmpty()) {
+            "${method.name}_${methodSpec.hash}"
         } else method.name
     }
 
@@ -609,8 +613,9 @@ open class JavaSourceGenerator : Generator() {
             }
 
             if (body != null) {
-                val tmp = MethodSpecialization(constructor, specialization)
-                appendCode(context, tmp, body, true)
+                val methodSpec = specialization
+                check(methodSpec.method === constructor)
+                appendCode(context, methodSpec, body, true)
             }
         }
     }
@@ -659,7 +664,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendCode(
         context: ResolutionContext,
-        method1: MethodSpecialization,
+        method1: Specialization,
         body: Expression,
         skipSuperCall: Boolean
     ) {

@@ -6,14 +6,14 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.Specialization
 
 object IsMethodThrowing : MethodColoring<Type>() {
 
-    override fun getSelfColor(key: MethodSpecialization): Type {
-        val body = key.method.getSpecializedBody(key.specialization) ?: return Types.Nothing
+    override fun getSelfColor(key: Specialization): Type {
+        val body = key.method.getSpecializedBody(key) ?: return Types.Nothing
         val thrownTypes = ArrayList<Type>()
-        val context = ResolutionContext(key.method.selfType, key.specialization, false, null)
+        val context = ResolutionContext(key.method.selfType, key, false, null)
         body.forEachExpressionRecursively { expr ->
             if (expr is ThrowExpression) {
                 val type = TypeResolution.resolveType(context, expr.value)
@@ -24,10 +24,8 @@ object IsMethodThrowing : MethodColoring<Type>() {
     }
 
     override fun mergeColors(
-        key: MethodSpecialization,
-        self: Type,
-        colors: List<Type>,
-        isRecursive: Boolean
+        key: Specialization, self: Type,
+        colors: List<Type>, isRecursive: Boolean
     ): Type {
         // recursive doesn't matter
         return unionTypes(colors, self)

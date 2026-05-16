@@ -22,7 +22,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
-import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.Specialization
 import javax.lang.model.type.UnionType
 
 class Runtime {
@@ -123,11 +123,12 @@ class Runtime {
 
     fun executeCall(
         self: Instance,
-        methodSpec: MethodSpecialization,
+        methodSpec: Specialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
 
         // println("Calling $methodSpec on $self with $valueParameters")
+        check(methodSpec.isMethodLike())
 
         if (isNull(self)) {
             throw IllegalArgumentException("Cannot execute $methodSpec on null instance")

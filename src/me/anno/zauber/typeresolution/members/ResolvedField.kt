@@ -40,6 +40,7 @@ class ResolvedField(
 ) : ResolvedMember<Field>(field, context, codeScope, matchScore) {
 
     companion object {
+
         private val LOGGER = LogManager.getLogger(ResolvedField::class)
 
         fun filterTypeByScopeConditions(field: Field, type: Type, context: ResolutionContext, codeScope: Scope): Type {
@@ -150,7 +151,7 @@ class ResolvedField(
     }
 
     init {
-        check(context.specialization.scope == field.ownerScope)
+        check(context.specialization.scope == field.fieldScope)
     }
 
     val isBackingField = field.isBackingField()

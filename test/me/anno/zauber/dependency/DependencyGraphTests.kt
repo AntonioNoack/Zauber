@@ -6,10 +6,9 @@ import me.anno.zauber.Compile
 import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.specialization.ClassSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -35,7 +34,7 @@ class DependencyGraphTests {
         """.trimIndent()
         val testScope = ResolutionUtils.typeResolveScope(code)
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
-        Dependencies.addMethod(MethodSpecialization(method, Specialization.noSpecialization))
+        Dependencies.addMethod(Specialization(method.scope, emptyParameterList()))
 
         val dependencies = Dependencies.collectClassesAndMethods()
         printDependencies(dependencies)
@@ -55,7 +54,7 @@ class DependencyGraphTests {
             Types.Unit,
             zauberScope.typeWithArgs,
             testScope.typeWithArgs,
-        ).map { ClassSpecialization(it) }
+        ).map { Specialization(it) }
         assertEquals(expectedClasses.toSet(), classes)
 
         val expectedMethods = setOf(
@@ -63,7 +62,7 @@ class DependencyGraphTests {
             // zauberScope.primaryConstructorScope!!.selfAsConstructor!!,
             testScope.primaryConstructorScope!!.selfAsConstructor!!,
         )
-            .map { method -> MethodSpecialization(method, Specialization.noSpecialization) }
+            .map { method -> Specialization(method.scope, emptyParameterList()) }
             .toSet()
         assertEquals(expectedMethods, methods)
     }

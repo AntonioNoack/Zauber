@@ -12,12 +12,12 @@ import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
-import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
-import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
@@ -26,9 +26,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.specialization.FieldSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 import java.io.File
 
 /**
@@ -99,7 +97,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun generateClassForScope(
         scope: Scope, dst: File, writer: FileWithImportsWriter, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>
+        methods: Collection<Specialization>, fields: Collection<Specialization>
     ) {
         if (needsHeaders()) {
             val (name, packageScope) = getNameAndScope(scope, specialization)
@@ -116,7 +114,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
+        methods: Collection<Specialization>, fields: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
@@ -148,13 +146,14 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendConstructors(
         classScope: Scope, className: String,
-        methods: Collection<MethodSpecialization>, headerOnly: Boolean
+        methods: Collection<Specialization>, headerOnly: Boolean
     ) {
         super.appendConstructors(classScope, className, methods, headerOnly)
 
         // if this is a value class & we have no empty constructor, append one
         if (headerOnly && classScope.typeWithArgs.isValue() &&
-            methods.none { (method, _) ->
+            methods.none { spec ->
+                val method = spec.method
                 method is Constructor && method.valueParameters.isEmpty()
             }
         ) {
@@ -380,7 +379,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendMethod(
         classScope: Scope, className: String,
-        method0: MethodSpecialization, headerOnly: Boolean
+        method0: Specialization, headerOnly: Boolean
     ) {
         val method = method0.method as Method
         if (!headerOnly && method0.method.isExternal() && getNativeImplementation(method) == null) {
@@ -397,7 +396,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendMethodHeader(
         classScope: Scope, className: String,
-        method0: MethodSpecialization, headerOnly: Boolean
+        method0: Specialization, headerOnly: Boolean
     ) {
         val method = method0.method as Method
         appendMethodFlags(classScope, method, headerOnly)
@@ -428,12 +427,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
-    override fun appendMethodBody(method: MethodSpecialization, headerOnly: Boolean) {
+    override fun appendMethodBody(methodSpec: Specialization, headerOnly: Boolean) {
         if (headerOnly) {
             builder.append(";")
             nextLine()
         } else {
-            super.appendMethodBody(method, false)
+            super.appendMethodBody(methodSpec, false)
         }
     }
 

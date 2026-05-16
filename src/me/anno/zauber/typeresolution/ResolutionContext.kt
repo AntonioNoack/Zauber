@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 data class ResolutionContext(
     /**

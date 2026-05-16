@@ -12,7 +12,7 @@ import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.MemberResolver.Companion.findGenericsForMatch
 import me.anno.zauber.typeresolution.members.MergeTypeParams.collectSpecialization
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 object FindMemberMatch {
 
@@ -95,7 +95,7 @@ object FindMemberMatch {
         ) ?: return null
 
         val selfType1 = explicitSelfType ?: memberSelfType
-        val specialization = Specialization(member.scope, generics)
+        val specialization = Specialization(member.memberScope, generics)
         val context = ResolutionContext(selfType1, specialization, false, hintedReturnType)
         return when (member) {
             is Method -> ResolvedMethod(member, context, codeScope, matchScore)

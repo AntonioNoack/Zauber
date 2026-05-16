@@ -21,7 +21,7 @@ import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 /**
  * left!!

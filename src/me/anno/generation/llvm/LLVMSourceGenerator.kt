@@ -21,7 +21,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.MethodSpecialization
+import me.anno.zauber.types.Specialization
 import java.io.File
 
 // todo this is like C (end game difficulty), just different commands?
@@ -63,9 +63,9 @@ class LLVMSourceGenerator : CSourceGenerator() {
         builder.clear()
     }
 
-    override fun getMethodName(method: MethodSpecialization): String {
-        return method.method.methodScope.pathStr +
-                JavaSourceGenerator().createSpecializationSuffix(method.specialization)
+    override fun getMethodName(method: Specialization): String {
+        return method.method.memberScope.pathStr +
+                JavaSourceGenerator().createSpecializationSuffix(method)
     }
 
     override fun comment(body: () -> Unit) {
@@ -80,9 +80,9 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun generateCode(method0: MethodSpecialization) {
+    fun generateCode(method0: Specialization) {
 
-        val (method, specialization) = method0
+        val method = method0.method
         method.body ?: return
 
         nextLine()
@@ -93,7 +93,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         builder.append(getMethodName(method0))
         builder.append("(")
 
-        appendType(method.ownerScope.typeWithArgs.specialize(specialization), method.scope, false)
+        appendType(method.ownerScope.typeWithArgs.specialize(method0), method.scope, false)
         builder.append(" %this")
         for (parameter in method.valueParameters) {
             builder.append(", ")

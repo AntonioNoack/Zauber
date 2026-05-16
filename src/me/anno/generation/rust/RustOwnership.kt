@@ -10,7 +10,7 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 object RustOwnership : GraphColoring<Type, RustOwnershipType>() {
 

@@ -161,7 +161,7 @@ object ResolutionUtils {
 
         LOGGER.info(style("Classes:", StringStyles.BOLD))
         for (clazz in data.createdClasses.map { clazz ->
-            "  - ${style(clazz.clazz.pathStr, StringStyles.LIGHT_BLUE)}, ${clazz.specialization}"
+            "  - ${style(clazz.clazz.pathStr, StringStyles.LIGHT_BLUE)}, $clazz"
         }.sorted()) {
             LOGGER.info(clazz)
         }
@@ -185,7 +185,7 @@ object ResolutionUtils {
                 }
                 else -> method.toString()
             }
-            "  - $methodStr, ${method.specialization}"
+            "  - $methodStr, $method"
         }.sorted()) {
             LOGGER.info(method)
         }
@@ -196,17 +196,17 @@ object ResolutionUtils {
 
         LOGGER.info(style("Fields:", StringStyles.BOLD))
         val fields = data.getFields + data.setFields
-        for (field in fields.map { field ->
-            val get = field in data.getFields
-            val set = field in data.setFields
-            val (field, spec) = field
+        for (field in fields.map { fieldSpec ->
+            val get = fieldSpec in data.getFields
+            val set = fieldSpec in data.setFields
+            val field = fieldSpec.field
             val str = when {
                 !get -> setStr
                 !set -> getStr
                 else -> getSetStr
             }
             val fieldStr = "${field.selfType ?: field.ownerScope.pathStr}"
-            "  - ${style(field.name, StringStyles.YELLOW)} in ${style(fieldStr, StringStyles.LIGHT_BLUE)}, $spec: $str"
+            "  - ${style(field.name, StringStyles.YELLOW)} in ${style(fieldStr, StringStyles.LIGHT_BLUE)}, $fieldSpec: $str"
         }.sorted()) {
             LOGGER.info(field)
         }

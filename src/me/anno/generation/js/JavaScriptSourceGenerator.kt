@@ -3,7 +3,7 @@ package me.anno.generation.js
 import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
-import me.anno.generation.Specializations
+import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.cpp.CppSourceGenerator.Companion.appendRelativePath
 import me.anno.generation.java.JavaSourceGenerator
@@ -26,9 +26,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.specialization.FieldSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 import java.io.File
 
 /**
@@ -64,7 +62,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun getExtension(headerOnly: Boolean): String = "js"
 
-    override fun getMethodName(method: MethodSpecialization): String {
+    override fun getMethodName(method: Specialization): String {
         val base = if (method.method is Constructor) "__init_" else super.getMethodName(method)
         return "${base}_${hashMethodParameters(method)}"
     }
@@ -82,8 +80,8 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         mainMethod: Method, className: String
     ): FileEntry {
         val needsArgs = mainMethod.valueParameters.isNotEmpty()
-        val spec = Specialization(mainMethod.methodScope, emptyParameterList())
-        val methodName = getMethodName(MethodSpecialization(mainMethod, spec))
+        val spec = Specialization(mainMethod.memberScope, emptyParameterList())
+        val methodName = getMethodName(spec)
         return FileEntry(emptyList(), this)
             .apply {
                 content.append(
@@ -122,7 +120,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
+        methods: Collection<Specialization>, fields: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
@@ -153,8 +151,9 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         constructor: Constructor, headerOnly: Boolean
     ) {
         appendConstructorFlags(classScope, constructor, headerOnly)
+        check(specialization.method === constructor)
         if (classScope.isObjectLike()) builder.append("constructor")
-        else builder.append(getMethodName(MethodSpecialization(constructor, Specializations.specialization)))
+        else builder.append(getMethodName(specialization))
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
     }
 
@@ -199,7 +198,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun appendMethodHeader(
         classScope: Scope, className: String,
-        method0: MethodSpecialization, headerOnly: Boolean
+        method0: Specialization, headerOnly: Boolean
     ) {
         val method = method0.method as Method
         appendMethodFlags(classScope, method, headerOnly)
@@ -210,18 +209,18 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }
 
-    override fun appendMethodBody(method: MethodSpecialization, headerOnly: Boolean) {
-        val nativeImpl = getNativeImplementation(method.method)
-        val body = method.method.body
+    override fun appendMethodBody(methodSpec: Specialization, headerOnly: Boolean) {
+        val nativeImpl = getNativeImplementation(methodSpec.method)
+        val body = methodSpec.method.body
 
         if (body != null) {
-            val context = ResolutionContext(method.method.selfType, method.specialization, true, null)
-            appendCode(context, method, body, false)
+            val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
+            appendCode(context, methodSpec, body, false)
         } else if (nativeImpl != null) {
-            appendNativeImplementation(nativeImpl, method.method)
+            appendNativeImplementation(nativeImpl, methodSpec.method)
         } else {
             writeBlock {
-                builder.append("throw 'Missing implementation for $method';")
+                builder.append("throw 'Missing implementation for $methodSpec';")
                 nextLine()
             }
         }
@@ -264,7 +263,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             }
             is SimpleCall if (expr.sample is Constructor) -> {
                 appendFieldName(graph, expr.self, ".")
-                builder.append(getMethodName(expr.methodSpec))
+                builder.append(getMethodName(expr.specialization))
                 appendValueParams(graph, expr.valueParameters)
             }
             is SimpleDeclaration -> {

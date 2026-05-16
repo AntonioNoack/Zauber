@@ -4,7 +4,7 @@ import me.anno.zauber.ast.rich.MethodLike
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 class JVMSimpleCall(
     val dst: SimpleFieldExpr,

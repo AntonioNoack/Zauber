@@ -1,38 +1,54 @@
 package me.anno.zauber.interpreting
 
+import me.anno.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class UnderdefinedCallTests {
 
-    @Test
-    fun testArrayOf() {
-        val valueT = testExecute(
-            """
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    fun testArrayOf(type: String) {
+        val code = """
             val tested = arrayOf(1, 2, 3)
+            
+            fun main() {
+                println(tested[1])
+            }
             
             package zauber
             class Any
+            class Int
             class Array<V>(override val size: Int) {
                 external fun set(index: Int, value: V)
+                external fun get(index: Int): V
             }
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
+            external fun println(arg0: Int)
         """.trimIndent()
-        )
-        val expectedType = runtime.getClass(Types.Array.withTypeParameter(Types.Int))
-        assertEquals(expectedType, valueT.clazz)
-        val contents = valueT.rawValue
-        assertInstanceOf<IntArray>(contents)
-        assertEquals(listOf(1, 2, 3), contents.toList())
+
+        MultiTest()
+            .type(code) { Types.Array.withTypeParameter(Types.Int) }
+            .runtime(code) {
+                val valueT = testExecute(code)
+                val expectedType = runtime.getClass(Types.Array.withTypeParameter(Types.Int))
+                assertEquals(expectedType, valueT.clazz)
+                val contents = valueT.rawValue
+                assertInstanceOf<IntArray>(contents)
+                assertEquals(listOf(1, 2, 3), contents.toList())
+            }
+            .compile(code, "1\n")
+            .execute(type)
     }
 
-    // todo "const" could be a "deep" value, aka fully immutable
-    //  if definitely should be available as some sort of qualifier to protect parameters from mutation
+    // can we enforce const to be fully immutable?
+    //  we could only allow it on value-classes of value-classes...
 
     @Test
     fun testListOf() {

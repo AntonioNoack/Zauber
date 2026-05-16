@@ -31,6 +31,7 @@ abstract class Member(
     }
 
     abstract val ownerScope: Scope
+    abstract val memberScope: Scope
 
     // due to multi-interface, there may be many of them
     var overriddenFor: List<Member> = emptyList()

@@ -177,7 +177,21 @@ class Field(
     }
 
     override val ownerScope get() = scope
-    val fieldScope: Scope get() = throw IllegalStateException("Fields don't have their own scope")
+    override val memberScope: Scope get() = fieldScope
+
+    private val fieldScopeImpl: Scope by lazy {
+        ownerScope.getOrPut(name, ScopeType.FIELD).apply {
+            check(selfAsField == null)
+            selfAsField = this@Field
+        }
+    }
+
+    val fieldScope: Scope
+        get() {
+            val solution = fieldScopeImpl
+            check(solution.parent == ownerScope)
+            return solution
+        }
 
     fun moveToScope(newScope: Scope) {
         check(scope.fields.remove(this)) { "Failed to remove field from scope" }

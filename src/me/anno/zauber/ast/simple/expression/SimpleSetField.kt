@@ -7,7 +7,7 @@ import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 class SimpleSetField(
     val self: SimpleField,
@@ -22,6 +22,8 @@ class SimpleSetField(
     }
 
     init {
+        check(specialization.scope == field.fieldScope)
+
         if (field.ownerScope.isInterface()) {
             throw IllegalStateException("Cannot just set field of an interface, must use getter, $field")
         }

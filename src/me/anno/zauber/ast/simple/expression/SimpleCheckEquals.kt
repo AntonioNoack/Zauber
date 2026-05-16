@@ -6,7 +6,6 @@ import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.types.specialization.MethodSpecialization
 
 class SimpleCheckEquals(
     dst: SimpleField,
@@ -31,7 +30,7 @@ class SimpleCheckEquals(
         if (vaNull != vbNull) return BlockReturn(ReturnType.VALUE, runtime.getBool(negated))
 
         // todo handle yield from this...
-        val method1 = MethodSpecialization(method.resolved, method.specialization)
+        val method1 = method.specialization
         val result = runtime.executeCall(va, method1, listOf(right))
         if (!negated) return result.retToVal()
 

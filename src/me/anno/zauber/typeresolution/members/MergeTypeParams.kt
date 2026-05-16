@@ -7,7 +7,7 @@ import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 object MergeTypeParams {
 

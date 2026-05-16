@@ -21,12 +21,11 @@ import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.specialization.FieldSpecialization
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 import java.io.File
 
 /**
@@ -118,7 +117,8 @@ class RustSourceGenerator : CSourceGenerator() {
         mainMethod: Method, className: String
     ): FileEntry {
         val needsArgs = mainMethod.valueParameters.isNotEmpty()
-        val methodName = getMethodName(MethodSpecialization(mainMethod, Specialization.noSpecialization))
+        val spec = Specialization(mainMethod.scope, emptyParameterList())
+        val methodName = getMethodName(spec)
         return FileEntry(emptyList(), this)
             .apply {
                 // todo convert argc/argv to String-array, if needed
@@ -159,7 +159,7 @@ class RustSourceGenerator : CSourceGenerator() {
 
     override fun appendClass(
         className: String, classScope: Scope, specialization: Specialization,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
+        methods: Collection<Specialization>, fields: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         declareImport(classScope, specialization)
@@ -210,7 +210,7 @@ class RustSourceGenerator : CSourceGenerator() {
 
     override fun appendClassBody(
         classScope: Scope, className: String,
-        methods: Collection<MethodSpecialization>, fields: Collection<FieldSpecialization>,
+        methods: Collection<Specialization>, fields: Collection<Specialization>,
         headerOnly: Boolean
     ) {
         writeBlock {
@@ -239,7 +239,7 @@ class RustSourceGenerator : CSourceGenerator() {
 
     override fun appendMethod(
         classScope: Scope, className: String,
-        method0: MethodSpecialization, headerOnly: Boolean
+        method0: Specialization, headerOnly: Boolean
     ) {
         super.appendMethod(classScope, className, method0, headerOnly)
         nextLine()
@@ -252,7 +252,7 @@ class RustSourceGenerator : CSourceGenerator() {
 
     override fun appendMethodHeader(
         classScope: Scope, className: String,
-        method0: MethodSpecialization, headerOnly: Boolean
+        method0: Specialization, headerOnly: Boolean
     ) {
         val method = method0.method as Method
         method.scope[ScopeInitType.CODE_GENERATION]

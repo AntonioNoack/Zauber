@@ -55,7 +55,7 @@ class MultiTest {
         return this
     }
 
-    fun run(name: String) {
+    fun execute(name: String) {
         val runnable = runnables[name]
             ?: throw IllegalStateException("Missing '$name'")
         runnable()

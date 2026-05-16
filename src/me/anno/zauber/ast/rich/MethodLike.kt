@@ -1,6 +1,5 @@
 package me.anno.zauber.ast.rich
 
-import me.anno.generation.Specializations
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
@@ -11,8 +10,7 @@ import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.specialization.MethodSpecialization
-import me.anno.zauber.types.specialization.Specialization
+import me.anno.zauber.types.Specialization
 
 open class MethodLike(
     selfType: Type?,
@@ -40,18 +38,21 @@ open class MethodLike(
     val capturedFields = HashSet<Field>()
 
     override val ownerScope get() = scope.parent!!
-    val methodScope get() = scope
+    override val memberScope get() = scope
 
     fun isRecursive(specialization: Specialization): Boolean {
-        return IsMethodRecursive[MethodSpecialization(this, specialization)]
+        check(specialization.scope == memberScope)
+        return IsMethodRecursive[specialization]
     }
 
     fun getThrownType(specialization: Specialization): Type {
-        return IsMethodThrowing[MethodSpecialization(this, specialization)]
+        check(specialization.scope == memberScope)
+        return IsMethodThrowing[specialization]
     }
 
     fun getYieldedType(specialization: Specialization): Type {
-        return IsMethodThrowing[MethodSpecialization(this, specialization)]
+        check(specialization.scope == memberScope)
+        return IsMethodThrowing[specialization]
     }
 
     fun getSpecializedBody(specialization: Specialization): Expression? {
@@ -62,7 +63,6 @@ open class MethodLike(
         return specializations.getOrPut(specialization) {
             specialization.use {
                 val context = ResolutionContext(null, specialization, true, null)
-                Specializations.foundMethodSpecialization(this, specialization)
                 body.resolve(context)
             }
         }

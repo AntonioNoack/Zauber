@@ -38,6 +38,9 @@ enum class ScopeType {
     FIELD_SETTER,
     LAMBDA,
 
+    // just a virtual scope, because fields can be moved
+    FIELD,
+
     // inside expressions
     METHOD_BODY,
     MACRO,

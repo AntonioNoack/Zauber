@@ -19,8 +19,8 @@ abstract class ResolvedMember<V : Member>(
 ) {
 
     init {
-        check(resolved.scope == context.specialization.scope) {
-            "Resolved member $this (${resolved.scope}) has incorrect scope in context $context: ${context.specialization.scope}"
+        check(resolved.memberScope == context.specialization.scope) {
+            "Resolved member $this (${resolved.memberScope}) has incorrect scope in context $context: ${context.specialization.scope}"
         }
     }
 
