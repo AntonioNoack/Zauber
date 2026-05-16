@@ -15,10 +15,19 @@ object CodeReconstruction {
 
         if (isSolved(graph)) return
 
+        var fine = true
         while (!isSolved(graph)) {
             if (simplifySequence(graph)) continue
             if (simplifyBranch(graph)) continue
             if (simplifyLoop(graph)) continue
+
+            if (fine) {
+                println("Graph needs tail-calls")
+                println(graph)
+                println()
+                fine = false
+            }
+
             if (breakAtStrongestKnot(graph)) continue
             break
         }
@@ -71,19 +80,39 @@ object CodeReconstruction {
     }
 
     private fun simplifyLoop(graph: SimpleGraph): Boolean {
+
         for (i in graph.blocks.indices) {
             val curr = graph.blocks[i]
-            val nextT = curr.ifBranch
-            val nextF = curr.elseBranch
-            val after = nextF?.nextBranch
-            if (curr.isBranch &&
-                nextT != null && nextT.isOnlyInput(curr) &&
-                nextF != null && nextF.isOnlyInput(curr) &&
-                // todo check this condition...
-                nextT.isOnlyOutput(curr) &&
-                after?.isEntryPoint != true
+            val body = curr.ifBranch
+            val after = curr.elseBranch
+            val condition = curr.branchCondition
+            if (condition != null &&
+                body != null && body.isOnlyInput(curr) &&
+                body !== after &&
+                body.isOnlyOutput(curr)
             ) {
-                TODO("rev-simplify loop")
+                curr.instructions.add(SimpleLoop(condition, false, body))
+                curr.elseBranch = null
+                curr.ifBranch = after
+                curr.branchCondition = null
+                return true
+            }
+        }
+
+        for (i in graph.blocks.indices) {
+            val curr = graph.blocks[i]
+            val body = curr.elseBranch
+            val after = curr.ifBranch
+            val condition = curr.branchCondition
+            if (condition != null &&
+                body != null && body.isOnlyInput(curr) &&
+                body !== after &&
+                body.isOnlyOutput(curr)
+            ) {
+                curr.instructions.add(SimpleLoop(condition, true, body))
+                curr.elseBranch = null
+                curr.ifBranch = after
+                curr.branchCondition = null
                 return true
             }
         }

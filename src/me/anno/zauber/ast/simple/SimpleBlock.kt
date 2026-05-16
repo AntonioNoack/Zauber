@@ -86,7 +86,9 @@ class SimpleBlock(val graph: SimpleGraph) {
     }
 
     fun isOnlyOutput(output: SimpleBlock?): Boolean {
-        return (output == ifBranch || ifBranch == null) && (output == elseBranch || elseBranch == null)
+        val ifBranch = ifBranch
+        val elseBranch = elseBranch
+        return (ifBranch == output || ifBranch == null) && (elseBranch == output || elseBranch == null)
     }
 
     val blockId = graph.blocks.size
