@@ -10,12 +10,12 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 
 class SimpleSetField(
-    val self: SimpleField,
-    val field: Field,
+    override val self: SimpleField,
+    override val field: Field,
     val value: SimpleField,
-    val specialization: Specialization,
+    override val specialization: Specialization,
     scope: Scope, origin: Long
-) : SimpleInstruction(scope, origin) {
+) : SimpleInstruction(scope, origin), SimpleGetOrSetField {
 
     companion object {
         private val LOGGER = LogManager.getLogger(SimpleSetField::class)
@@ -35,6 +35,11 @@ class SimpleSetField(
 
     override fun toString(): String {
         return "$self?[${field.selfType}].${field.name} = $value"
+    }
+
+    override fun withField(field: Field): SimpleInstruction {
+        val spec = Specialization(field.fieldScope, specialization.typeParameters)
+        return SimpleSetField(self, field, value, spec, scope, origin)
     }
 
     override fun execute(): BlockReturn? {

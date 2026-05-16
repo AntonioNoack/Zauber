@@ -126,7 +126,7 @@ object ASTSimplifier {
             is YieldExpression -> {
                 val field = simplifyImpl(context, expr.value, block0, flow0, true)
                 val field1v = field.value ?: return field
-                val continueBlock = block0.graph.addNode()
+                val continueBlock = block0.graph.addBlock()
                 field1v.block.add(SimpleYield(field1v.value.use(), continueBlock, expr.scope, expr.origin))
                 continueBlock.isEntryPoint = true
                 return field.withValue(unitInstance(block0.graph, expr), continueBlock)
@@ -681,8 +681,8 @@ object ASTSimplifier {
                 block0b.add(instanceCheck)
 
                 val graph = block0b.graph
-                val ifBlock = graph.addNode()
-                val elseBlock = graph.addNode()
+                val ifBlock = graph.addBlock()
+                val elseBlock = graph.addBlock()
                 block0b.branchCondition = instanceOfField.use()
                 block0b.ifBranch = ifBlock
                 block0b.elseBranch = elseBlock
@@ -764,9 +764,9 @@ object ASTSimplifier {
 
         val graph = block0.graph
         val conditionBlock = block0.nextOrSelfIfEmpty()
-        val bodyBlock = graph.addNode()
-        val afterBlock = graph.addNode()
-        val elseBlock = if (expr.elseBranch != null) graph.addNode() else null
+        val bodyBlock = graph.addBlock()
+        val afterBlock = graph.addBlock()
+        val elseBlock = if (expr.elseBranch != null) graph.addBlock() else null
 
         val labelScope = expr.body.scope
         graph.breakLabels[labelScope] = afterBlock
@@ -807,8 +807,8 @@ object ASTSimplifier {
 
         val graph = block0.graph
         val bodyBlock = block0.nextOrSelfIfEmpty()
-        val conditionBlock = graph.addNode()
-        val afterBlock = graph.addNode()
+        val conditionBlock = graph.addBlock()
+        val afterBlock = graph.addBlock()
 
         val labelScope = expr.body.scope
         graph.breakLabels[labelScope] = afterBlock
@@ -819,8 +819,8 @@ object ASTSimplifier {
         val insideBlock1 = simplifyImpl(context, expr.body, bodyBlock, insideFlow0, false)
         var flow1 = insideFlow0.joinError(insideBlock1)
         if (insideBlock1.value != null ||
-            afterBlock.inputNodes.isNotEmpty() || // there is a @break
-            conditionBlock.inputNodes.isNotEmpty() // there is a @continue
+            afterBlock.inputBlocks.isNotEmpty() || // there is a @break
+            conditionBlock.inputBlocks.isNotEmpty() // there is a @continue
         ) {
             insideBlock1.value?.block?.nextBranch = conditionBlock
 
@@ -856,8 +856,8 @@ object ASTSimplifier {
         // todo when the condition to a branch is a simple boolean, skip evaluating the other branch!
 
         val graph = block0.graph
-        val ifBlock = graph.addNode()
-        val elseBlock = graph.addNode()
+        val ifBlock = graph.addBlock()
+        val elseBlock = graph.addBlock()
 
         block1v.block.branchCondition = condition.use()
         block1v.block.ifBranch = ifBlock
@@ -973,7 +973,7 @@ object ASTSimplifier {
         val flow1 = flow0.withValue(result, block0)
         if (thrownType == Types.Nothing) return flow1
 
-        val throwBlock = block0.graph.addNode()
+        val throwBlock = block0.graph.addBlock()
         val throwField = throwBlock.field(thrownType)
         val throwFlow = Flow(throwField, throwBlock)
         callable.onThrown = throwFlow

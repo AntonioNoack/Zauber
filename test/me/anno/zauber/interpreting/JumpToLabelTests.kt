@@ -1,10 +1,14 @@
 package me.anno.zauber.interpreting
 
+import me.anno.MultiTest
 import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class JumpToLabelTests {
 
@@ -38,6 +42,9 @@ class JumpToLabelTests {
         class Array<V>(val size: Int) {
             external operator fun set(index: Int, value: V)
         }
+        
+        object Unit
+        external fun println(arg0: Int)
     """.trimIndent()
 
     @Test
@@ -101,8 +108,10 @@ class JumpToLabelTests {
         assertEquals(16, value.castToInt())
     }
 
-    @Test
-    fun testContinueToFor() {
+    @ParameterizedTest
+    @ValueSource(strings = [/*"type", "runtime", "js", "java", "c++",*/ "wasm"])
+    fun testContinueToFor(type: String) {
+        disableCompileLoggers()
         val code = """
             fun call(): Int {
                 var x = 1
@@ -116,8 +125,14 @@ class JumpToLabelTests {
             
             val tested = call()
         """.trimIndent() + stdlib
-        val value = testExecute(code)
-        assertEquals(16, value.castToInt())
+
+        MultiTest()
+            .type(code) { Types.Int }
+            .runtime(code) { value ->
+                assertEquals(16, value.castToInt())
+            }
+            .compile(code, "16\n")
+            .execute(type)
     }
 
 }

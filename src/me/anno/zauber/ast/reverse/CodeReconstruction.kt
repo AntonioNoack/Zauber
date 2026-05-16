@@ -1,7 +1,8 @@
 package me.anno.zauber.ast.reverse
 
-import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.reverse.GraphToClass.convertGraphToClass
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleGraph
 
 /**
  * Converts an arbitrary graph back into if-else and while-blocks.
@@ -11,6 +12,9 @@ import me.anno.zauber.ast.simple.SimpleBlock
 object CodeReconstruction {
 
     fun createCodeFromGraph(graph: SimpleGraph) {
+
+        if (isSolved(graph)) return
+
         while (!isSolved(graph)) {
             if (simplifySequence(graph)) continue
             if (simplifyBranch(graph)) continue
@@ -18,7 +22,8 @@ object CodeReconstruction {
             if (breakAtStrongestKnot(graph)) continue
             break
         }
-        check(isSolved(graph))
+
+        return convertGraphToClass(graph)
     }
 
     private fun simplifySequence(graph: SimpleGraph): Boolean {
@@ -85,32 +90,39 @@ object CodeReconstruction {
         return false
     }
 
+    /**
+     * breaks the graph on the block with the most inputs in hope of making more branches possible
+     * */
     private fun breakAtStrongestKnot(graph: SimpleGraph): Boolean {
-        val bestNode = graph.blocks
-            .filter { !it.isEntryPoint }
-            .maxBy { it.inputNodes.size }
+        val bestBlock = graph.blocks
+            //.filter { !it.isEntryPoint }
+            .filter { it.inputBlocks.size > 1 }
+            .maxByOrNull { it.inputBlocks.size }
+            ?: return false
 
-        bestNode.isEntryPoint = true
-        for (inputNode in bestNode.inputNodes) {
+        bestBlock.isEntryPoint = true
+        val inputNodes = ArrayList(bestBlock.inputBlocks)
+        for (inputNode in inputNodes) {
             if (inputNode.isBranch) {
-                if (inputNode.ifBranch == bestNode) {
-                    inputNode.ifBranch = graph.createTailCall(bestNode)
+                if (inputNode.ifBranch == bestBlock) {
+                    inputNode.ifBranch = graph.createTailCall(bestBlock)
                 } else {
-                    check(inputNode.elseBranch == bestNode) { "Expected elseBranch to be bestNode" }
-                    inputNode.elseBranch = graph.createTailCall(bestNode)
+                    check(inputNode.elseBranch == bestBlock) { "Expected elseBranch to be bestNode" }
+                    inputNode.elseBranch = graph.createTailCall(bestBlock)
                 }
             } else {
+                check(inputNode.nextBranch == bestBlock)
                 inputNode.ifBranch = null
                 inputNode.elseBranch = null
                 inputNode.branchCondition = null
-                inputNode.instructions.add(SimpleTailCall(bestNode))
+                inputNode.instructions.add(SimpleTailCall(bestBlock))
             }
         }
         return true
     }
 
     private fun SimpleGraph.createTailCall(target: SimpleBlock): SimpleBlock {
-        val node = addNode()
+        val node = addBlock()
         node.instructions.add(SimpleTailCall(target))
         return node
     }

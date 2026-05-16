@@ -26,7 +26,7 @@ data class Flow(val value: SimpleField, val block: SimpleBlock) {
             if (other == null) return this
             if (this == other) return this
 
-            val joinedBlock = block.graph.addNode()
+            val joinedBlock = block.graph.addBlock()
             block.nextBranch = joinedBlock
             other.block.nextBranch = joinedBlock
             return Flow(joinFields(other, joinedBlock), joinedBlock)
@@ -35,7 +35,7 @@ data class Flow(val value: SimpleField, val block: SimpleBlock) {
         fun Flow?.join(other: SimpleField, otherNode: SimpleBlock): Flow {
             if (this == null) return Flow(other, otherNode)
 
-            val joinedBlock = block.graph.addNode()
+            val joinedBlock = block.graph.addBlock()
             val joinedType = unionTypes(value.type, other.type)
             val joinedField = joinedBlock.field(joinedType)
             block.nextBranch = joinedBlock

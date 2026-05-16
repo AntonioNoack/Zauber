@@ -11,13 +11,13 @@ import me.anno.zauber.ast.simple.expression.SimpleGetField
 import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
-import me.anno.zauber.types.Specialization
 
 class SimpleBlock(val graph: SimpleGraph) {
 
@@ -47,17 +47,17 @@ class SimpleBlock(val graph: SimpleGraph) {
 
     private fun linkTo(value: SimpleBlock?) {
         value ?: return
-        value.inputNodes.add(this)
+        value.inputBlocks.add(this)
         outputNodes.add(value)
     }
 
     private fun unlinkTo(value: SimpleBlock?) {
         value ?: return
-        value.inputNodes.remove(this)
+        value.inputBlocks.remove(this)
         outputNodes.remove(value)
     }
 
-    val inputNodes = ArrayList<SimpleBlock>(4)
+    val inputBlocks = ArrayList<SimpleBlock>(4)
     val outputNodes = ArrayList<SimpleBlock>(2)
 
     var nextBranch: SimpleBlock?
@@ -77,12 +77,12 @@ class SimpleBlock(val graph: SimpleGraph) {
         ifBranch = null
         elseBranch = null
         branchCondition = null
-        inputNodes.clear()
+        inputBlocks.clear()
         outputNodes.clear()
     }
 
     fun isOnlyInput(input: SimpleBlock): Boolean {
-        return !isEntryPoint && inputNodes.all { it == input }
+        return !isEntryPoint && inputBlocks.all { it == input }
     }
 
     fun isOnlyOutput(output: SimpleBlock?): Boolean {
@@ -195,6 +195,8 @@ class SimpleBlock(val graph: SimpleGraph) {
         builder.append('b').append(blockId)
             .append('[')
 
+        if (isEntryPoint) builder.append("->|")
+
         if (nextBranch == null) {
             builder.append("end")
         } else if (branchCondition != null) {
@@ -224,7 +226,7 @@ class SimpleBlock(val graph: SimpleGraph) {
 
     fun nextOrSelfIfEmpty(): SimpleBlock {
         if (isEmpty()) return this
-        val next = graph.addNode()
+        val next = graph.addBlock()
         nextBranch = next
         return next
     }

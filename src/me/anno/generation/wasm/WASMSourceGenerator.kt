@@ -49,6 +49,10 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     companion object {
         const val CLASS_INDEX_NAME = "_type"
+
+        fun isLocalField(self: SimpleField): Boolean {
+            return self.type is ClassType && !self.type.clazz.isClassLike()
+        }
     }
 
     val functionTypes = HashMap<FunctionType, Int>()
@@ -1129,10 +1133,6 @@ class WASMSourceGenerator : CSourceGenerator() {
             }
             else -> null
         } ?: throw NotImplementedError("Missing opcode for $type.$symbol")
-    }
-
-    fun isLocalField(self: SimpleField): Boolean {
-        return self.type is ClassType && !self.type.clazz.isClassLike()
     }
 
     override fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean) {

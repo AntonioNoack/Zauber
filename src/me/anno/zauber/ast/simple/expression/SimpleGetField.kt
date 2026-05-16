@@ -2,6 +2,7 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -12,11 +13,11 @@ import me.anno.zauber.types.impl.ClassType
 
 class SimpleGetField(
     dst: SimpleField,
-    val self: SimpleField,
-    val field: Field,
-    val specialization: Specialization,
+    override val self: SimpleField,
+    override val field: Field,
+    override val specialization: Specialization,
     scope: Scope, origin: Long
-) : SimpleAssignment(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin), SimpleGetOrSetField {
 
     companion object {
         private val LOGGER = LogManager.getLogger(SimpleGetField::class)
@@ -43,6 +44,11 @@ class SimpleGetField(
 
     override fun toString(): String {
         return "$dst = $self?[${field.selfType ?: field.ownerScope.pathStr}].${field.name}"
+    }
+
+    override fun withField(field: Field): SimpleInstruction {
+        val spec = Specialization(field.fieldScope, specialization.typeParameters)
+        return SimpleGetField(dst, self, field, spec, scope, origin)
     }
 
     override fun eval(): BlockReturn {

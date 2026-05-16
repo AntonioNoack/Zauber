@@ -60,9 +60,9 @@ class MultiTest {
         return this
     }
 
-    fun execute(name: String) {
-        val runnable = runnables[name]
-            ?: throw IllegalStateException("Missing '$name'")
+    fun execute(type: String) {
+        val runnable = runnables[type]
+            ?: throw IllegalStateException("Missing '$type'")
         runnable()
     }
 }

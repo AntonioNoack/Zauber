@@ -14,4 +14,8 @@ class SimpleTailCall(val toBeCalled: SimpleBlock) :
     override fun execute(): BlockReturn? {
         TODO("Not yet implemented")
     }
+
+    override fun toString(): String {
+        return "SimpleTailCall[${toBeCalled.blockId}]"
+    }
 }

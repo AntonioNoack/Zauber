@@ -33,7 +33,7 @@ class SimpleGraph(val method: MethodLike) {
         blocks.add(startBlock)
     }
 
-    fun addNode(): SimpleBlock {
+    fun addBlock(): SimpleBlock {
         val node = SimpleBlock(this)
         blocks.add(node)
         return node

@@ -12,4 +12,8 @@ class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFa
     override fun execute(): BlockReturn? {
         TODO("Not yet implemented")
     }
+
+    override fun toString(): String {
+        return "SimpleBranch(condition=$condition, ifTrue=[${ifTrue.blockId}], ifFalse=[${ifFalse.blockId}])"
+    }
 }
