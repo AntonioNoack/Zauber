@@ -98,11 +98,20 @@ class FloatFormatTests {
     }
 
     @Test
-    fun testLargeBasis() {
+    fun testLargeDecimalBasis() {
         val float = testExecute("val tested = 1e1" + "0".repeat(20) + "f")
         assertEquals(Float.POSITIVE_INFINITY, float.castToFloat())
 
         val double = testExecute("val tested = 1e1" + "0".repeat(20))
+        assertEquals(Double.POSITIVE_INFINITY, double.castToDouble())
+    }
+
+    @Test
+    fun testLargeBinaryBasis() {
+        val float = testExecute("val tested = 0x1p1" + "0".repeat(20) + "f")
+        assertEquals(Float.POSITIVE_INFINITY, float.castToFloat())
+
+        val double = testExecute("val tested = 0x1p1" + "0".repeat(20))
         assertEquals(Double.POSITIVE_INFINITY, double.castToDouble())
     }
 }
