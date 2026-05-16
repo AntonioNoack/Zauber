@@ -7,8 +7,8 @@ import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.impl.ClassType
 
 class SimpleGetField(
     dst: SimpleField,
@@ -23,6 +23,7 @@ class SimpleGetField(
     }
 
     init {
+        check(specialization.scope == field.fieldScope)
         if (self.type is ClassType) {
             val selfScope = self.type.clazz
             val fieldScope = field.ownerScope
@@ -32,8 +33,11 @@ class SimpleGetField(
                 throw IllegalStateException("Cannot get $field from $self")
             }
         }
-        if (field.ownerScope.isInterface()) {
-            throw IllegalStateException("Cannot just get field of an interface, must use getter, $field")
+        check(!field.ownerScope.isInterface()) {
+            "Cannot just get field of an interface, must use getter, $field"
+        }
+        check(!field.isBackingField()) {
+            "Cannot get 'backing' field $field in ${field.ownerScope}, needs to use direct access"
         }
     }
 

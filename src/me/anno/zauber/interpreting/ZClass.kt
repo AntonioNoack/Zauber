@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Flags
@@ -13,11 +14,11 @@ import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.Specialization
 
 class ZClass(val type: Type) {
 
@@ -27,13 +28,15 @@ class ZClass(val type: Type) {
 
         // types, which may contain the 'content' field
         // to differentiate instance and native field
-        val nativeTypes = listOf(
-            Types.Byte, Types.UByte,
-            Types.UShort, Types.UShort, Types.Char,
-            Types.Int, Types.UInt,
-            Types.Long, Types.ULong,
-            Types.Float, Types.Double
-        )
+        val nativeTypes by threadLocal {
+            listOf(
+                Types.Byte, Types.UByte,
+                Types.UShort, Types.UShort, Types.Char,
+                Types.Int, Types.UInt,
+                Types.Long, Types.ULong,
+                Types.Float, Types.Double
+            )
+        }
 
         fun collectFields(type: Type): List<Field> {
             if (type !is ClassType) {
@@ -43,9 +46,8 @@ class ZClass(val type: Type) {
             if (type in nativeTypes) {
                 return emptyList()
             }
-            val fields = type.clazz[ScopeInitType.AFTER_DISCOVERY].fields.filter { field ->
-                field.needsBackingFieldImpl(type)
-            }
+            val fields = type.clazz[ScopeInitType.AFTER_DISCOVERY]
+                .fields.filter { field -> field.needsToBeStored() }
             if (type.clazz.isConstructor() && type.clazz.parent!!.scopeType == ScopeType.INNER_CLASS) {
                 // move __outer__ to the front
                 // todo ideally, it would be sorted inside the scope already...
@@ -54,7 +56,7 @@ class ZClass(val type: Type) {
             return fields
         }
 
-        fun Field.needsBackingFieldImpl(type0: Type): Boolean {
+        fun Field.needsToBeStored(): Boolean {
             if (isObjectInstance()) return false
 
             val type = scope.typeWithoutArgs
@@ -76,6 +78,8 @@ class ZClass(val type: Type) {
         var objectInstance = objectInstance
         if (objectInstance != null) return objectInstance
 
+        println("-- creating object instance for $this --")
+
         objectInstance = createInstance()
         this.objectInstance = objectInstance
 
@@ -91,9 +95,12 @@ class ZClass(val type: Type) {
                 "Object/package must not have valueParameters, found some in $scope"
             }
 
-            val spec = Specialization(primaryConstructor.scope, emptyParameterList())
+            val spec = Specialization(primaryConstructor.memberScope, emptyParameterList())
             runtime.executeCall(objectInstance, spec, emptyList())
         }
+
+        println("-- created object instance for $this: $objectInstance --")
+
         return objectInstance
     }
 

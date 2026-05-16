@@ -35,6 +35,7 @@ object DataClassGenerator {
     private val special by threadLocal { SpecialValues() }
 
     private const val KEYWORDS = Flags.SYNTHETIC or Flags.OVERRIDE
+    private const val KEYWORDS_NO_OVERRIDE = KEYWORDS and Flags.OVERRIDE.inv()
 
     class ExpressionBuilder(var scope: Scope, val origin: Long, val type: Type) {
         var expr: Expression? = null
@@ -277,37 +278,70 @@ object DataClassGenerator {
         classScope: Scope, primaryFields: List<Field>,
         context: ResolutionContext, origin: Long
     ) {
+        // create copy methods with zero fields
         val copyMethod = MethodResolver.findMemberInScope(
             classScope, origin, "copy", classScope.typeWithArgs, classScope.typeWithArgs,
             emptyList(), emptyList(), context
         )
         if (copyMethod == null) {
-            generateCopyMethod(classScope, primaryFields, origin)
+            generateCopyMethod(classScope, primaryFields, null, origin)
+        }
+
+        // create copy methods with just one field
+        for (setField in primaryFields) {
+            val valueType = setField.valueType!!.resolvedName
+            val copyMethod = classScope.methods0.firstOrNull { method ->
+                method.name == "copy" && method.valueParameters.size == 1 &&
+                        method.valueParameters[0].run {
+                            name == setField.name && type.resolvedName == valueType
+                        }
+            }
+            if (copyMethod == null) {
+                println("Creating copy(${setField.name}: $valueType) for $classScope")
+                generateCopyMethod(classScope, primaryFields, setField, origin)
+            }
         }
     }
 
     private fun ZauberASTBuilderBase.generateCopyMethod(
-        classScope: Scope, primaryFields: List<Field>, origin: Long,
+        classScope: Scope, primaryFields: List<Field>,
+        setField: Field?, origin: Long,
     ) {
         lateinit var body: Expression
-        val methodScope = pushScope("copy", ScopeType.METHOD) { scope ->
-            scope.setEmptyTypeParams()
+        lateinit var valueParams: List<Parameter>
+        val methodScope = pushScope(ScopeType.METHOD, "copy") { methodScope ->
+            methodScope.setEmptyTypeParams()
+
+            valueParams = if (setField == null) emptyList() else listOf(
+                Parameter(
+                    0, setField.name, ParameterType.VALUE_PARAMETER,
+                    setField.valueType!!, methodScope, origin
+                ).apply { mustBeNamed = true }
+            )
 
             val typeParameters = classScope.typeParameters.map { it.type }
             val valueParameters = primaryFields.map { field ->
-                val expr = FieldExpression(field, classScope, origin)
+                val expr = if (field === setField) {
+                    val paramField = valueParams[0]
+                        .getOrCreateField(null, Flags.SYNTHETIC)
+                    FieldExpression(paramField, methodScope, origin)
+                } else {
+                    FieldExpression(field, classScope, origin)
+                }
                 NamedParameter(field.name, expr)
             }
             val copyExpr = ConstructorExpression(
                 classScope, typeParameters,
                 valueParameters, null, classScope, origin
             )
-            body = ReturnExpression(copyExpr, null, scope, origin)
-            scope
+            body = ReturnExpression(copyExpr, null, methodScope, origin)
+            methodScope
         }
         methodScope.selfAsMethod = Method(
-            null, false, "copy", emptyList(), emptyList(),
-            methodScope, classScope.typeWithArgs, emptyList(), body, KEYWORDS and Flags.OVERRIDE.inv(), origin
+            null, false, "copy",
+            emptyList(), valueParams, methodScope,
+            classScope.typeWithArgs, emptyList(),
+            body, KEYWORDS_NO_OVERRIDE, origin
         )
     }
 }

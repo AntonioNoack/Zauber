@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.FieldGetterSetter.finishGetter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
@@ -16,7 +17,7 @@ import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
-import me.anno.zauber.interpreting.ZClass.Companion.needsBackingFieldImpl
+import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
@@ -25,15 +26,15 @@ import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.MatchScore
+import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.impl.arithmetic.UnknownType
-import me.anno.zauber.types.Specialization
-import me.anno.zauber.types.Specialization.Companion.noSpecialization
 
 object ASTSimplifier {
 
@@ -82,7 +83,7 @@ object ASTSimplifier {
 
     private fun finishFlows(flow1: FlowResult, method: Specialization, expr: Expression) {
         val flow1v = flow1.value
-        if (flow1v != null && method.method !is Constructor) {
+        if (flow1v != null) {
             // missing return -> we do it ourselves
             // validate method returns Unit
             check(method.method.returnType == Types.Unit) {
@@ -334,7 +335,20 @@ object ASTSimplifier {
         block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
+
+        var expr = expr
+        if (expr.field.isBackingField) {
+            // probably could be smaller and easier...
+            val backed = expr.field.resolved.getBackedField()!!
+            val realField = backedToRealField(backed, expr.field, expr.context)
+            expr = ResolvedGetFieldExpression(
+                ThisExpression(backed.ownerScope, expr.scope, expr.origin),
+                realField, expr.scope, expr.origin
+            )
+        }
+
         val field = expr.field.resolved
+
         if (field.isObjectInstance()) {
             val dst = block0.field(field.ownerScope.typeWithArgs)
             val value = SimpleGetObject(dst, field.ownerScope, expr.scope, expr.origin)
@@ -349,10 +363,13 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
-        val useGetter = expr.field.resolved.isOpen() || expr.field.resolved.initialValue is DelegateExpression || (
+        val useGetter = expr.field.resolved.isOpen() ||
+                expr.field.resolved.initialValue is DelegateExpression || (
                 !expr.field.isBackingField && (
-                        field.hasCustomGetter || field.isLateinit() ||
-                                !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+                        field.hasCustomGetter ||
+                                field.isLateinit() ||
+                                !field.needsToBeStored()
+                        )
                 )
 
         val selfMethod = getMethod(self.type)
@@ -367,6 +384,9 @@ object ASTSimplifier {
 
         val dst = block1v.block.field(valueType)
         if (useGetter) {
+
+            if (field.getter == null) finishGetter(field.ownerScope, field)
+
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val getter = field.getter ?: throw IllegalStateException("Missing getter for $field")
             val newContext = context.withSpec(Specialization(getter.scope, ownerTypes))
@@ -406,6 +426,17 @@ object ASTSimplifier {
         }
     }
 
+    fun backedToRealField(backed: Field, backing: ResolvedField, context: ResolutionContext): ResolvedField {
+        val realSpec = Specialization(
+            backed.fieldScope,
+            context.specialization.typeParameters
+        )
+        return ResolvedField(
+            backed, context.withSpec(realSpec),
+            backing.codeScope, backing.matchScore
+        )
+    }
+
     fun getMethod(type: Type): MethodLike? {
         val type = type.resolvedName.resolve()
         if (type !is ClassType) return null
@@ -432,6 +463,17 @@ object ASTSimplifier {
         flow0: FlowResult
     ): FlowResult {
 
+        var expr = expr
+        if (expr.field.isBackingField) {
+            // probably could be smaller and easier...
+            val backed = expr.field.resolved.getBackedField()!!
+            val realField = backedToRealField(backed, expr.field, expr.context)
+            expr = ResolvedSetFieldExpression(
+                ThisExpression(backed.ownerScope, expr.scope, expr.origin),
+                realField, expr.value, expr.scope, expr.origin
+            )
+        }
+
         val field = expr.field.resolved
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
@@ -445,7 +487,7 @@ object ASTSimplifier {
         val useSetter = expr.field.resolved.isOpen() ||
                 expr.field.resolved.initialValue is DelegateExpression || (
                 !expr.field.isBackingField &&
-                        (field.hasCustomSetter || !field.needsBackingFieldImpl(field.selfType ?: UnknownType))
+                        (field.hasCustomSetter || !field.needsToBeStored())
                 )
 
         val selfMethod = getMethod(self.type)

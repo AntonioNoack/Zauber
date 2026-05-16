@@ -1,7 +1,9 @@
 package me.anno.zauber.interpreting
 
+import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -16,8 +18,6 @@ class ConstTests {
      * */
     @Test
     fun testConstWithCrissCrossReferences() {
-        // todo why does this fail when executed together with other tests?
-        //  we must still have shared state somewhere...
         val value = testExecute(
             """
             object A {
@@ -44,6 +44,8 @@ class ConstTests {
 
     @Test
     fun testCanWriteNonConstValue() {
+        disableCompileLoggers()
+        LogManager.enable("ASTSimplifier,Runtime")
         val value = testExecute(
             """
             value class Vector(val x: Int, val y: Int)
@@ -54,7 +56,7 @@ class ConstTests {
                 return vec.x + vec.y
             }
             
-            const tested = calculate()
+            val tested = calculate()
             
             package zauber
             class Any
@@ -68,7 +70,7 @@ class ConstTests {
 
     @Test
     fun testCannotWriteConstValue() {
-        assertThrowsContains<IllegalStateException>(listOf("Expected Field(", ".x to be mutable")) {
+        assertThrowsContains<IllegalStateException>(listOf("Expected ", ".vec.x to be mutable")) {
             testExecute(
                 """
             value class Vector(val x: Int, val y: Int)

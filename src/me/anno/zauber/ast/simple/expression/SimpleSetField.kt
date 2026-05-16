@@ -23,9 +23,11 @@ class SimpleSetField(
 
     init {
         check(specialization.scope == field.fieldScope)
-
-        if (field.ownerScope.isInterface()) {
-            throw IllegalStateException("Cannot just set field of an interface, must use getter, $field")
+        check(!field.ownerScope.isInterface()) {
+            "Cannot just set field of an interface, must use getter, $field"
+        }
+        check(!field.isBackingField()) {
+            "Cannot get 'backing' field $field in ${field.ownerScope}, needs to use direct access"
         }
     }
 

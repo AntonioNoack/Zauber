@@ -204,6 +204,7 @@ class Instance(
             emptyList(), ReturnExpression(value, null, value.scope, value.origin),
             flags, value.origin
         )
+        tmpMethodScope.selfAsMethod = method
 
         val methodSpec = Specialization(method.scope, emptyParameterList())
         return runtime.executeCall(this, methodSpec, emptyList())

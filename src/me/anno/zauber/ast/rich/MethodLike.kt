@@ -58,7 +58,7 @@ open class MethodLike(
     fun getSpecializedBody(specialization: Specialization): Expression? {
         val body = body ?: return null
         val specialization = specialization.withScope(scope)
-        println("applying $specialization to $this")
+        // println("applying $specialization to $this")
 
         return specializations.getOrPut(specialization) {
             specialization.use {

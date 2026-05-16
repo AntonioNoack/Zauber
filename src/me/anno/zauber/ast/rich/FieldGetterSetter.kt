@@ -54,24 +54,28 @@ object FieldGetterSetter {
     fun ZauberASTBuilderBase.finishField(ownerScope: Scope, field: Field) {
         // println("Finishing field $field")
         flags = 0
-        val origin = field.origin
+        check(ownerScope.isClassLike())
+        finishGetter(ownerScope, field)
+        finishSetter(ownerScope, field)
+    }
+
+    fun finishGetter(ownerScope: Scope, field: Field) {
         if (field.getter == null) {
             val getterScope = ownerScope.getOrPut(getterName(field.name), ScopeType.FIELD_GETTER)
-            pushScope(getterScope) {
-                val method = createGetterMethod0(field, null, getterScope, origin)
-                check(getterScope.selfAsMethod == method)
-            }
-        }
-        if (field.isMutable && field.setter == null) {
-            val setterScope = ownerScope.getOrPut(setterName(field.name), ScopeType.FIELD_SETTER)
-            pushScope(setterScope) {
-                val method = createSetterMethod0(field, null, "value", setterScope, origin)
-                check(setterScope.selfAsMethod == method)
-            }
+            val method = createGetterMethod0(field, null, getterScope, field.origin)
+            check(getterScope.selfAsMethod == method)
         }
     }
 
-    fun ZauberASTBuilderBase.createGetterMethod0(
+    fun finishSetter(ownerScope: Scope, field: Field) {
+        if (field.isMutable && field.setter == null) {
+            val setterScope = ownerScope.getOrPut(setterName(field.name), ScopeType.FIELD_SETTER)
+            val method = createSetterMethod0(field, null, "value", setterScope, field.origin)
+            check(setterScope.selfAsMethod == method)
+        }
+    }
+
+    fun createGetterMethod0(
         field: Field, expr0: Expression?,
         getterScope: Scope, origin: Long
     ): Method {
@@ -79,7 +83,7 @@ object FieldGetterSetter {
         return createGetterMethod1(field, expr0, backingField, getterScope, origin)
     }
 
-    private fun ZauberASTBuilderBase.createGetterMethod1(
+    private fun createGetterMethod1(
         field: Field, expr0: Expression?, backingField: Field,
         getterScope: Scope, origin: Long
     ): Method {
@@ -103,11 +107,10 @@ object FieldGetterSetter {
             ReturnExpression(valueExpr, null, getterScope, origin)
         } else null
 
-
         val method = Method(
             null, false, getterName(field.name), emptyList(), emptyList(),
             getterScope, field.valueType, emptyList(),
-            expr, packFlags() or field.flags, origin
+            expr, field.flags, origin
         )
         method.backedField = field
         method.backingField = backingField
@@ -152,7 +155,7 @@ object FieldGetterSetter {
         )
     }
 
-    fun ZauberASTBuilderBase.createSetterMethod0(
+    fun createSetterMethod0(
         field: Field, expr0: Expression?, fieldName: String,
         setterScope: Scope, origin: Long,
     ): Method {
@@ -161,7 +164,7 @@ object FieldGetterSetter {
         return createSetterMethod1(field, expr0, backingField, valueField, setterScope, origin)
     }
 
-    private fun ZauberASTBuilderBase.createSetterMethod1(
+    private fun createSetterMethod1(
         field: Field, expr0: Expression?,
         backingField: Field, valueField: Field,
         setterScope: Scope, origin: Long,
@@ -193,7 +196,7 @@ object FieldGetterSetter {
             field.selfType, false, setterName(field.name), emptyList(),
             listOf(parameter), setterScope,
             Types.Unit, emptyList(),
-            expr, packFlags() or field.flags, origin
+            expr, field.flags, origin
         )
         method.backedField = field
         method.backingField = backingField

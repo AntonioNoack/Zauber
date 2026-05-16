@@ -25,6 +25,8 @@ class Parameter(
     val isConst get() = mutability == ParameterMutability.CONST
     val isVararg get() = expansion == ParameterExpansion.VARARG
 
+    var mustBeNamed = false
+
     fun getOrCreateField(selfType: Type?, keywords: FlagSet): Field {
         // automatically gets added to fieldScope
         val field = field ?: scope.addField(

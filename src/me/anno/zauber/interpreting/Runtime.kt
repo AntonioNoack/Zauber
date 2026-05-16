@@ -196,8 +196,7 @@ class Runtime {
             val parameter = valueParameters[i]
             val field = methodScopeInstance.clazz.fields.getOrNull(i)
                 ?: throw IllegalStateException(
-                    "Method needs at least as many fields as parameters, " +
-                            "$method, " +
+                    "Method $method in ${method.ownerScope} needs at least as many fields as parameters, " +
                             "fields: ${(methodScopeInstance.clazz.type as ClassType).clazz.fields} -> " +
                             "properties: ${methodScopeInstance.clazz.fields}"
                 )

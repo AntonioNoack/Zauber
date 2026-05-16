@@ -236,7 +236,9 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         get() {
             check(scope != null)
             check(scope.isMethodLike())
-            return scope.selfAsMethod ?: scope.selfAsConstructor!!
+            return scope.selfAsMethod
+                ?: scope.selfAsConstructor
+                ?: throw IllegalStateException("$scope[${scope.scopeType}] is method-like, but has no method?")
         }
 
     val field: Field

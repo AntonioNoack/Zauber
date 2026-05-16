@@ -42,7 +42,7 @@ object FindMemberMatch {
         var explicitSelfType = explicitSelfType
         if (explicitSelfType == null && member is Constructor) {
             // hack: selfType is typically not set for constructors, only for inner classes
-            explicitSelfType = member.ownerScope.typeWithArgs
+            explicitSelfType = member.ownerScope.typeWithoutArgs // <- without, so we don't force it
         }
 
         val avp = explicitValueParameters.size

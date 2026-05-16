@@ -64,7 +64,7 @@ class Field(
 
     fun isBackingField(methodScope: Scope): Boolean {
         return name == "field" &&
-                this@Field.flags.hasFlag(Flags.SYNTHETIC) &&
+                flags.hasFlag(Flags.SYNTHETIC) &&
                 scope == methodScope
     }
 
@@ -75,7 +75,8 @@ class Field(
 
     fun getBackedField(): Field? {
         if (name != "field") return null
-        if (!this@Field.flags.hasFlag(Flags.SYNTHETIC)) return null
+        if (!flags.hasFlag(Flags.SYNTHETIC)) return null
+
         val scope = scope
         if (scope.scopeType != ScopeType.FIELD_GETTER &&
             scope.scopeType != ScopeType.FIELD_SETTER

@@ -25,6 +25,7 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.getScope
@@ -222,10 +223,25 @@ class ResolvedField(
             return FindMemberMatch.findMemberMatch(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, specialization, codeScope, resolved.origin
-            ) as? ResolvedMethod ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
+            ) as? ResolvedMethod
+                ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
+    }
+
+    fun resolveCopyMethod(): ResolvedMethod {
+        val field = resolved
+        val valueScope = field.ownerScope[ScopeInitType.AFTER_OVERRIDES]
+        val method = valueScope.methods0.firstOrNull {
+            it.name == "copy" &&
+                    it.valueParameters.size == 1 &&
+                    it.valueParameters[0].run { name == field.name && type == field.valueType }
+        } ?: throw IllegalStateException("Missing copy method for $field, candidates: ${valueScope.methods0}")
+        return ResolvedMethod(
+            method, context.withSpec(Specialization(method.scope, specialization.typeParameters)),
+            codeScope, matchScore
+        )
     }
 
     val ownerScope get() = resolved.scope

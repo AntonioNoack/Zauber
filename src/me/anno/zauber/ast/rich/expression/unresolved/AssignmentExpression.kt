@@ -3,6 +3,8 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.scope.Scope
@@ -62,15 +64,18 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
                 val owner = dstExpr.left
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
-            is DotExpression if dstExpr.left is FieldExpression && dstExpr.right is FieldResolvable -> {
+            is DotExpression if dstExpr.left is FieldResolvable && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
                 val ownerType = owner.resolveReturnType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
                     ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
-                check(field.resolved.isMutable || dstExpr.left.field.isMutableEx) {
-                    "Expected ${dstExpr.left.field}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
+                return if (!field.resolved.isMutable) {
+                    // potentially chained case
+                    handleImmutableAssignment(field, owner, newValue, dstExpr.left)
+                } else {
+                    // normal, simple case
+                    ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
                 }
-                return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
             is DotExpression if dstExpr.left is TypeExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
@@ -126,9 +131,49 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
         }
     }
 
-
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(dst)
         callback(src)
+    }
+
+    private fun handleImmutableAssignment(
+        field: ResolvedField, // immutable
+        owner: Expression, // maybe a mutable field
+        newValue: Expression, // new value for field
+        leftExpr: Any, // just for debugging
+    ): Expression {
+
+        if (field.ownerScope.run { isValueType() || isDataClass() }) {
+            return prepareSetterForCopy(owner, field, newValue)
+        }
+
+        throw IllegalStateException(
+            "Expected ${leftExpr}.${field.resolved.name} " +
+                    "to be mutable at ${resolveOrigin(origin)}"
+        )
+    }
+
+    private fun prepareSetterForCopy(
+        owner: Expression, field: ResolvedField, newValue: Expression,
+    ): Expression {
+        if (owner is ResolvedGetFieldExpression) {
+            if (!owner.field.isMutable) {
+                // todo it would be nice if we could do this recursively...
+                // handleImmutableAssignment(owner.field, owner.self, newValue, owner.self)
+                throw IllegalStateException(
+                    "Expected ${owner.self}.${owner.field.resolved.name}.${field.resolved.name} " +
+                            "to be mutable at ${resolveOrigin(origin)}"
+                )
+            }
+
+            val ownerField = owner.field
+            val createNewVector = ResolvedCallExpression(
+                owner, field.resolveCopyMethod(),
+                listOf(newValue), scope, origin
+            )
+            return ResolvedSetFieldExpression(owner.self, ownerField, createNewVector, scope, origin)
+        }
+
+        throw NotImplementedError("Expected $owner to be mutable at ${resolveOrigin(origin)}")
     }
 }

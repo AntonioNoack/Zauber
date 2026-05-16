@@ -32,7 +32,7 @@ class FieldGetSetTest {
                 check(e is V) { "Incorrect exception type was thrown: $e" }
                 val message = e.message ?: ""
                 for (part in listOf) {
-                    assertContains(part, message)
+                    if (part !in message) throw e
                 }
                 return
             }

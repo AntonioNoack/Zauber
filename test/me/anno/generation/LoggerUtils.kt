@@ -5,11 +5,12 @@ import me.anno.zauber.logging.LogManager
 object LoggerUtils {
     fun disableCompileLoggers() {
         LogManager.disableLoggers(
-            "TypeResolution,ASTSimplifier,MemberResolver,Inheritance," +
+            "TypeResolution,ASTSimplifier,MemberResolver,Inheritance,FindMemberMatch," +
                     "CallExpression,SuperCallExpression,CallWithNames,FieldMethodResolver," +
                     "MethodResolver,ResolvedMethod," +
                     "ConstructorResolver," +
-                    "ResolvedField,Field,FieldResolver,FieldExpression"
+                    "ResolvedField,Field,FieldResolver,FieldExpression," +
+                    "SimpleGetField,SimpleSetField"
         )
     }
 }

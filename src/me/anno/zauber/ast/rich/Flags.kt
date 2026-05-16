@@ -6,47 +6,47 @@ import kotlin.math.max
 object Flags {
 
     const val NONE = 0
-    const val SYNTHETIC = 1
-    const val PUBLIC = 2
-    const val PRIVATE = 4
-    const val PROTECTED = 8
-    const val OVERRIDE = 16
-    const val OPEN = 32
-    const val FINAL = 64
-    const val ABSTRACT = 128
-    const val DATA_CLASS = 256
-    const val VALUE = 512
-    const val FUN_INTERFACE = 1024
-    const val EXTERNAL = 2 * 1024
-    const val OPERATOR = 4 * 1024
-    const val INLINE = 8 * 1024
-    const val CROSS_INLINE = 16 * 1024
-    const val INFIX = 32 * 1024
-    const val MACRO = 64 * 1024
+    const val SYNTHETIC = 1 shl 0
+    const val PUBLIC = 1 shl 1
+    const val PRIVATE = 1 shl 2
+    const val PROTECTED = 1 shl 3
+    const val OVERRIDE = 1 shl 4
+    const val OPEN = 1 shl 5
+    const val FINAL = 1 shl 6
+    const val ABSTRACT = 1 shl 7
+    const val DATA_CLASS = 1 shl 8
+    const val VALUE = 1 shl 9
+    const val FUN_INTERFACE = 1 shl 10
+    const val EXTERNAL = 1 shl 11
+    const val OPERATOR = 1 shl 12
+    const val INLINE = 1 shl 13
+    const val CROSS_INLINE = 1 shl 14
+    const val INFIX = 1 shl 15
+    const val MACRO = 1 shl 16
 
     /**
      * class used for annotations;
      * is a pure value class, aka all members must be values and their properties must be, too
      * */
-    const val ANNOTATION = 128 * 1024
+    const val ANNOTATION = 1 shl 17
 
     /**
      * class cannot be extended by classes from other packages/modules
      * */
-    const val SEALED = 256 * 1024
+    const val SEALED = 1 shl 18
 
     /**
      * evaluated at compile time
      * */
-    const val CONSTEXPR = 512 * 1024
+    const val CONSTEXPR = 1 shl 19
 
     /**
      * guaranteed to be initialized when accessed, but not before;
      * cannot be applied to nullable types in Kotlin, I'm not sure about Zauber
      * */
-    const val LATEINIT = 1024 * 1024
+    const val LATEINIT = 1 shl 20
 
-    const val CPP_STRUCT = 2048 * 1024
+    const val CPP_STRUCT = 1 shl 21
 
     fun FlagSet.hasFlag(flag: FlagSet): Boolean {
         return (this and flag) == flag
