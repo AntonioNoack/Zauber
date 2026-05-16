@@ -11,6 +11,13 @@ import javax.tools.ToolProvider
 
 class MinimalJavaBuildCompiler : MinimalCompiler() {
 
+    companion object {
+        val compiler by lazy {
+            ToolProvider.getSystemJavaCompiler()
+                ?: error("No Java compiler found. Run with JDK, not JRE.")
+        }
+    }
+
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
         JavaSourceGenerator()
             .generateCode(srcFolder, dependencies, mainMethod)
@@ -28,9 +35,6 @@ class MinimalJavaBuildCompiler : MinimalCompiler() {
     }
 
     private fun compileJava(srcFolder: File, classFolder: File) {
-        val compiler = ToolProvider.getSystemJavaCompiler()
-            ?: error("No Java compiler found. Run with JDK, not JRE.")
-
         val sourceFiles = srcFolder.walkTopDown()
             .filter { it.extension == "java" && !it.isDirectory }
             .toList()
@@ -38,9 +42,11 @@ class MinimalJavaBuildCompiler : MinimalCompiler() {
         if (sourceFiles.isEmpty()) return
 
         val args = listOf(
+            // 1.8 with source and target is the fastest, even if it prints a few warnings
             "-source", "1.8",
             "-target", "1.8",
-            "-d", classFolder.toString()
+           // "--release", "8",
+            "-d", classFolder.path
         ) + sourceFiles.map { it.path }
 
         val result = compiler.run(null, null, null, *args.toTypedArray())
