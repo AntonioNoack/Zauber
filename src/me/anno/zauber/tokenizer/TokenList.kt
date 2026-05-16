@@ -6,6 +6,7 @@ import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile.root
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Import
 import kotlin.math.max
 import kotlin.math.min
@@ -443,19 +444,27 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return -1
     }
 
-    fun readPath(i: Int): Pair<Scope, Int> {
+    fun readPath(i: Int, scopeType: ScopeType?): Pair<Scope, Int> {
         var j = i
         check(equals(j, TokenType.NAME, TokenType.KEYWORD))
-        var path = root.getOrPut(toString(j++), null)
+        var path = root.getOrPut(toString(j++), scopeType)
+        if (scopeType == ScopeType.PACKAGE) {
+            path.setEmptyTypeParams()
+        }
+
         while (equals(j, ".") && equals(j + 1, TokenType.NAME, TokenType.KEYWORD)) {
-            path = path.getOrPut(toString(j + 1), null)
+            path = path.getOrPut(toString(j + 1), scopeType)
+            if (scopeType == ScopeType.PACKAGE) {
+                path.setEmptyTypeParams()
+            }
+
             j += 2 // skip period and name
         }
         return path to j
     }
 
     fun readImport(i: Int): Pair<Import, Int> {
-        var (path, j) = readPath(i)
+        var (path, j) = readPath(i, null)
         val allChildren = equals(j, ".*")
         if (allChildren) j++
         val name = if (!allChildren &&

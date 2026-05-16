@@ -1,7 +1,6 @@
-package me.anno.generation.llvmir
+package me.anno.generation.rust
 
-import me.anno.compilation.MinimalCompiler
-import me.anno.compilation.MinimalLLVMCompiler
+import me.anno.compilation.MinimalRustCompiler
 import me.anno.generation.CodeGenerationTests
 import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.generation.java.JavaSourceGenerator.Companion.register
@@ -10,16 +9,19 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class GenerateAndRunTest : CodeGenerationTests() {
+/**
+ * execution time: ~10s for all
+ * */
+class RustGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
         register(
             langScope, "println", listOf(Types.Int),
-            "System.out.println(arg0)" // todo adjust this
+            "println!(\"{}\", arg0)"
         )
     }
 
-    override fun generator(): MinimalCompiler = MinimalLLVMCompiler()
+    override fun generator() = MinimalRustCompiler()
 
     @BeforeEach
     fun init() {
@@ -55,11 +57,5 @@ class GenerateAndRunTest : CodeGenerationTests() {
     fun testValueIsPassedByCopy() {
         testValueIsPassedByCopyImpl()
     }
-
-    // todo implement value classes being copied when written / passed as parameter
-    // todo implement and test value classes being inlined
-
-    // todo implement and test working with strings
-    // todo test specialized classes being usable
 
 }

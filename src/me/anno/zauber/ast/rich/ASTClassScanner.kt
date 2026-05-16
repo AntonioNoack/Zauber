@@ -238,10 +238,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     open fun readPackage() {
-        val (path, ni) = tokens.readPath(i)
+        val (path, ni) = tokens.readPath(i, ScopeType.PACKAGE)
         currPackage = path
-        path.mergeScopeTypes(ScopeType.PACKAGE)
-        path.setEmptyTypeParams()
         i = ni
     }
 
@@ -737,7 +735,11 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         throw NotImplementedError()
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>, parameterType: ParameterType): List<Parameter> {
+    override fun readParameterDeclarations(
+        selfType: Type?,
+        extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter> {
         val parameters = ArrayList<Parameter>(extra)
         pushCall {
             while (i < tokens.size) {

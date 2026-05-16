@@ -22,11 +22,11 @@ import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.Specialization
 import java.io.File
 
 /**
@@ -239,17 +239,18 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         if (packagePath.isEmpty()) return
 
         if (cppVersion >= 17) {
+            builder.append("namespace ")
+            for (i in packagePath.indices) {
+                if (i > 0) builder.append('_')
+                builder.append(packagePath[i])
+            }
+            builder.append("{")
+            nextLine()
+        } else {
             for (part in packagePath) {
                 builder.append("namespace ").append(part).append(" {")
                 nextLine()
             }
-        } else {
-            builder.append("namespace ")
-            for (part in packagePath) {
-                builder.append(part).append(' ')
-            }
-            builder.append("{")
-            nextLine()
         }
         nextLine()
     }
@@ -491,13 +492,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     }
 
     override fun appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String) {
-        val needsArrow = if (field.isObjectLike()) {
+        val needsArrow = if (field.isOwnerThis(graph)) {
+            builder.append("this")
+            true
+        } else if (field.isObjectLike()) {
             val objectType = (field.type as ClassType).clazz
             appendGetObjectInstance(objectType, graph.method.scope)
             false
-        } else if (field.isOwnerThis(graph)) {
-            builder.append("this")
-            true
         } else {
             var field = field
             while (true) {
@@ -570,6 +571,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             is SimpleDeclaration -> {
                 val type = expr.type
                 appendType(type, expr.scope, false)
+                appendOwnershipSuffix(type)
                 builder.append(' ').append(expr.name)
                 when { // avoid undefined variables, where possible
                     type.isNullable() -> builder.append(" = nullptr")

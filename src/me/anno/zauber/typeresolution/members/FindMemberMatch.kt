@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
+import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.Constructor
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Member
@@ -11,8 +12,9 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.MemberResolver.Companion.findGenericsForMatch
 import me.anno.zauber.typeresolution.members.MergeTypeParams.collectSpecialization
-import me.anno.zauber.types.Type
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 
 object FindMemberMatch {
 
@@ -43,6 +45,23 @@ object FindMemberMatch {
         if (explicitSelfType == null && member is Constructor) {
             // hack: selfType is typically not set for constructors, only for inner classes
             explicitSelfType = member.ownerScope.typeWithoutArgs // <- without, so we don't force it
+        }
+
+        if (explicitSelfType == null &&
+            member is Field &&
+            member.isObjectInstance() &&
+            member.ownerScope.parent == root
+        ) {
+            // for package fields
+            explicitSelfType = member.ownerScope.typeWithArgs
+        }
+
+        if (member is Field && member.isObjectInstance() &&
+            member.ownerScope.parent == (explicitSelfType as? ClassType)?.clazz
+        ) {
+            // for fields inside objects, where selfType is given,
+            //   but points to the object containing the object
+            explicitSelfType = member.ownerScope.typeWithArgs
         }
 
         val avp = explicitValueParameters.size

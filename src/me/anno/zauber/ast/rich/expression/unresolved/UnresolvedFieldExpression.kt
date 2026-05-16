@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.scope.Scope
@@ -30,7 +31,7 @@ class UnresolvedFieldExpression(
     }
 
     override fun onMissingField(): Nothing {
-        throw IllegalStateException("Failed to resolve field $name in $scope")
+        throw IllegalStateException("Failed to resolve field $name in $scope at ${resolveOrigin(origin)}")
     }
 
     override fun splitsScope(): Boolean = false

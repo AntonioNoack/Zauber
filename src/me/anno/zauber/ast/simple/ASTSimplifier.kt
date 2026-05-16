@@ -20,6 +20,7 @@ import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSim
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.ParameterList
@@ -253,7 +254,8 @@ object ASTSimplifier {
             for (field in exprScope.fields) {
                 if (needsFieldByParameter(field.byParameter) &&
                     // field.originalScope == field.codeScope && // not moved
-                    block0.instructions.none { it is SimpleDeclaration && it.name == field.name }
+                    block0.instructions.none { it is SimpleDeclaration && it.name == field.name } &&
+                    fieldHasSensibleType(context, field)
                 ) {
                     val type = field.resolveValueType(context)
                     block0.add(SimpleDeclaration(type, field.name, field.scope, field.origin))
@@ -267,6 +269,13 @@ object ASTSimplifier {
             blockI = simplifyImpl(context, expr, blockIv.block, blockI, needsValue)
         }
         return blockI
+    }
+
+    private fun fieldHasSensibleType(context: ResolutionContext, field: Field): Boolean {
+        field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+        val type = field.valueType!!.specialize(context)
+        return type !is ClassType || !type.clazz.isObjectLike()
     }
 
     private fun simplifyDynamicMacro(
@@ -356,6 +365,11 @@ object ASTSimplifier {
             val value = SimpleGetObject(dst, field.ownerScope, expr.scope, expr.origin)
             block0.add(value)
             return flow0.withValue(dst)
+        }
+
+        if (!fieldHasSensibleType(context, field)) {
+            LOGGER.info("Skipping non-sense getter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")
+            return flow0
         }
 
         val valueType = expr.resolveReturnType(context)
@@ -460,6 +474,11 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val value = block2v.value
 
+        if (!fieldHasSensibleType(context, field)) {
+            LOGGER.info("Skipping non-sense setter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")
+            return block2
+        }
+
         val useSetter = canUseSetter && (
                 expr.field.resolved.isOpen() ||
                         expr.field.resolved.initialValue is DelegateExpression || (
@@ -492,9 +511,7 @@ object ASTSimplifier {
         } else {
             block2v.block.add(
                 SimpleSetField(
-                    self.use(),
-                    field,
-                    value.use(),
+                    self.use(), field, value.use(),
                     expr.field.specialization,
                     expr.scope,
                     expr.origin

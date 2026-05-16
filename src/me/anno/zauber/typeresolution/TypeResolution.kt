@@ -36,6 +36,7 @@ object TypeResolution {
         )
     }
 
+    // todo make this depend on which language we currently parse
     val langScope by threadLocal { root.getOrPut(STDLIB_NAME, null) }
 
     fun getSelfType(scope: Scope): Type? {

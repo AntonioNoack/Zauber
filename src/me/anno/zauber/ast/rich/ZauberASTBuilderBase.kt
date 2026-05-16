@@ -896,10 +896,9 @@ abstract class ZauberASTBuilderBase(
     }
 
     fun readAndApplyPackage() {
-        val (path, nextI) = tokens.readPath(i)
+        val (path, nextI) = tokens.readPath(i, ScopeType.PACKAGE)
         markNamespace(nextI)
         currPackage = path
-        currPackage.mergeScopeTypes(ScopeType.PACKAGE)
         i = nextI
     }
 

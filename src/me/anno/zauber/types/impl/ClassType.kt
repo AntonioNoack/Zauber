@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.Parameter
 import me.anno.zauber.ast.rich.ParameterMutability
 import me.anno.zauber.ast.rich.ParameterType
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -18,6 +19,63 @@ import me.anno.zauber.types.Types
  * e.g. ArrayList, ArrayList<Int> or Map<Key, Value>
  * */
 class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
+
+    companion object {
+
+        private val LOGGER = LogManager.getLogger(ClassType::class)
+
+        /**
+         * yes for compiling,
+         * no for language server
+         * */
+        var strictMode = true
+
+        fun createParameterList(
+            clazz: Scope,
+            typeParams: List<Type>,
+            origin: Long,
+            ignoreSIT: Boolean = false
+        ): ParameterList {
+            if (strictMode) {
+                if (!ignoreSIT) clazz[ScopeInitType.AFTER_DISCOVERY]
+                if (!clazz.hasTypeParameters && (clazz.scopeType == null || clazz.scopeType == ScopeType.PACKAGE)) {
+                    LOGGER.warn("Scope $clazz wasn't defined explicitly, assigning package type")
+                    clazz.scopeType = ScopeType.PACKAGE
+                    clazz.setEmptyTypeParams()
+                }
+                check(clazz.hasTypeParameters) {
+                    "$clazz is missing type parameter definition, at ${resolveOrigin(origin)}"
+                }
+                check(clazz.typeParameters.size == typeParams.size) {
+                    "Incorrect number of typeParams for $clazz, " +
+                            "expected ${clazz.typeParameters.size}, " +
+                            "got ${typeParams.size}, " +
+                            "at ${resolveOrigin(origin)}, " +
+                            "defined in ${clazz.fileName}"
+                }
+            }
+            if (clazz.typeParameters.size == typeParams.size) {
+                val result = ParameterList(clazz.typeParameters)
+                for (i in typeParams.indices) {
+                    result.set(i, typeParams[i], InsertMode.READ_ONLY)
+                }
+                return result
+            } else {
+                val fallbackGenerics = List(typeParams.size) {
+                    Parameter(
+                        it, ('A' + it).toString(), ParameterType.VALUE_PARAMETER,
+                        ParameterMutability.DEFAULT,
+                        Types.NullableAny, clazz, -1
+                    )
+                }
+                val result = ParameterList(fallbackGenerics)
+                for (i in typeParams.indices) {
+                    result.set(i, typeParams[i], InsertMode.READ_ONLY)
+                }
+                return result
+            }
+        }
+    }
 
     constructor(clazz: Scope, typeParameters: List<Type>?, origin: Long) : this(
         clazz, if (typeParameters == null) null
@@ -61,56 +119,6 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
     fun withTypeParameter(typeParameter: Type): ClassType {
         return ClassType(clazz, ParameterList(clazz.typeParameters, listOf(typeParameter)))
-    }
-
-    companion object {
-
-        /**
-         * yes for compiling,
-         * no for language server
-         * */
-        var strictMode = true
-
-        fun createParameterList(
-            clazz: Scope,
-            typeParams: List<Type>,
-            origin: Long,
-            ignoreSIT: Boolean = false
-        ): ParameterList {
-            if (strictMode) {
-                if (!ignoreSIT) clazz[ScopeInitType.AFTER_DISCOVERY]
-                check(clazz.hasTypeParameters) {
-                    "$clazz is missing type parameter definition, at ${resolveOrigin(origin)}"
-                }
-                check(clazz.typeParameters.size == typeParams.size) {
-                    "Incorrect number of typeParams for $clazz, " +
-                            "expected ${clazz.typeParameters.size}, " +
-                            "got ${typeParams.size}, " +
-                            "at ${resolveOrigin(origin)}, " +
-                            "defined in ${clazz.fileName}"
-                }
-            }
-            if (clazz.typeParameters.size == typeParams.size) {
-                val result = ParameterList(clazz.typeParameters)
-                for (i in typeParams.indices) {
-                    result.set(i, typeParams[i], InsertMode.READ_ONLY)
-                }
-                return result
-            } else {
-                val fallbackGenerics = List(typeParams.size) {
-                    Parameter(
-                        it, ('A' + it).toString(), ParameterType.VALUE_PARAMETER,
-                        ParameterMutability.DEFAULT,
-                        Types.NullableAny, clazz, -1
-                    )
-                }
-                val result = ParameterList(fallbackGenerics)
-                for (i in typeParams.indices) {
-                    result.set(i, typeParams[i], InsertMode.READ_ONLY)
-                }
-                return result
-            }
-        }
     }
 
     override fun equals(other: Any?): Boolean {

@@ -3,6 +3,8 @@ package me.anno
 import me.anno.generation.cpp.CppGenerationTests
 import me.anno.generation.java.JavaGenerationTests
 import me.anno.generation.javascript.JavaScriptGenerationTests
+import me.anno.generation.llvmir.LLVMGenerationTests
+import me.anno.generation.rust.RustGenerationTests
 import me.anno.generation.wasm.WASMGenerationTests
 import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
@@ -21,6 +23,8 @@ class MultiTest {
             "java" to JavaGenerationTests(),
             "js" to JavaScriptGenerationTests(),
             "wasm" to WASMGenerationTests(),
+            "rust" to RustGenerationTests(),
+            "llvm" to LLVMGenerationTests(),
         )
     }
 
@@ -44,6 +48,7 @@ class MultiTest {
     }
 
     fun compile(code: String, expected: String): MultiTest {
+        // todo some languages like Rust should get a per-test folder, or at least per-Rust, so we can cache the dependency builds
         val codeWithMain = if ("fun main(" in code) code else "fun main() { println(tested) }\n$code"
         for ((name, value) in languages) {
             or(name) {

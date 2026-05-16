@@ -173,6 +173,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
     fun resolveFieldByPackages(context: ResolutionContext, name: String, origin: Long): ResolvedField? {
         if (context.selfType != null) return null
         val root = root[ScopeInitType.AFTER_DISCOVERY]
+        println("looking up $name in root")
         return findMemberInScope(root, origin, name, null, emptyList(), context)
     }
 

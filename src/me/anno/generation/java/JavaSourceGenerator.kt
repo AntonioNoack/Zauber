@@ -777,7 +777,9 @@ open class JavaSourceGenerator : Generator() {
 
     fun SimpleField.isOwnerThis(graph: SimpleGraph): Boolean {
         return type is ClassType && type.clazz == graph.method.ownerScope &&
-                graph.thisFields.any { !it.key.isExplicitSelf && it.value === this }
+                (graph.thisFields.any { !it.key.isExplicitSelf && it.value === this } ||
+                        type.clazz.isObjectLike() // no this-field required
+                        )
     }
 
     open fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
@@ -789,11 +791,11 @@ open class JavaSourceGenerator : Generator() {
         graph: SimpleGraph, field: SimpleField,
         forFieldAccess: String = ""
     ) {
-        if (field.isObjectLike()) {
+        if (field.isOwnerThis(graph)) {
+            builder.append("this")
+        } else if (field.isObjectLike()) {
             val objectScope = (field.type as ClassType).clazz
             appendGetObjectInstance(objectScope, graph.method.scope)
-        } else if (field.isOwnerThis(graph)) {
-            builder.append("this")
         } else {
             var field = field
             while (true) {
@@ -1086,10 +1088,16 @@ open class JavaSourceGenerator : Generator() {
                 }
                 appendValueParams(graph, expr.valueParameters)
             }
+
             is SimpleReturn -> {
-                // todo cast if necessary
-                builder.append("return ")
-                appendFieldName(graph, expr.field)
+                if (graph.method is Constructor) {
+                    // cannot return something
+                    builder.append("return")
+                } else {
+                    // todo cast if necessary
+                    builder.append("return ")
+                    appendFieldName(graph, expr.field)
+                }
             }
             is SimpleThrow -> {
                 // todo cast if necessary
