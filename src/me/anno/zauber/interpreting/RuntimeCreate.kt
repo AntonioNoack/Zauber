@@ -1,7 +1,6 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.parseFloat
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
@@ -9,41 +8,22 @@ object RuntimeCreate {
 
     fun Runtime.createNumber(base: NumberExpression): Instance {
         val type = base.resolvedType ?: base.resolvedType0
-        var value = base.value
-        val basis = when {
-            value.startsWith("0x", true) -> {
-                value = value.substring(2)
-                16
-            }
-            value.startsWith("-0x", true) -> {
-                value = "-" + value.substring(3)
-                16
-            }
-            value.startsWith("0b", true) -> {
-                value = value.substring(2)
-                2
-            }
-            value.startsWith("-0b", true) -> {
-                value = "-" + value.substring(3)
-                2
-            }
-            else -> 10
-        }
-        if (value.endsWith("l", true)) {
-            value = value.substring(0, value.length - 1)
-        }
-        if ('_' in value) {
-            value = value.replace("_", "")
-        }
-        return when (type) {
-            Types.Byte -> createByte(value.toByte(basis))
-            Types.Short -> createShort(value.toShort(basis))
-            Types.Int -> createInt(value.toInt(basis))
-            Types.Long -> createLong(value.toLong(basis))
-            Types.Float -> createFloat(if (basis == 10) value.toFloat() else parseFloat(value, basis).toFloat())
-            Types.Double -> createDouble(if (basis == 10) value.toDouble() else parseFloat(value, basis))
+        val rawValue = when (type) {
+            Types.Byte -> base.asInt.toByte()
+            Types.UByte -> base.asInt.toUByte()
+            Types.Short -> base.asInt.toShort()
+            Types.UShort -> base.asInt.toUShort()
+            Types.Int -> base.asInt.toInt()
+            Types.UInt -> base.asInt.toInt().toUInt()
+            Types.Long -> base.asInt
+            Types.ULong -> base.asInt.toULong()
+            Types.Float -> base.asFloat.toFloat()
+            Types.Double -> base.asFloat
             else -> throw NotImplementedError("Create instance of type $type")
         }
+        val instance = getClass(type).createInstance()
+        instance.rawValue = rawValue
+        return instance
     }
 
     fun Runtime.createByte(value: Byte): Instance {

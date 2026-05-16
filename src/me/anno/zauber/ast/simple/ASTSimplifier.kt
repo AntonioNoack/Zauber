@@ -337,7 +337,9 @@ object ASTSimplifier {
     ): FlowResult {
 
         var expr = expr
+        var canUseGetter = true
         if (expr.field.isBackingField) {
+            canUseGetter = false
             // probably could be smaller and easier...
             val backed = expr.field.resolved.getBackedField()!!
             val realField = backedToRealField(backed, expr.field, expr.context)
@@ -363,12 +365,14 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
-        val useGetter = expr.field.resolved.isOpen() ||
-                expr.field.resolved.initialValue is DelegateExpression || (
-                !expr.field.isBackingField && (
-                        field.hasCustomGetter ||
-                                field.isLateinit() ||
-                                !field.needsToBeStored()
+        val useGetter = canUseGetter && (
+                expr.field.resolved.isOpen() ||
+                        expr.field.resolved.initialValue is DelegateExpression || (
+                        !expr.field.isBackingField && (
+                                field.hasCustomGetter ||
+                                        field.isLateinit() ||
+                                        !field.needsToBeStored()
+                                )
                         )
                 )
 
@@ -426,36 +430,6 @@ object ASTSimplifier {
         }
     }
 
-    fun backedToRealField(backed: Field, backing: ResolvedField, context: ResolutionContext): ResolvedField {
-        val realSpec = Specialization(
-            backed.fieldScope,
-            context.specialization.typeParameters
-        )
-        return ResolvedField(
-            backed, context.withSpec(realSpec),
-            backing.codeScope, backing.matchScore
-        )
-    }
-
-    fun getMethod(type: Type): MethodLike? {
-        val type = type.resolvedName.resolve()
-        if (type !is ClassType) return null
-
-        var scope = type.clazz
-        while (true) {
-            val method = scope.selfAsMethod
-            if (method != null) return method
-
-            scope = scope.parentIfSameFile ?: return null
-        }
-    }
-
-    private fun needsCapture(selfMethod: MethodLike?, valueMethod: MethodLike, field: Field): Boolean {
-        return selfMethod != null && selfMethod != valueMethod &&
-                valueMethod.scope.parent?.isObjectLike() != true &&
-                !field.ownerScope.isObjectLike()
-    }
-
     private fun simplifySetField(
         context: ResolutionContext,
         expr: ResolvedSetFieldExpression,
@@ -464,7 +438,9 @@ object ASTSimplifier {
     ): FlowResult {
 
         var expr = expr
+        var canUseSetter = true
         if (expr.field.isBackingField) {
+            canUseSetter = false
             // probably could be smaller and easier...
             val backed = expr.field.resolved.getBackedField()!!
             val realField = backedToRealField(backed, expr.field, expr.context)
@@ -484,10 +460,12 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val value = block2v.value
 
-        val useSetter = expr.field.resolved.isOpen() ||
-                expr.field.resolved.initialValue is DelegateExpression || (
-                !expr.field.isBackingField &&
-                        (field.hasCustomSetter || !field.needsToBeStored())
+        val useSetter = canUseSetter && (
+                expr.field.resolved.isOpen() ||
+                        expr.field.resolved.initialValue is DelegateExpression || (
+                        !expr.field.isBackingField &&
+                                (field.hasCustomSetter || !field.needsToBeStored())
+                        )
                 )
 
         val selfMethod = getMethod(self.type)
@@ -524,6 +502,36 @@ object ASTSimplifier {
             )
             return block2.withValue(unitInstance(block0.graph, expr), block2v.block)
         }
+    }
+
+    fun backedToRealField(backed: Field, backing: ResolvedField, context: ResolutionContext): ResolvedField {
+        val realSpec = Specialization(
+            backed.fieldScope,
+            context.specialization.typeParameters
+        )
+        return ResolvedField(
+            backed, context.withSpec(realSpec),
+            backing.codeScope, backing.matchScore
+        )
+    }
+
+    fun getMethod(type: Type): MethodLike? {
+        val type = type.resolvedName.resolve()
+        if (type !is ClassType) return null
+
+        var scope = type.clazz
+        while (true) {
+            val method = scope.selfAsMethod
+            if (method != null) return method
+
+            scope = scope.parentIfSameFile ?: return null
+        }
+    }
+
+    private fun needsCapture(selfMethod: MethodLike?, valueMethod: MethodLike, field: Field): Boolean {
+        return selfMethod != null && selfMethod != valueMethod &&
+                valueMethod.scope.parent?.isObjectLike() != true &&
+                !field.ownerScope.isObjectLike()
     }
 
     private fun simplifyCompareOp(
