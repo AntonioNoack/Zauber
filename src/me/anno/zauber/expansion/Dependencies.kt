@@ -140,6 +140,9 @@ object Dependencies {
         }
     }
 
-    fun collectClassesAndMethods(): DependencyData = reached
+    fun collectClassesAndMethods(): DependencyData {
+        addClass(Types.Unit, true)
+        return reached
+    }
 
 }

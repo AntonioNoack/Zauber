@@ -1,12 +1,12 @@
 package me.anno.zauber.interpreting
 
+import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
-import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.impl.ClassType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -51,12 +51,7 @@ class BasicRuntimeTests {
 
     @BeforeEach
     fun init() {
-        if (false) LogManager.disableLoggers(
-            "MethodResolver,Inheritance,MemberResolver," +
-                    "TypeResolution,ResolvedField,FieldExpression," +
-                    "FieldResolver,ConstructorResolver,ResolvedMethod," +
-                    "CallExpression,Field"
-        )
+        disableCompileLoggers()
     }
 
     @Test

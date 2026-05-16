@@ -8,9 +8,10 @@ import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Type
+import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.GenericType
 
 open class MethodLike(
     selfType: Type?,
@@ -114,7 +115,8 @@ open class MethodLike(
         if (typeParameters.isNotEmpty()) {
             builder.append('<')
             builder.append(typeParameters.joinToString(", ") {
-                "${it.name}: ${it.type}"
+                if (it.type == Types.NullableAny) it.name
+                else "${it.name}: ${it.type}"
             })
             builder.append("> ")
         }

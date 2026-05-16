@@ -132,7 +132,7 @@ class JumpToLabelTests {
                 assertEquals(16, value.castToInt())
             }
             .compile(code, "16\n")
-            .execute(type)
+            .runTest(type)
     }
 
 }

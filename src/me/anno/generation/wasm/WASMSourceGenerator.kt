@@ -5,7 +5,6 @@ import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.Constructor
@@ -24,11 +23,11 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.Specialization
-import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import java.io.File
 
 /**
@@ -857,6 +856,9 @@ class WASMSourceGenerator : CSourceGenerator() {
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
                 null -> {
+                    check(field.id >= 0) {
+                        "$field in ${graph.method} is invalid, what is it?"
+                    }
                     builder.append("local.get \$tmp").append(field.id)
                     binary.localGet(field.id + getLocalFieldOffset(graph))
                     nextLine()

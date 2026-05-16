@@ -24,7 +24,10 @@ class SimpleGetField(
     }
 
     init {
-        check(specialization.scope == field.fieldScope)
+        check(specialization.scope == field.fieldScope) {
+            "Field must match specialization scope, ${specialization.scope} != ${field.fieldScope}"
+        }
+
         if (self.type is ClassType) {
             val selfScope = self.type.clazz
             val fieldScope = field.ownerScope

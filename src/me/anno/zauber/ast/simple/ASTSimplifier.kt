@@ -71,7 +71,7 @@ object ASTSimplifier {
             val expr = method.method.getSpecializedBody(method)
                 ?: throw IllegalStateException("Specialized body is null? For $method")
             LOGGER.info("Simplifying $expr")
-            val graph = SimpleGraph(method.method)
+            val graph = SimpleGraph(method)
             val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
             val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
             graph.endFlow = flow1
@@ -274,8 +274,9 @@ object ASTSimplifier {
     private fun fieldHasSensibleType(context: ResolutionContext, field: Field): Boolean {
         field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
 
-        val type = field.valueType!!.specialize(context)
-        return type !is ClassType || !type.clazz.isObjectLike()
+        val type0 = field.valueType ?: field.resolveValueType(context)
+        val type1 = type0.specialize(context)
+        return type1 !is ClassType || !type1.clazz.isObjectLike()
     }
 
     private fun simplifyDynamicMacro(
@@ -427,9 +428,10 @@ object ASTSimplifier {
                     ?: throw IllegalStateException("Missing $OUTER_FIELD_NAME field in $clazz for $field")
                 val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
                 // println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
+                val spec = Specialization(outerField.fieldScope, expr.field.specialization.typeParameters)
                 val getter = SimpleGetField(
                     selfDst, self.use(), outerField,
-                    expr.field.specialization, expr.scope, expr.origin
+                    spec, expr.scope, expr.origin
                 )
                 block1v.block.add(getter)
                 self = selfDst

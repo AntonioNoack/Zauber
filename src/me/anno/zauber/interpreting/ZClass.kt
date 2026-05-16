@@ -46,13 +46,14 @@ class ZClass(val type: Type) {
             if (type in nativeTypes) {
                 return emptyList()
             }
-            val fields = type.clazz[ScopeInitType.AFTER_DISCOVERY]
+            val fields = type.clazz[ScopeInitType.AFTER_OVERRIDES]
                 .fields.filter { field -> field.needsToBeStored() }
             if (type.clazz.isConstructor() && type.clazz.parent!!.scopeType == ScopeType.INNER_CLASS) {
                 // move __outer__ to the front
                 // todo ideally, it would be sorted inside the scope already...
                 return fields.sortedByDescending { it.name == OUTER_FIELD_NAME }
             }
+            // println("fields for $type: $fields")
             return fields
         }
 
@@ -78,7 +79,7 @@ class ZClass(val type: Type) {
         var objectInstance = objectInstance
         if (objectInstance != null) return objectInstance
 
-        println("-- creating object instance for $this --")
+        // println("-- creating object instance for $this --")
 
         objectInstance = createInstance()
         this.objectInstance = objectInstance
@@ -99,7 +100,7 @@ class ZClass(val type: Type) {
             runtime.executeCall(objectInstance, spec, emptyList())
         }
 
-        println("-- created object instance for $this: $objectInstance --")
+        // println("-- created object instance for $this: $objectInstance --")
 
         return objectInstance
     }

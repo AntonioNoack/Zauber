@@ -197,7 +197,7 @@ object Macro {
         check(ownerScope != null && ownerScope.isObjectLike())
         val owner = runtime.getObjectInstance(ownerScope.typeWithArgs)
         val method1 = byMethodCall.specialization
-        check(byMethodCall.resolved == method1)
+        check(byMethodCall.resolved.memberScope == method1.scope)
 
         val callForFields = Call(method)
         runtime.callStack.add(callForFields)

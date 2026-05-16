@@ -1,7 +1,7 @@
 package me.anno.zauber.interpreting
 
+import me.anno.generation.LoggerUtils.disableCompileLoggers
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -21,6 +21,7 @@ class MacroTest {
 
     @Test
     fun testParsingXMLAtCompileTime() {
+        disableCompileLoggers()
         val value = testExecute(
             $$"""
 class XMLNode(val type: String) {
@@ -51,7 +52,7 @@ interface List<V> {
     operator fun get(index: Int): V
 }
 
-class Throwable(val message: String)
+open class Throwable(val message: String)
 object MacroContext: Throwable("") {
     lateinit var result: String
     external fun mark(i0: Int, i1: Int, type: String)
@@ -77,16 +78,9 @@ class String {
 
     @Test
     fun testCreatingSerializerAtCompileTime() {
-        LogManager.disableLoggers(
-            "TypeResolution,MemberResolver," +
-                    "ASTSimplifier,Runtime," +
-                    "Inheritance,ConstructorResolver,CallExpression," +
-                    "MethodResolver,ResolvedMethod," +
-                    "FieldResolver,FieldExpression,Field,ResolvedField," +
-                    "SimpleGetField,SimpleSetField,Stdlib"
-        )
+        disableCompileLoggers()
 
-        // todo why can't 'sample' not be resolved??? shouldn't the scope have been copied?
+        // todo serialization seems to be correct, but why is the method then returning Unit??
 
         val sourceCode = $$"""
 class Sample(var a: Int, var b: Float)

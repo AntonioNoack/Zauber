@@ -630,7 +630,7 @@ open class JavaSourceGenerator : Generator() {
         appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
     }
 
-    fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
+    open fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
         if (valueParameters.isEmpty()) return
         builder.append('<')
         for (param in valueParameters) {
@@ -713,7 +713,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendTypeParams(scope: Scope) {
+    open fun appendTypeParams(scope: Scope) {
         val typeParams = scope.typeParameters
         if (typeParams.isNotEmpty()) {
             builder.append('<')
@@ -729,7 +729,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendSuperTypes(scope: Scope) {
+    open fun appendSuperTypes(scope: Scope) {
         try {
             val superCall0 = scope.superCalls.firstOrNull()
             if (superCall0 != null &&

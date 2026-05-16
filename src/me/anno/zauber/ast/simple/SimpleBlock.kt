@@ -173,7 +173,8 @@ class SimpleBlock(val graph: SimpleGraph) {
 
             println("Step: ${innerScopeI}.$field1 -> $dst, calling on $currField")
 
-            add(SimpleGetField(dst, currField, field1, specialization, scope, origin))
+            val spec = Specialization(field1.fieldScope, specialization.typeParameters)
+            add(SimpleGetField(dst, currField, field1, spec, scope, origin))
             currField = dst
             innerScopeI = outerScopeI
         }

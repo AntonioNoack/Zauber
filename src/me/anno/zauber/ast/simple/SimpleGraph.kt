@@ -6,10 +6,13 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 
-class SimpleGraph(val method: MethodLike) {
+class SimpleGraph(val method0: Specialization) {
+
+    val method = method0.method
 
     private var numFields = 0
     val blocks = ArrayList<SimpleBlock>()

@@ -35,7 +35,7 @@ fun ASTBuilderBase.createDestructuringAssignment(
             null, false, isMutable = isMutable, null,
             name.name, name.type, newValue, Flags.NONE, origin
         )
-        val newFieldExpr = FieldExpression(newField, scope, origin)
+        val newFieldExpr = FieldExpression(newField, fieldScope, origin)
         result.add(AssignmentExpression(newFieldExpr, newValue))
     }
     return ExpressionList(result, scope, origin)

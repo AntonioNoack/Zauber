@@ -11,6 +11,7 @@ import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleGetOrSetField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 
 object GraphToClass {
@@ -35,7 +36,7 @@ object GraphToClass {
 
         val fields = collectFields(graph, clazz)
 
-        val newEntryGraph = SimpleGraph(graph.method)
+        val newEntryGraph = SimpleGraph(graph.method0)
         createEntryBlock(newEntryGraph, clazz, fields)
 
         val entryGraphs = graph.blocks.filter { it.isEntryPoint }
@@ -77,7 +78,7 @@ object GraphToClass {
             emptyList(), null, Flags.SYNTHETIC, origin
         )
         methodScope.selfAsMethod = method
-        val graph = SimpleGraph(method)
+        val graph = SimpleGraph(Specialization(method.scope, graph.method0.typeParameters))
         graph.startBlock.instructions.addAll(block.instructions)
         replaceFields(block, fields)
         if (true) TODO("We must also convert all shared SimpleFields [belongs to multiple methods] into fields...")

@@ -57,6 +57,11 @@ class Method(
         selfType(builder)
         builder.append(name)
         valueParams(builder)
+        val returnType = returnType
+        if (returnType != null) {
+            builder.append(": ")
+                .append(returnType)
+        }
         return builder.toString()
     }
 }

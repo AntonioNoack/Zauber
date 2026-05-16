@@ -200,6 +200,10 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 } else null
                 if (readBody) {
                     classScope.superCalls.add(SuperCall(type, valueParameters, delegate, origin))
+                    if (valueParameters != null) {
+                        val constructor = classScope.getOrCreatePrimaryConstructorScope().selfAsConstructor!!
+                        constructor.superCall = InnerSuperCall(InnerSuperCallTarget.SUPER, valueParameters, origin)
+                    }
                 }
             } while (consumeIf(TokenType.COMMA))
         }

@@ -44,7 +44,7 @@ class UnderdefinedCallTests {
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
             .compile(code, "1\n")
-            .execute(type)
+            .runTest(type)
     }
 
     // can we enforce const to be fully immutable?

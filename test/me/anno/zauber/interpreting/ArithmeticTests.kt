@@ -32,7 +32,7 @@ class ArithmeticTests {
                 assertEquals(22, value.castToInt())
             }
             .compile(code, "22\n")
-            .execute(type)
+            .runTest(type)
     }
 
     @ParameterizedTest
@@ -51,7 +51,7 @@ class ArithmeticTests {
                 assertEquals(21, value.castToInt())
             }
             .compile(code, "21\n")
-            .execute(type)
+            .runTest(type)
     }
 
     @ParameterizedTest
@@ -72,7 +72,7 @@ class ArithmeticTests {
                 assertEquals(24, value.castToInt())
             }
             .compile(code, "24\n")
-            .execute(type)
+            .runTest(type)
     }
 
     @Test

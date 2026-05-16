@@ -3,6 +3,7 @@ package me.anno.zauber.interpreting
 import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.CollectionUtils.mapArray
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.assertTrue
 import me.anno.zauber.ast.rich.Field
 import me.anno.zauber.ast.rich.Method
 import me.anno.zauber.ast.rich.MethodLike
@@ -16,13 +17,13 @@ import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
-import me.anno.zauber.types.Specialization
 import javax.lang.model.type.UnionType
 
 class Runtime {
@@ -93,7 +94,11 @@ class Runtime {
 
     operator fun set(instance: Instance, field: Field, value: Instance) {
         val clazz = instance.clazz
-        val fieldIndex = clazz.fields.indexOf(field)
+        var fieldIndex = clazz.fields.indexOf(field)
+        if (fieldIndex == -1) {
+            // fallback for inheritance
+            fieldIndex = clazz.fields.indexOfFirst { it.name == field.name }
+        }
         check(fieldIndex != -1) {
             "Instance $clazz does not have field $field, " +
                     "available: ${clazz.fields.map { it.name }}, " +
@@ -303,7 +308,19 @@ class Runtime {
                             }
                             // handlers inside the function all were processed already :3
                             ReturnType.RETURN, ReturnType.THROW -> {
-                                LOGGER.info("Exited with $lastValue (${instr.javaClass.simpleName}) from ${block0.graph.method}")
+                                // todo validate return type
+                                val method0 = block.graph.method0
+                                val method = method0.method
+                                if (false) {
+                                    val expectedType = method.returnType!!.specialize(method0)
+                                    val actualType = lastValue.value.clazz.type
+                                    assertTrue(isSubTypeOf(expectedType, actualType)) {
+                                        "Mismatched return type in ${method}: Expected $expectedType, but got $actualType"
+                                    }
+                                }
+                                if (LOGGER.isInfoEnabled) {
+                                    LOGGER.info("Exited with $lastValue (${instr.javaClass.simpleName}) from $method")
+                                }
                                 return lastValue
                             }
                             else -> throw NotImplementedError("Unknown exit type")

@@ -12,25 +12,35 @@ import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.ast.rich.expression.unresolved.UnresolvedFieldExpression
+import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 
 object JavaSuperCallWriter {
 
     fun JavaSourceGenerator.appendSuperCall(context: ResolutionContext, superCall: InnerSuperCall) {
+        builder.append(if (superCall.target == InnerSuperCallTarget.THIS) "this" else "super")
+        appendSuperCallParams(context, superCall)
+        builder.append(';')
+        nextLine()
+    }
+
+    fun JavaSourceGenerator.appendSuperCallParams(context: ResolutionContext, superCall: InnerSuperCall) {
         // todo I think this must be in one line... needs different writing, and cannot handle errors the traditional way...
         //  a) create helper functions
         //  b) implement our own constructor
-        builder.append(if (superCall.target == InnerSuperCallTarget.THIS) "this(" else "super(")
+        builder.append('(')
         for (parameter in superCall.valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendExpression(context, parameter.value)
         }
-        builder.append(");")
-        nextLine()
+        builder.append(')')
     }
 
     fun JavaSourceGenerator.appendExpression(context: ResolutionContext, expr: Expression) {
         when (expr) {
+            is LazyExpression -> {
+                appendExpression(context, expr.value)
+            }
             is DotExpression -> {
                 appendExpression(context, expr.left)
                 builder.append('.')

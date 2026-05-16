@@ -8,7 +8,7 @@ import me.anno.zauber.types.Types
 class Constructor(
     valueParameters: List<Parameter>,
     scope: Scope,
-    val superCall: InnerSuperCall?,
+    var superCall: InnerSuperCall?,
     body: Expression?,
     flags: FlagSet,
     origin: Long

@@ -36,7 +36,7 @@ external fun println(arg0: Int)
                 assertEquals(5, it.castToInt())
             }
             .compile(code, "5\n")
-            .execute(type)
+            .runTest(type)
     }
 
     @ParameterizedTest
@@ -59,6 +59,6 @@ external fun println(arg0: Int)
                 assertEquals(5, it.castToInt())
             }
             .compile(code, "5\n")
-            .execute(type)
+            .runTest(type)
     }
 }

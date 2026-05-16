@@ -4,14 +4,14 @@ import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.ImportSorter
+import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleDeclaration
@@ -22,6 +22,7 @@ import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -144,6 +145,30 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
+    override fun appendSuperTypes(scope: Scope) {
+        var hasSuper = false
+        val superCall0 = scope.superCalls.firstOrNull()
+        if (superCall0 != null &&
+            superCall0.isClassCall &&
+            superCall0.type != Types.Any
+        ) {
+            val type = superCall0.type
+            builder.append(" : ")
+            appendType(type, scope, true)
+            hasSuper = true
+        }
+
+        var implementsKeyword = if (hasSuper) ", " else " : "
+        for (superCall in scope.superCalls) {
+            if (superCall.isInterfaceCall) {
+                val type = superCall.type
+                builder.append(implementsKeyword)
+                appendType(type, scope, true)
+                implementsKeyword = ", "
+            }
+        }
+    }
+
     override fun appendConstructors(
         classScope: Scope, className: String,
         methods: Collection<Specialization>, headerOnly: Boolean
@@ -252,12 +277,14 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 nextLine()
             }
         }
+        depth++
         nextLine()
     }
 
     override fun endPackageDeclaration(packagePath: List<String>, file: File) {
         if (packagePath.isEmpty()) return
         val packageDepth = if (cppVersion >= 17) 1 else packagePath.size
+        depth--
         nextLine()
         repeat(packageDepth) {
             builder.append("}")
@@ -325,10 +352,17 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         classScope: Scope, className: String,
         constructor: Constructor, headerOnly: Boolean
     ) {
-        if (!headerOnly) super.appendConstructorBody(classScope, className, constructor, false)
-        else {
+        if (headerOnly) {
             builder.append(";")
             nextLine()
+        } else {
+            val body = constructor.body ?: return
+            val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+            writeBlock {
+                val methodSpec = specialization
+                check(methodSpec.method === constructor)
+                appendCode(context, methodSpec, body, true)
+            }
         }
     }
 
@@ -354,6 +388,24 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             appendConstructorFlags(classScope, constructor, false)
             builder.append(className).append("::").append(className)
             appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+
+            // interfaces don't need super calls :)
+            val superCall = constructor.superCall
+            val superType = classScope.superCalls
+                .firstOrNull { it.isClassCall }?.typeI
+            if (superCall != null) {
+                builder.append(" : ")
+                if (superCall.target == InnerSuperCallTarget.THIS) {
+                    builder.append(className) // is this supported? yes
+                } else {
+                    appendType(superType!!, constructor.scope, false)
+                }
+
+                val context = ResolutionContext(null, specialization, true, null)
+                appendSuperCallParams(context, superCall)
+            } else {
+                comment { builder.append("superCall is null") }
+            }
         }
     }
 
@@ -504,7 +556,11 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
-            builder.append("tmp").append(field.id)
+            when (val expr = field.constantRef) {
+                is NumberExpression -> appendNumber(field.type, expr)
+                null -> builder.append("tmp").append(field.id)
+                else -> throw NotImplementedError("Append constant field $expr")
+            }
             // todo depending on type, we need . or ->
             false
         }

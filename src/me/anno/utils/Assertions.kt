@@ -16,6 +16,14 @@ inline fun assertEquals(a: Any?, b: Any?, message: () -> String = { "" }) {
     if (a != b) throw AssertionError("${a.format()} != ${b.format()}: ${message()}")
 }
 
+fun assertTrue(condition: Boolean, message: String) {
+    if (!condition) throw AssertionError(message)
+}
+
+inline fun assertTrue(condition: Boolean, message: () -> String = { "" }) {
+    if (!condition) throw AssertionError(message())
+}
+
 fun Any?.format() = toString()
     .replace("\n", "\\n")
     .replace("\r", "\\r")

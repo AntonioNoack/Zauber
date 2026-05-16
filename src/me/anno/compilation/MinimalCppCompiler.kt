@@ -29,7 +29,9 @@ open class MinimalCppCompiler : MinimalCompiler() {
         gen.generateCode(srcFolder, dependencies, mainMethod)
 
         val si = projectFolder.absolutePath.length + 1
-        val filesList = gen.cppFiles.joinToString("\n") { file -> file.absolutePath.substring(si) }
+        val filesList = gen.cppFiles.joinToString("\n") { file ->
+            file.absolutePath.substring(si)
+        }
 
         File(projectFolder, "CMakeLists.txt")
             .writeText(minimalCMakeLists.replace("CPP_FILES_LIST", filesList))
