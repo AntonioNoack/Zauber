@@ -9,7 +9,8 @@ import me.anno.zauber.types.Types
 class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
-        return "[${list.joinToString("; ") { it.toString(depth) }}]"
+        return if (list.size <= 1) "[${list.joinToString("; ") { it.toString(depth) }}]"
+        else "[${list.joinToString(";") { "\n  " + it.toString(depth) }}]"
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type {

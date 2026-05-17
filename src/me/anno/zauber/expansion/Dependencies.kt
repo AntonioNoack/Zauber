@@ -102,7 +102,7 @@ object Dependencies {
                 }
 
                 when (instr) {
-                    is SimpleCallable -> addMethod(instr.methodSpec)
+                    is SimpleCallable -> addMethod(instr.specialization)
                     is SimpleAllocateInstance -> addClass(instr.allocatedType)
                     is SimpleString -> addClass(Types.String, true)
                     is SimpleNumber -> addClass(instr.dst.type as ClassType, true)

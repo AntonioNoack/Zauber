@@ -939,7 +939,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                 ret()
                 nextLine()
             }
-            is SimpleSelfConstructor -> {
+            is SimpleConstructorCall -> {
                 appendCallImpl(graph, expr)
             }
             is SimpleAllocateInstance -> {
@@ -1225,7 +1225,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
-    fun appendCallImpl(graph: SimpleGraph, expr: SimpleSelfConstructor) {
+    fun appendCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {
         appendGetField(graph, expr.self)
         appendValueParams(graph, expr.valueParameters)
 

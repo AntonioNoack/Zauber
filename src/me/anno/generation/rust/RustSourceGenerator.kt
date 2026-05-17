@@ -22,10 +22,10 @@ import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.Specialization
 import java.io.File
 
 /**
@@ -502,7 +502,7 @@ class RustSourceGenerator : CSourceGenerator() {
         builder.append(needsCastForFirstValue.boxed).append("::new(")
         appendFieldName(graph, expr.self)
         builder.append(").")
-        builder.append(getMethodName(expr.methodSpec))
+        builder.append(getMethodName(expr.specialization))
         appendValueParams(graph, expr.valueParameters)
     }
 
@@ -519,7 +519,7 @@ class RustSourceGenerator : CSourceGenerator() {
                 builder.append(ownership.callPrefix)
             }
             builder.append(".")
-            val methodName = getMethodName(expr.methodSpec)
+            val methodName = getMethodName(expr.specialization)
             builder.append(methodName)
             appendValueParams(graph, expr.valueParameters)
         }

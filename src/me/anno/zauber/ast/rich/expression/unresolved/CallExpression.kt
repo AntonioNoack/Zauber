@@ -38,6 +38,16 @@ class CallExpression(
         private val LOGGER = LogManager.getLogger(CallExpression::class)
     }
 
+    init {
+        println("Created CallExpr $this")
+    }
+
+    override fun resolveImpl(context: ResolutionContext): Expression {
+        return super.resolveImpl(context).apply {
+            println("Resolved CallExpr to $this")
+        }
+    }
+
     override fun toStringImpl(depth: Int): String {
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         val base = self.toString(depth)

@@ -388,7 +388,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 appendType(expr.allocatedType, expr.scope, true)
                 appendValueParams(graph, expr.paramsForLater)
             }
-            is SimpleSelfConstructor -> {
+            is SimpleConstructorCall -> {
                 when (expr.isThis) {
                     true -> builder.append("this")
                     false -> builder.append("super")

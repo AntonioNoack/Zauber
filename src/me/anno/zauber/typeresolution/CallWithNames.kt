@@ -1,13 +1,12 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.generation.Specializations
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.expression.ArrayOfExpr
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
@@ -219,16 +218,16 @@ object CallWithNames {
         return if (isUnknownGenericType(this, scope)) null else this
     }
 
-    fun createArrayOfExpr(
+    fun getArrayOfExprInstanceType(
         context: ResolutionContext,
         instanceType0: Type?, values: List<Expression>,
         scope: Scope, origin: Long,
-    ): Expression {
-
-        val instanceType = instanceType0?.nullIfUnknown(scope)
+    ): Type {
+        return instanceType0?.nullIfUnknown(scope)
             ?: run {
                 val tt = context.targetType
-                if (tt is ClassType && tt.clazz.pathStr == "zauber.Array") tt.typeParameters?.first()?.nullIfUnknown(scope)
+                if (tt is ClassType && tt.clazz.pathStr == "zauber.Array") tt.typeParameters?.first()
+                    ?.nullIfUnknown(scope)
                 else null
             } ?: run {
                 val types = values.map { it.resolveReturnType(context.withTargetType(null)) }
@@ -237,39 +236,18 @@ object CallWithNames {
                 "Unknown instance type for createArrayOfExpr (this will fail to resolve), " +
                         "at ${resolveOrigin(origin)}"
             )
+    }
 
-        val typeParameters = listOf(instanceType)
+    fun createArrayOfExpr(
+        context: ResolutionContext,
+        instanceType0: Type?, values: List<Expression>,
+        scope: Scope, origin: Long,
+    ): Expression {
+        val instanceType = getArrayOfExprInstanceType(context, instanceType0, values, scope, origin)
 
-        LOGGER.info("createArrayOfExpr($values, $typeParameters by $instanceType), spec: ${Specializations.specialization}")
+        LOGGER.info("createArrayOfExpr($values, $instanceType), spec: ${Specializations.specialization}")
 
-        // this shall be the implementation of ArrayOf():
-        //  create an Array-instance,
-        //  fill all members
-        //  'return' it
-        val createArrayInstructions = ArrayList<Expression>(values.size + 2)
-        val sizeExpr = NumberExpression("${values.size}", scope, origin)
-        val arrayInitExpr = ConstructorExpression(
-            Types.Array.clazz, typeParameters,
-            listOf(NamedParameter(null, sizeExpr)), null, scope, origin
-        )
-
-        val tmpField = scope.createImmutableField(arrayInitExpr)
-        val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
-        createArrayInstructions.add(AssignmentExpression(tmpFieldExpr, arrayInitExpr))
-        for (i in values.indices) {
-            val index = NumberExpression("$i", scope, origin)
-            createArrayInstructions.add(
-                NamedCallExpression(
-                    tmpFieldExpr, "set", emptyList(), emptyList(),
-                    listOf(
-                        NamedParameter(null, index),
-                        NamedParameter(null, values[i])
-                    ), scope, origin
-                )
-            )
-        }
-        createArrayInstructions.add(tmpFieldExpr) // 'return' value
-        return ExpressionList(createArrayInstructions, scope, origin)
+        return ArrayOfExpr(values, instanceType, scope, origin)
     }
 
 }

@@ -20,7 +20,11 @@ class ResolvedGetFieldExpression(
         ResolvedGetFieldExpression(self.clone(scope), field, scope, origin)
 
     override fun toStringImpl(depth: Int): String {
-        return "$self.$field"
+        return if (self is ThisExpression && self.label.isInsideExpression()) {
+            "$field"
+        } else {
+            "$self.$field"
+        }
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

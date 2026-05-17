@@ -21,7 +21,11 @@ class ResolvedSetFieldExpression(
         ResolvedSetFieldExpression(self.clone(scope), field, value.clone(scope), scope, origin)
 
     override fun toStringImpl(depth: Int): String {
-        return "$self.$field=$value"
+        return if (self is ThisExpression && self.label.isInsideExpression()) {
+            "$field=$value"
+        } else {
+            "$self.$field=$value"
+        }
     }
 
     override fun isResolved(): Boolean = super.isResolved() && value.isResolved()

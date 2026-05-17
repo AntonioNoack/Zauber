@@ -5,7 +5,7 @@ import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
-import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
+import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
@@ -70,7 +70,7 @@ class SimpleGraph(val method0: Specialization) {
     fun removeSuperCalls() {
         for (block in blocks) {
             block.instructions.removeIf {
-                it is SimpleSelfConstructor
+                it is SimpleConstructorCall
             }
         }
     }

@@ -10,7 +10,7 @@ import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -229,7 +229,8 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 val foundConstructor = ConstructorResolver.findMemberInScope(
                     superType.clazz, superCall.origin, superType.clazz.name,
                     null, valueParams, context
-                ) ?: throw IllegalStateException("Missing $superCall in $superType for $className, valueParams: $valueParams")
+                )
+                    ?: throw IllegalStateException("Missing $superCall in $superType for $className, valueParams: $valueParams")
                 builder.append(".__init__")
                     .append(hashMethodParameters(foundConstructor.specialization))
             }
@@ -388,7 +389,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         builder.append(needsCastForFirstValue.boxed).append("(), { content: ")
         appendFieldName(graph, expr.self)
         builder.append(" }).")
-        builder.append(getMethodName(expr.methodSpec))
+        builder.append(getMethodName(expr.specialization))
         appendValueParams(graph, expr.valueParameters)
     }
 

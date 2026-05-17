@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.utils.LazyMap
-import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.member.Method
@@ -10,13 +9,10 @@ import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.expansion.MethodOverrides.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.Specialization
 
@@ -27,14 +23,13 @@ class SimpleCall(
     // todo key should also contain specialization, or should it?
     //  method then could be the specialized one...
     val methods: Map<ClassType, MethodLike>,
-    sample: MethodLike,
     self: SimpleField,
     specialization: Specialization,
     val typeParameters: List<SimpleField>,
     val valueParameters: List<SimpleField>,
     val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Long
-) : SimpleCallable(dst, self, sample, specialization, scope, origin) {
+) : SimpleCallable(dst, self, specialization, scope, origin) {
 
     companion object {
 
@@ -103,7 +98,7 @@ class SimpleCall(
         scopeBridgingParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method), method, self,
+        dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method), self,
         specialization, typeParameters, valueParameters, scopeBridgingParameters, scope, origin
     )
 
@@ -129,7 +124,7 @@ class SimpleCall(
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, (method as? Method)?.name ?: "?", methodMap, method, self, specialization,
+        dst, (method as? Method)?.name ?: "?", methodMap, self, specialization,
         emptyList(), valueParameters, emptyList(),
         scope, origin
     )
@@ -178,38 +173,7 @@ class SimpleCall(
         }
 
         val method = methods[self.clazz.type as ClassType] ?: sample
-
-        initializeArrayIfNeeded(self, method)
-
         val method1 = Specialization(method.memberScope, specialization.typeParameters)
         return runtime.executeCall(self, method1, valueParameters).retToVal()
-    }
-
-    fun initializeArrayIfNeeded(self: Instance, method: MethodLike) {
-        val selfType = self.clazz.type.resolvedName
-        if (selfType is ClassType && selfType.clazz.pathStr == "zauber.Array" &&
-            method is Constructor && valueParameters.size == 1 &&
-            method.valueParameters[0].type.resolvedName == Types.Int
-        ) {
-            val sizeParam = valueParameters[0]
-            val size = runtime[sizeParam].castToInt()
-            self.rawValue = createArray(selfType.typeParameters?.get(0)?.resolvedName, size)
-        }
-    }
-
-    fun createArray(type: Type?, size: Int): Any {
-        return when (type) {
-            Types.Boolean -> BooleanArray(size)
-            Types.Byte -> ByteArray(size)
-            Types.Short -> ShortArray(size)
-            Types.Int -> IntArray(size)
-            Types.Long -> LongArray(size)
-            Types.Float -> FloatArray(size)
-            Types.Double -> DoubleArray(size)
-            else -> {
-                val nullValue = runtime.getNull()
-                Array(size) { nullValue }
-            }
-        }
     }
 }

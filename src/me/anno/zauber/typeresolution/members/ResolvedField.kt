@@ -191,7 +191,7 @@ class ResolvedField(
     }
 
     override fun toString(): String {
-        return "ResolvedField(field=${resolved.toStringWithoutDefault()}, generics=$specialization)"
+        return "Resolved${resolved.toStringWithoutDefault()}$specialization"
     }
 
     fun resolveCalledMethod(typeParameters: List<Type>?, valueParameters: List<ValueParameter>): ResolvedMethod {

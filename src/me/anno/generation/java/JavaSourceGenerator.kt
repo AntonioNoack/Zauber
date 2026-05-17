@@ -1155,7 +1155,7 @@ open class JavaSourceGenerator : Generator() {
                 appendType(expr.allocatedType, expr.scope, true)
                 appendValueParams(graph, expr.paramsForLater)
             }
-            is SimpleSelfConstructor -> {
+            is SimpleConstructorCall -> {
                 when (expr.isThis) {
                     true -> builder.append("this")
                     false -> builder.append("super")
@@ -1197,7 +1197,7 @@ open class JavaSourceGenerator : Generator() {
             appendCallForPrimitive(needsCastForFirstValue, expr, graph)
         } else {
             appendFieldName(graph, expr.self, ".")
-            val methodName = getMethodName(expr.methodSpec)
+            val methodName = getMethodName(expr.specialization)
             builder.append(methodName)
             appendValueParams(graph, expr.valueParameters)
         }
@@ -1208,7 +1208,7 @@ open class JavaSourceGenerator : Generator() {
         graph: SimpleGraph,
     ) {
         builder.append(needsCastForFirstValue.boxed).append('.')
-        val methodName = getMethodName(expr.methodSpec)
+        val methodName = getMethodName(expr.specialization)
         builder.append(methodName).append('(')
         appendFieldName(graph, expr.self)
         if (expr.valueParameters.isNotEmpty()) {

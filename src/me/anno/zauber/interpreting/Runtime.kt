@@ -66,7 +66,10 @@ class Runtime {
         val field = getMergedField(field)
         // LOGGER.info("Getting SimpleField $field")
         return call.simpleFields[field]
-            ?: throw IllegalStateException("Missing field $field, fields: ${call.simpleFields.entries.joinToString("") { (k, v) -> "\n  $k=$v" }}")
+            ?: run {
+                println(call.graph)
+                throw IllegalStateException("Missing field $field, fields: ${call.simpleFields.entries.joinToString("") { (k, v) -> "\n  $k=$v" }}")
+            }
     }
 
     operator fun set(field: SimpleField, value: Instance) {
@@ -128,22 +131,22 @@ class Runtime {
 
     fun executeCall(
         self: Instance,
-        methodSpec: Specialization,
+        specialization: Specialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
 
         // println("Calling $methodSpec on $self with $valueParameters")
-        check(methodSpec.isMethodLike())
+        check(specialization.isMethodLike())
 
         if (isNull(self)) {
-            throw IllegalArgumentException("Cannot execute $methodSpec on null instance")
+            throw IllegalArgumentException("Cannot execute $specialization on null instance")
         }
 
         val valueParameters = valueParameters.map { valueField ->
             this[valueField].cloneIfValue()
         }
 
-        val method = methodSpec.method
+        val method = specialization.method
         method.scope[ScopeInitType.CODE_GENERATION] // load method
 
         if (method.isExternal()) {
@@ -163,7 +166,7 @@ class Runtime {
             throw IllegalStateException("Missing body for method $method in ${method.scope.pathStr}")
         }
 
-        val graph = ASTSimplifier.simplify(methodSpec)
+        val graph = ASTSimplifier.simplify(specialization)
 
         val call = Call(method)
         prepareCall(graph, call, method, self, valueParameters)

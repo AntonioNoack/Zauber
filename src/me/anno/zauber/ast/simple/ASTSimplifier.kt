@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
@@ -227,11 +227,82 @@ object ASTSimplifier {
             is BreakExpression -> return simplifyJump(expr, flow0, block0.graph.breakLabels[expr.label])
             is ContinueExpression -> return simplifyJump(expr, flow0, block0.graph.continueLabels[expr.label])
 
+            is ArrayOfExpr -> return simplifyArrayOf(context, expr, block0, flow0)
+
             else -> {
                 if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")
                 throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
             }
         }
+    }
+
+    private fun simplifyArrayOf(
+        context: ResolutionContext,
+        expr: ArrayOfExpr,
+        block0: SimpleBlock,
+        flow0: FlowResult
+    ): FlowResult {
+
+        var flowI = flow0
+        var blockI = block0
+
+        val arrayType = expr.resolveReturnType(context)
+        val instanceType = (arrayType as ClassType).typeParameters!![0]
+
+        if (true) throw IllegalStateException("Testing: arrayOf.instanceType=$instanceType, spec: ${context.specialization.scope}")
+
+        val subContext = context
+            .withAllowTypeless(false)
+            .withTargetType(instanceType)
+
+        val values: List<SimpleField> = expr.values.map { value ->
+            flowI = simplifyImpl(subContext, value, blockI, flowI, true)
+            val blockIv = flowI.value ?: return flowI
+            blockI = blockIv.block
+            blockIv.value
+        }
+
+        val array = blockI.field(arrayType)
+        val scope = expr.scope
+        val origin = expr.origin
+        val size = blockI.field(Types.Int)
+        blockI.add(SimpleNumber(size, NumberExpression("${expr.values.size}", scope, origin)))
+        val allocateParams = listOf(size.use())
+        blockI.add(SimpleAllocateInstance(array, arrayType, allocateParams, scope, origin))
+        // handle error?
+
+        // find constructor method
+        val unit = unitInstance(blockI.graph, scope, origin)
+        val constructor = Types.Array.clazz.constructors0
+            .firstOrNull { it.valueParameters.size == 1 && it.valueParameters[0].type == Types.Int }
+            ?: throw IllegalStateException("Missing Array(size: Int) constructor")
+        val specParams = ParameterList(Types.Array.clazz.typeParameters, listOf(instanceType))
+        val specialization = Specialization(constructor.memberScope, specParams)
+        val constr = SimpleConstructorCall(unit, true, array.use(), specialization, allocateParams, scope, origin)
+        blockI.add(constr)
+        // todo handle OOM error
+
+        if (expr.values.isNotEmpty()) {
+            // find assignment method
+            val setMethod = Types.Array.clazz
+                .methods0.firstOrNull {
+                    it.name == "set" && it.valueParameters.size == 2 &&
+                            it.valueParameters[0].type == Types.Int
+                }
+                ?: throw IllegalStateException("Missing Array(size: Int).set(index,value) method")
+
+            // execute all assignments
+            for (i in values.indices) {
+                val indexExpr = NumberExpression("$i", scope, origin) // could be cached
+                val index = blockI.field(Types.Int, indexExpr)
+                blockI.add(SimpleNumber(index, indexExpr))
+                val valueParameters = listOf(index.use(), values[i].use())
+                blockI.add(SimpleCall(unit, setMethod, array.use(), specialization, valueParameters, scope, origin))
+            }
+        }
+
+        return flowI.withValue(array, blockI)
+
     }
 
     private fun simplifyJump(expr: Expression, flow0: FlowResult, target: SimpleBlock?): FlowResult {
@@ -927,17 +998,17 @@ object ASTSimplifier {
         scope: Scope,
         origin: Long
     ): FlowResult {
+        val graph = block0.graph
+        val unit = unitInstance(graph, scope, origin)
         return if (selfIfInsideConstructor != null) {
-            val graph = block0.graph
-            val unit = unitInstance(graph, scope, origin)
 
             val selfScope = (graph.method as Constructor).classScope
             val selfType = selfScope.typeWithArgs.specialize(method0.specialization)
             val self = block0.thisField(selfType, selfScope, scope, origin, method0.specialization, null)
 
-            val constructor = SimpleSelfConstructor(
+            val constructor = SimpleConstructorCall(
                 unit, selfIfInsideConstructor,
-                self.use(), method, method0.specialization, valueParameters, scope, origin
+                self.use(), method0.specialization, valueParameters, scope, origin
             )
 
             handleThrown(
@@ -952,9 +1023,11 @@ object ASTSimplifier {
             }
             // todo allocation could fail, too...
             block0.add(SimpleAllocateInstance(dst, selfType, valueParameters, scope, origin))
-            val unusedTmp = block0.field(Types.Unit)
             val specialization = method0.specialization
-            val call = SimpleCall(unusedTmp, method, dst.use(), specialization, valueParameters, scope, origin)
+            val call = SimpleConstructorCall(
+                unit, true, dst.use(),
+                specialization, valueParameters, scope, origin
+            )
             LOGGER.info("Finding throw type for $method0")
             handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
         }
