@@ -22,7 +22,7 @@ class InitializationOrderTests {
             val tested = a
             
             package zauber
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
         """.trimIndent()

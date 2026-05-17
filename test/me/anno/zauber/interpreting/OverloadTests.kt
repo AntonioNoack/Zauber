@@ -18,7 +18,7 @@ class OverloadTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun div(other: Int): Int
             }
             external fun println(arg0: Int)

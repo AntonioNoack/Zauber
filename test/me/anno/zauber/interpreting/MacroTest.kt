@@ -149,7 +149,7 @@ class Array<V>(override val size: Int): List<V> {
     override fun iterator() = ArrayIterator<V>(this)
 }
 
-class Int {
+external class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
     operator fun inc() = this + 1

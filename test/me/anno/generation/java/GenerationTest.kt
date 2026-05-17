@@ -152,7 +152,7 @@ public final class Test {
             external fun String.plus(other: Any?): String
             
             package zauber
-            class Int
+            external class Int
             class String
         """.trimIndent()
         )
@@ -170,7 +170,7 @@ public final class Test {
             external fun String.plus(other: Any?): String
             
             package zauber
-            class Int
+            external class Int
             class String
         """.trimIndent()
         )
@@ -224,7 +224,7 @@ public final class Test {
             """
                 val tested = 0
                 package zauber
-                class Int {
+                external class Int {
                     fun compareTo(other: Int): Int
                     fun equals(other: Int): Boolean
                 }
@@ -246,7 +246,7 @@ public final class Test {
             """
                 val tested = 0
                 package zauber
-                class Float {
+                external class Float {
                     fun compareTo(other: Int): Int
                     fun equals(other: Int): Boolean
                 }
@@ -276,7 +276,7 @@ public final class Test {
             
             package zauber
             class Long
-            class Int {
+            external class Int {
                 external fun toLong(): Long
             }
         """.trimIndent()
@@ -301,7 +301,7 @@ public final class Test {
             fun interface Function1<P0, R> {
                 fun call(p0: P0): R
             }
-            class Int {
+            external class Int {
                 external operator fun times(other: Int): Int
             }
         """.trimIndent()
@@ -351,7 +351,7 @@ public final class Test {
             }
             
             package zauber
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
         """.trimIndent()
@@ -414,7 +414,7 @@ public final class Test {
             fun interface Function1<P0, R> {
                 fun call(p0: P0): R
             }
-            class Int
+            external class Int
         """.trimIndent()
         )
     }

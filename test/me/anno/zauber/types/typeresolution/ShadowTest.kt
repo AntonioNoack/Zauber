@@ -21,8 +21,8 @@ class ShadowTest {
                 val tested = main(0)
                 
                 package zauber
-                class Int
-                class Float
+                external class Int
+                external class Float
             """.trimIndent(), true
         )
         assertEquals(Types.Float, actualType)

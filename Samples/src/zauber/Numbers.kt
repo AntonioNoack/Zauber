@@ -16,7 +16,7 @@ interface Number : Comparable<Self> {
     fun unaryMinus(): Self
 }
 
-value class Int(val value: NativeI32) : Number,
+external class Int(val value: NativeI32) : Number,
     Comparable<Long>, Comparable<Half>, Comparable<Float>, Comparable<Double> {
 
     external operator fun plus(other: Int): Int
@@ -193,7 +193,7 @@ value class Half(val value: NativeF16) : Number,
     override fun compareTo(other: Double): Int = toDouble().compareTo(other)
 }
 
-value class Float(val value: NativeF32) : Number,
+external class Float(val value: NativeF32) : Number,
     Comparable<Int>, Comparable<Long>, Comparable<Half>, Comparable<Double> {
 
     operator fun plus(other: Int): Float = plus(other.toLong())

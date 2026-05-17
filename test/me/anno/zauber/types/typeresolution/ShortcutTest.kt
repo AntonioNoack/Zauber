@@ -20,7 +20,7 @@ class ShortcutTest {
             val tested = X(0,1f).equals(1)
             
             package zauber
-            class Int
+            external class Int
             """.trimIndent(), reset = true
         )
         assertEquals(Types.Boolean, actual)
@@ -39,7 +39,7 @@ class ShortcutTest {
             val tested = X(0,1f).equals(1)
             
             package zauber
-            class Int
+            external class Int
             """.trimIndent(), reset = true
         )
         assertEquals(Types.Boolean, actual)

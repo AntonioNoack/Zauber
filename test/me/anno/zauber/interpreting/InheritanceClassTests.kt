@@ -18,7 +18,7 @@ class InheritanceClassTests {
     private val stdlib = "\n" + """
 package zauber
 class Any
-class Int
+external class Int
 external fun println(arg0: Int)
     """.trimIndent()
 

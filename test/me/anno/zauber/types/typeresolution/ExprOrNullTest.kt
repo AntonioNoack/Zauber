@@ -19,8 +19,8 @@ class ExprOrNullTest {
                 val tested = x?.plus(0f)
                 
                 package zauber
-                class Int
-                class Float
+                external class Int
+                external class Float
             """.trimIndent(), true
         )
         assertEquals(unionTypes(Types.Float, NullType), actual)
@@ -36,8 +36,8 @@ class ExprOrNullTest {
                 val tested = x?.plus(0f) ?: 0.0
                 
                 package zauber
-                class Int
-                class Float
+                external class Int
+                external class Float
             """.trimIndent(), true
         )
         assertEquals(unionTypes(Types.Float, Types.Double), actual)

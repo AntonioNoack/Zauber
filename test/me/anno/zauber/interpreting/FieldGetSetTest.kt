@@ -56,7 +56,7 @@ class FieldGetSetTest {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
         """.trimIndent()
@@ -76,7 +76,7 @@ class FieldGetSetTest {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun times(other: Int): Int
                 external operator fun plus(other: Int): Int
             }
@@ -101,7 +101,7 @@ class FieldGetSetTest {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
         """.trimIndent()
@@ -147,7 +147,7 @@ class FieldGetSetTest {
                 external operator fun set(index: Int, value: V)
             }
             
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
             

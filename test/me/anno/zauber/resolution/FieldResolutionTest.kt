@@ -507,8 +507,8 @@ class FieldResolutionTest {
             }
         }
         package zauber
-        class Int
-        class Float
+        external class Int
+        external class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
@@ -528,8 +528,8 @@ class FieldResolutionTest {
             }
         }
         package zauber
-        class Int
-        class Float
+        external class Int
+        external class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
@@ -550,8 +550,8 @@ class FieldResolutionTest {
         val Int.next get() = 0f
         
         package zauber
-        class Int
-        class Float
+        external class Int
+        external class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
         val actualType = findFieldType(scope)
@@ -603,7 +603,7 @@ class FieldResolutionTest {
             fun sq(x: Int) = x*x
             
             package zauber
-            class Int {
+            external class Int {
                 external fun times(other: Int): Int
             }
         """.trimIndent()

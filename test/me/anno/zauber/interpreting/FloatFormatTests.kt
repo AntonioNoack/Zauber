@@ -39,8 +39,8 @@ class FloatFormatTests {
         val float = testExecute("val tested = 17.31e3f")
         assertEquals(17.31e3f, float.castToFloat())
 
-        val double = testExecute("val tested = 17.31e3")
-        assertEquals(17.31e3, double.castToDouble())
+        val double = testExecute("val tested = 17.32e3")
+        assertEquals(17.32e3, double.castToDouble())
     }
 
     @Test

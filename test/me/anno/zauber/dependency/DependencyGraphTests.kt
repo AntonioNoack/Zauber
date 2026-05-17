@@ -26,7 +26,7 @@ class DependencyGraphTests {
             }
             
             package zauber
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
             

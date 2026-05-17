@@ -43,7 +43,7 @@ class ThisTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -64,7 +64,7 @@ class ThisTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -85,7 +85,7 @@ class ThisTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -110,7 +110,7 @@ class ThisTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -131,7 +131,7 @@ class ThisTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -159,7 +159,7 @@ class ThisTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -182,7 +182,7 @@ class ThisTests {
             val tested = A(1).B(2).test()
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
         """.trimIndent()
@@ -246,7 +246,7 @@ class Array<V>(override val size: Int): List<V> {
     external operator fun set(index: Int, value: V)
 }
 
-class Int {
+external class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
     infix fun inc() = this + 1

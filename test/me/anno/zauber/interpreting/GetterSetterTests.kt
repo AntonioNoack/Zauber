@@ -26,7 +26,7 @@ class GetterSetterTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
                 fun inc() = this + 1
@@ -51,7 +51,7 @@ class GetterSetterTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
                 fun inc() = this + 1
@@ -75,7 +75,7 @@ class GetterSetterTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
                 fun inc() = this + 1

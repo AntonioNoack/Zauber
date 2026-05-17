@@ -24,7 +24,7 @@ class UnderdefinedCallTests {
             
             package zauber
             class Any
-            class Int
+            external class Int
             class Array<V>(override val size: Int) {
                 external fun set(index: Int, value: V)
                 external fun get(index: Int): V

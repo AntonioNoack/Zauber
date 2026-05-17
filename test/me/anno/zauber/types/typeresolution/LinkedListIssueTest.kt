@@ -74,7 +74,7 @@ class LinkedListIssueTest {
             }
         }
         
-        class Int {
+        external class Int {
             external fun unaryMinus(): Int
             external fun minus(other: Int): Int
         }

@@ -19,7 +19,7 @@ class CaptureTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
             fun interface Function0<R> {
@@ -44,7 +44,7 @@ class CaptureTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun compareTo(other: Int): Int
                 operator fun inc(): Int = this + 1

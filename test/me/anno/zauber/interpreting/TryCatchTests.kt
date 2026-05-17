@@ -127,7 +127,7 @@ class TryCatchTests {
                 external fun set(index: Int, value: V)
             }
             class Any
-            class Int {
+            external class Int {
                fun equals(other: Any?) = other is Int
             }
         """.trimIndent()
@@ -157,7 +157,7 @@ class TryCatchTests {
                 throw NullPointerException(message)
             }
             class Any
-            class Int {
+            external class Int {
                fun equals(other: Any?) = other is Int
             }
         """.trimIndent()
@@ -231,7 +231,7 @@ class TryCatchTests {
             external fun println(value: Int)
             
             // stdlib for for-loop:
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun minus(other: Int): Int
                 external operator fun compareTo(other: Int): Int

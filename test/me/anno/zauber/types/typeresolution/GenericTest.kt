@@ -85,7 +85,7 @@ class GenericTest {
                 
                 // mark Int as a class (that extends Any)
                 package $STDLIB_NAME
-                class Int: Any() {
+                external class Int: Any() {
                     operator fun plus(other: Int): Int
                     operator fun plus(other: Float): Float
                 }
@@ -132,7 +132,7 @@ class GenericTest {
                 
                 // mark Int as a class (that extends Any)
                 package $STDLIB_NAME
-                class Int: Any() {
+                external class Int: Any() {
                     operator fun plus(other: Int): Int
                     operator fun plus(other: Float): Float
                 }
@@ -158,7 +158,7 @@ class GenericTest {
                 
                 // mark Int as a class (that extends Any)
                 package $STDLIB_NAME
-                class Int: Any() {
+                external class Int: Any() {
                     operator fun plus(other: Int): Int
                     operator fun plus(other: Float): Float
                 }
@@ -213,7 +213,7 @@ class GenericTest {
                 // define types as classes
                 package zauber
                 interface List<V>
-                class Int
+                external class Int
                 class String
                 class Char
             """.trimIndent(), true
@@ -233,9 +233,9 @@ class GenericTest {
                 // define types as classes
                 package zauber
                 interface List<V>
-                class Int
+                external class Int
                 class String
-                class Float
+                external class Float
             """.trimIndent(), true
         )
         val mixedType = unionTypes(listOf(Types.String, Types.Int, Types.Float))

@@ -15,12 +15,12 @@ class ClassCastTest {
                 fun Int.plus(other: Float): Float
                 
                 val x: Int? = null
-                val tested = if(x == null) "Test" else x+1f
+                val tested = if (x == null) "Test" else x + 1f
                 
                 // ensure these are registered as classes
                 package zauber
-                class Int
-                class Float
+                external class Int
+                external class Float
                 class String
             """.trimIndent(), true
         )

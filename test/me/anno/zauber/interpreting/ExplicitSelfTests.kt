@@ -24,7 +24,7 @@ class ExplicitSelfTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
@@ -45,7 +45,7 @@ class ExplicitSelfTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
             fun <S, R> S.run(runnable: S.() -> R): R {

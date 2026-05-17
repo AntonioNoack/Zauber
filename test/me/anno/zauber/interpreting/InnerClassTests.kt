@@ -117,7 +117,7 @@ class InnerClassTests {
                 
                 package zauber
                 class Any
-                class Int {
+                external class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc(): Int = this + 1
                 }
@@ -180,7 +180,7 @@ class InnerClassTests {
                 
                 package zauber
                 class Any
-                class Int {
+                external class Int {
                     external operator fun plus(other: Int): Int
                     operator fun inc() = this + 1
                 }

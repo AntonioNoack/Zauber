@@ -66,7 +66,7 @@ class Array<V>(val size: Int) {
     
     external fun clone(): Array<V>
 }
-class Float {
+external class Float {
     external operator fun plus(other: Float): Float
     external operator fun minus(other: Float): Float
     external operator fun times(other: Float): Float

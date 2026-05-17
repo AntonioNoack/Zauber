@@ -12,7 +12,7 @@ class ArithmeticTests {
 
     private val stdlib = "\n" + """
         package zauber
-        class Int(val content: Int) {
+        external class Int(val content: Int) {
             external fun plus(other: Int): Int
             external fun times(other: Int): Int
             fun inc(): Int = content + 1
@@ -87,7 +87,7 @@ class ArithmeticTests {
                 }
             
             package zauber
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
                 external fun times(other: Int): Int
                 fun inc() = this+1
@@ -104,7 +104,7 @@ class ArithmeticTests {
             fun sq(x: Int) = x*x
             
             package zauber
-            class Int {
+            external class Int {
                 external fun times(other: Int): Int
             }
         """.trimIndent()

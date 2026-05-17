@@ -22,7 +22,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
             
@@ -45,7 +45,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
             
@@ -68,7 +68,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            class Int(val content: Int) {
+            external class Int(val content: Int) {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
                 fun hashCode(): Int = content
@@ -93,7 +93,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
             }
@@ -119,7 +119,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
             }
@@ -150,7 +150,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
             }

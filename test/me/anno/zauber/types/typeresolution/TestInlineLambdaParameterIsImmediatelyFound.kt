@@ -10,10 +10,12 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.expression.unresolved.FieldResolvable
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.tokenizer.ZauberTokenizer
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.impl.LambdaType
 import org.junit.jupiter.api.Test
 
@@ -39,7 +41,8 @@ class TestInlineLambdaParameterIsImmediatelyFound {
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].firstChild(ScopeType.METHOD)
         val expr = findCallExpression(method.selfAsMethod!!.body!!)
         println("${expr.self}, ${expr.self.javaClass.simpleName}")
-        val field = (expr.self as FieldExpression).field
+        val field = (expr.self as FieldResolvable)
+            .resolveField(ResolutionContext.minimal)!!.resolved
         check(field.name == "runnable")
         check(field.byParameter is Parameter)
         check(field.valueType is LambdaType)

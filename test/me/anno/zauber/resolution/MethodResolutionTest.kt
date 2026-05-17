@@ -296,8 +296,8 @@ class MethodResolutionTest {
             }
         }
         package zauber
-        class Int
-        class Float
+        external class Int
+        external class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
         assertEquals(Types.Float, findFieldType(scope))
@@ -321,8 +321,8 @@ class MethodResolutionTest {
             }
         }
         package zauber
-        class Int
-        class Float
+        external class Int
+        external class Float
         """.trimIndent()
         val scope = typeResolveScope(code)
         assertEquals(Types.Float, findFieldType(scope))

@@ -14,7 +14,7 @@ class ExtensionFunctionTests {
             val tested = 1.calc()
             
             package zauber
-            class Int {
+            external class Int {
                 external fun plus(other: Int): Int
             }
         """.trimIndent()
@@ -49,7 +49,7 @@ class ExtensionFunctionTests {
             val tested = 0.calc()
             
             package zauber
-            class Int
+            external class Int
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(3, value.castToInt())
@@ -82,7 +82,7 @@ class ExtensionFunctionTests {
             val tested = 0.calc()
             
             package zauber
-            class Int
+            external class Int
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(2, value.castToInt())

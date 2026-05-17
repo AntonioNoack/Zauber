@@ -17,7 +17,7 @@ class ReduceTests {
         }
         return result
     }
-    class Int {
+    external class Int {
         operator fun plus(other: Int): Int
         operator fun plus(other: Float): Float
         external fun compareTo(other: Int): Int
@@ -63,7 +63,7 @@ class ReduceTests {
             }
             
             package zauber
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
             }
         """.trimIndent()

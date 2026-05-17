@@ -23,7 +23,7 @@ class FactorialTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun compareTo(other: Int): Int
                 external fun times(other: Int): Int
                 external fun minus(other: Int): Int
@@ -66,7 +66,7 @@ class FactorialTests {
             
             package zauber
             class Any
-            class Int {
+            external class Int {
                 external fun compareTo(other: Int): Int
                 external fun times(other: Int): Int
                 external fun minus(other: Int): Int
@@ -101,7 +101,7 @@ class FactorialTests {
             package zauber
             class Any
             object Unit
-            class Int {
+            external class Int {
                 external operator fun plus(other: Int): Int
                 external operator fun minus(other: Int): Int
                 external operator fun times(other: Int): Int
@@ -112,7 +112,7 @@ class FactorialTests {
                 fun dec() = this-1
             }
             
-            class IntRange(val from: Int, val to: Int) {
+            value class IntRange(val from: Int, val to: Int) {
                 fun iterator() = IntRangeIterator(this)
             }
             

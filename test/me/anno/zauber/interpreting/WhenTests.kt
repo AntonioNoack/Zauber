@@ -14,7 +14,7 @@ package zauber
 class Any {
     open fun equals(other: Any): Boolean = this === other
 }
-class Int {
+external class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
     operator fun inc(): Int = this + other

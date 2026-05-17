@@ -18,7 +18,7 @@ class FibonacciTests {
     private val stdlib = "\n" + """
         package zauber
         object Unit
-        class Int {
+        external class Int {
             external operator fun plus(other: Int): Int
             external operator fun minus(other: Int): Int
             external operator fun compareTo(other: Int): Int
@@ -29,7 +29,7 @@ class FibonacciTests {
             fun dec() = this-1
         }
         
-        class IntRange(val from: Int, val to: Int) {
+        value class IntRange(val from: Int, val to: Int) {
             fun iterator() = IntRangeIterator(this)
         }
         
