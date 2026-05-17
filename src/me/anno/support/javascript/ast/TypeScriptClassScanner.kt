@@ -3,6 +3,7 @@ package me.anno.support.javascript.ast
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
+import me.anno.utils.StringUtils.capitalize1
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.Expression
@@ -164,7 +165,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         val flags = packFlags()
 
         var name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-        name = "get${name.capitalize()}"
+        name = "get${name.capitalize1()}"
 
         val ownerScope = currPackage
         val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
@@ -205,7 +206,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
         val flags = packFlags()
 
         var name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-        name = "set${name.capitalize()}"
+        name = "set${name.capitalize1()}"
 
         val ownerScope = currPackage
         val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)

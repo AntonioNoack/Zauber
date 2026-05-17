@@ -11,7 +11,6 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.DelegateExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -21,8 +20,11 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.SuperCallExpression
 import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.createDelegateGetter
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.createDelegateSetter
 import me.anno.zauber.ast.rich.member.FieldGetterSetter.createGetterMethod0
 import me.anno.zauber.ast.rich.member.FieldGetterSetter.createSetterMethod0
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.createValueField
 import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.createAssignmentInstructionsForPrimaryConstructor
@@ -393,9 +395,10 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     open fun readField() {
-        val origin = origin(i - 1)
-        val isMutable = tokens.equals(i - 1, "var")
-        val isConst = tokens.equals(i - 1, "const")
+        val i0 = i - 1
+        val origin = origin(i0)
+        val isMutable = tokens.equals(i0, "var")
+        val isConst = tokens.equals(i0, "const")
         if (isConst) {
             addFlag(Flags.CONSTEXPR)
             check(currPackage.isObjectLike()) {
@@ -420,10 +423,15 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName at ${tokens.err(i - 1)}" }
 
         var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
+        var delegateExpr: Expression? = null
+
         val initialValue = pushScope(ownerScope.getOrCreatePrimaryConstructorScope()) {
             when {
                 consumeIf("=") -> readLazyValue(true)
-                consumeIf("by") -> DelegateExpression(readLazyValue(true))
+                consumeIf("by") -> {
+                    delegateExpr = readLazyValue(true)
+                    null
+                }
                 flags.hasFlag(Flags.LATEINIT) -> SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
                 else -> null
             }
@@ -438,7 +446,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val getterVisibility = readVisibility()
         var setterVisibility = getterVisibility
         var getterOrigin = origin
-        val getterBody: Expression? = if (consumeIf("get")) {
+        var getterBody: Expression? = if (consumeIf("get")) {
             getterOrigin = origin(i - 1)
             val body = if (consumeIf(TokenType.OPEN_CALL)) {
                 consume(TokenType.CLOSE_CALL)
@@ -448,9 +456,9 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             body
         } else null
 
-        lateinit var setterName: String
         var setterOrigin = origin
-        val setterBody: Expression? = if (consumeIf("set")) {
+        lateinit var setterName: String
+        var setterBody: Expression? = if (consumeIf("set")) {
             setterOrigin = origin(i - 1)
             if (consumeIf(TokenType.OPEN_CALL)) {
                 setterName = consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
@@ -469,6 +477,37 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             name, valueType, initialValue, flags, origin
         )
         field.typeParameters = typeParameters
+
+        if (getterBody != null && delegateExpr != null) {
+            throw IllegalStateException("Cannot have both getter and delegate at ${tokens.err(i0)}")
+        }
+
+        if (initialValue != null && delegateExpr != null) {
+            throw IllegalStateException("Cannot have both initial value and delegate at ${tokens.err(i0)}")
+        }
+
+        if (delegateExpr != null) {
+
+            val initial = delegateExpr
+            val delegateField = ownerScope.createImmutableField(initial)
+            val backingFieldExpr = FieldExpression(delegateField, ownerScope, origin)
+            ownerScope.getOrCreatePrimaryConstructorScope()
+                .code.add(AssignmentExpression(backingFieldExpr, initial))
+
+            getterBody = pushScope(ScopeType.FIELD_GETTER, "delegateGetter") { getterScope ->
+                val getterExpr = createDelegateGetter(getterScope, backingFieldExpr, origin)
+                ReturnExpression(getterExpr, null, getterScope, origin)
+            }
+
+            if (isMutable && setterBody == null) {
+                setterName = "value"
+                pushScope(ScopeType.FIELD_SETTER, "delegateSetter") { setterScope ->
+                    val valueField = createValueField(field, setterName, setterScope, origin)
+                    val valueExpr = FieldExpression(valueField, setterScope, origin)
+                    setterBody = createDelegateSetter(initial.scope, backingFieldExpr, valueExpr, origin)
+                }
+            }
+        }
 
         if (initialValue != null) {
             val constr = ownerScope.getOrCreatePrimaryConstructorScope()

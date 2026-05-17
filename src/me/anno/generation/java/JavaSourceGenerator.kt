@@ -5,13 +5,14 @@ import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringUtils.capitalize1
 import me.anno.zauber.Compile.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -239,7 +240,7 @@ open class JavaSourceGenerator : Generator() {
     open fun getPackageName(scope: Scope, specialization: Specialization): String {
         check(scope.isPackage()) { "Expected scope for packageName to be package" }
         check(specialization.typeParameters.isEmpty()) { "Expected package to have empty specialization" }
-        return scope.name.capitalize() + "Kt"
+        return scope.name.capitalize1() + "Kt"
     }
 
     open fun generateClassForScope(

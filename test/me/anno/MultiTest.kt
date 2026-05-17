@@ -7,10 +7,10 @@ import me.anno.generation.llvmir.LLVMGenerationTests
 import me.anno.generation.rust.RustGenerationTests
 import me.anno.generation.wasm.WASMGenerationTests
 import me.anno.utils.ResolutionUtils.testTypeResolution
+import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.types.Type
-import org.junit.jupiter.api.Assertions.assertEquals
 
 class MultiTest(val code: String) {
 
@@ -36,7 +36,10 @@ class MultiTest(val code: String) {
     fun type(getType: () -> Type): MultiTest {
         return or("type") {
             val actual = testTypeResolution(code, reset = true)
-            assertEquals(getType(), actual)
+            val expected = getType()
+            assertEquals(expected, actual) {
+                "Got incorrect type"
+            }
         }
     }
 

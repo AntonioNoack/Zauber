@@ -1,35 +1,35 @@
 package me.anno.zauber.ast.rich.member
 
-import me.anno.zauber.ast.rich.parser.ASTBuilderBase.Companion.shouldBeResolvable
+import me.anno.utils.StringUtils.capitalize1
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.types.impl.TypeOfField
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.DelegateExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterMutability
+import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase.Companion.shouldBeResolvable
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.TypeOfField
 
 object FieldGetterSetter {
 
     fun getterName(fieldName: String): String {
-        return "get${fieldName.capitalize()}"
+        return "get${fieldName.capitalize1()}"
     }
 
     fun setterName(fieldName: String): String {
-        return "set${fieldName.capitalize()}"
+        return "set${fieldName.capitalize1()}"
     }
 
     fun createValueField(
@@ -44,13 +44,8 @@ object FieldGetterSetter {
     }
 
     fun createBackingField(field: Field, scope: Scope, origin: Long): Field {
-        var value = field.initialValue ?: field.getterExpr
-        var valueType = field.valueType
-        if (value is DelegateExpression) {
-            value = createDelegateGetter(scope, value.value, origin)
-            valueType = null // needs resolution of getValue()
-        }
-
+        val value = field.initialValue ?: field.getterExpr
+        val valueType = field.valueType
         return scope.addField(
             field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
             "field", valueType, value /* just for the type */,
@@ -103,14 +98,9 @@ object FieldGetterSetter {
         val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
         val expr = expr0 ?: if (!isInterface) {
             val backingFieldExpr = FieldExpression(backingField, getterScope, origin)
-            val initialValue = field.initialValue
-            val valueExpr = when {
-                field.flags.hasFlag(Flags.LATEINIT) ->
-                    createLateinitExpression(field, getterScope, backingFieldExpr, origin)
-                initialValue is DelegateExpression ->
-                    createDelegateGetter(getterScope, backingFieldExpr, origin)
-                else -> backingFieldExpr
-            }
+            val valueExpr = if (field.flags.hasFlag(Flags.LATEINIT)) {
+                createLateinitExpression(field, getterScope, backingFieldExpr, origin)
+            } else backingFieldExpr
             ReturnExpression(valueExpr, null, getterScope, origin)
         } else null
 
@@ -148,11 +138,11 @@ object FieldGetterSetter {
         return IfElseBranch(condition, throwExpr, backingFieldExpr.clone(elseScope))
     }
 
-    private fun createDelegateGetter(getterScope: Scope, backingFieldExpr: Expression, origin: Long): Expression {
+    fun createDelegateGetter(getterScope: Scope, backingFieldExpr: Expression, origin: Long): Expression {
         return NamedCallExpression(backingFieldExpr, "getValue", emptyList(), getterScope, origin)
     }
 
-    private fun createDelegateSetter(
+    fun createDelegateSetter(
         setterScope: Scope, backingFieldExpr: FieldExpression,
         valueExpr: Expression, origin: Long,
     ): Expression {
@@ -187,11 +177,7 @@ object FieldGetterSetter {
             if (!isInterface) {
                 val backingFieldExpr = FieldExpression(backingField, setterScope, origin)
                 val valueExpr = FieldExpression(valueField, setterScope, origin)
-                when {
-                    field.initialValue is DelegateExpression ->
-                        createDelegateSetter(setterScope, backingFieldExpr, valueExpr, origin)
-                    else -> AssignmentExpression(backingFieldExpr, valueExpr)
-                }
+                AssignmentExpression(backingFieldExpr, valueExpr)
             } else null
         }
 

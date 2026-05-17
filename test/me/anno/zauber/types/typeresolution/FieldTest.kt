@@ -47,6 +47,39 @@ class FieldTest {
         assertEquals(Types.Int, actual)
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    fun testLazyWithoutDelegate(type: String) {
+        // todo bug: type is not fully resolved :/
+        val code = """
+                val helper = lazy { 0 }
+                val tested = helper.getValue()
+                
+                package zauber
+                class Any
+                class Lazy<V: Any>(val getter: () -> V) {
+                    var value: V? = null
+                    operator fun getValue(): V {
+                        if (value == null) {
+                            value = getter()
+                        }
+                        return value!!
+                    }
+                }
+                fun <R> lazy(getter: () -> R): Lazy {
+                    return Lazy(getter)
+                }
+                fun interface Function0<R> {
+                    fun call(): R
+                }
+                external fun println(arg0: Int)
+            """.trimIndent()
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value -> assertEquals(0, value.castToInt()) }
+            .compile("0\n")
+            .runTest(type)
+    }
 
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
@@ -56,9 +89,15 @@ class FieldTest {
                 val tested by lazy { 0 }
                 
                 package zauber
-                class Lazy<V>(val getter: () -> V) {
-                    // implementation not needed here
-                    external operator fun getValue(): V
+                class Any
+                class Lazy<V: Any>(val getter: () -> V) {
+                    var value: V? = null
+                    operator fun getValue(): V {
+                        if (value == null) {
+                            value = getter()
+                        }
+                        return value!!
+                    }
                 }
                 fun <R> lazy(getter: () -> R): Lazy {
                     return Lazy(getter)
@@ -66,7 +105,7 @@ class FieldTest {
                 fun interface Function0<R> {
                     fun call(): R
                 }
-                class Any
+                external fun println(arg0: Int)
             """.trimIndent()
         MultiTest(code)
             .type { Types.Int }

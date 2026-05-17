@@ -3,7 +3,6 @@ package me.anno.zauber.ast.simple
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishGetter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
@@ -14,15 +13,12 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishGetter
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.controlflow.Flow
-import me.anno.zauber.ast.simple.controlflow.FlowResult
-import me.anno.zauber.ast.simple.controlflow.SimpleReturn
-import me.anno.zauber.ast.simple.controlflow.SimpleThrow
-import me.anno.zauber.ast.simple.controlflow.SimpleYield
+import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
@@ -231,9 +227,6 @@ object ASTSimplifier {
             is BreakExpression -> return simplifyJump(expr, flow0, block0.graph.breakLabels[expr.label])
             is ContinueExpression -> return simplifyJump(expr, flow0, block0.graph.continueLabels[expr.label])
 
-            // pseudo/placeholder
-            is DelegateExpression -> return simplifyImpl(context, expr.value, block0, flow0, needsValue)
-
             else -> {
                 if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")
                 throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
@@ -389,8 +382,7 @@ object ASTSimplifier {
         val self = block1v.value
 
         val useGetter = canUseGetter && (
-                expr.field.resolved.isOpen() ||
-                        expr.field.resolved.initialValue is DelegateExpression || (
+                expr.field.resolved.isOpen() || (
                         !expr.field.isBackingField && (
                                 field.hasCustomGetter ||
                                         field.isLateinit() ||
@@ -490,8 +482,7 @@ object ASTSimplifier {
         }
 
         val useSetter = canUseSetter && (
-                expr.field.resolved.isOpen() ||
-                        expr.field.resolved.initialValue is DelegateExpression || (
+                expr.field.resolved.isOpen() || (
                         !expr.field.isBackingField &&
                                 (field.hasCustomSetter || !field.needsToBeStored())
                         )
