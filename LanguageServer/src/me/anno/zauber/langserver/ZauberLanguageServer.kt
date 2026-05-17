@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture
 class ZauberLanguageServer : LanguageServer, LanguageClientAware {
 
     lateinit var client: LanguageClient
+
     private val textDocumentService = ZauberTextDocumentService(this)
     private val workspaceService = ZauberWorkspaceService(this)
 
@@ -31,7 +32,11 @@ class ZauberLanguageServer : LanguageServer, LanguageClientAware {
                 this.full = Either.forLeft(true)
             }
             textDocumentSync = Either.forLeft(TextDocumentSyncKind.Incremental)
-            completionProvider = CompletionOptions()
+            completionProvider = CompletionOptions()/*.apply {
+                resolveProvider = true // todo what does this do?
+                triggerCharacters = (('A'..'Z') + ('a' .. 'z')).map { it.toString() }
+                completionItem.labelDetailsSupport = true // todo what does this do?
+            }*/
             // todo inlay hints provider = show the type, where none is specified
             // todo what are inline values?
             // todo what are diagnostics?

@@ -4,6 +4,7 @@ import me.anno.utils.Maths.clamp
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile.root
+import me.anno.zauber.ast.rich.parser.SemanticTokenList
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -17,6 +18,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
         private val LOGGER = LogManager.getLogger(TokenList::class)
         private val i0 = IntArray(0)
     }
+
+    var semantic: SemanticTokenList? = null
 
     var size = 0
     var tliIndex = -1

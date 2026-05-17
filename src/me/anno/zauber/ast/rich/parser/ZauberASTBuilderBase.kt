@@ -14,7 +14,6 @@ import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
-import me.anno.zauber.ast.rich.parser.DataClassGenerator.finishDataClass
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.*
@@ -25,13 +24,8 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.createAssignmentInstructionsForPrimaryConstructor
-import me.anno.zauber.ast.rich.parameter.InnerSuperCall
-import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parameter.*
+import me.anno.zauber.ast.rich.parser.DataClassGenerator.finishDataClass
 import me.anno.zauber.expansion.Macro.evaluateMacro
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -782,9 +776,7 @@ abstract class ZauberASTBuilderBase(
         ) return null
 
         val name = tokens.toString(i++)
-        if (this is ZauberASTBuilder) {
-            setLSType(i - 1, VSCodeType.TYPE, 0)
-        }
+        semantic?.setLSType(i - 1, VSCodeType.TYPE, 0)
 
         when (language) {
             Language.ZAUBER, Language.KOTLIN -> {
@@ -847,10 +839,7 @@ abstract class ZauberASTBuilderBase(
             "Expected name for $vsCodeType at ${tokens.err(i)}"
         }
         val name = tokens.toString(i)
-        if (this is ZauberASTBuilder) {
-            lsTypes[i] = vsCodeType.ordinal
-            lsModifiers[i] = modifiers
-        }
+        semantic?.setLSType(i, vsCodeType, modifiers)
         i++
         return name
     }
@@ -999,7 +988,7 @@ abstract class ZauberASTBuilderBase(
         if (this is ZauberASTBuilder) {
             for (k in i until nextI) {
                 if (tokens.equals(k, TokenType.NAME)) {
-                    setLSType(k, VSCodeType.NAMESPACE, 0)
+                    semantic?.setLSType(k, VSCodeType.NAMESPACE, 0)
                 }
             }
         }
@@ -1012,9 +1001,7 @@ abstract class ZauberASTBuilderBase(
     fun collectKeywords() {
         if (!tokens.equals(i, TokenType.STRING)) {
             addFlag(consumeKeyword())
-            if (this is ZauberASTBuilder) {
-                setLSType(i - 1, VSCodeType.KEYWORD, 0)
-            }
+            semantic?.setLSType(i - 1, VSCodeType.KEYWORD, 0)
             return
         }
         throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")

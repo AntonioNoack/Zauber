@@ -20,15 +20,9 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.FieldDeclaration
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterExpansion
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.expansion.Macro.evaluateMacro
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -84,31 +78,6 @@ class ZauberASTBuilder(
         }
     }
 
-    // todo now that we use lazy-parsing, we should but these into ASTClassScanner...
-    val lsTypes = IntArray(tokens.totalSize).apply { fill(-1) }
-    val lsModifiers = IntArray(tokens.totalSize)
-
-    fun setLSType(i: Int, type: VSCodeType, modifiers: Int) {
-        lsTypes[i] = type.ordinal
-        lsModifiers[i] = modifiers
-    }
-
-    init {
-        // numbers and strings are trivial to fill
-        val tmp = tokens.size
-        tokens.size = tokens.totalSize
-        for (i in 0 until tokens.totalSize) {
-            lsTypes[i] = when (tokens.getType(i)) {
-                TokenType.NUMBER -> VSCodeType.NUMBER
-                TokenType.STRING -> VSCodeType.STRING
-                TokenType.SYMBOL -> VSCodeType.OPERATOR
-                TokenType.KEYWORD -> VSCodeType.KEYWORD
-                else -> continue
-            }.ordinal
-        }
-        tokens.size = tmp
-    }
-
     override fun readSuperCalls(classScope: Scope, readBody: Boolean) {
         if (consumeIf(":")) {
             var endIndex = findEndOfSuperCalls(i)
@@ -150,8 +119,6 @@ class ZauberASTBuilder(
         }
         return -1
     }
-
-    var lastField: Field? = null
 
     private fun readFieldOrMethodSelfType(typeParameters: List<Parameter>, functionScope: Scope): Type? {
         if (tokens.equals(i + 1, ".") ||
@@ -316,7 +283,7 @@ class ZauberASTBuilder(
                     else -> break
                 }
                 addFlag(keyword)
-                setLSType(i - 1, VSCodeType.KEYWORD, 0)
+                semantic?.setLSType(i - 1, VSCodeType.KEYWORD, 0)
             }
 
             val i0 = i
@@ -697,7 +664,7 @@ class ZauberASTBuilder(
                         return@push null
                     }
                     tokens.equals(i, "in") || tokens.equals(i, "!in") -> {
-                        setLSType(i, VSCodeType.OPERATOR, 0)
+                        semantic?.setLSType(i, VSCodeType.OPERATOR, 0)
                         val symbol =
                             if (tokens.toString(i++) == "in") SubjectConditionType.CONTAINS
                             else SubjectConditionType.NOT_CONTAINS
@@ -706,7 +673,7 @@ class ZauberASTBuilder(
                         conditions.add(SubjectCondition(value, null, symbol, extra))
                     }
                     tokens.equals(i, "is") || tokens.equals(i, "!is") -> {
-                        setLSType(i, VSCodeType.OPERATOR, 0)
+                        semantic?.setLSType(i, VSCodeType.OPERATOR, 0)
                         val symbol =
                             if (tokens.toString(i++) == "is") SubjectConditionType.INSTANCEOF
                             else SubjectConditionType.NOT_INSTANCEOF

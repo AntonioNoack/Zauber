@@ -1,11 +1,11 @@
 package me.anno.zauber.langserver
 
 import me.anno.langserver.VSCodeType
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
+import me.anno.zauber.ast.rich.parser.SemanticTokenList
+import me.anno.zauber.tokenizer.TokenList
 import kotlin.math.min
 
-class VSTokenEncoder(private val builder: ZauberASTBuilder) {
-    private val tokens = builder.tokens
+class VSTokenEncoder(private val tokens: TokenList, val ls: SemanticTokenList) {
     private val data = ArrayList<Int>((tokens.size + tokens.numComments) * 5)
 
     private var prevLine = 0
@@ -60,13 +60,13 @@ class VSTokenEncoder(private val builder: ZauberASTBuilder) {
     // the output tokens must be sorted to be valid
     fun encodeTokens(): List<Int> {
         for (t in 0 until tokens.size) {
-            val type = builder.lsTypes[t]
-            if (type == -1) continue // skip
+            val type = ls.types[t]
+            if (type == (-1).toByte()) continue // skip
 
             val i0 = tokens.getI0(t)
             val i1 = tokens.getI1(t)
             pushCommentsUntil(i0)
-            push(type, builder.lsModifiers[t], i0, i1)
+            push(type.toInt(), ls.modifiers[t], i0, i1)
         }
         pushCommentsUntil(tokens.size)
         return data

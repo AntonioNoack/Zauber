@@ -21,6 +21,9 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
         val shouldBeResolvable = emptyList<Import>()
     }
 
+    val semantic
+        get() = tokens.semantic
+
     var flags = 0
 
     var currPackage = root
@@ -130,9 +133,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
 
     fun consumeIf(keyword: String, vsCodeType: VSCodeType, modifiers: Int): Boolean {
         return if (tokens.equals(i, keyword)) {
-            if (this is ZauberASTBuilder) {
-                setLSType(i, vsCodeType, modifiers)
-            }
+            semantic?.setLSType(i, vsCodeType, modifiers)
             i++
             true
         } else false
