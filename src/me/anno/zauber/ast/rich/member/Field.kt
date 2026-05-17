@@ -5,9 +5,7 @@ import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
-import me.anno.zauber.types.impl.TypeOfField
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
@@ -15,9 +13,9 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.typeresolution.members.ResolvedMethod.Companion.selfTypeToTypeParams
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.TypeOfField
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class Field(
@@ -95,9 +93,6 @@ class Field(
     var getterExpr: Expression? = null
     var hasCustomGetter = false
     var hasCustomSetter = false
-
-    fun selfTypeTypeParams(givenSelfType: Type?): List<Parameter> =
-        selfTypeToTypeParams(selfType ?: ownerScope.typeWithArgs, givenSelfType)
 
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType

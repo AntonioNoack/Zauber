@@ -28,7 +28,7 @@ data class ResolutionContext(
      * This value is only set if we're currently resolving expressions for inlining calls.
      * Otherwise, just leave it empty
      * */
-    val knownLambdas: Map<Field, Expression>,
+    val knownLambdas: Map</* from a parameter */ Field, /* lambda-like, e.g. ::plus or { 2 * it } */Expression>,
     /**
      * when methods are resolved, this is some extra 'this' possibilities;
      * these come from lambdas with self-type, e.g. S.()->Boolean

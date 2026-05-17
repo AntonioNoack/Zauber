@@ -267,7 +267,7 @@ abstract class CallExpressionBase(
 
                 val base = self.resolve(context)
                 val valueParameters1 = resolveValueParameters(context, valueParameters, null)
-                for (vp in valueParameters1) checkTypeMakesSense((vp as? ValueParameterImpl)?.type, scope)
+                // for (vp in valueParameters1) checkTypeMakesSense((vp as? ValueParameterImpl)?.type, scope)
 
                 println("Resolved value parameters: $valueParameters -> $valueParameters1")
 

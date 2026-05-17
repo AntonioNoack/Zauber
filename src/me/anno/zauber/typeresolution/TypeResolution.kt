@@ -67,7 +67,7 @@ object TypeResolution {
     fun resolveType(context: ResolutionContext, expr: Expression): Type {
         // if already resolved, just use that type
         LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
-        val type = expr.resolveReturnType(context).resolvedName
+        val type = expr.resolveReturnType(context).resolvedName.specialize(context)
         LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
         return type
     }

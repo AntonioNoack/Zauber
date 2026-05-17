@@ -3,6 +3,7 @@ package me.anno.zauber.interpreting
 import me.anno.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -111,6 +112,7 @@ class UnderdefinedCallTests {
 
     @Test
     fun testArrayReduceWithLambda() {
+        LogManager.enableAllLoggers()
         val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }

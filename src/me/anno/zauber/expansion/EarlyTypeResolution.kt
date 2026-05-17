@@ -1,6 +1,7 @@
 package me.anno.zauber.expansion
 
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
+import me.anno.zauber.ast.rich.expression.unresolved.LambdaVariable
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -84,12 +85,12 @@ object EarlyTypeResolution {
             // todo define proper resolution context
             // todo we need knownLambdas and extensionThis -> this should already happen in the method
             val selfType = null
-            field.resolveValueType(
-                ResolutionContext(
-                    selfType, Specialization.noSpecialization,
-                    false, null, emptyMap(), emptyList()
-                )
+            val ctx = ResolutionContext(
+                selfType, Specialization.noSpecialization,
+                false, null, emptyMap(), emptyList()
             )
+            if (field.initialValue == null && field.byParameter is LambdaVariable) null
+            else field.resolveValueType(ctx)
         }
     }
 

@@ -51,4 +51,10 @@ object LogManager {
             logger.isWarnEnabled = false
         }
     }
+
+    fun enableAllLoggers() {
+        for (logger in loggers.values) {
+            logger.isInfoEnabled = true
+        }
+    }
 }
