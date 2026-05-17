@@ -1,26 +1,25 @@
-package me.anno.generation.javascript
+package me.anno.generation
 
-import me.anno.compilation.MinimalCompiler
-import me.anno.compilation.MinimalJavaScriptCompiler
-import me.anno.generation.CodeGenerationTests
-import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.compilation.MinimalWASMCompiler
+import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~0.5s for all
+ * execution time: 2s,
+ * main cost is loading Node via NVM, I think
  * */
-class JavaScriptGenerationTests : CodeGenerationTests() {
+class WASMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        register(
-            langScope, "println", listOf(Types.Int),
+        JavaSourceGenerator.register(
+            TypeResolution.langScope, "println", listOf(Types.Int),
             "console.log(arg0)"
         )
     }
 
-    override fun generator(): MinimalCompiler = MinimalJavaScriptCompiler()
+    override fun generator() = MinimalWASMCompiler()
 
     @Test
     fun testSimpleAddition() {

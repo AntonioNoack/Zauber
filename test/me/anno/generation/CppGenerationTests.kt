@@ -1,25 +1,31 @@
-package me.anno.generation.java
+package me.anno.generation
 
-import me.anno.compilation.MinimalJavaBuildCompiler
-import me.anno.generation.CodeGenerationTests
-import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.compilation.MinimalCppCompiler
+import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~7s -> ~0.7s by not using Maven
+ * execution time: ~3s for all
  * */
-class JavaGenerationTests : CodeGenerationTests() {
+class CppGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        register(
-            langScope, "println", listOf(Types.Int),
-            "System.out.println(arg0)"
+        JavaSourceGenerator.register(
+            TypeResolution.langScope, "println", listOf(Types.Int),
+            "#include <stdio.h>\n" +
+                    "printf(\"%d\\n\",arg0)"
         )
     }
 
-    override fun generator() = MinimalJavaBuildCompiler()
+    override fun generator() = MinimalCppCompiler()
+
+    @BeforeEach
+    fun init() {
+        // disableCompileLoggers()
+    }
 
     @Test
     fun testSimpleAddition() {
@@ -50,11 +56,6 @@ class JavaGenerationTests : CodeGenerationTests() {
     fun testValueIsPassedByCopy() {
         testValueIsPassedByCopyImpl()
     }
-
-    // todo add .copy(name=value) as a special function on data classes
-
-    // todo implement and test value classes being inlined:
-    //  we explode them, and must make their body-functions static...
 
     // todo implement and test working with strings
     // todo test specialized classes being usable

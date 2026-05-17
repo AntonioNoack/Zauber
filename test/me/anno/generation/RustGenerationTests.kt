@@ -1,9 +1,8 @@
-package me.anno.generation.rust
+package me.anno.generation
 
 import me.anno.compilation.MinimalRustCompiler
-import me.anno.generation.CodeGenerationTests
-import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
@@ -13,8 +12,8 @@ import org.junit.jupiter.api.Test
 class RustGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        register(
-            langScope, "println", listOf(Types.Int),
+        JavaSourceGenerator.register(
+            TypeResolution.langScope, "println", listOf(Types.Int),
             "println!(\"{}\", arg0)"
         )
     }

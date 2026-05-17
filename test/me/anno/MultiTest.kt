@@ -1,11 +1,11 @@
 package me.anno
 
-import me.anno.generation.cpp.CppGenerationTests
-import me.anno.generation.java.JavaGenerationTests
-import me.anno.generation.javascript.JavaScriptGenerationTests
-import me.anno.generation.llvmir.LLVMGenerationTests
-import me.anno.generation.rust.RustGenerationTests
-import me.anno.generation.wasm.WASMGenerationTests
+import me.anno.generation.CppGenerationTests
+import me.anno.generation.JavaGenerationTests
+import me.anno.generation.JavaScriptGenerationTests
+import me.anno.generation.LLVMGenerationTests
+import me.anno.generation.RustGenerationTests
+import me.anno.generation.WASMGenerationTests
 import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute

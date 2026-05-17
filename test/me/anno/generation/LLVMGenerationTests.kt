@@ -1,18 +1,17 @@
-package me.anno.generation.llvmir
+package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalLLVMCompiler
-import me.anno.generation.CodeGenerationTests
-import me.anno.generation.java.JavaSourceGenerator.Companion.register
-import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 class LLVMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        register(
-            langScope, "println", listOf(Types.Int),
+        JavaSourceGenerator.register(
+            TypeResolution.langScope, "println", listOf(Types.Int),
             "System.out.println(arg0)" // todo adjust this
         )
     }
