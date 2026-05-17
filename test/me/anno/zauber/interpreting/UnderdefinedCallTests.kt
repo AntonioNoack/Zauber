@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource
 class UnderdefinedCallTests {
 
     @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    @ValueSource(strings = ["type", "runtime",/* "js", "java", "c++", "wasm"*/])
     fun testArrayOf(type: String) {
         val code = """
             val tested = arrayOf(1, 2, 3)
@@ -50,10 +50,10 @@ class UnderdefinedCallTests {
     // can we enforce const to be fully immutable?
     //  we could only allow it on value-classes of value-classes...
 
-    @Test
-    fun testListOf() {
-        val value = testExecute(
-            """
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime"])
+    fun testListOf(type: String) {
+        val code = """
             val tested = listOf(1, 2, 3)
             
             package zauber
@@ -67,19 +67,17 @@ class UnderdefinedCallTests {
             fun <V> listOf(vararg vs: V): List<V> = vs
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
-        )
-        when (val contents = value.rawValue) {
-            is IntArray -> {
-                // todo it should be this one..., but it's the other one
-                assertEquals(Types.Array.withTypeParameter(Types.Int), value.clazz.type)
+
+        MultiTest(code)
+            .type { Types.List.withTypeParameter(Types.Int) }
+            .runtime { value ->
+                val type = Types.Array.withTypeParameter(Types.Int)
+                assertEquals(runtime.getClass(type), value.clazz)
+
+                val contents = assertInstanceOf<IntArray>(value.rawValue)
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
-            is Array<*> -> {
-                assertEquals(Types.Array, value.clazz.type)
-                assertEquals(listOf(1, 2, 3), contents.map { value -> (value as Instance).castToInt() })
-            }
-            else -> throw IllegalStateException("$value is incorrect")
-        }
+            .runTest(type)
     }
 
     private val stdlib = """

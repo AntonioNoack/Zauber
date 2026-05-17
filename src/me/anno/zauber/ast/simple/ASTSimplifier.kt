@@ -249,8 +249,6 @@ object ASTSimplifier {
         val arrayType = expr.resolveReturnType(context)
         val instanceType = (arrayType as ClassType).typeParameters!![0]
 
-        if (true) throw IllegalStateException("Testing: arrayOf.instanceType=$instanceType, spec: ${context.specialization.scope}")
-
         val subContext = context
             .withAllowTypeless(false)
             .withTargetType(instanceType)

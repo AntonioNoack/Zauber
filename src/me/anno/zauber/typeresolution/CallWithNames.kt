@@ -211,7 +211,7 @@ object CallWithNames {
 
     private fun isUnknownGenericType(instanceType: Type?, scope: Scope): Boolean {
         return instanceType is GenericType &&
-                instanceType.scope.isVisibleFrom(scope)
+                !instanceType.scope.isVisibleFrom(scope)
     }
 
     private fun Type?.nullIfUnknown(scope: Scope): Type? {
@@ -244,9 +244,7 @@ object CallWithNames {
         scope: Scope, origin: Long,
     ): Expression {
         val instanceType = getArrayOfExprInstanceType(context, instanceType0, values, scope, origin)
-
-        LOGGER.info("createArrayOfExpr($values, $instanceType), spec: ${Specializations.specialization}")
-
+        println("createArrayOfExpr($values, $instanceType), spec: ${Specializations.specialization}")
         return ArrayOfExpr(values, instanceType, scope, origin)
     }
 

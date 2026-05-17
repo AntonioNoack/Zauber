@@ -8,10 +8,6 @@ import me.anno.zauber.types.Types
 class ArrayOfExpr(val values: List<Expression>, val type: Type, scope: Scope, origin: Long) :
     Expression(scope, origin) {
 
-    init {
-        throw IllegalStateException("Testing: arrayOf<$type>")
-    }
-
     override fun toStringImpl(depth: Int): String {
         return "arrayOf(${values.joinToString(",") { "\n  " + it.toString(depth) }})"
     }
