@@ -18,10 +18,10 @@ class ResolvedMethod(method: Method, context: ResolutionContext, codeScope: Scop
 
     private val typeFromCallImpl = lazy {
         val method = resolved
-        LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
-        val selfType = if (method.selfType != null) context.selfType else method.ownerScope.typeWithArgs
+        val context = this.context
+        if (LOGGER.isInfoEnabled) LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
         val inGeneral = method.resolveReturnType(context)
-        val forSelf = specialization.typeParameters.resolveGenerics(selfType, inGeneral)
+        val forSelf = specialization.typeParameters.resolveGenerics(context.selfType, inGeneral)
         forSelf.specialize(specialization)
     }
 

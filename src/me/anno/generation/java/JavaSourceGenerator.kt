@@ -508,7 +508,7 @@ open class JavaSourceGenerator : Generator() {
         appendMethodFlags(classScope, method, headerOnly)
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
-        appendType(method.returnType ?: Types.NullableAny, classScope, false)
+        appendType(method.resolveReturnType(method0), classScope, false)
 
         builder.append(' ').append(getMethodName(method0))
 

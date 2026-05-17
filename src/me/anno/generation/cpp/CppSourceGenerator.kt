@@ -456,7 +456,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
 
-        val returnType = resolveType(method.returnType ?: Types.NullableAny)
+        val returnType = resolveType(method.resolveReturnType(method0))
         appendType(returnType, classScope, false)
         appendOwnershipSuffix(returnType)
 

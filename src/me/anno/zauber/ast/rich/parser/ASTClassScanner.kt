@@ -8,9 +8,6 @@ import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.member.FieldGetterSetter.createGetterMethod0
-import me.anno.zauber.ast.rich.member.FieldGetterSetter.createSetterMethod0
-import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
@@ -24,15 +21,12 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.SuperCallExpression
 import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.createGetterMethod0
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.createSetterMethod0
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.createAssignmentInstructionsForPrimaryConstructor
-import me.anno.zauber.ast.rich.parameter.InnerSuperCall
-import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterExpansion
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -426,11 +420,13 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName at ${tokens.err(i - 1)}" }
 
         var valueType = if (consumeIf(":")) readTypeNotNull(selfType, true) else null
-        val initialValue = when {
-            consumeIf("=") -> readLazyValue(true)
-            consumeIf("by") -> DelegateExpression(readLazyValue(true))
-            flags.hasFlag(Flags.LATEINIT) -> SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
-            else -> null
+        val initialValue = pushScope(ownerScope.getOrCreatePrimaryConstructorScope()) {
+            when {
+                consumeIf("=") -> readLazyValue(true)
+                consumeIf("by") -> DelegateExpression(readLazyValue(true))
+                flags.hasFlag(Flags.LATEINIT) -> SpecialValueExpression(SpecialValue.NULL, ownerScope, origin)
+                else -> null
+            }
         }
 
         if (isConst) {

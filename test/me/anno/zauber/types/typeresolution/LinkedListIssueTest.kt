@@ -22,7 +22,11 @@ class LinkedListIssueTest {
             operator fun iterator(): Iterator<V>
         }
         
-        class Array<V>(override val size: Int) : Iterable<V> {
+        class List<V>: Iterable<V> {
+            operator fun get(index: Int): V
+        }
+        
+        class Array<V>(override val size: Int) : List<V> {
             external override operator fun get(index: Int): V
             external operator fun set(index: Int, value: V)
             external operator fun get(index: Int): V
@@ -36,7 +40,7 @@ class LinkedListIssueTest {
             }
         }
         
-        class LinkedList<V>(capacity: Int = 16) : Iterable<V> {
+        class LinkedList<V>(capacity: Int = 16) : List<V> {
         
             private val content = Array<V>(capacity)
             private val previous = Array<Int>(capacity)

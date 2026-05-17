@@ -86,7 +86,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
         nextLine()
         builder.append("define ")
-        appendType(method.returnType ?: Types.NullableAny, method.scope, false)
+        appendType(method.resolveReturnType(method0), method.scope, false)
 
         builder.append(" @")
         builder.append(getMethodName(method0))

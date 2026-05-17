@@ -1,9 +1,12 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.types.Types
+import me.anno.MultiTest
 import me.anno.utils.ResolutionUtils.testTypeResolution
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class FieldTest {
 
@@ -45,21 +48,11 @@ class FieldTest {
     }
 
 
-    @Test
-    fun testTypeByDelegate() {
-        // todo test delegates in runtime
-        /* class Delegate {
-            operator fun getValue(thisRef: Any?, property: KProperty<*>): String {
-                return "$thisRef, thank you for delegating '${property.name}' to me!"
-            }
-
-            operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
-                println("$value has been assigned to '${property.name}' in $thisRef.")
-            }
-        } */
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    fun testTypeByDelegate(type: String) {
         // todo bug: type is not fully resolved :/
-        val actual = testTypeResolution(
-            """
+        val code = """
                 val tested by lazy { 0 }
                 
                 package zauber
@@ -73,9 +66,13 @@ class FieldTest {
                 fun interface Function0<R> {
                     fun call(): R
                 }
+                class Any
             """.trimIndent()
-        )
-        assertEquals(Types.Int, actual)
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value -> assertEquals(0, value.castToInt()) }
+            .compile("0\n")
+            .runTest(type)
     }
 
 }

@@ -267,7 +267,7 @@ class RustSourceGenerator : CSourceGenerator() {
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
 
         builder.append(" -> ")
-        val returnType = resolveType(method.returnType ?: Types.NullableAny)
+        val returnType = resolveType(method.resolveReturnType(method0))
         val isObject = returnType is ClassType && returnType.clazz.isObjectLike()
         if (isObject) builder.append("MutexGuard<'static, ")
         appendType(returnType, classScope, false)

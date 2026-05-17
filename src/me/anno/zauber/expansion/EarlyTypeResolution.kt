@@ -23,14 +23,17 @@ object EarlyTypeResolution {
     private fun replaceUnresolvedTypes(scope: Scope) {
         val selfScope = findSelfScope(scope)
 
+        val isOpen = selfScope != null && selfScope.isOpen()
+        val selfScope1 = if (isOpen) null else selfScope
+
         val asMethod = scope.selfAsMethod
-        if (asMethod != null) replaceUnresolvedTypesForMethod(asMethod, selfScope)
+        if (asMethod != null) replaceUnresolvedTypesForMethod(asMethod, selfScope1)
 
         val asConstructor = scope.selfAsConstructor
-        if (asConstructor != null) replaceUnresolvedTypesForConstructor(asConstructor, selfScope)
+        if (asConstructor != null) replaceUnresolvedTypesForConstructor(asConstructor, selfScope1)
 
         for (field in scope.fields) {
-            replaceUnresolvedTypesForField(field, selfScope)
+            replaceUnresolvedTypesForField(field, selfScope1)
         }
     }
 
