@@ -18,6 +18,7 @@ import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 class SimpleBlock(val graph: SimpleGraph) {
 
@@ -255,6 +256,7 @@ class SimpleBlock(val graph: SimpleGraph) {
                 is UnionType -> types.any { it.isNullable() }
                 is AndType -> types.all { it.isNullable() }
                 is GenericType -> superBounds.isNullable()
+                is UnresolvedType -> resolvedName.isNullable()
                 else -> throw NotImplementedError("Can a $this be null?")
             }
         }

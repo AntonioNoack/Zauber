@@ -558,7 +558,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             }
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
-                null -> builder.append("tmp").append(field.id)
+                null -> {
+                    check(field.id >= 0) { "Invalid field $field in $graph" }
+                    builder.append("tmp").append(field.id)
+                }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
             // todo depending on type, we need . or ->

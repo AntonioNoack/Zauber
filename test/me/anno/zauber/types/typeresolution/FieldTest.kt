@@ -51,9 +51,11 @@ class FieldTest {
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testLazyWithoutDelegate(type: String) {
         // todo bug: type is not fully resolved :/
+        // todo bug: at runtime, why does null get returned???
+        // todo bug: compiled versions all don't work
         val code = """
                 val helper = lazy { 0 }
-                val tested = helper.getValue()
+                val tested: Int = helper.getValue()
                 
                 package zauber
                 class Any
@@ -86,7 +88,7 @@ class FieldTest {
     fun testTypeByDelegate(type: String) {
         // todo bug: type is not fully resolved :/
         val code = """
-                val tested by lazy { 0 }
+                val tested: Int by lazy { 0 }
                 
                 package zauber
                 class Any

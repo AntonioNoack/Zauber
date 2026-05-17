@@ -1,8 +1,8 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
@@ -113,7 +113,8 @@ class SimpleGraph(val method0: Specialization) {
     fun removeFieldIf(condition: (SimpleField) -> Boolean) {
         fields.removeIf {
             if (condition(it)) {
-                it.id = Int.MIN_VALUE
+                it.id = -100_000 - it.id
+                check(it.id < 0)
                 true
             } else false
         }

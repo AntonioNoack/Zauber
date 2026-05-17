@@ -1,5 +1,6 @@
 package me.anno.zauber.expansion
 
+import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -32,6 +33,9 @@ object EarlyTypeResolution {
         val asConstructor = scope.selfAsConstructor
         if (asConstructor != null) replaceUnresolvedTypesForConstructor(asConstructor, selfScope1)
 
+        val asLambda = scope.selfAsLambda
+        if (asLambda != null) replaceUnresolvedTypesForLambda(asLambda, selfScope1)
+
         for (field in scope.fields) {
             replaceUnresolvedTypesForField(field, selfScope1)
         }
@@ -44,6 +48,13 @@ object EarlyTypeResolution {
 
     private fun replaceUnresolvedTypesForConstructor(method: Constructor, selfScope: Scope?) {
         replaceUnresolvedTypesForMethodLike(method, selfScope)
+    }
+
+    private fun replaceUnresolvedTypesForLambda(method: LambdaExpression, selfScope: Scope?) {
+        val lambdaVariables = method.variables ?: return
+        for (variable in lambdaVariables) {
+            variable.type = variable.type?.resolve(selfScope)
+        }
     }
 
     private fun replaceUnresolvedTypesForMethodLike(method: MethodLike, selfScope: Scope?) {

@@ -10,6 +10,8 @@ import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -855,10 +857,16 @@ class WASMSourceGenerator : CSourceGenerator() {
             }
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
-                null -> {
-                    check(field.id >= 0) {
-                        "$field in ${graph.method} is invalid, what is it?"
+                is SpecialValueExpression -> when (expr.type) {
+                    SpecialValue.NULL -> {
+                        builder.append("ref.null")
+                        binary.u8(WASMOpcode.REF_NULL)
                     }
+                    SpecialValue.TRUE -> i32Const(1)
+                    SpecialValue.FALSE -> i32Const(0)
+                }
+                null -> {
+                    check(field.id >= 0) { "Invalid field $field in $graph" }
                     builder.append("local.get \$tmp").append(field.id)
                     binary.localGet(field.id + getLocalFieldOffset(graph))
                     nextLine()

@@ -550,7 +550,7 @@ class Scope(val name: String, val parent: Scope? = null) {
      * for inner classes and methods, the origin should be that of the first class-defining keyword, e.g. 'object'
      * */
     fun generateName(prefix: String, uniqueOrigin: Long): String {
-        return "$${prefix}_o$uniqueOrigin"
+        return "$${prefix}_o${uniqueOrigin.toString(36)}"
     }
 
     val parentIfSameFile: Scope?

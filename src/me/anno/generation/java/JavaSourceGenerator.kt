@@ -17,6 +17,7 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -861,7 +862,15 @@ open class JavaSourceGenerator : Generator() {
             }
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
-                null -> builder.append("tmp").append(field.id)
+                null -> {
+                    check(field.id >= 0) { "Invalid field $field in $graph" }
+                    builder.append("tmp").append(field.id)
+                }
+                is SpecialValueExpression -> when (expr.type) {
+                    SpecialValue.NULL -> builder.append("null")
+                    SpecialValue.TRUE -> builder.append("true")
+                    SpecialValue.FALSE -> builder.append("false")
+                }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
         }

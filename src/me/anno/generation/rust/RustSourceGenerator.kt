@@ -433,6 +433,7 @@ class RustSourceGenerator : CSourceGenerator() {
             while (true) {
                 field = field.mergeInfo?.dst ?: break
             }
+            check(field.id >= 0) { "Invalid field $field in $graph" }
             builder.append("tmp").append(field.id)
             when (forFieldAccess) {
                 "" -> {}
