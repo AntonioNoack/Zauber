@@ -54,11 +54,6 @@ class TypeAliasConstructorTest {
 
     @Test
     fun testTypeAliasInsideGetter() {
-        // type is incorrect:
-        //  return has type Nothing,
-        //  but what we actually want is what is returned,
-        //  find that out somehow, I know we can do it...
-        // todo somehow, it cannot resolve the type??
         // (Kotlin doesn't even allow this)
         val actualType = testTypeResolution(
             """
@@ -73,8 +68,8 @@ class TypeAliasConstructorTest {
                 external operator fun set(index: Int, value: V)
             }
             fun <X> arrayOf(vararg v: X): Array<X> = v
-        """.trimIndent()
+        """.trimIndent(), reset = true
         )
-        assertEquals(Types.List.withTypeParameter(Types.Int), actualType)
+        assertEquals(Types.Array.withTypeParameter(Types.Int), actualType)
     }
 }

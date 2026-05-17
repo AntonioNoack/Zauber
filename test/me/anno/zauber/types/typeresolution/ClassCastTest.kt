@@ -22,7 +22,7 @@ class ClassCastTest {
                 external class Int
                 external class Float
                 class String
-            """.trimIndent(), true
+            """.trimIndent(), reset = true
         )
         assertEquals(unionTypes(Types.Float, Types.String), actual)
     }

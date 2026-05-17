@@ -1,8 +1,8 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -45,7 +45,10 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : E
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {
-        return ExpressionList(list.map { it.resolve(context) }, scope, origin)
+        val ctxWithoutTypeRequirement = context.withAllowTypeless(true)
+        return ExpressionList(list.mapIndexed { index, expr ->
+            expr.resolve(if (index == list.lastIndex) ctxWithoutTypeRequirement else context)
+        }, scope, origin)
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

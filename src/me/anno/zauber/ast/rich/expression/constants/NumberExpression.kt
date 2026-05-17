@@ -17,6 +17,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
 
         private val LOGGER = LogManager.getLogger(NumberExpression::class)
 
+        const val CHAR_BASE = -1
+
         private fun parseDigit(c: Char): Int {
             return when (c) {
                 in '0'..'9' -> c - '0'
@@ -27,6 +29,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         }
 
         fun parseFloat(value: String, basis: Int): Double {
+            if (basis == CHAR_BASE) return parseChar(value).code.toDouble()
+
             var result = 0.0
             var i = 0
             if (value.startsWith('-')) i++ // skip sign
@@ -115,6 +119,8 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         }
 
         fun parseInt(value: String, basis: Int): Long {
+            if (basis == CHAR_BASE) return parseChar(value).code.toLong()
+
             var result = 0L
             var i = 0
             val isNegative = value.startsWith('-')
@@ -147,10 +153,33 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
             return if (isNegative) result else -result
         }
 
+        fun parseChar(value: String): Char {
+            check(value.startsWith('\''))
+            var i = 1
+            if (value[1] == '\\') i++
+            val char = if (i == 2) when (value[i]) {
+                'f' -> '\u000c'
+                'n' -> '\n'
+                'r' -> '\r'
+                't' -> '\t'
+                '0' -> '\u0000'
+                'u' -> {
+                    val hex = value.substring(2, 6).toInt(16)
+                    i += 4 // 4 more chars
+                    hex.toChar()
+                }
+                else -> value[i]
+            } else value[i]
+            check(value[i + 1] == '\'')
+            check(i + 2 == value.length)
+            return char
+        }
+
         fun parseBasis(value: String): Int {
             return when {
                 value.startsWith("0x", true) || value.startsWith("-0x", true) -> 16
                 value.startsWith("0b", true) || value.startsWith("-0b", true) -> 2
+                value.startsWith('\'') -> CHAR_BASE
                 else -> 10
             }
         }
@@ -171,6 +200,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
     }
 
     val isFloaty = resolvedType0 == Types.Half || resolvedType0 == Types.Float || resolvedType0 == Types.Double
+    val isChar get() = value.first() == '\''
 
     // todo bug: ULong would currently overflow, although it is correct and valid
     val asFloat = parseFloat(value, basis) // should always work
