@@ -1,11 +1,11 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.utils.LazyMap
-import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.FullMap
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.expansion.MethodOverrides.sameParameters

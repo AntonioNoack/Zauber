@@ -3,7 +3,7 @@ package me.anno.zauber.typeresolution
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.logging.LogManager

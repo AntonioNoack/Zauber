@@ -20,7 +20,6 @@ class ZauberLanguageServer : LanguageServer, LanguageClientAware {
         AppendLogging.info("initialize")
 
         // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide
-        // todo we must create these tokens
         val legend = SemanticTokensLegend(
             VSCodeType.entries.map { it.code },
             VSCodeModifier.entries.map { it.code }
@@ -33,6 +32,15 @@ class ZauberLanguageServer : LanguageServer, LanguageClientAware {
             }
             textDocumentSync = Either.forLeft(TextDocumentSyncKind.Incremental)
             completionProvider = CompletionOptions()
+            // todo inlay hints provider = show the type, where none is specified
+            // todo what are inline values?
+            // todo what are diagnostics?
+            // todo what shall our hover provider do? show method/type information
+            // todo definition provider
+            // todo type definition provider
+            // todo implementation provider
+            // todo references provider (where is it used)
+            // todo completion provider
         }
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
     }

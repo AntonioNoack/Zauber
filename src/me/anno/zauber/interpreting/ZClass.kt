@@ -2,7 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.interpreting.Runtime.Companion.runtime

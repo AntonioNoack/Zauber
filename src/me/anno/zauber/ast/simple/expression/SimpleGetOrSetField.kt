@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.types.Specialization

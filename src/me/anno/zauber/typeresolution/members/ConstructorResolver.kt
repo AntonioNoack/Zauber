@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType

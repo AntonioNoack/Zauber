@@ -1,6 +1,6 @@
 package me.anno.support.jvm
 
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.types.Type
 
 data class MethodSignature(

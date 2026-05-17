@@ -1,9 +1,9 @@
 package me.anno.zauber.types
 
 import me.anno.generation.Specializations.specialization
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.TypeOfField
-import me.anno.zauber.ast.rich.ZauberASTBuilderBase.Companion.resolveTypeByName
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.types.impl.TypeOfField
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase.Companion.resolveTypeByName
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList

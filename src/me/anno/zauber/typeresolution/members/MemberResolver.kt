@@ -2,8 +2,8 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.utils.PairArrayList
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.Member
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.member.Member
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType

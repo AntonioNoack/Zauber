@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.InsertMode

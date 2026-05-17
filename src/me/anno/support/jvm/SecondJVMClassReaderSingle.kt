@@ -2,7 +2,7 @@ package me.anno.support.jvm
 
 import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isStatic
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import org.objectweb.asm.ClassVisitor

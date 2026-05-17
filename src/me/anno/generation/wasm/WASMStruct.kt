@@ -1,6 +1,6 @@
 package me.anno.generation.wasm
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 
 data class WASMStruct(
     val superType: WASMStruct?,

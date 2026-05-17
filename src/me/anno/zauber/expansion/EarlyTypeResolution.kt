@@ -1,6 +1,10 @@
 package me.anno.zauber.expansion
 
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInit
 import me.anno.zauber.scope.ScopeInitType

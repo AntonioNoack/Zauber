@@ -7,10 +7,10 @@ import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.*

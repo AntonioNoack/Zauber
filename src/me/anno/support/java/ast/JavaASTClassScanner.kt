@@ -3,7 +3,7 @@ package me.anno.support.java.ast
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.zauber.ast.FlagSet
-import me.anno.zauber.ast.rich.ASTClassScanner
+import me.anno.zauber.ast.rich.parser.ASTClassScanner
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType

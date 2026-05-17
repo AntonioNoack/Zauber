@@ -1,9 +1,9 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.interpreting.Runtime.Companion.runtime

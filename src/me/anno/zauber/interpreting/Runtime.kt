@@ -4,9 +4,9 @@ import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.CollectionUtils.mapArray
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.assertTrue
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.interpreting.RuntimeCreate.createString

@@ -11,6 +11,13 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterExpansion
+import me.anno.zauber.ast.rich.parameter.ParameterMutability
+import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parser.ASTClassScanner
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList

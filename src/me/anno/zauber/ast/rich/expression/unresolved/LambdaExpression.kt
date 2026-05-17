@@ -7,6 +7,10 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType

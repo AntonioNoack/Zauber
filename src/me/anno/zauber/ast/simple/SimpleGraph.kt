@@ -1,8 +1,9 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.MethodLike
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleSelfConstructor
 import me.anno.zauber.scope.Scope

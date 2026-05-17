@@ -1,6 +1,6 @@
 package me.anno.generation
 
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 

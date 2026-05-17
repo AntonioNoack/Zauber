@@ -1,7 +1,7 @@
 package me.anno.generation.java
 
-import me.anno.zauber.ast.rich.InnerSuperCall
-import me.anno.zauber.ast.rich.InnerSuperCallTarget
+import me.anno.zauber.ast.rich.parameter.InnerSuperCall
+import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression

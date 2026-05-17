@@ -5,7 +5,7 @@ import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.java.ast.NamedDestructuringExpression
 import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.ZauberASTBuilderBase
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject

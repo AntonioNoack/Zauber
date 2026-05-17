@@ -1,8 +1,8 @@
 package me.anno.support.jvm
 
 import me.anno.support.jvm.FirstJVMClassReader.Companion.getScope
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.ParameterType
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type

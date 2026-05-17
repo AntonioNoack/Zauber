@@ -9,8 +9,8 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.debug
-import me.anno.zauber.ast.rich.ZauberASTBuilder.Companion.unitInstance
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.debug
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -23,6 +23,24 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.InnerSuperCall
+import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterExpansion
+import me.anno.zauber.ast.rich.parameter.ParameterMutability
+import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parser.Associativity
+import me.anno.zauber.ast.rich.parser.Operator
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
+import me.anno.zauber.ast.rich.parser.createBranchExpression
+import me.anno.zauber.ast.rich.parser.createCastExpression
+import me.anno.zauber.ast.rich.parser.shouldSplitIntoSubScope
+import me.anno.zauber.ast.rich.parser.splitIntoSubScope
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -43,25 +61,25 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
     companion object {
         private val LOGGER = LogManager.getLogger(JavaASTBuilder::class)
 
-        val operators = me.anno.zauber.ast.rich.operators + mapOf(
-            "&=" to Operator("&=", 1, Assoc.RIGHT),
-            "^=" to Operator("^=", 1, Assoc.RIGHT),
-            "|=" to Operator("|=", 1, Assoc.RIGHT),
-            "<<=" to Operator("<<=", 1, Assoc.LEFT),
-            ">>=" to Operator(">>=", 1, Assoc.LEFT),
-            ">>>=" to Operator(">>>=", 1, Assoc.LEFT),
+        val operators = ZauberASTBuilderBase.operators + mapOf(
+            "&=" to Operator("&=", 1, Associativity.RIGHT),
+            "^=" to Operator("^=", 1, Associativity.RIGHT),
+            "|=" to Operator("|=", 1, Associativity.RIGHT),
+            "<<=" to Operator("<<=", 1, Associativity.LEFT),
+            ">>=" to Operator(">>=", 1, Associativity.LEFT),
+            ">>>=" to Operator(">>>=", 1, Associativity.LEFT),
 
-            "?" to Operator("?", 2 /* like ?: */, Assoc.LEFT),
-            "|" to Operator("|", 5, Assoc.LEFT),
-            "^" to Operator("^", 6, Assoc.LEFT),
-            "&" to Operator("&", 7, Assoc.LEFT),
+            "?" to Operator("?", 2 /* like ?: */, Associativity.LEFT),
+            "|" to Operator("|", 5, Associativity.LEFT),
+            "^" to Operator("^", 6, Associativity.LEFT),
+            "&" to Operator("&", 7, Associativity.LEFT),
 
-            "instanceof" to Operator("instanceof", 9 /* like comparing symbols */, Assoc.LEFT),
+            "instanceof" to Operator("instanceof", 9 /* like comparing symbols */, Associativity.LEFT),
 
             // between +/- and </>/<=/>=
-            "<<" to Operator("<<", 10, Assoc.LEFT),
-            ">>" to Operator(">>", 10, Assoc.LEFT),
-            ">>>" to Operator(">>>", 10, Assoc.LEFT),
+            "<<" to Operator("<<", 10, Associativity.LEFT),
+            ">>" to Operator(">>", 10, Associativity.LEFT),
+            ">>>" to Operator(">>>", 10, Associativity.LEFT),
         )
 
         val nativeJavaTypes by threadLocal {

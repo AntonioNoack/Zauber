@@ -4,12 +4,11 @@ import me.anno.generation.BoxedType
 import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable

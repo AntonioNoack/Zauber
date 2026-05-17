@@ -7,6 +7,11 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderParameters
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.logging.LogManager

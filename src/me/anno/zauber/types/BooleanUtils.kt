@@ -1,6 +1,6 @@
 package me.anno.zauber.types
 
-import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
 

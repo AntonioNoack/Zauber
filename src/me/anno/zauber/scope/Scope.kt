@@ -9,6 +9,12 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.expansion.DefaultParameters
 import me.anno.zauber.expansion.EarlyTypeResolution
 import me.anno.zauber.expansion.MethodOverrides
@@ -202,11 +208,6 @@ class Scope(val name: String, val parent: Scope? = null) {
     val typeWithArgs by lazy {
         ClassType(this, getParameterList())
     }
-
-    /**
-     * used for type resolution
-     * */
-    var imports: List<Import2> = emptyList()
 
     /**
      * each object Scope is also one field, and we store that here

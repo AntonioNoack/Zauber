@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.ASTBuilderBase
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression

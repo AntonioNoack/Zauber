@@ -5,7 +5,7 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.CompileSources.buildASTs
 import me.anno.zauber.CompileSources.printPackages
 import me.anno.zauber.CompileSources.tokenizeSources
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanAllClasses
+import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner.Companion.scanAllClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope

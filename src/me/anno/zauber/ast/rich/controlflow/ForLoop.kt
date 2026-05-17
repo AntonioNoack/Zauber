@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.controlflow
 
-import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.createDeclarationExpression

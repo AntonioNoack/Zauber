@@ -3,11 +3,11 @@ package me.anno.zauber.expansion
 import me.anno.generation.Specializations
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOriginShort
-import me.anno.zauber.ast.rich.ZauberASTBuilderBase
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression

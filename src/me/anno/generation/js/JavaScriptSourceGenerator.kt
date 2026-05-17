@@ -13,6 +13,12 @@ import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.InnerSuperCall
+import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
@@ -21,7 +27,6 @@ import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext

@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*

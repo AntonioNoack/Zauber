@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.NamedParameter
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.SuperExpression

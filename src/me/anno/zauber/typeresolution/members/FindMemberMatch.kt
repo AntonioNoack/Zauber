@@ -1,10 +1,10 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Member
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Member
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList

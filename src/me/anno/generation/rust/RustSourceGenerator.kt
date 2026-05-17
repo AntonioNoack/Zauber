@@ -6,10 +6,10 @@ import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.c.CSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph

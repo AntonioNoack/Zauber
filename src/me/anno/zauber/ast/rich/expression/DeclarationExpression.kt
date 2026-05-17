@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.scope.Scope

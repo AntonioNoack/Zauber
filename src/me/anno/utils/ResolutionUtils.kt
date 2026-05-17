@@ -3,10 +3,10 @@ package me.anno.utils
 import me.anno.generation.Specializations
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
-import me.anno.zauber.ast.rich.ZauberASTClassScanner
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DependencyData

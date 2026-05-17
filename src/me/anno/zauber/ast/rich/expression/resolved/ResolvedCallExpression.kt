@@ -1,8 +1,8 @@
 package me.anno.zauber.ast.rich.expression.resolved
 
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext

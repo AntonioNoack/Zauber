@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.generation.cpp.CppSourceGenerator.Companion.nativeCppTypes
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression

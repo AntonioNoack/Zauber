@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 

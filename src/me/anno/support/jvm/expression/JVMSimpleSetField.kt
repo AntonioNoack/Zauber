@@ -1,6 +1,6 @@
 package me.anno.support.jvm.expression
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type

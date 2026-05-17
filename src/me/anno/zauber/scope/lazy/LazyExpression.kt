@@ -2,7 +2,7 @@ package me.anno.zauber.scope.lazy
 
 import me.anno.zauber.Compile.root
 import me.anno.support.Language
-import me.anno.zauber.ast.rich.ZauberASTBuilder
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.tokenizer.TokenList

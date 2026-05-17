@@ -10,6 +10,10 @@ import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope

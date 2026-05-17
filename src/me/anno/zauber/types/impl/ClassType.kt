@@ -1,8 +1,8 @@
 package me.anno.zauber.types.impl
 
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.ParameterMutability
-import me.anno.zauber.ast.rich.ParameterType
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterMutability
+import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope

@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.ASTBuilderBase
-import me.anno.zauber.ast.rich.FieldDeclaration
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
+import me.anno.zauber.ast.rich.member.FieldDeclaration
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression

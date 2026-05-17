@@ -3,6 +3,10 @@ package me.anno.zauber.expansion
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInit

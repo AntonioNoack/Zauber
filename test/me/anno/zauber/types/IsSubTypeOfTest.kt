@@ -2,9 +2,9 @@ package me.anno.zauber.types
 
 import me.anno.utils.ResolutionUtils.ctr
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.ParameterType
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer

@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.ast.rich.Constructor
+import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type

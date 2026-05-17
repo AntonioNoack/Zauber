@@ -1,0 +1,24 @@
+package me.anno.zauber.ast.rich.parameter
+
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.scope.Scope
+
+/**
+ * Used in calls: a named parameter
+ * todo how does this represent varargs?
+ * */
+class NamedParameter(val name: String?, val value: Expression) {
+
+    override fun toString(): String {
+        return if (name != null) "$name=$value" else "$value"
+    }
+
+    fun toString(depth: Int): String {
+        val valueStr = value.toString(depth)
+        return if (name != null) "$name=$valueStr" else valueStr
+    }
+
+    fun clone(scope: Scope): NamedParameter =
+        NamedParameter(name, value.clone(scope))
+
+}

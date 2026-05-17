@@ -3,7 +3,7 @@ package me.anno.compilation
 import me.anno.utils.ResolutionUtils
 import me.anno.utils.ResolutionUtils.printDependencies
 import me.anno.utils.assertEquals
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.logging.LogManager

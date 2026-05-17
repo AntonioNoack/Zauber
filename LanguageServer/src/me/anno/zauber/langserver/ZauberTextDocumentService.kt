@@ -2,7 +2,7 @@ package me.anno.zauber.langserver
 
 import me.anno.zauber.Compile.root
 import me.anno.support.Language
-import me.anno.zauber.ast.rich.ZauberASTBuilder
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
 import me.anno.zauber.langserver.logging.AppendLogging
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.types.impl.ClassType

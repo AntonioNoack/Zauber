@@ -3,10 +3,10 @@ package me.anno.zauber.types
 import me.anno.generation.Specializations
 import me.anno.utils.ResetThreadLocal
 import me.anno.zauber.Compile
-import me.anno.zauber.ast.rich.Field
-import me.anno.zauber.ast.rich.MethodLike
-import me.anno.zauber.ast.rich.Parameter
-import me.anno.zauber.ast.rich.SuperCall
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.interpreting.ZClass
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType

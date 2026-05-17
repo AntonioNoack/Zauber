@@ -14,6 +14,16 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterExpansion
+import me.anno.zauber.ast.rich.parameter.ParameterMutability
+import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parser.Associativity
+import me.anno.zauber.ast.rich.parser.Operator
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
@@ -31,8 +41,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         val noneType by threadLocal { Types.getType("PyNull") }
 
         val extraOperators = mapOf(
-            ":=" to Operator(":=", 1, Assoc.RIGHT),
-            "is" to Operator("is", 10, Assoc.LEFT),
+            ":=" to Operator(":=", 1, Associativity.RIGHT),
+            "is" to Operator("is", 10, Associativity.LEFT),
         )
     }
 

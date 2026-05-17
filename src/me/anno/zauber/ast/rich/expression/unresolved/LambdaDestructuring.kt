@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Field
 
 class LambdaDestructuring(val components: List<LambdaVariable>, syntheticField: Field) :
     LambdaVariable(null, syntheticField) {

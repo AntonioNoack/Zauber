@@ -1,10 +1,10 @@
 package me.anno.zauber.ast.reverse
 
 import me.anno.generation.wasm.WASMSourceGenerator.Companion.isLocalField
-import me.anno.zauber.ast.rich.Constructor
-import me.anno.zauber.ast.rich.Field
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance

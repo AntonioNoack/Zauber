@@ -4,7 +4,7 @@ import me.anno.utils.ResolutionUtils.ctr
 import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.Compile.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
-import me.anno.zauber.ast.rich.ZauberASTClassScanner.Companion.scanClasses
+import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList

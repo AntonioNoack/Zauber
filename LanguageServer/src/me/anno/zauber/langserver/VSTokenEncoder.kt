@@ -1,7 +1,7 @@
 package me.anno.zauber.langserver
 
 import me.anno.langserver.VSCodeType
-import me.anno.zauber.ast.rich.ZauberASTBuilder
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
 import kotlin.math.min
 
 class VSTokenEncoder(private val builder: ZauberASTBuilder) {

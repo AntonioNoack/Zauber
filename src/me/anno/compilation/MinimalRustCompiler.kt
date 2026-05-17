@@ -1,7 +1,7 @@
 package me.anno.compilation
 
 import me.anno.generation.rust.RustSourceGenerator
-import me.anno.zauber.ast.rich.Method
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 

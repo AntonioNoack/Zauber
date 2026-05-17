@@ -3,7 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.FieldGetterSetter.finishGetter
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishGetter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
@@ -12,6 +12,14 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.simple.controlflow.Flow
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.controlflow.SimpleYield

@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.ast.rich.Member
-import me.anno.zauber.ast.rich.Parameter
+import me.anno.zauber.ast.rich.member.Member
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.scope.Scope

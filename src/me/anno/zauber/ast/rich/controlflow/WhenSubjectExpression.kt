@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.rich.ASTBuilderBase
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
