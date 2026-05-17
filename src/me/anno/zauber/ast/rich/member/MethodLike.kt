@@ -3,8 +3,8 @@ package me.anno.zauber.ast.rich.member
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
 import me.anno.zauber.scope.Scope
@@ -65,10 +65,26 @@ open class MethodLike(
 
         return specializations.getOrPut(specialization) {
             specialization.use {
-                val context = ResolutionContext(null, specialization, true, null)
-                body.resolve(context)
+                body.resolve(createContext(specialization))
             }
         }
+    }
+
+    fun createContext(specialization: Specialization): ResolutionContext {
+        val specialization = specialization.withScope(scope)
+        return ResolutionContext(null, specialization, true, null)
+    }
+
+    fun resolveReturnType(specialization: Specialization): Type {
+        val specialization = specialization.withScope(scope)
+        val returnType = returnType
+        if (returnType != null) {
+            return returnType.specialize(specialization)
+        }
+
+        val body = getSpecializedBody(specialization)
+            ?: throw IllegalStateException("Either body or returnType must be defined for $this")
+        return body.resolveReturnType(createContext(specialization))
     }
 
     val specializations = HashMap<Specialization, Expression>()

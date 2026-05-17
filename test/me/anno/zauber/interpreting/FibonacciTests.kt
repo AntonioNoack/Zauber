@@ -1,10 +1,18 @@
 package me.anno.zauber.interpreting
 
+import me.anno.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
+/**
+ * test some different language features to compute an actual task: Fibonacci numbers
+ * 1, 1, 2, 3, 5, 8, 13, 21
+ * */
 class FibonacciTests {
 
     private val stdlib = "\n" + """
@@ -45,10 +53,13 @@ class FibonacciTests {
         class Any {
             open fun equals(other: Any?): Boolean = this === other
         }
+        
+        external fun println(arg0: Int)
         """.trimIndent()
 
-    @Test
-    fun testForLoopFibonacci() {
+    @ParameterizedTest
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    fun testForLoopFibonacci(type: String) {
         val code = """
         fun fib(i: Int): Int {
             var a = 1
@@ -62,7 +73,11 @@ class FibonacciTests {
         }
         val tested = fib(7)
         """.trimIndent() + stdlib
-        // 1, 1, 2, 3, 5, 8, 13, 21
+        MultiTest(code)
+            .type { Types.Int }
+            .runtime { value -> assertEquals(21, value.castToInt()) }
+            .compile("21\n")
+            .runTest(type)
         val value = testExecute(code)
         assertEquals(21, value.castToInt())
     }

@@ -7,12 +7,13 @@ import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
+import me.anno.zauber.ast.rich.expression.CompareType
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
@@ -326,9 +327,9 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun getFunctionTypeIndex(method: Specialization): Int {
-        method.use {
-            val method = method.method
+    fun getFunctionTypeIndex(method0: Specialization): Int {
+        method0.use {
+            val method = method0.method
             method.scope[ScopeInitType.CODE_GENERATION]
 
             val params = ArrayList<WASMType>(
@@ -351,8 +352,7 @@ class WASMSourceGenerator : CSourceGenerator() {
             // todo throwing methods could return the value as an extra return value...
             //  or we finally use WASM exceptions :)
 
-            val returnType = method.returnType
-                ?: throw IllegalStateException("$method misses return type")
+            val returnType = method.resolveReturnType(method0)
             val returnTypes = listOf(getWASMType(returnType))
             val functionType = FunctionType(params, returnTypes)
             return getFunctionTypeIndex(functionType)
@@ -869,11 +869,11 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendNumber(type: Type, expr: NumberExpression) {
-        when (type) {
-            Types.Int, Types.UInt -> i32Const(expr.asInt.toInt())
-            Types.Long, Types.ULong -> i64Const(expr.asInt)
-            Types.Float, Types.Half -> f32Const(expr.asFloat.toFloat())
-            Types.Double -> f64Const(expr.asFloat)
+        when (getWASMType(type)) {
+            WASMType.I32 -> i32Const(expr.asInt.toInt())
+            WASMType.I64 -> i64Const(expr.asInt)
+            WASMType.F32 -> f32Const(expr.asFloat.toFloat())
+            WASMType.F64 -> f64Const(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type")
         }
         nextLine()
@@ -1059,8 +1059,79 @@ class WASMSourceGenerator : CSourceGenerator() {
                     nextLine()
                 }
             }
+            is SimpleCompare -> {
+                val method = expr.method.resolved
+                method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+                val ownerType = method.ownerScope.typeWithArgs
+                val paramType = method.valueParameters[0].type.specialize()
+                if (ownerType == paramType && ownerType in nativeNumbers) {
+                    appendNativeCompare(ownerType, expr.type)
+                } else {
+                    TODO("Call method, then compare to zero for $ownerType,$paramType")
+                }
+            }
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }
+    }
+
+    fun appendNativeCompare(valueType: Type, compareType: CompareType) {
+        val numberType = getWASMType(valueType)
+        val compareName = when (compareType) {
+            CompareType.LESS -> "lt"
+            CompareType.LESS_EQUALS -> "le"
+            CompareType.GREATER -> "gt"
+            CompareType.GREATER_EQUALS -> "ge"
+        }
+        builder.append(numberType.wasmName)
+            .append('.').append(compareName)
+        when (valueType) {
+            Types.Byte, Types.Short, Types.Int, Types.Long -> builder.append("_s")
+            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> builder.append("_u")
+            Types.Half, Types.Float, Types.Double -> {}
+            else -> throw NotImplementedError("Unknown number type")
+        }
+        val wasmInstr = when (valueType) {
+            Types.Byte, Types.Short, Types.Int -> when (compareType) {
+                CompareType.LESS -> WASMOpcode.I32_LT_S
+                CompareType.LESS_EQUALS -> WASMOpcode.I32_LT_S
+                CompareType.GREATER -> WASMOpcode.I32_GT_S
+                CompareType.GREATER_EQUALS -> WASMOpcode.I32_GE_S
+            }
+            Types.UByte, Types.UShort, Types.Char, Types.UInt -> when (compareType) {
+                CompareType.LESS -> WASMOpcode.I32_LT_U
+                CompareType.LESS_EQUALS -> WASMOpcode.I32_LT_U
+                CompareType.GREATER -> WASMOpcode.I32_GT_U
+                CompareType.GREATER_EQUALS -> WASMOpcode.I32_GE_U
+            }
+            Types.Long -> when (compareType) {
+                CompareType.LESS -> WASMOpcode.I64_LT_S
+                CompareType.LESS_EQUALS -> WASMOpcode.I64_LT_S
+                CompareType.GREATER -> WASMOpcode.I64_GT_S
+                CompareType.GREATER_EQUALS -> WASMOpcode.I64_GE_S
+            }
+            Types.ULong -> when (compareType) {
+                CompareType.LESS -> WASMOpcode.I64_LT_U
+                CompareType.LESS_EQUALS -> WASMOpcode.I64_LT_U
+                CompareType.GREATER -> WASMOpcode.I64_GT_U
+                CompareType.GREATER_EQUALS -> WASMOpcode.I64_GE_U
+            }
+            Types.Float, Types.Half -> when (compareType) {
+                CompareType.LESS -> WASMOpcode.F32_LT
+                CompareType.LESS_EQUALS -> WASMOpcode.F32_LE
+                CompareType.GREATER -> WASMOpcode.F32_GT
+                CompareType.GREATER_EQUALS -> WASMOpcode.F32_GE
+            }
+            Types.Double -> when (compareType) {
+                CompareType.LESS -> WASMOpcode.F64_LT
+                CompareType.LESS_EQUALS -> WASMOpcode.F64_LE
+                CompareType.GREATER -> WASMOpcode.F64_GT
+                CompareType.GREATER_EQUALS -> WASMOpcode.F64_GE
+            }
+            else -> throw NotImplementedError("Implement compare for $valueType")
+        }
+        binary.u8(wasmInstr)
+        nextLine()
     }
 
     override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {

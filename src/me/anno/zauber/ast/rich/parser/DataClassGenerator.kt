@@ -135,18 +135,18 @@ object DataClassGenerator {
         )
         if (equalsAnyMethod == null) {
             generateEqualsAnyMethod(classScope, origin, primaryFields)
+        }
 
-            // this is an optimization:
-            val hasEqualsSelfMethod = MethodResolver.findMemberInScope(
-                classScope, origin, "equals", Types.Boolean, classScope.typeWithArgs,
-                emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithArgs, false)),
-                context
-            ) != null
-            if (!hasEqualsSelfMethod) {
-                // saves type-check and cast, and therefore should be much faster,
-                //  and allow us to not runtime-allocate some instances
-                generateEqualsSelfMethod(classScope, origin, primaryFields)
-            }
+        // this is an optimization:
+        val equalsSelfMethod = MethodResolver.findMemberInScope(
+            classScope, origin, "equals", Types.Boolean, classScope.typeWithArgs,
+            emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithArgs, false)),
+            context
+        )
+        if (equalsSelfMethod == null) {
+            // saves type-check and cast, and therefore should be much faster,
+            //  and allow us to not runtime-allocate some instances
+            generateEqualsSelfMethod(classScope, origin, primaryFields)
         }
     }
 
