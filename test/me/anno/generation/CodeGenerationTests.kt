@@ -31,7 +31,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, true, ::registerLib)
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("8\n", printed)
     }
 
@@ -54,7 +54,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, true, ::registerLib)
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("3\n", printed)
     }
 
@@ -79,7 +79,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, true, ::registerLib)
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("${(1 * 31 + 2) * 31 + 3}\n", printed)
     }
 
@@ -103,7 +103,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, true, ::registerLib)
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("1\n", printed)
     }
 
@@ -129,7 +129,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, true, ::registerLib)
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("7\n", printed)
     }
 
@@ -160,7 +160,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
 
         val printed = generator()
-            .testCompileMainAndRun(code, true, ::registerLib)
+            .testCompileMainAndRun(code, ::registerLib)
         assertEquals("1\n", printed)
     }
 

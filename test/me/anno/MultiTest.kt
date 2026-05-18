@@ -51,7 +51,7 @@ class MultiTest(val code: String) {
         for ((name, value) in languages) {
             or(name) {
                 val actual = value.generator()
-                    .testCompileMainAndRun(codeWithMain, true, value::registerLib)
+                    .testCompileMainAndRun(codeWithMain, value::registerLib)
                 assertEquals(expected, actual)
             }
         }

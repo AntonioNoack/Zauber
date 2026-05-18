@@ -5,7 +5,8 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-open class MinimalCppCompiler : MinimalCompiler() {
+open class MinimalCppCompiler(preserveFolder: Boolean = false) :
+    MinimalCompiler(if (preserveFolder) "ZauberCpp" else null) {
 
     companion object {
         val minimalCMakeLists by lazy {

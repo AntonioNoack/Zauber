@@ -7,7 +7,7 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~10s for all
+ * execution time: 0.9s with preserveFolder=true instead of ~10s
  * */
 class RustGenerationTests : CodeGenerationTests() {
 

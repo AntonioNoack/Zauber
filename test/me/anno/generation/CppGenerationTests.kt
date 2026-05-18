@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~3s for all
+ * execution time: ~2s for all when preserveFolder=true, instead of 3s
  * */
 class CppGenerationTests : CodeGenerationTests() {
 
@@ -20,7 +20,7 @@ class CppGenerationTests : CodeGenerationTests() {
         )
     }
 
-    override fun generator() = MinimalCppCompiler()
+    override fun generator() = MinimalCppCompiler(true)
 
     @BeforeEach
     fun init() {

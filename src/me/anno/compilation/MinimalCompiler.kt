@@ -18,7 +18,7 @@ import kotlin.concurrent.thread
  * base class for toy compilers,
  * compiling Zauber to other languages
  * */
-abstract class MinimalCompiler {
+abstract class MinimalCompiler(val preserveFolderName: String? = null) {
 
     companion object {
 
@@ -60,10 +60,6 @@ abstract class MinimalCompiler {
     }
 
     fun testCompileMainAndRun(code: String, registerMethods: () -> Unit): String {
-        return testCompileMainAndRun(code, false, registerMethods)
-    }
-
-    fun testCompileMainAndRun(code: String, debug: Boolean, registerMethods: () -> Unit): String {
 
         LOGGER.info("Starting compilation")
 
@@ -74,30 +70,26 @@ abstract class MinimalCompiler {
         val dependencies = Dependencies.collectClassesAndMethods()
         printDependencies(dependencies)
 
-        // generate Java code
-        val projectFolder =
-            if (debug) File(System.getProperty("user.home"), "Desktop/Zauber")
-            else File.createTempFile("GenAndRun", ".tmp")
+        // prepare folders
+        val projectFolder = File(
+            System.getProperty("user.home"),
+            if (preserveFolderName == null) "Desktop/Zauber"
+            else "Desktop/${preserveFolderName}"
+        )
 
-        try {
-            projectFolder.deleteRecursively()
-            projectFolder.mkdirs()
+        if (preserveFolderName == null) projectFolder.deleteRecursively()
+        projectFolder.mkdirs()
 
-            val srcFolder = File(projectFolder, "src")
-            if (srcFolder.exists()) srcFolder.deleteRecursively()
-            srcFolder.mkdirs()
+        val srcFolder = File(projectFolder, "src")
+        // srcFolder should be cleaned up by DeltaFileWriter, if it exists
+        srcFolder.mkdirs()
 
-            registerMethods()
+        registerMethods()
 
-            val mainMethod = testScope.methods0.first { it.name == "main" }
-            compile(projectFolder, srcFolder, dependencies, mainMethod)
+        val mainMethod = testScope.methods0.first { it.name == "main" }
+        compile(projectFolder, srcFolder, dependencies, mainMethod)
 
-            return execute(projectFolder)
-        } finally {
-            if (!debug) {
-                projectFolder.deleteRecursively()
-            }
-        }
+        return execute(projectFolder)
     }
 
     abstract fun execute(projectFolder: File): String
