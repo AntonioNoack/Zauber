@@ -14,6 +14,15 @@ class SimpleField(val type: Type, var id: Int, val constantRef: Expression?) {
         return this
     }
 
+    val dst: SimpleField
+        get() {
+            var dst = this
+            while (true) {
+                dst = dst.mergeInfo?.dst
+                    ?: return dst
+            }
+        }
+
     override fun toString(): String {
         return when {
             id >= 0 && constantRef != null -> "\"$constantRef\"%$id"

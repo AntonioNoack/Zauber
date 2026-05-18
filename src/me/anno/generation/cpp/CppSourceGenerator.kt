@@ -9,6 +9,7 @@ import me.anno.generation.java.JavaSourceGenerator
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -16,14 +17,10 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
+import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
-import me.anno.zauber.ast.simple.SimpleDeclaration
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -37,6 +34,7 @@ import java.io.File
 /**
  * structs are directly supported, inheritance is still supported
  * todo needs custom GC
+ * todo mode, where we pack all implementation into one cpp file
  * */
 open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
@@ -152,11 +150,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override fun appendSuperTypes(scope: Scope) {
         var hasSuper = false
         val superCall0 = scope.superCalls.firstOrNull()
-        if (superCall0 != null &&
-            superCall0.isClassCall &&
-            superCall0.type != Types.Any
-        ) {
+        if (superCall0 != null && superCall0.isClassCall) {
             val type = superCall0.type
+            builder.append(" : ")
+            appendType(type, scope, true)
+            hasSuper = true
+        } else if (scope != Types.Any.clazz) {
+            val type = Types.Any
             builder.append(" : ")
             appendType(type, scope, true)
             hasSuper = true
@@ -214,23 +214,24 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         static $className& get$OBJECT_FIELD_NAME() {
             static $className $OBJECT_FIELD_NAME;
             return $OBJECT_FIELD_NAME;
-        }
-        """.trimIndent() + "\n"
+          }
+        """.trimIndent()
         )
+        nextLine()
         if (cppVersion in 3 until 11) {
             builder.append(
                 """
     private:
         $className($className const&); // Don't Implement
-        void operator=($className const&); // Don't implement 
-    public:
+          void operator=($className const&); // Don't implement 
+      public:
         """.trimIndent()
             )
         } else if (cppVersion >= 11) {
             builder.append(
                 """
         $className($className const&) = delete;
-        void operator=($className const&) = delete;
+          void operator=($className const&) = delete;
             """.trimIndent()
             )
         } else {
@@ -370,15 +371,17 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
+    fun appendVisibility(isPrivate: Boolean) {
+        dedent()
+        val visibility = if (isPrivate) "private:" else "public:"
+        builder.append(visibility)
+        nextLine()
+    }
+
     override fun appendConstructorFlags(classScope: Scope, constructor: Constructor, headerOnly: Boolean) {
         if (headerOnly) {
-            if (classScope.isObjectLike() || constructor.flags.isPrivate()) {
-                builder.append("private:")
-                nextLine()
-            } else {
-                builder.append("public:")
-                nextLine()
-            }
+            val isPrivate = classScope.isObjectLike() || constructor.flags.isPrivate()
+            appendVisibility(isPrivate)
         }
         // no flags yet
     }
@@ -411,13 +414,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
         if (headerOnly) {
-            if (method.flags.isPrivate()) {
-                builder.append("private:")
-                nextLine()
-            } else {
-                builder.append("public:")
-                nextLine()
-            }
+            appendVisibility(method.flags.isPrivate())
         }
         // no flags yet
     }
@@ -501,14 +498,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         builder.append("::get").append(OBJECT_FIELD_NAME).append("()")
     }
 
-    override fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
-        val dst = expression.dst
+    override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
         // without final
-        appendType(dst.type, expression.scope, false)
+        appendType(dst.type, scope, false)
         appendOwnershipSuffix(dst.type)
         builder.append(' ')
         appendFieldName(graph, dst)
-        builder.append(" = ")
+        if (withEquals) builder.append(" = ")
     }
 
     override fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
@@ -552,15 +548,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             appendGetObjectInstance(objectType, graph.method.scope)
             false
         } else {
-            var field = field
-            while (true) {
-                field = field.mergeInfo?.dst ?: break
-            }
+            val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     builder.append("tmp").append(field.id)
+                    usedFields.add(field)
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }

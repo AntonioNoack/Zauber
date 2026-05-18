@@ -1,9 +1,9 @@
 package me.anno.zauber.types.impl
 
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -17,6 +17,8 @@ import me.anno.zauber.types.Types
 /**
  * A scope, but also with optional type arguments,
  * e.g. ArrayList, ArrayList<Int> or Map<Key, Value>
+ *
+ * todo typeParameters shall contain outer-values for inner classes, too
  * */
 class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
 
@@ -88,8 +90,8 @@ class ClassType(val clazz: Scope, typeParameters: ParameterList?) : Type() {
     )
 
     init {
-        if (clazz.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
-            throw IllegalStateException("Classes should use the general enum, not the entries")
+        check(clazz.scopeType != ScopeType.ENUM_ENTRY_CLASS) {
+            "Classes should use the general enum, not the entries, violation: $clazz"
         }
     }
 

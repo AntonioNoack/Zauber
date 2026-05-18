@@ -3,7 +3,6 @@ package me.anno.zauber.interpreting
 import me.anno.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -11,10 +10,13 @@ import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
-class UnderdefinedCallTests {
+/**
+ * this tests lambda-style calls, where generics may have to be derived from lambda-internals
+ * */
+class LambdaTests {
 
     @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime",/* "js", "java", "c++", "wasm"*/])
+    @ValueSource(strings = ["type", "runtime"/* "js", "java", "c++", "wasm"*/])
     fun testArrayOf(type: String) {
         val code = """
             val tested = arrayOf(1, 2, 3)
@@ -36,11 +38,10 @@ class UnderdefinedCallTests {
 
         MultiTest(code)
             .type { Types.Array.withTypeParameter(Types.Int) }
-            .runtime {
-                val valueT = testExecute(code)
-                val expectedType = runtime.getClass(Types.Array.withTypeParameter(Types.Int))
-                assertEquals(expectedType, valueT.clazz)
-                val contents = valueT.rawValue
+            .runtime { array ->
+                val expectedType = Types.Array.withTypeParameter(Types.Int)
+                assertEquals(expectedType, array.clazz.type)
+                val contents = array.rawValue
                 assertInstanceOf<IntArray>(contents)
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
@@ -112,7 +113,8 @@ class UnderdefinedCallTests {
 
     @Test
     fun testArrayReduceWithLambda() {
-        LogManager.enableAllLoggers()
+        // LogManager.enableAllLoggers()
+        // LogManager.enable("ASTSimplifier")
         val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }

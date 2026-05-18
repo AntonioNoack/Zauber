@@ -135,11 +135,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         } else if (field.isOwnerThis(graph)) {
             builder.append("%this")
         } else {
-            var field = field
-            while (true) {
-                field = field.mergeInfo?.dst ?: break
-            }
-            builder.append("%").append(field.id)
+            builder.append("%").append(field.dst.id)
         }
         builder.append(forFieldAccess)
     }

@@ -133,9 +133,9 @@ class SimpleBlock(val graph: SimpleGraph) {
                         !fieldOwner.isInsideExpression() && !fieldOwner.isMethodLike()
                     }
                     else -> TODO("$thisScope is ambiguous, what does $contextExpr ${contextExpr?.javaClass?.simpleName} indicate?")
-                }.apply {
+                }/*.apply {
                     println("isExplicitSelf? $contextExpr -> $this")
-                }
+                }*/
             } else false
 
             if (thisScope.isClassLike()) {

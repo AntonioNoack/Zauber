@@ -7,6 +7,7 @@ import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.Specialization
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -60,6 +61,10 @@ class DependencyGraphTests {
         val expectedMethods = setOf(
             method, printlnMethod, intPlusMethod,
             // zauberScope.primaryConstructorScope!!.selfAsConstructor!!,
+            Types.Any.clazz.getOrCreatePrimaryConstructor(),
+            Types.Int.clazz.getOrCreatePrimaryConstructor(),
+            Types.Unit.clazz.getOrCreatePrimaryConstructor(),
+            langScope.getOrCreatePrimaryConstructor(),
             testScope.primaryConstructorScope!!.selfAsConstructor!!,
         )
             .map { method -> Specialization(method.scope, emptyParameterList()) }

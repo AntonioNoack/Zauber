@@ -17,4 +17,12 @@ data class WASMStruct(
     }
 
     val type = WASMType.Ref(typeIndex, typeName, isNullable)
+
+    override fun toString(): String {
+        return if (superType != null) {
+            "WASMStruct('$typeName' extends '${superType.typeName}', $properties)"
+        } else {
+            "WASMStruct('$typeName', $properties)"
+        }
+    }
 }

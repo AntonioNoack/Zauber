@@ -1,8 +1,26 @@
 package me.anno
 
+// todo low-hanging fruits:
+//  - allow CLI to execute one script, like in tests
+//  - WASM runtime
+//  - WASM optimizer: we have many repeating, useless structures (set+exclusive get immediately after), ungrouped local-field-IDs, unused local-field-IDs,...
+//  - WASM arrays
+//  - C++ arrays
+//  - Java arrays
+//  - JVM bytecode generator
+//  - JVM bytecode loader: create code tokens for debugging
+//  - Python generator
+
+/*
+* todo yield can be implemented by modifying graph + virtual class, and I think we can do that
+*
+* todo split value classes into their components (exploded local fields, exploded class properties)
+* todo value class methods are two-fold: with reference, with just values
+*/
+
 // todo most pressing tasks:
 //  1. Make it usable
-//    1. Generate C++ code
+//    (done) 1. Generate C++ code
 //      a) as a first step, everything is a GC/refCount-variable
 //      b) later on use proper structs
 //      ...

@@ -5,16 +5,19 @@ import me.anno.zauber.types.Type
 
 /**
  * Lambda type, with always known parameter types...
- * (A,B,C) -> R
+ * Self.(A,B,C) -> R
+ *
+ * Int::plus can be understood as (Int,Int) -> Int, and Int.(Int) -> Int
  * */
 class LambdaType(
     val selfType: Type?,
     val parameters: List<LambdaParameter>,
     val returnType: Type
 ) : Type() {
+
     override fun toStringImpl(depth: Int): String {
-        val scopeType = if (selfType != null) "self=${selfType.toString(depth)} | " else null
-        return "LambdaType($scopeType(${
+        val scopeType = if (selfType != null) "self=${selfType.toString(depth)} | " else ""
+        return "($scopeType(${
             parameters.joinToString(", ") {
                 if (it.name != null) "${it.name}=${it.type.toString(depth)}"
                 else it.type.toString(depth)

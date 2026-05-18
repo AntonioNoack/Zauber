@@ -41,8 +41,24 @@ object TOMLParser {
         }
     }
 
-    private fun parseString(line: String): Any {
-        // todo unescape things...
-        return line.substring(1, line.length - 1)
+    private fun parseString(line: String): String {
+        val builder = StringBuilder()
+        var i = 1
+        while (i + 1 < line.length) {
+            if (line[i] == '\\' && i + 2 < line.length) {
+                i++ // skip '\\'
+                val letter = when (val c = line[i++]) {
+                    'n' -> '\n'
+                    'r' -> '\r'
+                    't' -> '\t'
+                    'b' -> '\b'
+                    'f' -> '\u000C'
+                    '0' -> '\u0000'
+                    else -> c // \\ and " are handled
+                }
+                builder.append(letter)
+            } else builder.append(line[i++])
+        }
+        return builder.toString()
     }
 }

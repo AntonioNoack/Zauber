@@ -12,10 +12,6 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution
 
-// todo convert JVM Bytecode AST into simplified AST...
-//  what about generics? we can either keep them generic, or specialize them... both would be good...
-//  generally, we should make specialization optional... union super-types will always be specialized
-
 // todo make variable capture by lambdas explicit:
 //  mark mutable fields as captured;
 //  mutable fields then need some sort of wrapper in the method

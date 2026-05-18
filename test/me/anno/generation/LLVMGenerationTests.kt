@@ -19,8 +19,8 @@ class LLVMGenerationTests : CodeGenerationTests() {
     override fun generator(): MinimalCompiler = MinimalLLVMCompiler()
 
     @Test
-    fun testSimpleAddition() {
-        testSimpleAdditionImpl()
+    fun testSimpleMath() {
+        testSimpleMathImpl()
     }
 
     @Test

@@ -1,24 +1,25 @@
 package me.anno.generation
 
-import me.anno.compilation.MinimalRustCompiler
+import me.anno.compilation.MinimalWASMRuntimeCompiler
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~10s for all
+ * execution time: 2s,
+ * main cost is loading Node via NVM, I think
  * */
-class RustGenerationTests : CodeGenerationTests() {
+class WASMRuntimeTests : CodeGenerationTests() {
 
     override fun registerLib() {
         JavaSourceGenerator.register(
             TypeResolution.langScope, "println", listOf(Types.Int),
-            "println!(\"{}\", arg0)"
+            "console.log(arg0)"
         )
     }
 
-    override fun generator() = MinimalRustCompiler()
+    override fun generator() = MinimalWASMRuntimeCompiler()
 
     @Test
     fun testSimpleMath() {

@@ -1,11 +1,13 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
+import me.anno.zauber.ast.simple.expression.SimpleGetOrSetField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
@@ -63,7 +65,11 @@ class SimpleGraph(val method0: Specialization) {
     override fun toString(): String {
         return "Graph[${blocks.size} nodes, $numFields fields]\n" +
                 "unit: $unitField\n" +
-                "this: ${thisFields.map { "\n  %${it.value.id} = ${it.key.scope}" }}\n" +
+                "this: ${
+                    thisFields.entries
+                        .sortedBy { it.value.id }
+                        .map { "\n  %${it.value.id} = ${it.key.scope}" }
+                }\n" +
                 blocks.joinToString("\n") { it.toString() }
     }
 
@@ -125,4 +131,45 @@ class SimpleGraph(val method0: Specialization) {
             fields[i].id = i
         }
     }
+
+    fun giveMethodFieldsUniqueNames() {
+        val foundNames = HashMap<String, Field>()
+        for (param in method.valueParameters) {
+            // check that parameters are registered first...
+            val field = param.getOrCreateField(null, Flags.NONE)
+            foundNames.getOrPut(field.newName) { field }
+        }
+        for (block in blocks) {
+            for (expr in block.instructions) {
+                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
+                    foundNames.getOrPut(expr.field.newName) { expr.field }
+                }
+            }
+        }
+
+        for (block in blocks) {
+            for (expr in block.instructions) {
+                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
+                    val field = expr.field
+                    val prevField = foundNames[field.newName]
+                    if (prevField != field) findNewName(foundNames, field)
+                }
+            }
+        }
+    }
+
+    private fun findNewName(allNames: HashMap<String, Field>, field: Field) {
+        val oldName = field.newName
+        var id = 0
+        while (true) {
+            val newName = "${oldName}_${id++}"
+            if (allNames[newName] == null) {
+                allNames[newName] = field
+                field.newName = newName
+                return
+            }
+        }
+    }
+
+
 }

@@ -1,6 +1,5 @@
 package me.anno.zauber.ast.reverse
 
-import me.anno.generation.wasm.WASMSourceGenerator.Companion.isLocalField
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.Flags
@@ -101,7 +100,7 @@ object GraphToClass {
             val block = graph.blocks[i]
             for (j in block.instructions.indices) {
                 val expr = block.instructions[j]
-                if (expr is SimpleGetOrSetField && isLocalField(expr.self)) {
+                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
                     val field = expr.field
                     fieldMap.getOrPut(field) {
                         clazz.addField(

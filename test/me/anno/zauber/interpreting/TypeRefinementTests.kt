@@ -4,6 +4,12 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
+/**
+ * tests that type-checks are applied to sub-scopes
+ *
+ * todo is it viable that instead of sub-scopes, we make type-checks operate on a line-position-in-scope basis?
+ *  this would reduce the headache of deep scopes
+ * */
 class TypeRefinementTests {
     @Test
     fun testTypeRefinement() {

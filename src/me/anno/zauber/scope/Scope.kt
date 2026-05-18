@@ -3,15 +3,18 @@ package me.anno.zauber.scope
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.InnerSuperCall
+import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.ast.rich.parser.ASTBuilderBase
@@ -251,13 +254,20 @@ class Scope(val name: String, val parent: Scope? = null) {
             scope.setEmptyTypeParams()
 
             primaryConstructorScope = scope
+            val superCall = if (pathStr == "zauber.Any") null
+            else InnerSuperCall(InnerSuperCallTarget.SUPER, emptyList(), -1)
             scope.selfAsConstructor = Constructor(
                 emptyList(), scope,
-                null, ExpressionList(ArrayList(), scope, -1),
+                superCall, ExpressionList(ArrayList(), scope, -1),
                 Flags.SYNTHETIC, -1
             )
             scope
         }
+    }
+
+    fun getOrCreatePrimaryConstructor(): Constructor {
+        return getOrCreatePrimaryConstructorScope()
+            .selfAsConstructor!!
     }
 
     fun addField(

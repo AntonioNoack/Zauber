@@ -328,7 +328,7 @@ object ASTSimplifier {
                     fieldHasSensibleType(context, field)
                 ) {
                     val type = field.resolveValueType(context)
-                    block0.add(SimpleDeclaration(type, field.name, field.scope, field.origin))
+                    block0.add(SimpleDeclaration(type, field, field.scope, field.origin))
                 }
             }
         }
@@ -344,9 +344,8 @@ object ASTSimplifier {
     private fun fieldHasSensibleType(context: ResolutionContext, field: Field): Boolean {
         field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
 
-        val type0 = field.valueType ?: field.resolveValueType(context)
-        val type1 = type0.specialize(context)
-        return type1 !is ClassType || !type1.clazz.isObjectLike()
+        val type0 = field.resolveValueType(context)
+        return type0 !is ClassType || !type0.clazz.isObjectLike()
     }
 
     private fun simplifyDynamicMacro(

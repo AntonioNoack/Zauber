@@ -150,7 +150,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeFunctionSection(functionTypes: List<Int>) {
-        u8(0x03) // Function section id
+        u8(WASMSection.FUNCTION.ordinal)
         val t = WASMBinaryWriter()
         t.u32(functionTypes.size)
         for (fn in functionTypes) {
@@ -208,7 +208,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeMemorySection() {
-        u8(0x05) // memory section
+        u8(WASMSection.MEMORY.ordinal)
 
         val t = WASMBinaryWriter()
         t.u32(1) // one memory
@@ -226,7 +226,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeImportSection(imports: List<Pair<String, Int>>) {
-        u8(0x02) // import section
+        u8(WASMSection.IMPORT.ordinal)
 
         val t = WASMBinaryWriter()
         t.u32(imports.size)
@@ -250,7 +250,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeExportSection(exports: List<Pair<String, Int>>) {
-        u8(0x07)
+        u8(WASMSection.EXPORT.ordinal)
 
         val t = WASMBinaryWriter()
         t.u32(exports.size)
@@ -271,7 +271,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeGlobalSection(globals: List<WASMType.Ref>) {
-        u8(0x06) // section id
+        u8(WASMSection.GLOBAL.ordinal)
 
         val t = WASMBinaryWriter()
         t.u32(globals.size)
@@ -293,7 +293,7 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeCodeSection(bodies: ListOfByteArrays) {
-        u8(0x0A) // code section id
+        u8(WASMSection.CODE.ordinal)
 
         val tmp = WASMBinaryWriter()
         tmp.u32(bodies.size)

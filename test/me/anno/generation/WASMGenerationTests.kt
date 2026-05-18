@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 
 /**
  * execution time: 2s,
- * main cost is loading Node via NVM, I think
+ * main cost is loading Node via NVM, I think -> yesss, custom runtime is 10x faster
  * */
 class WASMGenerationTests : CodeGenerationTests() {
 
@@ -22,8 +22,8 @@ class WASMGenerationTests : CodeGenerationTests() {
     override fun generator() = MinimalWASMCompiler()
 
     @Test
-    fun testSimpleAddition() {
-        testSimpleAdditionImpl()
+    fun testSimpleMath() {
+        testSimpleMathImpl()
     }
 
     @Test

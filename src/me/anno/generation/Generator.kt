@@ -62,9 +62,7 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         try {
             run()
 
-            if (builder.endsWith("  ")) {
-                builder.setLength(builder.length - 2)
-            }
+            dedent()
 
             depth--
             builder.append("}\n")
@@ -87,6 +85,12 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         run()
         closeBlock()
         builder.append(blockSuffix)
+    }
+
+    fun dedent() {
+        if (builder.endsWith("  ")) {
+            builder.setLength(builder.length - 2)
+        }
     }
 
     open fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {

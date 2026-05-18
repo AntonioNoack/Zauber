@@ -135,6 +135,9 @@ open class JavaSourceGenerator : Generator() {
     open val nativeTypes: Map<ClassType, BoxedType> get() = nativeJavaTypes
     open val nativeNumbers: Map<ClassType, BoxedType> get() = nativeJavaNumbers
 
+    val declaredFields = HashSet<SimpleField>()
+    val usedFields = HashSet<SimpleField>()
+
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         val writer = FileWithImportsWriter(this, dst)
         try {
@@ -618,10 +621,11 @@ open class JavaSourceGenerator : Generator() {
         val superCall = constructor.superCall
         val superType = classScope.superCalls
             .firstOrNull { it.isClassCall }?.typeI
+            ?: Types.Any
         if (superCall != null) {
             appendSuperCall0Name(
                 classScope, className, constructor,
-                superType!!, superCall
+                superType, superCall
             )
 
             val context = ResolutionContext(null, specialization, true, null)
@@ -707,9 +711,25 @@ open class JavaSourceGenerator : Generator() {
         graph.removeThisFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
+        graph.giveMethodFieldsUniqueNames()
         graph.renumberFields()
 
+        // todo another step could be removing merge-infos, only LLVMs benefits from them
+
         CodeReconstruction.createCodeFromGraph(graph)
+    }
+
+    fun scanSelves(graph: SimpleGraph, method: MethodLike) {
+        for ((self, dst) in graph.thisFields) {
+            val (scope, explicit) = self
+            if (explicit) {
+                TODO("Somehow get explicit self...")
+            } else {
+                if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
+                    TODO("Declare $self in $dst for $method")
+                } // else not needed
+            }
+        }
     }
 
     open fun appendCode(
@@ -720,24 +740,19 @@ open class JavaSourceGenerator : Generator() {
     ) {
         writeBlock {
             try {
-                val method = method1.method
                 val graph = ASTSimplifier.simplify(method1)
                 if (skipSuperCall) graph.removeSuperCalls()
                 prepareGraph(graph)
 
-                for ((self, dst) in graph.thisFields) {
-                    val (scope, explicit) = self
-                    if (explicit) {
-                        TODO("Somehow get explicit self...")
-                    } else {
-                        if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
-                            TODO("Declare $self in $dst for $method")
-                        } // else not needed
-                    }
-                }
+                scanSelves(graph, method1.method)
 
                 // todo simplify all entry points as methods...
+
+                val pos0 = builder.length
                 appendSimpleBlock(graph, graph.startBlock)
+
+                appendMissingDeclarations(graph, pos0)
+
             } catch (e: Throwable) {
                 e.printStackTrace()
                 comment {
@@ -813,13 +828,37 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
-        val dst = expression.dst
+    fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
+        appendDeclare(graph, expression.dst, expression.scope, true)
+        declaredFields.add(expression.dst)
+    }
+
+    open fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
         builder.append("final ")
-        appendType(dst.type, expression.scope, false)
+        appendType(dst.type, scope, false)
         builder.append(' ')
         appendFieldName(graph, dst)
-        builder.append(" = ")
+        if (withEquals) builder.append(" = ")
+    }
+
+    fun appendMissingDeclarations(graph: SimpleGraph, pos0: Int) {
+        val pos1 = builder.length
+        for (field in usedFields - declaredFields) {
+            appendDeclare(graph, field, graph.method.memberScope, false)
+            builder.append(";")
+            nextLine()
+        }
+        swapSections(pos0, pos1)
+    }
+
+    fun swapSections(pos0: Int, pos1: Int) {
+        if (pos1 == pos0) return
+        check(pos1 >= pos0)
+        val middleSection = builder.substring(pos0, pos1)
+        val afterSection = builder.substring(pos1)
+        builder.setLength(pos0)
+        builder.append(afterSection)
+        builder.append(middleSection)
     }
 
     fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
@@ -856,15 +895,13 @@ open class JavaSourceGenerator : Generator() {
             val objectScope = (field.type as ClassType).clazz
             appendGetObjectInstance(objectScope, graph.method.scope)
         } else {
-            var field = field
-            while (true) {
-                field = field.mergeInfo?.dst ?: break
-            }
+            val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     builder.append("tmp").append(field.id)
+                    usedFields.add(field)
                 }
                 is SpecialValueExpression -> when (expr.type) {
                     SpecialValue.NULL -> builder.append("null")
@@ -1378,7 +1415,7 @@ open class JavaSourceGenerator : Generator() {
         if (!field.ownerScope.isClassLike()) {
             // append("__").append(field.ownerScope.depth).append('_')
         }
-        builder.append(field.name)
+        builder.append(field.newName)
     }
 
     fun appendFieldName(field: Parameter) {

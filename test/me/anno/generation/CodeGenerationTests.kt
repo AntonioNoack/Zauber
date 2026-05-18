@@ -12,9 +12,9 @@ abstract class CodeGenerationTests {
     abstract fun registerLib()
     abstract fun generator(): MinimalCompiler
 
-    fun testSimpleAdditionImpl() {
+    fun testSimpleMathImpl() {
         val code = """
-            val x = 1 + 2
+            val x = 5 + 12 / 4
             fun main() {
                 println(x)
             }
@@ -24,6 +24,7 @@ abstract class CodeGenerationTests {
             object Unit
             external class Int {
                 external operator fun plus(other: Int): Int
+                external operator fun div(other: Int): Int
             }
             
             external fun println(arg0: Int)
@@ -31,7 +32,7 @@ abstract class CodeGenerationTests {
 
         val printed = generator()
             .testCompileMainAndRun(code, true, ::registerLib)
-        assertEquals("3\n", printed)
+        assertEquals("8\n", printed)
     }
 
     fun testMethodCallImpl() {

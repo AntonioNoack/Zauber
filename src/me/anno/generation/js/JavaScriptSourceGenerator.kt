@@ -19,11 +19,12 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.ast.simple.SimpleDeclaration
+import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.scope.Scope
@@ -149,6 +150,9 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendSuperTypes(scope: Scope) {
+        if (scope.superCalls.isEmpty() && scope != Types.Any.clazz) {
+            scope.superCalls.add(SuperCall(Types.Any, emptyList(), null, -1))
+        }
         for (superCall in scope.superCalls) {
             if (superCall.isInterfaceCall) continue
             val type = superCall.type
@@ -213,6 +217,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         val superCall = constructor.superCall
         val superType = classScope.superCalls
             .firstOrNull { it.isClassCall }?.typeI
+            ?: Types.Any
         if (superCall != null) {
             appendSuperCall0Name(
                 classScope, className, constructor,
@@ -317,11 +322,10 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    override fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
-        val dst = expression.dst
-        builder.append("const ")
+    override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
+        builder.append(if (withEquals) "const " else "let ")
         appendFieldName(graph, dst)
-        builder.append(" = ")
+        if (withEquals) builder.append(" = ")
     }
 
     override fun appendValueParameterDeclaration(

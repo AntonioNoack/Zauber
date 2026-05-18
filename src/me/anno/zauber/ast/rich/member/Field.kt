@@ -55,6 +55,12 @@ class Field(
     val isMutableEx get() = isMutable || scope.flags.hasFlag(Flags.VALUE)
     var isCaptured = false
 
+    /**
+     * when compiling languages, who dislike shadowing,
+     * create new names for duplicated ones
+     * */
+    var newName = name
+
     fun needsBackingField(): Boolean {
         val getterBody = getter?.body ?: return true
         if (getterBody.needsBackingField(getterBody.scope)) return true
@@ -97,7 +103,7 @@ class Field(
     fun resolveValueType(context: ResolutionContext): Type {
         val valueType = valueType
         if (valueType != null) {
-            return valueType.resolvedName
+            return valueType.resolvedName.specialize(context)
         }
 
         val initialValue = initialValue

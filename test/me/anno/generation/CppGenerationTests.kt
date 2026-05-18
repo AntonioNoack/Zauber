@@ -28,8 +28,8 @@ class CppGenerationTests : CodeGenerationTests() {
     }
 
     @Test
-    fun testSimpleAddition() {
-        testSimpleAdditionImpl()
+    fun testSimpleMath() {
+        testSimpleMathImpl()
     }
 
     @Test

@@ -22,8 +22,8 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
     override fun generator(): MinimalCompiler = MinimalJavaScriptCompiler()
 
     @Test
-    fun testSimpleAddition() {
-        testSimpleAdditionImpl()
+    fun testSimpleMath() {
+        testSimpleMathImpl()
     }
 
     @Test

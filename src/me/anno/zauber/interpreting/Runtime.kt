@@ -49,21 +49,13 @@ class Runtime {
         externalMethods[key] = method
     }
 
-    private fun getMergedField(field: SimpleField): SimpleField {
-        var field = field
-        while (true) {
-            field = field.mergeInfo?.dst
-                ?: return field
-        }
-    }
-
     operator fun get(field: SimpleField): Instance {
         val currCall = callStack.last()
         return this[currCall, field]
     }
 
     operator fun get(call: Call, field: SimpleField): Instance {
-        val field = getMergedField(field)
+        val field = field.dst
         // LOGGER.info("Getting SimpleField $field")
         return call.simpleFields[field]
             ?: run {
@@ -74,10 +66,7 @@ class Runtime {
 
     operator fun set(field: SimpleField, value: Instance) {
         // todo a field may be used for both use-cases...
-        var field = field
-        while (true) {
-            field = field.mergeInfo?.dst ?: break
-        }
+        val field = field.dst
 
         // todo only if that field really belongs into this scope:
         //  it might belong to one of the scopes before us

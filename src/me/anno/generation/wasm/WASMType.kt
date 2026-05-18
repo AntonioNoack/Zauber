@@ -2,6 +2,10 @@ package me.anno.generation.wasm
 
 sealed class WASMType(val wasmName: String) {
 
+    companion object {
+        val anyRef = Ref(-0x10 /* magic value meaning any */, "any", true)
+    }
+
     sealed class WASMNumberType(wasmName: String) : WASMType(wasmName)
 
     object I32 : WASMNumberType("i32")
@@ -9,9 +13,7 @@ sealed class WASMType(val wasmName: String) {
     object F32 : WASMNumberType("f32")
     object F64 : WASMNumberType("f64")
 
-    companion object {
-        val anyRef = Ref(-0x10 /* magic value meaning any */, "any", true)
-    }
+    override fun toString(): String = wasmName
 
     class Ref(
         val typeIndex: Int,

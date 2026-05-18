@@ -21,8 +21,8 @@ class JavaGenerationTests : CodeGenerationTests() {
     override fun generator() = MinimalJavaBuildCompiler()
 
     @Test
-    fun testSimpleAddition() {
-        testSimpleAdditionImpl()
+    fun testSimpleMath() {
+        testSimpleMathImpl()
     }
 
     @Test

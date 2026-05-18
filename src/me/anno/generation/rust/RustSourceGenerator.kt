@@ -6,22 +6,21 @@ import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.c.CSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.SimpleDeclaration
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -274,6 +273,28 @@ class RustSourceGenerator : CSourceGenerator() {
         if (isObject) builder.append(">")
     }
 
+    override fun appendCode(
+        context: ResolutionContext,
+        method1: Specialization,
+        body: Expression,
+        skipSuperCall: Boolean
+    ) {
+        writeBlock {
+            val graph = ASTSimplifier.simplify(method1)
+            if (skipSuperCall) graph.removeSuperCalls()
+            prepareGraph(graph)
+
+            scanSelves(graph, method1.method)
+
+            // todo simplify all entry points as methods...
+
+            val pos0 = builder.length
+            appendSimpleBlock(graph, graph.startBlock)
+
+            appendMissingDeclarations(graph, pos0)
+        }
+    }
+
     override fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
         builder.append("pub ")
     }
@@ -407,14 +428,13 @@ class RustSourceGenerator : CSourceGenerator() {
         imports.remove(name)
     }
 
-    override fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
-        val dst = expression.dst
+    override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
         builder.append("let ")
         if (dst.type !in nativeTypes) builder.append("mut ")
         appendFieldName(graph, dst)
         builder.append(": ")
-        appendTypeDecl(dst.type, expression.scope)
-        builder.append(" = ")
+        appendTypeDecl(dst.type, scope)
+        if (withEquals) builder.append(" = ")
     }
 
     override fun appendFieldName(
@@ -422,19 +442,23 @@ class RustSourceGenerator : CSourceGenerator() {
         field: SimpleField,
         forFieldAccess: String
     ) {
-        if (field.isObjectLike()) {
+        if (field.isOwnerThis(graph)) {
+            builder.append("self").append(forFieldAccess)
+        } else if (field.isObjectLike()) {
             val objectType = (field.type as ClassType).clazz
             appendGetObjectInstance(objectType, graph.method.scope)
             builder.append(forFieldAccess)
-        } else if (field.isOwnerThis(graph)) {
-            builder.append("self").append(forFieldAccess)
         } else {
-            var field = field
-            while (true) {
-                field = field.mergeInfo?.dst ?: break
+            val field = field.dst
+            when (val expr = field.constantRef) {
+                is NumberExpression -> appendNumber(field.type, expr)
+                null -> {
+                    check(field.id >= 0) { "Invalid field $field in $graph" }
+                    builder.append("tmp").append(field.id)
+                    usedFields.add(field)
+                }
+                else -> throw NotImplementedError("Append constant field $expr")
             }
-            check(field.id >= 0) { "Invalid field $field in $graph" }
-            builder.append("tmp").append(field.id)
             when (forFieldAccess) {
                 "" -> {}
                 "." -> {
