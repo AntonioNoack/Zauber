@@ -50,7 +50,7 @@ class JavaGenerationTests : CodeGenerationTests() {
         testValueIsPassedByCopyImpl()
     }
 
-    // todo add .copy(name=value) as a special function on data classes
+    // todo add .copy(name=value, name2=value2) as a special function on data classes
 
     // todo implement and test value classes being inlined:
     //  we explode them, and must make their body-functions static...

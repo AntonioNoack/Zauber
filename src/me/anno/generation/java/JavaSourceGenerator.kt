@@ -1020,6 +1020,9 @@ open class JavaSourceGenerator : Generator() {
                 }
                 builder.append(';')
             }*/
+            is SimpleConstructorCall -> {
+                // done already
+            }
             is SimpleDeclaration -> {
                 appendType(expr.type, expr.scope, false)
                 builder.append(' ').append(expr.name)
@@ -1125,65 +1128,57 @@ open class JavaSourceGenerator : Generator() {
                 }
             }
             is SimpleCall -> {
-                if (expr.sample is Constructor) {
-                    comment {
-                        builder.append("new ")
-                        // appendType(expr.dst.type, expr.scope, true)
-                        appendValueParams(graph, expr.valueParameters)
-                    }
-                } else {
-                    // Number.toX() needs to be converted to a cast
-                    val methodName = expr.methodName
-                    val done = when (expr.valueParameters.size) {
-                        0 -> {
-                            val castSymbol = when (methodName) {
-                                "toInt" -> "(int) "
-                                "toLong" -> "(long) "
-                                "toFloat" -> "(float) "
-                                "toDouble" -> "(double) "
-                                "toByte" -> "(byte) "
-                                "toShort" -> "(short) "
-                                "toChar" -> "(char) "
-                                else -> null
-                            }
-                            if (castSymbol != null && expr.self.type in nativeNumbers) {
-                                builder.append(castSymbol)
-                                appendFieldName(graph, expr.self)
-                                true
-                            } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                                builder.append('!')
-                                appendFieldName(graph, expr.self)
-                                true
-                            } else false
+                // Number.toX() needs to be converted to a cast
+                val methodName = expr.methodName
+                val done = when (expr.valueParameters.size) {
+                    0 -> {
+                        val castSymbol = when (methodName) {
+                            "toInt" -> "(int) "
+                            "toLong" -> "(long) "
+                            "toFloat" -> "(float) "
+                            "toDouble" -> "(double) "
+                            "toByte" -> "(byte) "
+                            "toShort" -> "(short) "
+                            "toChar" -> "(char) "
+                            else -> null
                         }
-                        1 -> {
-                            val supportsType = when (expr.self.type) {
-                                Types.String, in nativeTypes -> true
-                                else -> false
-                            }
-                            val symbol = when (methodName) {
-                                "plus" -> " + "
-                                "minus" -> " - "
-                                "times" -> " * "
-                                "div" -> " / "
-                                "rem" -> " % "
-                                // compareTo is a problem for numbers:
-                                //  we must call their static compare() function
-                                "compareTo" -> "compare"
-                                else -> null
-                            }
-                            if (supportsType && symbol != null) {
-                                appendFieldName(graph, expr.self)
-                                builder.append(symbol)
-                                appendFieldName(graph, expr.valueParameters[0])
-                                true
-                            } else false
+                        if (castSymbol != null && expr.self.type in nativeNumbers) {
+                            builder.append(castSymbol)
+                            appendFieldName(graph, expr.self)
+                            true
+                        } else if (expr.self.type == Types.Boolean && methodName == "not") {
+                            builder.append('!')
+                            appendFieldName(graph, expr.self)
+                            true
+                        } else false
+                    }
+                    1 -> {
+                        val supportsType = when (expr.self.type) {
+                            Types.String, in nativeTypes -> true
+                            else -> false
                         }
-                        else -> false
+                        val symbol = when (methodName) {
+                            "plus" -> " + "
+                            "minus" -> " - "
+                            "times" -> " * "
+                            "div" -> " / "
+                            "rem" -> " % "
+                            // compareTo is a problem for numbers:
+                            //  we must call their static compare() function
+                            "compareTo" -> "compare"
+                            else -> null
+                        }
+                        if (supportsType && symbol != null) {
+                            appendFieldName(graph, expr.self)
+                            builder.append(symbol)
+                            appendFieldName(graph, expr.valueParameters[0])
+                            true
+                        } else false
                     }
-                    if (!done) {
-                        appendCallImpl(graph, expr)
-                    }
+                    else -> false
+                }
+                if (!done) {
+                    appendCallImpl(graph, expr)
                 }
             }
             is SimpleAllocateInstance -> {
@@ -1192,14 +1187,6 @@ open class JavaSourceGenerator : Generator() {
                 appendType(expr.allocatedType, expr.scope, true)
                 appendValueParams(graph, expr.paramsForLater)
             }
-            is SimpleConstructorCall -> {
-                when (expr.isThis) {
-                    true -> builder.append("this")
-                    false -> builder.append("super")
-                }
-                appendValueParams(graph, expr.valueParameters)
-            }
-
             is SimpleReturn -> {
                 if (graph.method is Constructor) {
                     // cannot return something
@@ -1233,11 +1220,15 @@ open class JavaSourceGenerator : Generator() {
         if (needsCastForFirstValue != null) {
             appendCallForPrimitive(needsCastForFirstValue, expr, graph)
         } else {
-            appendFieldName(graph, expr.self, ".")
-            val methodName = getMethodName(expr.specialization)
-            builder.append(methodName)
-            appendValueParams(graph, expr.valueParameters)
+            appendCallForNonPrimitive(expr, graph)
         }
+    }
+
+    open fun appendCallForNonPrimitive(expr: SimpleCall, graph: SimpleGraph) {
+        appendFieldName(graph, expr.self, ".")
+        val methodName = getMethodName(expr.specialization)
+        builder.append(methodName)
+        appendValueParams(graph, expr.valueParameters)
     }
 
     open fun appendCallForPrimitive(

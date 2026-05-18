@@ -1,11 +1,6 @@
 package me.anno
 
-import me.anno.generation.CppGenerationTests
-import me.anno.generation.JavaGenerationTests
-import me.anno.generation.JavaScriptGenerationTests
-import me.anno.generation.LLVMGenerationTests
-import me.anno.generation.RustGenerationTests
-import me.anno.generation.WASMGenerationTests
+import me.anno.generation.*
 import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
@@ -22,7 +17,7 @@ class MultiTest(val code: String) {
             "c++" to CppGenerationTests(),
             "java" to JavaGenerationTests(),
             "js" to JavaScriptGenerationTests(),
-            "wasm" to WASMGenerationTests(),
+            "wasm" to WASMRuntimeTests(),
             "rust" to RustGenerationTests(),
             "llvm" to LLVMGenerationTests(),
         )

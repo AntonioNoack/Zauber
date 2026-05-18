@@ -26,6 +26,7 @@ import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -350,7 +351,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 appendType(expr.allocatedType, expr.scope, true)
                 builder.append("()")
             }
-            is SimpleCall if (expr.sample is Constructor) -> {
+            is SimpleConstructorCall -> {
                 appendFieldName(graph, expr.self, ".")
                 builder.append(getMethodName(expr.specialization))
                 appendValueParams(graph, expr.valueParameters)
