@@ -26,6 +26,7 @@ import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.types.Type
@@ -85,20 +86,17 @@ object DataClassGenerator {
             }
     }
 
-    fun ZauberASTBuilderBase.finishDataClass(classScope: Scope) {
-        pushScope(classScope) {
-            val origin = origin(i)
-            val primaryFields = classScope.findPrimaryFields()
-            val context = ResolutionContext.minimal /// todo better context?
+    fun finishDataClass(classScope: Scope, origin: Long) {
+        val primaryFields = classScope.findPrimaryFields()
+        val context = ResolutionContext.minimal /// todo better context?
 
-            ensureHashCodeMethod(classScope, primaryFields, context, origin)
-            ensureToStringMethod(classScope, primaryFields, context, origin)
-            ensureEqualsMethods(classScope, primaryFields, context, origin)
-            ensureCopyMethod(classScope, primaryFields, context, origin)
-        }
+        ensureHashCodeMethod(classScope, primaryFields, context, origin)
+        ensureToStringMethod(classScope, primaryFields, context, origin)
+        ensureEqualsMethods(classScope, primaryFields, context, origin)
+        ensureCopyMethod(classScope, primaryFields, context, origin)
     }
 
-    private fun ZauberASTBuilderBase.ensureHashCodeMethod(
+    private fun ensureHashCodeMethod(
         classScope: Scope, primaryFields: List<Field>,
         context: ResolutionContext, origin: Long
     ) {
@@ -107,11 +105,11 @@ object DataClassGenerator {
             emptyList(), emptyList(), context
         )
         if (hashCodeMethod == null) {
-            generateHashCodeMethod(primaryFields, origin)
+            generateHashCodeMethod(classScope, primaryFields, origin)
         }
     }
 
-    private fun ZauberASTBuilderBase.ensureToStringMethod(
+    private fun ensureToStringMethod(
         classScope: Scope, primaryFields: List<Field>,
         context: ResolutionContext, origin: Long
     ) {
@@ -124,7 +122,7 @@ object DataClassGenerator {
         }
     }
 
-    private fun ZauberASTBuilderBase.ensureEqualsMethods(
+    private fun ensureEqualsMethods(
         classScope: Scope, primaryFields: List<Field>,
         context: ResolutionContext, origin: Long
     ) {
@@ -150,140 +148,130 @@ object DataClassGenerator {
         }
     }
 
-    private fun ZauberASTBuilderBase.generateHashCodeMethod(primaryFields: List<Field>, origin: Long) {
-        lateinit var body: Expression
-        val methodScope = pushScope("hashCode", ScopeType.METHOD) { scope ->
-            scope.setEmptyTypeParams()
+    private fun generateHashCodeMethod(
+        classScope: Scope, primaryFields: List<Field>, origin: Long
+    ) {
+        val methodScope = classScope.generate("hashCode", ScopeType.METHOD)
+        methodScope.setEmptyTypeParams()
 
-            val builder = ExpressionBuilder(scope, origin, Types.Int)
-            for (field in primaryFields) {
-                val fieldExpr = FieldExpression(field, scope, origin)
-                val hashExpr = NamedCallExpression(fieldExpr, "hashCode", scope, origin)
-                if (builder.expr == null) {
-                    builder.expr = hashExpr
-                } else {
-                    builder.times(special.i31)
-                    builder.plus(hashExpr)
-                }
+        val builder = ExpressionBuilder(methodScope, origin, Types.Int)
+        for (field in primaryFields) {
+            val fieldExpr = FieldExpression(field, methodScope, origin)
+            val hashExpr = NamedCallExpression(fieldExpr, "hashCode", methodScope, origin)
+            if (builder.expr == null) {
+                builder.expr = hashExpr
+            } else {
+                builder.times(special.i31)
+                builder.plus(hashExpr)
             }
-            body = ReturnExpression(builder.expr ?: special.i1, null, scope, origin)
-            scope
         }
+
+        val body = ReturnExpression(builder.expr ?: special.i1, null, methodScope, origin)
         methodScope.selfAsMethod = Method(
             null, false, "hashCode", emptyList(), emptyList(),
             methodScope, Types.Int, emptyList(), body, KEYWORDS, origin
         )
     }
 
-    private fun ZauberASTBuilderBase.generateToStringMethod(
+    private fun generateToStringMethod(
         classScope: Scope, origin: Long,
         primaryFields: List<Field>
     ) {
-        lateinit var body: Expression
-        val methodScope = pushScope("toString", ScopeType.METHOD) { scope ->
-            scope.setEmptyTypeParams()
+        val methodScope = classScope.generate("toString", ScopeType.METHOD)
+        methodScope.setEmptyTypeParams()
 
-            val builder = ExpressionBuilder(scope, origin, Types.String)
-            builder.expr = StringExpression("${classScope.name}(", scope, origin)
-            for ((i, field) in primaryFields.withIndex()) {
-                val fieldExpr = FieldExpression(field, scope, origin)
-                val stringExpr = NamedCallExpression(fieldExpr, "toString", scope, origin)
-                val name = field.name
-                builder.plus(StringExpression(if (i > 0) ",$name=" else "$name=", scope, origin))
-                builder.plus(stringExpr)
-            }
-            builder.plus(StringExpression(")", scope, origin))
-            body = ReturnExpression(builder.expr!!, null, scope, origin)
-            scope
+        val builder = ExpressionBuilder(methodScope, origin, Types.String)
+        builder.expr = StringExpression("${classScope.name}(", methodScope, origin)
+        for ((i, field) in primaryFields.withIndex()) {
+            val fieldExpr = FieldExpression(field, methodScope, origin)
+            val stringExpr = NamedCallExpression(fieldExpr, "toString", methodScope, origin)
+            val name = field.name
+            builder.plus(StringExpression(if (i > 0) ",$name=" else "$name=", methodScope, origin))
+            builder.plus(stringExpr)
         }
+        builder.plus(StringExpression(")", methodScope, origin))
+
+        val body = ReturnExpression(builder.expr!!, null, methodScope, origin)
         methodScope.selfAsMethod = Method(
             null, false, "toString", emptyList(), emptyList(),
             methodScope, Types.String, emptyList(), body, KEYWORDS, origin
         )
     }
 
-    private fun ZauberASTBuilderBase.generateEqualsAnyMethod(
+    private fun generateEqualsAnyMethod(
         classScope: Scope, origin: Long,
         primaryFields: List<Field>
     ) {
-        lateinit var body: Expression
-        lateinit var parameter: Parameter
-        val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
-            scope.setEmptyTypeParams()
+        val methodScope = classScope.generate("equals", ScopeType.METHOD)
+        methodScope.setEmptyTypeParams()
 
-            parameter = Parameter(
-                0, "other", ParameterType.VALUE_PARAMETER,
-                ParameterMutability.DEFAULT,
-                Types.NullableAny, scope, origin,
-            )
-            val otherField = parameter.getOrCreateField(null, Flags.NONE)
+        val parameter = Parameter(
+            0, "other", ParameterType.VALUE_PARAMETER,
+            ParameterMutability.DEFAULT,
+            Types.NullableAny, methodScope, origin,
+        )
+        val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
-            val builder = ExpressionBuilder(scope, origin, Types.Boolean)
-            val otherInstanceExpr0 = FieldExpression(otherField, scope, origin)
-            builder.expr = IsInstanceOfExpr(otherInstanceExpr0, classScope.typeWithArgs, scope, origin)
+        val builder = ExpressionBuilder(methodScope, origin, Types.Boolean)
+        val otherInstanceExpr0 = FieldExpression(otherField, methodScope, origin)
+        builder.expr = IsInstanceOfExpr(otherInstanceExpr0, classScope.typeWithArgs, methodScope, origin)
 
-            for (field in primaryFields) {
-                builder.shortcutAnd { subScope ->
-                    val fieldExpr = FieldExpression(field, subScope, origin)
-                    val otherInstanceI = FieldExpression(otherField, subScope, origin) // must be here for implicit cast
-                    val otherFieldExpr = DotExpression(otherInstanceI, emptyList(), fieldExpr, subScope, origin)
-                    CheckEqualsOp(
-                        fieldExpr, otherFieldExpr,
-                        byPointer = false, negated = false,
-                        null, subScope, origin
-                    )
-                }
+        for (field in primaryFields) {
+            builder.shortcutAnd { subScope ->
+                val fieldExpr = FieldExpression(field, subScope, origin)
+                val otherInstanceI = FieldExpression(otherField, subScope, origin) // must be here for implicit cast
+                val otherFieldExpr = DotExpression(otherInstanceI, emptyList(), fieldExpr, subScope, origin)
+                CheckEqualsOp(
+                    fieldExpr, otherFieldExpr,
+                    byPointer = false, negated = false,
+                    null, subScope, origin
+                )
             }
-
-            body = ReturnExpression(builder.expr ?: special.iTrue, null, scope, origin)
-            scope
         }
+
+        val body = ReturnExpression(builder.expr ?: special.iTrue, null, methodScope, origin)
         methodScope.selfAsMethod = Method(
             null, false, "equals", emptyList(), listOf(parameter),
             methodScope, Types.Boolean, emptyList(), body, KEYWORDS, origin
         )
     }
 
-    private fun ZauberASTBuilderBase.generateEqualsSelfMethod(
+    private fun generateEqualsSelfMethod(
         classScope: Scope, origin: Long,
         primaryFields: List<Field>
     ) {
-        lateinit var body: Expression
-        lateinit var parameter: Parameter
-        val methodScope = pushScope("equals", ScopeType.METHOD) { scope ->
-            scope.setEmptyTypeParams()
+        val methodScope = classScope.generate("equals", ScopeType.METHOD)
+        methodScope.setEmptyTypeParams()
 
-            parameter = Parameter(
-                0, "other", ParameterType.VALUE_PARAMETER,
-                ParameterMutability.DEFAULT,
-                classScope.typeWithArgs, scope, origin
-            )
-            val otherField = parameter.getOrCreateField(null, Flags.NONE)
+        val parameter = Parameter(
+            0, "other", ParameterType.VALUE_PARAMETER,
+            ParameterMutability.DEFAULT,
+            classScope.typeWithArgs, methodScope, origin
+        )
+        val otherField = parameter.getOrCreateField(null, Flags.NONE)
 
-            val builder = ExpressionBuilder(scope, origin, Types.Boolean)
-            for (field in primaryFields) {
-                builder.shortcutAnd { subScope ->
-                    val fieldExpr = FieldExpression(field, subScope, origin)
-                    val otherInstanceI = FieldExpression(otherField, subScope, origin) // must be here for implicit cast
-                    val otherFieldExpr = DotExpression(otherInstanceI, emptyList(), fieldExpr, subScope, origin)
-                    CheckEqualsOp(
-                        fieldExpr, otherFieldExpr,
-                        byPointer = false, negated = false,
-                        null, subScope, origin
-                    )
-                }
+        val builder = ExpressionBuilder(methodScope, origin, Types.Boolean)
+        for (field in primaryFields) {
+            builder.shortcutAnd { subScope ->
+                val fieldExpr = FieldExpression(field, subScope, origin)
+                val otherInstanceI = FieldExpression(otherField, subScope, origin) // must be here for implicit cast
+                val otherFieldExpr = DotExpression(otherInstanceI, emptyList(), fieldExpr, subScope, origin)
+                CheckEqualsOp(
+                    fieldExpr, otherFieldExpr,
+                    byPointer = false, negated = false,
+                    null, subScope, origin
+                )
             }
-
-            body = ReturnExpression(builder.expr ?: special.iTrue, null, scope, origin)
-            scope
         }
+
+        val body = ReturnExpression(builder.expr ?: special.iTrue, null, methodScope, origin)
         methodScope.selfAsMethod = Method(
             null, false, "equals", emptyList(), listOf(parameter),
             methodScope, Types.Boolean, emptyList(), body, KEYWORDS, origin
         )
     }
 
-    private fun ZauberASTBuilderBase.ensureCopyMethod(
+    private fun ensureCopyMethod(
         classScope: Scope, primaryFields: List<Field>,
         context: ResolutionContext, origin: Long
     ) {
@@ -293,7 +281,7 @@ object DataClassGenerator {
             emptyList(), emptyList(), context
         )
         if (copyMethod == null) {
-            generateCopyMethod(classScope, primaryFields, null, origin)
+            generateCopyMethod(classScope, primaryFields, emptyList(), origin)
         }
 
         // create copy methods with just one field
@@ -307,46 +295,81 @@ object DataClassGenerator {
             }
             if (copyMethod == null) {
                 println("Creating copy(${setField.name}: $valueType) for $classScope")
-                generateCopyMethod(classScope, primaryFields, setField, origin)
+                generateCopyMethod(classScope, primaryFields, listOf(setField), origin)
             }
         }
     }
 
-    private fun ZauberASTBuilderBase.generateCopyMethod(
-        classScope: Scope, primaryFields: List<Field>,
-        setField: Field?, origin: Long,
+    fun generateCopyMethodIfNeeded(
+        classScope: Scope, name: String,
+        typeParameters: List<Type>?,
+        valueParameters: List<ValueParameter>,
+        origin: Long
     ) {
-        lateinit var body: Expression
-        lateinit var valueParams: List<Parameter>
-        val methodScope = pushScope(ScopeType.METHOD, "copy") { methodScope ->
-            methodScope.setEmptyTypeParams()
 
-            valueParams = if (setField == null) emptyList() else listOf(
-                Parameter(
-                    0, setField.name, ParameterType.VALUE_PARAMETER,
-                    ParameterMutability.DEFAULT,
-                    setField.valueType!!, methodScope, origin
-                ).apply { mustBeNamed = true }
-            )
+        // some preliminary checks
+        if (name != "copy") return
+        if (!typeParameters.isNullOrEmpty()) return
+        if (!(classScope.isDataClass() || classScope.isValueType())) return
+        if (valueParameters.size < 2) return // handled elsewhere
+        if (valueParameters.any { vp -> vp.name == null }) return
+        if (valueParameters.any { vp -> classScope.fields.none { field -> field.name == vp.name } }) return
 
-            val typeParameters = classScope.typeParameters.map { it.type }
-            val valueParameters = primaryFields.map { field ->
-                val expr = if (field === setField) {
-                    val paramField = valueParams[0]
-                        .getOrCreateField(null, Flags.SYNTHETIC)
-                    FieldExpression(paramField, methodScope, origin)
-                } else {
-                    FieldExpression(field, classScope, origin)
-                }
-                NamedParameter(field.name, expr)
-            }
-            val copyExpr = ConstructorExpression(
-                classScope, typeParameters,
-                valueParameters, null, classScope, origin
-            )
-            body = ReturnExpression(copyExpr, null, methodScope, origin)
-            methodScope
+        // last checks for validity
+        val primaryFields = classScope.findPrimaryFields()
+        val setFields = valueParameters.map { vp ->
+            primaryFields.firstOrNull { field -> field.name == vp.name }
+                ?: return
         }
+
+        val existingMethod = classScope.children.firstOrNull {
+            val m = it.selfAsMethod
+            m != null && m.name == "copy" &&
+                    m.typeParameters.isEmpty() &&
+                    m.valueParameters.size == valueParameters.size &&
+                    valueParameters.indices.all { index ->
+                        m.valueParameters[index].name == valueParameters[index].name
+                    }
+        }
+
+        if (existingMethod == null) {
+            generateCopyMethod(classScope, primaryFields, setFields, origin)
+        }
+    }
+
+    fun generateCopyMethod(
+        classScope: Scope, primaryFields: List<Field>,
+        setFields: List<Field>, origin: Long,
+    ) {
+        val methodScope = classScope.generate("copy", ScopeType.METHOD)
+        methodScope.setEmptyTypeParams()
+
+        val valueParams = setFields.mapIndexed { index, setField ->
+            Parameter(
+                index, setField.name, ParameterType.VALUE_PARAMETER,
+                ParameterMutability.DEFAULT,
+                setField.valueType!!, methodScope, origin
+            ).apply { mustBeNamed = true }
+        }
+
+        val typeParameters = classScope.typeParameters.map { it.type }
+        val valueParameters = primaryFields.map { field ->
+            val valueParam = valueParams.firstOrNull { it.name == field.name }
+            val expr = if (valueParam != null) {
+                val paramField = valueParam
+                    .getOrCreateField(null, Flags.SYNTHETIC)
+                FieldExpression(paramField, methodScope, origin)
+            } else {
+                FieldExpression(field, classScope, origin)
+            }
+            NamedParameter(field.name, expr)
+        }
+        val copyExpr = ConstructorExpression(
+            classScope, typeParameters,
+            valueParameters, null, classScope, origin
+        )
+
+        val body = ReturnExpression(copyExpr, null, methodScope, origin)
         methodScope.selfAsMethod = Method(
             null, false, "copy",
             emptyList(), valueParams, methodScope,

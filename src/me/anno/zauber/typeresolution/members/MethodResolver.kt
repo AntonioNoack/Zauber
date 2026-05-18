@@ -1,8 +1,9 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parser.DataClassGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -32,6 +33,11 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
 
         val scopeSelfType = getSelfType(scope)
         val children = scope[sit1].children
+
+        if (name == "copy") DataClassGenerator.generateCopyMethodIfNeeded(
+            scope, name, typeParameters, valueParameters, -1,
+        )
+
         var bestMatch: ResolvedMethod? = null
         for (i in children.indices) {
 
@@ -60,6 +66,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
                 bestMatch = match
             }
         }
+
         return bestMatch
     }
 

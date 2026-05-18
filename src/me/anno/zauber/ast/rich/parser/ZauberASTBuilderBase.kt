@@ -185,11 +185,8 @@ abstract class ZauberASTBuilderBase(
             }
         }
 
-        val keywords = classScope.flags
-        if (keywords.hasFlag(Flags.DATA_CLASS) || keywords.hasFlag(Flags.VALUE)) {
-            pushScope(classScope) {
-                finishDataClass(classScope)
-            }
+        if (classScope.isDataOrValueClass()) {
+            finishDataClass(classScope, origin(i))
         }
     }
 
