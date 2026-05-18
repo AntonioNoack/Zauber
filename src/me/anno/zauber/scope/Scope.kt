@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.ast.rich.parser.ASTBuilderBase
+import me.anno.zauber.expansion.AddSuperCallToPackages
 import me.anno.zauber.expansion.DefaultParameters
 import me.anno.zauber.expansion.EarlyTypeResolution
 import me.anno.zauber.expansion.MethodOverrides
@@ -111,6 +112,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     init {
+        addInitPart(AddSuperCallToPackages.addSuperCallToPackages)
         addInitPart(EarlyTypeResolution.typeResolutionCreator)
         addInitPart(DefaultParameters.defaultParameterCreator)
         addInitPart(MethodOverrides.methodOverrideCreator)

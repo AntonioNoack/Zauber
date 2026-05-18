@@ -18,7 +18,7 @@ class RustGenerationTests : CodeGenerationTests() {
         )
     }
 
-    override fun generator() = MinimalRustCompiler()
+    override fun generator() = MinimalRustCompiler(true)
 
     @Test
     fun testSimpleMath() {

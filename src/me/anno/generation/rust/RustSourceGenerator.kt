@@ -133,10 +133,6 @@ class RustSourceGenerator : CSourceGenerator() {
             }
     }
 
-    override fun getClassType(scope: Scope): String {
-        return "pub struct"
-    }
-
     override fun appendClassFlags(scope: Scope) {
         val ownership = RustOwnership[resolveType(scope.typeWithArgs)]
         if (scope.isValueType() && ownership.isImmutable) {
@@ -163,6 +159,11 @@ class RustSourceGenerator : CSourceGenerator() {
     ) {
         declareImport(classScope, specialization)
         specialization.use {
+            // todo writing the class must be done in two phases like for C++:
+            //  traits and structs
+            //  traits describe open class or interfaces
+            //  structs define classes
+
             appendSpecializationInfoComment()
 
             if (classScope.isObjectLike()) {
@@ -170,16 +171,57 @@ class RustSourceGenerator : CSourceGenerator() {
             }
 
             appendClassFlags(classScope)
-            appendClassPrefix(classScope, className)
+            builder.append("pub struct ").append(className)
+            writeBlock {
+                val allowFinalFields = !classScope.isValueType() &&
+                        methods.any { it.method is Constructor }
+                appendFields(classScope, fields, allowFinalFields, headerOnly)
+            }
+            nextLine()
 
-            /*if (specialization.containsGenerics()) {
-                appendTypeParams(classScope)
-            }*/
-            appendSuperTypes(classScope)
+            builder.append("impl ").append(className)
+            writeBlock {
+                if (classScope.isObjectLike()) {
+                    builder.append("pub fn get").append(OBJECT_FIELD_NAME)
+                        .append("() -> MutexGuard<'static, ").append(className).append(">")
+                    writeBlock {
+                        builder.append(OBJECT_FIELD_NAME)
+                            .append(".lock().unwrap()")
+                        nextLine()
+                    }
+                }
 
-            appendClassBody(classScope, className, methods, fields, headerOnly)
+                appendConstructors(classScope, className, methods, headerOnly)
+                appendMethods(classScope, className, methods, headerOnly)
+            }
+            nextLine()
+
+            if (classScope.isOpen() || classScope == Types.Any.clazz) {
+                // todo only if a class actually overrides it?
+                builder.append("pub trait ").append(className).append(traitSuffix)
+                writeBlock {
+                    // todo add all open methods
+                }
+                nextLine()
+            }
+
+            for (call in classScope.superCalls) {
+                val superScope = call.type.clazz
+                val superClassName = getClassName(superScope, specialization.withScope(superScope)) + traitSuffix
+                // we have to import it...
+                imports[superClassName] = superScope.path.dropLast(1) + superClassName
+                builder.append("impl ")
+                    .append(superClassName)
+                    .append(" for ").append(className)
+                writeBlock {
+                    // todo add all methods
+                }
+                nextLine()
+            }
         }
     }
+
+    val traitSuffix = "Trait"
 
     override fun appendStaticInstance(classScope: Scope, className: String) {
         builder.append("use lazy_static::lazy_static;\n")
@@ -205,35 +247,6 @@ class RustSourceGenerator : CSourceGenerator() {
             builder.append(", ")
         }
         builder.append("}")
-    }
-
-    override fun appendClassBody(
-        classScope: Scope, className: String,
-        methods: Collection<Specialization>, fields: Collection<Specialization>,
-        headerOnly: Boolean
-    ) {
-        writeBlock {
-            val allowFinalFields = !classScope.isValueType() &&
-                    methods.any { it.method is Constructor }
-            appendFields(classScope, fields, allowFinalFields, headerOnly)
-        }
-        nextLine()
-
-        builder.append("impl ").append(className)
-        writeBlock {
-            if (classScope.isObjectLike()) {
-                builder.append("pub fn get").append(OBJECT_FIELD_NAME)
-                    .append("() -> MutexGuard<'static, ").append(className).append(">")
-                writeBlock {
-                    builder.append(OBJECT_FIELD_NAME)
-                        .append(".lock().unwrap()")
-                    nextLine()
-                }
-            }
-
-            appendConstructors(classScope, className, methods, headerOnly)
-            appendMethods(classScope, className, methods, headerOnly)
-        }
     }
 
     override fun appendMethod(
@@ -416,6 +429,10 @@ class RustSourceGenerator : CSourceGenerator() {
         }
         appendPath(import, "::")
         if (fromZauber) {
+            //hack!
+            if (builder.endsWith(traitSuffix)) {
+                builder.setLength(builder.length - traitSuffix.length)
+            }
             // name must appear twice, once for the file, once for the class
             builder.append("::").append(import.last())
         }

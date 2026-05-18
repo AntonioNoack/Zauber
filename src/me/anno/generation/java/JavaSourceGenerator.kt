@@ -960,6 +960,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
+            is SimpleConstructorCall -> {}
             is SimpleCall -> {
                 if (expr.sample !is Constructor) {
                     builder.append(";")

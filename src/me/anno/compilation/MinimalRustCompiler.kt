@@ -5,7 +5,8 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-open class MinimalRustCompiler : MinimalCompiler() {
+open class MinimalRustCompiler(val preserveFolder: Boolean = false) :
+    MinimalCompiler() {
 
     companion object {
         val cargoToml by lazy {
@@ -19,6 +20,11 @@ open class MinimalRustCompiler : MinimalCompiler() {
         projectFolder: File, srcFolder: File,
         dependencies: DependencyData, mainMethod: Method
     ) {
+        // avoid deleting build folder, because Rust builds dependencies
+        val projectFolder = if (preserveFolder) File(projectFolder.parentFile, "ZauberRust") else projectFolder
+        val srcFolder = if (preserveFolder) File(projectFolder, "src") else srcFolder
+        if (preserveFolder) srcFolder.mkdirs()
+
         RustSourceGenerator()
             .generateCode(srcFolder, dependencies, mainMethod)
 
@@ -27,6 +33,7 @@ open class MinimalRustCompiler : MinimalCompiler() {
     }
 
     override fun execute(projectFolder: File): String {
+        val projectFolder = if (preserveFolder) File(projectFolder, "../ZauberRust") else projectFolder
         return runProcessGetPrinted(projectFolder, "cargo", "run")
     }
 }
