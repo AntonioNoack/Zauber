@@ -621,12 +621,13 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
-        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
+        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing) {
             val notNeeded = expr.dst.id < 0
             if (notNeeded) {
-                comment { builder.append("%tmp[${expr.dst.id}] =") }
                 appendDrop()
-            } else appendAssign(graph, expr)
+            } else {
+                appendAssign(graph, expr)
+            }
         }
         if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
             appendUnreachable()
@@ -1198,9 +1199,6 @@ class WASMSourceGenerator : CSourceGenerator() {
 
         callMethod(expr.specialization)
         nextLine()
-
-        // constructor return value is ignored
-        appendDrop()
     }
 
     fun callMethod(method: Specialization) {
