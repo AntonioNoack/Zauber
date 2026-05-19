@@ -50,4 +50,9 @@ class RustGenerationTests : CodeGenerationTests() {
         testValueIsPassedByCopyImpl()
     }
 
+    @Test
+    fun testSimpleLoop() {
+        testSimpleLoopImpl()
+    }
+
 }

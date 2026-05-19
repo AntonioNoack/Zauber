@@ -50,6 +50,11 @@ class JavaGenerationTests : CodeGenerationTests() {
         testValueIsPassedByCopyImpl()
     }
 
+    @Test
+    fun testSimpleLoop() {
+        testSimpleLoopImpl()
+    }
+
     // todo add .copy(name=value, name2=value2) as a special function on data classes
 
     // todo implement and test value classes being inlined:

@@ -81,7 +81,7 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
         projectFolder.mkdirs()
 
         val srcFolder = File(projectFolder, "src")
-        // srcFolder should be cleaned up by DeltaFileWriter, if it exists
+        // srcFolder should be cleaned up by DeltaFileWriter
         srcFolder.mkdirs()
 
         registerMethods()

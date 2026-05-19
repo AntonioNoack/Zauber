@@ -48,10 +48,9 @@ class LLVMGenerationTests : CodeGenerationTests() {
         testValueIsPassedByCopyImpl()
     }
 
-    // todo implement value classes being copied when written / passed as parameter
-    // todo implement and test value classes being inlined
-
-    // todo implement and test working with strings
-    // todo test specialized classes being usable
+    @Test
+    fun testSimpleLoop() {
+        testSimpleLoopImpl()
+    }
 
 }

@@ -57,6 +57,11 @@ class CppGenerationTests : CodeGenerationTests() {
         testValueIsPassedByCopyImpl()
     }
 
+    @Test
+    fun testSimpleLoop() {
+        testSimpleLoopImpl()
+    }
+
     // todo implement and test working with strings
     // todo test specialized classes being usable
 

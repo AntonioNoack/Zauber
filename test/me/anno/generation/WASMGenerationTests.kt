@@ -51,4 +51,9 @@ class WASMGenerationTests : CodeGenerationTests() {
         testValueIsPassedByCopyImpl()
     }
 
+    @Test
+    fun testSimpleLoop() {
+        testSimpleLoopImpl()
+    }
+
 }

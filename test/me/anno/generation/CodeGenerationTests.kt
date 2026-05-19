@@ -164,4 +164,37 @@ abstract class CodeGenerationTests {
         assertEquals("1\n", printed)
     }
 
+    fun testSimpleLoopImpl() {
+        val code = """
+        fun fib(i: Int): Int {
+            var a = 1
+            var b = 0
+            var k = 0
+            while (k <= i) {
+                val tmp = a
+                a = a + b
+                b = tmp
+                k++
+            }
+            return b
+        }
+        fun main() {
+            println(fib(7))
+        }
+        package zauber
+        class Any
+        external class Int {
+            external operator fun plus(other: Int): Int
+            external operator fun compareTo(other: Int): Int
+            operator fun inc() = this + 1
+        }
+        external fun println(arg0: Int)
+        """.trimIndent()
+
+        // 1, 1, 2, 3, 5, 8, 13, 21
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("21\n", printed)
+    }
+
 }

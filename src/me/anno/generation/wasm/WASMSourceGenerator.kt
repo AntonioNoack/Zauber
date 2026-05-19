@@ -34,8 +34,6 @@ import me.anno.zauber.types.impl.ClassType
 import java.io.File
 
 /**
- * todo bug: result from call to println() is not dropped in testSimpleAddition, why???
- *
  * todo copy/adjust this class into JVM-bytecode
  *
  * directly encode binary WASM
@@ -195,7 +193,13 @@ class WASMSourceGenerator : CSourceGenerator() {
         commentDepth++
         try {
             builder.append(if (commentDepth == 1) ";; " else "(")
+            val i0 = builder.length
             body()
+            for (i in i0 until builder.length) {
+                if (builder[i] == '\n') {
+                    builder[i] = '|'
+                }
+            }
             if (commentDepth == 1) nextLine()
             else builder.append(")")
         } finally {

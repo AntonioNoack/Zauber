@@ -14,11 +14,30 @@ class MinimalLLVMCompiler : MinimalCompiler() {
 
         // compile it to assembly
         runProcess(projectFolder, "llc", srcFile.name)
+        val assemblyFile = srcFile.nameWithoutExtension + ".s"
+        val objectFile = srcFile.nameWithoutExtension + ".o"
 
-        // todo link it
+        val cFile = "Zauber.c"
+        val objectLibFile = "Zauber.o"
+        File(projectFolder, cFile)
+            .writeText(
+                """
+                #include <stdio.h>
+                void zauber_println_wjpkxu(void* self, int value) {
+                    printf("%d\n", value);
+                }
+            """.trimIndent()
+            )
+
+        runProcess(projectFolder, "clang", "-c", assemblyFile, "-o", objectFile)
+        runProcess(projectFolder, "clang", "-c", cFile, "-o", objectLibFile)
+
+        // link it
+        runProcess(projectFolder, "clang", objectFile, objectLibFile, "-o", "Zauber.a")
+
     }
 
     override fun execute(projectFolder: File): String {
-        TODO("run it")
+        return runProcessGetPrinted(projectFolder, "./Zauber.a")
     }
 }

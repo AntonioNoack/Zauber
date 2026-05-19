@@ -1,77 +1,140 @@
 package me.anno.generation.llvm
 
-import me.anno.generation.BoxedType
 import me.anno.generation.c.CSourceGenerator
-import me.anno.generation.java.JavaSourceGenerator
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.member.Constructor
-import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.expression.CompareType
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.*
-import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
-import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.Specialization
 import java.io.File
+import kotlin.math.max
 
-// todo this is like C (end game difficulty), just different commands?
+/**
+ * generate LLVM directly instead of calling into C/C++, should be faster,
+ * but make our life a little harder
+ * */
 class LLVMSourceGenerator : CSourceGenerator() {
 
-    companion object {
+    val typeList = ArrayList<LLVMStruct>()
 
-        // taken from Java
-        val protectedLLVMTypes by threadLocal {
-            Types.run {
-                mapOf(
-                    Boolean to BoxedType("Boolean", "boolean"),
-                    Byte to BoxedType("Byte", "byte"),
-                    Short to BoxedType("Short", "short"),
-                    Int to BoxedType("Integer", "int"),
-                    Long to BoxedType("Long", "long"),
-                    Char to BoxedType("Character", "char"),
-                    Float to BoxedType("Float", "float"),
-                    Double to BoxedType("Double", "double"),
-                )
-            }
+    var nextRegisterId = 0
+    var nextLabelId = 0
+
+    fun nextReg(): String = "%r${nextRegisterId++}"
+    fun nextLabel(prefix: String = "lbl"): String = "${prefix}_${nextLabelId++}"
+
+    val globalNames = ArrayList<String>()
+    val globalStructs = ArrayList<LLVMStruct>()
+    val objectGlobals = HashMap<Scope, Int>()
+    val renames = HashMap<SimpleField, String>()
+
+    lateinit var objectGetters: Map<Scope, Int>
+    lateinit var objects: List<Specialization>
+
+    val structs = HashMap<Specialization, LLVMStruct>()
+
+    fun defineObjectGetters(data: DependencyData) {
+        // find constructed object-likes
+        val objects = data.createdClasses.filter { it.clazz.isObjectLike() }
+        val getters = HashMap<Scope, Int>(objects.size)
+        for (i in objects.indices) {
+            getters[objects[i].clazz] = i
         }
-
-        val nativeLLVMTypes by threadLocal { protectedLLVMTypes.filter { (_, it) -> it.boxed != it.native } }
-        val nativeLLVMNumbers by threadLocal { nativeLLVMTypes - Types.Boolean }
-
+        this.objects = objects
+        objectGetters = getters
     }
 
-    override val protectedTypes: Map<ClassType, BoxedType> get() = protectedLLVMTypes
-    override val nativeTypes: Map<ClassType, BoxedType> get() = nativeLLVMTypes
-    override val nativeNumbers: Map<ClassType, BoxedType> get() = nativeLLVMNumbers
-
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
+
+        defineObjectGetters(data)
+
+        comment { builder.append("method imports") }
         for (method in data.calledMethods) {
-            generateCode(method)
+            if (method.method.body != null) continue
+            appendMethodImport(method)
         }
+        builder.append("declare ptr @calloc(i64, i64)")
+        nextLine()
+
+        val methodImports = builder.toString()
+        builder.clear()
+
+        comment { builder.append("main method") }
+        appendMainMethodCode(mainMethod)
+
+        comment { builder.append("method implementations") }
+        for (method in data.calledMethods) {
+            if (method.method.body == null) continue
+            appendMethodCode(method)
+        }
+
+        comment { builder.append("object getters") }
+        for (obj in objects) {
+            appendObjectGetterCode(obj.clazz)
+        }
+
+        val methodBodies = builder.toString()
+        builder.clear()
+
+        writeStructTypes()
+        builder.append(methodImports)
+        writeObjectGlobals()
+        builder.append(methodBodies)
 
         dst.writeText(builder.toString())
         builder.clear()
     }
 
-    override fun getMethodName(method: Specialization): String {
-        return method.method.memberScope.pathStr +
-                JavaSourceGenerator().createSpecializationSuffix(method)
+    fun appendMainMethodCode(mainMethod: Method) {
+        builder.append("define i32 @main(i32 %argc, i8** %argv) #0 {")
+        depth++
+        nextLine()
+
+        val tmp = getObjectInstanceField(mainMethod.ownerScope)
+        val spec = Specialization(mainMethod.memberScope, emptyParameterList())
+        callMethod(SimpleGraph(spec), spec, listOf(tmp))
+        nextLine()
+
+        builder.append("ret i32 0")
+        nextLine()
+
+        dedent()
+        depth--
+        builder.append("}")
+        nextLine()
     }
 
     override fun comment(body: () -> Unit) {
         commentDepth++
         try {
-            builder.append(if (commentDepth == 1) "; " else "(")
+            builder.append(if (commentDepth == 1) ";; " else "(")
+            val i0 = builder.length
             body()
+            for (i in i0 until builder.length) {
+                if (builder[i] == '\n') {
+                    builder[i] = '|'
+                }
+            }
             if (commentDepth == 1) nextLine()
             else builder.append(")")
         } finally {
@@ -79,370 +142,810 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun generateCode(method0: Specialization) {
+    fun writeStructTypes() {
+        for (struct in structs.values) {
 
-        val method = method0.method
-        method.body ?: return
+            builder.append(struct.typeName)
+                .append(" = type { ")
 
-        nextLine()
-        builder.append("define ")
-        appendType(method.resolveReturnType(method0), method.scope, false)
+            for ((index, prop) in struct.properties.withIndex()) {
+                if (index > 0) builder.append(", ")
+                builder.append(prop.llvmType.ir)
+            }
 
-        builder.append(" @")
-        builder.append(getMethodName(method0))
-        builder.append("(")
-
-        appendType(method.ownerScope.typeWithArgs.specialize(method0), method.scope, false)
-        builder.append(" %this")
-        for (parameter in method.valueParameters) {
-            builder.append(", ")
-            appendType(parameter.type, method.scope, false)
-            builder.append(" %").append(parameter.name)
-        }
-
-        builder.append(")")
-
-        val graph = ASTSimplifier.simplify(method0)
-        prepareGraph(graph)
-
-        writeBlock {
-            appendSimpleBlock(graph, graph.startBlock)
-        }
-    }
-
-    override fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
-        when (val type = resolveType(type)) {
-            Types.Int, Types.UInt -> builder.append("i32")
-            Types.Long, Types.ULong -> builder.append("i64")
-            Types.Half -> builder.append("f16")
-            Types.Float -> builder.append("f32")
-            Types.Double -> builder.append("f64")
-            else -> {
-                comment { builder.append("$type") }
-                builder.append(" i64")
-            }
-        }
-    }
-
-    override fun appendFieldName(
-        graph: SimpleGraph,
-        field: SimpleField,
-        forFieldAccess: String
-    ) {
-        if (field.isObjectLike()) {
-            val objectScope = (field.type as ClassType).clazz
-            appendGetObjectInstance(objectScope, graph.method.scope)
-        } else if (field.isOwnerThis(graph)) {
-            builder.append("%this")
-        } else {
-            builder.append("%").append(field.dst.id)
-        }
-        builder.append(forFieldAccess)
-    }
-
-    override fun appendSimpleBlock(graph: SimpleGraph, expr: SimpleBlock) {
-        val instructions = expr.instructions
-        for (i in instructions.indices) {
-            val instr = instructions[i]
-            appendSimpleInstruction(graph, instr /*loop*/)
-            if (instr is SimpleAssignment &&
-                instr.dst.type == Types.Nothing
-            ) break
-        }
-        if (expr.branchCondition == null) {
-            val next = expr.nextBranch
-            if (next != null) {
-                appendSimpleBlock(graph, next)
-            }
-        } else {
-            // todo this may or may not be simply be possible...
-            // todo this may be a loop, branch, or similar...
-            TODO("Jump to either branch")
-        }
-    }
-
-    override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
-        val dst = expression.dst
-        if (dst.mergeInfo != null) {
-            appendFieldName(graph, dst)
-            builder.append(" = ")
-        } else {
-            comment { appendType(dst.type, expression.scope, false) }
-            builder.append(' ')
-            appendFieldName(graph, dst)
-            builder.append(" = ")
-        }
-    }
-
-    override fun appendSimpleInstruction(graph: SimpleGraph, expr: SimpleInstruction) {
-        if (expr is SimpleGetObject) return
-        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
-            val notNeeded = expr.dst.numReads == 0
-            if (notNeeded) comment { appendAssign(graph, expr) }
-            else appendAssign(graph, expr)
-        }
-        when (expr) {
-            is SimpleBranch -> {
-                builder.append("if (")
-                appendFieldName(graph, expr.condition)
-                builder.append(')')
-                writeBlock {
-                    appendSimpleBlock(graph, expr.ifTrue)
-                }
-                trimWhitespaceAtEnd()
-                builder.append(" else ")
-                writeBlock {
-                    appendSimpleBlock(graph, expr.ifFalse)
-                }
-            }
-            is SimpleLoop -> {
-                builder.append("b").append(expr.body.blockId)
-                builder.append(": while (true)")
-                writeBlock {
-                    appendSimpleBlock(graph, expr.body)
-                }
-            }
-            is SimpleDeclaration -> {
-                appendType(expr.type, expr.scope, false)
-                builder.append(' ').append(expr.name)
-            }
-            is SimpleString -> {
-                builder.append('"').append(expr.base.value).append('"')
-            }
-            is SimpleNumber -> {
-                // todo remove suffixes, that are not supported by Java
-                //  and instead cast the value to the target
-                builder.append(expr.base.value)
-            }
-            is SimpleGetField -> {
-                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                appendFieldName(expr.field)
-            }
-            is SimpleSetField -> {
-                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                appendFieldName(expr.field)
-                builder.append(" = ")
-                appendFieldName(graph, expr.value)
-            }
-            is SimpleCompare -> {
-                appendFieldName(graph, expr.left)
-                builder.append(' ')
-                builder.append(expr.type.symbol).append(" 0")
-            }
-            is SimpleInstanceOf -> {
-                // todo if type is ClassType, this is easy, else we need to build an expression...
-                appendFieldName(graph, expr.value)
-                builder.append(" instanceof ")
-                appendType(expr.type, expr.scope, false)
-            }
-            is SimpleCheckEquals -> {
-                // todo this could be converted into a SimpleBranch + SimpleCall
-                // todo simple types use ==, while complex types use .equals()
-
-                // todo if left cannot be null, skip null check
-                // todo if left side is a native field, use the static class for comparison
-
-                val leftCanBeNull = expr.left.type.isNullable()
-                val rightCanBeNull = expr.right.type.isNullable()
-
-                val leftNative = nativeTypes[expr.left.type]
-                val rightNative = nativeTypes[expr.right.type]
-                when {
-                    leftNative != null && rightNative != null -> {
-                        appendFieldName(graph, expr.left)
-                        builder.append(" == ")
-                        appendFieldName(graph, expr.right)
-                    }
-                    leftCanBeNull && rightCanBeNull -> {
-                        appendFieldName(graph, expr.left)
-                        builder.append(" == null ? ")
-                        appendFieldName(graph, expr.right)
-                        builder.append(" == null : ")
-                        appendFieldName(graph, expr.left)
-                        builder.append(".equals(")
-                        appendFieldName(graph, expr.right)
-                        builder.append(")")
-                    }
-                    leftCanBeNull -> {
-                        appendFieldName(graph, expr.left)
-                        builder.append(" != null && ")
-                        appendFieldName(graph, expr.left)
-                        builder.append(".equals(")
-                        appendFieldName(graph, expr.right)
-                        builder.append(")")
-                    }
-                    rightCanBeNull -> {
-                        appendFieldName(graph, expr.right)
-                        builder.append(" != null && ")
-                        appendFieldName(graph, expr.left)
-                        builder.append(".equals(")
-                        appendFieldName(graph, expr.right)
-                        builder.append(")")
-                    }
-                    else -> {
-                        appendFieldName(graph, expr.left)
-                        builder.append(".equals(")
-                        appendFieldName(graph, expr.right)
-                        builder.append(")")
-                    }
-                }
-            }
-            is SimpleCheckIdentical -> {
-                appendFieldName(graph, expr.left)
-                builder.append(" == ")
-                appendFieldName(graph, expr.right)
-            }
-            is SimpleSpecialValue -> {
-                when (expr.type) {
-                    SpecialValue.TRUE -> builder.append("true")
-                    SpecialValue.FALSE -> builder.append("false")
-                    SpecialValue.NULL -> builder.append("null")
-                }
-            }
-            is SimpleCall -> {
-                if (expr.sample is Constructor) {
-                    comment {
-                        builder.append("new ")
-                        // appendType(expr.dst.type, expr.scope, true)
-                        appendValueParams(graph, expr.valueParameters)
-                    }
-                } else {
-                    // Number.toX() needs to be converted to a cast
-                    val methodName = expr.methodName
-                    val done = when (expr.valueParameters.size) {
-                        0 -> {
-                            val castSymbol = when (methodName) {
-                                "toInt" -> "(int) "
-                                "toLong" -> "(long) "
-                                "toFloat" -> "(float) "
-                                "toDouble" -> "(double) "
-                                "toByte" -> "(byte) "
-                                "toShort" -> "(short) "
-                                "toChar" -> "(char) "
-                                else -> null
-                            }
-                            if (castSymbol != null && expr.self.type in nativeNumbers) {
-                                builder.append(castSymbol)
-                                appendFieldName(graph, expr.self)
-                                true
-                            } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                                builder.append('!')
-                                appendFieldName(graph, expr.self)
-                                true
-                            } else false
-                        }
-                        1 -> {
-                            val supportsType = when (expr.self.type) {
-                                Types.String, in nativeTypes -> true
-                                else -> false
-                            }
-                            val symbol = when (methodName) {
-                                "plus" -> "add"
-                                "minus" -> "sub"
-                                "times" -> "mul"
-                                "div" -> "div"
-                                "rem" -> "mod"
-                                // compareTo is a problem for numbers:
-                                //  we must call their static compare() function
-                                "compareTo" -> "compare"
-                                else -> null
-                            }
-                            if (supportsType && symbol != null) {
-                                builder.append(symbol).append(' ')
-                                appendType(expr.dst.type, expr.scope, false)
-                                builder.append(' ')
-                                appendFieldName(graph, expr.self)
-                                builder.append(", ")
-                                appendFieldName(graph, expr.valueParameters[0])
-                                true
-                            } else false
-                        }
-                        else -> false
-                    }
-                    if (!done) {
-                        val needsCastForFirstValue = nativeTypes[expr.self.type]
-                        if (needsCastForFirstValue != null) {
-                            builder.append(needsCastForFirstValue.boxed).append('.')
-                            builder.append(expr.methodName).append('(')
-                            appendFieldName(graph, expr.self)
-                            if (expr.valueParameters.isNotEmpty()) {
-                                builder.append(", ")
-                                appendValueParams(graph, expr.valueParameters, false)
-                            }
-                            builder.append(')')
-                        } else {
-                            appendFieldName(graph, expr.self, ".")
-                            builder.append(expr.methodName)
-                            appendValueParams(graph, expr.valueParameters)
-                        }
-                    }
-                }
-            }
-            is SimpleAllocateInstance -> {
-                // handled in SimpleCall, because only there do we have the value parameters
-                builder.append("new ")
-                appendType(expr.allocatedType, expr.scope, true)
-                appendValueParams(graph, expr.paramsForLater)
-            }
-            is SimpleConstructorCall -> {
-                when (expr.isThis) {
-                    true -> builder.append("this")
-                    false -> builder.append("super")
-                }
-                appendValueParams(graph, expr.valueParameters)
-            }
-            is SimpleReturn -> {
-                // todo cast if necessary
-                builder.append("ret ")
-                appendFieldName(graph, expr.field)
-            }
-            is SimpleThrow -> {
-                // todo cast if necessary
-                builder.append("throw ")
-                appendFieldName(graph, expr.field)
-            }
-            else -> {
-                comment {
-                    builder.append(expr.javaClass.simpleName).append(": ")
-                        .append(expr)
-                }
-            }
-        }
-        if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
-        if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
-            builder.append("throw new AssertionError(\"Unreachable\")")
+            builder.append(" }")
             nextLine()
         }
     }
 
-    override fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
-        // todo if there is nothing dangerous in-between, we could use this.
-        if (field.ownerScope == outsideClassLike(exprScope)) {
-            builder.append("%this")
-        } else {
-            appendGetObjectInstance(field.ownerScope, exprScope)
+    fun getLLVMType(type: Type): LLVMType {
+        return when (val type = resolveType(type)) {
+
+            Types.Boolean -> LLVMType.I1
+
+            Types.Byte, Types.UByte -> LLVMType.I8
+            Types.Short, Types.UShort -> LLVMType.I16
+            Types.Int, Types.UInt -> LLVMType.I32
+
+            Types.Long, Types.ULong -> LLVMType.I64
+
+            Types.Float, Types.Half -> LLVMType.F32
+            Types.Double -> LLVMType.F64
+
+            is ClassType -> {
+                val structName = getStructName(type)
+                val struct = LLVMType.Struct(structName)
+                LLVMType.Ptr(struct, type.isValue())
+            }
+            else -> getLLVMType(Types.Any) // fallback
         }
-        builder.append(forFieldAccess)
     }
 
-    override fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
-        if (self.type is ClassType && self.type.clazz.isObjectLike()) {
-            appendObjectInstance(field, exprScope, ".")
-        } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {
-            builder.append("/* ${field.ownerScope.pathStr} */ ")
-        } else {
-            val fieldSelfType = field.selfType
-            val needsCast = self.type != fieldSelfType
-            if (needsCast && fieldSelfType != null) {
-                builder.append("((")
-                appendType(fieldSelfType, exprScope, true)
-                builder.append(')')
-                appendFieldName(graph, self, ").")
-            } else {
-                appendFieldName(graph, self, ".")
+    // todo we can make globals structs instead of pointers, because globals itself are pointers,
+    //  and then store the init-flag within the global
+
+    fun getStructName(type: ClassType): String {
+        return getClassName(type.clazz, Specialization(type))
+    }
+
+    // we cannot just quit -> removing try-catch
+    override fun appendMethods(
+        classScope: Scope, className: String,
+        methods: Collection<Specialization>, headerOnly: Boolean
+    ) {
+        for (method0 in methods) {
+            val method = method0.method
+            if (method !is Method) continue
+            if (method.scope.parent != classScope) {
+                // an inherited method -> skip, because it's already defined in the parent
+                continue
+            }
+
+            appendMethod(classScope, className, method0, headerOnly)
+        }
+    }
+
+    fun appendMethodHeader(method: Specialization) {
+
+        val returnType = getLLVMType(
+            method.method.resolveReturnType(method)
+        )
+
+        builder.append("define ")
+            .append(returnType.ir)
+        if (returnType is LLVMType.Ptr && returnType.isValueType) {
+            builder.setLength(builder.length - 1) // delete star
+        }
+        builder.append(" ")
+            .append(getMethodName(method)).append("(")
+
+        val params = ArrayList<String>()
+
+        params.add("${getLLVMType(method.method.ownerScope.typeWithArgs).ir} %this")
+
+        // todo append self-type
+
+        for (param in method.method.valueParameters) {
+            params.add(
+                "${getLLVMType(param.type).ir} %${param.name}"
+            )
+        }
+
+        builder.append(params.joinToString(", "))
+            .append(")")
+    }
+
+    override fun getMethodName(method: Specialization): String {
+        val base = if (method.method is Constructor) "_init_" else super.getMethodName0(method)
+        return "@${method.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method)}"
+    }
+
+    fun appendMethodCode(method0: Specialization) {
+        val method = method0.method
+        method0.use {
+            appendMethodHeader(method0)
+            writeBlock {
+                val l0 = builder.length
+                if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
+                    val body = method.body!!
+                    val context = ResolutionContext(method.selfType, method0, true, null)
+                    appendCode(context, method0, body, false)
+                }
+
+                if (method is Constructor && builder.length == l0) {
+                    var i = builder.length
+                    while (i > 0 && builder[i - 1].isWhitespace()) i--
+                    val suffix = "ret"
+                    i -= suffix.length
+                    if (!builder.startsWith(suffix, i)) {
+                        // return is typically missing
+                        val instanceReg = if (method.ownerScope == Types.Unit.clazz) "%this"
+                        else getObjectInstanceField(Types.Unit.clazz)
+                        builder.append("ret ").append(getLLVMType(Types.Unit).ir)
+                            .append(" ").append(instanceReg)
+                        nextLine()
+                    }
+                }
+
+                // cleanup
+                renames.clear()
             }
         }
     }
 
+    fun appendObjectGetterCode(objectScope: Scope) {
+        noSpecialization.use {
+            val returnType = getLLVMType(objectScope.typeWithArgs)
+
+            builder.append("define ")
+                .append(returnType.ir).append(" ")
+                .append(getObjectGetterName(objectScope))
+                .append("() {")
+            depth++
+            nextLine()
+
+            appendGetObjectInstanceImpl(objectScope)
+
+            // close body
+            dedent()
+            depth--
+            builder.append("}")
+            nextLine()
+        }
+    }
+
+    fun appendMethodImport(method: Specialization) {
+        method.use {
+            val returnType0 = method.method.resolveReturnType(method)
+            val returnType1 = getLLVMType(returnType0)
+
+            builder.append("declare ")
+                .append(returnType1.ir)
+                .append(" ")
+                .append(getMethodName(method))
+                .append("(")
+
+            // self
+            builder.append(getLLVMType(method.method.ownerScope.typeWithArgs).ir)
+
+            // todo explicit self
+
+            for (param in method.method.valueParameters) {
+                builder.append(", ")
+                builder.append(getLLVMType(param.type).ir)
+            }
+
+            builder.append(")")
+
+            nextLine()
+        }
+    }
+
+    override fun appendCode(
+        context: ResolutionContext, method1: Specialization,
+        body: Expression, skipSuperCall: Boolean
+    ) {
+        val graph = ASTSimplifier.simplify(method1)
+        if (skipSuperCall) graph.removeSuperCalls()
+        prepareGraph(graph)
+
+        scanSelves(graph, method1.method)
+
+        // write all code
+        appendSimpleBlock(graph, graph.startBlock)
+    }
+
+    fun appendUnreachable() {
+        builder.append("unreachable")
+        nextLine()
+    }
+
+    override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
+        appendAssign(expression.dst)
+    }
+
+    fun appendAssign(dst: SimpleField) {
+        if (dst.dst.id < 0) return
+        val rename = renames[dst]
+        check(rename == null) { "Renames cannot be assigned" }
+        builder.append("%tmp").append(dst.id).append(" = ")
+    }
+
+    override fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
+        if (expr is SimpleAssignment &&
+            expr !is SimpleGetField &&
+            expr !is SimpleCall &&
+            expr !is SimpleAllocateInstance &&
+            expr.dst.type != Types.Nothing
+        ) {
+            val needed = expr.dst.id >= 0
+            if (needed) {
+                appendAssign(graph, expr)
+            }
+        }
+    }
+
+    override fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
+        if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
+            appendUnreachable()
+        }
+        nextLine()
+    }
+
+    fun writeObjectGlobals() {
+        comment { builder.append("globals") }
+        for ((scope, index) in objectGlobals.entries.sortedBy { it.value }) {
+            val struct = getStruct(Specialization.fromSimple(scope))
+            builder
+                .append(globalNames[index])
+                .append(" = global ")
+                .append(struct.typeName)
+                .append("* null")
+            nextLine()
+        }
+    }
+
+    val classIndexProp = listOf(LLVMProperty(null, LLVMType.I32, 0))
+
+    fun getStruct(classSpecialization: Specialization): LLVMStruct {
+        check(classSpecialization.clazz.isClassLike()) {
+            "Invalid struct: $classSpecialization"
+        }
+        return structs.getOrPut(classSpecialization) {
+            val clazz = classSpecialization.clazz
+            classSpecialization.use {
+
+
+                val superType0 = classSpecialization.superType
+                val superType = if (superType0 != null) getStruct(superType0) else null
+
+                val props = clazz.fields
+                    .filter { isStoredField(it) }
+                    .mapIndexed { index, field ->
+                        field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+                        val type = getLLVMType(field.resolveValueType(ResolutionContext.minimal))
+                        LLVMProperty(field, type, classIndexProp.size + index)
+                    }
+
+                val typeIndex = typeList.size
+                val typeName = "%" + getClassName(clazz, classSpecialization)
+                val struct = LLVMStruct(superType, typeIndex, typeName, classIndexProp + props, false)
+                typeList.add(struct)
+                struct
+            }
+        }
+    }
+
+    override fun getClassName(scope: Scope, specialization: Specialization): String {
+        return scope.pathStr + createSpecializationSuffix(specialization)
+    }
+
+    class Branch(self: LLVMSourceGenerator) {
+        val ifLabel = self.nextLabel("if")
+        val elseLabel = self.nextLabel("else")
+        val endLabel = self.nextLabel("endif")
+    }
+
+    fun ifCondition(branch: Branch, condition: String) {
+        builder.append("  br i1 ")
+            .append(condition)
+            .append(", label %")
+            .append(branch.ifLabel)
+            .append(", label %")
+            .append(branch.elseLabel)
+        nextLine()
+        nextLine()
+    }
+
+    fun ifOrElseBranch(label: String, endLabel: String, run: () -> Unit) {
+        builder.append(label).append(":")
+        depth++
+        nextLine()
+
+        run()
+
+        depth--
+        builder.append("br label %").append(endLabel)
+        nextLine()
+        nextLine()
+    }
+
+    fun ifBranch(branch: Branch, run: () -> Unit) {
+        ifOrElseBranch(branch.ifLabel, branch.endLabel, run)
+    }
+
+    fun elseBranch(branch: Branch, run: () -> Unit) {
+        ifOrElseBranch(branch.elseLabel, branch.endLabel, run)
+
+        builder.append(branch.endLabel).append(":")
+        nextLine()
+    }
+
+    fun appendGetObjectInstanceImpl(objectScope: Scope) {
+        val struct = getStruct(Specialization.fromSimple(objectScope))
+        val globalIndex = objectGlobals.getOrPut(objectScope) {
+            globalNames.add("@global_${objectScope.pathStr.replace('.', '_')}")
+            globalStructs.add(struct)
+            objectGlobals.size
+        }
+
+        val globalName = globalNames[globalIndex]
+        val loadedGlobal = nextReg()
+        builder.append(loadedGlobal)
+            .append(" = load ").append(struct.typeName)
+            .append("*, ptr ").append(globalName)
+        nextLine()
+
+        builder.append("%isNull = icmp eq ")
+            .append(struct.typeName).append("*")
+            .append(" ").append(loadedGlobal)
+            .append(", null")
+        nextLine()
+
+        val branch = Branch(this)
+        ifCondition(branch, "%isNull")
+        ifBranch(branch) {
+            val value = allocateStruct(struct)
+            builder.append("store ").append(struct.typeName)
+                .append("* ").append(value)
+                .append(", ptr ").append(globalName)
+            nextLine()
+
+            val constructor = objectScope
+                .getOrCreatePrimaryConstructorScope()
+                .selfAsConstructor!!
+
+            callMethod(
+                null, Specialization(
+                    constructor.memberScope,
+                    emptyParameterList()
+                ), listOf(value)
+            )
+            nextLine()
+
+            builder.append("ret ").append(struct.typeName)
+                .append("* ").append(value)
+            nextLine()
+        }
+        elseBranch(branch) {
+            builder.append("ret ").append(struct.typeName)
+                .append("* ").append(loadedGlobal)
+            nextLine()
+        }
+        // just decorative
+        builder.append("  ")
+        appendUnreachable()
+    }
+
+    fun estimateStructSize(struct: LLVMStruct): Int {
+        var pos = 0
+        var maxAlignment = 4
+        for (field in struct.properties) {
+            val size = when (field.llvmType) {
+                LLVMType.I1, LLVMType.I8 -> 1
+                LLVMType.I16 -> 2
+                LLVMType.I32, LLVMType.F32 -> 4
+                LLVMType.I64, LLVMType.F64 -> 8
+                is LLVMType.Struct -> {
+                    // todo depends on whether it's a value or a reference
+                    8
+                }
+                else -> TODO()
+            }
+            maxAlignment = max(maxAlignment, size)
+            pos = align(pos, size)
+            pos += size
+        }
+        pos = align(pos, maxAlignment)
+        return pos
+    }
+
+    fun align(pos: Int, size: Int): Int {
+        val mod = pos % size
+        return if (mod > 0) pos - mod + size else pos
+    }
+
+    fun allocateStruct(struct: LLVMStruct): String {
+
+        val raw = nextReg()
+        val typed = nextReg()
+
+        val size = estimateStructSize(struct)
+
+        builder
+            .append(raw)
+            .append(" = call ptr @calloc(i64 1, i64 ").append(size)
+            .append(")")
+        nextLine()
+
+        builder.append(typed)
+            .append(" = bitcast ptr ").append(raw)
+            .append(" to ").append(struct.typeName).append("*")
+        nextLine()
+
+        return typed
+    }
+
+    fun getObjectGetterName(objectScope: Scope): String {
+        return "@obj_${objectScope.pathStr.replace('.', '_')}"
+    }
+
+    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
+        throw NotImplementedError()
+    }
+
+    fun getObjectInstanceField(objectScope: Scope): String {
+        val struct = getStruct(Specialization(objectScope, emptyParameterList()))
+        val tmp = nextReg()
+        builder.append(tmp).append(" = call ").append(struct.typeName)
+            .append("* ")
+            .append(getObjectGetterName(objectScope))
+            .append("()")
+        nextLine()
+        return tmp
+    }
+
+    fun emptyResultIf() {
+        builder.append("(if (then")
+        depth++
+        nextLine()
+    }
+
+    fun emptyResultElse() {
+        builder.append(") (else")
+        nextLine()
+    }
+
+    fun emptyResultEnd() {
+        builder.append("))")
+        depth--
+        nextLine()
+    }
+
+    fun insideObjectConstructor(graph: SimpleGraph, objectScope: Scope): Boolean {
+        return objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor == graph.method
+    }
+
+    fun getSimpleFieldReg(graph: SimpleGraph, field: SimpleField): String {
+        return if (field.isOwnerThis(graph)) {
+            "%this"
+        } else if (field.isObjectLike()) {
+            val objectScope = (field.type as ClassType).clazz
+            if (insideObjectConstructor(graph, objectScope)) {
+                "%this"
+            } else {
+                getObjectInstanceField(objectScope)
+            }
+        } else {
+            val field = field.dst
+            when (val expr = field.constantRef) {
+                is NumberExpression -> stringifyNumber(field.type, expr)
+                is SpecialValueExpression -> when (expr.type) {
+                    SpecialValue.NULL -> "null"
+                    SpecialValue.TRUE -> "1"
+                    SpecialValue.FALSE -> "0"
+                }
+                null -> {
+                    check(field.id >= 0) { "Invalid field $field in $graph" }
+                    renames[field] ?: "%tmp${field.id}"
+                }
+                else -> throw NotImplementedError("Append constant field $expr")
+            }
+        }
+    }
+
+    fun stringifyNumber(type: Type, expr: NumberExpression): String {
+        val l0 = builder.length
+        appendNumber(type, expr)
+        val str = builder.substring(l0)
+        builder.setLength(l0)
+        return str
+    }
+
+    override fun appendNumber(type: Type, expr: NumberExpression) {
+        when (getLLVMType(type)) {
+            LLVMType.I32 -> builder.append(expr.asInt.toInt())
+            LLVMType.I64 -> builder.append(expr.asInt)
+            LLVMType.F32 -> builder.append(expr.asFloat.toFloat())
+            LLVMType.F64 -> builder.append(expr.asFloat)
+            else -> throw NotImplementedError("Append number of type $type")
+        }
+    }
+
+    override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
+        when (expr) {
+            is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
+            is SimpleDeclaration -> {
+                builder.append("%").append(expr.field.newName).append(" = ")
+                    .append("alloca ").append(getLLVMType(expr.type).ir)
+                builder.append(" ;; local")
+            }
+            is SimpleBranch -> {
+                getSimpleFieldReg(graph, expr.condition)
+                emptyResultIf()
+                /**/appendSimpleBlock(graph, expr.ifTrue)
+                emptyResultElse()
+                /**/appendSimpleBlock(graph, expr.ifFalse)
+                emptyResultEnd()
+            }
+            is SimpleLoop -> {
+                TODO("implement loop")
+            }
+            is SimpleReturn -> {
+                val reg = getSimpleFieldReg(graph, expr.field)
+                val type = getLLVMType(expr.field.type)
+
+                if (type is LLVMType.Ptr && type.isValueType) {
+                    // remove *, so we pass values, not instances
+                    val valueReg = nextReg()
+                    builder.append(valueReg).append(" = load ").append(type.ir)
+                    builder.setLength(builder.length - 1)
+                    builder.append(", ptr ").append(reg)
+                    nextLine()
+
+                    builder.append("ret ").append(type.ir)
+                    builder.setLength(builder.length - 1)
+                    builder.append(" ").append(valueReg)
+                } else {
+                    builder.append("ret ").append(type.ir)
+                        .append(" ").append(reg)
+                }
+            }
+            is SimpleConstructorCall -> {
+                appendConstructorCallImpl(graph, expr)
+            }
+            is SimpleAllocateInstance -> {
+                // this allocation is a ClassType, so it cannot be null ever
+                val struct = getStruct(Specialization(expr.allocatedType))
+                if (!expr.allocatedType.isValue()) {
+                    val tmp = nextReg()
+                    builder.append(tmp).append(" = call ptr @calloc(i32 1, i32 ").append(estimateStructSize(struct))
+                        .append(")")
+                    nextLine()
+
+                    appendAssign(expr.dst)
+                    builder.append("bitcast ptr ").append(tmp)
+                        .append(" to ").append(struct.typeName).append("*")
+                } else {
+                    appendAssign(expr.dst)
+                    builder.append("alloca ").append(struct.typeName)
+                }
+            }
+            is SimpleCall -> {
+                // Number.toX() needs to be converted to a cast
+                val methodName = expr.methodName
+                val done = when (expr.valueParameters.size) {
+                    0 -> {
+                        val castSymbol = when (methodName) {
+                            "toInt" -> "(int) "
+                            "toLong" -> "(long) "
+                            "toFloat" -> "(float) "
+                            "toDouble" -> "(double) "
+                            "toByte" -> "(byte) "
+                            "toShort" -> "(short) "
+                            "toChar" -> "(char) "
+                            else -> null
+                        }
+                        // todo append correct casting method...
+                        if (castSymbol != null && expr.self.type in nativeNumbers) {
+                            getSimpleFieldReg(graph, expr.self)
+                            builder.append(castSymbol)
+                            TODO("find cast-instr")
+                            true
+                        } else if (expr.self.type == Types.Boolean && methodName == "not") {
+                            getSimpleFieldReg(graph, expr.self)
+                            builder.append("i32.eqz")
+                            nextLine()
+                            true
+                        } else false
+                    }
+                    1 -> {
+                        val supportsType = expr.self.type in nativeNumbers
+                        val symbol = when (methodName) {
+                            "plus" -> "add"
+                            "minus" -> "sub"
+                            "times" -> "mul"
+                            // todo depends on signedness
+                            "div" -> "sdiv"
+                            "rem" -> "smod"
+                            else -> null
+                        }
+                        if (supportsType && symbol != null) {
+                            val v0 = getSimpleFieldReg(graph, expr.self)
+                            val v1 = getSimpleFieldReg(graph, expr.valueParameters[0])
+
+                            appendAssign(expr.dst)
+                            val type = resolveType(expr.self.type)
+                            builder
+                                .append(symbol).append(' ')
+                                .append(getLLVMType(type).wasmName)
+                                .append(' ').append(v0).append(", ").append(v1)
+                            true
+                        } else false
+                    }
+                    else -> false
+                }
+                if (!done) {
+                    appendCallImpl(graph, expr)
+                }
+            }
+            is SimpleGetField -> {
+                if (expr.dst.id < 0) return
+
+                if (expr.isLocalField()) {
+                    if (expr.field.byParameter is Parameter) {
+                        // we actually need to rename expr.dst, because we cannot assign it
+                        renames[expr.dst] = "%" + expr.field.newName
+                        builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
+                    } else {
+                        val self = "%" + expr.field.newName
+                        appendAssign(expr.dst)
+                        builder.append("load ").append(getLLVMType(expr.dst.type).ir)
+                            .append(", ptr ").append(self)
+                    }
+                } else {
+
+                    val selfType = expr.self.type as ClassType
+                    if (selfType !in nativeNumbers) {
+
+                        val tmp = nextReg()
+                        val self = getSimpleFieldReg(graph, expr.self)
+                        val struct = getStruct(Specialization(selfType))
+                        builder.append(tmp).append(" = getelementptr ").append(struct.typeName)
+                            .append(", ptr ").append(self)
+                            .append(", i32 0, i32 ").append(
+                                struct.properties.indexOfFirst { it.field?.name == expr.field.name })
+                            .append(" ;; ").append(expr.field)
+                        nextLine()
+
+                        appendAssign(graph, expr)
+                        builder.append("load ").append(getLLVMType(expr.dst.type).ir)
+                            .append(", ptr ").append(tmp)
+
+                    } else {
+                        // field must be 'content'
+                        if (expr.dst.id >= 0) {
+                            renames[expr.dst] = "%this"
+                            check(expr.field.name == "content")
+                            builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
+                        }
+                    }
+                }
+            }
+            is SimpleSetField -> {
+                val needsCopy = expr.value.type.needsCopy()
+                val valueReg = getSimpleFieldReg(graph, expr.value)
+                // todo copy if necessary
+
+                if (expr.isLocalField()) {
+
+                    val self = "%" + expr.field.newName
+                    builder.append("store ").append(getLLVMType(expr.value.type).ir)
+                        .append(" ").append(valueReg)
+                        .append(", ptr ").append(self)
+
+                } else {
+
+                    val selfType = expr.self.type as ClassType
+                    val tmp = nextReg()
+                    val self = getSimpleFieldReg(graph, expr.self)
+                    val struct = getStruct(Specialization(selfType))
+                    builder.append(tmp).append(" = getelementptr ").append(struct.typeName)
+                        .append(", ptr ").append(self)
+                        .append(", i32 0, i32 ").append(
+                            struct.properties.indexOfFirst { it.field?.name == expr.field.name }
+                        )
+                        .append(" ;; ").append(expr.field)
+                    nextLine()
+
+                    builder.append("store ").append(getLLVMType(expr.value.type).ir)
+                        .append(" ").append(valueReg)
+                        .append(", ptr ").append(tmp)
+                }
+            }
+            is SimpleCompare -> {
+                val method = expr.method.resolved
+                method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+                val ownerType = method.ownerScope.typeWithArgs
+                val paramType = method.valueParameters[0].type.specialize()
+                if (ownerType == paramType && ownerType in nativeNumbers) {
+                    getSimpleFieldReg(graph, expr.left)
+                    getSimpleFieldReg(graph, expr.right)
+                    appendNativeCompare(ownerType, expr.type)
+                } else {
+                    TODO("Call method, then compare to zero for $ownerType,$paramType")
+                }
+            }
+            is SimpleMerge -> {}
+            else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
+        }
+    }
+
+    fun appendNativeCompare(valueType: Type, compareType: CompareType) {
+        val numberType = getLLVMType(valueType)
+        val compareName = when (compareType) {
+            CompareType.LESS -> "lt"
+            CompareType.LESS_EQUALS -> "le"
+            CompareType.GREATER -> "gt"
+            CompareType.GREATER_EQUALS -> "ge"
+        }
+        builder.append(numberType.wasmName)
+            .append('.').append(compareName)
+        when (valueType) {
+            Types.Byte, Types.Short, Types.Int, Types.Long -> builder.append("_s")
+            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> builder.append("_u")
+            Types.Half, Types.Float, Types.Double -> {}
+            else -> throw NotImplementedError("Unknown number type")
+        }
+        nextLine()
+    }
+
+    override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
+        // todo this is not ready!
+        val valueType = expr.value.type as ClassType
+        val method = valueType.clazz.methods0.first { it.name == "copy" && it.valueParameters.isEmpty() }
+        val methodSpec = Specialization(method.scope, valueType.typeParameters ?: emptyParameterList())
+        callMethod(graph, methodSpec, emptyList())
+        nextLine()
+    }
+
+    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+        if (expr.methods !is FullMap) {
+            if (expr.sample.ownerScope.isInterface()) {
+                TODO("interface method-res")
+            } else {
+                TODO("child-class method-res")
+            }
+        }
+        // todo we must also store the result
+        val args = (listOf(expr.self) + expr.valueParameters).map {
+            getSimpleFieldReg(graph, it)
+        }
+        appendAssign(graph, expr)
+        callMethod(graph, expr.specialization, args)
+    }
+
+    fun appendConstructorCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {
+        val args = (listOf(expr.self) + expr.valueParameters)
+            .map { getSimpleFieldReg(graph, it) }
+        callMethod(graph, expr.specialization, args)
+    }
+
+    fun callMethod(
+        graph: SimpleGraph?,
+        method: Specialization,
+        args: List<String>
+    ) {
+
+        val returnType = getLLVMType(
+            method.method.resolveReturnType(method)
+        )
+
+        builder.append("call ")
+            .append(returnType.wasmName)
+            .append(" ").append(getMethodName(method))
+            .append("(")
+
+        val methodParams = ArrayList<LLVMType>()
+        method.use { // <- for resolving types
+            if (graph != null || args.isNotEmpty()) {
+                methodParams.add(getLLVMType(method.method.ownerScope.typeWithArgs))
+            }
+
+            // todo self-type
+            for (param in method.method.valueParameters) {
+                methodParams.add(getLLVMType(param.type))
+            }
+        }
+
+        for (i in args.indices) {
+            if (i > 0) builder.append(", ")
+            builder.append(methodParams[i].ir).append(" ").append(args[i])
+        }
+
+        builder.append(")")
+    }
 
 }
