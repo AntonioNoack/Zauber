@@ -77,6 +77,16 @@ class CppGenerationTests : CodeGenerationTests() {
         testReferenceArrayImpl()
     }
 
+    @Test
+    fun testClassInheritance() {
+        testClassInheritanceImpl()
+    }
+
+    @Test
+    fun testInterfaceInheritance() {
+        testInterfaceInheritanceImpl()
+    }
+
     // todo implement and test working with strings
     // todo test specialized classes being usable
 

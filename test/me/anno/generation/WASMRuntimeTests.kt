@@ -70,4 +70,14 @@ class WASMRuntimeTests : CodeGenerationTests() {
         testReferenceArrayImpl()
     }
 
+    @Test
+    fun testClassInheritance() {
+        testClassInheritanceImpl()
+    }
+
+    @Test
+    fun testInterfaceInheritance() {
+        testInterfaceInheritanceImpl()
+    }
+
 }

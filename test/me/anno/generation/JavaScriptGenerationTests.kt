@@ -71,4 +71,14 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
         testReferenceArrayImpl()
     }
 
+    @Test
+    fun testClassInheritance() {
+        testClassInheritanceImpl()
+    }
+
+    @Test
+    fun testInterfaceInheritance() {
+        testInterfaceInheritanceImpl()
+    }
+
 }

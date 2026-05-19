@@ -305,4 +305,50 @@ abstract class CodeGenerationTests {
         assertEquals("21\n", printed)
     }
 
+    fun testClassInheritanceImpl() {
+        val code = """
+            open class Parent {
+                open fun calc() = 1
+            }
+            class Child : Parent() {
+                override fun calc() = 2
+            }
+            fun main() {
+                var p: Parent = Child()
+                println(p.calc())
+            }
+            package zauber
+            class Any
+            class Int
+            external fun println(arg0: Int)
+        """.trimIndent()
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
+    }
+
+    fun testInterfaceInheritanceImpl() {
+        val code = """
+            interface Parent {
+                fun calc() = 1
+            }
+            class Child : Parent {
+                override fun calc() = 2
+            }
+            fun main() {
+                var p: Parent = Child()
+                println(p.calc())
+            }
+            package zauber
+            class Any
+            class Int
+            external fun println(arg0: Int)
+        """.trimIndent()
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
+    }
+
 }
