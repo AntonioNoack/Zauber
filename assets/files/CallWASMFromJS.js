@@ -25,6 +25,8 @@ const imports = {
         'zauber_Int_times_rtgkvs': () => {
         },
         'zauber_Int_div_rtgkvs': () => {
+        },
+        'zauber_Int_minus_rtgkvs': () => {
         }
     }
 };

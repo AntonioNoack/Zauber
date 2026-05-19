@@ -44,6 +44,13 @@ class Field(
 
     companion object {
         private val LOGGER = LogManager.getLogger(Field::class)
+
+        fun cleanNameForCompilation(name: String): String {
+            var name = name
+            while (name.startsWith('$')) name = name.substring(1)
+            if (name.first() in '0'..'9') name = "_$name"
+            return name
+        }
     }
 
     var valueType
@@ -59,7 +66,7 @@ class Field(
      * when compiling languages, who dislike shadowing,
      * create new names for duplicated ones
      * */
-    var newName = name
+    var newName = cleanNameForCompilation(name)
 
     fun needsBackingField(): Boolean {
         val getterBody = getter?.body ?: return true

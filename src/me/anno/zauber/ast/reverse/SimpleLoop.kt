@@ -6,8 +6,14 @@ import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 
-class SimpleLoop(val condition: SimpleField, val negate: Boolean, val body: SimpleBlock) :
+class SimpleLoop(val condition: SimpleField?, val negate: Boolean, val body: SimpleBlock) :
     SimpleInstruction(root, -1) {
+
+    init {
+        check(condition != null || !negate) {
+            "Loop without condition, and negate=true is useless"
+        }
+    }
 
     override fun execute(): BlockReturn? {
         TODO("Not yet implemented")

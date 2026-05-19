@@ -409,6 +409,10 @@ class WASMBinaryReader(
 
             WASMOpcode.ELSE -> WASMInstruction.Else
             WASMOpcode.END -> WASMInstruction.End
+            WASMOpcode.BR -> {
+                val depth = u32()
+                WASMInstruction.br[depth]
+            }
 
             WASMOpcode.RETURN -> WASMInstruction.Return
 

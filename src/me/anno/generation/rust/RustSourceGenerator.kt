@@ -6,6 +6,7 @@ import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.c.CSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -38,7 +39,7 @@ class RustSourceGenerator : CSourceGenerator() {
         val protectedRustTypes by threadLocal {
             Types.run {
                 mapOf(
-                    Boolean to BoxedType("Boolean", "boo"),
+                    Boolean to BoxedType("Boolean", "bool"),
                     Byte to BoxedType("Byte", "i8"),
                     Short to BoxedType("Short", "i16"),
                     Int to BoxedType("Int", "i32"),
@@ -241,7 +242,7 @@ class RustSourceGenerator : CSourceGenerator() {
         for (field in classScope.fields) {
             if (field.name == OBJECT_FIELD_NAME || !isStoredField(field)) continue
 
-            builder.append(field.name).append(": ")
+            builder.append(field.newName).append(": ")
             val type = field.valueType!!
             appendDefaultValue(type)
             builder.append(", ")
@@ -454,6 +455,20 @@ class RustSourceGenerator : CSourceGenerator() {
         if (withEquals) builder.append(" = ")
     }
 
+    override fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
+        val valueType = field.valueType!!
+        builder.append("let ")
+        if (field.isMutableEx || field.name.startsWith('$') /* todo declare them everywhere (DeclareExpression)  */)
+            builder.append("mut ")
+        builder.append(field.newName)
+        builder.append(": ")
+        appendTypeDecl(valueType, graph.method.memberScope)
+        //builder.append(" = ")
+        //appendDefaultValue(valueType)
+        builder.append(";")
+        nextLine()
+    }
+
     override fun appendFieldName(
         graph: SimpleGraph,
         field: SimpleField,
@@ -514,14 +529,24 @@ class RustSourceGenerator : CSourceGenerator() {
             is SimpleDeclaration -> {
                 val type = expr.type
                 builder.append("let ")
+                if (expr.field.isMutableEx) builder.append("mut ")
                 builder.append(expr.name).append(": ")
                 appendTypeDecl(type, expr.scope)
+                declaredLocalFields += expr.field
+            }
+            is SimpleLoop -> {
+                check(expr.condition == null) { "Loop with condition not yet implemented" }
+                builder.append("'b").append(expr.body.blockId)
+                builder.append(": loop ")
+                writeBlock {
+                    appendSimpleBlock(graph, expr.body)
+                }
             }
             else -> super.appendInstrImpl(graph, expr)
         }
     }
 
-    fun appendDefaultValue(valueType: Type) {
+    override fun appendDefaultValue(valueType: Type) {
         when (resolveType(valueType)) {
             Types.Boolean -> builder.append("false")
             in nativeTypes -> builder.append("0")

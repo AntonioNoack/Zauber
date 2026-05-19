@@ -9,6 +9,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.*
@@ -41,7 +42,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
     var nextLabelId = 0
 
     fun nextReg(): String = "%r${nextRegisterId++}"
-    fun nextLabel(prefix: String = "lbl"): String = "${prefix}_${nextLabelId++}"
+    fun nextLabel(prefix: String): String = "${prefix}_${nextLabelId++}"
 
     val globalNames = ArrayList<String>()
     val globalStructs = ArrayList<LLVMStruct>()
@@ -271,6 +272,8 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
                 // cleanup
                 renames.clear()
+                nextLabelId = 0
+                nextRegisterId = 0
             }
         }
     }
@@ -334,7 +337,10 @@ class LLVMSourceGenerator : CSourceGenerator() {
         scanSelves(graph, method1.method)
 
         // write all code
+        val pos0 = builder.length
         appendSimpleBlock(graph, graph.startBlock)
+
+        appendMissingDeclarations(graph, pos0)
     }
 
     fun appendUnreachable() {
@@ -641,6 +647,13 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
+    override fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
+        builder.append("%").append(field.newName).append(" = ")
+            .append("alloca ").append(getLLVMType(field.valueType!!).ir)
+        builder.append(" ;; local, was missing")
+        nextLine()
+    }
+
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
@@ -648,6 +661,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 builder.append("%").append(expr.field.newName).append(" = ")
                     .append("alloca ").append(getLLVMType(expr.type).ir)
                 builder.append(" ;; local")
+                declaredLocalFields += expr.field
             }
             is SimpleBranch -> {
                 val branch = Branch(this)
@@ -661,7 +675,25 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 }
             }
             is SimpleLoop -> {
-                TODO("implement loop")
+                if (expr.condition == null) {
+                    check(!expr.negate)
+
+                    val loopLabel = nextLabel("loop")
+                    nextLine() // for style
+                    builder.append("br label %").append(loopLabel)
+                    nextLine()
+
+                    builder.append(loopLabel).append(":")
+                    depth++
+                    nextLine()
+
+                    appendSimpleBlock(graph, expr.body)
+                    builder.append("br label %").append(loopLabel)
+
+                    depth--
+                } else {
+                    TODO("implement conditional loop")
+                }
             }
             is SimpleReturn -> {
                 val reg = getSimpleFieldReg(graph, expr.field)
@@ -775,6 +807,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                         appendAssign(expr.dst)
                         builder.append("load ").append(getLLVMType(expr.dst.type).ir)
                             .append(", ptr ").append(self)
+                        usedLocalFields += expr.field
                     }
                 } else {
 
@@ -817,6 +850,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                     builder.append("store ").append(getLLVMType(expr.value.type).ir)
                         .append(" ").append(valueReg)
                         .append(", ptr ").append(self)
+                    usedLocalFields += expr.field
 
                 } else {
 

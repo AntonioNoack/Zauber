@@ -209,13 +209,17 @@ abstract class CodeGenerationTests {
         }
         package zauber
         class Any
-        external class Int {
+        external class Int(val content: Int) {
             external operator fun plus(other: Int): Int
             external operator fun compareTo(other: Int): Int
-            operator fun inc() = this + 1
+            operator fun inc(): Int = this + 1
         }
         external fun println(arg0: Int)
         """.trimIndent()
+
+        // todo bug: if we use
+        //  operator fun inc() = this + 1
+        //  without :Int, we somehow get nothing as the type??
 
         // 1, 1, 2, 3, 5, 8, 13, 21
         val printed = generator()

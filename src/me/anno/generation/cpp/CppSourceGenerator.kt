@@ -633,6 +633,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     type in nativeNumbers -> builder.append(" = 0")
                     else -> {} // default value is unknown...
                 }
+                declaredLocalFields += expr.field
             }
             else -> super.appendInstrImpl(graph, expr)
         }

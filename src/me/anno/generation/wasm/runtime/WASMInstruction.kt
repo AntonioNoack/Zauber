@@ -19,6 +19,11 @@ sealed interface WASMInstruction {
 
     data object Else : WASMInstruction
     data object End : WASMInstruction
+    data class Br(val depth: Int) : WASMInstruction {
+        fun next(): Br? {
+            return if (depth == 0) null else br[depth - 1]
+        }
+    }
 
     data object Return : WASMInstruction
     data class Call(val functionIndex: Int) : WASMInstruction
@@ -54,5 +59,6 @@ sealed interface WASMInstruction {
         val simple = Array(256) { opcode ->
             Simple(opcode)
         }
+        val br = Array(256) { depth -> Br(depth) }
     }
 }

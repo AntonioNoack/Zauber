@@ -273,14 +273,6 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    open fun appendDefaultValue(valueType: Type) {
-        when (valueType) {
-            Types.Boolean -> builder.append("false")
-            in nativeTypes -> builder.append("0")
-            else -> builder.append("null")
-        }
-    }
-
     override fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
         if (method.flags.hasFlag(Flags.ABSTRACT) && classScope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
@@ -315,6 +307,15 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 nextLine()
             }
         }
+    }
+
+    override fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
+        val type = resolveType(field.valueType!!)
+        builder.append("let ")
+        builder.append(field.newName).append(" = ")
+        appendDefaultValue(type)
+        builder.append(';')
+        nextLine()
     }
 
     override fun appendStaticInstance(classScope: Scope, className: String) {
@@ -359,6 +360,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             is SimpleDeclaration -> {
                 builder.append("let ").append(expr.name).append(" = ")
                 appendDefaultValue(expr.type)
+                declaredLocalFields += expr.field
             }
             else -> super.appendInstrImpl(graph, expr)
         }

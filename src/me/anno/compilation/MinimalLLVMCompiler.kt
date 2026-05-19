@@ -15,10 +15,9 @@ class MinimalLLVMCompiler : MinimalCompiler() {
         // compile it to assembly
         runProcess(projectFolder, "llc", srcFile.name)
         val assemblyFile = srcFile.nameWithoutExtension + ".s"
-        val objectFile = srcFile.nameWithoutExtension + ".o"
 
+        // todo collect this from used, registered functions (?)
         val cFile = "Zauber.c"
-        val objectLibFile = "Zauber.o"
         File(projectFolder, cFile)
             .writeText(
                 """
@@ -29,11 +28,8 @@ class MinimalLLVMCompiler : MinimalCompiler() {
             """.trimIndent()
             )
 
-        runProcess(projectFolder, "clang", "-c", assemblyFile, "-o", objectFile)
-        runProcess(projectFolder, "clang", "-c", cFile, "-o", objectLibFile)
-
-        // link it
-        runProcess(projectFolder, "clang", objectFile, objectLibFile, "-o", "Zauber.a")
+        // compile and link it together
+        runProcess(projectFolder, "clang", assemblyFile, cFile, "-o", "Zauber.a")
 
     }
 

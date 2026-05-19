@@ -138,6 +138,9 @@ open class JavaSourceGenerator : Generator() {
     val declaredFields = HashSet<SimpleField>()
     val usedFields = HashSet<SimpleField>()
 
+    val declaredLocalFields = HashSet<Field>()
+    val usedLocalFields = HashSet<Field>()
+
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         val writer = FileWithImportsWriter(this, dst)
         try {
@@ -743,7 +746,7 @@ open class JavaSourceGenerator : Generator() {
         graph.giveMethodFieldsUniqueNames()
         graph.renumberFields()
 
-        // todo another step could be removing merge-infos, only LLVMs benefits from them
+        // todo another step could be removing merge-infos, only LLVMs uses/requires them
 
         CodeReconstruction.createCodeFromGraph(graph)
     }
@@ -786,7 +789,7 @@ open class JavaSourceGenerator : Generator() {
                 e.printStackTrace()
                 comment {
                     builder.append(
-                        "[${e.javaClass.simpleName}: ${e.stackTrace ?: "no-st"}] $body"
+                        "[${e.message ?: e.javaClass.simpleName}: ${e.stackTrace?.joinToString("\n") ?: "no-st"}] $body"
                             .replace("/*", "[")
                             .replace("*/", "]")
                     )
@@ -852,9 +855,9 @@ open class JavaSourceGenerator : Generator() {
         if (dst.mergeInfo != null) {
             appendFieldName(graph, dst)
             builder.append(" = ")
-        } else {
+        } else if (dst.id >= 0) {
             appendDeclare(graph, expression)
-        }
+        } // else unused
     }
 
     fun appendDeclare(graph: SimpleGraph, expression: SimpleAssignment) {
@@ -877,7 +880,34 @@ open class JavaSourceGenerator : Generator() {
             builder.append(";")
             nextLine()
         }
+        for (field in usedLocalFields - declaredLocalFields) {
+            if (field.byParameter is Parameter) continue
+            appendLocalDeclaration(graph, field)
+        }
         swapSections(pos0, pos1)
+
+        usedFields.clear()
+        usedLocalFields.clear()
+        declaredFields.clear()
+        declaredLocalFields.clear()
+    }
+
+    open fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
+        val type = resolveType(field.valueType!!)
+        appendType(type, graph.method.memberScope, false)
+        builder.append(' ')
+        builder.append(field.newName).append(" = ")
+        appendDefaultValue(type)
+        builder.append(';')
+        nextLine()
+    }
+
+    open fun appendDefaultValue(valueType: Type) {
+        when (valueType) {
+            Types.Boolean -> builder.append("false")
+            in nativeTypes -> builder.append("0")
+            else -> builder.append("null")
+        }
     }
 
     fun swapSections(pos0: Int, pos1: Int) {
@@ -981,7 +1011,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
-            val notNeeded = expr.dst.numReads == 0
+            val notNeeded = expr.dst.numReads <= 0
             if (notNeeded) comment { appendAssign(graph, expr) }
             else appendAssign(graph, expr)
         }
@@ -1034,6 +1064,7 @@ open class JavaSourceGenerator : Generator() {
                 }
             }
             is SimpleLoop -> {
+                check(expr.condition == null) { "Loop with condition not yet implemented" }
                 builder.append("b").append(expr.body.blockId)
                 builder.append(": while (true)")
                 writeBlock {
@@ -1056,6 +1087,7 @@ open class JavaSourceGenerator : Generator() {
             is SimpleDeclaration -> {
                 appendType(expr.type, expr.scope, false)
                 builder.append(' ').append(expr.name)
+                declaredLocalFields += expr.field
             }
             is SimpleString -> {
                 builder.append('"').append(expr.base.value).append('"')
@@ -1066,8 +1098,10 @@ open class JavaSourceGenerator : Generator() {
                 builder.append(expr.base.value)
             }
             is SimpleGetField -> {
-                appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                appendFieldName(expr.field)
+                if (expr.dst.dst.id >= 0) {
+                    appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
+                    appendFieldName(expr.field)
+                } // else skip
             }
             is SimpleSetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
@@ -1183,7 +1217,8 @@ open class JavaSourceGenerator : Generator() {
                         } else false
                     }
                     1 -> {
-                        val supportsType = when (expr.self.type) {
+                        val type = expr.self.type
+                        val supportsType = when (type) {
                             Types.String, in nativeTypes -> true
                             else -> false
                         }
@@ -1193,13 +1228,18 @@ open class JavaSourceGenerator : Generator() {
                             "times" -> " * "
                             "div" -> " / "
                             "rem" -> " % "
-                            // compareTo is a problem for numbers:
-                            //  we must call their static compare() function
-                            "compareTo" -> "compare"
                             else -> null
                         }
                         if (supportsType && symbol != null) {
-                            appendFieldName(graph, expr.self)
+                            if (type != Types.String && expr.self.isOwnerThis(graph)) {
+                                check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
+                                    "$type is missing field 'content'"
+                                }
+                                appendFieldName(graph, expr.self, ".")
+                                builder.append("content")
+                            } else {
+                                appendFieldName(graph, expr.self)
+                            }
                             builder.append(symbol)
                             appendFieldName(graph, expr.valueParameters[0])
                             true
@@ -1265,9 +1305,17 @@ open class JavaSourceGenerator : Generator() {
         needsCastForFirstValue: BoxedType, expr: SimpleCall,
         graph: SimpleGraph,
     ) {
-        builder.append(needsCastForFirstValue.boxed).append('.')
-        val methodName = getMethodName(expr.specialization)
-        builder.append(methodName).append('(')
+        when (expr.methodName) {
+            "inc" -> builder.append("1+")
+            "dec" -> builder.append("-1+")
+            else -> {
+                builder.append(needsCastForFirstValue.boxed).append('.')
+                val methodName = getMethodName(expr.specialization)
+                builder.append(methodName)
+            }
+        }
+
+        builder.append('(')
         appendFieldName(graph, expr.self)
         if (expr.valueParameters.isNotEmpty()) {
             builder.append(", ")
@@ -1294,11 +1342,16 @@ open class JavaSourceGenerator : Generator() {
         builder.append(forFieldAccess)
     }
 
+    fun isLocalField(self: SimpleField): Boolean {
+        return self.type is ClassType && !self.type.clazz.isClassLike()
+    }
+
     open fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
         if (self.type is ClassType && self.type.clazz.isObjectLike()) {
             appendObjectInstance(field, exprScope, ".")
-        } else if (self.type is ClassType && !self.type.clazz.isClassLike()) {
+        } else if (isLocalField(self)) {
             builder.append("/* ${field.ownerScope.pathStr} */ ")
+            usedLocalFields += field
         } else {
             val fieldSelfType = field.selfType
             val needsCast = self.type != fieldSelfType

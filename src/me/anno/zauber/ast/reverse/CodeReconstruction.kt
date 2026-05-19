@@ -43,11 +43,25 @@ object CodeReconstruction {
             if (!curr.isBranch &&
                 next != null && next.isOnlyInput(curr)
             ) {
-                curr.instructions.addAll(next.instructions)
-                curr.ifBranch = next.ifBranch
-                curr.elseBranch = next.elseBranch
-                curr.branchCondition = next.branchCondition
-                next.clear()
+
+                // println("Joining ${curr.blockId} and ${next.blockId}")
+
+                if (curr === next) {
+                    // simple infinite loop
+                    val newNode = graph.addBlock()
+                    newNode.instructions.addAll(curr.instructions)
+                    curr.instructions.clear()
+                    curr.add(SimpleLoop(condition = null, false, newNode))
+                    curr.ifBranch = null
+                    curr.elseBranch = null
+                } else {
+                    // concat-join
+                    curr.instructions.addAll(next.instructions)
+                    curr.ifBranch = next.ifBranch
+                    curr.elseBranch = next.elseBranch
+                    curr.branchCondition = next.branchCondition
+                    next.clear()
+                }
                 changed = true
             }
         }
@@ -68,6 +82,9 @@ object CodeReconstruction {
                 nextF.isOnlyOutput(after) &&
                 after?.isEntryPoint != true
             ) {
+
+                // println("Simplify branch ${curr.blockId} -> [${nextT.blockId}|${nextF.blockId}] -> ${after?.blockId}")
+
                 curr.instructions.add(SimpleBranch(curr.branchCondition!!, nextT, nextF))
                 nextT.removeLinks()
                 nextF.removeLinks()

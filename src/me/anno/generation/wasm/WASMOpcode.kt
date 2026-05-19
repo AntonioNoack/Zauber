@@ -9,6 +9,7 @@ object WASMOpcode {
     const val ELSE = 0x05
 
     const val END = 0x0b
+    const val BR = 0x0c // continue loop
     const val RETURN = 0x0f
 
     const val CALL = 0x10

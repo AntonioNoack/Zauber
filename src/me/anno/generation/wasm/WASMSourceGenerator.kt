@@ -902,7 +902,28 @@ class WASMSourceGenerator : CSourceGenerator() {
                 emptyResultEnd()
             }
             is SimpleLoop -> {
-                TODO("implement loop")
+                check(expr.condition == null) { "Loop with condition not yet implemented" }
+                val name ="b${expr.body.blockId}"
+                builder.append("(loop $").append(name)
+                depth++
+                nextLine()
+
+                binary.u8(WASMOpcode.LOOP)
+                binary.u8(0x40) // empty
+
+                appendSimpleBlock(graph,expr.body)
+
+                binary.u8(WASMOpcode.BR)
+                binary.u8(0) // depth 0
+                binary.u8(WASMOpcode.END)
+
+                builder.append("br $").append(name)
+                depth--
+                nextLine()
+                builder.append(')')
+                nextLine()
+
+                appendUnreachable()
             }
             is SimpleReturn -> {
                 appendGetField(graph, expr.field)
@@ -1073,25 +1094,25 @@ class WASMSourceGenerator : CSourceGenerator() {
         val wasmInstr = when (valueType) {
             Types.Byte, Types.Short, Types.Int -> when (compareType) {
                 CompareType.LESS -> WASMOpcode.I32_LT_S
-                CompareType.LESS_EQUALS -> WASMOpcode.I32_LT_S
+                CompareType.LESS_EQUALS -> WASMOpcode.I32_LE_S
                 CompareType.GREATER -> WASMOpcode.I32_GT_S
                 CompareType.GREATER_EQUALS -> WASMOpcode.I32_GE_S
             }
             Types.UByte, Types.UShort, Types.Char, Types.UInt -> when (compareType) {
                 CompareType.LESS -> WASMOpcode.I32_LT_U
-                CompareType.LESS_EQUALS -> WASMOpcode.I32_LT_U
+                CompareType.LESS_EQUALS -> WASMOpcode.I32_LE_U
                 CompareType.GREATER -> WASMOpcode.I32_GT_U
                 CompareType.GREATER_EQUALS -> WASMOpcode.I32_GE_U
             }
             Types.Long -> when (compareType) {
                 CompareType.LESS -> WASMOpcode.I64_LT_S
-                CompareType.LESS_EQUALS -> WASMOpcode.I64_LT_S
+                CompareType.LESS_EQUALS -> WASMOpcode.I64_LE_S
                 CompareType.GREATER -> WASMOpcode.I64_GT_S
                 CompareType.GREATER_EQUALS -> WASMOpcode.I64_GE_S
             }
             Types.ULong -> when (compareType) {
                 CompareType.LESS -> WASMOpcode.I64_LT_U
-                CompareType.LESS_EQUALS -> WASMOpcode.I64_LT_U
+                CompareType.LESS_EQUALS -> WASMOpcode.I64_LE_U
                 CompareType.GREATER -> WASMOpcode.I64_GT_U
                 CompareType.GREATER_EQUALS -> WASMOpcode.I64_GE_U
             }

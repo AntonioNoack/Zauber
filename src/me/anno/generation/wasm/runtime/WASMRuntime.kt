@@ -135,12 +135,29 @@ class WASMRuntime(val binary: WASMBinary) {
                 is WASMInstruction.RefAsNonNull -> {
                     check(stack.last() is WASMInstance)
                 }
+
                 is WASMInstruction.If -> {
                     val condition = stack.removeLast() as Int
                     val branch = if (condition != 0) instr.ifBranch else instr.elseBranch
                     val result = execute(call, branch)
+                    if (result is WASMInstruction.Br) return result.next()
                     if (result != null) return result
                 }
+
+                is WASMInstruction.Loop -> {
+                    while (true) {
+                        val result = execute(call, instr.body)
+                        if (result is WASMInstruction.Br) {
+                            if (result.depth == 0) continue // continue this loop
+                            return result.next() // an outer loop was 'continued'
+                        }
+                        if (result != null) return result
+                        else break // done
+                    }
+                }
+
+                is WASMInstruction.Br -> return instr
+
                 is WASMInstruction.StructNewDefault -> {
                     val type = binary.types[instr.typeIndex] as WASMStruct
                     val fields = ArrayList<Any?>(type.properties.size)
@@ -198,10 +215,34 @@ class WASMRuntime(val binary: WASMBinary) {
     fun popF32(n: Int) = pop(n) as Float
     fun popF64(n: Int) = pop(n) as Double
 
+    fun pushBool(b: Boolean) = stack.add(b.toInt())
+
     fun executeSimple(call: WASMCall, opcode: Int) {
         // for now, we only have binary functions
         check(stack.size - 2 >= call.stack0)
         when (opcode) {
+
+            WASMOpcode.I32_EQ -> pushBool(popI32() == popI32())
+            WASMOpcode.I32_NE -> pushBool(popI32() != popI32())
+            WASMOpcode.I32_LT_S -> pushBool(popI32(1) < popI32())
+            WASMOpcode.I32_LT_U -> pushBool(Integer.compareUnsigned(popI32(1), popI32()) < 0)
+            WASMOpcode.I32_GT_S -> pushBool(popI32(1) > popI32())
+            WASMOpcode.I32_GT_U -> pushBool(Integer.compareUnsigned(popI32(1), popI32()) > 0)
+            WASMOpcode.I32_LE_S -> pushBool(popI32(1) <= popI32())
+            WASMOpcode.I32_LE_U -> pushBool(Integer.compareUnsigned(popI32(1), popI32()) <= 0)
+            WASMOpcode.I32_GE_S -> pushBool(popI32(1) >= popI32())
+            WASMOpcode.I32_GE_U -> pushBool(Integer.compareUnsigned(popI32(1), popI32()) >= 0)
+
+            WASMOpcode.I64_EQ -> pushBool(popI64() == popI64())
+            WASMOpcode.I64_NE -> pushBool(popI64() != popI64())
+            WASMOpcode.I64_LT_S -> pushBool(popI64(1) < popI64())
+            WASMOpcode.I64_LT_U -> pushBool(java.lang.Long.compareUnsigned(popI64(1), popI64()) < 0)
+            WASMOpcode.I64_GT_S -> pushBool(popI64(1) > popI64())
+            WASMOpcode.I64_GT_U -> pushBool(java.lang.Long.compareUnsigned(popI64(1), popI64()) > 0)
+            WASMOpcode.I64_LE_S -> pushBool(popI64(1) <= popI64())
+            WASMOpcode.I64_LE_U -> pushBool(java.lang.Long.compareUnsigned(popI64(1), popI64()) <= 0)
+            WASMOpcode.I64_GE_S -> pushBool(popI64(1) >= popI64())
+            WASMOpcode.I64_GE_U -> pushBool(java.lang.Long.compareUnsigned(popI64(1), popI64()) >= 0)
 
             WASMOpcode.I32_ADD -> stack.add(popI32() + popI32())
             WASMOpcode.I32_SUB -> stack.add(popI32(1) - popI32())
@@ -215,7 +256,7 @@ class WASMRuntime(val binary: WASMBinary) {
             WASMOpcode.I64_DIV_S -> stack.add(popI64(1) / popI64())
             WASMOpcode.I64_DIV_U -> stack.add(java.lang.Long.divideUnsigned(popI64(1), popI64()))
 
-            else -> error("Opcode $opcode not yet implemented")
+            else -> error("Opcode 0x${opcode.toString(16)} not yet implemented")
         }
     }
 

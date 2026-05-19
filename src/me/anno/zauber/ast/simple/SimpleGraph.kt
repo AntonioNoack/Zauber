@@ -137,6 +137,7 @@ class SimpleGraph(val method0: Specialization) {
         for (param in method.valueParameters) {
             // check that parameters are registered first...
             val field = param.getOrCreateField(null, Flags.NONE)
+            while (field.newName.startsWith('$')) field.newName = field.newName.substring(1)
             foundNames.getOrPut(field.newName) { field }
         }
         for (block in blocks) {
