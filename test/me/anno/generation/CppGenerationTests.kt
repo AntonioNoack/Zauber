@@ -58,6 +58,11 @@ class CppGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testSimpleBranch() {
+        testSimpleBranchImpl()
+    }
+
+    @Test
     fun testSimpleLoop() {
         testSimpleLoopImpl()
     }

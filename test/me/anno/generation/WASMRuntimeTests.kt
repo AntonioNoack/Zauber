@@ -51,6 +51,11 @@ class WASMRuntimeTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testSimpleBranch() {
+        testSimpleBranchImpl()
+    }
+
+    @Test
     fun testSimpleLoop() {
         testSimpleLoopImpl()
     }

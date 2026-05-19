@@ -47,6 +47,8 @@ class LLVMSourceGenerator : CSourceGenerator() {
     val globalStructs = ArrayList<LLVMStruct>()
     val objectGlobals = HashMap<Scope, Int>()
     val renames = HashMap<SimpleField, String>()
+    val fieldBranches = HashMap<SimpleField, String>()
+    var currBranch = "?"
 
     lateinit var objectGetters: Map<Scope, Int>
     lateinit var objects: List<Specialization>
@@ -346,6 +348,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
     fun appendAssign(dst: SimpleField) {
         if (dst.dst.id < 0) return
+        fieldBranches[dst] = currBranch
         val rename = renames[dst]
         check(rename == null) { "Renames cannot be assigned" }
         builder.append("%tmp").append(dst.id).append(" = ")
@@ -443,7 +446,10 @@ class LLVMSourceGenerator : CSourceGenerator() {
         depth++
         nextLine()
 
+        val prevBranch = currBranch
+        currBranch = label
         run()
+        currBranch = prevBranch
 
         depth--
         builder.append("br label %").append(endLabel)
@@ -586,23 +592,6 @@ class LLVMSourceGenerator : CSourceGenerator() {
         return tmp
     }
 
-    fun emptyResultIf() {
-        builder.append("(if (then")
-        depth++
-        nextLine()
-    }
-
-    fun emptyResultElse() {
-        builder.append(") (else")
-        nextLine()
-    }
-
-    fun emptyResultEnd() {
-        builder.append("))")
-        depth--
-        nextLine()
-    }
-
     fun insideObjectConstructor(graph: SimpleGraph, objectScope: Scope): Boolean {
         return objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor == graph.method
     }
@@ -618,7 +607,6 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 getObjectInstanceField(objectScope)
             }
         } else {
-            val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> stringifyNumber(field.type, expr)
                 is SpecialValueExpression -> when (expr.type) {
@@ -662,12 +650,15 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 builder.append(" ;; local")
             }
             is SimpleBranch -> {
-                getSimpleFieldReg(graph, expr.condition)
-                emptyResultIf()
-                /**/appendSimpleBlock(graph, expr.ifTrue)
-                emptyResultElse()
-                /**/appendSimpleBlock(graph, expr.ifFalse)
-                emptyResultEnd()
+                val branch = Branch(this)
+                val condition = getSimpleFieldReg(graph, expr.condition)
+                ifCondition(branch, condition)
+                ifBranch(branch) {
+                    appendSimpleBlock(graph, expr.ifTrue)
+                }
+                elseBranch(branch) {
+                    appendSimpleBlock(graph, expr.ifFalse)
+                }
             }
             is SimpleLoop -> {
                 TODO("implement loop")
@@ -777,6 +768,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                     if (expr.field.byParameter is Parameter) {
                         // we actually need to rename expr.dst, because we cannot assign it
                         renames[expr.dst] = "%" + expr.field.newName
+                        fieldBranches[expr.dst] = currBranch
                         builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
                     } else {
                         val self = "%" + expr.field.newName
@@ -807,6 +799,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                         // field must be 'content'
                         if (expr.dst.id >= 0) {
                             renames[expr.dst] = "%this"
+                            fieldBranches[expr.dst] = currBranch
                             check(expr.field.name == "content")
                             builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
                         }
@@ -851,35 +844,46 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 val ownerType = method.ownerScope.typeWithArgs
                 val paramType = method.valueParameters[0].type.specialize()
                 if (ownerType == paramType && ownerType in nativeNumbers) {
-                    getSimpleFieldReg(graph, expr.left)
-                    getSimpleFieldReg(graph, expr.right)
+                    val left = getSimpleFieldReg(graph, expr.left)
+                    val right = getSimpleFieldReg(graph, expr.right)
                     appendNativeCompare(ownerType, expr.type)
+                    builder.append(' ').append(getLLVMType(ownerType).ir)
+                        .append(' ').append(left).append(", ").append(right)
                 } else {
                     TODO("Call method, then compare to zero for $ownerType,$paramType")
                 }
             }
-            is SimpleMerge -> {}
+            is SimpleMerge -> {
+                // create phi instruction 😎
+                val fromIf = getSimpleFieldReg(graph, expr.ifField)
+                val fromElse = getSimpleFieldReg(graph, expr.elseField)
+                val ifBranch = fieldBranches[expr.ifField]!!
+                val elseBranch = fieldBranches[expr.elseField]!!
+                appendAssign(expr.dst)
+                builder.append("phi ")
+                    .append(getLLVMType(expr.dst.type).ir)
+                    .append(" [ ").append(fromIf).append(", %").append(ifBranch)
+                    .append(" ], [ ").append(fromElse).append(", %").append(elseBranch)
+                    .append(" ]")
+            }
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }
     }
 
     fun appendNativeCompare(valueType: Type, compareType: CompareType) {
-        val numberType = getLLVMType(valueType)
         val compareName = when (compareType) {
             CompareType.LESS -> "lt"
             CompareType.LESS_EQUALS -> "le"
             CompareType.GREATER -> "gt"
             CompareType.GREATER_EQUALS -> "ge"
         }
-        builder.append(numberType.wasmName)
-            .append('.').append(compareName)
-        when (valueType) {
-            Types.Byte, Types.Short, Types.Int, Types.Long -> builder.append("_s")
-            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> builder.append("_u")
-            Types.Half, Types.Float, Types.Double -> {}
-            else -> throw NotImplementedError("Unknown number type")
+        val prefix = when {
+            isNumberFloat(valueType) -> "fcmp u" // u = unordered = either value may be NaN
+            isNumberSigned(valueType) -> "icmp s" // signed
+            else -> "icmp u" // unsigned
         }
-        nextLine()
+        builder.append(prefix)
+            .append(compareName)
     }
 
     override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {

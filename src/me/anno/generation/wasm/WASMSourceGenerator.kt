@@ -1065,11 +1065,10 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
         builder.append(numberType.wasmName)
             .append('.').append(compareName)
-        when (valueType) {
-            Types.Byte, Types.Short, Types.Int, Types.Long -> builder.append("_s")
-            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> builder.append("_u")
-            Types.Half, Types.Float, Types.Double -> {}
-            else -> throw NotImplementedError("Unknown number type")
+        when {
+            isNumberFloat(valueType) -> {}
+            isNumberSigned(valueType) -> builder.append("_s")
+            else -> builder.append("_u")
         }
         val wasmInstr = when (valueType) {
             Types.Byte, Types.Short, Types.Int -> when (compareType) {

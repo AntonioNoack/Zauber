@@ -51,6 +51,11 @@ class JavaGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testSimpleBranch() {
+        testSimpleBranchImpl()
+    }
+
+    @Test
     fun testSimpleLoop() {
         testSimpleLoopImpl()
     }

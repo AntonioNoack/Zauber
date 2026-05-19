@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 class LLVMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
+        // todo use these registered functions to generate a .c file
         JavaSourceGenerator.register(
             TypeResolution.langScope, "println", listOf(Types.Int),
             "System.out.println(arg0)" // todo adjust this
@@ -46,6 +47,11 @@ class LLVMGenerationTests : CodeGenerationTests() {
     @Test
     fun testValueIsPassedByCopy() {
         testValueIsPassedByCopyImpl()
+    }
+
+    @Test
+    fun testSimpleBranch() {
+        testSimpleBranchImpl()
     }
 
     @Test

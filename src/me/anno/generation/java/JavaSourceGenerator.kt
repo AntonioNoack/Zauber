@@ -180,6 +180,35 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun isNumberSigned(valueType: Type): Boolean {
+        return when (valueType) {
+            Types.Byte, Types.Short, Types.Int, Types.Long -> true
+            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> false
+            // Types.Half, Types.Float, Types.Double -> {}
+            else -> throw NotImplementedError("Unknown integer type")
+        }
+    }
+
+    fun isNumberFloat(valueType: Type): Boolean {
+        return when (valueType) {
+            Types.Byte, Types.Short, Types.Int, Types.Long,
+            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> false
+            Types.Half, Types.Float, Types.Double -> true
+            else -> throw NotImplementedError("Unknown number type")
+        }
+    }
+
+    fun getNumberSizeInBytes(valueType: Type, supportsHalfs: Boolean): Int {
+        return when (valueType) {
+            Types.Byte, Types.UByte -> 1
+            Types.Short, Types.UShort, Types.Char -> 2
+            Types.Int, Types.UInt, Types.Float -> 4
+            Types.Long, Types.ULong, Types.Double -> 8
+            Types.Half -> if (supportsHalfs) 2 else 4
+            else -> throw NotImplementedError("Unknown number type")
+        }
+    }
+
     open fun defineNullableAnnotation(dst: File, writer: FileWithImportsWriter) {
         val file = File(dst, "org/jetbrains/annotations/Nullable.java")
         writer[file] = FileEntry("org.jetbrains.annotations".split('.'), this)
