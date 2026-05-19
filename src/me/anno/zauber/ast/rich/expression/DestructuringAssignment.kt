@@ -1,14 +1,15 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.parser.ASTBuilderBase
-import me.anno.zauber.ast.rich.member.FieldDeclaration
+import me.anno.utils.GrowingList
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.member.FieldDeclaration
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.scope.Scope
 
-val componentNames = List(100) {
+val componentNames = GrowingList {
     "component${it + 1}"
 }
 

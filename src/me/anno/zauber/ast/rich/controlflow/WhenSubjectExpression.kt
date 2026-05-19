@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.controlflow
 
+import me.anno.utils.GrowingList
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.ast.rich.Flags
@@ -42,12 +43,10 @@ fun lambdaTypeToClassType(lambdaType: LambdaType, origin: Long): ClassType {
 }
 
 fun getLambdaTypeName(n: Int): String {
-    val names = lambdaTypeNames
-    return names.getOrNull(n)
-        ?: throw IllegalStateException("Only ${names.lastIndex}/$n lambda parameters are allowed")
+    return lambdaTypeNames[n]
 }
 
-private val lambdaTypeNames = List(10) { n -> "Function$n" }
+private val lambdaTypeNames = GrowingList { n -> "Function$n" }
 
 fun storeSubject(
     scope: Scope,

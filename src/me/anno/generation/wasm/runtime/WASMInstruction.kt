@@ -1,5 +1,7 @@
 package me.anno.generation.wasm.runtime
 
+import me.anno.utils.GrowingList
+
 sealed interface WASMInstruction {
 
     data object Unreachable : WASMInstruction
@@ -56,9 +58,7 @@ sealed interface WASMInstruction {
     data class StructSet(val typeIndex: Int, val fieldIndex: Int) : WASMInstruction
 
     companion object {
-        val simple = Array(256) { opcode ->
-            Simple(opcode)
-        }
-        val br = Array(256) { depth -> Br(depth) }
+        val simple = Array(256) { opcode -> Simple(opcode) }
+        val br = GrowingList(::Br)
     }
 }
