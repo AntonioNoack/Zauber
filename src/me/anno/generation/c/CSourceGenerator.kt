@@ -14,7 +14,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         fun hashMethodParameters(method: Specialization): String {
             check(method.isMethodLike())
             if (method.method.valueParameters.isEmpty()) {
-                // we rely on this special behaviour -> make it explicit
+                // we rely on this special behavior -> make it explicit
                 return "0"
             }
             return method.use {

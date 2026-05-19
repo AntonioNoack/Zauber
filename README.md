@@ -225,10 +225,11 @@ Available targets:
 - **Rust** with single-threaded GC
 - **C++** without memory-management (just infinite allocations like Zig's compiler)
 - **LLVM IR** without memory-management
-- **WASM** with native GC
+- **WASM** (WAT + binary) with native GC
 - **JavaScript** with native GC
 
 Planned targets:
+- **JVM** via JVM Bytecode, Java is already really close
 - **TypeScript** (because we have JavaScript, should be easy)
 - **Zig** (because we have Rust and borrowed its defer and errdefer)
 - **Python** (for machine learning)
