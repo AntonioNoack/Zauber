@@ -151,6 +151,7 @@ class ZauberASTBuilder(
     private fun readMethod(): Method {
         val origin = origin(i - 1) // on 'fun'
 
+        if (currPackage.isInterface()) addFlag(Flags.OPEN)
         val keywords = packFlags()
 
         // parse optional <T, U>

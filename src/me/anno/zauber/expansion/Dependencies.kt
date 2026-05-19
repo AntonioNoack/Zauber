@@ -2,10 +2,13 @@ package me.anno.zauber.expansion
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Specialization
@@ -21,6 +24,8 @@ import me.anno.zauber.types.impl.ClassType
  *  but I still believe that we could define this as a graph coloring problem
  * */
 object Dependencies {
+
+    private val LOGGER = LogManager.getLogger(Dependencies::class)
 
     private val reached by threadLocal { DependencyData() }
 
@@ -64,8 +69,39 @@ object Dependencies {
         }
     }
 
-    private fun markMethodsInSubClassesReachable(method: Specialization) {
-        check(method.isMethodLike())
+    private fun markMethodsInSubClassesReachable(method0: Specialization) {
+
+        val method = method0.method
+        if (method is Constructor) {
+            return // cannot be inherited -> nothing to do
+        }
+
+        if (!method.ownerScope.isClassLike() || method.ownerScope.isObjectLike()) {
+            return // cannot be inherited -> nothing to do
+        }
+
+        // todo check that methods in interfaces automatically get marked OPEN
+        if (!method.flags.hasAnyFlag(Flags.OPEN or Flags.OVERRIDE)) {
+            check(!method.ownerScope.isInterface()) {
+                "$method (inside an interface) misses open-flag"
+            }
+            return
+        }
+
+        val methodName = method.name
+
+        val ownerScope = method.ownerScope
+        val ownerSpec = method0.withScope(ownerScope)
+        for (childClass in reached.childClasses[ownerSpec].orEmpty()) {
+            val childCandidates = childClass.scope!!.methods0
+                .filter { it.name == methodName && method in it.overriddenBy }
+            if (childCandidates.size > 1) LOGGER.warn("More child-candidates than expected for $method in $childClass: $childCandidates")
+            if (childCandidates.isEmpty()) LOGGER.warn("Missing child-candidate of $method in $childClass")
+            for (candidate in childCandidates) {
+                addMethod(Specialization(candidate.scope, method0.typeParameters + childClass.typeParameters))
+            }
+        }
+
         // todo we must check all sub classes whether they are constructable,
         //  and if so, we must add their overridden method to be reachable
     }
@@ -124,11 +160,19 @@ object Dependencies {
         }
     }
 
-    private fun markSuperTypesConstructable(type: Specialization) {
+    private fun markSuperTypesConstructable(childType: Specialization) {
+        check(childType.clazz.isClassLike())
+
         // mark all super-types as constructable (because they are)
-        val scope = type.clazz[ScopeInitType.AFTER_DISCOVERY]
+        val scope = childType.clazz[ScopeInitType.AFTER_DISCOVERY]
         for (superType in scope.superCalls) {
-            addClass(type.getSuperType(superType))
+            val superTypeI = childType.getSuperType(superType)
+            reached.childClasses.getOrPut(superTypeI, ::ArrayList)
+                .add(childType)
+
+            // LOGGER.info("$childType extends $superTypeI")
+
+            addClass(superTypeI)
         }
     }
 

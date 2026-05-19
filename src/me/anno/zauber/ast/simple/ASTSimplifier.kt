@@ -327,6 +327,7 @@ object ASTSimplifier {
                     block0.instructions.none { it is SimpleDeclaration && it.name == field.name } &&
                     fieldHasSensibleType(context, field)
                 ) {
+                    // todo if there is only one assignment place, I'd prefer Declare+Assign in one...
                     val type = field.resolveValueType(context)
                     block0.add(SimpleDeclaration(type, field, field.scope, field.origin))
                 }

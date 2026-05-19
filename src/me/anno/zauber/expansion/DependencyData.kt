@@ -11,4 +11,7 @@ class DependencyData {
     //   but we still have code, that moves fields, so...
     val getFields = HashSet<Specialization>()
     val setFields = HashSet<Specialization>()
+
+    // val parentClasses = HashMap<Specialization, List<Specialization>>()
+    val childClasses = HashMap<Specialization, ArrayList<Specialization>>()
 }

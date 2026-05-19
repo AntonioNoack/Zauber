@@ -9,7 +9,8 @@ import me.anno.generation.java.JavaSourceGenerator
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
-import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -17,12 +18,13 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
-import me.anno.zauber.ast.simple.*
-import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
+import me.anno.zauber.ast.simple.SimpleDeclaration
+import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
-import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
@@ -153,14 +155,18 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val superCall0 = scope.superCalls.firstOrNull()
         if (superCall0 != null && superCall0.isClassCall) {
             val type = superCall0.type
-            builder.append(" : ")
-            appendType(type, scope, true)
-            hasSuper = true
+            if (!(scope.isInterface() && type == Types.Any)) {
+                builder.append(" : ")
+                appendType(type, scope, true)
+                hasSuper = true
+            }
         } else if (scope != Types.Any.clazz) {
             val type = Types.Any
-            builder.append(" : ")
-            appendType(type, scope, true)
-            hasSuper = true
+            if (!scope.isInterface()) {
+                builder.append(" : ")
+                appendType(type, scope, true)
+                hasSuper = true
+            }
         }
 
         var implementsKeyword = if (hasSuper) ", " else " : "
@@ -212,9 +218,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         // https://stackoverflow.com/a/1008289/4979303
         builder.append(
             """
-        static $className& get$OBJECT_FIELD_NAME() {
+        static $className* get$OBJECT_FIELD_NAME() {
             static $className $OBJECT_FIELD_NAME;
-            return $OBJECT_FIELD_NAME;
+            return &$OBJECT_FIELD_NAME;
           }
         """.trimIndent()
         )
@@ -258,7 +264,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 content.append(
                     """
                 int main(int argc, char** argv) {
-                    $className.${mainMethod.name}(${if (needsArgs) "argv" else ""});
+                    $className->${mainMethod.name}(${if (needsArgs) "argv" else ""});
                     return 0;
                 }
             """.trimIndent()
@@ -416,8 +422,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
         if (headerOnly) {
             appendVisibility(method.flags.isPrivate())
+            if (method.flags.hasFlag(Flags.OVERRIDE)) {
+                // override is a suffix...
+            } else if (method.flags.hasFlag(Flags.OPEN) || method.ownerScope.isInterface()) {
+                builder.append("virtual ")
+            }
         }
-        // no flags yet
     }
 
     override fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
@@ -466,6 +476,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
         assignSelfType(classScope, method)
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
+        if (headerOnly && method.flags.hasFlag(Flags.OVERRIDE)) {
+            builder.append(" override")
+        }
     }
 
 
@@ -514,7 +527,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             builder.append("this->")
         } else {
             appendGetObjectInstance(field.ownerScope, exprScope)
-            builder.append(forFieldAccess)
+            builder.append("->")
         }
     }
 
@@ -525,11 +538,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     fun appendOwnershipSuffix(type: Type) {
         val type = resolveType(type)
-        val symbol = when {
-            type.isNullable() -> "*"
-            type.isValue() -> ""
-            else -> "&"
-        }
+        val symbol = if (type.isValue()) "" else "*"
         builder.append(symbol)
     }
 
@@ -547,7 +556,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         } else if (field.isObjectLike()) {
             val objectType = (field.type as ClassType).clazz
             appendGetObjectInstance(objectType, graph.method.scope)
-            false
+            true
         } else {
             val field = field.dst
             when (val expr = field.constantRef) {
@@ -559,8 +568,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
-            // todo depending on type, we need . or ->
-            false
+            !(field.type in nativeNumbers || field.type.isValue())
         }
         if (forFieldAccess.isNotEmpty()) {
             val symbol = if (needsArrow) {
@@ -623,15 +631,15 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 }
             }
             is SimpleDeclaration -> {
+                // todo we need SimpleDeclareAndAssign, so we can rid of this impure logic...
                 val type = expr.type
                 appendType(type, expr.scope, false)
                 appendOwnershipSuffix(type)
                 builder.append(' ').append(expr.name)
                 when { // avoid undefined variables, where possible
-                    type.isNullable() -> builder.append(" = nullptr")
                     type.isValue() -> builder.append(" = {}")
                     type in nativeNumbers -> builder.append(" = 0")
-                    else -> {} // default value is unknown...
+                    else -> builder.append(" = nullptr") // assigning non-nullable to null is bad :/
                 }
                 declaredLocalFields += expr.field
             }

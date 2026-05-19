@@ -635,6 +635,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val end = findParameterStart()
         val name = tokens.toString(end - 1)
         val ownerScope = currPackage
+        if (ownerScope.isInterface()) addFlag(Flags.OPEN)
+
         val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
         methodScope.addFlags(packFlags())
 

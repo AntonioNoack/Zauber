@@ -9,7 +9,7 @@ import me.anno.zauber.types.impl.ClassType
 
 // todo if it is val, we should just use simpleField
 //  else, this is fine, becomes a mutable field, kind of
-class SimpleDeclaration(val type: Type, val field: Field, scope: Scope, origin: Long) :
+open class SimpleDeclaration(val type: Type, val field: Field, scope: Scope, origin: Long) :
     SimpleInstruction(scope, origin) {
 
     val name get() = field.newName

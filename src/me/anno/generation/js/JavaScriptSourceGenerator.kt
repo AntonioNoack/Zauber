@@ -216,9 +216,11 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     override fun appendSuperCall0(classScope: Scope, className: String, constructor: Constructor) {
         // interfaces don't need super calls :)
         val superCall = constructor.superCall
-        val superType = classScope.superCalls
+        val superType0 = classScope.superCalls
             .firstOrNull { it.isClassCall }?.typeI
             ?: Types.Any
+        val superType = resolveType(superType0)
+
         if (superCall != null) {
             appendSuperCall0Name(
                 classScope, className, constructor,

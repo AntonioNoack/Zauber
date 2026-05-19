@@ -898,7 +898,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append(' ')
         builder.append(field.newName).append(" = ")
         appendDefaultValue(type)
-        builder.append(';')
+        builder.append("; // missing")
         nextLine()
     }
 

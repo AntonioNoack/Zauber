@@ -318,12 +318,13 @@ abstract class CodeGenerationTests {
     }
 
     fun testClassInheritanceImpl() {
+        // todo bug: why is in C++ the result type of calc() without hint resolved to Nothing??
         val code = """
             open class Parent {
-                open fun calc() = 1
+                open fun calc(): Int = 1
             }
             class Child : Parent() {
-                override fun calc() = 2
+                override fun calc(): Int = 2
             }
             fun main() {
                 var p: Parent = Child()
@@ -343,10 +344,10 @@ abstract class CodeGenerationTests {
     fun testInterfaceInheritanceImpl() {
         val code = """
             interface Parent {
-                fun calc() = 1
+                fun calc(): Int = 1
             }
             class Child : Parent {
-                override fun calc() = 2
+                override fun calc(): Int = 2
             }
             fun main() {
                 var p: Parent = Child()

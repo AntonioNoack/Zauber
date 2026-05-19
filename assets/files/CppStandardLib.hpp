@@ -8,8 +8,8 @@
 #include <new>
 
 template<typename T, typename... Args>
-T& gcNew(Args&&... args)
+T* gcNew(Args&&... args)
 {
     void* mem = calloc(1, sizeof(T));
-    return *new (mem) T(std::forward<Args>(args)...);
+    return new (mem) T(std::forward<Args>(args)...);
 }
