@@ -60,6 +60,16 @@ class JavaGenerationTests : CodeGenerationTests() {
         testSimpleLoopImpl()
     }
 
+    @Test
+    fun testValueArray() {
+        testValueArrayImpl()
+    }
+
+    @Test
+    fun testReferenceArray() {
+        testReferenceArrayImpl()
+    }
+
     // todo add .copy(name=value, name2=value2) as a special function on data classes
 
     // todo implement and test value classes being inlined:

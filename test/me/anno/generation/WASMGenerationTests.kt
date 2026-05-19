@@ -61,4 +61,14 @@ class WASMGenerationTests : CodeGenerationTests() {
         testSimpleLoopImpl()
     }
 
+    @Test
+    fun testValueArray() {
+        testValueArrayImpl()
+    }
+
+    @Test
+    fun testReferenceArray() {
+        testReferenceArrayImpl()
+    }
+
 }

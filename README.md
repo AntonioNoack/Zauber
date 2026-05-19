@@ -229,12 +229,16 @@ Available targets:
 - **JavaScript** with native GC
 
 Planned targets:
-- **TypeScript**
-- **Zig**
-- **Python**
+- **TypeScript** (because we have JavaScript, should be easy)
+- **Zig** (because we have Rust and borrowed its defer and errdefer)
+- **Python** (for machine learning)
+- **C** (without C++)
 
 Inheritance works in the Java target, I believe.
 For quickly testing WASM, there is also a small WASM reader and runtime.
+
+Eventually, the generated code should look nice,
+and have proper names everywhere. For now, I focus on getting things started/working though.
 
 ## Origin of the name "Zauber" 🪄
 

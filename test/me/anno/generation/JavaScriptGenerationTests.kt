@@ -61,4 +61,14 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
         testSimpleLoopImpl()
     }
 
+    @Test
+    fun testValueArray() {
+        testValueArrayImpl()
+    }
+
+    @Test
+    fun testReferenceArray() {
+        testReferenceArrayImpl()
+    }
+
 }

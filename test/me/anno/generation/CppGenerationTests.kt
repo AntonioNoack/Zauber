@@ -67,6 +67,16 @@ class CppGenerationTests : CodeGenerationTests() {
         testSimpleLoopImpl()
     }
 
+    @Test
+    fun testValueArray() {
+        testValueArrayImpl()
+    }
+
+    @Test
+    fun testReferenceArray() {
+        testReferenceArrayImpl()
+    }
+
     // todo implement and test working with strings
     // todo test specialized classes being usable
 
