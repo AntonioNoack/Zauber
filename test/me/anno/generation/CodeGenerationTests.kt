@@ -182,6 +182,10 @@ abstract class CodeGenerationTests {
             operator fun inc() = this + 1
         }
         external fun println(arg0: Int)
+        enum class Boolean { TRUE, FALSE }
+        class Array<V>(val size: Int) {
+            external operator fun set(i: Int, value: V)
+        }
         """.trimIndent()
 
         // 1, 1, 2, 3, 5, 8, 13, 21
@@ -215,6 +219,10 @@ abstract class CodeGenerationTests {
             operator fun inc(): Int = this + 1
         }
         external fun println(arg0: Int)
+        enum class Boolean { TRUE, FALSE }
+        class Array<V>(val size: Int) {
+            external operator fun set(i: Int, value: V)
+        }
         """.trimIndent()
 
         // todo bug: if we use
@@ -239,6 +247,7 @@ abstract class CodeGenerationTests {
             var j = 2
             while (j <= i) {
                 v[j] = v[j-1] + v[j-2]
+                j++
             }
             return v[i].x
         }
@@ -253,6 +262,7 @@ abstract class CodeGenerationTests {
             external operator fun compareTo(other: Int): Int
             operator fun inc(): Int = this + 1
         }
+        enum class Boolean { TRUE, FALSE }
         class Array<V>(val size: Int) {
             external operator fun get(index: Int): V
             external operator fun set(index: Int, value: V)
@@ -278,6 +288,7 @@ abstract class CodeGenerationTests {
             var j = 2
             while (j <= i) {
                 v[j] = v[j-1] + v[j-2]
+                j++
             }
             return v[i].x
         }
@@ -292,6 +303,7 @@ abstract class CodeGenerationTests {
             external operator fun compareTo(other: Int): Int
             operator fun inc(): Int = this + 1
         }
+        enum class Boolean { TRUE, FALSE }
         class Array<V>(val size: Int) {
             external operator fun get(index: Int): V
             external operator fun set(index: Int, value: V)
