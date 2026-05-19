@@ -1,11 +1,15 @@
-# Zauber
+# Zauber 🪄
 
-This is a modern programming language with focus on usability, performance, and memory-safety.
+Zauber is a modern programming language with focus on usability, performance, and memory-safety.
 
 <img src="assets/Logo.png" alt="Mascot for Zauber" style="width:15em"/>
 
 This project is still in its infancy, but I really do want a language without compromises and
 constantly thinking about switching from Kotlin to Zig or Rust.
+
+Zauber is my personal learning project to learn more about compilers,
+so things may stay unstable for a while, and I'm probably turning it into a whole
+compiler framework, because I want to learn it all 🤩.
 
 ## Learn Zauber
 
@@ -54,7 +58,7 @@ Ideally much faster.
 - [x] Tokenizing Kotlin
 - [x] Parsing Kotlin to an AST
 - [ ] Type Resolution
-- [ ] Basic Code Generation
+- [x] Basic Code Generation
 - [ ] Basic GC for JVM-style objects (default for Kotlin compatibility)
 - [ ] Different Allocators
 - [ ] ...
@@ -157,12 +161,12 @@ val floatArray =
 
 floatArrayOf() will only be available in Kotlin files. Zauber uses arrayOf() for all types.
 
-### Reflection
+## Reflection
 
 I'd like the reflection API to be completely comptime like in Zig,
 so if you don't use it, you don't need the (space)overhead.
 
-### Standard Library
+## Standard Library
 
 Java has application specific classes/packages like AWT, Swing, java.sql, and idk why...
 These should be implemented in libraries.
@@ -174,50 +178,66 @@ If you need obfuscation, obfuscate all library-internal logic.
 
 For generated code in other languages, I'll add the basics to get the language working, and ideally auto-compile-time bindings for the stdlib, but more than that will be up to 3rd party libraries.
 
-### Progress Estimation
+## Progress Estimation
 
-Total Progress: 2.7 %
+This represents the general point of where Zauber is right now. Quite a few things work already, but we're still far away from having a stable language.
 
-```yaml
-- Kotlin-Style:
-  - Tokenizer: 90% of 1%
-  - AST: 85% of 3%
-  - Typealias: 75% of 0.2%
-  - Type-Resolution: 70% of 4%
-  - Baking(comptime) Generics: 70% of 2%
-  - Dependency-Optimization: 50% of 4%
-- Rust-style Macros: 15% of 3%
-- Compile to C/C++: 15% of 3%
-- Choose Allocator for Instantiation: 10% of 3%
-- Arena Allocator: 0% of 2%
-- Store struct members on stack: 0% of 3%
-- Automatic Struct Of Arrays: 0% of 2%
-- Compile to JVM: 10% of 3%
-- Compile to WASM: 0% of 3%
-- Debug-Compile to x86 directly: 0% of 4%
-- Hot-reloading functions: 0% of 5%
-- JVM bindings for FileIO, OpenGL/GLFW, println, ...: 0% of 3%
-- WASM bindings for async IO, WebGL, println, ...: 0% of 3%
-- C++ bindings for FileIO, OpenGL, native libraries, ...: 0% of 3%
-- Automatically colored asynchronous Methods: 5% of 3%
-- Fixed-Point numbers: 0% of 3%
-- Lambdas: 30% of 3%
-- Garbage Collector: 5% of 2%
-- Multithreading and Parallel GC: 0% of 5%
-- Completely Immutable Objects: 15% of 3%
-- CompileTime Interpreter: 40% of 5%
-- VisualStudioCode Extension for syntax checking: 70% of 3%
-- VisualStudioCode Extension for semantic checking: 3% of 5%
-- IntelliJ Idea Extension for syntax checking: 0% of 3%
-- IntelliJ Idea Extension for semantic checking: 0% of 5%
-- Custom Code Editor (Necromicon?, Grimoire): 0% of 5%
-...
-# yes, these probably don't add up to 100%
-```
+### Language Features
 
-## Naming
+Here is the general state of Zauber right now:
+
+| Feature                               | State                                                                       |
+|---------------------------------------|-----------------------------------------------------------------------------|
+| Branches                              | 100%                                                                        |
+| Loops                                 | 100% in interpreter, 70% in compilers                                       |
+| Class Inheritance                     | 100% in interpreter, 10% in compilers                                       |
+| Interface Inheritance                 | 100% in interpreter, 10% in compilers                                       |
+| Compile Time Reflections              | 10% in interpreter (compiler irrelevant)                                    |
+| Macros                                | 25%, only as functions right now, as field/class/method annotations missing |
+| Try-Catch-Finally                     | 70% in interpreter (most places support it), 0% in compilers                |
+| Defer, Errdefer                       | Fully work, internally use try-catch-finally logic                          |
+| Fields, Methods                       | Base versions work, extension fields not yet well                           |
+| Inner Classses, Functions             | Can be type-resolved, but not yet properly executed                         |
+| Lambdas                               | Type-Resolution works partially, runtime not                                |
+| Async and Yield                       | Type-Resolution works, runtime not                                          |
+| Importing things from other languages | Not implemented yet                                                         |
+
+### Importing other languages
+
+*This intends to transpile other languages to Zauber, so we can use libraries from all the programming world.*
+
+Very proof-of-concept at the moment, started a little for Python, Java, TypeScript, and of course Kotlin.
+
+### Binding other languages
+
+Not really started yet, only possible when compiling to that language,
+and declaring an external function; self is a must right now.
+
+### Compilation
+
+The interpreter works relatively well, but yield isn't supported yet.
+
+For compiling, while a lot of targets have proof-of-concepts, none are production ready.
+Simple things like variables, branches, loops, and classes (non-inheritance) work in all targets.
+
+Available targets:
+- **JVM** via Java + JDK
+- **Rust** with single-threaded GC
+- **C++** without memory-management (just infinite allocations like Zig's compiler)
+- **LLVM IR** without memory-management
+- **WASM** with native GC
+- **JavaScript** with native GC
+
+Planned targets:
+- **TypeScript**
+- **Zig**
+- **Python**
+
+Inheritance works in the Java target, I believe.
+For quickly testing WASM, there is also a small WASM reader and runtime.
+
+## Origin of the name "Zauber" 🪄
 
 Programming languages are magic to even most developers, and I like the German words "Zauber" and "Zauberei".
 Compilers are/were pretty magic to me before I got well into this project too, although I had some [JVM2WASM](https://github.com/AntonioNoack/jvm2wasm) experience.
 
-I'm also thinking about renaming it to "fux" (German & English mixed) or "fox", but idk...
