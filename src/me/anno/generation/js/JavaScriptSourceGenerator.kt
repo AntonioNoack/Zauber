@@ -121,6 +121,11 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
+    override fun appendArrayContentField(classScope: Scope, headerOnly: Boolean) {
+        builder.append("content = null;")
+        nextLine()
+    }
+
     override fun getClassType(scope: Scope): String {
         // todo what about enums?
         return "class"
@@ -204,6 +209,10 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             appendSuperCall0(classScope, className, constructor)
             builder.append(';')
             nextLine()
+
+            if (classScope == Types.Array.clazz) {
+                appendArrayContentInitialization(constructor)
+            }
 
             if (body != null) {
                 val methodSpec = specialization
@@ -299,16 +308,63 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         val nativeImpl = getNativeImplementation(methodSpec.method)
         val body = methodSpec.method.body
 
-        if (body != null) {
-            val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
-            appendCode(context, methodSpec, body, false)
-        } else if (nativeImpl != null) {
-            appendNativeImplementation(nativeImpl, methodSpec.method)
-        } else {
-            writeBlock {
-                builder.append("throw 'Missing implementation for $methodSpec';")
-                nextLine()
+        when {
+            body != null -> {
+                val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
+                appendCode(context, methodSpec, body, false)
             }
+            nativeImpl != null -> {
+                appendNativeImplementation(nativeImpl, methodSpec.method)
+            }
+            isArrayGetter(methodSpec) -> appendArrayGetter(methodSpec)
+            isArraySetter(methodSpec) -> appendArraySetter(methodSpec)
+            else -> {
+                writeBlock {
+                    builder.append("throw 'Missing implementation for $methodSpec';")
+                    nextLine()
+                }
+            }
+        }
+    }
+
+    override fun appendArrayContentInitialization(constructor: Constructor) {
+        val elementType = specialization.typeParameters[0]
+        val sizeName = constructor.valueParameters[0].name
+        builder.append("this.content = new ")
+        val arrayName = when (elementType) {
+            Types.Byte -> "Int8Array"
+            Types.UByte -> "UInt8Array"
+            Types.Short -> "Int16Array"
+            Types.UShort, Types.Char -> "UInt16Array"
+            Types.Int -> "Int32Array"
+            Types.UInt -> "UInt32Array"
+            Types.Long -> "Int64Array"
+            Types.ULong -> "UInt64Array"
+            Types.Half -> "Float16Array"
+            Types.Float -> "Float32Array"
+            Types.Double -> "Float64Array"
+            else -> "Array"
+        }
+        builder.append(arrayName).append('(').append(sizeName).append(");")
+        nextLine()
+    }
+
+    override fun appendArrayGetter(method0: Specialization) {
+        writeBlock {
+            builder.append("return this.content[index];")
+            nextLine()
+        }
+    }
+
+    override fun appendArraySetter(method0: Specialization) {
+        writeBlock {
+            builder.append("this.content[index] = value;")
+            nextLine()
+
+            builder.append("return ")
+            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+            builder.append(';')
+            nextLine()
         }
     }
 
