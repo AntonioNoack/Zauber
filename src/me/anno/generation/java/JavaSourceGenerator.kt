@@ -464,11 +464,11 @@ open class JavaSourceGenerator : Generator() {
         }
 
         if (classScope == Types.Array.clazz) {
-            appendArrayContentField(classScope)
+            appendArrayContentField(classScope, headerOnly)
         }
     }
 
-    open fun appendArrayContentField(classScope: Scope) {
+    open fun appendArrayContentField(classScope: Scope, headerOnly: Boolean) {
         val valueType = specialization.typeParameters[0]
         builder.append("private final ")
         appendType(valueType, classScope, false)
@@ -756,7 +756,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendArrayContentInitialization(constructor: Constructor) {
+    open fun appendArrayContentInitialization(constructor: Constructor) {
         val elementType = specialization.typeParameters[0]
         builder.append("content = new ")
         appendType(elementType, constructor.scope, false)
@@ -1087,7 +1087,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
-            is SimpleConstructorCall -> {}
+            is SimpleConstructorCall, is SimpleMerge -> {}
             is SimpleCall -> {
                 if (expr.sample !is Constructor) {
                     builder.append(";")

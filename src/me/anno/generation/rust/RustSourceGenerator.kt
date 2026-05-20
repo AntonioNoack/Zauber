@@ -3,9 +3,11 @@ package me.anno.generation.rust
 import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
+import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -59,13 +61,15 @@ class RustSourceGenerator : CSourceGenerator() {
         val gcImport = "gc::Gc".split("::")
         val gcTraceImport = "gc::Trace".split("::")
         val gcFinalizeImport = "gc::Finalize".split("::")
+        val mutexGuardImport = "std::sync::MutexGuard".split("::")
 
         val libImports = listOf(
             refCellImport,
             gcCellImport,
             gcImport,
             gcTraceImport,
-            gcFinalizeImport // must be defined, when we have no own finalize implementation
+            gcFinalizeImport,// must be defined, when we have no own finalize implementation
+            mutexGuardImport,
         )
 
     }
@@ -125,7 +129,7 @@ class RustSourceGenerator : CSourceGenerator() {
                 // include all imports
                 content.append(writer[File(dst, "mod.rs")]!!.content)
                 content.append(
-                    """
+                    "\n" + """
                 fn main() {
                     $className.$methodName(${if (needsArgs) "std::env::args()" else ""});
                 }
@@ -222,6 +226,55 @@ class RustSourceGenerator : CSourceGenerator() {
         }
     }
 
+    override fun appendArrayContentField(classScope: Scope, headerOnly: Boolean) {
+        val elementType = specialization.typeParameters[0]
+        builder.append("content: Vec<")
+        appendType(elementType, classScope, false)
+        builder.append(">,")
+        nextLine()
+    }
+
+    override fun appendArrayGetter(method0: Specialization) {
+        writeBlock {
+            builder.append("return self.content[index as usize];")
+            nextLine()
+        }
+    }
+
+    override fun appendArraySetter(method0: Specialization) {
+        writeBlock {
+            builder.append("self.content[index as usize] = value;")
+            nextLine()
+
+            imports["MutexGuard"] = mutexGuardImport
+
+            builder.append("return ")
+            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+            builder.append(';')
+            nextLine()
+        }
+    }
+
+    /*override fun getClassName(scope: Scope, specialization: Specialization): String {
+        return toUpperCamelCase(super.getClassName(scope, specialization))
+    }*/
+
+    var cleanRustNames = true
+
+    fun toUpperCamelCase(s: String): String {
+        if (!cleanRustNames) return s
+
+        val b = StringBuilder(s.length)
+        for (i in s.indices) {
+            val c = s[i]
+            if (c == '_') continue
+            val capitalize = i == 0 || s[i - 1] == '_'
+            b.append(if (capitalize) c.uppercaseChar() else c)
+        }
+        if (b.isEmpty()) b.append('_')
+        return b.toString()
+    }
+
     val traitSuffix = "Trait"
 
     override fun appendStaticInstance(classScope: Scope, className: String) {
@@ -238,7 +291,7 @@ class RustSourceGenerator : CSourceGenerator() {
     }
 
     fun appendCreateEmptyInstance(classScope: Scope, className: String) {
-        builder.append(className).append(" {")
+        builder.append(className).append(" { ")
         for (field in classScope.fields) {
             if (field.name == OBJECT_FIELD_NAME || !isStoredField(field)) continue
 
@@ -247,7 +300,11 @@ class RustSourceGenerator : CSourceGenerator() {
             appendDefaultValue(type)
             builder.append(", ")
         }
-        builder.append("}")
+        if (classScope == Types.Array.clazz) {
+            builder.append("content: Vec::with_capacity(size), ")
+        }
+        if (builder.endsWith(", ")) builder.setLength(builder.length - 2)
+        builder.append(" }")
     }
 
     override fun appendMethod(
@@ -502,6 +559,13 @@ class RustSourceGenerator : CSourceGenerator() {
         }
     }
 
+    override fun appendArrayContentInitialization(constructor: Constructor) {
+        // todo we need to somehow get a null/zero element...
+        val sizeName = constructor.valueParameters[0].name
+        builder.append("for i in 0..$sizeName { self.content.push(0); }")
+        nextLine()
+    }
+
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
         if (objectScope == outsideClassLike(exprScope)) {
             builder.append("self")
@@ -534,10 +598,23 @@ class RustSourceGenerator : CSourceGenerator() {
                 appendTypeDecl(type, expr.scope)
                 declaredLocalFields += expr.field
             }
+            is SimpleBranch -> {
+                builder.append("if ")
+                appendFieldName(graph, expr.condition)
+                builder.append(' ')
+                writeBlock {
+                    appendSimpleBlock(graph, expr.ifTrue)
+                }
+                trimWhitespaceAtEnd()
+                builder.append(" else ")
+                writeBlock {
+                    appendSimpleBlock(graph, expr.ifFalse)
+                }
+            }
             is SimpleLoop -> {
                 check(expr.condition == null) { "Loop with condition not yet implemented" }
-                builder.append("'b").append(expr.body.blockId)
-                builder.append(": loop ")
+                // builder.append("'b").append(expr.body.blockId).append(": ") // todo check if we use the label anywhere
+                builder.append("loop ")
                 writeBlock {
                     appendSimpleBlock(graph, expr.body)
                 }

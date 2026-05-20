@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
+import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleField
@@ -329,6 +330,17 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         appendPackageDeclaration(packagePath, file)
     }
 
+    override fun appendArrayContentField(classScope: Scope, headerOnly: Boolean) {
+        if (!headerOnly) return
+
+        val elementType = specialization.typeParameters[0]
+        builder.append("private: ")
+        appendType(elementType, classScope, false)
+        appendOwnershipSuffix(elementType)
+        builder.append("* content;")
+        nextLine()
+    }
+
     fun writeUsingNamespace(imports: Map<String, List<String>>) {
         if (imports.none { it.value.size > 1 }) return
 
@@ -364,18 +376,37 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         classScope: Scope, className: String,
         constructor: Constructor, headerOnly: Boolean
     ) {
-        if (headerOnly) {
-            builder.append(";")
-            nextLine()
-        } else {
-            val body = constructor.body ?: return
-            val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
-            writeBlock {
-                val methodSpec = specialization
-                check(methodSpec.method === constructor)
-                appendCode(context, methodSpec, body, true)
+        val body = constructor.body
+        when {
+            headerOnly -> {
+                builder.append(";")
+                nextLine()
+            }
+            body != null -> {
+                val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+                writeBlock {
+                    if (classScope == Types.Array.clazz) {
+                        appendArrayContentInitialization(constructor)
+                    }
+
+                    val methodSpec = specialization
+                    check(methodSpec.method === constructor)
+                    appendCode(context, methodSpec, body, true)
+                }
             }
         }
+    }
+
+    override fun appendArrayContentInitialization(constructor: Constructor) {
+        val elementType = specialization.typeParameters[0]
+        builder.append("this->content = (")
+        appendType(elementType, constructor.scope, false)
+        appendOwnershipSuffix(elementType)
+        builder.append("*) calloc(size, sizeof(")
+        appendType(elementType, constructor.scope, false)
+        appendOwnershipSuffix(elementType)
+        builder.append("));")
+        nextLine()
     }
 
     fun appendVisibility(isPrivate: Boolean) {
@@ -405,6 +436,26 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
             appendSuperCall0(classScope, className, constructor)
         }
+    }
+
+    override fun appendValueParameterDeclaration(
+        selfTypeIfNecessary: Type?,
+        valueParameters: List<Parameter>,
+        scope: Scope
+    ) {
+        builder.append('(')
+        if (selfTypeIfNecessary != null) {
+            appendType(selfTypeIfNecessary, scope, false)
+            builder.append(" __self")
+        }
+        for (param in valueParameters) {
+            if (!builder.endsWith("(")) builder.append(", ")
+            appendType(param.type, scope, false)
+            appendOwnershipSuffix(param.type)
+            builder.append(' ')
+            appendFieldName(param)
+        }
+        builder.append(')')
     }
 
     override fun appendSuperCall0Name(
@@ -444,7 +495,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         method0: Specialization, headerOnly: Boolean
     ) {
         val method = method0.method as Method
-        if (!headerOnly && method0.method.isExternal() && getNativeImplementation(method) == null) {
+        if (!headerOnly &&
+            method0.method.isExternal() &&
+            getNativeImplementation(method) == null &&
+            !isArrayGetter(method0) &&
+            !isArraySetter(method0)
+        ) {
             // missing implementation
             comment {
                 appendNativeImports(method)
@@ -477,7 +533,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
         assignSelfType(classScope, method)
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
-        if (headerOnly && method.flags.hasFlag(Flags.OVERRIDE)) {
+        if (false && headerOnly && method.flags.hasFlag(Flags.OVERRIDE)) {
+            // this flag is optional, and we must not declare it, if the super method wasn't defined
+            // todo somehow check, whether the super method is available
             builder.append(" override")
         }
     }
