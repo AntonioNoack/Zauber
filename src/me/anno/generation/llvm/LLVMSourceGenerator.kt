@@ -1,5 +1,6 @@
 package me.anno.generation.llvm
 
+import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
@@ -73,7 +74,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
         comment { builder.append("method imports") }
         for (method in data.calledMethods) {
-            if (method.method.body != null) continue
+            if (hasImplementation(method)) continue
             appendMethodImport(method)
         }
         builder.append("declare ptr @calloc(i64, i64)")
@@ -87,7 +88,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
         comment { builder.append("method implementations") }
         for (method in data.calledMethods) {
-            if (method.method.body == null) continue
+            if (!hasImplementation(method)) continue
             appendMethodCode(method)
         }
 
@@ -177,8 +178,9 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
             is ClassType -> {
                 val structName = getStructName(type)
-                val struct = LLVMType.Struct(structName)
-                LLVMType.Ptr(struct, type.isValue())
+                val isValue = type.isValue()
+                val struct = LLVMType.Struct(structName, isValue)
+                LLVMType.Ptr(struct, isValue)
             }
             else -> getLLVMType(Types.Any) // fallback
         }
@@ -250,9 +252,26 @@ class LLVMSourceGenerator : CSourceGenerator() {
             writeBlock {
                 val l0 = builder.length
                 if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
-                    val body = method.body!!
-                    val context = ResolutionContext(method.selfType, method0, true, null)
-                    appendCode(context, method0, body, false)
+                    when {
+                        isArrayGetter(method0) -> appendArrayGetter(method0)
+                        isArraySetter(method0) -> appendArraySetter(method0)
+                        else -> {
+
+                            if (method is Constructor) {
+                                val classScope = method.ownerScope
+                                if (classScope == Types.Array.clazz &&
+                                    method.valueParameters.size == 1 &&
+                                    method.valueParameters[0].type == Types.Int
+                                ) {
+                                    appendArrayContentInitialization(method)
+                                }
+                            }
+
+                            val body = method.body!!
+                            val context = ResolutionContext(method.selfType, method0, true, null)
+                            appendCode(context, method0, body, false)
+                        }
+                    }
                 }
 
                 if (method is Constructor && builder.length == l0) {
@@ -276,6 +295,83 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 nextRegisterId = 0
             }
         }
+    }
+
+    fun calculateElementAddress(method0: Specialization): LLVMType {
+        val elementType = method0.typeParameters[0]
+        val elementLLVM = getLLVMType(elementType)
+        val clazz = method0.withScope(method0.method.ownerScope)
+        val llvmType = getStruct(clazz)
+
+        // loading content pointer
+        builder.append("%dataPtr = getelementptr ")
+            .append(llvmType.typeName)
+            .append(", ptr %this, i32 0, i32 1")
+        nextLine()
+        builder.append("%data = load ptr, ptr %dataPtr")
+        nextLine()
+
+        // compute data address
+        builder.append("%elemPtr = getelementptr ")
+            .append(elementLLVM.ir).append(", ptr %data, i32 %index")
+        nextLine()
+
+        return elementLLVM
+    }
+
+    override fun appendArrayContentInitialization(constructor: Constructor) {
+        builder.append("%size64 = sext i32 %size to i64")
+        nextLine()
+
+        val selfType = getStruct(specialization.withScope(constructor.ownerScope))
+        val elementType = specialization.typeParameters[0]
+        val llvmType = getLLVMType(elementType)
+        val size = when (llvmType) {
+            LLVMType.I1, LLVMType.I8 -> 1
+            LLVMType.I16 -> 2
+            LLVMType.I32, LLVMType.F32 -> 4
+            LLVMType.I64, LLVMType.F64 -> 8
+            else -> 8 // todo for value-structs use their size, for objects use their ptr
+        }
+        builder.append("%mem = call ptr @calloc(i64 %size64, i64 ").append(size).append(')')
+        nextLine()
+
+        builder.append("%dataPtr = getelementptr ").append(selfType.typeName)
+            .append(", ptr %this, i32 0, i32 1") // content field
+        nextLine()
+
+        builder.append("store ptr %mem, ptr %dataPtr")
+        nextLine()
+    }
+
+    override fun appendArrayGetter(method0: Specialization) {
+
+        val elementLLVM = calculateElementAddress(method0)
+
+        // load value
+        builder.append("%result = load ")
+            .append(elementLLVM.ir).append(", ptr %elemPtr")
+        nextLine()
+
+        builder.append("ret ").append(elementLLVM.ir)
+            .append(" %result")
+        nextLine()
+    }
+
+    override fun appendArraySetter(method0: Specialization) {
+
+        val elementLLVM = calculateElementAddress(method0)
+
+        // store value
+        builder.append("store ")
+            .append(elementLLVM.ir).append(" %value, ptr %elemPtr")
+        nextLine()
+
+        // return
+        val unit = getObjectInstanceField(Types.Unit.clazz)
+        builder.append("ret ").append(getLLVMType(Types.Unit).ir)
+            .append(' ').append(unit)
+        nextLine()
     }
 
     fun appendObjectGetterCode(objectScope: Scope) {
@@ -394,36 +490,55 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    val classIndexProp = listOf(LLVMProperty(null, LLVMType.I32, 0))
+    val classIndexProp = LLVMProperty(null, LLVMType.I32, 0)
 
     fun getStruct(classSpecialization: Specialization): LLVMStruct {
         check(classSpecialization.clazz.isClassLike()) {
             "Invalid struct: $classSpecialization"
         }
-        return structs.getOrPut(classSpecialization) {
-            val clazz = classSpecialization.clazz
+        var created = false
+        val clazz = classSpecialization.clazz
+        val s = structs.getOrPut(classSpecialization) {
             classSpecialization.use {
-
 
                 val superType0 = classSpecialization.superType
                 val superType = if (superType0 != null) getStruct(superType0) else null
 
-                val props = clazz.fields
-                    .filter { isStoredField(it) }
-                    .mapIndexed { index, field ->
-                        field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
 
-                        val type = getLLVMType(field.resolveValueType(ResolutionContext.minimal))
-                        LLVMProperty(field, type, classIndexProp.size + index)
-                    }
-
+                created = true
                 val typeIndex = typeList.size
                 val typeName = "%" + getClassName(clazz, classSpecialization)
-                val struct = LLVMStruct(superType, typeIndex, typeName, classIndexProp + props, false)
+                val struct = LLVMStruct(superType, typeIndex, typeName, false)
                 typeList.add(struct)
                 struct
             }
         }
+        if (created) {
+            // classIndexProp + props,
+            s.properties.add(classIndexProp)
+
+            if (clazz == Types.Array.clazz) {
+                val elementType = classSpecialization.typeParameters[0]
+                val elementLLVMType = getLLVMType(elementType)
+                s.properties.add(
+                    LLVMProperty(
+                        null,
+                        LLVMType.Ptr(elementLLVMType, elementType.isValue()),
+                        s.properties.size
+                    )
+                )
+            }
+
+            for (field in clazz.fields) {
+                if (!isStoredField(field)) continue
+
+                field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+                val type = getLLVMType(field.resolveValueType(ResolutionContext.minimal))
+                s.properties.add(LLVMProperty(field, type, s.properties.size))
+            }
+        }
+        return s
     }
 
     override fun getClassName(scope: Scope, specialization: Specialization): String {
@@ -543,7 +658,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                     // todo depends on whether it's a value or a reference
                     8
                 }
-                else -> TODO()
+                is LLVMType.Ptr -> 8
             }
             maxAlignment = max(maxAlignment, size)
             pos = align(pos, size)
@@ -584,7 +699,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-        throw NotImplementedError()
+        throw NotImplementedError("Use getObjectInstanceField(Types.Unit.clazz) instead")
     }
 
     fun getObjectInstanceField(objectScope: Scope): String {
@@ -782,7 +897,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                             val type = resolveType(expr.self.type)
                             builder
                                 .append(symbol).append(' ')
-                                .append(getLLVMType(type).wasmName)
+                                .append(getLLVMType(type).ir)
                                 .append(' ').append(v0).append(", ").append(v1)
                             true
                         } else false
@@ -921,7 +1036,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
-        // todo this is not ready!
+        // todo when we implement everything correctly, we do not need this complex copy function
         val valueType = expr.value.type as ClassType
         val method = valueType.clazz.methods0.first { it.name == "copy" && it.valueParameters.isEmpty() }
         val methodSpec = Specialization(method.scope, valueType.typeParameters ?: emptyParameterList())
@@ -962,7 +1077,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
         )
 
         builder.append("call ")
-            .append(returnType.wasmName)
+            .append(returnType.ir)
             .append(" ").append(getMethodName(method))
             .append("(")
 

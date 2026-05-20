@@ -67,11 +67,6 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     val structs = HashMap<TypeDef, WASMStructLike>()
 
-    fun hasImplementation(method0: Specialization): Boolean {
-        val method = method0.method
-        return method.body != null || isArrayGetter(method0) || isArraySetter(method0)
-    }
-
     fun registerMethods(data: DependencyData, mainMethod: Method) {
         // imported methods first
         functionIndexList.addAll(data.calledMethods)

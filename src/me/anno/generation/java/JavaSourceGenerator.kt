@@ -223,6 +223,11 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun hasImplementation(method0: Specialization): Boolean {
+        val method = method0.method
+        return method.body != null || isArrayGetter(method0) || isArraySetter(method0)
+    }
+
     open fun defineNullableAnnotation(dst: File, writer: FileWithImportsWriter) {
         val file = File(dst, "org/jetbrains/annotations/Nullable.java")
         writer[file] = FileEntry("org.jetbrains.annotations".split('.'), this)
