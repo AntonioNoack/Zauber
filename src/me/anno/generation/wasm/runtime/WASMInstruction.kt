@@ -57,6 +57,10 @@ sealed interface WASMInstruction {
     data class StructGet(val typeIndex: Int, val fieldIndex: Int) : WASMInstruction
     data class StructSet(val typeIndex: Int, val fieldIndex: Int) : WASMInstruction
 
+    data class ArrayNewDefault(val typeIndex: Int) : WASMInstruction
+    data class ArrayGet(val typeIndex: Int) : WASMInstruction
+    data class ArraySet(val typeIndex: Int) : WASMInstruction
+
     companion object {
         val simple = Array(256) { opcode -> Simple(opcode) }
         val br = GrowingList(::Br)

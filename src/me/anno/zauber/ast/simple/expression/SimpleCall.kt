@@ -77,7 +77,7 @@ class SimpleCall(
                     }
                     check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
                     check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
-                    println(
+                    if (false) println(
                         "Selected ${choices.first().scope.pathStr}/${choices.first()} " +
                                 "for $invokedType.$method, " +
                                 "options: ${clazzScope.methods0.map { it.scope.pathStr }}"

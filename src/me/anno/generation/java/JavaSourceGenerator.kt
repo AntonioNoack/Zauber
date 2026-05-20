@@ -77,14 +77,15 @@ open class JavaSourceGenerator : Generator() {
                     Any to BoxedType("Object", "Object"),
 
                     // what about these native types???
-                    Array.withTypeParameter(Boolean) to BoxedType("Array_zauberBoolean", "boolean[]"),
+                    //  for now, we can use custom types, later on, we should replace them for compatibility
+                    /*Array.withTypeParameter(Boolean) to BoxedType("Array_zauberBoolean", "boolean[]"),
                     Array.withTypeParameter(Byte) to BoxedType("Array_zauberByte", "byte[]"),
                     Array.withTypeParameter(Short) to BoxedType("Array_zauberShort", "short[]"),
                     Array.withTypeParameter(Int) to BoxedType("Array_zauberInt", "int[]"),
                     Array.withTypeParameter(Long) to BoxedType("Array_zauberLong", "long[]"),
                     Array.withTypeParameter(Char) to BoxedType("Array_zauberChar", "char[]"),
                     Array.withTypeParameter(Float) to BoxedType("Array_zauberFloat", "float[]"),
-                    Array.withTypeParameter(Double) to BoxedType("Array_zauberDouble", "double[]"),
+                    Array.withTypeParameter(Double) to BoxedType("Array_zauberDouble", "double[]"),*/
                 )
             }
         }

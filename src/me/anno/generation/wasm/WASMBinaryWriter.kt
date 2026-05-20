@@ -144,6 +144,26 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         u32(fieldIndex)
     }
 
+    fun arrayNewDefault(wasmType: WASMType.Ref) {
+        u8(0xfb)
+        u32(0x07)
+        // println("creating array of type ${wasmType.typeIndex}")
+        u32(wasmType.typeIndex)
+    }
+
+    fun arrayGet(wasmType: WASMType.Ref) {
+        // todo for i8 and i16, there is also _s and _u variants
+        u8(0xfb)
+        u8(0x0b)
+        u32(wasmType.typeIndex)
+    }
+
+    fun arraySet(wasmType: WASMType.Ref) {
+        u8(0xfb)
+        u8(0x0e)
+        u32(wasmType.typeIndex)
+    }
+
     fun writeModuleHeader() {
         le32(0x6D736100) // \0asm
         le32(1) // version 1
@@ -160,51 +180,63 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
     }
 
     fun writeTypeSection(types: List<WASMFuncTypeOrStruct>) {
-        u8(0x01) // type section
+        u8(WASMSection.TYPE.ordinal)
 
         val t = WASMBinaryWriter()
-        t.u32(types.size)
+        t.writeTypeSectionImpl(types)
+        endSection(t)
+    }
 
-        // struct types first, because our function types depend on them
-        for (type in types) {
+    private fun writeTypeSectionImpl(types: List<WASMFuncTypeOrStruct>) {
+
+        u32(types.size)
+
+        // structs will usually come before functions
+        for (ti in types.indices) {
+            val type = types[ti]
+            // println("type[$ti]: $type")
             when (type) {
                 is WASMStruct -> {
-                    t.u8(0x50) // subtype
-                    if (type.superType != null) {
-                        t.u32(1) // one supertype
-                        t.u32(type.superType.typeIndex)
-                    } else {
-                        t.u8(0x00) // no supertype
-                    }
-
-                    t.u8(0x5f) // struct
-
-                    t.u32(type.properties.size)
+                    writeSuperType(type)
+                    u8(0x5f) // struct
+                    u32(type.properties.size)
                     for (field in type.properties) {
-                        t.writeValueType(field.wasmType)
-
-                        // mutable
-                        t.u8(0x01)
+                        writeValueType(field.wasmType, true)
+                        u8(0x01) // mutable
                     }
+                }
+                is WASMArray -> {
+                    writeSuperType(type)
+                    u8(0x5e) // array
+                    writeValueType(type.elementType, true)
+                    u8(0x01) // mutable
                 }
                 is FunctionType -> {
-                    t.u8(0x60)
+                    u8(0x60) // function
 
-                    t.u32(type.params.size)
+                    u32(type.params.size)
                     for (p in type.params) {
-                        t.writeValueType(p)
+                        writeValueType(p)
                     }
 
-                    t.u32(type.results.size)
+                    u32(type.results.size)
                     for (r in type.results) {
-                        t.writeValueType(r)
+                        writeValueType(r)
                     }
                 }
-                else -> throw NotImplementedError()
+                else -> error("Implement writing ${type.javaClass.simpleName}")
             }
         }
+    }
 
-        endSection(t)
+    fun writeSuperType(type: WASMStructLike) {
+        u8(0x50) // subtype
+        if (type.superType != null) {
+            u32(1) // one supertype
+            u32(type.superType.typeIndex)
+        } else {
+            u8(0x00) // no supertype
+        }
     }
 
     fun writeMemorySection() {
@@ -312,19 +344,20 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         writeVarInt(type.typeIndex.toLong())
     }
 
-    fun writeValueType(type: WASMType) {
+    fun writeValueType(type: WASMType, nullableOverride: Boolean? = null) {
         when (type) {
             WASMType.I32 -> u8(0x7f)
             WASMType.I64 -> u8(0x7e)
             WASMType.F32 -> u8(0x7d)
             WASMType.F64 -> u8(0x7c)
-            is WASMType.Ref -> writeHeapType(type)
+
+            WASMType.I8 -> u8(0x78)
+            WASMType.I16 -> u8(0x77)
+
+            is WASMType.Ref -> {
+                u8(if (nullableOverride ?: type.isNullable) 0x63 else 0x64)
+                writeVarInt(type.typeIndex.toLong())
+            }
         }
     }
-
-    fun writeHeapType(type: WASMType.Ref) {
-        u8(if (type.isNullable) 0x63 else 0x64)
-        writeVarInt(type.typeIndex.toLong())
-    }
-
 }

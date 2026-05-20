@@ -167,33 +167,55 @@ class WASMBinaryReader(
                         if (superTypeCount > 0) u32()
                         else null
 
-                    val structKind = u8()
-                    if (structKind != 0x5f) {
-                        throw IllegalArgumentException("Expected struct type $structKind")
-                    }
+                    when (val structKind = u8()) {
+                        0x5f -> {
+                            val fields = List(u32()) {
+                                val type = readValueType()
 
-                    val fields = List(u32()) {
-                        val type = readValueType()
+                                val mutable = u8()
+                                if (mutable != 0x01) {
+                                    throw IllegalArgumentException("Expected mutable field")
+                                }
 
-                        val mutable = u8()
-                        if (mutable != 0x01) {
-                            throw IllegalArgumentException("Expected mutable field")
+                                type
+                            }
+
+                            val s = WASMStruct(
+                                typeIndex = result.size,
+                                typeName = "type${result.size}",
+                                superType = superType?.let {
+                                    result[it] as WASMStruct
+                                },
+                                isNullable = false // todo fix this, where do we get the info from?
+                            )
+                            for (index in fields.indices) {
+                                val type = fields[index]
+                                s.properties.add(WASMProperty(null, type, index))
+                            }
+                            result += s
                         }
+                        0x5e -> {
+                            val type = readValueType()
 
-                        type
+                            val mutable = u8()
+                            if (mutable != 0x01) {
+                                throw IllegalArgumentException("Expected mutable field")
+                            }
+
+                            val s = WASMArray(
+                                superType = superType?.let { result[it] as WASMStructLike },
+                                typeIndex = result.size,
+                                typeName = "type${result.size}",
+                                elementStruct = null, // type as? WASMStruct,
+                                elementType = type,
+                                isNullable = false // todo fix this, where do we get the info from?
+                            )
+                            result += s
+                        }
+                        else -> {
+                            throw IllegalArgumentException("Unexpected struct type 0x${structKind.toString(16)}")
+                        }
                     }
-
-                    result += WASMStruct(
-                        typeIndex = result.size,
-                        typeName = "type${result.size}",
-                        superType = superType?.let {
-                            result[it] as WASMStruct
-                        },
-                        properties = fields.mapIndexed { index, type ->
-                            WASMProperty(null, type, index)
-                        },
-                        isNullable = false // todo fix this, where do we get the info from?
-                    )
                 }
                 0x60 -> {
                     // function type
@@ -327,6 +349,9 @@ class WASMBinaryReader(
             0x7e -> WASMType.I64
             0x7d -> WASMType.F32
             0x7c -> WASMType.F64
+
+            0x78 -> WASMType.I8
+            0x77 -> WASMType.I16
 
             0x63 -> {
                 val typeIndex = readVarInt().toInt()
@@ -531,6 +556,10 @@ class WASMBinaryReader(
                         val fieldIndex = u32()
                         WASMInstruction.StructSet(typeIndex, fieldIndex)
                     }
+
+                    0x07 -> WASMInstruction.ArrayNewDefault(u32())
+                    0x0e -> WASMInstruction.ArraySet(u32())
+                    0x0b -> WASMInstruction.ArrayGet(u32())
 
                     else -> error("Unknown GC opcode: $gcOpcode")
                 }

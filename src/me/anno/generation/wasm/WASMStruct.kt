@@ -2,21 +2,24 @@ package me.anno.generation.wasm
 
 import me.anno.zauber.ast.rich.member.Field
 
-data class WASMStruct(
-    val superType: WASMStruct?,
-    val typeIndex: Int,
-    val typeName: String,
-    val properties: List<WASMProperty>,
-    val isNullable: Boolean,
-) : WASMFuncTypeOrStruct() {
+class WASMStruct(
+    superType: WASMStruct?,
+    typeIndex: Int, typeName: String,
+    isNullable: Boolean,
+) : WASMStructLike(
+    superType, typeIndex, typeName, isNullable,
+    WASMType.Ref(typeIndex, typeName, isNullable)
+) {
 
-    private val mapping = properties.associateBy { it.field }
+    val properties = ArrayList<WASMProperty>()
+
+    private val mapping by lazy {
+        properties.associateBy { it.field }
+    }
 
     fun getIndex(field: Field): Int {
         return mapping[field]!!.index
     }
-
-    val type = WASMType.Ref(typeIndex, typeName, isNullable)
 
     override fun toString(): String {
         return if (superType != null) {

@@ -17,7 +17,7 @@ import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.*
-import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
@@ -41,10 +41,6 @@ import java.io.File
  * */
 class WASMSourceGenerator : CSourceGenerator() {
 
-    companion object {
-        const val CLASS_INDEX_NAME = "_type"
-    }
-
     val functionTypes = HashMap<FunctionType, Int>()
     val typeList = ArrayList<WASMFuncTypeOrStruct>()
 
@@ -62,18 +58,33 @@ class WASMSourceGenerator : CSourceGenerator() {
     lateinit var objects: List<Specialization>
 
     val bodies = ListOfByteArrays(binary.out)
-    val structs = HashMap<Pair<Specialization, Boolean>, WASMStruct>()
+
+    data class TypeDef(
+        val specialization: Specialization,
+        val isNullable: Boolean,
+        val arrayDepth: Int
+    )
+
+    val structs = HashMap<TypeDef, WASMStructLike>()
+
+    fun hasImplementation(method0: Specialization): Boolean {
+        val method = method0.method
+        return method.body != null || isGetter(method0) || isSetter(method0)
+    }
 
     fun registerMethods(data: DependencyData, mainMethod: Method) {
         // imported methods first
         functionIndexList.addAll(data.calledMethods)
-        functionIndexList.partitionBy { method -> method.method.body != null }
+        functionIndexList.partitionBy { method ->
+            method.method.body != null ||
+                    isGetter(method) || isSetter(method)
+        }
 
         var hadImpl = false
         for (i in functionIndexList.indices) {
             val method = functionIndexList[i]
             functionIndexMap[method] = functionIndexMap.size
-            if (method.method.body != null) {
+            if (hasImplementation(method)) {
                 hadImpl = true
             } else {
                 check(!hadImpl) { "Imports must be first" }
@@ -98,6 +109,16 @@ class WASMSourceGenerator : CSourceGenerator() {
         objectGetters = getters
     }
 
+    fun isGetter(method0: Specialization): Boolean {
+        val method = method0.method
+        return method.ownerScope == Types.Array.clazz && method.name == "get"
+    }
+
+    fun isSetter(method0: Specialization): Boolean {
+        val method = method0.method
+        return method.ownerScope == Types.Array.clazz && method.name == "set"
+    }
+
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
 
         registerMethods(data, mainMethod)
@@ -106,7 +127,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
         comment { builder.append("method imports") }
         for (method in functionIndexList) {
-            if (method.method.body != null) continue
+            if (hasImplementation(method)) continue // not imported
             appendMethodImport(method)
         }
 
@@ -115,7 +136,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
         comment { builder.append("method implementations") }
         for (method in functionIndexList) {
-            if (method.method.body == null) continue
+            if (!hasImplementation(method)) continue
             appendMethodCode(method)
         }
 
@@ -159,6 +180,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.out.removeSection(0, start)
     }
 
+    @Suppress("unused")
     fun getMainMethodType(mainMethod: Method): Int {
         // could have args...
         return getFunctionTypeIndex(FunctionType(emptyList(), emptyList()))
@@ -275,32 +297,51 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     fun writeStructTypes() {
         comment { builder.append("struct types") }
-        for (struct in structs.values) {
-
-            builder.append("(type $").append(struct.typeName)
-            if (struct.superType != null) {
-                builder.append(" (sub $").append(struct.superType.typeName)
-            }
-
-            builder.append(" (struct")
-
-            for (property in struct.properties) {
-
-                builder.append(" (field $").append(property.field?.name ?: CLASS_INDEX_NAME)
-                    .append(" ")
-
-                when (val t = property.wasmType) {
-                    is WASMType.Ref -> builder.append(t.wasmName)
-                    else -> builder.append(t.wasmName)
+        for (struct in typeList) {
+            when (struct) {
+                is WASMStruct -> {
+                    writeSuperType(struct)
+                    writeStructType(struct)
+                    if (struct.superType != null) builder.append(")")
                 }
+                is WASMArray -> {
+                    writeSuperType(struct)
 
-                builder.append(")")
+                    builder.append(" (array (mut")
+                    val elementType = struct.elementStruct
+                    if (elementType != null) {
+                        writeStructType(elementType)
+                    } else {
+                        builder.append(' ')
+                        builder.append(struct.elementType.wasmName)
+                    }
+                    builder.append("))")
+                    if (struct.superType != null) builder.append(")")
+                }
+                is FunctionType -> continue
+                else -> error("Unknown type")
             }
 
-            if (struct.superType != null) builder.append(")")
-            builder.append("))")
             nextLine()
         }
+    }
+
+    fun writeSuperType(struct: WASMStructLike) {
+        builder.append("(type $").append(struct.typeName)
+        if (struct.superType != null) {
+            builder.append(" (sub $").append(struct.superType.typeName)
+        }
+    }
+
+    fun writeStructType(struct: WASMStruct) {
+        builder.append(" (struct")
+
+        for (property in struct.properties) {
+            builder.append(" (mut ") // mut, because we want to zero-initialize them
+            builder.append(property.wasmType.wasmName).append(")")
+        }
+
+        builder.append("))")
     }
 
     fun getWASMType(type: Type): WASMType {
@@ -441,9 +482,15 @@ class WASMSourceGenerator : CSourceGenerator() {
             appendMethodHeader(type, getMethodName(method0), method0, true)
 
             if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
-                val body = method.body!!
-                val context = ResolutionContext(method.selfType, method0, true, null)
-                appendCode(context, method0, body, false)
+                when {
+                    isGetter(method0) -> appendGetter(method0)
+                    isSetter(method0) -> appendSetter(method0)
+                    else -> {
+                        val body = method.body!!
+                        val context = ResolutionContext(method.selfType, method0, true, null)
+                        appendCode(context, method0, body, false)
+                    }
+                }
             } else {
                 // we would get issues, if we tried to call super(), because 'this' is not a reference
                 declareFuncHasNoLocalFields()
@@ -470,6 +517,75 @@ class WASMSourceGenerator : CSourceGenerator() {
 
             bodies.finishBody()
         }
+    }
+
+    fun appendGetter(method0: Specialization) {
+
+        declareFuncHasNoLocalFields()
+
+        val classSpec = method0.withScope(Types.Array.clazz)
+        val arrayType = getStruct(classSpec, false)
+        val contentType = arrayType.properties[1].wasmType as WASMType.Ref
+
+        // load self
+        builder.append("local.get 0")
+        binary.localGet(0)
+        nextLine()
+
+        // convert array-wrapper to content
+        builder.append("struct.get ").append(arrayType.typeName).append(" 1")
+        binary.structGet(arrayType.typeIndex, 1)
+        nextLine()
+
+        // load index
+        builder.append("local.get 1")
+        binary.localGet(1)
+        nextLine()
+
+        builder.append("array.get ").append(contentType.wasmName)
+        binary.arrayGet(contentType)
+        nextLine()
+
+        val elementType = classSpec.typeParameters[0]
+        if (!elementType.isNullable() && elementType !in nativeNumbers) {
+            castNonNull()
+        }
+
+    }
+
+    fun appendSetter(method0: Specialization) {
+
+        declareFuncHasNoLocalFields()
+
+        val wasmType = getStruct(method0.withScope(Types.Array.clazz), false)
+        val contentType = wasmType.properties[1].wasmType as WASMType.Ref
+
+        // load self
+        builder.append("local.get 0")
+        binary.localGet(0)
+        nextLine()
+
+        // convert array-wrapper to content
+        builder.append("struct.get ").append(wasmType.typeName).append(" 1")
+        binary.structGet(wasmType.typeIndex, 1)
+        nextLine()
+
+        // load index
+        builder.append("local.get 1")
+        binary.localGet(1)
+        nextLine()
+
+        // load value
+        builder.append("local.get 2")
+        binary.localGet(2)
+        nextLine()
+
+        builder.append("array.set ").append(contentType.wasmName)
+        binary.arraySet(contentType)
+        nextLine()
+
+        appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+
     }
 
     fun getObjectGetterFunctionTypeIndex(objectScope: Scope): Int {
@@ -653,45 +769,111 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    val classIndexProp = listOf(WASMProperty(null, WASMType.I32, 0))
+    val classIndexProp = WASMProperty(null, WASMType.I32, 0)
 
-    fun getStruct(classSpecialization: Specialization, isNullable: Boolean): WASMStruct {
+    fun getStruct(classSpecialization: Specialization, isNullable: Boolean, arrayDepth: Int): WASMStructLike {
         check(classSpecialization.clazz.isClassLike()) {
             "Invalid struct: $classSpecialization"
         }
-        return structs.getOrPut(classSpecialization to isNullable) {
-            val clazz = classSpecialization.clazz
+
+        val key = TypeDef(classSpecialization, isNullable, arrayDepth)
+        var createdStruct = false
+        val s = structs.getOrPut(key) {
             classSpecialization.use {
-
-                val superType = run {
-                    if (isNullable) {
-                        getStruct(classSpecialization, false)
-                    } else {
-                        val superType0 = classSpecialization.superType
-                        if (superType0 != null) getStruct(superType0, false) else null
-                    }
-                }
-
-                val props = clazz.fields
-                    .filter { isStoredField(it) }
-                    .mapIndexed { index, field ->
-                        field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
-
-                        val type = getWASMType(
-                            field.valueType
-                                ?: throw IllegalStateException("Missing valueType for $field")
+                if (arrayDepth > 0) {
+                    val clazz = classSpecialization.clazz.typeWithArgs
+                    if (clazz in nativeNumbers) {
+                        // child is number, get native type instead...
+                        val elementType = getWASMType(clazz)
+                        val typeName = elementType.wasmName + "Q"
+                        WASMArray(
+                            null, typeList.size, typeName,
+                            null, elementType, false
                         )
-                        WASMProperty(field, type, classIndexProp.size + index)
+                    } else {
+                        val elementType = getStruct(classSpecialization, isNullable, arrayDepth - 1)
+                        val elementType0 = getStruct(classSpecialization, isNullable)
+                        val typeName = elementType.typeName + "Q"
+                        WASMArray(
+                            null, typeList.size, typeName,
+                            elementType0, elementType.type, false
+                        )
+                    }
+                } else {
+                    createdStruct = true
+
+                    // damn NodeJS WASM doesn't support references into the future :(,
+                    //  so we have to prepare a little
+                    val clazz = classSpecialization.scope!!
+                    if (clazz == Types.Array.clazz) {
+                        val child = Types.Array.typeParameters!![0]
+                            .specialize(classSpecialization) as ClassType
+
+                        getStruct(Specialization(child), false, 1)
                     }
 
-                val typeIndex = typeList.size
-                var typeName = getClassName(clazz, classSpecialization)
-                if (isNullable) typeName += "?"
-                val struct = WASMStruct(superType, typeIndex, typeName, classIndexProp + props, isNullable)
-                typeList.add(struct)
-                struct
+                    createStructImpl(classSpecialization, isNullable)
+                }.apply {
+                    typeList.add(this)
+                }
             }
         }
+
+        // create these later, so we can support recursive types
+        if (createdStruct) {
+
+            val clazz = classSpecialization.scope!!
+
+            s as WASMStruct
+            s.properties.add(classIndexProp)
+
+            if (clazz == Types.Array.clazz) {
+                val child = Types.Array.typeParameters!![0]
+                    .specialize(classSpecialization) as ClassType
+
+                val type = getStruct(Specialization(child), false, 1)
+                // println("array-content type[${type.typeIndex}]: $type")
+                s.properties.add(WASMProperty(null, type.type, s.properties.size))
+            }
+
+            for (field in clazz.fields) {
+                if (!isStoredField(field)) continue
+                field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+                val type = getWASMType(
+                    field.valueType
+                        ?: throw IllegalStateException("Missing valueType for $field")
+                )
+                s.properties += WASMProperty(field, type, s.properties.size)
+            }
+        }
+        return s
+    }
+
+    fun getStruct(classSpecialization: Specialization, isNullable: Boolean): WASMStruct {
+        return getStruct(classSpecialization, isNullable, 0) as WASMStruct
+    }
+
+    private fun createStructImpl(
+        classSpecialization: Specialization,
+        isNullable: Boolean,
+    ): WASMStruct {
+
+        val clazz = classSpecialization.clazz
+
+        val superType = run {
+            if (isNullable) {
+                getStruct(classSpecialization, false)
+            } else {
+                val superType0 = classSpecialization.superType
+                if (superType0 != null) getStruct(superType0, false) else null
+            }
+        }
+
+        val typeIndex = typeList.size
+        var typeName = getClassName(clazz, classSpecialization)
+        if (isNullable) typeName += "?"
+        return WASMStruct(superType, typeIndex, typeName, isNullable)
     }
 
     override fun getClassName(scope: Scope, specialization: Specialization): String {
@@ -702,7 +884,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         val structNullable = getStruct(Specialization.fromSimple(objectScope), isNullable = true)
         val globalIndex = objectGlobals.getOrPut(objectScope) {
             globalNames.add("global_${objectScope.pathStr.replace('.', '_')}")
-            globalStructs.add(structNullable.type)
+            globalStructs.add(structNullable.type as WASMType.Ref)
             objectGlobals.size
         }
 
@@ -903,7 +1085,7 @@ class WASMSourceGenerator : CSourceGenerator() {
             }
             is SimpleLoop -> {
                 check(expr.condition == null) { "Loop with condition not yet implemented" }
-                val name ="b${expr.body.blockId}"
+                val name = "b${expr.body.blockId}"
                 builder.append("(loop $").append(name)
                 depth++
                 nextLine()
@@ -911,7 +1093,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                 binary.u8(WASMOpcode.LOOP)
                 binary.u8(0x40) // empty
 
-                appendSimpleBlock(graph,expr.body)
+                appendSimpleBlock(graph, expr.body)
 
                 binary.u8(WASMOpcode.BR)
                 binary.u8(0) // depth 0
@@ -932,22 +1114,46 @@ class WASMSourceGenerator : CSourceGenerator() {
             is SimpleConstructorCall -> {
                 appendConstructorCallImpl(graph, expr)
             }
+            // todo test nullable variables
             is SimpleAllocateInstance -> {
-                // todo test nullable variables
                 // this allocation is a ClassType, so it cannot be null ever
-                val struct = getStruct(Specialization(expr.allocatedType), false)
-                if (!expr.allocatedType.isValue()) {
-                    /*for (param in expr.paramsForLater) {
-                        appendGetField(graph, param)
-                    }*/
+                val type = expr.allocatedType
+                val struct = getStruct(Specialization(type), false)
+                if (type.clazz == Types.Array.clazz) {
+                    // todo test arrays of arrays...
+
+                    // We must immediately allocate the array
+
+                    val sizeParam = expr.paramsForLater[0]
+                    check(sizeParam.type == Types.Int)
+
+                    i32Const(0) // classIndex field; todo push class index
+                    nextLine()
+
+                    appendGetField(graph, sizeParam) // size for content
+
+                    // content-field
+                    val property = struct.properties[1]
+                    builder.append("array.new_default $").append(property.wasmType.wasmName)
+                    val wasmType = property.wasmType as WASMType.Ref
+                    binary.arrayNewDefault(wasmType)
+                    nextLine()
+
+                    appendGetField(graph, sizeParam) // size field
+
+                    check(struct.properties.size == 3) {
+                        "Expected exactly three array properties (classIdx, content, size), got $struct"
+                    }
+
                     builder.append("struct.new $").append(struct.typeName)
+                    binary.structNew(struct.typeIndex)
                     nextLine()
                 } else {
-                    appendType(expr.allocatedType, expr.scope, true)
-                    // appendValueParams(graph, expr.paramsForLater)
+
+                    builder.append("struct.new_default $").append(struct.typeName)
+                    binary.structNewDefault(struct.typeIndex)
+                    nextLine()
                 }
-                // we will use the struct in both cases for now
-                binary.structNewDefault(struct.typeIndex)
             }
             is SimpleCall -> {
                 // Number.toX() needs to be converted to a cast
@@ -1225,10 +1431,11 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
-    fun callMethod(method: Specialization) {
-        val index = functionIndexMap[method]
-            ?: throw IllegalStateException("Missing ${method.method} @${method}, cannot call it")
-        builder.append("call $").append(getMethodName(method))
+    fun callMethod(method0: Specialization) {
+        val method = method0.method
+        val index = functionIndexMap[method0]
+            ?: throw IllegalStateException("Missing $method @${method0}, cannot call it")
+        builder.append("call $").append(getMethodName(method0))
         binary.call(index)
     }
 

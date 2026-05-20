@@ -235,21 +235,18 @@ abstract class CodeGenerationTests {
         assertEquals("21\n", printed)
     }
 
-    fun testValueArrayImpl() {
+    fun testIntArrayImpl() {
         val code = """
-        value class V(val x: Int) {
-            operator fun plus(other: V): V = V(this.x + other.x)
-        }
         fun fib(i: Int): Int {
-            val v = Array<V>(i+1)
-            v[0] = V(1)
-            v[1] = V(1)
+            val v = Array<Int>(i+1)
+            v[0] = 1
+            v[1] = 1
             var j = 2
             while (j <= i) {
                 v[j] = v[j-1] + v[j-2]
                 j++
             }
-            return v[i].x
+            return v[i]
         }
         fun main() {
             println(fib(7))

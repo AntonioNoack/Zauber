@@ -4,9 +4,22 @@ sealed class WASMType(val wasmName: String) {
 
     companion object {
         val anyRef = Ref(-0x10 /* magic value meaning any */, "any", true)
+
+        fun Array(
+            typeIndex: Int,
+            typeName: String,
+            isNullable: Boolean
+        ) = Ref(
+            typeIndex, typeName, isNullable,
+            typeName
+        )
     }
 
     sealed class WASMNumberType(wasmName: String) : WASMType(wasmName)
+
+    // todo these can be used for arrays
+    object I8 : WASMNumberType("i8")
+    object I16 : WASMNumberType("i16")
 
     object I32 : WASMNumberType("i32")
     object I64 : WASMNumberType("i64")
@@ -18,16 +31,8 @@ sealed class WASMType(val wasmName: String) {
     class Ref(
         val typeIndex: Int,
         typeName: String,
-        val isNullable: Boolean
-    ) : WASMType(
-        if (isNullable) "(ref null $$typeName)"
-        else "(ref $$typeName)"
-    )
+        val isNullable: Boolean,
+        wasmName: String = "(ref null $typeName)"
+    ) : WASMType(wasmName)
 
-    val byteSize: Int
-        get() = when (this) {
-            I32, F32 -> 4
-            I64, F64 -> 8
-            is Ref -> 4
-        }
 }

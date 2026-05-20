@@ -38,8 +38,8 @@ object ZauberCLI {
         while (i < args.size) {
             val argI = args[i++]
             val optionName = when {
-                argI.startsWith("-") -> argI.substring(1)
                 argI.startsWith("--") -> argI.substring(2)
+                argI.startsWith("-") -> argI.substring(1)
                 else -> {
                     location = File(argI)
                     continue
@@ -48,9 +48,7 @@ object ZauberCLI {
 
             // todo check if the option is known, and if not, what the most similar one would be
 
-            val value = if (i + 1 < args.size && !args[i + 1].startsWith("-")) {
-                args[i++]
-            } else ""
+            val value = if (i < args.size && !args[i].startsWith("-")) args[i++] else ""
             options[optionName] = value
         }
 

@@ -1,9 +1,6 @@
 package me.anno.generation.wasm.runtime
 
-import me.anno.generation.wasm.FunctionType
-import me.anno.generation.wasm.WASMOpcode
-import me.anno.generation.wasm.WASMStruct
-import me.anno.generation.wasm.WASMType
+import me.anno.generation.wasm.*
 import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.logging.LogManager
 
@@ -166,6 +163,15 @@ class WASMRuntime(val binary: WASMBinary) {
                     }
                     stack.add(WASMInstance(type, fields))
                 }
+                is WASMInstruction.StructNew -> {
+                    val type = binary.types[instr.typeIndex] as WASMStruct
+                    val fields = ArrayList<Any?>(type.properties.size)
+                    repeat(type.properties.size) {
+                        fields.add(stack.removeLast())
+                    }
+                    fields.reverse()
+                    stack.add(WASMInstance(type, fields))
+                }
                 is WASMInstruction.StructGet -> {
                     val struct = stack.removeLast() as WASMInstance
                     val expectedType = binary.types[instr.typeIndex] as WASMStruct
@@ -186,9 +192,51 @@ class WASMRuntime(val binary: WASMBinary) {
                     // todo validate type of value
                     struct.fields[instr.fieldIndex] = value
                 }
+
+                is WASMInstruction.ArrayNewDefault -> {
+                    val newSize = stack.removeLast() as Int
+                    val arrayType = binary.types[instr.typeIndex] as WASMArray
+                    val elementType = arrayType.elementType
+                    val arrayInstance = when (elementType) {
+                        WASMType.I32 -> IntArray(newSize)
+                        WASMType.I64 -> LongArray(newSize)
+                        WASMType.F32 -> FloatArray(newSize)
+                        WASMType.F64 -> DoubleArray(newSize)
+                        else -> arrayOfNulls<Any>(newSize)
+                    }
+                    stack.add(arrayInstance)
+                }
+                is WASMInstruction.ArrayGet -> {
+                    val index = stack.removeLast() as Int
+                    val element = when (val array = stack.removeLast()) {
+                        is IntArray -> array[index]
+                        is LongArray -> array[index]
+                        is FloatArray -> array[index]
+                        is DoubleArray -> array[index]
+                        is Array<*> -> array[index]
+                        else -> error("Expected array, got ${array?.javaClass?.simpleName}")
+                    }
+                    stack.add(element)
+                }
+                is WASMInstruction.ArraySet -> {
+                    val value = stack.removeLast()
+                    val index = stack.removeLast() as Int
+                    val array = stack.removeLast()
+                    @Suppress("UNCHECKED_CAST")
+                    when (array) {
+                        is IntArray -> array[index] = value as Int
+                        is LongArray -> array[index] = value as Long
+                        is FloatArray -> array[index] = value as Float
+                        is DoubleArray -> array[index] = value as Double
+                        is Array<*> -> (array as Array<Any?>)[index] = value
+                        else -> error("Expected array, got ${array?.javaClass?.simpleName}")
+                    }
+                }
+
                 WASMInstruction.End -> return null
                 WASMInstruction.Return -> return instr
                 WASMInstruction.Drop -> stack.removeLast()
+
                 else -> throw NotImplementedError("Implement $instr")
             }
             check(stack.size >= call.stack0) { "Popped too many values" }
@@ -197,7 +245,7 @@ class WASMRuntime(val binary: WASMBinary) {
     }
 
     fun isInstanceOf(instance: WASMInstance, type: WASMStruct): Boolean {
-        var instanceType = instance.type
+        var instanceType: WASMStructLike = instance.type
         while (true) {
             if (type.typeIndex == instanceType.typeIndex) return true
             instanceType = instanceType.superType ?: return false

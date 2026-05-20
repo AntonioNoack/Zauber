@@ -60,8 +60,8 @@ class LLVMGenerationTests : CodeGenerationTests() {
     }
 
     @Test
-    fun testValueArray() {
-        testValueArrayImpl()
+    fun testIntArray() {
+        testIntArrayImpl()
     }
 
     @Test
