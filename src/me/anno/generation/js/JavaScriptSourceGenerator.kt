@@ -275,7 +275,8 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    override fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
+    override fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
+        val method = method0.method
         if (method.flags.hasFlag(Flags.ABSTRACT) && classScope.scopeType != ScopeType.INTERFACE) {
             builder.append("abstract ")
         }
@@ -285,11 +286,11 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         classScope: Scope, className: String,
         method0: Specialization, headerOnly: Boolean
     ) {
-        val method = method0.method as Method
-        appendMethodFlags(classScope, method, headerOnly)
+        appendMethodFlags(classScope, method0, headerOnly)
 
         builder.append(getMethodName(method0))
 
+        val method = method0.method as Method
         assignSelfType(classScope, method)
         appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
     }

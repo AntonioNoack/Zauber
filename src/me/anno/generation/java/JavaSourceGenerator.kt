@@ -184,6 +184,16 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun isArrayGetter(method0: Specialization): Boolean {
+        val method = method0.method
+        return method.ownerScope == Types.Array.clazz && method.name == "get"
+    }
+
+    fun isArraySetter(method0: Specialization): Boolean {
+        val method = method0.method
+        return method.ownerScope == Types.Array.clazz && method.name == "set"
+    }
+
     fun isNumberSigned(valueType: Type): Boolean {
         return when (valueType) {
             Types.Byte, Types.Short, Types.Int, Types.Long -> true
@@ -452,6 +462,18 @@ open class JavaSourceGenerator : Generator() {
                 }
             }
         }
+
+        if (classScope == Types.Array.clazz) {
+            appendArrayContentField(classScope)
+        }
+    }
+
+    open fun appendArrayContentField(classScope: Scope) {
+        val valueType = specialization.typeParameters[0]
+        builder.append("private final ")
+        appendType(valueType, classScope, false)
+        builder.append("[] content;")
+        nextLine()
     }
 
     open fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
@@ -542,9 +564,9 @@ open class JavaSourceGenerator : Generator() {
         method0: Specialization,
         headerOnly: Boolean
     ) {
-        val method = method0.method as Method
-        appendMethodFlags(classScope, method, headerOnly)
+        appendMethodFlags(classScope, method0, headerOnly)
 
+        val method = method0.method as Method
         appendTypeParameterDeclaration(method.typeParameters, classScope)
         appendType(method.resolveReturnType(method0), classScope, false)
 
@@ -558,13 +580,38 @@ open class JavaSourceGenerator : Generator() {
         val nativeImpl = getNativeImplementation(methodSpec.method)
         val body = methodSpec.method.body
 
-        if (body != null) {
-            val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
-            appendCode(context, methodSpec, body, false)
-        } else if (nativeImpl != null) {
-            appendNativeImplementation(nativeImpl, methodSpec.method)
-        } else {
-            builder.append(";")
+        when {
+            body != null -> {
+                val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
+                appendCode(context, methodSpec, body, false)
+            }
+            nativeImpl != null -> {
+                appendNativeImplementation(nativeImpl, methodSpec.method)
+            }
+            isArrayGetter(methodSpec) -> appendArrayGetter(methodSpec)
+            isArraySetter(methodSpec) -> appendArraySetter(methodSpec)
+            else -> {
+                builder.append(";")
+                nextLine()
+            }
+        }
+    }
+
+    open fun appendArrayGetter(method0: Specialization) {
+        writeBlock {
+            builder.append("return content[index];")
+            nextLine()
+        }
+    }
+
+    open fun appendArraySetter(method0: Specialization) {
+        writeBlock {
+            builder.append("content[index] = value;")
+            nextLine()
+
+            builder.append("return ")
+            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+            builder.append(';')
             nextLine()
         }
     }
@@ -598,8 +645,9 @@ open class JavaSourceGenerator : Generator() {
         } else method.name
     }
 
-    open fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
+    open fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
 
+        val method = method0.method
         if (method.flags.hasFlag(Flags.OVERRIDE)) {
             builder.append("@Override")
             nextLine()
@@ -618,7 +666,11 @@ open class JavaSourceGenerator : Generator() {
         val nativeImpl = getNativeImplementation(method)
 
         if (isPublic) builder.append("public ")
-        if (isNative && nativeImpl == null) builder.append("native ")
+        if (isNative &&
+            nativeImpl == null &&
+            !isArrayGetter(method0) &&
+            !isArraySetter(method0)
+        ) builder.append("native ")
         if (isFinal) builder.append("final ")
         if (isDefault) builder.append("default ")
 
@@ -689,12 +741,27 @@ open class JavaSourceGenerator : Generator() {
                 appendSuperCall(context, superCall)
             }
 
+            if (classScope == Types.Array.clazz &&
+                constructor.valueParameters.size == 1 &&
+                constructor.valueParameters[0].type == Types.Int
+            ) {
+                appendArrayContentInitialization(constructor)
+            }
+
             if (body != null) {
                 val methodSpec = specialization
                 check(methodSpec.method === constructor)
                 appendCode(context, methodSpec, body, true)
             }
         }
+    }
+
+    fun appendArrayContentInitialization(constructor: Constructor) {
+        val elementType = specialization.typeParameters[0]
+        builder.append("content = new ")
+        appendType(elementType, constructor.scope, false)
+        builder.append("[").append(constructor.valueParameters[0].name).append("];")
+        nextLine()
     }
 
     open fun appendConstructorHeader(

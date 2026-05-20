@@ -258,7 +258,7 @@ class RustSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
-    override fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
+    override fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
         // nothing to do yet
         builder.append("pub fn ")
     }
@@ -270,7 +270,7 @@ class RustSourceGenerator : CSourceGenerator() {
         val method = method0.method as Method
         method.scope[ScopeInitType.CODE_GENERATION]
 
-        appendMethodFlags(classScope, method, headerOnly)
+        appendMethodFlags(classScope, method0, headerOnly)
 
         appendTypeParameterDeclaration(method.typeParameters, classScope)
 

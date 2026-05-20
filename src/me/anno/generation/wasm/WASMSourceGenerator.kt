@@ -69,7 +69,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     fun hasImplementation(method0: Specialization): Boolean {
         val method = method0.method
-        return method.body != null || isGetter(method0) || isSetter(method0)
+        return method.body != null || isArrayGetter(method0) || isArraySetter(method0)
     }
 
     fun registerMethods(data: DependencyData, mainMethod: Method) {
@@ -77,7 +77,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         functionIndexList.addAll(data.calledMethods)
         functionIndexList.partitionBy { method ->
             method.method.body != null ||
-                    isGetter(method) || isSetter(method)
+                    isArrayGetter(method) || isArraySetter(method)
         }
 
         var hadImpl = false
@@ -107,16 +107,6 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
         this.objects = objects
         objectGetters = getters
-    }
-
-    fun isGetter(method0: Specialization): Boolean {
-        val method = method0.method
-        return method.ownerScope == Types.Array.clazz && method.name == "get"
-    }
-
-    fun isSetter(method0: Specialization): Boolean {
-        val method = method0.method
-        return method.ownerScope == Types.Array.clazz && method.name == "set"
     }
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
@@ -483,8 +473,8 @@ class WASMSourceGenerator : CSourceGenerator() {
 
             if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
                 when {
-                    isGetter(method0) -> appendGetter(method0)
-                    isSetter(method0) -> appendSetter(method0)
+                    isArrayGetter(method0) -> appendArrayGetter(method0)
+                    isArraySetter(method0) -> appendArraySetter(method0)
                     else -> {
                         val body = method.body!!
                         val context = ResolutionContext(method.selfType, method0, true, null)
@@ -519,7 +509,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun appendGetter(method0: Specialization) {
+    override fun appendArrayGetter(method0: Specialization) {
 
         declareFuncHasNoLocalFields()
 
@@ -553,7 +543,7 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     }
 
-    fun appendSetter(method0: Specialization) {
+    override fun appendArraySetter(method0: Specialization) {
 
         declareFuncHasNoLocalFields()
 

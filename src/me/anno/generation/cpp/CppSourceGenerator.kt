@@ -419,8 +419,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
-    override fun appendMethodFlags(classScope: Scope, method: Method, headerOnly: Boolean) {
+    override fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
         if (headerOnly) {
+            val method = method0.method
             appendVisibility(method.flags.isPrivate())
             if (method.flags.hasFlag(Flags.OVERRIDE)) {
                 // override is a suffix...
@@ -459,9 +460,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         classScope: Scope, className: String,
         method0: Specialization, headerOnly: Boolean
     ) {
-        val method = method0.method as Method
-        appendMethodFlags(classScope, method, headerOnly)
+        appendMethodFlags(classScope, method0, headerOnly)
 
+        val method = method0.method as Method
         appendTypeParameterDeclaration(method.typeParameters, classScope)
 
         val returnType = resolveType(method.resolveReturnType(method0))
