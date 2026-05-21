@@ -59,11 +59,10 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun getOrPutLocalField(field: Field, context: ResolutionContext): LocalField {
-        var localField = localFields
-            .firstOrNull { it.field == field }
+        var localField = localFields.firstOrNull { it.field == field }
         if (localField == null) {
             val type = field.resolveValueType(context)
-            localField = createLocalField(field, field.name, type)
+            localField = createLocalField(field, field.newName, type, true)
         }
         return localField
     }
@@ -72,20 +71,20 @@ class SimpleGraph(val method0: Specialization) {
         val method = method
         if (method.ownerScope.isClassLike()) {
             val selfType = method.ownerScope.typeWithArgs.specialize(context)
-            thisField = createLocalField(null, "this", selfType)
+            thisField = createLocalField(null, "this", selfType, false)
         }
         if (method.hasExplicitSelfType) {
             val selfType = method.selfType!!.specialize(context)
-            selfField = createLocalField(null, "self", selfType)
+            selfField = createLocalField(null, "self", selfType, false)
         }
         parameterFields = method.valueParameters.map { parameter ->
             val type = parameter.type.specialize(context)
-            createLocalField(parameter.field!!, parameter.name, type)
+            createLocalField(parameter.field!!, parameter.name, type, false)
         }
     }
 
-    private fun createLocalField(field: Field?, name: String, type: Type): LocalField {
-        val localField = LocalField(field, name, type, localFields.size)
+    private fun createLocalField(field: Field?, name: String, type: Type, insideMethod: Boolean): LocalField {
+        val localField = LocalField(field, name, type, localFields.size, insideMethod)
         localFields.add(localField)
         return localField
     }
@@ -145,7 +144,6 @@ class SimpleGraph(val method0: Specialization) {
     fun removeMergedFields() {
         removeFieldIf { it.mergeInfo != null }
     }
-
 
     fun replaceYieldsByInnerClass() {
         // todo if inner classes/methods reference a mutable field,

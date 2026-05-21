@@ -22,7 +22,7 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            external class Int {
+            external class Int(val content: Int) {
                 external operator fun plus(other: Int): Int
                 external operator fun div(other: Int): Int
             }

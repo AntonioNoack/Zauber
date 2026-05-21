@@ -20,14 +20,13 @@ import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
-import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
-import me.anno.zauber.ast.simple.expression.SimpleSetField
+import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
@@ -368,11 +367,9 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
-        val type = resolveType(field.valueType!!)
+    override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
         builder.append("let ")
-        builder.append(field.newName).append(" = ")
-        appendDefaultValue(type)
+        builder.append(field.name)
         builder.append(';')
         nextLine()
     }
@@ -415,11 +412,6 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 appendFieldName(graph, expr.thisInstance, ".")
                 builder.append(getMethodName(expr.specialization))
                 appendValueParams(graph, expr.valueParameters)
-            }
-            is SimpleDeclaration -> {
-                builder.append("let ").append(expr.name).append(" = ")
-                appendDefaultValue(expr.type)
-                declaredLocalFields += expr.field
             }
             else -> super.appendInstrImpl(graph, expr)
         }

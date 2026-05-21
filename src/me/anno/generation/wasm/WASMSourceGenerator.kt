@@ -19,7 +19,6 @@ import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
-import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
@@ -507,10 +506,9 @@ class WASMSourceGenerator : CSourceGenerator() {
             }
 
             if (method is Constructor) {
-                var i = builder.length
-                while (i > 0 && builder[i - 1].isWhitespace()) i--
-                i -= "return".length
-                if (!builder.startsWith("return", i)) {
+                val suffix = "return"
+                val i = findSuffixOffset(suffix)
+                if (!builder.startsWith(suffix, i)) {
                     // return is typically missing
                     if (method.ownerScope == Types.Unit.clazz) appendGetThis()
                     else appendGetObjectInstance(Types.Unit.clazz, method.scope)
@@ -1051,22 +1049,9 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
-    override fun appendSimpleInstruction(graph: SimpleGraph, expr: SimpleInstruction) {
-        if (expr is SimpleGetLocalField && expr.dst.dst.fromLocalField == expr.field) return // skip
-        super.appendSimpleInstruction(graph, expr)
-    }
-
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
-            is SimpleDeclaration -> {
-                // is this supported in wasm??? obviously not
-                /*builder.append("(local $").append(expr.name)
-                    .append(' ').append(getWASMType(expr.type).wasmName)
-                    .append(")")
-                nextLine()*/
-                // just skipped, they need unique names anyway
-            }
             is SimpleBranch -> {
                 appendGetField(graph, expr.condition)
                 emptyResultIf()

@@ -136,7 +136,7 @@ object ASTSimplifier {
         contextExpr: Expression? = null // for ThisExpression
     ): FlowResult {
         when (expr) {
-            is ExpressionList -> return simplifyList(context, expr, block0, flow0, needsValue)
+            is ExpressionList -> return simplifyList(context, expr, flow0, needsValue)
             is YieldExpression -> {
                 val field = simplifyImpl(context, expr.value, block0, flow0, true)
                 val field1v = field.value ?: return field
@@ -321,29 +321,9 @@ object ASTSimplifier {
     }
 
     private fun simplifyList(
-        context: ResolutionContext,
-        expr: ExpressionList,
-        block0: SimpleBlock,
-        flow0: FlowResult,
-        needsValue: Boolean
+        context: ResolutionContext, expr: ExpressionList,
+        flow0: FlowResult, needsValue: Boolean
     ): FlowResult {
-        val exprScope = expr.scope
-
-        // declare fields -> needed? yes, better like that for some generators
-        if (false && exprScope.isInsideExpression()) {
-            for (field in exprScope.fields) {
-                if (needsFieldByParameter(field.byParameter) &&
-                    // field.originalScope == field.codeScope && // not moved
-                    block0.instructions.none { it is SimpleDeclaration && it.name == field.name } &&
-                    fieldHasSensibleType(context, field)
-                ) {
-                    // todo if there is only one assignment place, I'd prefer Declare+Assign in one...
-                    val type = field.resolveValueType(context)
-                    block0.add(SimpleDeclaration(type, field, field.scope, field.origin))
-                }
-            }
-        }
-
         var blockI = flow0
         for (expr in expr.list) {
             val blockIv = blockI.value ?: return blockI

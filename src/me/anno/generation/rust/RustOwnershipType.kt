@@ -15,7 +15,6 @@ enum class RustOwnershipType(
      * e.g. for Arrays or ArrayList<Int>
      * */
     FLAT_MUTABLE(2, "RefCell<", ">", "RefCell::new(", ")", ".borrow_mut()"),
-
     FLAT_MUTABLE_OR_NULL(3, "RefCell<", ">"),
 
     DEEP_MUTABLE(4, "GcCell<Gc<", ">>"), // e.g. for Panel

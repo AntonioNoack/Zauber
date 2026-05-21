@@ -20,7 +20,6 @@ import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
-import me.anno.zauber.ast.simple.SimpleDeclaration
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
@@ -688,19 +687,6 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     appendType(expr.allocatedType, expr.scope, true)
                     appendValueParams(graph, expr.paramsForLater)
                 }
-            }
-            is SimpleDeclaration -> {
-                // todo we need SimpleDeclareAndAssign, so we can rid of this impure logic...
-                val type = expr.type
-                appendType(type, expr.scope, false)
-                appendOwnershipSuffix(type)
-                builder.append(' ').append(expr.name)
-                when { // avoid undefined variables, where possible
-                    type.isValue() -> builder.append(" = {}")
-                    type in nativeNumbers -> builder.append(" = 0")
-                    else -> builder.append(" = nullptr") // assigning non-nullable to null is bad :/
-                }
-                declaredLocalFields += expr.field
             }
             else -> super.appendInstrImpl(graph, expr)
         }

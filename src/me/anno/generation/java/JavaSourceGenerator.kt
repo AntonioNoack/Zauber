@@ -4,6 +4,7 @@ import me.anno.generation.*
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
+import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringUtils.capitalize1
 import me.anno.zauber.Compile.root
@@ -25,16 +26,18 @@ import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.*
+import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.needsFieldByParameter
+import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
+import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.interpreting.ExternalKey
 import me.anno.zauber.scope.Scope
@@ -140,9 +143,6 @@ open class JavaSourceGenerator : Generator() {
 
     val declaredFields = HashSet<SimpleField>()
     val usedFields = HashSet<SimpleField>()
-
-    val declaredLocalFields = HashSet<Field>()
-    val usedLocalFields = HashSet<Field>()
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         val writer = FileWithImportsWriter(this, dst)
@@ -817,18 +817,14 @@ open class JavaSourceGenerator : Generator() {
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-       // graph.removeFieldsByLocalFields()
-       // graph.removeMergedFields()
+        // graph.removeFieldsByLocalFields()
+        // graph.removeMergedFields()
         graph.giveLocalFieldsUniqueNames()
         graph.renumberFields()
 
         // todo another step could be removing merge-infos, only LLVMs uses/requires them
 
         CodeReconstruction.createCodeFromGraph(graph)
-    }
-
-    @Deprecated("No longer necessary")
-    fun scanSelves(graph: SimpleGraph, method: MethodLike) {
     }
 
     open fun appendCode(
@@ -838,29 +834,36 @@ open class JavaSourceGenerator : Generator() {
         skipSuperCall: Boolean
     ) {
         writeBlock {
-            try {
-                val graph = ASTSimplifier.simplify(method1)
-                if (skipSuperCall) graph.removeSuperCalls()
-                prepareGraph(graph)
+            val graph = ASTSimplifier.simplify(method1)
+            if (skipSuperCall) graph.removeSuperCalls()
+            prepareGraph(graph)
 
-                // todo simplify all entry points as methods...
+            // todo simplify all entry points as methods...
 
-                val pos0 = builder.length
-                appendSimpleBlock(graph, graph.startBlock)
+            val pos0 = builder.length
+            declareLocalFields(graph)
+            appendSimpleBlock(graph, graph.startBlock)
+            removeTailingReturn()
 
-                appendMissingDeclarations(graph, pos0)
+            appendMissingDeclarations(graph, pos0)
+        }
+    }
 
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                comment {
-                    builder.append(
-                        "[${e.message ?: e.javaClass.simpleName}: ${e.stackTrace?.joinToString("\n") ?: "no-st"}] $body"
-                            .replace("/*", "[")
-                            .replace("*/", "]")
-                    )
-                }
-                nextLine()
-            }
+    open fun removeTailingReturn() {
+        removeTrailingSuffix("return;")
+    }
+
+    fun findSuffixOffset(suffix: String): Int {
+        var i = builder.length
+        while (i > 0 && builder[i - 1].isWhitespace()) i--
+        i -= suffix.length
+        return i
+    }
+
+    fun removeTrailingSuffix(suffix: String) {
+        val i = findSuffixOffset(suffix)
+        if (builder.startsWith(suffix, i)) {
+            builder.setLength(i)
         }
     }
 
@@ -945,25 +948,27 @@ open class JavaSourceGenerator : Generator() {
             builder.append(";")
             nextLine()
         }
-        for (field in usedLocalFields - declaredLocalFields) {
-            if (field.byParameter is Parameter) continue
-            appendLocalDeclaration(graph, field)
-        }
         swapSections(pos0, pos1)
 
         usedFields.clear()
-        usedLocalFields.clear()
         declaredFields.clear()
-        declaredLocalFields.clear()
     }
 
-    open fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
-        val type = resolveType(field.valueType!!)
+    fun declareLocalFields(graph: SimpleGraph) {
+        val fields = graph.localFields
+        val i0 = 1 + graph.method.hasExplicitSelfType.toInt() + graph.method.valueParameters.size
+        for (i in i0 until fields.size) {
+            declareLocalField(graph, fields[i])
+        }
+    }
+
+    open fun declareLocalField(graph: SimpleGraph, field: LocalField) {
+        val type = field.type
         appendType(type, graph.method.memberScope, false)
         builder.append(' ')
-        builder.append(field.newName).append(" = ")
+        builder.append(field.name).append(" = ")
         appendDefaultValue(type)
-        builder.append("; // missing")
+        builder.append(";")
         nextLine()
     }
 
@@ -988,7 +993,7 @@ open class JavaSourceGenerator : Generator() {
     fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
 
     fun SimpleField.isOwnerThis(graph: SimpleGraph): Boolean {
-        return this.fromLocalField === graph.thisField
+        return fromLocalField === graph.thisField
     }
 
     open fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
@@ -1019,15 +1024,20 @@ open class JavaSourceGenerator : Generator() {
             val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
-                null -> {
-                    check(field.id >= 0) { "Invalid field $field in $graph" }
-                    builder.append("tmp").append(field.id)
-                    usedFields.add(field)
-                }
                 is SpecialValueExpression -> when (expr.type) {
                     SpecialValue.NULL -> builder.append("null")
                     SpecialValue.TRUE -> builder.append("true")
                     SpecialValue.FALSE -> builder.append("false")
+                }
+                null -> {
+                    check(field.id >= 0) { "Invalid field $field in $graph" }
+                    val localField = field.fromLocalField
+                    if (localField != null) {
+                        builder.append(localField.name)
+                    } else {
+                        builder.append("tmp").append(field.id)
+                        usedFields.add(field)
+                    }
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
@@ -1089,8 +1099,8 @@ open class JavaSourceGenerator : Generator() {
             }
             is SimpleAssignment,
             is SimpleSetField,
-            is SimpleExit,
-            is SimpleDeclaration -> builder.append(';')
+            is SimpleSetLocalField,
+            is SimpleExit -> builder.append(';')
             else -> {}
         }
         if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
@@ -1100,11 +1110,18 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    open fun exprIsHandledImplicitly(expr: SimpleInstruction): Boolean {
+        if (expr is SimpleGetObject) return true
+        if (expr is SimpleGetLocalField && expr.dst.dst.fromLocalField == expr.field) return true
+        return false
+    }
+
     open fun appendSimpleInstruction(
         graph: SimpleGraph, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
-        if (expr is SimpleGetObject) return
+        if (exprIsHandledImplicitly(expr)) return
+
         appendInstrPrefix(graph, expr)
         appendInstrImpl(graph, expr)
         appendInstrSuffix(graph, expr)
@@ -1146,11 +1163,6 @@ open class JavaSourceGenerator : Generator() {
             is SimpleConstructorCall -> {
                 // done already
             }
-            is SimpleDeclaration -> {
-                appendType(expr.type, expr.scope, false)
-                builder.append(' ').append(expr.name)
-                declaredLocalFields += expr.field
-            }
             is SimpleString -> {
                 builder.append('"').append(expr.base.value).append('"')
             }
@@ -1159,11 +1171,24 @@ open class JavaSourceGenerator : Generator() {
                 //  and instead cast the value to the target
                 builder.append(expr.base.value)
             }
+            is SimpleGetLocalField -> {
+                if (expr.field.id == 0 && expr.field.type in nativeNumbers) builder.append("this.content")
+                else builder.append(expr.field.name)
+            }
             is SimpleGetField -> {
                 if (expr.dst.dst.id >= 0) {
                     appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
                     appendFieldName(expr.field)
                 } // else skip
+            }
+            is SimpleSetLocalField -> {
+                builder.append(expr.field.name)
+                builder.append(" = ")
+
+                appendFieldName(graph, expr.value)
+
+                val needsCopy = expr.value.type.needsCopy()
+                if (needsCopy) appendCopy(graph, expr.value.type)
             }
             is SimpleSetField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
@@ -1334,12 +1359,9 @@ open class JavaSourceGenerator : Generator() {
                 builder.append("throw ")
                 appendFieldName(graph, expr.field)
             }
-            else -> {
-                comment {
-                    builder.append(expr.javaClass.simpleName).append(": ")
-                        .append(expr)
-                }
+            is SimpleMerge -> { /* not usable in Java */
             }
+            else -> throw NotImplementedError("Implement ${expr.javaClass.simpleName}")
         }
     }
 
@@ -1404,16 +1426,9 @@ open class JavaSourceGenerator : Generator() {
         builder.append(forFieldAccess)
     }
 
-    fun isLocalField(self: SimpleField): Boolean {
-        return self.type is ClassType && !self.type.clazz.isClassLike()
-    }
-
     open fun appendSelfForFieldAccess(graph: SimpleGraph, self: SimpleField, field: Field, exprScope: Scope) {
         if (self.type is ClassType && self.type.clazz.isObjectLike()) {
             appendObjectInstance(field, exprScope, ".")
-        } else if (isLocalField(self)) {
-            builder.append("/* ${field.ownerScope.pathStr} */ ")
-            usedLocalFields += field
         } else {
             val fieldSelfType = field.selfType
             val needsCast = self.type != fieldSelfType

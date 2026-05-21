@@ -14,7 +14,6 @@ import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -105,7 +104,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     val methodField = graph.field(methodScope.typeWithArgs)
 
     init {
-        graph.thisFields[SimpleThis(methodScope, false)] = methodField
+        graph.thisFields[methodScope] = methodField
 
         if (!isStatic) {
             // create self-field and assign it...
@@ -116,7 +115,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 "__self__", selfType, null,
                 Flags.NONE, origin
             )
-            graph.thisFields[SimpleThis(classScope, false)] = selfField
+            graph.thisFields[classScope] = selfField
             block.add(JVMSimpleSetField(methodField, tmpField, selfField, methodScope, origin))
             localFields.add(tmpField)
         }

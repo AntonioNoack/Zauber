@@ -15,10 +15,11 @@ import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.*
+import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
-import me.anno.zauber.ast.simple.expression.SimpleSetField
+import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
@@ -230,8 +231,11 @@ class RustSourceGenerator : CSourceGenerator() {
 
     override fun appendArrayContentField(classScope: Scope, headerOnly: Boolean) {
         val elementType = specialization.typeParameters[0]
+        val ownership = getOwnership(elementType)
         builder.append("content: Vec<")
+        builder.append(ownership.typePrefix)
         appendType(elementType, classScope, false)
+        builder.append(ownership.typeSuffix)
         builder.append(">,")
         nextLine()
     }
@@ -303,7 +307,7 @@ class RustSourceGenerator : CSourceGenerator() {
             builder.append(", ")
         }
         if (classScope == Types.Array.clazz) {
-            builder.append("content: Vec::with_capacity(size), ")
+            builder.append("content: Vec::with_capacity(size as usize), ")
         }
         if (builder.endsWith(", ")) builder.setLength(builder.length - 2)
         builder.append(" }")
@@ -340,10 +344,13 @@ class RustSourceGenerator : CSourceGenerator() {
 
         builder.append(" -> ")
         val returnType = resolveType(method.resolveReturnType(method0))
+        val ownership = getOwnership(returnType)
         val isObject = returnType is ClassType && returnType.clazz.isObjectLike()
         if (isObject) builder.append("MutexGuard<'static, ")
+        else builder.append(ownership.typePrefix)
         appendType(returnType, classScope, false)
         if (isObject) builder.append(">")
+        else builder.append(ownership.typeSuffix)
     }
 
     override fun appendCode(
@@ -358,6 +365,8 @@ class RustSourceGenerator : CSourceGenerator() {
             prepareGraph(graph)
 
             // todo simplify all entry points as methods...
+
+            declareLocalFields(graph)
 
             val pos0 = builder.length
             appendSimpleBlock(graph, graph.startBlock)
@@ -504,20 +513,17 @@ class RustSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
-        builder.append("let ")
-        if (dst.type !in nativeTypes) builder.append("mut ")
+        builder.append("let mut ")
         appendFieldName(graph, dst)
         builder.append(": ")
         appendTypeDecl(dst.type, scope)
         if (withEquals) builder.append(" = ")
     }
 
-    override fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
-        val valueType = field.valueType!!
-        builder.append("let ")
-        if (field.isMutableEx || field.name.startsWith('$') /* todo declare them everywhere (DeclareExpression)  */)
-            builder.append("mut ")
-        builder.append(field.newName)
+    override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
+        val valueType = field.type
+        builder.append("let mut ")
+        builder.append(field.name)
         builder.append(": ")
         appendTypeDecl(valueType, graph.method.memberScope)
         //builder.append(" = ")
@@ -543,8 +549,14 @@ class RustSourceGenerator : CSourceGenerator() {
                 is NumberExpression -> appendNumber(field.type, expr)
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
-                    builder.append("tmp").append(field.id)
-                    usedFields.add(field)
+                    val localField = field.fromLocalField
+                    if (localField != null) {
+                        builder.append(localField.name)
+                    } else {
+                        builder.append("tmp").append(field.id)
+                        usedFields.add(field)
+                    }
+
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
@@ -562,7 +574,17 @@ class RustSourceGenerator : CSourceGenerator() {
     override fun appendArrayContentInitialization(constructor: Constructor) {
         // todo we need to somehow get a null/zero element...
         val sizeName = constructor.valueParameters[0].name
-        builder.append("for i in 0..$sizeName { self.content.push(0); }")
+        val elementType = specialization.typeParameters[0]
+        val ownership = getOwnership(elementType)
+        builder.append("for i in 0..$sizeName { self.content.push(")
+        builder.append(ownership.allocPrefix)
+
+        // todo depending on type, set a value,
+        if (elementType in nativeTypes) builder.append('0')
+        else appendDefaultValue(elementType) // todo <- should this contain ownership-data?
+
+        builder.append(ownership.allocSuffix)
+        builder.append("); }")
         nextLine()
     }
 
@@ -590,14 +612,6 @@ class RustSourceGenerator : CSourceGenerator() {
                 appendValueParams(graph, expr.paramsForLater)
                 builder.append(ownership.allocSuffix)
             }
-            is SimpleDeclaration -> {
-                val type = expr.type
-                builder.append("let ")
-                if (expr.field.isMutableEx) builder.append("mut ")
-                builder.append(expr.name).append(": ")
-                appendTypeDecl(type, expr.scope)
-                declaredLocalFields += expr.field
-            }
             is SimpleBranch -> {
                 builder.append("if ")
                 appendFieldName(graph, expr.condition)
@@ -624,9 +638,13 @@ class RustSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendDefaultValue(valueType: Type) {
-        when (resolveType(valueType)) {
+        when (val type = resolveType(valueType)) {
             Types.Boolean -> builder.append("false")
             in nativeTypes -> builder.append("0")
+            is ClassType -> appendCreateEmptyInstance(
+                type.clazz,
+                getClassName(type.clazz, Specialization(type))
+            )
             else -> builder.append("()")
         }
     }
@@ -658,7 +676,7 @@ class RustSourceGenerator : CSourceGenerator() {
         } else {
             appendFieldName(graph, expr.thisInstance, "")
             if (!expr.thisInstance.type.isObjectLike()) {
-                val ownership = RustOwnership[expr.thisInstance.type]
+                val ownership = getOwnership(expr.thisInstance.type)
                 builder.append(ownership.callPrefix)
             }
             builder.append(".")

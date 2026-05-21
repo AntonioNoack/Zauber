@@ -1,7 +1,6 @@
 package me.anno.support.jvm.expression
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.simple.SimpleThis
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -9,7 +8,7 @@ import me.anno.zauber.types.Type
 class JVMGraph(scope: Scope, origin: Long) : Expression(scope, origin) {
 
     val startBlock = addNode()
-    val thisFields = HashMap<SimpleThis, SimpleFieldExpr>()
+    val thisFields = HashMap<Scope, SimpleFieldExpr>()
 
     private var numFields = 0
 

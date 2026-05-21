@@ -155,9 +155,10 @@ class SimpleBlock(val graph: SimpleGraph) {
             }
 
             // println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
-            val value = if (isExplicitSelf) graph.selfField!! else graph.thisField!!
+            val localField = if (isExplicitSelf) graph.selfField!! else graph.thisField!!
             val dst = field(type)
-            add(SimpleGetLocalField(dst, value, scope, origin))
+            add(SimpleGetLocalField(dst, localField, scope, origin))
+            dst.fromLocalField = localField
             return dst
         }
     }

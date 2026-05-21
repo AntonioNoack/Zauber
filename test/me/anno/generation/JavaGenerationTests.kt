@@ -2,6 +2,7 @@ package me.anno.generation
 
 import me.anno.compilation.MinimalJavaBuildCompiler
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
@@ -22,6 +23,7 @@ class JavaGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testSimpleMath() {
+        LogManager.enable("ASTSimplifier")
         testSimpleMathImpl()
     }
 

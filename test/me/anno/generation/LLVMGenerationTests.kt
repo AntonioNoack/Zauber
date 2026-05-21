@@ -3,6 +3,7 @@ package me.anno.generation
 import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalLLVMCompiler
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
@@ -56,6 +57,7 @@ class LLVMGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testSimpleLoop() {
+        LogManager.enable("ASTSimplifier")
         testSimpleLoopImpl()
     }
 

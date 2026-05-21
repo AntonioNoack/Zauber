@@ -11,16 +11,15 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.*
+import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
+import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -278,10 +277,8 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 }
 
                 if (method is Constructor && builder.length == l0) {
-                    var i = builder.length
-                    while (i > 0 && builder[i - 1].isWhitespace()) i--
                     val suffix = "ret"
-                    i -= suffix.length
+                    val i = findSuffixOffset(suffix)
                     if (!builder.startsWith(suffix, i)) {
                         // return is typically missing
                         val instanceReg = if (method.ownerScope == Types.Unit.clazz) "%this"
@@ -425,6 +422,12 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
+    fun addPercentPrefixToLocalFields(graph: SimpleGraph) {
+        for (field in graph.localFields) {
+            field.name = "%${field.name}"
+        }
+    }
+
     override fun appendCode(
         context: ResolutionContext, method1: Specialization,
         body: Expression, skipSuperCall: Boolean
@@ -432,6 +435,9 @@ class LLVMSourceGenerator : CSourceGenerator() {
         val graph = ASTSimplifier.simplify(method1)
         if (skipSuperCall) graph.removeSuperCalls()
         prepareGraph(graph)
+        addPercentPrefixToLocalFields(graph)
+
+        declareLocalFields(graph)
 
         // write all code
         val pos0 = builder.length
@@ -458,16 +464,8 @@ class LLVMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
-        if (expr is SimpleAssignment &&
-            expr !is SimpleGetField &&
-            expr !is SimpleCall &&
-            expr !is SimpleAllocateInstance &&
-            expr.dst.type != Types.Nothing
-        ) {
-            val needed = expr.dst.id >= 0
-            if (needed) {
-                appendAssign(graph, expr)
-            }
+        if (expr is SimpleAssignment) {
+            fieldBranches[expr.dst] = currBranch
         }
     }
 
@@ -738,7 +736,21 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 }
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
-                    renames[field] ?: "%tmp${field.id}"
+                    val localField = field.fromLocalField
+                    if (localField != null) {
+                        if (!localField.isInsideMethod) {
+                            localField.name
+                        } else {
+                            val tmp = nextReg()
+                            builder.append(tmp).append(" = load ")
+                                .append(getLLVMType(field.type).ir).append(", ptr ")
+                                .append(localField.name)
+                            nextLine()
+                            tmp
+                        }
+                    } else {
+                        renames[field] ?: "%tmp${field.id}"
+                    }
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
@@ -763,22 +775,23 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    override fun appendLocalDeclaration(graph: SimpleGraph, field: Field) {
-        builder.append("%").append(field.newName).append(" = ")
-            .append("alloca ").append(getLLVMType(field.valueType!!).ir)
-        builder.append(" ;; local, was missing")
+    override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
+        builder.append(field.name).append(" = ")
+            .append("alloca ").append(getLLVMType(field.type).ir)
         nextLine()
     }
 
+    override fun exprIsHandledImplicitly(expr: SimpleInstruction): Boolean {
+        return expr is SimpleGetObject
+    }
+
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
+
+        builder.append(";; ").append(expr.javaClass.simpleName)
+        nextLine()
+
         when (expr) {
             is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
-            is SimpleDeclaration -> {
-                builder.append("%").append(expr.field.newName).append(" = ")
-                    .append("alloca ").append(getLLVMType(expr.type).ir)
-                builder.append(" ;; local")
-                declaredLocalFields += expr.field
-            }
             is SimpleBranch -> {
                 val branch = Branch(this)
                 val condition = getSimpleFieldReg(graph, expr.condition)
@@ -909,83 +922,75 @@ class LLVMSourceGenerator : CSourceGenerator() {
                     appendCallImpl(graph, expr)
                 }
             }
+            is SimpleGetLocalField -> {
+                if (!expr.field.isInsideMethod) {
+                    renames[expr.dst] = expr.field.name
+                    builder.append(";; rename: %tmp${expr.dst.id} = ${expr.field.name}")
+                } else {
+                    appendAssign(graph, expr)
+                    builder.append("load ").append(getLLVMType(expr.dst.type).ir)
+                        .append(", ptr ").append(expr.field.name)
+                }
+            }
             is SimpleGetField -> {
                 if (expr.dst.id < 0) return
 
-                if (expr.isLocalField()) {
-                    if (expr.field.byParameter is Parameter) {
-                        // we actually need to rename expr.dst, because we cannot assign it
-                        renames[expr.dst] = "%" + expr.field.newName
-                        fieldBranches[expr.dst] = currBranch
-                        builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
-                    } else {
-                        val self = "%" + expr.field.newName
-                        appendAssign(expr.dst)
-                        builder.append("load ").append(getLLVMType(expr.dst.type).ir)
-                            .append(", ptr ").append(self)
-                        usedLocalFields += expr.field
-                    }
-                } else {
+                val selfType = expr.self.type as ClassType
+                if (selfType !in nativeNumbers) {
 
-                    val selfType = expr.self.type as ClassType
-                    if (selfType !in nativeNumbers) {
-
-                        val tmp = nextReg()
-                        val self = getSimpleFieldReg(graph, expr.self)
-                        val struct = getStruct(Specialization(selfType))
-                        builder.append(tmp).append(" = getelementptr ").append(struct.typeName)
-                            .append(", ptr ").append(self)
-                            .append(", i32 0, i32 ").append(
-                                struct.properties.indexOfFirst { it.field?.name == expr.field.name })
-                            .append(" ;; ").append(expr.field)
-                        nextLine()
-
-                        appendAssign(graph, expr)
-                        builder.append("load ").append(getLLVMType(expr.dst.type).ir)
-                            .append(", ptr ").append(tmp)
-
-                    } else {
-                        // field must be 'content'
-                        if (expr.dst.id >= 0) {
-                            renames[expr.dst] = "%this"
-                            fieldBranches[expr.dst] = currBranch
-                            check(expr.field.name == "content")
-                            builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
-                        }
-                    }
-                }
-            }
-            is SimpleSetField -> {
-                val needsCopy = expr.value.type.needsCopy()
-                val valueReg = getSimpleFieldReg(graph, expr.value)
-                // todo copy if necessary
-
-                if (expr.isLocalField()) {
-
-                    val self = "%" + expr.field.newName
-                    builder.append("store ").append(getLLVMType(expr.value.type).ir)
-                        .append(" ").append(valueReg)
-                        .append(", ptr ").append(self)
-                    usedLocalFields += expr.field
-
-                } else {
-
-                    val selfType = expr.self.type as ClassType
                     val tmp = nextReg()
                     val self = getSimpleFieldReg(graph, expr.self)
                     val struct = getStruct(Specialization(selfType))
                     builder.append(tmp).append(" = getelementptr ").append(struct.typeName)
                         .append(", ptr ").append(self)
                         .append(", i32 0, i32 ").append(
-                            struct.properties.indexOfFirst { it.field?.name == expr.field.name }
-                        )
+                            struct.properties.indexOfFirst { it.field?.name == expr.field.name })
                         .append(" ;; ").append(expr.field)
                     nextLine()
 
-                    builder.append("store ").append(getLLVMType(expr.value.type).ir)
-                        .append(" ").append(valueReg)
+                    appendAssign(graph, expr)
+                    builder.append("load ").append(getLLVMType(expr.dst.type).ir)
                         .append(", ptr ").append(tmp)
+
+                } else {
+                    // field must be 'content'
+                    if (expr.dst.id >= 0) {
+                        renames[expr.dst] = "%this"
+                        check(expr.field.name == "content")
+                        builder.append(";; rename: %tmp${expr.dst.id} = %${expr.field.newName}")
+                    }
                 }
+            }
+            is SimpleSetLocalField -> {
+                val needsCopy = expr.value.type.needsCopy()
+                val valueReg = getSimpleFieldReg(graph, expr.value)
+                // todo copy if necessary
+
+                builder.append("store ").append(getLLVMType(expr.value.type).ir)
+                    .append(' ')
+                    .append(valueReg)
+                    .append(", ptr ").append(expr.field.name)
+            }
+            is SimpleSetField -> {
+                val needsCopy = expr.value.type.needsCopy()
+                val valueReg = getSimpleFieldReg(graph, expr.value)
+                // todo copy if necessary
+
+                val selfType = expr.self.type as ClassType
+                val tmp = nextReg()
+                val self = getSimpleFieldReg(graph, expr.self)
+                val struct = getStruct(Specialization(selfType))
+                builder.append(tmp).append(" = getelementptr ").append(struct.typeName)
+                    .append(", ptr ").append(self)
+                    .append(", i32 0, i32 ").append(
+                        struct.properties.indexOfFirst { it.field?.name == expr.field.name }
+                    )
+                    .append(" ;; ").append(expr.field)
+                nextLine()
+
+                builder.append("store ").append(getLLVMType(expr.value.type).ir)
+                    .append(" ").append(valueReg)
+                    .append(", ptr ").append(tmp)
             }
             is SimpleCompare -> {
                 val method = expr.method.resolved
@@ -996,6 +1001,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 if (ownerType == paramType && ownerType in nativeNumbers) {
                     val left = getSimpleFieldReg(graph, expr.left)
                     val right = getSimpleFieldReg(graph, expr.right)
+                    appendAssign(expr.dst)
                     appendNativeCompare(ownerType, expr.type)
                     builder.append(' ').append(getLLVMType(ownerType).ir)
                         .append(' ').append(left).append(", ").append(right)
@@ -1007,8 +1013,10 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 // create phi instruction 😎
                 val fromIf = getSimpleFieldReg(graph, expr.ifField)
                 val fromElse = getSimpleFieldReg(graph, expr.elseField)
-                val ifBranch = fieldBranches[expr.ifField]!!
-                val elseBranch = fieldBranches[expr.elseField]!!
+                val ifBranch = fieldBranches[expr.ifField]
+                    ?: throw IllegalStateException("Missing name for ifBranch ${expr.ifField}")
+                val elseBranch = fieldBranches[expr.elseField]
+                    ?: throw IllegalStateException("Missing name for elseBranch ${expr.elseField}")
                 appendAssign(expr.dst)
                 builder.append("phi ")
                     .append(getLLVMType(expr.dst.type).ir)

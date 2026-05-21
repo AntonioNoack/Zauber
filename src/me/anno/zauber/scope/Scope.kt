@@ -70,11 +70,6 @@ class Scope(val name: String, val parent: Scope? = null) {
     val constructors0: List<Constructor>
         get() = children.mapNotNull { it.selfAsConstructor }
 
-    fun getConstructors(scopeInitType: ScopeInitType): List<Constructor> {
-        this[scopeInitType]
-        return children.mapNotNull { it[scopeInitType].selfAsConstructor }
-    }
-
     fun getMethods(scopeInitType: ScopeInitType): List<Method> {
         this[scopeInitType]
         return children.mapNotNull { it[scopeInitType].selfAsMethod }
