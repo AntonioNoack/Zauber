@@ -28,7 +28,7 @@ object TypeResolution {
 
     fun doCatchFailures() {
         catchFailures = true
-        LogManager.disableLoggers(
+        LogManager.disable(
             "TypeResolution,Inheritance," +
                     "MemberResolver,ConstructorResolver,MethodResolver,FieldResolver," +
                     "ResolvedField,ResolvedMethod,CallExpression,Field,ResolvedCallable," +

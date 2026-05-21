@@ -1,8 +1,10 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
@@ -34,7 +36,8 @@ class SimpleSetField(
     }
 
     override fun toString(): String {
-        return "$self?[${field.selfType}].${field.name} = $value"
+        return "$self?[${style(field.selfType.toString(), StringStyles.LINK)}]." +
+                "${style(field.name, StringStyles.GREEN)} = $value"
     }
 
     override fun withField(field: Field): SimpleInstruction {

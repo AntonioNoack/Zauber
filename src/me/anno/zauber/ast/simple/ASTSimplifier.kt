@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.utils.FullMap
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles.bold
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
@@ -21,6 +23,9 @@ import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
+import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -71,18 +76,23 @@ object ASTSimplifier {
     fun simplify(method: Specialization): SimpleGraph {
         check(method.isMethodLike())
         return cache.getOrPut(method) {
-            val context = ResolutionContext(null, method, true, null)
-            val expr = method.method.getSpecializedBody(method)
-                ?: throw IllegalStateException("Specialized body is null? For $method")
-            LOGGER.info("Simplifying $expr")
-            val graph = SimpleGraph(method)
-            val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
-            val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
-            graph.endFlow = flow1
-            finishFlows(flow1, method, expr)
+            method.use { // use scope
+                val context = ResolutionContext(null, method, true, null)
+                val expr = method.method.getSpecializedBody(method)
+                    ?: throw IllegalStateException("Specialized body is null? For $method")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Simplifying $expr")
 
-            LOGGER.info("Simplified $method:\n  $flow1\n  to $graph")
-            graph
+                val graph = SimpleGraph(method)
+                graph.initializeSpecialFields(context)
+
+                val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
+                val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
+                graph.endFlow = flow1
+                finishFlows(flow1, method, expr)
+
+                if (LOGGER.isInfoEnabled) LOGGER.info("\n${bold("Simplified")} $method:\n  $flow1\n  to $graph\n")
+                graph
+            }
         }
     }
 
@@ -320,7 +330,7 @@ object ASTSimplifier {
         val exprScope = expr.scope
 
         // declare fields -> needed? yes, better like that for some generators
-        if (exprScope.isInsideExpression()) {
+        if (false && exprScope.isInsideExpression()) {
             for (field in exprScope.fields) {
                 if (needsFieldByParameter(field.byParameter) &&
                     // field.originalScope == field.codeScope && // not moved
@@ -409,6 +419,16 @@ object ASTSimplifier {
         )
     }
 
+    private fun isLocalField(graph: SimpleGraph, field: Field): Boolean {
+        var fieldScope = field.scope
+        while (true) {
+            if (fieldScope.isMethodLike() || fieldScope.isClassLike()) break
+            fieldScope = fieldScope.parent!!
+        }
+
+        return graph.method.memberScope == fieldScope
+    }
+
     private fun simplifyGetField(
         context: ResolutionContext,
         expr: ResolvedGetFieldExpression,
@@ -445,6 +465,14 @@ object ASTSimplifier {
 
         val valueType = expr.resolveReturnType(context)
         // println("valueType for $expr: $valueType")
+
+        if (isLocalField(block0.graph, field)) {
+            val localField = block0.graph.getOrPutLocalField(field, context)
+            val dst = block0.field(valueType)
+            block0.add(SimpleGetLocalField(dst, localField, expr.scope, expr.origin))
+            dst.fromLocalField = localField
+            return flow0.withValue(dst)
+        }
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true, expr)
         val block1v = block1.value ?: return block1
@@ -536,6 +564,16 @@ object ASTSimplifier {
         }
 
         val field = expr.field.resolved
+
+        if (isLocalField(block0.graph, field)) {
+            val localField = block0.graph.getOrPutLocalField(field, context)
+            val block2 = simplifyImpl(context, expr.value, flow0, true)
+            val block2v = block2.value ?: return block2
+            val value = block2v.value
+
+            block0.add(SimpleSetLocalField(localField, value.use(), expr.scope, expr.origin))
+            return flow0.withValue(unitInstance(block0.graph, expr))
+        }
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
         val block1v = block1.value ?: return block1

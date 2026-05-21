@@ -10,7 +10,7 @@ class InheritanceInterfaceTests {
 
     @Test
     fun testCallInterfaceDefaultMethod() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "CallExpression,ZClass,MemberResolver,ConstructorResolver," +
                     "TypeResolution,Inheritance," +
                     "MethodResolver,ResolvedMethod," +
@@ -71,7 +71,7 @@ class InheritanceInterfaceTests {
 
     @Test
     fun testCallInterfaceField() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "ZClass,TypeResolution,CallExpression,MemberResolver,ConstructorResolver," +
                     "MemberResolver,Inheritance," +
                     "MethodResolver,ResolvedMethod," +

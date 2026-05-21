@@ -180,7 +180,7 @@ class FibonacciTests {
 
     @Test
     fun testMemoizedFibonacci() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "TypeResolution,CallExpression," +
                     "ConstructorResolver,MemberResolver," +
                     "FieldExpression,FieldResolver,ResolvedField,Field," +

@@ -129,7 +129,7 @@ class StringTests {
 
     @Test
     fun testStringConcatUsingArrays() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
                     "ResolvedField,FieldResolver,FieldExpression,AssignmentExpression," +
                     "Stdlib,ASTSimplifier,ResolvedMethod"
@@ -143,7 +143,7 @@ class StringTests {
 
     @Test
     fun testStringTrimUsingArrays() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "Inheritance,Runtime,CallExpression,ConstructorResolver," +
                     "FieldExpression,AssignmentExpression,MethodResolver," +
                     "Stdlib,ASTSimplifier,ResolvedMethod"

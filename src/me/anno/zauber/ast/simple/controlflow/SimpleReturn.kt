@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple.controlflow
 
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.scope.Scope
 

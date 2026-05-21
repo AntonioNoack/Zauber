@@ -2,9 +2,9 @@ package me.anno.zauber.interpreting
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.logging.LogManager
@@ -62,7 +62,7 @@ class ZClass(val type: Type) {
 
             val type = scope.typeWithoutArgs
             // LOGGER.info("[$type0] $this needs backing field? (${!explicitSelfType} || $selfType == $type) && ${needsBackingField()}")
-            return (!explicitSelfType || selfType == type) &&
+            return (!hasExplicitSelfType || selfType == type) &&
                     needsBackingField()
         }
     }
@@ -97,7 +97,7 @@ class ZClass(val type: Type) {
             }
 
             val spec = Specialization(primaryConstructor.memberScope, emptyParameterList())
-            runtime.executeCall(objectInstance, spec, emptyList())
+            runtime.executeCall(objectInstance, null, spec, emptyList())
         }
 
         // println("-- created object instance for $this: $objectInstance --")

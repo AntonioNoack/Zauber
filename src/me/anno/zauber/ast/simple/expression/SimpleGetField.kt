@@ -1,8 +1,10 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -46,7 +48,8 @@ class SimpleGetField(
     }
 
     override fun toString(): String {
-        return "$dst = $self?[${field.selfType ?: field.ownerScope.pathStr}].${field.name}"
+        return "$dst = $self?[${style(field.selfType?.toString() ?: field.ownerScope.pathStr, StringStyles.LINK)}]." +
+                style(field.name, StringStyles.GREEN)
     }
 
     override fun withField(field: Field): SimpleInstruction {

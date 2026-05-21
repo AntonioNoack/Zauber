@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 
 fun main() {
 
-    LogManager.disableLoggers("" +
+    LogManager.disable("" +
             "MemberResolver,TypeResolver,TypeResolution," +
             "ASTSimplifier,Runtime,Inheritance," +
             "MethodResolver,CallExpression,ResolvedMethod," +

@@ -1,14 +1,16 @@
 package me.anno.zauber.ast.simple.controlflow
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.simple.SimpleBlock
-import me.anno.zauber.ast.simple.SimpleField
 import me.anno.zauber.ast.simple.SimpleMerge
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 data class Flow(val value: SimpleField, val block: SimpleBlock) {
     override fun toString(): String {
-        return "Flow(value=$value, block=${block.blockId})"
+        return "${style("b${block.blockId}", StringStyles.GREEN)}: $value"
     }
 
     private fun joinFields(other: Flow, joinedBlock: SimpleBlock): SimpleField {

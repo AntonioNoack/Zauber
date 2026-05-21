@@ -1,8 +1,9 @@
 package me.anno.zauber.ast.simple.controlflow
 
-import me.anno.zauber.ast.simple.controlflow.Flow.Companion.join
+import me.anno.utils.StringStyles.bold
 import me.anno.zauber.ast.simple.SimpleBlock
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.controlflow.Flow.Companion.join
+import me.anno.zauber.ast.simple.fields.SimpleField
 
 data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) {
 
@@ -68,5 +69,24 @@ data class FlowResult(val value: Flow?, val returned: Flow?, val thrown: Flow?) 
         check(this.returned == null) { "Finally-block for catch must not return" }
         if (value == null) return this
         return FlowResult(null, returned, thrown.join(returned.value, value.block))
+    }
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        sb.append(bold("FlowResult"))
+            .append('(')
+        if (value != null) {
+            sb.append(value)
+        }
+        if (returned != null) {
+            if (!sb.endsWith('(')) sb.append(", ")
+            sb.append("r=").append(returned)
+        }
+        if (thrown != null) {
+            if (!sb.endsWith('(')) sb.append(", ")
+            sb.append("t=").append(thrown)
+        }
+        sb.append(')')
+        return sb.toString()
     }
 }

@@ -20,14 +20,6 @@ const imports = {
             console.log(value);
             return lib["obj_zauber_Unit"]()
         },
-        'zauber_Int_plus_rtgkvs': () => {
-        },
-        'zauber_Int_times_rtgkvs': () => {
-        },
-        'zauber_Int_div_rtgkvs': () => {
-        },
-        'zauber_Int_minus_rtgkvs': () => {
-        },
         'zauber_Array_get_724980837_sfuzcq': () => {
             throw 'Implement Array-access'
         },

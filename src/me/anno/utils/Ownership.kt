@@ -1,4 +1,4 @@
-package me.anno.zauber.ast.simple
+package me.anno.utils
 
 enum class Ownership {
     /**

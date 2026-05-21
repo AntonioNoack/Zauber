@@ -47,7 +47,7 @@ object FieldGetterSetter {
         val value = field.initialValue ?: field.getterExpr
         val valueType = field.valueType
         return scope.addField(
-            field.selfType, field.explicitSelfType, isMutable = field.isMutable, null,
+            field.selfType, field.hasExplicitSelfType, isMutable = field.isMutable, null,
             "field", valueType, value /* just for the type */,
             Flags.SYNTHETIC, origin
         )

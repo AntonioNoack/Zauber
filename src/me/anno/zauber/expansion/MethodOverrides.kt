@@ -85,7 +85,7 @@ object MethodOverrides {
         selfMethods: Map<String, List<Method>>,
         foundMethods: HashSet<Method>
     ) {
-        val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.explicitSelfType }
+        val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.hasExplicitSelfType }
         for (superMethod in superMethods) {
             if (superMethod.isPrivate()) continue
 
@@ -151,7 +151,7 @@ object MethodOverrides {
         selfFields0: List<Field>,
         foundFields: HashSet<Field>
     ) {
-        val superFields = superScope.fields.filter { !it.explicitSelfType }
+        val superFields = superScope.fields.filter { !it.hasExplicitSelfType }
         for (superField in superFields) {
             if (superField.isPrivate()) continue
 

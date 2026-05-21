@@ -33,6 +33,8 @@ import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.interpreting.ExternalKey
 import me.anno.zauber.scope.Scope
@@ -813,10 +815,11 @@ open class JavaSourceGenerator : Generator() {
 
     open fun prepareGraph(graph: SimpleGraph) {
         graph.removeWriteOnlyFields()
-        graph.removeThisFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        graph.giveMethodFieldsUniqueNames()
+       // graph.removeFieldsByLocalFields()
+       // graph.removeMergedFields()
+        graph.giveLocalFieldsUniqueNames()
         graph.renumberFields()
 
         // todo another step could be removing merge-infos, only LLVMs uses/requires them
@@ -824,17 +827,8 @@ open class JavaSourceGenerator : Generator() {
         CodeReconstruction.createCodeFromGraph(graph)
     }
 
+    @Deprecated("No longer necessary")
     fun scanSelves(graph: SimpleGraph, method: MethodLike) {
-        for ((self, dst) in graph.thisFields) {
-            val (scope, explicit) = self
-            if (explicit) {
-                TODO("Somehow get explicit self...")
-            } else {
-                if (!scope.isObjectLike() && scope.isClassLike() && scope != method.scope && scope != method.ownerScope) {
-                    TODO("Declare $self in $dst for $method")
-                } // else not needed
-            }
-        }
     }
 
     open fun appendCode(
@@ -848,8 +842,6 @@ open class JavaSourceGenerator : Generator() {
                 val graph = ASTSimplifier.simplify(method1)
                 if (skipSuperCall) graph.removeSuperCalls()
                 prepareGraph(graph)
-
-                scanSelves(graph, method1.method)
 
                 // todo simplify all entry points as methods...
 
@@ -996,10 +988,7 @@ open class JavaSourceGenerator : Generator() {
     fun SimpleField.isObjectLike() = type is ClassType && type.clazz.isObjectLike()
 
     fun SimpleField.isOwnerThis(graph: SimpleGraph): Boolean {
-        return type is ClassType && type.clazz == graph.method.ownerScope &&
-                (graph.thisFields.any { !it.key.isExplicitSelf && it.value === this } ||
-                        type.clazz.isObjectLike() // no this-field required
-                        )
+        return this.fromLocalField === graph.thisField
     }
 
     open fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
@@ -1184,7 +1173,7 @@ open class JavaSourceGenerator : Generator() {
                 appendFieldName(graph, expr.value)
 
                 val needsCopy = expr.value.type.needsCopy()
-                if (needsCopy) appendCopy(graph, expr)
+                if (needsCopy) appendCopy(graph, expr.value.type)
             }
             is SimpleCompare -> {
                 // todo if this is not native, we must append a call
@@ -1279,18 +1268,18 @@ open class JavaSourceGenerator : Generator() {
                             "toChar" -> "(char) "
                             else -> null
                         }
-                        if (castSymbol != null && expr.self.type in nativeNumbers) {
+                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
                             builder.append(castSymbol)
-                            appendFieldName(graph, expr.self)
+                            appendFieldName(graph, expr.thisInstance)
                             true
-                        } else if (expr.self.type == Types.Boolean && methodName == "not") {
+                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
                             builder.append('!')
-                            appendFieldName(graph, expr.self)
+                            appendFieldName(graph, expr.thisInstance)
                             true
                         } else false
                     }
                     1 -> {
-                        val type = expr.self.type
+                        val type = expr.thisInstance.type
                         val supportsType = when (type) {
                             Types.String, in nativeTypes -> true
                             else -> false
@@ -1304,14 +1293,14 @@ open class JavaSourceGenerator : Generator() {
                             else -> null
                         }
                         if (supportsType && symbol != null) {
-                            if (type != Types.String && expr.self.isOwnerThis(graph)) {
+                            if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
                                 check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
                                     "$type is missing field 'content'"
                                 }
-                                appendFieldName(graph, expr.self, ".")
+                                appendFieldName(graph, expr.thisInstance, ".")
                                 builder.append("content")
                             } else {
-                                appendFieldName(graph, expr.self)
+                                appendFieldName(graph, expr.thisInstance)
                             }
                             builder.append(symbol)
                             appendFieldName(graph, expr.valueParameters[0])
@@ -1354,12 +1343,12 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
+    open fun appendCopy(graph: SimpleGraph, valueType: Type) {
         builder.append(".copy()")
     }
 
     open fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
-        val needsCastForFirstValue = nativeTypes[expr.self.type]
+        val needsCastForFirstValue = nativeTypes[expr.thisInstance.type]
         if (needsCastForFirstValue != null) {
             appendCallForPrimitive(needsCastForFirstValue, expr, graph)
         } else {
@@ -1368,7 +1357,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendCallForNonPrimitive(expr: SimpleCall, graph: SimpleGraph) {
-        appendFieldName(graph, expr.self, ".")
+        appendFieldName(graph, expr.thisInstance, ".")
         val methodName = getMethodName(expr.specialization)
         builder.append(methodName)
         appendValueParams(graph, expr.valueParameters)
@@ -1389,7 +1378,7 @@ open class JavaSourceGenerator : Generator() {
         }
 
         builder.append('(')
-        appendFieldName(graph, expr.self)
+        appendFieldName(graph, expr.thisInstance)
         if (expr.valueParameters.isNotEmpty()) {
             builder.append(", ")
             appendValueParams(graph, expr.valueParameters, false)

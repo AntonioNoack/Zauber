@@ -49,7 +49,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
             val main = mainMethod
             val self = runtime.getObjectInstance(main.ownerScope.typeWithArgs)
             val spec = Specialization(main.memberScope, emptyParameterList())
-            val result = runtime.executeCall(self, spec, emptyList())
+            val result = runtime.executeCall(self, null, spec, emptyList())
             check(result.type == ReturnType.RETURN) { "Call failed: $result" }
             return buffer.toString()
         }
@@ -59,7 +59,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
 
     @BeforeEach
     fun init() {
-        LogManager.disableLoggers("Runtime,Stdlib")
+        LogManager.disable("Runtime,Stdlib")
     }
 
     override fun generator() = RuntimeCompiler()

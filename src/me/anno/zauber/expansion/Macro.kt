@@ -3,17 +3,17 @@ package me.anno.zauber.expansion
 import me.anno.generation.Specializations
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOriginShort
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.*
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.scope.Scope
@@ -211,7 +211,7 @@ object Macro {
             runtime[valueParameters2[i]] = valueParameters1[i]
         }
 
-        val result = runtime.executeCall(owner, method1, valueParameters2)
+        val result = runtime.executeCall(owner, null, method1, valueParameters2)
 
         @Suppress("Since15")
         check(callForFields == runtime.callStack.removeLast())

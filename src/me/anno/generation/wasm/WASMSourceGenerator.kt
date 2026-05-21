@@ -3,6 +3,7 @@ package me.anno.generation.wasm
 import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
+import me.anno.utils.FullMap
 import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.reverse.SimpleBranch
@@ -13,14 +14,20 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.*
+import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
+import me.anno.zauber.ast.simple.SimpleDeclaration
+import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -67,9 +74,27 @@ class WASMSourceGenerator : CSourceGenerator() {
 
     val structs = HashMap<TypeDef, WASMStructLike>()
 
+    fun isInlinedMethod(method0: Specialization): Boolean {
+        val method = method0.method
+        when (val ownerType = method.ownerScope.typeWithArgs) {
+            Types.Int, Types.Long,
+            Types.Float, Types.Double -> {
+                if (method.valueParameters.size != 1) return false
+                if (method.valueParameters[0].type != ownerType) return false
+                return when (method.name) {
+                    "plus", "minus", "times", "div" -> true
+                    else -> false
+                }
+            }
+            // array getter and setter are not inlined
+            else -> return false
+        }
+    }
+
     fun registerMethods(data: DependencyData, mainMethod: Method) {
         // imported methods first
         functionIndexList.addAll(data.calledMethods)
+        functionIndexList.removeIf(::isInlinedMethod)
         functionIndexList.partitionBy { method ->
             method.method.body != null ||
                     isArrayGetter(method) || isArraySetter(method)
@@ -353,14 +378,14 @@ class WASMSourceGenerator : CSourceGenerator() {
             method.scope[ScopeInitType.CODE_GENERATION]
 
             val params = ArrayList<WASMType>(
-                1 + (if (method.explicitSelfType) 1 else 0) +
+                1 + (if (method.hasExplicitSelfType) 1 else 0) +
                         method.valueParameters.size
             )
 
             // self:
             params.add(getWASMType(method.ownerScope.typeWithArgs))
 
-            if (method.explicitSelfType) {
+            if (method.hasExplicitSelfType) {
                 val selfType = method.selfType!!
                 params.add(getWASMType(selfType))
             }
@@ -407,7 +432,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         val method = method0.method
         val functionIndex = functionIndexMap[method0]!!
         appendMethodHeader(
-            typeIndex, methodName, functionIndex, method.explicitSelfType,
+            typeIndex, methodName, functionIndex, method.hasExplicitSelfType,
             method.valueParameters, export
         )
     }
@@ -624,8 +649,6 @@ class WASMSourceGenerator : CSourceGenerator() {
         if (skipSuperCall) graph.removeSuperCalls()
         prepareGraph(graph)
 
-        scanSelves(graph, method1.method)
-
         declareLocalFieldsAsVariables(graph)
 
         // write all code
@@ -637,12 +660,27 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun declareLocalFieldsAsVariables(graph: SimpleGraph) {
-        // todo we must also include mutable fields...
-        val offset = getLocalFieldOffset(graph)
-        val mutableFields = collectMutableFields(graph, offset)
 
-        val types = ArrayList<WASMType>()
-        for (field in graph.fields) {
+        val typesForBinary = ArrayList<WASMType>()
+
+        // first all eventually mutable fields
+        val localFields = graph.localFields
+        for (field in localFields) {
+            if (field == graph.thisField ||
+                field == graph.selfField ||
+                field in graph.parameterFields
+            ) continue // already have an ID
+
+            val type = getWASMType(field.type)
+            builder.append("(local $").append(field.name)
+                .append(' ').append(type.wasmName).append(')')
+            typesForBinary.add(type)
+            nextLine()
+        }
+
+        // then all assign-once fields
+        for (field in graph.simpleFields) {
+            // if (field.fromLocalField != null) continue // todo remove them, is easy enough
             val type = getWASMType(field.type)
             if (field.mergeInfo == null) {
                 builder.append("(local \$tmp").append(field.id)
@@ -650,56 +688,16 @@ class WASMSourceGenerator : CSourceGenerator() {
                 nextLine()
             }
             // needed for now
-            types.add(type)
-        }
-        for (field in mutableFields) {
-            // todo ensure unique names
-            field.scope[ScopeInitType.AFTER_RESOLVE_TYPES]
-
-            val valueType = field.valueType
-                ?: throw IllegalStateException("Missing valueType for $field")
-
-            val type = getWASMType(valueType)
-            builder.append("(local $").append(field.newName)
-                .append(' ').append(type.wasmName).append(')')
-            types.add(type)
-            nextLine()
+            typesForBinary.add(type)
         }
 
-        // we should reorder all field indices...
-        binary.u32(types.size)
-        for (type in types) {
+        // we should reorder all field indices -> can do that later
+        //  as an optimization step, not now
+        binary.u32(typesForBinary.size)
+        for (type in typesForBinary) {
             binary.u32(1)
             binary.writeValueType(type)
         }
-    }
-
-    lateinit var mutableFields: Map<Field, Int>
-
-    fun collectMutableFields(graph: SimpleGraph, offset: Int): List<Field> {
-        val fieldMap = HashMap<Field, Int>()
-        val fieldList = ArrayList<Field>()
-        val offset = offset + graph.fields.size
-        val parameters = graph.method.valueParameters
-        val thisOffset = 1 + if (graph.method.explicitSelfType) 1 else 0
-        for (block in graph.blocks) {
-            for (expr in block.instructions) {
-                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
-                    val field = expr.field
-                    val parameterIndex = parameters.indexOf(field.byParameter)
-                    fieldMap.getOrPut(field) {
-                        if (parameterIndex >= 0) {
-                            parameterIndex + thisOffset
-                        } else {
-                            fieldList.add(field)
-                            fieldList.lastIndex + offset
-                        }
-                    }
-                }
-            }
-        }
-        mutableFields = fieldMap
-        return fieldList
     }
 
     override fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
@@ -721,7 +719,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     override fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
         val dst = expression.dst.dst
         builder.append("local.set \$tmp").append(dst.id)
-        binary.localSet(dst.id + getLocalFieldOffset(graph))
+        binary.localSet(getSimpleFieldOffset(graph) + dst.id)
         nextLine()
     }
 
@@ -966,11 +964,8 @@ class WASMSourceGenerator : CSourceGenerator() {
         return objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor == graph.method
     }
 
-    fun getLocalFieldOffset(graph: SimpleGraph): Int {
-        var offset = 1 // 'this'
-        if (graph.method.explicitSelfType) offset++ // 'self'
-        val numParams = graph.method.valueParameters.size
-        return offset + numParams
+    fun getSimpleFieldOffset(graph: SimpleGraph): Int {
+        return graph.localFields.size
     }
 
     fun appendGetThis() {
@@ -1003,9 +998,16 @@ class WASMSourceGenerator : CSourceGenerator() {
                 }
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
-                    builder.append("local.get \$tmp").append(field.id)
-                    binary.localGet(field.id + getLocalFieldOffset(graph))
-                    nextLine()
+                    val localField = field.fromLocalField
+                    if (localField != null) {
+                        builder.append("local.get \$").append(localField.name)
+                        binary.localGet(localField.id)
+                        nextLine()
+                    } else {
+                        builder.append("local.get \$tmp").append(field.id)
+                        binary.localGet(getSimpleFieldOffset(graph) + field.id)
+                        nextLine()
+                    }
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
@@ -1047,6 +1049,11 @@ class WASMSourceGenerator : CSourceGenerator() {
         builder.append("return")
         binary.ret()
         nextLine()
+    }
+
+    override fun appendSimpleInstruction(graph: SimpleGraph, expr: SimpleInstruction) {
+        if (expr is SimpleGetLocalField && expr.dst.dst.fromLocalField == expr.field) return // skip
+        super.appendSimpleInstruction(graph, expr)
     }
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
@@ -1156,13 +1163,13 @@ class WASMSourceGenerator : CSourceGenerator() {
                             else -> null
                         }
                         // todo append correct casting method...
-                        if (castSymbol != null && expr.self.type in nativeNumbers) {
-                            appendGetField(graph, expr.self)
+                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
+                            appendGetField(graph, expr.thisInstance)
                             builder.append(castSymbol)
                             TODO("find cast-instr")
                             true
-                        } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                            appendGetField(graph, expr.self)
+                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
+                            appendGetField(graph, expr.thisInstance)
                             builder.append("i32.eqz")
                             binary.u8(WASMOpcode.I32_EQZ)
                             nextLine()
@@ -1170,7 +1177,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                         } else false
                     }
                     1 -> {
-                        val supportsType = expr.self.type in nativeNumbers
+                        val supportsType = expr.thisInstance.type in nativeNumbers
                         val symbol = when (methodName) {
                             "plus" -> "add"
                             "minus" -> "sub"
@@ -1180,9 +1187,9 @@ class WASMSourceGenerator : CSourceGenerator() {
                             else -> null
                         }
                         if (supportsType && symbol != null) {
-                            appendGetField(graph, expr.self)
+                            appendGetField(graph, expr.thisInstance)
                             appendGetField(graph, expr.valueParameters[0])
-                            val type = resolveType(expr.self.type)
+                            val type = resolveType(expr.thisInstance.type)
                             builder.append(getWASMType(type).wasmName)
                                 .append('.').append(symbol)
                             binary.u8(getSimpleMathOp(type, symbol))
@@ -1196,57 +1203,56 @@ class WASMSourceGenerator : CSourceGenerator() {
                     appendCallImpl(graph, expr)
                 }
             }
+            is SimpleGetLocalField -> {
+                builder.append("local.get $").append(expr.field.name)
+                binary.localGet(expr.field.id)
+                nextLine()
+            }
             is SimpleGetField -> {
-                if (expr.isLocalField()) {
-                    builder.append("local.get $").append(expr.field.newName)
-                    binary.localGet(mutableFields[expr.field]!!)
+
+
+                // load field owner
+                appendGetField(graph, expr.self)
+
+                val selfType = expr.self.type as ClassType
+                if (selfType !in nativeNumbers) {
+                    val struct = getStruct(Specialization(selfType), isNullable = false)
+                    val fieldIndex = struct.getIndex(expr.field)
+                    builder.append("struct.get $")
+                        .append(struct.typeName).append(' ')
+                        .append(fieldIndex)
+                    binary.structGet(struct.typeIndex, fieldIndex)
                     nextLine()
                 } else {
-
-                    // load field owner
-                    appendGetField(graph, expr.self)
-
-                    val selfType = expr.self.type as ClassType
-                    if (selfType !in nativeNumbers) {
-                        val struct = getStruct(Specialization(selfType), isNullable = false)
-                        val fieldIndex = struct.getIndex(expr.field)
-                        builder.append("struct.get $")
-                            .append(struct.typeName).append(' ')
-                            .append(fieldIndex)
-                        binary.structGet(struct.typeIndex, fieldIndex)
-                        nextLine()
-                    } else {
-                        // field must be 'content'
-                        check(expr.field.name == "content")
-                    }
+                    // field must be 'content'
+                    check(expr.field.name == "content")
                 }
+            }
+            is SimpleSetLocalField -> {
+                val needsCopy = expr.value.type.needsCopy()
+                appendGetField(graph, expr.value)
+                if (needsCopy) appendCopy(graph, expr.value.type)
+
+                builder.append("local.set $").append(expr.field.name)
+                binary.localSet(expr.field.id)
+                nextLine()
             }
             is SimpleSetField -> {
                 val needsCopy = expr.value.type.needsCopy()
-                if (expr.isLocalField()) {
-                    appendGetField(graph, expr.value)
-                    if (needsCopy) appendCopy(graph, expr)
 
-                    builder.append("local.set $").append(expr.field.newName)
-                    binary.localSet(mutableFields[expr.field]!!)
-                    nextLine()
+                appendGetField(graph, expr.self)
+                appendGetField(graph, expr.value)
+                if (needsCopy) appendCopy(graph, expr.value.type)
 
-                } else {
+                val selfType = expr.self.type as ClassType
+                val struct = getStruct(Specialization(selfType), isNullable = false)
 
-                    appendGetField(graph, expr.self)
-                    appendGetField(graph, expr.value)
-                    if (needsCopy) appendCopy(graph, expr)
-
-                    val selfType = expr.self.type as ClassType
-                    val struct = getStruct(Specialization(selfType), isNullable = false)
-
-                    val fieldIndex = struct.getIndex(expr.field)
-                    builder.append("struct.set $")
-                        .append(struct.typeName).append(' ')
-                        .append(fieldIndex)
-                    binary.structSet(struct.typeIndex, fieldIndex)
-                    nextLine()
-                }
+                val fieldIndex = struct.getIndex(expr.field)
+                builder.append("struct.set $")
+                    .append(struct.typeName).append(' ')
+                    .append(fieldIndex)
+                binary.structSet(struct.typeIndex, fieldIndex)
+                nextLine()
             }
             is SimpleCompare -> {
                 val method = expr.method.resolved
@@ -1325,8 +1331,8 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
-    override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
-        val valueType = expr.value.type as ClassType
+    override fun appendCopy(graph: SimpleGraph, valueType: Type) {
+        val valueType = valueType as ClassType
         val method = valueType.clazz.methods0.first { it.name == "copy" && it.valueParameters.isEmpty() }
         val methodSpec = Specialization(method.scope, valueType.typeParameters ?: emptyParameterList())
         callMethod(methodSpec)
@@ -1394,7 +1400,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
-        appendGetField(graph, expr.self)
+        appendGetField(graph, expr.thisInstance)
         appendValueParams(graph, expr.valueParameters)
 
         if (expr.methods !is FullMap) {
@@ -1409,7 +1415,7 @@ class WASMSourceGenerator : CSourceGenerator() {
     }
 
     fun appendConstructorCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {
-        appendGetField(graph, expr.self)
+        appendGetField(graph, expr.thisInstance)
         appendValueParams(graph, expr.valueParameters)
 
         callMethod(expr.specialization)

@@ -21,9 +21,9 @@ import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleDeclaration
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.scope.Scope
@@ -661,13 +661,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
         // ensure import
-        val selfType = expr.self.type
+        val selfType = expr.thisInstance.type
         val position = builder.length
         appendType(selfType, expr.scope, true)
         builder.setLength(position)
 
         builder.append(needsCastForFirstValue.boxed).append("(")
-        appendFieldName(graph, expr.self)
+        appendFieldName(graph, expr.thisInstance)
         builder.append(").")
         builder.append(expr.methodName)
         appendValueParams(graph, expr.valueParameters)

@@ -2,11 +2,7 @@ package me.anno
 
 // todo low-hanging fruits:
 //  - allow CLI to execute one script, like in tests
-//  - WASM runtime
 //  - WASM optimizer: we have many repeating, useless structures (set+exclusive get immediately after), ungrouped local-field-IDs, unused local-field-IDs,...
-//  - WASM arrays
-//  - C++ arrays
-//  - Java arrays
 //  - JVM bytecode generator
 //  - JVM bytecode loader: create code tokens for debugging
 //  - Python generator

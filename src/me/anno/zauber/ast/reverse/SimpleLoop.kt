@@ -2,8 +2,8 @@ package me.anno.zauber.ast.reverse
 
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.simple.SimpleBlock
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 
 class SimpleLoop(val condition: SimpleField?, val negate: Boolean, val body: SimpleBlock) :

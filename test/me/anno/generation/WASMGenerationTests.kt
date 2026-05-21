@@ -2,6 +2,7 @@ package me.anno.generation
 
 import me.anno.compilation.MinimalWASMCompiler
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
@@ -28,6 +29,7 @@ class WASMGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testMethodCall() {
+        LogManager.enable("ASTSimplifier")
         testMethodCallImpl()
     }
 
@@ -53,6 +55,7 @@ class WASMGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testSimpleBranch() {
+        LogManager.enable("ASTSimplifier")
         testSimpleBranchImpl()
     }
 

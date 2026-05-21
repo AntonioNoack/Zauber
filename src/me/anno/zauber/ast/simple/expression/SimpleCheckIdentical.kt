@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime

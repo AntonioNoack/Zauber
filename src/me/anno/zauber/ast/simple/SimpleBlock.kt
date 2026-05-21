@@ -1,14 +1,19 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.generation.cpp.CppSourceGenerator.Companion.nativeCppTypes
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.simple.expression.SimpleGetField
 import me.anno.zauber.ast.simple.expression.SimpleGetObject
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Specialization
@@ -118,7 +123,7 @@ class SimpleBlock(val graph: SimpleGraph) {
             add(SimpleGetObject(dst, thisScope, scope, origin))
             return dst
         } else {
-            val isAmbiguous = thisScope.selfAsMethod?.explicitSelfType == true
+            val isAmbiguous = thisScope.selfAsMethod?.hasExplicitSelfType == true
             val isExplicitSelf = if (isAmbiguous) {
                 when (contextExpr) {
                     is ReturnExpression -> true
@@ -150,7 +155,10 @@ class SimpleBlock(val graph: SimpleGraph) {
             }
 
             // println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
-            return graph.thisFields.getOrPut(SimpleThis(thisScope, isExplicitSelf)) { field(type) }
+            val value = if (isExplicitSelf) graph.selfField!! else graph.thisField!!
+            val dst = field(type)
+            add(SimpleGetLocalField(dst, value, scope, origin))
+            return dst
         }
     }
 
@@ -196,19 +204,20 @@ class SimpleBlock(val graph: SimpleGraph) {
 
     override fun toString(): String {
         val builder = StringBuilder()
-        builder.append('b').append(blockId)
+        builder
+            .append(StringStyles.style("b${blockId}", StringStyles.GREEN))
             .append('[')
 
         if (isEntryPoint) builder.append("->|")
 
         if (nextBranch == null) {
-            builder.append("end")
+            builder.append(StringStyles.style("end", StringStyles.RED))
         } else if (branchCondition != null) {
             builder.append(branchCondition).append(" ? ")
-                .append(ifBranch?.blockId).append(" : ")
-                .append(elseBranch?.blockId)
+                .append(style("b${ifBranch!!.blockId}", StringStyles.GREEN)).append(" : ")
+                .append(style("b${elseBranch!!.blockId}", StringStyles.GREEN))
         } else {
-            builder.append(nextBranch?.blockId)
+            builder.append(style("b${nextBranch!!.blockId}", StringStyles.GREEN))
         }
 
         builder.append(']')

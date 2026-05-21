@@ -10,7 +10,7 @@ class DeferTests {
 
     @Test
     fun testDefer() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
@@ -35,7 +35,7 @@ class DeferTests {
 
     @Test
     fun testErrDeferIsExecuted() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
@@ -70,7 +70,7 @@ class DeferTests {
 
     @Test
     fun testErrDeferIsNotExecutedWithoutThrow() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )

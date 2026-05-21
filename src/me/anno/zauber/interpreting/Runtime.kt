@@ -7,8 +7,11 @@ import me.anno.utils.assertTrue
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
-import me.anno.zauber.ast.simple.*
+import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleCallable
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -44,23 +47,27 @@ class Runtime {
     val externalMethods = HashMap<ExternalKey, ExternalMethod>()
     val printed = ArrayList<String>()
 
+    fun getCall() = callStack.last()
+
     fun register(scope: Scope, name: String, types: List<Type>, method: ExternalMethod) {
         val key = ExternalKey(scope, name, types)
         externalMethods[key] = method
     }
 
     operator fun get(field: SimpleField): Instance {
-        val currCall = callStack.last()
-        return this[currCall, field]
+        return this[getCall(), field]
     }
 
     operator fun get(call: Call, field: SimpleField): Instance {
         val field = field.dst
         // LOGGER.info("Getting SimpleField $field")
-        return call.simpleFields[field]
+        return call.simpleFields[field.id]
             ?: run {
                 println(call.graph)
-                throw IllegalStateException("Missing field $field, fields: ${call.simpleFields.entries.joinToString("") { (k, v) -> "\n  $k=$v" }}")
+                throw IllegalStateException(
+                    "Missing simple field $field, " +
+                            "fields: ${call.simpleFields.withIndex().joinToString("") { (k, v) -> "\n  %$k=$v" }}"
+                )
             }
     }
 
@@ -81,7 +88,7 @@ class Runtime {
             "Assignment of $value into $field invalid, type-mismatch"
         }
         // get(field) // sanity check for existence
-        callStack.last().simpleFields[field] = value
+        getCall().setSimple(field, value)
     }
 
     operator fun set(instance: Instance, field: Field, value: Instance) {
@@ -119,7 +126,8 @@ class Runtime {
     }
 
     fun executeCall(
-        self: Instance,
+        thisInstance: Instance,
+        selfInstance: Instance?,
         specialization: Specialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
@@ -127,7 +135,7 @@ class Runtime {
         // println("Calling $methodSpec on $self with $valueParameters")
         check(specialization.isMethodLike())
 
-        if (isNull(self)) {
+        if (isNull(thisInstance)) {
             throw IllegalArgumentException("Cannot execute $specialization on null instance")
         }
 
@@ -147,7 +155,7 @@ class Runtime {
             val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]
                 ?: throw IllegalStateException("Missing external method $key")
-            val value = method.process(self, valueParameters)
+            val value = method.process(thisInstance, valueParameters)
             return BlockReturn(ReturnType.RETURN, value)
         }
 
@@ -158,7 +166,7 @@ class Runtime {
         val graph = ASTSimplifier.simplify(specialization)
 
         val call = Call(method)
-        prepareCall(graph, call, method, self, valueParameters)
+        prepareCall(graph, call, thisInstance, selfInstance, valueParameters)
 
         val result = executeBlock(graph.startBlock)
 
@@ -168,80 +176,55 @@ class Runtime {
         return result ?: BlockReturn(ReturnType.RETURN, getUnit())
     }
 
+    fun <V> ArrayList<V?>.resizeTo(newSize: Int) {
+        @Suppress("Since15")
+        while (size > newSize) removeLast()
+        while (size < newSize) add(null)
+    }
+
     private fun prepareCall(
         graph: SimpleGraph, call: Call,
-        method: MethodLike, self: Instance,
+        thisInstance: Instance,
+        selfInstance: Instance?,
         valueParameters: List<Instance>,
     ) {
         call.graph = graph
         callStack.add(call)
 
-        val class0 = getClass(method.scope.typeWithArgs)
-        val methodScopeInstance = class0.createInstance()
+        call.simpleFields.resizeTo(graph.simpleFields.size)
+        call.localFields.resizeTo(graph.localFields.size)
 
-        assignParameters(method, methodScopeInstance, valueParameters)
-        assignThisFields(graph, call, method, self, methodScopeInstance)
-        assignCapturedFields(graph, call)
-    }
+        val thisField = graph.thisField
+        if (thisField != null) {
+            call.setLocal(thisField, thisInstance)
+        }
 
-    private fun assignParameters(
-        method: MethodLike,
-        methodScopeInstance: Instance,
-        valueParameters: List<Instance>,
-    ) {
+        val selfField = graph.selfField
+        if (selfField != null) {
+            check(selfInstance != null) {
+                "Method ${graph.method} meeds self, not just this"
+            }
+            call.setLocal(selfField, selfInstance)
+        }
+
+        val params = graph.parameterFields
+        check(params.size == valueParameters.size)
         for (i in valueParameters.indices) {
-            val parameter = valueParameters[i]
-            val field = methodScopeInstance.clazz.fields.getOrNull(i)
-                ?: throw IllegalStateException(
-                    "Method $method in ${method.ownerScope} needs at least as many fields as parameters, " +
-                            "fields: ${(methodScopeInstance.clazz.type as ClassType).clazz.fields} -> " +
-                            "properties: ${methodScopeInstance.clazz.fields}, " +
-                            "required: $valueParameters"
-                )
-            check(field.name == method.valueParameters[i].name) {
-                "Unexpected field order, " +
-                        "${methodScopeInstance.clazz.fields.map { it.name }} != ${method.valueParameters.map { it.name }}"
-            }
-            methodScopeInstance.fields[i] = parameter
+            call.setLocal(params[i], valueParameters[i])
         }
-    }
 
-    private fun assignThisFields(
-        graph: SimpleGraph, call: Call,
-        method: MethodLike, self: Instance,
-        methodScopeInstance: Instance
-    ) {
-        for ((selfI, dst) in graph.thisFields) {
-            val (scope, isExplicitSelf) = selfI
-            call.simpleFields[dst] = when {
-                isExplicitSelf -> {
-                    check(scope == method.scope)
-                    self
-                }
-                scope.isClassLike() -> {
-                    // this check is incorrect for extension methods
-                    /*check(scope == method.ownerScope) {
-                        "Scope mismatch: $scope != ${method.ownerScope} in $method"
-                    }*/
-                    self
-                }
-                scope == method.scope -> methodScopeInstance
-                else -> {
-                    // not class like -> just create a temporary scope...
-                    getClass(scope.typeWithArgs).createInstance()
-                }
-            }
-        }
+        assignCapturedFields(graph, call)
     }
 
     private fun assignCapturedFields(graph: SimpleGraph, call: Call) {
         for ((capture, dstField) in graph.capturedFields) {
             val (owner, capturedField) = capture
             val prevCall = findPrevCall(owner)
-            val prevCallInstanceRef = prevCall.graph.thisFields[SimpleThis(capturedField.ownerScope, false)]
+            val prevCallInstanceRef = prevCall.graph.thisField
                 ?: throw IllegalStateException("Missing thisField for ${capturedField.ownerScope} in $owner")
-            val prevCallInstance = this[prevCall, prevCallInstanceRef]
-            call.simpleFields[dstField] = prevCallInstance[capturedField]
+            val prevCallInstance = prevCall.localFields[prevCallInstanceRef.id]
+                ?: throw IllegalStateException("Missing thisInstance for ${capturedField.ownerScope} in $owner")
+            call.setSimple(dstField, prevCallInstance[capturedField])
         }
     }
 

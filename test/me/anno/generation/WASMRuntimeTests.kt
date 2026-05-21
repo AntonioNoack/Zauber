@@ -1,9 +1,6 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalWASMRuntimeCompiler
-import me.anno.generation.java.JavaSourceGenerator
-import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
@@ -11,13 +8,7 @@ import org.junit.jupiter.api.Test
  * */
 class WASMRuntimeTests : CodeGenerationTests() {
 
-    override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "console.log(arg0)"
-        )
-    }
-
+    override fun registerLib() {} // stdlib defined in MinimalWASMRuntimeCompiler
     override fun generator() = MinimalWASMRuntimeCompiler()
 
     @Test

@@ -19,6 +19,8 @@ import me.anno.zauber.ast.simple.*
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleSetField
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -355,8 +357,6 @@ class RustSourceGenerator : CSourceGenerator() {
             if (skipSuperCall) graph.removeSuperCalls()
             prepareGraph(graph)
 
-            scanSelves(graph, method1.method)
-
             // todo simplify all entry points as methods...
 
             val pos0 = builder.length
@@ -631,19 +631,19 @@ class RustSourceGenerator : CSourceGenerator() {
         }
     }
 
-    override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
+    override fun appendCopy(graph: SimpleGraph, valueType: Type) {
         // not necessary, this is done by the owner-ship types
     }
 
     override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
         // ensure import
-        val selfType = expr.self.type
+        val selfType = expr.thisInstance.type
         val position = builder.length
         appendType(selfType, expr.scope, true)
         builder.setLength(position)
 
         builder.append(needsCastForFirstValue.boxed).append("::new(")
-        appendFieldName(graph, expr.self)
+        appendFieldName(graph, expr.thisInstance)
         builder.append(").")
         builder.append(getMethodName(expr.specialization))
         appendValueParams(graph, expr.valueParameters)
@@ -652,13 +652,13 @@ class RustSourceGenerator : CSourceGenerator() {
     fun Type.isObjectLike() = this is ClassType && clazz.isObjectLike()
 
     override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
-        val needsCastForFirstValue = nativeTypes[expr.self.type]
+        val needsCastForFirstValue = nativeTypes[expr.thisInstance.type]
         if (needsCastForFirstValue != null) {
             appendCallForPrimitive(needsCastForFirstValue, expr, graph)
         } else {
-            appendFieldName(graph, expr.self, "")
-            if (!expr.self.type.isObjectLike()) {
-                val ownership = RustOwnership[expr.self.type]
+            appendFieldName(graph, expr.thisInstance, "")
+            if (!expr.thisInstance.type.isObjectLike()) {
+                val ownership = RustOwnership[expr.thisInstance.type]
                 builder.append(ownership.callPrefix)
             }
             builder.append(".")

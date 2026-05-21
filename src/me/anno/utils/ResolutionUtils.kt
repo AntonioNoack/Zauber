@@ -1,14 +1,15 @@
 package me.anno.utils
 
 import me.anno.generation.Specializations
+import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.Compile
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -159,14 +160,14 @@ object ResolutionUtils {
     fun printDependencies(data: DependencyData) {
         if (!LOGGER.isInfoEnabled) return
 
-        LOGGER.info(style("Classes:", StringStyles.BOLD))
+        LOGGER.info(bold("Classes:"))
         for (clazz in data.createdClasses.map { clazz ->
             "  - ${style(clazz.clazz.pathStr, StringStyles.LIGHT_BLUE)}, $clazz"
         }.sorted()) {
             LOGGER.info(clazz)
         }
 
-        LOGGER.info(style("Methods:", StringStyles.BOLD))
+        LOGGER.info(bold("Methods:"))
         for (method in data.calledMethods.map { method ->
             val methodStr = when (val method = method.method) {
                 is Method -> {
@@ -194,7 +195,7 @@ object ResolutionUtils {
         val getStr = style("get", StringStyles.GREEN)
         val getSetStr = "$getStr+$setStr"
 
-        LOGGER.info(style("Fields:", StringStyles.BOLD))
+        LOGGER.info(bold("Fields:"))
         val fields = data.getFields + data.setFields
         for (field in fields.map { fieldSpec ->
             val get = fieldSpec in data.getFields
@@ -206,7 +207,12 @@ object ResolutionUtils {
                 else -> getSetStr
             }
             val fieldStr = "${field.selfType ?: field.ownerScope.pathStr}"
-            "  - ${style(field.name, StringStyles.YELLOW)} in ${style(fieldStr, StringStyles.LIGHT_BLUE)}, $fieldSpec: $str"
+            "  - ${style(field.name, StringStyles.YELLOW)} in ${
+                style(
+                    fieldStr,
+                    StringStyles.LIGHT_BLUE
+                )
+            }, $fieldSpec: $str"
         }.sorted()) {
             LOGGER.info(field)
         }

@@ -1,13 +1,13 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.controlflow.Flow
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 
 abstract class SimpleCallable(
     dst: SimpleField,
-    val self: SimpleField,
+    val thisInstance: SimpleField,
     val specialization: Specialization,
     scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {

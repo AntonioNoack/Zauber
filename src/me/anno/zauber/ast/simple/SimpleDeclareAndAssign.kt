@@ -1,6 +1,10 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.bold
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
@@ -19,7 +23,7 @@ class SimpleDeclareAndAssign(
     }
 
     override fun toString(): String {
-        return "DECL: $type $name = $value;"
+        return "${bold("DECL:")} $type ${style(name, StringStyles.GREEN)} = $value;"
     }
 
     override fun execute(): BlockReturn? {

@@ -90,7 +90,7 @@ object DefaultParameters {
                 )
             }
             val newMethod = Method(
-                self.selfType, self.explicitSelfType, self.name,
+                self.selfType, self.hasExplicitSelfType, self.name,
                 self.typeParameters, subValueParameters,
                 scope, self.returnType, self.extraConditions,
                 ReturnExpression(newBody, null, scope, origin),

@@ -2,7 +2,7 @@ package me.anno.zauber.logging
 
 object LoggerUtils {
     fun disableCompileLoggers() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "TypeResolution,ASTSimplifier,MemberResolver,Inheritance,FindMemberMatch," +
                     "CallExpression,SuperCallExpression,CallWithNames,FieldMethodResolver," +
                     "MethodResolver,ResolvedMethod," +

@@ -108,7 +108,7 @@ class TryCatchTests {
 
     @Test
     fun testNullPointerExceptionManual() {
-        LogManager.disableLoggers("ResolvedField,TypeResolution,Field,MemberResolver,Inheritance,ConstructorResolver," +
+        LogManager.disable("ResolvedField,TypeResolution,Field,MemberResolver,Inheritance,ConstructorResolver," +
                 "FieldExpression,FieldResolver,CallExpression,SimpleGetField,CallWithNames")
         val code = """
             val likeNull: Int? = null
@@ -185,7 +185,7 @@ class TryCatchTests {
 
     @Test
     fun testCascadedFinallyIsExecuted() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
                     "MethodResolver,ResolvedMethod"
         )
@@ -211,7 +211,7 @@ class TryCatchTests {
 
     @Test
     fun testLoopedFinallyIsExecuted() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "TypeResolution,MemberResolver,Inheritance,ResolvedMethod," +
                     "MethodResolver,CallExpression,Field,ConstructorResolver,ResolvedField,FieldResolver," +
                     "FieldExpression"

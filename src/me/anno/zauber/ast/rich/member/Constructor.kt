@@ -17,7 +17,7 @@ class Constructor(
 ) : MethodLike(
     null, false,
     scope.typeParameters, valueParameters,
-    Types.Unit, scope, "?", body, flags, origin
+    Types.Unit, scope, "new-${scope.parent}", body, flags, origin
 ) {
 
     val selfTypeI get() = ownerScope.typeWithArgs

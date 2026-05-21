@@ -13,7 +13,7 @@ class ExplicitSelfTests {
         // todo check after inlining, we have access to A, because S = A
         // -> S is resolved to Any-scope, why is it not specialized?
         // -> now S is proper, todo why is it not finding x() in A?
-        LogManager.disableLoggers("" +
+        LogManager.disable("" +
                 "CallExpression,ConstructorResolver," +
                 "Inheritance,")
         val code = """

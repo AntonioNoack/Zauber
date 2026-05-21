@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.expression.CompareType
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -24,7 +24,7 @@ class SimpleCompare(
         val left = runtime[left]
 
         val method1 = method.specialization
-        val result = runtime.executeCall(left, method1, listOf(right))
+        val result = runtime.executeCall(left, null, method1, listOf(right))
         if (!result.isValue()) return result
 
         val asInt = result.value.castToInt()

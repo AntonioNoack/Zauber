@@ -193,7 +193,7 @@ class ThisTests {
 
     @Test
     fun testIterateOverList() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "TypeResolution,MemberResolver," +
                     "ASTSimplifier,Runtime," +
                     "Inheritance,ConstructorResolver,CallExpression," +

@@ -42,7 +42,7 @@ class BasicRuntimeTests {
 
             val specialization = Specialization(getter.scope, emptyParameterList())
             val self = runtime.getObjectInstance(scope.typeWithArgs)
-            val value = runtime.executeCall(self, specialization, emptyList())
+            val value = runtime.executeCall(self, null, specialization, emptyList())
             return value
         }
     }

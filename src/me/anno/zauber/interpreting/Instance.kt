@@ -207,7 +207,7 @@ class Instance(
         tmpMethodScope.selfAsMethod = method
 
         val methodSpec = Specialization(method.scope, emptyParameterList())
-        return runtime.executeCall(this, methodSpec, emptyList())
+        return runtime.executeCall(this, null, methodSpec, emptyList())
     }
 
     fun set(fieldName: String, value: Instance) {

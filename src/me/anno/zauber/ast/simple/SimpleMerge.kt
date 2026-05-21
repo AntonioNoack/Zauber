@@ -1,7 +1,9 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.utils.StringStyles.bold
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.scope.Scope
 
 /**
@@ -44,5 +46,5 @@ class SimpleMerge(
 
     override fun execute(): BlockReturn? = null
 
-    override fun toString(): String = "$dst = Merge($ifField,$elseField)"
+    override fun toString(): String = "$dst = ${bold("Merge")}($ifField,$elseField)"
 }

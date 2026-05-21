@@ -1,4 +1,4 @@
-package me.anno.zauber.ast.simple
+package me.anno.utils
 
 class FullMap<K, V>(val value: V) : Map<K, V> {
 

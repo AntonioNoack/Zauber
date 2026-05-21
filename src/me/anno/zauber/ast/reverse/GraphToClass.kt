@@ -1,15 +1,21 @@
 package me.anno.zauber.ast.reverse
 
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleGetOrSetField
+import me.anno.zauber.ast.simple.fields.LocalField
+import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 
@@ -66,10 +72,10 @@ object GraphToClass {
     fun createContentBlock(
         graph: SimpleGraph,
         block: SimpleBlock,
-        clazz: Scope,
+        newClass: Scope,
         fields: Map<Field, Field>
     ): SimpleGraph {
-        val methodScope = clazz.getOrPut("b${block.blockId}", ScopeType.METHOD)
+        val methodScope = newClass.getOrPut("b${block.blockId}", ScopeType.METHOD)
         val origin = block.instructions.firstOrNull()?.origin ?: graph.method.origin
         val method = Method(
             null, false, methodScope.name,
@@ -80,7 +86,7 @@ object GraphToClass {
         val graph = SimpleGraph(Specialization(method.scope, graph.method0.typeParameters))
         graph.startBlock.instructions.addAll(block.instructions)
         replaceFields(block, fields)
-        if (true) TODO("We must also convert all shared SimpleFields [belongs to multiple methods] into fields...")
+        replaceSharedFieldsWithLocals(graph, newClass, fields)
         return graph
     }
 
@@ -94,7 +100,7 @@ object GraphToClass {
         }
     }
 
-    fun collectFields(graph: SimpleGraph, clazz: Scope): Map<Field, Field> {
+    fun collectFields(graph: SimpleGraph, newClass: Scope): Map<Field, Field> {
         val fieldMap = HashMap<Field, Field>()
         for (i in graph.blocks.indices) {
             val block = graph.blocks[i]
@@ -103,15 +109,67 @@ object GraphToClass {
                 if (expr is SimpleGetOrSetField && expr.isLocalField()) {
                     val field = expr.field
                     fieldMap.getOrPut(field) {
-                        clazz.addField(
+                        newClass.addField(
                             null, false, field.isMutable, null, field.name,
-                            field.valueType!!, field.initialValue!!, Flags.SYNTHETIC, field.origin
+                            field.resolveValueType(ResolutionContext.minimal),
+                            field.initialValue, Flags.SYNTHETIC, field.origin
                         )
                     }
                 }
             }
         }
         return fieldMap
+    }
+
+    /**
+     * all shared "simple-fields" and "local-fields" must be replaced
+     *
+     * todo explicit SimpleGetExplicitSelf(),
+     *  SimpleSetLocalField(), SimpleGetSimpleField()
+     * */
+    fun replaceSharedFieldsWithLocals(graph: SimpleGraph, newClass: Scope, fields: Map<Field, Field>) {
+        // find which simple-fields are used in which graph parts
+
+        val sharedFields = HashMap<SimpleField, Field>()
+        val sharedOwner = HashMap<SimpleField, SimpleBlock>()
+
+        val sharedLocalFields = HashMap<SimpleField, Field>()
+        val sharedLocalOwner = HashMap<SimpleField, SimpleBlock>()
+
+        fun handleField(block: SimpleBlock, entry: SimpleBlock, field: SimpleField, instr: SimpleInstruction) {
+
+        }
+
+        fun handleField(block: SimpleBlock, entry: SimpleBlock, field: LocalField, instr: SimpleInstruction) {
+
+        }
+
+        fun scanBlock(block: SimpleBlock, entry: SimpleBlock) {
+            for (instr in block.instructions) {
+                when (instr) {
+                    is SimpleTailCall -> scanBlock(instr.toBeCalled, entry)
+                    is SimpleBranch -> {
+                        scanBlock(instr.ifTrue, entry)
+                        scanBlock(instr.ifFalse, entry)
+                    }
+                    is SimpleLoop -> {
+                        scanBlock(instr.body, entry)
+                    }
+                    is SimpleGetLocalField -> handleField(block, entry, instr.field, instr)
+                    is SimpleSetLocalField -> handleField(block, entry, instr.field, instr)
+                    else -> TODO("extract simple fields for ${instr.javaClass.simpleName}")
+                }
+                instr.listSimpleFieldsIn()
+                instr.listSimpleFieldsOut()
+            }
+        }
+        // todo first find, which fields are shared
+        for (block in graph.blocks) {
+            if (block.isEntryPoint) {
+                scanBlock(block, block)
+            }
+        }
+        // todo then replace them
     }
 
 }

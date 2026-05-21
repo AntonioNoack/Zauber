@@ -1,7 +1,8 @@
 package me.anno.zauber.ast.simple.controlflow
 
-import me.anno.zauber.ast.simple.SimpleField
-import me.anno.zauber.ast.simple.SimpleInstruction
+import me.anno.utils.StringStyles
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -12,7 +13,7 @@ abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Long) : 
     abstract val returnType: ReturnType
 
     override fun toString(): String {
-        return "${returnType.symbol} $field"
+        return "${StringStyles.style(returnType.symbol, StringStyles.ORANGE)} $field"
     }
 
     override fun execute(): BlockReturn {

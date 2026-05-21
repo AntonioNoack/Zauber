@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.MethodLike
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -38,14 +38,14 @@ class SimpleConstructorCall(
     override fun execute() = eval()
     override fun eval(): BlockReturn {
         val runtime = runtime
-        val self = runtime[self]
-        check((self.clazz.type as ClassType).clazz.isClassLike()) {
-            "Cannot invoke constructor on $self"
+        val thisInstance = runtime[thisInstance]
+        check((thisInstance.clazz.type as ClassType).clazz.isClassLike()) {
+            "Cannot invoke constructor on $thisInstance"
         }
 
-        initializeArrayIfNeeded(self, method)
+        initializeArrayIfNeeded(thisInstance, method)
 
-        return runtime.executeCall(self, specialization, valueParameters).retToVal()
+        return runtime.executeCall(thisInstance, null, specialization, valueParameters).retToVal()
     }
 
     fun initializeArrayIfNeeded(self: Instance, method: MethodLike) {

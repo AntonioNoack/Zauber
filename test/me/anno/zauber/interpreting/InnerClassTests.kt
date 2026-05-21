@@ -14,7 +14,7 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassFields() {
-        LogManager.disableLoggers("TypeResolution,MemberResolver,CallExpression")
+        LogManager.disable("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
                 class Outer {
@@ -35,7 +35,7 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassFieldChain() {
-        LogManager.disableLoggers("TypeResolution,MemberResolver,CallExpression")
+        LogManager.disable("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
                 class Outer {
@@ -56,7 +56,7 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassMethods() {
-        LogManager.disableLoggers("TypeResolution,MemberResolver,CallExpression")
+        LogManager.disable("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
                 class Outer {
@@ -97,7 +97,7 @@ class InnerClassTests {
 
     @Test
     fun testCallInnerClassConstructorFromInside() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "" +
                     "ASTSimplifier,TypeResolution,CallExpression,MemberResolver,Inheritance,Runtime," +
                     "ResolvedMethod,MethodResolver," +
@@ -128,7 +128,7 @@ class InnerClassTests {
 
     @Test
     fun testCallInnerClassConstructorFromInsideInner() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "" +
                     "ASTSimplifier,TypeResolution,Inheritance,Runtime," +
                     "CallExpression,MemberResolver,SuperCallExpression," +
@@ -156,7 +156,7 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassChainAndFieldAccess() {
-        LogManager.disableLoggers(
+        LogManager.disable(
             "" +
                     "ASTSimplifier,TypeResolution,Inheritance,Runtime," +
                     "CallExpression,MemberResolver,SuperCallExpression," +

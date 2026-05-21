@@ -1,20 +1,21 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.utils.FullMap
 import me.anno.utils.LazyMap
+import me.anno.utils.StringStyles
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
-import me.anno.zauber.ast.simple.FullMap
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.expansion.MethodOverrides.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.impl.ClassType
 
 class SimpleCall(
     dst: SimpleField,
@@ -23,13 +24,14 @@ class SimpleCall(
     // todo key should also contain specialization, or should it?
     //  method then could be the specialized one...
     val methods: Map<ClassType, MethodLike>,
-    self: SimpleField,
+    thisInstance: SimpleField,
+    val selfInstance: SimpleField?,
     specialization: Specialization,
     val typeParameters: List<SimpleField>,
     val valueParameters: List<SimpleField>,
     val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Long
-) : SimpleCallable(dst, self, specialization, scope, origin) {
+) : SimpleCallable(dst, thisInstance, specialization, scope, origin) {
 
     companion object {
 
@@ -98,8 +100,9 @@ class SimpleCall(
         scopeBridgingParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method), self,
-        specialization, typeParameters, valueParameters, scopeBridgingParameters, scope, origin
+        dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method),
+        self, null, specialization,
+        typeParameters, valueParameters, scopeBridgingParameters, scope, origin
     )
 
     constructor(
@@ -124,7 +127,8 @@ class SimpleCall(
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, (method as? Method)?.name ?: "?", methodMap, self, specialization,
+        dst, (method as? Method)?.name ?: "?", methodMap,
+        self, null, specialization,
         emptyList(), valueParameters, emptyList(),
         scope, origin
     )
@@ -151,8 +155,8 @@ class SimpleCall(
     override fun toString(): String {
         val builder = StringBuilder()
         builder.append(dst).append(" = ")
-            .append(self).append('[').append(sample.selfType).append("].")
-            .append(methodName)
+            .append(thisInstance).append('[').append(sample.selfType).append("].")
+            .append(StringStyles.style(methodName, StringStyles.GREEN))
             .append(valueParameters.joinToString(", ", "(", ")"))
         val ot = onThrown
         if (ot != null) {
@@ -166,14 +170,18 @@ class SimpleCall(
         // todo we can have multiple selves... how do we handle that?
         //  class A { fun B.call() {}; init { B().call() } }
         val runtime = runtime
-        val self = runtime[self]
-        if (runtime.isNull(self)) {
+        val thisInstance = runtime[thisInstance]
+        if (runtime.isNull(thisInstance)) {
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")
         }
 
-        val method = methods[self.clazz.type as ClassType] ?: sample
+        val selfInstance =
+            if (selfInstance != null) runtime[selfInstance]
+            else null
+
+        val method = methods[thisInstance.clazz.type as ClassType] ?: sample
         val method1 = Specialization(method.memberScope, specialization.typeParameters)
-        return runtime.executeCall(self, method1, valueParameters).retToVal()
+        return runtime.executeCall(thisInstance, selfInstance, method1, valueParameters).retToVal()
     }
 }

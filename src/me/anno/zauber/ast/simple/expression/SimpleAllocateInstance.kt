@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -15,7 +17,7 @@ class SimpleAllocateInstance(
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
-        return "$dst = new $allocatedType"
+        return "$dst = ${style("new", StringStyles.ORANGE)} ${style(allocatedType.toString(), StringStyles.LIGHT_ORANGE)}"
     }
 
     override fun eval(): BlockReturn {

@@ -25,7 +25,7 @@ abstract class Member(
         check((selfType != null) == explicitSelfType)
     }
 
-    val explicitSelfType get() = selfType != null
+    val hasExplicitSelfType get() = selfType != null
     val hasExpandingParameter = valueParameters.any { it.expansion != ParameterExpansion.NONE }
 
     fun addFlags(flags: FlagSet) {

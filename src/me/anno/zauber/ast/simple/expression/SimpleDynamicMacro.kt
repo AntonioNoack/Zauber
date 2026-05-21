@@ -2,7 +2,7 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.expansion.Macro.evaluateMacroNow
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -31,7 +31,7 @@ class SimpleDynamicMacro(
     override fun toString(): String {
         val builder = StringBuilder()
         builder.append(dst).append(" = ")
-            .append(self).append('[').append(method.selfType).append("].")
+            .append(thisInstance).append('[').append(method.selfType).append("].")
             .append(methodName).append('!')
             .append(valueParameters.joinToString(", ", "(", ")"))
         val ot = onThrown
@@ -44,7 +44,7 @@ class SimpleDynamicMacro(
 
     override fun eval(): BlockReturn {
         val runtime = runtime
-        val self = runtime[self]
+        val self = runtime[thisInstance]
         if (runtime.isNull(self)) {
             // this should never happen
             throw IllegalStateException("Unexpected NPE: $this")

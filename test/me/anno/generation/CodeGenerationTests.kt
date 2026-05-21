@@ -236,6 +236,7 @@ abstract class CodeGenerationTests {
     }
 
     fun testIntArrayImpl() {
+        // todo add this to test graph-to-class: if (i <= 2) return i
         val code = """
         fun fib(i: Int): Int {
             val v = Array<Int>(i+1)

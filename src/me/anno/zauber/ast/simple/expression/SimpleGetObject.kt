@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.simple.expression
 
-import me.anno.zauber.ast.simple.SimpleField
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.bold
+import me.anno.utils.StringStyles.style
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -21,7 +24,13 @@ class SimpleGetObject(
     }
 
     override fun toString(): String {
-        return "$dst = Object[$objectScope]"
+        return "$dst = ${bold("Object")}[${style(objectScope.pathStr, StringStyles.LINK)}]"
+    }
+
+    override fun execute(): BlockReturn? {
+        val runtime = runtime
+        runtime[dst] = runtime.getObjectInstance(objectScope.typeWithArgs)
+        return null
     }
 
     override fun eval(): BlockReturn {

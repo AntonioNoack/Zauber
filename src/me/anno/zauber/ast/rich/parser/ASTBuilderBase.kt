@@ -204,7 +204,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             }
 
             val method = scope.selfAsMethod
-            if (method != null && method.explicitSelfType) {
+            if (method != null && method.hasExplicitSelfType) {
                 if (method.name == label || label == null) {
                     return scope
                 }

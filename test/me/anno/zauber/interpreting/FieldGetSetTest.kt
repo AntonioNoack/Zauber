@@ -112,7 +112,7 @@ class FieldGetSetTest {
     @Test
     fun testGetterAndSetterWithDelegate() {
         // todo why does it try to resolve Int.getValue?
-        LogManager.disableLoggers("MemberResolver,ResolvedField")
+        LogManager.disable("MemberResolver,ResolvedField")
         val actual = testExecute(
             """
             var tmp: Int by LazyInit { 3 }

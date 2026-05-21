@@ -6,7 +6,7 @@ import me.anno.zauber.logging.LogManager
 fun main() {
     val t0 = System.nanoTime()
     val instance = FactorialTests()
-    LogManager.disableLoggers(
+    LogManager.disable(
         "Stdlib,MethodResolver,Inheritance,TypeResolution,ResolvedField,FieldExpression," +
                 "FieldResolver,MemberResolver,ConstructorResolver,ResolvedMethod,ResolvedField,ASTSimplifier," +
                 "CallExpression,Field,Runtime"

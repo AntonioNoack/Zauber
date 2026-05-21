@@ -2,6 +2,7 @@ package me.anno.generation.llvm
 
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator
+import me.anno.utils.FullMap
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.expression.CompareType
@@ -18,6 +19,8 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -429,8 +432,6 @@ class LLVMSourceGenerator : CSourceGenerator() {
         val graph = ASTSimplifier.simplify(method1)
         if (skipSuperCall) graph.removeSuperCalls()
         prepareGraph(graph)
-
-        scanSelves(graph, method1.method)
 
         // write all code
         val pos0 = builder.length
@@ -866,20 +867,20 @@ class LLVMSourceGenerator : CSourceGenerator() {
                             else -> null
                         }
                         // todo append correct casting method...
-                        if (castSymbol != null && expr.self.type in nativeNumbers) {
-                            getSimpleFieldReg(graph, expr.self)
+                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
+                            getSimpleFieldReg(graph, expr.thisInstance)
                             builder.append(castSymbol)
                             TODO("find cast-instr")
                             true
-                        } else if (expr.self.type == Types.Boolean && methodName == "not") {
-                            getSimpleFieldReg(graph, expr.self)
+                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
+                            getSimpleFieldReg(graph, expr.thisInstance)
                             builder.append("i32.eqz")
                             nextLine()
                             true
                         } else false
                     }
                     1 -> {
-                        val supportsType = expr.self.type in nativeNumbers
+                        val supportsType = expr.thisInstance.type in nativeNumbers
                         val symbol = when (methodName) {
                             "plus" -> "add"
                             "minus" -> "sub"
@@ -890,11 +891,11 @@ class LLVMSourceGenerator : CSourceGenerator() {
                             else -> null
                         }
                         if (supportsType && symbol != null) {
-                            val v0 = getSimpleFieldReg(graph, expr.self)
+                            val v0 = getSimpleFieldReg(graph, expr.thisInstance)
                             val v1 = getSimpleFieldReg(graph, expr.valueParameters[0])
 
                             appendAssign(expr.dst)
-                            val type = resolveType(expr.self.type)
+                            val type = resolveType(expr.thisInstance.type)
                             builder
                                 .append(symbol).append(' ')
                                 .append(getLLVMType(type).ir)
@@ -1035,9 +1036,9 @@ class LLVMSourceGenerator : CSourceGenerator() {
             .append(compareName)
     }
 
-    override fun appendCopy(graph: SimpleGraph, expr: SimpleSetField) {
+    override fun appendCopy(graph: SimpleGraph, valueType: Type) {
         // todo when we implement everything correctly, we do not need this complex copy function
-        val valueType = expr.value.type as ClassType
+        val valueType = valueType as ClassType
         val method = valueType.clazz.methods0.first { it.name == "copy" && it.valueParameters.isEmpty() }
         val methodSpec = Specialization(method.scope, valueType.typeParameters ?: emptyParameterList())
         callMethod(graph, methodSpec, emptyList())
@@ -1053,7 +1054,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
             }
         }
         // todo we must also store the result
-        val args = (listOf(expr.self) + expr.valueParameters).map {
+        val args = (listOf(expr.thisInstance) + expr.valueParameters).map {
             getSimpleFieldReg(graph, it)
         }
         appendAssign(graph, expr)
@@ -1061,7 +1062,7 @@ class LLVMSourceGenerator : CSourceGenerator() {
     }
 
     fun appendConstructorCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {
-        val args = (listOf(expr.self) + expr.valueParameters)
+        val args = (listOf(expr.thisInstance) + expr.valueParameters)
             .map { getSimpleFieldReg(graph, it) }
         callMethod(graph, expr.specialization, args)
     }

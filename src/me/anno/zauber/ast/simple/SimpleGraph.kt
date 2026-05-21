@@ -1,14 +1,16 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.zauber.ast.rich.Flags
+import me.anno.utils.StringStyles.bold
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
-import me.anno.zauber.ast.simple.expression.SimpleGetOrSetField
+import me.anno.zauber.ast.simple.fields.LocalField
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -20,18 +22,22 @@ class SimpleGraph(val method0: Specialization) {
     private var numFields = 0
     val blocks = ArrayList<SimpleBlock>()
     val startBlock = SimpleBlock(this)
-    val fields = ArrayList<SimpleField>()
+    val simpleFields = ArrayList<SimpleField>()
+    val localFields = ArrayList<LocalField>()
 
-    // todo in methods within classes, always request self at the start,
-    //  so we can use it to call self-based methods with explicitSelf
-    val thisFields = HashMap<SimpleThis, SimpleField>()
+    // these cannot be SimpleField, because we join SimpleFields,
+    //  and these cannot be properly joined (except for LLVM)
+    var thisField: LocalField? = null
+    var selfField: LocalField? = null
+    var parameterFields: List<LocalField> = emptyList()
+
+    // typically used lots in graphs to represent no value, e.g. from while-loops
+    var unitField: SimpleField? = null
 
     val capturedFields = HashMap<Capture, SimpleField>()
 
     val continueLabels = HashMap<Scope, SimpleBlock>()
     val breakLabels = HashMap<Scope, SimpleBlock>()
-
-    var unitField: SimpleField? = null
 
     lateinit var endFlow: FlowResult
 
@@ -48,8 +54,40 @@ class SimpleGraph(val method0: Specialization) {
 
     fun field(type: Type, constantRef: Expression? = null): SimpleField {
         val field = SimpleField(type, numFields++, constantRef)
-        fields.add(field)
+        simpleFields.add(field)
         return field
+    }
+
+    fun getOrPutLocalField(field: Field, context: ResolutionContext): LocalField {
+        var localField = localFields
+            .firstOrNull { it.field == field }
+        if (localField == null) {
+            val type = field.resolveValueType(context)
+            localField = createLocalField(field, field.name, type)
+        }
+        return localField
+    }
+
+    fun initializeSpecialFields(context: ResolutionContext) {
+        val method = method
+        if (method.ownerScope.isClassLike()) {
+            val selfType = method.ownerScope.typeWithArgs.specialize(context)
+            thisField = createLocalField(null, "this", selfType)
+        }
+        if (method.hasExplicitSelfType) {
+            val selfType = method.selfType!!.specialize(context)
+            selfField = createLocalField(null, "self", selfType)
+        }
+        parameterFields = method.valueParameters.map { parameter ->
+            val type = parameter.type.specialize(context)
+            createLocalField(parameter.field!!, parameter.name, type)
+        }
+    }
+
+    private fun createLocalField(field: Field?, name: String, type: Type): LocalField {
+        val localField = LocalField(field, name, type, localFields.size)
+        localFields.add(localField)
+        return localField
     }
 
     fun onCapturedField(field: Field) {
@@ -63,13 +101,11 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     override fun toString(): String {
-        return "Graph[${blocks.size} nodes, $numFields fields]\n" +
-                "unit: $unitField\n" +
-                "this: ${
-                    thisFields.entries
-                        .sortedBy { it.value.id }
-                        .map { "\n  %${it.value.id} = ${it.key.scope}" }
-                }\n" +
+        return "${bold("Graph")}[${blocks.size} nodes, $numFields fields]\n" +
+                "${bold("this:")} $thisField\n" +
+                "${bold("self:")} $selfField\n" +
+                "${bold("unit:")} $unitField\n" +
+                "${bold("params:")} $parameterFields\n" +
                 blocks.joinToString("\n") { it.toString() }
     }
 
@@ -91,10 +127,6 @@ class SimpleGraph(val method0: Specialization) {
         }
     }
 
-    fun removeThisFields() {
-        removeFieldIf { it in thisFields.values }
-    }
-
     fun removeObjectFields() {
         removeFieldIf {
             val type = it.type
@@ -105,6 +137,15 @@ class SimpleGraph(val method0: Specialization) {
     fun removeWriteOnlyFields() {
         removeFieldIf { it.numReads == 0 }
     }
+
+    fun removeFieldsByLocalFields() {
+        removeFieldIf { it.fromLocalField != null && it.mergeInfo == null }
+    }
+
+    fun removeMergedFields() {
+        removeFieldIf { it.mergeInfo != null }
+    }
+
 
     fun replaceYieldsByInnerClass() {
         // todo if inner classes/methods reference a mutable field,
@@ -117,60 +158,50 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun removeFieldIf(condition: (SimpleField) -> Boolean) {
-        fields.removeIf {
-            if (condition(it)) {
-                it.id = -100_000 - it.id
-                check(it.id < 0)
+        simpleFields.removeIf { field ->
+            if (condition(field)) {
+                field.id = -100_000 - field.id
+                check(field.id < 0)
                 true
             } else false
         }
     }
 
     fun renumberFields() {
-        for (i in fields.indices) {
-            fields[i].id = i
+        for (i in simpleFields.indices) {
+            simpleFields[i].id = i
         }
     }
 
-    fun giveMethodFieldsUniqueNames() {
-        val foundNames = HashMap<String, Field>()
-        for (param in method.valueParameters) {
-            // check that parameters are registered first...
-            val field = param.getOrCreateField(null, Flags.NONE)
-            while (field.newName.startsWith('$')) field.newName = field.newName.substring(1)
-            foundNames.getOrPut(field.newName) { field }
-        }
-        for (block in blocks) {
-            for (expr in block.instructions) {
-                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
-                    foundNames.getOrPut(expr.field.newName) { expr.field }
-                }
-            }
+    fun giveLocalFieldsUniqueNames() {
+        val foundNames = HashMap<String, LocalField?>()
+
+        // protect these special names:
+        foundNames["this"] = null
+        if (method.hasExplicitSelfType) foundNames["self"] = null
+        for (param in method.valueParameters) foundNames[param.name] = null
+
+        for (field in localFields) {
+            foundNames.getOrPut(field.name) { field }
         }
 
-        for (block in blocks) {
-            for (expr in block.instructions) {
-                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
-                    val field = expr.field
-                    val prevField = foundNames[field.newName]
-                    if (prevField != field) findNewName(foundNames, field)
-                }
-            }
+        for (field in localFields) {
+            val prevField = foundNames[field.name]
+            if (prevField != field) findNewName(foundNames, field)
         }
     }
 
-    private fun findNewName(allNames: HashMap<String, Field>, field: Field) {
-        val oldName = field.newName
+    private fun findNewName(allNames: HashMap<String, LocalField?>, field: LocalField) {
+        val oldName = field.name
         var id = 0
         while (true) {
             val newName = "${oldName}_${id++}"
-            if (allNames[newName] == null) {
+            if (newName !in allNames) {
                 allNames[newName] = field
-                field.newName = newName
+                field.name = newName
                 return
             }
         }
     }
-
 
 }
