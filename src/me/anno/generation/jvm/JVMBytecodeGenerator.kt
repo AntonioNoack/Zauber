@@ -1,5 +1,8 @@
 package me.anno.generation.jvm
 
+import glsl.int
+import me.anno.generation.FileEntry
+import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.expression.CompareType
@@ -26,11 +29,10 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
-import org.objectweb.asm.Opcodes
 import java.io.File
-import java.util.jar.Attributes
-import java.util.jar.JarEntry
-import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import org.objectweb.asm.Opcodes as AsmOpcodes
 
 /**
  * JVM bytecode backend.
@@ -43,63 +45,56 @@ import java.util.jar.JarOutputStream
  */
 class JVMBytecodeGenerator : JavaSourceGenerator() {
 
+    companion object {
+        fun toJVMValueType(type0: Type): JVMValueType {
+            val type = resolveType(type0)
+            val t = if (type is UnionType) type.types.first { it != NullType } else type
+            return when (t) {
+                Types.Boolean,
+                Types.Byte, Types.UByte,
+                Types.Short, Types.UShort,
+                Types.Char,
+                Types.Int, Types.UInt -> JVMValueType.INT
+                Types.Long, Types.ULong -> JVMValueType.LONG
+                Types.Float, Types.Half -> JVMValueType.FLOAT
+                Types.Double -> JVMValueType.DOUBLE
+                else -> JVMValueType.REFERENCE
+            }
+        }
+    }
+
     override fun getExtension(headerOnly: Boolean): String = "class"
 
     val binary = JVMBytecodeWriter()
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
-        val classFolder = File(dst, "target")
-        if (classFolder.exists()) classFolder.deleteRecursively()
-        classFolder.mkdirs()
+        val writer = FileWithImportsWriter(this, dst)
+        try {
 
-        generateAllClasses(classFolder, data, mainMethod)
-        createJar(File(dst, "Zauber.jar"), classFolder)
-    }
+            File(dst, "Zauber.jar").outputStream().buffered().use { fos ->
+                ZipOutputStream(fos).use { zos ->
+                    zos.putNextEntry(ZipEntry("META-INF/MANIFEST.MF"))
+                    val manifest = """
+                    Manifest-Version: 1.0
+                    Main-Class: zauber.LaunchZauber
+                    Implementation-Title: minimal
+                    Implementation-Version: 1.0-SNAPSHOT
+                """.trimIndent()
+                    zos.write((manifest + "\n\n").encodeToByteArray())
+                    zos.closeEntry()
 
-    private fun createJar(jarFile: File, classFolder: File) {
-        jarFile.outputStream().buffered().use { fos ->
-            JarOutputStream(fos).use { jar ->
-                addManifest(jar)
-                addDirectory(jar, classFolder)
+                    generateAllClasses(writer, data, mainMethod, zos)
+                }
             }
+        } finally {
+            writer.finish()
         }
     }
 
-    private fun addManifest(jar: JarOutputStream) {
-        val manifest = java.util.jar.Manifest()
-        manifest.mainAttributes.apply {
-            put(Attributes.Name.MANIFEST_VERSION, "1.0")
-            put(Attributes.Name.MAIN_CLASS, "zauber.LaunchZauber")
-            put(Attributes.Name.IMPLEMENTATION_TITLE, "minimal")
-            put(Attributes.Name.IMPLEMENTATION_VERSION, "1.0-SNAPSHOT")
-        }
-        jar.putNextEntry(JarEntry("META-INF/MANIFEST.MF"))
-        manifest.write(jar)
-        jar.closeEntry()
-    }
-
-    private fun addDirectory(jar: JarOutputStream, root: File) {
-        for (file in root.walkTopDown()) {
-            if (file.isDirectory) continue
-            if (file.extension != "class") continue
-            val relative = file.toRelativeString(root).replace('\\', '/')
-            jar.putNextEntry(JarEntry(relative))
-            file.inputStream().use { it.transferTo(jar) }
-            jar.closeEntry()
-        }
-    }
-
-    internal data class GenClass(
-        val scope: Scope,
-        val specialization: Specialization,
-        val methods: Collection<Specialization>,
-        val fields: Collection<Specialization>,
-        val className: String,
-        val packageScope: Scope,
-        val internalName: String,
-    )
-
-    private fun generateAllClasses(classFolder: File, data: DependencyData, mainMethod: Method) {
+    private fun generateAllClasses(
+        writer: FileWithImportsWriter, data: DependencyData,
+        mainMethod: Method, zos: ZipOutputStream
+    ) {
         // same grouping as JavaSourceGenerator.generateCodeImpl(), but producing .class instead of .java
         val methodsByClass = data.calledMethods.groupBy { methodSpec ->
             val owner = methodSpec.method.ownerScope
@@ -114,7 +109,10 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             .filter { it.first.isClassLike() }
             .distinct()
 
-        val generated = ArrayList<GenClass>(classes.size + 1)
+        // Zauber entry point
+        val (bytes, dbg) = buildLaunchZauberClass(mainMethod)
+        writeClassAndDebug(writer, "zauber/LaunchZauber", bytes, dbg, zos)
+
         for (clazz in classes) {
             val (scope, typeParams) = clazz
             val classSpec = Specialization(scope, typeParams)
@@ -123,29 +121,24 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             val fields = fieldsByClass[clazz] ?: emptyList()
             val (name, packageScope) = getNameAndScope(scope, classSpec)
             val internalName = (packageScope.path + name).joinToString("/")
-            generated.add(GenClass(scope, classSpec, methods, fields, name, packageScope, internalName))
-        }
-
-        // LaunchZauber entry point (manifest main-class expects this)
-        run {
-            val (bytes, dbg) = buildLaunchZauberClass(mainMethod)
-            writeClassAndDebug(classFolder, "zauber/LaunchZauber", bytes, dbg)
-        }
-
-        // Zauber classes
-        for (gen in generated) {
+            val gen = JVMClass(scope, classSpec, methods, fields, name, packageScope, internalName)
             val (bytes, dbg) = gen.specialization.use { buildZauberClass(gen) }
-            writeClassAndDebug(classFolder, gen.internalName, bytes, dbg)
+            writeClassAndDebug(writer, gen.internalName, bytes, dbg, zos)
         }
     }
 
-    private fun writeClassAndDebug(classFolder: File, internalName: String, bytes: ByteArray, debugJava: String) {
-        val classFile = File(classFolder, "$internalName.class")
-        classFile.parentFile.mkdirs()
-        classFile.writeBytes(bytes)
+    private fun writeClassAndDebug(
+        writer: FileWithImportsWriter, internalName: String, bytes: ByteArray, debugJava: String,
+        zos: ZipOutputStream
+    ) {
+        zos.putNextEntry(ZipEntry("$internalName.class"))
+        zos.write(bytes)
+        zos.closeEntry()
 
-        val dbgFile = File(classFolder, "$internalName.java")
-        dbgFile.writeText(debugJava)
+        val dbgFile = File(writer.root, "$internalName.java")
+        val entry = FileEntry(internalName.split('/').dropLast(1), this)
+        entry.content.append(debugJava)
+        writer[dbgFile] = entry
     }
 
     private fun buildLaunchZauberClass(mainMethod: Method): Pair<ByteArray, String> {
@@ -166,7 +159,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             val codeAttr = binary.buildCodeAttributeInfo(8, 1, code.finish())
             methods.add(
                 MethodInfo(
-                    Opcodes.ACC_PUBLIC,
+                    AsmOpcodes.ACC_PUBLIC,
                     cp.utf8("<init>"),
                     cp.utf8("()V"),
                     listOf(AttributeInfo(codeUtf8, codeAttr))
@@ -190,7 +183,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             val codeAttr = binary.buildCodeAttributeInfo(32, 1, code.finish())
             methods.add(
                 MethodInfo(
-                    Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+                    AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_STATIC,
                     cp.utf8("main"),
                     cp.utf8("([Ljava/lang/String;)V"),
                     listOf(AttributeInfo(codeUtf8, codeAttr))
@@ -203,7 +196,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 minor = 0,
                 major = 50, // Java 6: no StackMapTable required
                 constantPool = cp,
-                accessFlags = Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER,
+                accessFlags = AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_SUPER,
                 thisClass = thisClass,
                 superClass = superClass,
                 interfaces = IntArray(0),
@@ -215,7 +208,6 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
 
         val debugText = buildDebugText(
-            packageName = "zauber",
             className = "LaunchZauber",
             methods = listOf(
                 DebugMethod(
@@ -228,10 +220,10 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         return bytes to debugText
     }
 
-    private fun buildZauberClass(gen: GenClass): Pair<ByteArray, String> {
+    private fun buildZauberClass(clazz: JVMClass): Pair<ByteArray, String> {
         val cp = ConstantPool()
-        val thisClass = cp.clazz(gen.internalName)
-        val superInternalName = getSuperInternalName(gen.scope)
+        val thisClass = cp.clazz(clazz.internalName)
+        val superInternalName = getSuperInternalName(clazz.scope)
         val superClass = cp.clazz(superInternalName)
         val codeUtf8 = cp.utf8("Code")
 
@@ -240,111 +232,111 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         val debugMethods = ArrayList<DebugMethod>()
 
         // Object-like scopes get: public static final <This> __object__ and <clinit> initializer.
-        if (gen.scope.isObjectLike()) {
+        if (clazz.scope.isObjectLike()) {
             fields.add(
                 FieldInfo(
-                    Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL,
+                    AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_STATIC or AsmOpcodes.ACC_FINAL,
                     cp.utf8(OBJECT_FIELD_NAME),
-                    cp.utf8("L${gen.internalName};"),
+                    cp.utf8("L${clazz.internalName};"),
                     emptyList()
                 )
             )
-            run {
-                val code = JvmCodeBuilder(cp)
-                code.new0(gen.internalName)
-                code.dup()
-                code.invokespecial(gen.internalName, "<init>", "()V")
-                code.putstatic(gen.internalName, OBJECT_FIELD_NAME, "L${gen.internalName};")
-                code.ret()
-                val codeAttr = binary.buildCodeAttributeInfo(16, 0, code.finish())
-                methods.add(
-                    MethodInfo(
-                        Opcodes.ACC_STATIC,
-                        cp.utf8("<clinit>"),
-                        cp.utf8("()V"),
-                        listOf(AttributeInfo(codeUtf8, codeAttr))
+
+            val code = JvmCodeBuilder(cp)
+            code.new0(clazz.internalName)
+            code.dup()
+            code.invokespecial(clazz.internalName, "<init>", "()V")
+            code.putstatic(clazz.internalName, OBJECT_FIELD_NAME, "L${clazz.internalName};")
+            code.ret()
+            val codeAttr = binary.buildCodeAttributeInfo(16, 0, code.finish())
+            methods.add(
+                MethodInfo(
+                    AsmOpcodes.ACC_STATIC,
+                    cp.utf8("<clinit>"),
+                    cp.utf8("()V"),
+                    listOf(AttributeInfo(codeUtf8, codeAttr))
+                )
+            )
+            debugMethods.add(
+                DebugMethod(
+                    "static {}",
+                    listOf(
+                        "NEW ${clazz.internalName}",
+                        "DUP",
+                        "INVOKESPECIAL ${clazz.internalName}.<init>()V",
+                        "PUTSTATIC ${clazz.internalName}.$OBJECT_FIELD_NAME : L${clazz.internalName};",
+                        "RETURN"
                     )
                 )
-                debugMethods.add(
-                    DebugMethod(
-                        "static {}",
-                        listOf(
-                            "NEW ${gen.internalName}",
-                            "DUP",
-                            "INVOKESPECIAL ${gen.internalName}.<init>()V",
-                            "PUTSTATIC ${gen.internalName}.$OBJECT_FIELD_NAME : L${gen.internalName};",
-                            "RETURN"
-                        )
-                    )
-                )
-            }
+            )
         }
 
         // Backing fields
-        val allowFinalFields = !gen.scope.isValueType() && gen.methods.any { it.method is Constructor }
-        for (fieldSpec in gen.fields) {
+        val allowFinalFields = !clazz.scope.isValueType() && clazz.methods.any { it.method is Constructor }
+        for (fieldSpec in clazz.fields) {
             val field = fieldSpec.field
             if (!isStoredField(field)) continue
             fieldSpec.use {
-                val acc = Opcodes.ACC_PUBLIC or (if (!field.isMutable && allowFinalFields) Opcodes.ACC_FINAL else 0)
-                val valueType = resolveType((field.valueType ?: Types.NullableAny).resolve(gen.scope))
+                val acc =
+                    AsmOpcodes.ACC_PUBLIC or (if (!field.isMutable && allowFinalFields) AsmOpcodes.ACC_FINAL else 0)
+                val valueType = resolveType((field.valueType ?: Types.NullableAny).resolve(clazz.scope))
                 fields.add(
                     FieldInfo(
                         acc,
                         cp.utf8(field.newName),
-                        cp.utf8(descriptorOf(valueType, gen.scope)),
+                        cp.utf8(descriptorOf(valueType, clazz.scope)),
                         emptyList()
                     )
                 )
             }
         }
 
-        if (gen.scope == Types.Array.clazz) {
-            val elemType = resolveType(gen.specialization.typeParameters[0])
+        if (clazz.scope == Types.Array.clazz) {
+            val elemType = resolveType(clazz.specialization.typeParameters[0])
             fields.add(
                 FieldInfo(
-                    Opcodes.ACC_PRIVATE or Opcodes.ACC_FINAL,
+                    AsmOpcodes.ACC_PRIVATE or AsmOpcodes.ACC_FINAL,
                     cp.utf8("content"),
-                    cp.utf8(arrayDescriptorOf(elemType, gen.scope)),
+                    cp.utf8(arrayDescriptorOf(elemType, clazz.scope)),
                     emptyList()
                 )
             )
         }
 
         // Constructors
-        val ctors = gen.methods.filter { it.method is Constructor }
+        val ctors = clazz.methods.filter { it.method is Constructor }
         if (ctors.isNotEmpty()) {
             for (ctorSpec in ctors) {
                 val ctor = ctorSpec.method as Constructor
-                val (m, dbg) = buildConstructor(gen, ctorSpec, ctor, cp, codeUtf8)
+                val (m, dbg) = buildConstructor(clazz, ctorSpec, ctor, cp, codeUtf8)
                 methods.add(m)
                 debugMethods.add(dbg)
             }
-        } else if (gen.scope.scopeType != ScopeType.INTERFACE && !gen.scope.isObjectLike()) {
-            val (m, dbg) = buildDefaultConstructor(gen, cp, codeUtf8, superInternalName)
+        } else if (clazz.scope.scopeType != ScopeType.INTERFACE && !clazz.scope.isObjectLike()) {
+            val (m, dbg) = buildDefaultConstructor(clazz, cp, codeUtf8, superInternalName)
             methods.add(m)
             debugMethods.add(dbg)
         }
 
         // Methods
-        for (methodSpec in gen.methods) {
+        for (methodSpec in clazz.methods) {
             val method = methodSpec.method
             if (method !is Method) continue
-            if (method.scope.parent != gen.scope) continue // skip inherited
-            val (m, dbg) = buildMethod(gen, methodSpec, method, cp, codeUtf8)
+            if (method.scope.parent != clazz.scope) continue // skip inherited
+            val (m, dbg) = buildMethod(clazz, methodSpec, method, cp, codeUtf8)
             methods.add(m)
             if (dbg != null) debugMethods.add(dbg)
         }
 
         val bytes = JVMBytecodeWriter().run {
             writeClassFile(
+                major = 50, // Java 6
                 minor = 0,
-                major = 50,
                 constantPool = cp,
-                accessFlags = Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER,
+                accessFlags = AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_SUPER,
                 thisClass = thisClass,
                 superClass = superClass,
-                interfaces = IntArray(0),
+                interfaces = IntArray(0), // todo this must be correctly set...
                 fields = fields,
                 methods = methods,
                 attributes = emptyList()
@@ -352,13 +344,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             out.toByteArray()
         }
 
-        val pkg = gen.internalName.substringBeforeLast('/', missingDelimiterValue = "").replace('/', '.')
-        val debugText = buildDebugText(pkg, gen.className, debugMethods)
+        val pkg = clazz.internalName.substringBeforeLast('/', missingDelimiterValue = "").replace('/', '.')
+        val debugText = buildDebugText(clazz.className, debugMethods)
         return bytes to debugText
     }
 
     private fun buildDefaultConstructor(
-        gen: GenClass,
+        gen: JVMClass,
         cp: ConstantPool,
         codeUtf8: Int,
         superInternalName: String
@@ -369,7 +361,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         code.ret()
         val codeAttr = binary.buildCodeAttributeInfo(8, 1, code.finish())
         val m = MethodInfo(
-            Opcodes.ACC_PUBLIC,
+            AsmOpcodes.ACC_PUBLIC,
             cp.utf8("<init>"),
             cp.utf8("()V"),
             listOf(AttributeInfo(codeUtf8, codeAttr))
@@ -381,7 +373,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
     }
 
     private fun buildConstructor(
-        gen: GenClass,
+        gen: JVMClass,
         ctorSpec: Specialization,
         ctor: Constructor,
         cp: ConstantPool,
@@ -413,7 +405,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             val graph = ASTSimplifier.simplify(ctorSpec)
             graph.removeSuperCalls()
             prepareGraphForBytecode(graph)
-            appendGraph(code, graph, gen, ctorSpec)
+            appendGraph(code, graph)
         }
 
         code.ret()
@@ -421,7 +413,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         val desc = ctorDescriptorOf(ctor, gen.scope)
         val codeAttr = binary.buildCodeAttributeInfo(64, code.maxLocals, code.finish())
         val m = MethodInfo(
-            Opcodes.ACC_PUBLIC,
+            AsmOpcodes.ACC_PUBLIC,
             cp.utf8("<init>"),
             cp.utf8(desc),
             listOf(AttributeInfo(codeUtf8, codeAttr))
@@ -440,7 +432,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
     }
 
     private fun buildMethod(
-        gen: GenClass,
+        gen: JVMClass,
         methodSpec: Specialization,
         method: Method,
         cp: ConstantPool,
@@ -456,7 +448,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
         if (isAbstract || (gen.scope.scopeType == ScopeType.INTERFACE && method.body == null)) {
             return MethodInfo(
-                Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT,
+                AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_ABSTRACT,
                 cp.utf8(name),
                 cp.utf8(desc),
                 emptyList()
@@ -467,13 +459,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         val code = JvmCodeBuilder(cp, dbg)
 
         when {
-            isArrayGetter(methodSpec) -> appendArrayGetter(code, gen, methodSpec)
-            isArraySetter(methodSpec) -> appendArraySetter(code, gen, methodSpec)
+            isArrayGetter(methodSpec) -> appendArrayGetter(code, gen)
+            isArraySetter(methodSpec) -> appendArraySetter(code, gen)
             nativeImpl != null -> appendNativeMethod(code, gen.scope, method, nativeImpl)
             method.body != null -> {
                 val graph = ASTSimplifier.simplify(methodSpec)
                 prepareGraphForBytecode(graph)
-                appendGraph(code, graph, gen, methodSpec)
+                appendGraph(code, graph)
                 appendReturnIfMissing(code, method, methodSpec, gen.scope)
             }
             else -> appendReturnIfMissing(code, method, methodSpec, gen.scope)
@@ -481,7 +473,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
         val codeAttr = binary.buildCodeAttributeInfo(64, code.maxLocals, code.finish())
         val m = MethodInfo(
-            Opcodes.ACC_PUBLIC,
+            AsmOpcodes.ACC_PUBLIC,
             cp.utf8(name),
             cp.utf8(desc),
             listOf(AttributeInfo(codeUtf8, codeAttr))
@@ -518,22 +510,22 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun appendArrayGetter(code: JvmCodeBuilder, gen: GenClass, methodSpec: Specialization) {
-        val elemType = resolveType(gen.specialization.typeParameters[0])
+    private fun appendArrayGetter(code: JvmCodeBuilder, gen: JVMClass) {
+        val elementType = resolveType(gen.specialization.typeParameters[0])
         code.aload0()
-        code.getfield(gen.internalName, "content", arrayDescriptorOf(elemType, gen.scope))
+        code.getfield(gen.internalName, "content", arrayDescriptorOf(elementType, gen.scope))
         code.iload(1)
-        code.arrayLoad(elemType)
-        code.returnByType(resolveType(methodSpec.method.resolveReturnType(methodSpec)))
+        code.arrayLoad(elementType)
+        code.returnByType(elementType)
     }
 
-    private fun appendArraySetter(code: JvmCodeBuilder, gen: GenClass, methodSpec: Specialization) {
-        val elemType = resolveType(gen.specialization.typeParameters[0])
+    private fun appendArraySetter(code: JvmCodeBuilder, gen: JVMClass) {
+        val elementType = resolveType(gen.specialization.typeParameters[0])
         code.aload0()
-        code.getfield(gen.internalName, "content", arrayDescriptorOf(elemType, gen.scope))
+        code.getfield(gen.internalName, "content", arrayDescriptorOf(elementType, gen.scope))
         code.iload(1)
-        code.loadByType(2, elemType)
-        code.arrayStore(elemType)
+        code.loadByType(2, elementType)
+        code.arrayStore(elementType)
         // return Unit.__object__
         val unitInternal = internalNameOf(Types.Unit)
         code.getstatic(unitInternal, OBJECT_FIELD_NAME, "L$unitInternal;")
@@ -547,7 +539,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         graph.renumberFields()
     }
 
-    private fun appendGraph(code: JvmCodeBuilder, graph: SimpleGraph, gen: GenClass, methodSpec: Specialization) {
+    private fun appendGraph(code: JvmCodeBuilder, graph: SimpleGraph) {
         val locals = JvmLocals(this, code, graph)
         code.maxLocals = locals.maxLocals
 
@@ -606,7 +598,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             }
             is SimpleGetObject -> {
                 val objInternal = internalNameOf(instr.objectScope.typeWithArgs)
-                code.getstatic(objInternal, OBJECT_FIELD_NAME, "L$objInternal;")
+                val isCtorOfSameObject =
+                    graph.method is Constructor && instr.objectScope == graph.method.ownerScope
+                if (isCtorOfSameObject) {
+                    code.aload0()
+                } else {
+                    code.getstatic(objInternal, OBJECT_FIELD_NAME, "L$objInternal;")
+                }
                 locals.storeField(instr.dst)
             }
             is SimpleGetField -> {
@@ -644,14 +642,45 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                         instr.valueParameters.size == 1 &&
                         methodName in setOf("plus", "minus", "times", "div", "rem")
                 if (inline) {
+                    val vt = toJVMValueType(thisType)
                     locals.loadField(instr.thisInstance)
                     locals.loadField(instr.valueParameters[0])
                     when (methodName) {
-                        "plus" -> code.iadd()
-                        "minus" -> code.isub()
-                        "times" -> code.imul()
-                        "div" -> code.idiv()
-                        "rem" -> code.irem()
+                        "plus" -> when (vt) {
+                            JVMValueType.INT -> code.iadd()
+                            JVMValueType.LONG -> code.ladd()
+                            JVMValueType.FLOAT -> code.fadd()
+                            JVMValueType.DOUBLE -> code.dadd()
+                            JVMValueType.REFERENCE -> error("inline plus on ref")
+                        }
+                        "minus" -> when (vt) {
+                            JVMValueType.INT -> code.isub()
+                            JVMValueType.LONG -> code.lsub()
+                            JVMValueType.FLOAT -> code.fsub()
+                            JVMValueType.DOUBLE -> code.dsub()
+                            JVMValueType.REFERENCE -> error("inline minus on ref")
+                        }
+                        "times" -> when (vt) {
+                            JVMValueType.INT -> code.imul()
+                            JVMValueType.LONG -> code.lmul()
+                            JVMValueType.FLOAT -> code.fmul()
+                            JVMValueType.DOUBLE -> code.dmul()
+                            JVMValueType.REFERENCE -> error("inline times on ref")
+                        }
+                        "div" -> when (vt) {
+                            JVMValueType.INT -> code.idiv()
+                            JVMValueType.LONG -> code.ldiv()
+                            JVMValueType.FLOAT -> code.fdiv()
+                            JVMValueType.DOUBLE -> code.ddiv()
+                            JVMValueType.REFERENCE -> error("inline div on ref")
+                        }
+                        "rem" -> when (vt) {
+                            JVMValueType.INT -> code.irem()
+                            JVMValueType.LONG -> code.lrem()
+                            JVMValueType.FLOAT -> code.frem()
+                            JVMValueType.DOUBLE -> code.drem()
+                            JVMValueType.REFERENCE -> error("inline rem on ref")
+                        }
                     }
                     locals.storeField(instr.dst)
                 } else {
@@ -676,20 +705,53 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 }
             }
             is SimpleCompare -> {
-                // only implement int compares for now
+                val vt = toJVMValueType(instr.left.type)
                 locals.loadField(instr.left)
                 locals.loadField(instr.right)
                 val lTrue = code.newLabel("cmp_true")
                 val lEnd = code.newLabel("cmp_end")
-                val op = when (instr.type) {
-                    CompareType.LESS -> Opcodes.IF_ICMPLT
-                    CompareType.LESS_EQUALS -> Opcodes.IF_ICMPLE
-                    CompareType.GREATER -> Opcodes.IF_ICMPGT
-                    CompareType.GREATER_EQUALS -> Opcodes.IF_ICMPGE
-                    // CompareType.EQUALS -> Opcodes.IF_ICMPEQ
-                    // CompareType.NOT_EQUALS -> Opcodes.IF_ICMPNE
+                when (vt) {
+                    JVMValueType.INT -> {
+                        val op = when (instr.type) {
+                            CompareType.LESS -> Opcodes.IF_ICMPLT
+                            CompareType.LESS_EQUALS -> Opcodes.IF_ICMPLE
+                            CompareType.GREATER -> Opcodes.IF_ICMPGT
+                            CompareType.GREATER_EQUALS -> Opcodes.IF_ICMPGE
+                        }
+                        code.jump(op, lTrue)
+                    }
+                    JVMValueType.LONG -> {
+                        code.lcmp()
+                        val op = when (instr.type) {
+                            CompareType.LESS -> Opcodes.IFLT
+                            CompareType.LESS_EQUALS -> Opcodes.IFLE
+                            CompareType.GREATER -> Opcodes.IFGT
+                            CompareType.GREATER_EQUALS -> Opcodes.IFGE
+                        }
+                        code.jump(op, lTrue)
+                    }
+                    JVMValueType.FLOAT -> {
+                        code.fcmpg()
+                        val op = when (instr.type) {
+                            CompareType.LESS -> Opcodes.IFLT
+                            CompareType.LESS_EQUALS -> Opcodes.IFLE
+                            CompareType.GREATER -> Opcodes.IFGT
+                            CompareType.GREATER_EQUALS -> Opcodes.IFGE
+                        }
+                        code.jump(op, lTrue)
+                    }
+                    JVMValueType.DOUBLE -> {
+                        code.dcmpg()
+                        val op = when (instr.type) {
+                            CompareType.LESS -> Opcodes.IFLT
+                            CompareType.LESS_EQUALS -> Opcodes.IFLE
+                            CompareType.GREATER -> Opcodes.IFGT
+                            CompareType.GREATER_EQUALS -> Opcodes.IFGE
+                        }
+                        code.jump(op, lTrue)
+                    }
+                    JVMValueType.REFERENCE -> error("Compare on references not supported by SimpleCompare")
                 }
-                code.jump(op, lTrue)
                 code.iconst(0)
                 code.goTo(lEnd)
                 code.label(lTrue)
@@ -713,17 +775,34 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             }
             is SimpleCheckEquals -> {
                 // Primitive int compare; otherwise Objects.equals
-                val lt = resolveType(instr.left.type)
-                val rt = resolveType(instr.right.type)
-                val isPrim = lt in nativeTypes || rt in nativeTypes
-                if (isPrim) {
+                val vt = toJVMValueType(instr.left.type)
+                if (vt != JVMValueType.REFERENCE) {
                     locals.loadField(instr.left)
                     locals.loadField(instr.right)
-                    // todo this seems very inefficient
                     val lTrue = code.newLabel("eq_true")
                     val lEnd = code.newLabel("eq_end")
-                    val op = if (instr.negated) Opcodes.IF_ICMPNE else Opcodes.IF_ICMPEQ
-                    code.jump(op, lTrue)
+                    when (vt) {
+                        JVMValueType.INT -> {
+                            val op = if (instr.negated) Opcodes.IF_ICMPNE else Opcodes.IF_ICMPEQ
+                            code.jump(op, lTrue)
+                        }
+                        JVMValueType.LONG -> {
+                            code.lcmp()
+                            val op = if (instr.negated) Opcodes.IFNE else Opcodes.IFEQ
+                            code.jump(op, lTrue)
+                        }
+                        JVMValueType.FLOAT -> {
+                            code.fcmpg()
+                            val op = if (instr.negated) Opcodes.IFNE else Opcodes.IFEQ
+                            code.jump(op, lTrue)
+                        }
+                        JVMValueType.DOUBLE -> {
+                            code.dcmpg()
+                            val op = if (instr.negated) Opcodes.IFNE else Opcodes.IFEQ
+                            code.jump(op, lTrue)
+                        }
+                        else -> error("Unreachable")
+                    }
                     code.iconst(0)
                     code.goTo(lEnd)
                     code.label(lTrue)
@@ -869,14 +948,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
     private data class DebugMethod(val header: String, val body: List<String>)
 
-    private fun buildDebugText(packageName: String, className: String, methods: List<DebugMethod>): String {
+    private fun buildDebugText(className: String, methods: List<DebugMethod>): String {
         val b = StringBuilder()
-        if (packageName.isNotEmpty()) b.append("package ").append(packageName).append(";\n\n")
         b.append("public class ").append(className).append(" {\n")
         for (m in methods) {
             b.append("  ").append(m.header).append(" {\n")
             for (line in m.body) {
-                b.append("    ").append(line).append('\n')
+                b.append("    // ").append(line).append('\n')
             }
             b.append("  }\n\n")
         }

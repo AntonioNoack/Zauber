@@ -1,13 +1,14 @@
 package me.anno.generation.jvm
 
 import me.anno.generation.java.JavaSourceGenerator.Companion.resolveType
+import me.anno.generation.jvm.JVMBytecodeGenerator.Companion.toJVMValueType
+import me.anno.zauber.SpecialFieldNames
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import kotlin.math.max
 
@@ -19,17 +20,17 @@ import kotlin.math.max
 class JvmLocals(
     private val gen: JVMBytecodeGenerator,
     private val code: JvmCodeBuilder,
-    graph: SimpleGraph
+    private val graph: SimpleGraph
 ) {
-
-    val maxLocals: Int
 
     private val localSlots = HashMap<LocalField, Int>()
     private val fieldSlots = HashMap<SimpleField, Int>()
 
     private val parent = HashMap<SimpleField, SimpleField>()
 
-    init {
+    val maxLocals: Int = collectFields(graph)
+
+    private fun collectFields(graph: SimpleGraph): Int {
         // Union-find across merge instructions: (dst, ifField, elseField) share one local.
         for (block in graph.blocks) {
             for (instr in block.instructions) {
@@ -77,7 +78,7 @@ class JvmLocals(
             slot += slotSize(sf.type)
         }
 
-        maxLocals = max(1, slot)
+        return max(1, slot)
     }
 
     private fun find(x: SimpleField): SimpleField {
@@ -96,22 +97,20 @@ class JvmLocals(
     private fun rep(f: SimpleField): SimpleField = find(f)
 
     private fun slotSize(type0: Type): Int {
-        val t = resolveType(type0)
-        return when (t) {
-            Types.Long, Types.ULong, Types.Double -> 2
+        return when (toJVMValueType(type0)) {
+            JVMValueType.LONG, JVMValueType.DOUBLE -> 2
             else -> 1
         }
     }
 
     fun loadLocal(local: LocalField) {
         val slot = localSlots[local] ?: error("Missing slot for $local")
-        code.loadByType(slot, resolveType(local.type))
+        code.load(toJVMValueType(local.type), slot)
     }
 
     fun storeLocal(local: LocalField) {
         val slot = localSlots[local] ?: error("Missing slot for $local")
-        val t = resolveType(local.type)
-        if (isI32Like(t)) code.istore(slot) else code.astore(slot)
+        code.store(toJVMValueType(local.type), slot)
     }
 
     fun loadField(field0: SimpleField) {
@@ -122,10 +121,17 @@ class JvmLocals(
             pushConst(field0, constant)
             return
         }
+
         // object-likes: load __object__
         if (t is ClassType && t.clazz.isObjectLike()) {
-            val internal = gen.internalNameOf(t)
-            code.getstatic(internal, me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME, "L$internal;")
+            // In objects, __object__ may not be initialized yet; use "this" for that object.
+            val isInsideObject = t.clazz == graph.method.ownerScope
+            if (isInsideObject) {
+                code.aload0()
+            } else {
+                val internal = gen.internalNameOf(t)
+                code.getstatic(internal, SpecialFieldNames.OBJECT_FIELD_NAME, "L$internal;")
+            }
             return
         }
 
@@ -137,32 +143,23 @@ class JvmLocals(
 
         val field = rep(field0)
         val slot = fieldSlots[field] ?: error("Missing slot for field $field")
-        if (isI32Like(t)) code.iload(slot) else code.aload(slot)
+        code.load(toJVMValueType(field.type), slot)
     }
 
     fun storeField(field0: SimpleField) {
         val field = rep(field0)
         val slot = fieldSlots[field] ?: error("Missing slot for field $field")
-        val t = resolveType(field.type)
-        if (isI32Like(t)) code.istore(slot) else code.astore(slot)
+        code.store(toJVMValueType(field.type), slot)
     }
 
     fun pushConst(dst: SimpleField, num: NumberExpression) {
-        when (val t = resolveType(dst.type)) {
-            Types.Boolean, Types.Byte, Types.Short, Types.Char, Types.Int, Types.UInt -> code.iconst(num.asInt.toInt())
-            Types.Long, Types.ULong -> code.lconst(num.asInt)
-            Types.Float, Types.Half -> code.fconst(num.asFloat.toFloat())
-            Types.Double -> code.dconst(num.asFloat)
-            else -> error("Unexpected constant number $t")
+        when (toJVMValueType(dst.type)) {
+            JVMValueType.INT -> code.iconst(num.asInt.toInt())
+            JVMValueType.LONG -> code.lconst(num.asInt)
+            JVMValueType.FLOAT -> code.fconst(num.asFloat.toFloat())
+            JVMValueType.DOUBLE -> code.dconst(num.asFloat)
+            JVMValueType.REFERENCE -> error("Unexpected numeric constant as reference: ${dst.type}")
         }
     }
 
-    private fun isI32Like(t: Type): Boolean {
-        val rt = resolveType(t)
-        return rt == Types.Boolean ||
-                rt == Types.Byte || rt == Types.UByte ||
-                rt == Types.Short || rt == Types.UShort ||
-                rt == Types.Char ||
-                rt == Types.Int || rt == Types.UInt
-    }
 }

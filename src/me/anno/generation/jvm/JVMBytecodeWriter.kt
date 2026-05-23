@@ -145,6 +145,6 @@ class JVMBytecodeWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2
             w.u2(e.catchType)
         }
         w.writeAttributes(attributes)
-        return w.out.bytes.copyOf(w.out.size)
+        return w.out.toByteArray()
     }
 }

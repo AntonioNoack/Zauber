@@ -1,11 +1,10 @@
 package me.anno.generation.jvm
 
+import me.anno.generation.jvm.JVMBytecodeGenerator.Companion.toJVMValueType
 import me.anno.support.jvm.OpCode
 import me.anno.utils.ByteArrayOutputStream2
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.impl.arithmetic.UnionType
 
 /**
  * Tiny JVM bytecode assembler: appends bytes + patches short branch offsets.
@@ -26,7 +25,7 @@ class JvmCodeBuilder(
 
     private val patches = ArrayList<Patch>()
 
-    var maxLocals: Int = 0
+    var maxLocals: Int = 16 // 16 is a hack...
 
     private var nextLabelId = 0
     fun newLabel(prefix: String): String = "${prefix}_${nextLabelId++}"
@@ -71,13 +70,6 @@ class JvmCodeBuilder(
         out.write(v and 255)
     }
 
-    private fun u4(v: Int) {
-        out.write((v ushr 24) and 255)
-        out.write((v ushr 16) and 255)
-        out.write((v ushr 8) and 255)
-        out.write(v and 255)
-    }
-
     private fun dbg(opcode: Int, extra: String? = null) {
         val base = OpCode[opcode].uppercase()
         dbgOut?.add(if (extra != null) "$base $extra" else base)
@@ -86,6 +78,24 @@ class JvmCodeBuilder(
     // --- helpers ---
 
     fun aconstNull() = op0(Opcodes.ACONST_NULL)
+    fun ldc(value: String) {
+        val idx = cp.string(value)
+        pushConstPoolEntry(idx, value)
+    }
+
+    private fun pushConstPoolEntry(idx: Int, extra: String) {
+        if (idx <= 255) op1(Opcodes.LDC, idx, "#$idx, $extra")
+        else {
+            u1(Opcodes.LDC_W); u2(idx)
+            dbg(Opcodes.LDC_W, "#$idx, $extra")
+        }
+    }
+
+    private fun pushLongOrDouble(idx: Int, extra: String) {
+        u1(Opcodes.LDC2_W); u2(idx)
+        dbg(Opcodes.LDC2_W, "#$idx, $extra")
+    }
+
     fun iconst(v: Int) {
         when (v) {
             -1 -> op0(Opcodes.ICONST_M1)
@@ -101,7 +111,7 @@ class JvmCodeBuilder(
             in -32768..32767 -> {
                 u1(Opcodes.SIPUSH); dbg(Opcodes.SIPUSH, v.toString()); u2(v and 0xffff)
             }
-            else -> ldcImpl(cp.int(v), v.toString())
+            else -> pushConstPoolEntry(cp.int(v), v.toString())
         }
     }
 
@@ -110,20 +120,7 @@ class JvmCodeBuilder(
             0f -> op0(Opcodes.FCONST_0)
             1f -> op0(Opcodes.FCONST_1)
             2f -> op0(Opcodes.FCONST_2)
-            else -> ldcImpl(cp.float(v), v.toString())
-        }
-    }
-
-    fun ldc(value: String) {
-        val idx = cp.string(value)
-        ldcImpl(idx, value)
-    }
-
-    fun ldcImpl(idx: Int, extra: String) {
-        if (idx <= 255) op1(Opcodes.LDC, idx, "#$idx, $extra")
-        else {
-            u1(Opcodes.LDC_W); u2(idx)
-            dbg(Opcodes.LDC_W, "#$idx, $extra")
+            else -> pushConstPoolEntry(cp.float(v), v.toString())
         }
     }
 
@@ -131,7 +128,7 @@ class JvmCodeBuilder(
         when (v) {
             0L -> u1(Opcodes.LCONST_0)
             1L -> u1(Opcodes.LCONST_1)
-            else -> ldcImpl(cp.long(v), v.toString())
+            else -> pushLongOrDouble(cp.long(v), v.toString())
         }
     }
 
@@ -139,17 +136,14 @@ class JvmCodeBuilder(
         when (v) {
             0.0 -> u1(Opcodes.DCONST_0)
             1.0 -> u1(Opcodes.DCONST_1)
-            else -> ldcImpl(cp.double(v), v.toString())
+            else -> pushLongOrDouble(cp.double(v), v.toString())
         }
     }
 
     fun aload0() = op0(Opcodes.ALOAD_0)
     fun iload(slot: Int) = load(JVMValueType.INT, slot)
-    fun aload(slot: Int) = load(JVMValueType.REFERENCE, slot)
-    fun istore(slot: Int) = store(JVMValueType.INT, slot)
-    fun astore(slot: Int) = store(JVMValueType.REFERENCE, slot)
 
-    private fun load(type: JVMValueType, slot: Int) {
+    fun load(type: JVMValueType, slot: Int) {
         // use _0.._3 when possible
         val op = when (type) {
             JVMValueType.INT -> when (slot) {
@@ -201,7 +195,7 @@ class JvmCodeBuilder(
         }
     }
 
-    private fun store(type: JVMValueType, slot: Int) {
+    fun store(type: JVMValueType, slot: Int) {
         // use _0.._3 when possible
         val op = when (type) {
             JVMValueType.INT -> when (slot) {
@@ -270,6 +264,28 @@ class JvmCodeBuilder(
     fun irem() = op0(Opcodes.IREM)
     fun ixor() = op0(Opcodes.IXOR)
 
+    fun ladd() = op0(Opcodes.LADD)
+    fun lsub() = op0(Opcodes.LSUB)
+    fun lmul() = op0(Opcodes.LMUL)
+    fun ldiv() = op0(Opcodes.LDIV)
+    fun lrem() = op0(Opcodes.LREM)
+
+    fun fadd() = op0(Opcodes.FADD)
+    fun fsub() = op0(Opcodes.FSUB)
+    fun fmul() = op0(Opcodes.FMUL)
+    fun fdiv() = op0(Opcodes.FDIV)
+    fun frem() = op0(Opcodes.FREM)
+
+    fun dadd() = op0(Opcodes.DADD)
+    fun dsub() = op0(Opcodes.DSUB)
+    fun dmul() = op0(Opcodes.DMUL)
+    fun ddiv() = op0(Opcodes.DDIV)
+    fun drem() = op0(Opcodes.DREM)
+
+    fun lcmp() = op0(Opcodes.LCMP)
+    fun fcmpg() = op0(Opcodes.FCMPG)
+    fun dcmpg() = op0(Opcodes.DCMPG)
+
     fun lconst0() = op0(Opcodes.LCONST_0)
     fun fconst0() = op0(Opcodes.FCONST_0)
     fun dconst0() = op0(Opcodes.DCONST_0)
@@ -328,28 +344,17 @@ class JvmCodeBuilder(
     }
 
     fun returnByType(type0: Type) {
-        val t = when (type0) {
-            is UnionType -> type0.types.first { it != NullType }
-            else -> type0
-        }
-        when (t) {
-            Types.Boolean, Types.Byte, Types.Short, Types.Char, Types.Int, Types.UInt -> ireturn()
-            Types.Long, Types.ULong -> lreturn()
-            Types.Float, Types.Half -> freturn()
-            Types.Double -> dreturn()
-            else -> areturn()
+        when (toJVMValueType(type0)) {
+            JVMValueType.INT -> ireturn()
+            JVMValueType.LONG -> lreturn()
+            JVMValueType.FLOAT -> freturn()
+            JVMValueType.DOUBLE -> dreturn()
+            JVMValueType.REFERENCE -> areturn()
         }
     }
 
     fun loadByType(slot: Int, type0: Type) {
-        val t = when (type0) {
-            is UnionType -> type0.types.first { it != NullType }
-            else -> type0
-        }
-        when (t) {
-            Types.Boolean, Types.Byte, Types.Short, Types.Char, Types.Int, Types.UInt -> iload(slot)
-            else -> aload(slot)
-        }
+        load(toJVMValueType(type0), slot)
     }
 
     /**
@@ -405,9 +410,9 @@ class JvmCodeBuilder(
         dbg(opcode)
     }
 
-    private fun op1(opcode: Int, b: Int, extra: String? = null) {
+    private fun op1(opcode: Int, b: Int, extra: String) {
         u1(opcode)
         u1(b)
-        dbg(opcode, extra?.trim())
+        dbg(opcode, extra)
     }
 }
