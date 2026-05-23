@@ -47,4 +47,6 @@ class ByteArrayOutputStream2 : OutputStream() {
         bytes.copyInto(bytes, i0, i1, size)
         size -= (i1 - i0)
     }
+
+    fun toByteArray(): ByteArray = bytes.copyOf(size)
 }

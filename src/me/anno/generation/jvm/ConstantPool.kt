@@ -82,32 +82,30 @@ class ConstantPool {
     fun double(v: Double): Int = addEntry(v, takesTwoSlots = true)
 
     fun writeTo(w: JVMBytecodeWriter) {
-        // entries[0] is invalid, entries can contain null holes
-        for (i in 1 until entries.size) {
-            when (val value = entries[i]) {
-                Unit -> continue
+        for (i in entries.indices) {
+            when (val entry = entries[i]) {
                 is String -> {
                     w.u1(1) // CONSTANT_Utf8
-                    w.modifiedUtf8(value)
+                    w.dos.writeUTF(entry)
                 }
                 is Int -> {
                     w.u1(3) // CONSTANT_Integer
-                    w.dos.writeInt(value)
+                    w.dos.writeInt(entry)
                 }
                 is Float -> {
                     w.u1(4) // CONSTANT_Float
-                    w.dos.writeFloat(value)
+                    w.dos.writeFloat(entry)
                 }
                 is Long -> {
                     w.u1(5) // CONSTANT_Long
-                    w.dos.writeLong(value)
+                    w.dos.writeLong(entry)
                 }
                 is Double -> {
                     w.u1(6) // CONSTANT_Double
-                    w.dos.writeDouble(value)
+                    w.dos.writeDouble(entry)
                 }
-                is CpEntry -> value.writeTo(w)
-                else -> throw NotImplementedError("Write pool entry ${value.javaClass.simpleName}")
+                is CpEntry -> entry.writeTo(w)
+                else -> throw NotImplementedError("Write pool entry ${entry.javaClass.simpleName}")
             }
         }
     }
