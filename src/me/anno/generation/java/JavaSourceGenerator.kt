@@ -643,7 +643,7 @@ open class JavaSourceGenerator : Generator() {
     fun getMethodName0(methodSpec: Specialization): String {
         val method = methodSpec.method
         return if (methodSpec.isNotEmpty()) {
-            "${method.name}_${methodSpec.hash}"
+            "${method.name}_${methodSpec.hash.toString(36)}"
         } else method.name
     }
 

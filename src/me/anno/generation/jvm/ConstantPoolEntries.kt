@@ -5,6 +5,8 @@ sealed interface CpEntry {
     fun writeTo(w: JVMBytecodeWriter)
 }
 
+// UTF-String, Int, Long, Float and Double just used their own classes
+
 data class CpClass(val nameIndex: Int) : CpEntry {
     override fun writeTo(w: JVMBytecodeWriter) {
         w.u1(7) // CONSTANT_Class
