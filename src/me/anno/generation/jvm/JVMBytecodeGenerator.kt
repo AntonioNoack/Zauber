@@ -35,7 +35,7 @@ import java.util.jar.JarOutputStream
 /**
  * JVM bytecode backend.
  *
- * Like WASM, we emit binary directly; but like LLVM (future), we skip CodeReconstruction and
+ * Like WASM, we append binary directly; but like LLVM (future), we skip CodeReconstruction and
  * just linearize the SimpleGraph CFG into blocks + branches.
  *
  * For debugging, we also write a ".java" text file next to each ".class" containing Java-style
@@ -413,7 +413,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             val graph = ASTSimplifier.simplify(ctorSpec)
             graph.removeSuperCalls()
             prepareGraphForBytecode(graph)
-            emitGraph(code, graph, gen, ctorSpec)
+            appendGraph(code, graph, gen, ctorSpec)
         }
 
         code.ret()
@@ -467,16 +467,16 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         val code = JvmCodeBuilder(cp, dbg)
 
         when {
-            isArrayGetter(methodSpec) -> emitArrayGetter(code, gen, methodSpec)
-            isArraySetter(methodSpec) -> emitArraySetter(code, gen, methodSpec)
-            nativeImpl != null -> emitNativeMethod(code, gen.scope, method, nativeImpl)
+            isArrayGetter(methodSpec) -> appendArrayGetter(code, gen, methodSpec)
+            isArraySetter(methodSpec) -> appendArraySetter(code, gen, methodSpec)
+            nativeImpl != null -> appendNativeMethod(code, gen.scope, method, nativeImpl)
             method.body != null -> {
                 val graph = ASTSimplifier.simplify(methodSpec)
                 prepareGraphForBytecode(graph)
-                emitGraph(code, graph, gen, methodSpec)
-                emitReturnIfMissing(code, method, methodSpec, gen.scope)
+                appendGraph(code, graph, gen, methodSpec)
+                appendReturnIfMissing(code, method, methodSpec, gen.scope)
             }
-            else -> emitReturnIfMissing(code, method, methodSpec, gen.scope)
+            else -> appendReturnIfMissing(code, method, methodSpec, gen.scope)
         }
 
         val codeAttr = binary.buildCodeAttributeInfo(64, code.maxLocals, code.finish())
@@ -502,13 +502,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun emitNativeMethod(code: JvmCodeBuilder, scope: Scope, method: Method, nativeImpl: String) {
+    private fun appendNativeMethod(code: JvmCodeBuilder, scope: Scope, method: Method, nativeImpl: String) {
         val impl = nativeImpl.trim().removeSuffix(";")
         if (impl == "System.out.println(arg0)") {
             code.getstatic("java/lang/System", "out", "Ljava/io/PrintStream;")
             code.iload(1)
             code.invokevirtual("java/io/PrintStream", "println", "(I)V")
-            emitReturnIfMissing(code, method, noSpecialization, scope)
+            appendReturnIfMissing(code, method, noSpecialization, scope)
         } else {
             code.new0("java/lang/UnsupportedOperationException")
             code.dup()
@@ -518,7 +518,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun emitArrayGetter(code: JvmCodeBuilder, gen: GenClass, methodSpec: Specialization) {
+    private fun appendArrayGetter(code: JvmCodeBuilder, gen: GenClass, methodSpec: Specialization) {
         val elemType = resolveType(gen.specialization.typeParameters[0])
         code.aload0()
         code.getfield(gen.internalName, "content", arrayDescriptorOf(elemType, gen.scope))
@@ -527,7 +527,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         code.returnByType(resolveType(methodSpec.method.resolveReturnType(methodSpec)))
     }
 
-    private fun emitArraySetter(code: JvmCodeBuilder, gen: GenClass, methodSpec: Specialization) {
+    private fun appendArraySetter(code: JvmCodeBuilder, gen: GenClass, methodSpec: Specialization) {
         val elemType = resolveType(gen.specialization.typeParameters[0])
         code.aload0()
         code.getfield(gen.internalName, "content", arrayDescriptorOf(elemType, gen.scope))
@@ -547,7 +547,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         graph.renumberFields()
     }
 
-    private fun emitGraph(code: JvmCodeBuilder, graph: SimpleGraph, gen: GenClass, methodSpec: Specialization) {
+    private fun appendGraph(code: JvmCodeBuilder, graph: SimpleGraph, gen: GenClass, methodSpec: Specialization) {
         val locals = JvmLocals(this, code, graph)
         code.maxLocals = locals.maxLocals
 
@@ -556,7 +556,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             code.label(labels.getValue(block))
             for (instr in block.instructions) {
                 if (instr is me.anno.zauber.ast.simple.SimpleMerge) continue // handled by local coalescing
-                emitInstr(code, locals, graph, gen, instr)
+                appendInstr(code, locals, graph, instr)
                 if (instr is SimpleReturn || instr is SimpleThrow) break
             }
             val last = block.instructions.lastOrNull()
@@ -573,11 +573,10 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun emitInstr(
+    private fun appendInstr(
         code: JvmCodeBuilder,
         locals: JvmLocals,
         graph: SimpleGraph,
-        gen: GenClass,
         instr: SimpleInstruction
     ) {
         when (instr) {
@@ -720,6 +719,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 if (isPrim) {
                     locals.loadField(instr.left)
                     locals.loadField(instr.right)
+                    // todo this seems very inefficient
                     val lTrue = code.newLabel("eq_true")
                     val lEnd = code.newLabel("eq_end")
                     val op = if (instr.negated) Opcodes.IF_ICMPNE else Opcodes.IF_ICMPEQ
@@ -768,7 +768,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun emitReturnIfMissing(code: JvmCodeBuilder, method: MethodLike, spec: Specialization, scope: Scope) {
+    private fun appendReturnIfMissing(code: JvmCodeBuilder, method: MethodLike, spec: Specialization, scope: Scope) {
         val rt = resolveType(if (method is Constructor) Types.Unit else method.resolveReturnType(spec))
         if (rt == Types.Unit) {
             val unitInternal = internalNameOf(Types.Unit)
@@ -827,8 +827,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
     }
 
     private fun descriptorOf(type0: Type, scope: Scope): String {
-        val type = resolveType(type0)
-        return when (type) {
+        return when (val type = resolveType(type0)) {
             Types.Boolean -> "Z"
             Types.Byte, Types.UByte -> "B"
             Types.Short, Types.UShort -> "S"

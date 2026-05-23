@@ -8,7 +8,7 @@ import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 
 /**
- * Tiny JVM bytecode assembler: emits bytes + patches short branch offsets.
+ * Tiny JVM bytecode assembler: appends bytes + patches short branch offsets.
  *
  * This is intentionally minimal; we keep maxStack conservative and skip stackmap frames by using classfile major=50.
  */
@@ -146,10 +146,10 @@ class JvmCodeBuilder(
     fun aload0() = op0(Opcodes.ALOAD_0)
     fun iload(slot: Int) = load(JVMValueType.INT, slot)
     fun aload(slot: Int) = load(JVMValueType.REFERENCE, slot)
-    fun istore(slot: Int) = store( JVMValueType.INT, slot)
+    fun istore(slot: Int) = store(JVMValueType.INT, slot)
     fun astore(slot: Int) = store(JVMValueType.REFERENCE, slot)
 
-    private fun load( type: JVMValueType , slot: Int) {
+    private fun load(type: JVMValueType, slot: Int) {
         // use _0.._3 when possible
         val op = when (type) {
             JVMValueType.INT -> when (slot) {
@@ -159,6 +159,27 @@ class JvmCodeBuilder(
                 3 -> Opcodes.ILOAD_3
                 else -> -1
             }
+            JVMValueType.LONG -> when (slot) {
+                0 -> Opcodes.LLOAD_0
+                1 -> Opcodes.LLOAD_1
+                2 -> Opcodes.LLOAD_2
+                3 -> Opcodes.LLOAD_3
+                else -> -1
+            }
+            JVMValueType.FLOAT -> when (slot) {
+                0 -> Opcodes.FLOAD_0
+                1 -> Opcodes.FLOAD_1
+                2 -> Opcodes.FLOAD_2
+                3 -> Opcodes.FLOAD_3
+                else -> -1
+            }
+            JVMValueType.DOUBLE -> when (slot) {
+                0 -> Opcodes.DLOAD_0
+                1 -> Opcodes.DLOAD_1
+                2 -> Opcodes.DLOAD_2
+                3 -> Opcodes.DLOAD_3
+                else -> -1
+            }
             JVMValueType.REFERENCE -> when (slot) {
                 0 -> Opcodes.ALOAD_0
                 1 -> Opcodes.ALOAD_1
@@ -166,23 +187,70 @@ class JvmCodeBuilder(
                 3 -> Opcodes.ALOAD_3
                 else -> -1
             }
-            else -> -1
         }
         if (op >= 0) op0(op)
         else {
-            val base = when(type) {
-
-                isLoad && !isRef -> Opcodes.ILOAD
-                isLoad && isRef -> Opcodes.ALOAD
-                !isLoad && !isRef -> Opcodes.ISTORE
-                else -> Opcodes.ASTORE
+            val base = when (type) {
+                JVMValueType.INT -> Opcodes.ILOAD
+                JVMValueType.LONG -> Opcodes.LLOAD
+                JVMValueType.FLOAT -> Opcodes.FLOAD
+                JVMValueType.DOUBLE -> Opcodes.DLOAD
+                JVMValueType.REFERENCE -> Opcodes.ALOAD
             }
             op1(base, slot, slot.toString())
         }
     }
 
-    private fun store( type: JVMValueType , slot: Int) {
-       TODO()
+    private fun store(type: JVMValueType, slot: Int) {
+        // use _0.._3 when possible
+        val op = when (type) {
+            JVMValueType.INT -> when (slot) {
+                0 -> Opcodes.ISTORE_0
+                1 -> Opcodes.ISTORE_1
+                2 -> Opcodes.ISTORE_2
+                3 -> Opcodes.ISTORE_3
+                else -> -1
+            }
+            JVMValueType.LONG -> when (slot) {
+                0 -> Opcodes.LSTORE_0
+                1 -> Opcodes.LSTORE_1
+                2 -> Opcodes.LSTORE_2
+                3 -> Opcodes.LSTORE_3
+                else -> -1
+            }
+            JVMValueType.FLOAT -> when (slot) {
+                0 -> Opcodes.FSTORE_0
+                1 -> Opcodes.FSTORE_1
+                2 -> Opcodes.FSTORE_2
+                3 -> Opcodes.FSTORE_3
+                else -> -1
+            }
+            JVMValueType.DOUBLE -> when (slot) {
+                0 -> Opcodes.DSTORE_0
+                1 -> Opcodes.DSTORE_1
+                2 -> Opcodes.DSTORE_2
+                3 -> Opcodes.DSTORE_3
+                else -> -1
+            }
+            JVMValueType.REFERENCE -> when (slot) {
+                0 -> Opcodes.ASTORE_0
+                1 -> Opcodes.ASTORE_1
+                2 -> Opcodes.ASTORE_2
+                3 -> Opcodes.ASTORE_3
+                else -> -1
+            }
+        }
+        if (op >= 0) op0(op)
+        else {
+            val base = when (type) {
+                JVMValueType.INT -> Opcodes.ISTORE
+                JVMValueType.LONG -> Opcodes.LSTORE
+                JVMValueType.FLOAT -> Opcodes.FSTORE
+                JVMValueType.DOUBLE -> Opcodes.DSTORE
+                JVMValueType.REFERENCE -> Opcodes.ASTORE
+            }
+            op1(base, slot, slot.toString())
+        }
     }
 
     fun pop() = op0(Opcodes.POP)
@@ -285,7 +353,7 @@ class JvmCodeBuilder(
     }
 
     /**
-     * Emits NEWARRAY/ANEWARRAY for a given element type.
+     * Appends NEWARRAY/ANEWARRAY for a given element type.
      * For reference types, [refInternalName] must be provided (internal JVM name like "pkg/Foo").
      */
     fun newArray(type: Type, refInternalName: String?) {
