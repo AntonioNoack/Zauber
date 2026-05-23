@@ -3,6 +3,7 @@ package me.anno.generation.jvm
 import me.anno.generation.jvm.JVMBytecodeGenerator.Companion.toJVMValueType
 import me.anno.support.jvm.OpCode
 import me.anno.utils.ByteArrayOutputStream2
+import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -11,15 +12,22 @@ import me.anno.zauber.types.Types
  *
  * This is intentionally minimal; we keep maxStack conservative and skip stackmap frames by using classfile major=50.
  */
-class JvmCodeBuilder(
+class JVMCodeBuilder(
     val cp: ConstantPool,
     private val dbgOut: MutableList<String>? = null
 ) {
 
     private val out = ByteArrayOutputStream2()
+    private val labels = HashMap<String, Int>() // label -> pc
+    var blockLabels: Map<SimpleBlock, String> = emptyMap()
 
-    // label -> pc
-    private val labels = HashMap<String, Int>()
+    fun currentPc(): Int {
+        return out.size
+    }
+
+    fun labelPc(name: String): Int {
+        return labels[name] ?: error("Unknown label $name")
+    }
 
     private data class Patch(val opcodePc: Int, val label: String)
 

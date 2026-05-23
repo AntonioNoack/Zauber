@@ -1,9 +1,9 @@
 package me.anno.generation.jvm
 
-import glsl.int
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.jvm.VerificationTypeInfo.Companion.buildStackMapTable
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -46,6 +46,7 @@ import org.objectweb.asm.Opcodes as AsmOpcodes
 class JVMBytecodeGenerator : JavaSourceGenerator() {
 
     companion object {
+        const val MAJOR = 51 // Java 7
         fun toJVMValueType(type0: Type): JVMValueType {
             val type = resolveType(type0)
             val t = if (type is UnionType) type.types.first { it != NullType } else type
@@ -152,7 +153,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
         // <init>()
         run {
-            val code = JvmCodeBuilder(cp)
+            val code = JVMCodeBuilder(cp)
             code.aload0()
             code.invokespecial("java/lang/Object", "<init>", "()V")
             code.ret()
@@ -169,10 +170,10 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
         // public static void main(String[] args)
         run {
-            val code = JvmCodeBuilder(cp)
+            val code = JVMCodeBuilder(cp)
 
             // Invoke the compiled main-method via the object-like singleton field.
-            val ownerInternal = internalNameOf(mainMethod.ownerScope.typeWithArgs)
+            val ownerInternal = getJVMName(mainMethod.ownerScope.typeWithArgs)
 
             code.getstatic(ownerInternal, OBJECT_FIELD_NAME, "L$ownerInternal;")
             val targetDesc = methodDescriptorOf(mainMethod, noSpecialization, mainMethod.ownerScope)
@@ -193,8 +194,8 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
         val bytes = JVMBytecodeWriter().run {
             writeClassFile(
+                major = MAJOR,
                 minor = 0,
-                major = 50, // Java 6: no StackMapTable required
                 constantPool = cp,
                 accessFlags = AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_SUPER,
                 thisClass = thisClass,
@@ -242,7 +243,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 )
             )
 
-            val code = JvmCodeBuilder(cp)
+            val code = JVMCodeBuilder(cp)
             code.new0(clazz.internalName)
             code.dup()
             code.invokespecial(clazz.internalName, "<init>", "()V")
@@ -304,11 +305,11 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
 
         // Constructors
-        val ctors = clazz.methods.filter { it.method is Constructor }
-        if (ctors.isNotEmpty()) {
-            for (ctorSpec in ctors) {
-                val ctor = ctorSpec.method as Constructor
-                val (m, dbg) = buildConstructor(clazz, ctorSpec, ctor, cp, codeUtf8)
+        val constructors = clazz.methods.filter { it.method is Constructor }
+        if (constructors.isNotEmpty()) {
+            for (spec in constructors) {
+                val constructor = spec.method as Constructor
+                val (m, dbg) = buildConstructor(clazz, spec, constructor, cp, codeUtf8)
                 methods.add(m)
                 debugMethods.add(dbg)
             }
@@ -330,7 +331,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
         val bytes = JVMBytecodeWriter().run {
             writeClassFile(
-                major = 50, // Java 6
+                major = MAJOR,
                 minor = 0,
                 constantPool = cp,
                 accessFlags = AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_SUPER,
@@ -355,7 +356,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         codeUtf8: Int,
         superInternalName: String
     ): Pair<MethodInfo, DebugMethod> {
-        val code = JvmCodeBuilder(cp)
+        val code = JVMCodeBuilder(cp)
         code.aload0()
         code.invokespecial(superInternalName, "<init>", "()V")
         code.ret()
@@ -374,55 +375,58 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
     private fun buildConstructor(
         gen: JVMClass,
-        ctorSpec: Specialization,
-        ctor: Constructor,
-        cp: ConstantPool,
+        spec: Specialization,
+        constructor: Constructor,
+        constants: ConstantPool,
         codeUtf8: Int
     ): Pair<MethodInfo, DebugMethod> {
 
         val dbg = ArrayList<String>()
-        val code = JvmCodeBuilder(cp, dbg)
+        val code = JVMCodeBuilder(constants, dbg)
 
-        val superInternalName = getSuperInternalName(gen.scope)
-        code.aload0()
-        code.invokespecial(superInternalName, "<init>", "()V")
+        if (constructor.superCall == null ||
+            constructor.body == null ||
+            constructor.ownerScope.isPackage()
+        //  constructor.ownerScope.isObjectLike() // todo why is this missing for packages???
+        ) {
+            val superInternalName = getSuperInternalName(gen.scope)
+            code.aload0()
+            code.invokespecial(superInternalName, "<init>", "()V")
+        }
 
         // Array content init (mirrors JavaSourceGenerator.appendArrayContentInitialization())
         if (gen.scope == Types.Array.clazz &&
-            ctor.valueParameters.size == 1 &&
-            ctor.valueParameters[0].type == Types.Int
+            constructor.valueParameters.size == 1 &&
+            constructor.valueParameters[0].type == Types.Int
         ) {
             val elemType = resolveType(gen.specialization.typeParameters[0])
             code.aload0()
             code.iload(1)
-            val refName = (elemType as? ClassType)?.let { internalNameOf(it) }
+            val refName = (elemType as? ClassType)?.let { getJVMName(it) }
             code.newArray(elemType, refName)
             code.putfield(gen.internalName, "content", arrayDescriptorOf(elemType, gen.scope))
         }
 
-        val body = ctor.body
+        val body = constructor.body
         if (body != null) {
-            val graph = ASTSimplifier.simplify(ctorSpec)
-            graph.removeSuperCalls()
-            prepareGraphForBytecode(graph)
-            appendGraph(code, graph)
+            translateBody(spec, code)
+        } else {
+            code.ret()
         }
 
-        code.ret()
-
-        val desc = ctorDescriptorOf(ctor, gen.scope)
-        val codeAttr = binary.buildCodeAttributeInfo(64, code.maxLocals, code.finish())
+        val desc = ctorDescriptorOf(constructor, gen.scope)
+        val codeAttr = buildBody(code, constants, constructor)
         val m = MethodInfo(
             AsmOpcodes.ACC_PUBLIC,
-            cp.utf8("<init>"),
-            cp.utf8(desc),
+            constants.utf8("<init>"),
+            constants.utf8(desc),
             listOf(AttributeInfo(codeUtf8, codeAttr))
         )
 
         val header = run {
             val b0 = builder.length
             try {
-                appendConstructorHeader(gen.scope, gen.className, ctor, headerOnly = true)
+                appendConstructorHeader(gen.scope, gen.className, constructor, headerOnly = true)
                 builder.substring(b0).trim()
             } finally {
                 builder.setLength(b0)
@@ -431,11 +435,31 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         return m to DebugMethod(header, dbg)
     }
 
+    fun buildBody(code: JVMCodeBuilder, constants: ConstantPool, method: MethodLike): ByteArray {
+        val bytecode = code.finish()
+
+        val stackMapUtf8 = constants.utf8("StackMapTable")
+
+        val stackFrames = if (method.body != null) {
+            val graph = graphForFrames!!
+            val locals = localsForFrames!!
+            JVMStackMapBuilder(this, constants, locals, graph, code).buildFrames()
+        } else {
+            emptyList()
+        }
+
+        val stackMapAttribute = AttributeInfo(stackMapUtf8, buildStackMapTable(stackFrames))
+        return binary.buildCodeAttributeInfo(
+            64, code.maxLocals, bytecode,
+            attributes = listOf(stackMapAttribute)
+        )
+    }
+
     private fun buildMethod(
         gen: JVMClass,
         methodSpec: Specialization,
         method: Method,
-        cp: ConstantPool,
+        constants: ConstantPool,
         codeUtf8: Int
     ): Pair<MethodInfo, DebugMethod?> {
 
@@ -449,39 +473,46 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         if (isAbstract || (gen.scope.scopeType == ScopeType.INTERFACE && method.body == null)) {
             return MethodInfo(
                 AsmOpcodes.ACC_PUBLIC or AsmOpcodes.ACC_ABSTRACT,
-                cp.utf8(name),
-                cp.utf8(desc),
+                constants.utf8(name),
+                constants.utf8(desc),
                 emptyList()
             ) to null
         }
 
         val dbg = ArrayList<String>()
-        val code = JvmCodeBuilder(cp, dbg)
+        val code = JVMCodeBuilder(constants, dbg)
 
         when {
             isArrayGetter(methodSpec) -> appendArrayGetter(code, gen)
             isArraySetter(methodSpec) -> appendArraySetter(code, gen)
             nativeImpl != null -> appendNativeMethod(code, gen.scope, method, nativeImpl)
-            method.body != null -> {
-                val graph = ASTSimplifier.simplify(methodSpec)
-                prepareGraphForBytecode(graph)
-                appendGraph(code, graph)
-                appendReturnIfMissing(code, method, methodSpec, gen.scope)
-            }
-            else -> appendReturnIfMissing(code, method, methodSpec, gen.scope)
+            method.body != null -> translateBody(methodSpec, code)
+            else -> appendReturnIfMissing(code, method, methodSpec)
         }
 
-        val codeAttr = binary.buildCodeAttributeInfo(64, code.maxLocals, code.finish())
+        val codeAttr = buildBody(code, constants, method)
         val m = MethodInfo(
             AsmOpcodes.ACC_PUBLIC,
-            cp.utf8(name),
-            cp.utf8(desc),
+            constants.utf8(name),
+            constants.utf8(desc),
             listOf(AttributeInfo(codeUtf8, codeAttr))
         )
 
         val header = buildJavaMethodHeader(gen.scope, gen.className, methodSpec)
         return m to DebugMethod(header, dbg)
     }
+
+    fun translateBody(methodSpec: Specialization, code: JVMCodeBuilder) {
+        val graph = ASTSimplifier.simplify(methodSpec)
+        prepareGraphForBytecode(graph)
+        graphForFrames = graph
+        val locals = JVMLocals(this, code, graph)
+        localsForFrames = locals
+        appendGraph(code, graph, locals)
+    }
+
+    var graphForFrames: SimpleGraph? = null
+    var localsForFrames: JVMLocals? = null
 
     private fun buildJavaMethodHeader(classScope: Scope, className: String, methodSpec: Specialization): String {
         val b0 = builder.length
@@ -494,13 +525,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun appendNativeMethod(code: JvmCodeBuilder, scope: Scope, method: Method, nativeImpl: String) {
+    private fun appendNativeMethod(code: JVMCodeBuilder, scope: Scope, method: Method, nativeImpl: String) {
         val impl = nativeImpl.trim().removeSuffix(";")
         if (impl == "System.out.println(arg0)") {
             code.getstatic("java/lang/System", "out", "Ljava/io/PrintStream;")
             code.iload(1)
             code.invokevirtual("java/io/PrintStream", "println", "(I)V")
-            appendReturnIfMissing(code, method, noSpecialization, scope)
+            appendReturnIfMissing(code, method, noSpecialization)
         } else {
             code.new0("java/lang/UnsupportedOperationException")
             code.dup()
@@ -510,7 +541,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun appendArrayGetter(code: JvmCodeBuilder, gen: JVMClass) {
+    private fun appendArrayGetter(code: JVMCodeBuilder, gen: JVMClass) {
         val elementType = resolveType(gen.specialization.typeParameters[0])
         code.aload0()
         code.getfield(gen.internalName, "content", arrayDescriptorOf(elementType, gen.scope))
@@ -519,7 +550,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         code.returnByType(elementType)
     }
 
-    private fun appendArraySetter(code: JvmCodeBuilder, gen: JVMClass) {
+    private fun appendArraySetter(code: JVMCodeBuilder, gen: JVMClass) {
         val elementType = resolveType(gen.specialization.typeParameters[0])
         code.aload0()
         code.getfield(gen.internalName, "content", arrayDescriptorOf(elementType, gen.scope))
@@ -527,7 +558,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         code.loadByType(2, elementType)
         code.arrayStore(elementType)
         // return Unit.__object__
-        val unitInternal = internalNameOf(Types.Unit)
+        val unitInternal = getJVMName(Types.Unit)
         code.getstatic(unitInternal, OBJECT_FIELD_NAME, "L$unitInternal;")
         code.areturn()
     }
@@ -539,11 +570,12 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         graph.renumberFields()
     }
 
-    private fun appendGraph(code: JvmCodeBuilder, graph: SimpleGraph) {
-        val locals = JvmLocals(this, code, graph)
+    private fun appendGraph(code: JVMCodeBuilder, graph: SimpleGraph, locals: JVMLocals) {
         code.maxLocals = locals.maxLocals
 
         val labels = graph.blocks.associateWith { "B${it.blockId}" }
+        code.blockLabels = labels
+
         for (block in graph.blocks) {
             code.label(labels.getValue(block))
             for (instr in block.instructions) {
@@ -566,10 +598,8 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
     }
 
     private fun appendInstr(
-        code: JvmCodeBuilder,
-        locals: JvmLocals,
-        graph: SimpleGraph,
-        instr: SimpleInstruction
+        code: JVMCodeBuilder, locals: JVMLocals,
+        graph: SimpleGraph, instr: SimpleInstruction
     ) {
         when (instr) {
             is SimpleNumber -> {
@@ -597,10 +627,9 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 locals.storeLocal(instr.field)
             }
             is SimpleGetObject -> {
-                val objInternal = internalNameOf(instr.objectScope.typeWithArgs)
-                val isCtorOfSameObject =
-                    graph.method is Constructor && instr.objectScope == graph.method.ownerScope
-                if (isCtorOfSameObject) {
+                val objInternal = getJVMName(instr.objectScope.typeWithArgs)
+                val insideOfSameObject = instr.objectScope == graph.method.ownerScope
+                if (insideOfSameObject) {
                     code.aload0()
                 } else {
                     code.getstatic(objInternal, OBJECT_FIELD_NAME, "L$objInternal;")
@@ -609,7 +638,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             }
             is SimpleGetField -> {
                 locals.loadField(instr.self)
-                val ownerInternal = internalNameOf(instr.field.ownerScope.typeWithArgs.specialize(instr.specialization))
+                val ownerInternal = getJVMName(instr.field.ownerScope.typeWithArgs.specialize(instr.specialization))
                 val valueType = resolveType(instr.field.valueType ?: Types.NullableAny)
                 code.getfield(ownerInternal, instr.field.newName, descriptorOf(valueType, instr.scope))
                 locals.storeField(instr.dst)
@@ -617,12 +646,12 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             is SimpleSetField -> {
                 locals.loadField(instr.self)
                 locals.loadField(instr.value)
-                val ownerInternal = internalNameOf(instr.field.ownerScope.typeWithArgs.specialize(instr.specialization))
+                val ownerInternal = getJVMName(instr.field.ownerScope.typeWithArgs.specialize(instr.specialization))
                 val valueType = resolveType(instr.field.valueType ?: Types.NullableAny)
                 code.putfield(ownerInternal, instr.field.newName, descriptorOf(valueType, instr.scope))
             }
             is SimpleAllocateInstance -> {
-                val internal = internalNameOf(instr.allocatedType)
+                val internal = getJVMName(instr.allocatedType)
                 code.new0(internal)
                 code.dup()
                 locals.storeField(instr.dst) // keep for ctor call
@@ -631,77 +660,102 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 locals.loadField(instr.thisInstance)
                 for (p in instr.valueParameters) locals.loadField(p)
                 val ownerInternal =
-                    internalNameOf((instr.method as Constructor).ownerScope.typeWithArgs.specialize(instr.specialization))
+                    getJVMName((instr.method as Constructor).ownerScope.typeWithArgs.specialize(instr.specialization))
                 val desc = ctorDescriptorOf(instr.method as Constructor, (instr.method as Constructor).ownerScope)
                 code.invokespecial(ownerInternal, "<init>", desc)
             }
             is SimpleCall -> {
                 val methodName = instr.methodName
                 val thisType = resolveType(instr.thisInstance.type)
-                val inline = (thisType in nativeNumbers) &&
+                val binaryInline = (thisType in nativeNumbers) &&
                         instr.valueParameters.size == 1 &&
                         methodName in setOf("plus", "minus", "times", "div", "rem")
-                if (inline) {
-                    val vt = toJVMValueType(thisType)
-                    locals.loadField(instr.thisInstance)
-                    locals.loadField(instr.valueParameters[0])
-                    when (methodName) {
-                        "plus" -> when (vt) {
-                            JVMValueType.INT -> code.iadd()
-                            JVMValueType.LONG -> code.ladd()
-                            JVMValueType.FLOAT -> code.fadd()
-                            JVMValueType.DOUBLE -> code.dadd()
-                            JVMValueType.REFERENCE -> error("inline plus on ref")
-                        }
-                        "minus" -> when (vt) {
-                            JVMValueType.INT -> code.isub()
-                            JVMValueType.LONG -> code.lsub()
-                            JVMValueType.FLOAT -> code.fsub()
-                            JVMValueType.DOUBLE -> code.dsub()
-                            JVMValueType.REFERENCE -> error("inline minus on ref")
-                        }
-                        "times" -> when (vt) {
-                            JVMValueType.INT -> code.imul()
-                            JVMValueType.LONG -> code.lmul()
-                            JVMValueType.FLOAT -> code.fmul()
-                            JVMValueType.DOUBLE -> code.dmul()
-                            JVMValueType.REFERENCE -> error("inline times on ref")
-                        }
-                        "div" -> when (vt) {
-                            JVMValueType.INT -> code.idiv()
-                            JVMValueType.LONG -> code.ldiv()
-                            JVMValueType.FLOAT -> code.fdiv()
-                            JVMValueType.DOUBLE -> code.ddiv()
-                            JVMValueType.REFERENCE -> error("inline div on ref")
-                        }
-                        "rem" -> when (vt) {
-                            JVMValueType.INT -> code.irem()
-                            JVMValueType.LONG -> code.lrem()
-                            JVMValueType.FLOAT -> code.frem()
-                            JVMValueType.DOUBLE -> code.drem()
-                            JVMValueType.REFERENCE -> error("inline rem on ref")
-                        }
-                    }
-                    locals.storeField(instr.dst)
-                } else {
-                    locals.loadField(instr.thisInstance)
-                    instr.selfInstance?.let { locals.loadField(it) }
-                    for (p in instr.valueParameters) locals.loadField(p)
-                    val target = instr.methods.values.first()
-                    val ownerInternal = internalNameOf(target.ownerScope.typeWithArgs.specialize(instr.specialization))
-                    val targetDesc = methodDescriptorOf(target, instr.specialization, target.ownerScope)
-                    val isInterface = target.ownerScope.scopeType == ScopeType.INTERFACE
-                    if (isInterface) {
-                        code.invokeinterface(
-                            ownerInternal,
-                            getMethodName(instr.specialization),
-                            targetDesc,
-                            1 + instr.valueParameters.size
+                val unaryInline = (thisType in nativeNumbers) &&
+                        instr.valueParameters.isEmpty() &&
+                        methodName in setOf("hashCode", "toString")
+                when {
+                    unaryInline -> {
+                        val jvmType = toJVMValueType(thisType)
+                        locals.loadField(instr.thisInstance)
+                        val tmp = toJVMValueType(instr.dst.type)
+                        code.invokestatic(
+                            when (jvmType) {
+                                JVMValueType.INT -> "java/lang/Integer"
+                                JVMValueType.LONG -> "java/lang/Long"
+                                JVMValueType.FLOAT -> "java/lang/Float"
+                                JVMValueType.DOUBLE -> "java/lang/Double"
+                                else -> error("Unreachable")
+                            }, methodName, "(" + tmp.letter + when (tmp) {
+                                JVMValueType.INT -> ")I"
+                                JVMValueType.LONG -> ")J"
+                                JVMValueType.FLOAT -> ")F"
+                                JVMValueType.DOUBLE -> ")D"
+                                JVMValueType.REFERENCE -> ")L${getJVMName(instr.dst.type)};"
+                            }
                         )
-                    } else {
-                        code.invokevirtual(ownerInternal, getMethodName(instr.specialization), targetDesc)
+                        locals.storeField(instr.dst)
                     }
-                    locals.storeField(instr.dst)
+                    binaryInline -> {
+                        val jvmType = toJVMValueType(thisType)
+                        locals.loadField(instr.thisInstance)
+                        locals.loadField(instr.valueParameters[0])
+                        when (methodName) {
+                            "plus" -> when (jvmType) {
+                                JVMValueType.INT -> code.iadd()
+                                JVMValueType.LONG -> code.ladd()
+                                JVMValueType.FLOAT -> code.fadd()
+                                JVMValueType.DOUBLE -> code.dadd()
+                                JVMValueType.REFERENCE -> error("inline plus on ref")
+                            }
+                            "minus" -> when (jvmType) {
+                                JVMValueType.INT -> code.isub()
+                                JVMValueType.LONG -> code.lsub()
+                                JVMValueType.FLOAT -> code.fsub()
+                                JVMValueType.DOUBLE -> code.dsub()
+                                JVMValueType.REFERENCE -> error("inline minus on ref")
+                            }
+                            "times" -> when (jvmType) {
+                                JVMValueType.INT -> code.imul()
+                                JVMValueType.LONG -> code.lmul()
+                                JVMValueType.FLOAT -> code.fmul()
+                                JVMValueType.DOUBLE -> code.dmul()
+                                JVMValueType.REFERENCE -> error("inline times on ref")
+                            }
+                            "div" -> when (jvmType) {
+                                JVMValueType.INT -> code.idiv()
+                                JVMValueType.LONG -> code.ldiv()
+                                JVMValueType.FLOAT -> code.fdiv()
+                                JVMValueType.DOUBLE -> code.ddiv()
+                                JVMValueType.REFERENCE -> error("inline div on ref")
+                            }
+                            "rem" -> when (jvmType) {
+                                JVMValueType.INT -> code.irem()
+                                JVMValueType.LONG -> code.lrem()
+                                JVMValueType.FLOAT -> code.frem()
+                                JVMValueType.DOUBLE -> code.drem()
+                                JVMValueType.REFERENCE -> error("inline rem on ref")
+                            }
+                        }
+                        locals.storeField(instr.dst)
+                    }
+                    else -> {
+                        locals.loadField(instr.thisInstance)
+                        instr.selfInstance?.let { locals.loadField(it) }
+                        for (p in instr.valueParameters) locals.loadField(p)
+                        val target = instr.methods.values.first()
+                        val ownerInternal = getJVMName(target.ownerScope.typeWithArgs.specialize(instr.specialization))
+                        val targetDesc = methodDescriptorOf(target, instr.specialization, target.ownerScope)
+                        val isInterface = target.ownerScope.scopeType == ScopeType.INTERFACE
+                        if (isInterface) {
+                            code.invokeinterface(
+                                ownerInternal, getMethodName(instr.specialization),
+                                targetDesc, 1 + instr.valueParameters.size
+                            )
+                        } else {
+                            code.invokevirtual(ownerInternal, getMethodName(instr.specialization), targetDesc)
+                        }
+                        locals.storeField(instr.dst)
+                    }
                 }
             }
             is SimpleCompare -> {
@@ -821,7 +875,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             }
             is SimpleInstanceOf -> {
                 locals.loadField(instr.value)
-                val internal = internalNameOf(resolveType(instr.type))
+                val internal = getJVMName(resolveType(instr.type))
                 code.instanceof0(internal)
                 locals.storeField(instr.dst)
             }
@@ -847,10 +901,10 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun appendReturnIfMissing(code: JvmCodeBuilder, method: MethodLike, spec: Specialization, scope: Scope) {
+    private fun appendReturnIfMissing(code: JVMCodeBuilder, method: MethodLike, spec: Specialization) {
         val rt = resolveType(if (method is Constructor) Types.Unit else method.resolveReturnType(spec))
         if (rt == Types.Unit) {
-            val unitInternal = internalNameOf(Types.Unit)
+            val unitInternal = getJVMName(Types.Unit)
             code.getstatic(unitInternal, OBJECT_FIELD_NAME, "L$unitInternal;")
             code.areturn()
         } else {
@@ -881,25 +935,23 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
 
     private fun getSuperInternalName(scope: Scope): String {
         val superClass = scope.superCalls.firstOrNull { it.isClassCall }?.typeI ?: Types.Any
-        val superType = resolveType(superClass)
-        return when (superType) {
+        return when (val superType = resolveType(superClass)) {
             Types.Any -> "java/lang/Object"
-            is ClassType -> internalNameOf(superType)
+            is ClassType -> getJVMName(superType)
             else -> "java/lang/Object"
         }
     }
 
-    internal fun internalNameOf(type0: Type): String {
-        val type = resolveType(type0)
-        return when (type) {
+    internal fun getJVMName(type0: Type): String {
+        return when (val type = resolveType(type0)) {
             Types.Any -> "java/lang/Object"
-            is UnionType -> internalNameOf(type.types.first { it != NullType })
-            is ClassType -> internalNameOf(type)
+            is UnionType -> getJVMName(type.types.first { it != NullType })
+            is ClassType -> getJVMName(type)
             else -> "java/lang/Object"
         }
     }
 
-    internal fun internalNameOf(type: ClassType): String {
+    internal fun getJVMName(type: ClassType): String {
         val spec = Specialization(type)
         val (name, packageScope) = getNameAndScope(type.clazz, spec)
         return (packageScope.path + name).joinToString("/")
@@ -915,10 +967,9 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             Types.Long, Types.ULong -> "J"
             Types.Float, Types.Half -> "F"
             Types.Double -> "D"
-            Types.Any -> "Ljava/lang/Object;"
-            Types.Nothing -> "Ljava/lang/Object;"
+            Types.Any, Types.Nothing -> "Ljava/lang/Object;"
             is UnionType -> descriptorOf(type.types.first { it != NullType }, scope)
-            is ClassType -> "L${internalNameOf(type)};"
+            is ClassType -> "L${getJVMName(type)};"
             else -> "Ljava/lang/Object;"
         }
     }
@@ -961,4 +1012,5 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         b.append("}\n")
         return b.toString()
     }
+
 }

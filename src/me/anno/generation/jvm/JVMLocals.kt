@@ -17,14 +17,15 @@ import kotlin.math.max
  *
  * We coalesce phi/merge groups by mapping merged SimpleFields to the same slot.
  */
-class JvmLocals(
+class JVMLocals(
     private val gen: JVMBytecodeGenerator,
-    private val code: JvmCodeBuilder,
+    private val code: JVMCodeBuilder,
     private val graph: SimpleGraph
 ) {
 
     private val localSlots = HashMap<LocalField, Int>()
     private val fieldSlots = HashMap<SimpleField, Int>()
+    val orderedLocals = ArrayList<LocalField>()
 
     private val parent = HashMap<SimpleField, SimpleField>()
 
@@ -46,14 +47,14 @@ class JvmLocals(
         val method = graph.method
         if (method.ownerScope.isClassLike()) {
             graph.thisField?.let { lf ->
-                localSlots[lf] = slot
+                assignSlot(lf, slot)
                 slot++
             }
         }
 
         if (method.hasExplicitSelfType) {
             graph.selfField?.let { lf ->
-                localSlots[lf] = slot
+                assignSlot(lf, slot)
                 slot += slotSize(lf.type)
             }
         }
@@ -66,7 +67,7 @@ class JvmLocals(
         // other LocalFields (mutable locals)
         for (lf in graph.localFields) {
             if (lf in localSlots) continue
-            localSlots[lf] = slot
+            assignSlot(lf, slot)
             slot += slotSize(lf.type)
         }
 
@@ -79,6 +80,11 @@ class JvmLocals(
         }
 
         return max(1, slot)
+    }
+
+    private fun assignSlot(lf: LocalField, slot: Int) {
+        localSlots[lf] = slot
+        orderedLocals.add(lf)
     }
 
     private fun find(x: SimpleField): SimpleField {
@@ -129,7 +135,7 @@ class JvmLocals(
             if (isInsideObject) {
                 code.aload0()
             } else {
-                val internal = gen.internalNameOf(t)
+                val internal = gen.getJVMName(t)
                 code.getstatic(internal, SpecialFieldNames.OBJECT_FIELD_NAME, "L$internal;")
             }
             return

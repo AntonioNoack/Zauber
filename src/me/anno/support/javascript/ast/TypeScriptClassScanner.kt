@@ -326,9 +326,9 @@ class TypeScriptClassScanner(tokens: TokenList) :
         )
 
         if (value != null) {
-            val ctor = owner.getOrCreatePrimaryConstructorScope()
+            val constructor = owner.getOrCreatePrimaryConstructorScope()
             val fieldExpr = FieldExpression(field, owner, origin)
-            ctor.code.add(AssignmentExpression(fieldExpr, value))
+            constructor.code.add(AssignmentExpression(fieldExpr, value))
         }
 
         consumeIf(TokenType.SEMICOLON)
