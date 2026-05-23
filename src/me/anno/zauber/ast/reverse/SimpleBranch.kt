@@ -1,12 +1,13 @@
 package me.anno.zauber.ast.reverse
 
+import me.anno.utils.StringStyles.bold
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.interpreting.BlockReturn
 
-class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFalse: SimpleBlock) :
+class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFalse: SimpleBlock?) :
     SimpleInstruction(root, -1) {
 
     override fun execute(): BlockReturn? {
@@ -14,6 +15,10 @@ class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFa
     }
 
     override fun toString(): String {
-        return "SimpleBranch(condition=$condition, ifTrue=[${ifTrue.blockId}], ifFalse=[${ifFalse.blockId}])"
+        return if (ifFalse != null) {
+            "${bold("SimpleBranch")}($condition ? ${ifTrue.str()} : ${ifFalse.str()})"
+        } else {
+            "${bold("SimpleBranch")}($condition ? ${ifTrue.str()})"
+        }
     }
 }

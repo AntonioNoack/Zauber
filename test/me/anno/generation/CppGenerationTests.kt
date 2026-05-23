@@ -22,11 +22,6 @@ class CppGenerationTests : CodeGenerationTests() {
 
     override fun generator() = MinimalCppCompiler(true)
 
-    @BeforeEach
-    fun init() {
-        // disableCompileLoggers()
-    }
-
     @Test
     fun testSimpleMath() {
         testSimpleMathImpl()

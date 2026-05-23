@@ -3,7 +3,6 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
@@ -14,13 +13,14 @@ class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope,
         return "$dst = $type"
     }
 
-    override fun eval(): BlockReturn {
+    override fun execute(): BlockReturn? {
         val runtime = runtime
         val value = when (type) {
             SpecialValue.NULL -> runtime.getNull()
             SpecialValue.TRUE -> runtime.getBool(true)
             SpecialValue.FALSE -> runtime.getBool(false)
         }
-        return BlockReturn(ReturnType.VALUE, value)
+        runtime[dst] = value
+        return null
     }
 }

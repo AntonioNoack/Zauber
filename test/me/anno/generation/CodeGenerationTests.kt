@@ -239,6 +239,7 @@ abstract class CodeGenerationTests {
         // todo add this to test graph-to-class: if (i <= 2) return i
         val code = """
         fun fib(i: Int): Int {
+            if (i <= 2) return i
             val v = Array<Int>(i+1)
             v[0] = 1
             v[1] = 1
@@ -280,6 +281,7 @@ abstract class CodeGenerationTests {
             operator fun plus(other: V): V = V(this.x + other.x)
         }
         fun fib(i: Int): Int {
+            if (i <= 2) return i
             val v = Array<V>(i+1)
             v[0] = V(1)
             v[1] = V(1)

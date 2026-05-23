@@ -10,7 +10,7 @@ abstract class SimpleCallable(
     val thisInstance: SimpleField,
     val specialization: Specialization,
     scope: Scope, origin: Long
-) : SimpleAssignment(dst, scope, origin) {
+) : SimpleUnsafeAssignment(dst, scope, origin) {
 
     val sample get() = specialization.method
 

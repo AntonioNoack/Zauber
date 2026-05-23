@@ -751,7 +751,7 @@ class ZauberASTBuilder(
                 }
 
                 val condition = push(nextArrow) {
-                    if (tokens.equals(i, "else")) null
+                    if (consumeIf("else")) null
                     else readExpression()
                 }
 

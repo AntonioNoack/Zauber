@@ -1,0 +1,30 @@
+package me.anno.zauber.ast.simple.expression
+
+import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ReturnType
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.logging.LogManager
+import me.anno.zauber.scope.Scope
+
+abstract class SimpleUnsafeAssignment( dst: SimpleField, scope: Scope, origin: Long) :
+    SimpleAssignment(dst,scope, origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(AssignmentExpression::class)
+    }
+
+    override fun execute(): BlockReturn? {
+        val value = eval()
+        return if (value.type == ReturnType.VALUE || value.type == ReturnType.RETURN) {
+            if (LOGGER.isDebugEnabled) LOGGER.debug("$dst is now ${value.value} by $this (${javaClass.simpleName})")
+            runtime[dst] = value.value
+            null
+        } else value
+    }
+
+    abstract fun eval(): BlockReturn
+
+}

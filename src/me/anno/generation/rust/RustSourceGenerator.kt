@@ -619,14 +619,16 @@ class RustSourceGenerator : CSourceGenerator() {
                 writeBlock {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
-                trimWhitespaceAtEnd()
-                builder.append(" else ")
-                writeBlock {
-                    appendSimpleBlock(graph, expr.ifFalse)
+                if (expr.ifFalse != null) {
+                    trimWhitespaceAtEnd()
+                    builder.append(" else ")
+                    writeBlock {
+                        appendSimpleBlock(graph, expr.ifFalse)
+                    }
                 }
             }
             is SimpleLoop -> {
-                check(expr.condition == null) { "Loop with condition not yet implemented" }
+                check(expr.conditionBlock == null) { "Loop with condition not yet implemented" }
                 // builder.append("'b").append(expr.body.blockId).append(": ") // todo check if we use the label anywhere
                 builder.append("loop ")
                 writeBlock {

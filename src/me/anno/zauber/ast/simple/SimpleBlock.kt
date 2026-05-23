@@ -2,6 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.generation.cpp.CppSourceGenerator.Companion.nativeCppTypes
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
@@ -54,17 +55,14 @@ class SimpleBlock(val graph: SimpleGraph) {
     private fun linkTo(value: SimpleBlock?) {
         value ?: return
         value.inputBlocks.add(this)
-        outputNodes.add(value)
     }
 
     private fun unlinkTo(value: SimpleBlock?) {
         value ?: return
         value.inputBlocks.remove(this)
-        outputNodes.remove(value)
     }
 
     val inputBlocks = ArrayList<SimpleBlock>(4)
-    val outputNodes = ArrayList<SimpleBlock>(2)
 
     var nextBranch: SimpleBlock?
         get() = ifBranch
@@ -83,8 +81,6 @@ class SimpleBlock(val graph: SimpleGraph) {
         ifBranch = null
         elseBranch = null
         branchCondition = null
-        inputBlocks.clear()
-        outputNodes.clear()
     }
 
     fun isOnlyInput(input: SimpleBlock): Boolean {
@@ -97,7 +93,10 @@ class SimpleBlock(val graph: SimpleGraph) {
         return (ifBranch == output || ifBranch == null) && (elseBranch == output || elseBranch == null)
     }
 
-    val blockId = graph.blocks.size
+    val blockId: Int =
+        if (graph.blocks.isNotEmpty()) graph.blocks.last().blockId + 1
+        else 0
+
     val instructions = ArrayList<SimpleInstruction>()
 
     fun add(expr: SimpleInstruction) {
@@ -206,7 +205,7 @@ class SimpleBlock(val graph: SimpleGraph) {
     override fun toString(): String {
         val builder = StringBuilder()
         builder
-            .append(StringStyles.style("b${blockId}", StringStyles.GREEN))
+            .append(StringStyles.style("b${blockId}", GREEN))
             .append('[')
 
         if (isEntryPoint) builder.append("->|")
@@ -215,10 +214,10 @@ class SimpleBlock(val graph: SimpleGraph) {
             builder.append(StringStyles.style("end", StringStyles.RED))
         } else if (branchCondition != null) {
             builder.append(branchCondition).append(" ? ")
-                .append(style("b${ifBranch!!.blockId}", StringStyles.GREEN)).append(" : ")
-                .append(style("b${elseBranch!!.blockId}", StringStyles.GREEN))
+                .append(style("b${ifBranch!!.blockId}", GREEN)).append(" : ")
+                .append(style("b${elseBranch!!.blockId}", GREEN))
         } else {
-            builder.append(style("b${nextBranch!!.blockId}", StringStyles.GREEN))
+            builder.append(style("b${nextBranch!!.blockId}", GREEN))
         }
 
         builder.append(']')
@@ -232,6 +231,8 @@ class SimpleBlock(val graph: SimpleGraph) {
         }
         return builder.toString()
     }
+
+    fun str() = style("b$blockId", GREEN)
 
     fun isEmpty(): Boolean {
         return branchCondition == null && ifBranch == null && elseBranch == null &&

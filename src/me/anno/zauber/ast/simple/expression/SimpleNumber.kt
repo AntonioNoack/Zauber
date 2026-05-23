@@ -4,7 +4,6 @@ import me.anno.utils.StringStyles
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createNumber
 
@@ -20,9 +19,5 @@ class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
         val runtime = runtime
         runtime[dst] = runtime.createNumber(base)
         return null
-    }
-
-    override fun eval(): BlockReturn {
-        return BlockReturn(ReturnType.VALUE, runtime.createNumber(base))
     }
 }

@@ -2,7 +2,6 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
@@ -16,11 +15,11 @@ class SimpleCheckIdentical(
         return "$dst = $left ${if (negated) "!==" else "==="} $right"
     }
 
-    override fun eval(): BlockReturn {
+    override fun execute(): BlockReturn? {
         val runtime = runtime
         val left = runtime[left]
         val right = runtime[right]
-        val instance = runtime.getBool((left == right) xor negated)
-        return BlockReturn(ReturnType.VALUE, instance)
+        runtime[dst] = runtime.getBool((left == right) xor negated)
+        return null
     }
 }

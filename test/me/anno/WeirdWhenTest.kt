@@ -1,34 +1,31 @@
-package me.anno.generation
+package me.anno
 
+import me.anno.generation.WASMGenerationTests
 import me.anno.utils.assertEquals
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Test
 
-class GraphToClassTests {
+class WeirdWhenTest {
+
+    // todo bug: how does this return 0???
+
     @Test
-    fun testGraphToClass() {
+    fun testWeirdWhenCase() {
+        LogManager.enable("ASTSimplifier")
         val code = """
-        fun fib(i: Int): Int {
-            if (i <= 2) return i
-            val v = Array<Int>(i+1)
-            v[0] = 1
-            v[1] = 1
-            var j = 2
-            while (j <= i) {
-                v[j] = v[j-1] + v[j-2]
-                j++
-            }
-            return v[i]
-        }
         fun main() {
-            println(fib(7))
+            var score = 0
+            val value = when {
+                score >= 12 -> 2
+                else -> 1
+            }
+            println(value)
         }
         package zauber
         class Any
         external class Int(val content: Int) {
             external operator fun plus(other: Int): Int
-            external operator fun minus(other: Int): Int
             external operator fun compareTo(other: Int): Int
-            operator fun inc(): Int = this + 1
         }
         enum class Boolean { TRUE, FALSE }
         class Array<V>(val size: Int) {
@@ -38,9 +35,8 @@ class GraphToClassTests {
         external fun println(arg0: Int)
         """.trimIndent()
 
-        // 1, 1, 2, 3, 5, 8, 13, 21
-        val printed = WASMRuntimeTests().generator()
+        val printed = WASMGenerationTests().generator()
             .testCompileMainAndRun(code) {}
-        assertEquals("21\n", printed)
+        assertEquals("1\n", printed)
     }
 }

@@ -800,11 +800,11 @@ class LLVMSourceGenerator : CSourceGenerator() {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
                 elseBranch(branch) {
-                    appendSimpleBlock(graph, expr.ifFalse)
+                    if (expr.ifFalse != null) appendSimpleBlock(graph, expr.ifFalse)
                 }
             }
             is SimpleLoop -> {
-                if (expr.condition == null) {
+                if (expr.conditionBlock == null) {
                     check(!expr.negate)
 
                     val loopLabel = nextLabel("loop")

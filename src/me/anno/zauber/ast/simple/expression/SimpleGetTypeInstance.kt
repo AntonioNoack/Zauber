@@ -2,8 +2,7 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
-import me.anno.zauber.interpreting.Runtime
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
@@ -15,8 +14,9 @@ class SimpleGetTypeInstance(
 
     override fun toString(): String = "$dst = $type::class"
 
-    override fun eval(): BlockReturn {
-        val value = Runtime.runtime.getTypeInstance(type)
-        return BlockReturn(ReturnType.VALUE, value)
+    override fun execute(): BlockReturn? {
+        val runtime = runtime
+        runtime[dst] = runtime.getTypeInstance(type)
+        return null
     }
 }

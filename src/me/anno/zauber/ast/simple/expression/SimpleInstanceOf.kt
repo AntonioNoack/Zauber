@@ -4,7 +4,6 @@ import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -23,13 +22,13 @@ class SimpleInstanceOf private constructor(
         return "$dst = $value is $type"
     }
 
-    override fun eval(): BlockReturn {
+    override fun execute(): BlockReturn? {
         val runtime = runtime
         val instance = runtime[value]
         val givenType = instance.clazz
         val expectedType = runtime.getClass(type)
-        val value = runtime.getBool(givenType.isSubTypeOf(expectedType))
-        return BlockReturn(ReturnType.VALUE, value)
+        runtime[dst] = runtime.getBool(givenType.isSubTypeOf(expectedType))
+        return null
     }
 
     companion object {

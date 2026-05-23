@@ -516,12 +516,7 @@ open class JavaSourceGenerator : Generator() {
                 continue
             }
 
-            try {
-                appendMethod(classScope, className, method0, headerOnly)
-            } catch (e: Exception) {
-                comment { builder.append(e) }
-                nextLine()
-            }
+            appendMethod(classScope, className, method0, headerOnly)
         }
     }
 
@@ -814,17 +809,19 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun prepareGraph(graph: SimpleGraph) {
+
+        println("input graph: $graph")
+
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        // graph.removeFieldsByLocalFields()
-        // graph.removeMergedFields()
         graph.giveLocalFieldsUniqueNames()
         graph.renumberFields()
 
         // todo another step could be removing merge-infos, only LLVMs uses/requires them
 
         CodeReconstruction.createCodeFromGraph(graph)
+        graph.renumberFields() // necessary
     }
 
     open fun appendCode(
@@ -1136,30 +1133,29 @@ open class JavaSourceGenerator : Generator() {
                 writeBlock {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
-                trimWhitespaceAtEnd()
-                builder.append(" else ")
-                writeBlock {
-                    appendSimpleBlock(graph, expr.ifFalse)
+                if (expr.ifFalse != null) {
+                    trimWhitespaceAtEnd()
+                    builder.append(" else ")
+                    writeBlock {
+                        appendSimpleBlock(graph, expr.ifFalse)
+                    }
                 }
             }
             is SimpleLoop -> {
-                check(expr.condition == null) { "Loop with condition not yet implemented" }
-                builder.append("b").append(expr.body.blockId)
-                builder.append(": while (true)")
+                builder.append("while (true)")
                 writeBlock {
+                    if (expr.condition != null) {
+                        appendSimpleBlock(graph, expr.conditionBlock!!)
+                        builder.append("if (")
+                        if (!expr.negate) builder.append('!')
+                        appendFieldName(graph, expr.condition)
+                        builder.append(") break;")
+                        nextLine()
+                        nextLine()
+                    }
                     appendSimpleBlock(graph, expr.body)
                 }
             }
-            /*is SimpleGoto -> {
-                if (expr.condition != null) {
-                    builder.append("if (").append1(expr.condition).append(") ")
-                }
-                builder.append(if (expr.isBreak) "break" else "continue")
-                if (expr.bodyBlock != loop?.body) {
-                    builder.append(" b").append(expr.bodyBlock.blockId)
-                }
-                builder.append(';')
-            }*/
             is SimpleConstructorCall -> {
                 // done already
             }

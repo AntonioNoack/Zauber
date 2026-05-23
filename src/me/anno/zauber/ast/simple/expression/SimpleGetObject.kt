@@ -32,9 +32,4 @@ class SimpleGetObject(
         runtime[dst] = runtime.getObjectInstance(objectScope.typeWithArgs)
         return null
     }
-
-    override fun eval(): BlockReturn {
-        val value = runtime.getObjectInstance(objectScope.typeWithArgs)
-        return BlockReturn(ReturnType.VALUE, value)
-    }
 }

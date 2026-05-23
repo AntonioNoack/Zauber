@@ -150,7 +150,7 @@ object GraphToClass {
                     is SimpleTailCall -> scanBlock(instr.toBeCalled, entry)
                     is SimpleBranch -> {
                         scanBlock(instr.ifTrue, entry)
-                        scanBlock(instr.ifFalse, entry)
+                        if (instr.ifFalse != null) scanBlock(instr.ifFalse, entry)
                     }
                     is SimpleLoop -> {
                         scanBlock(instr.body, entry)

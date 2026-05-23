@@ -20,11 +20,12 @@ import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
-import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.fields.LocalField
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
@@ -621,8 +622,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 is NumberExpression -> appendNumber(field.type, expr)
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
-                    builder.append("tmp").append(field.id)
-                    usedFields.add(field)
+                    val localField = field.fromLocalField
+                    if (localField != null) {
+                        builder.append(localField.name)
+                    } else {
+                        builder.append("tmp").append(field.id)
+                        usedFields.add(field)
+                    }
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }
@@ -637,6 +643,28 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 }
             } else forFieldAccess
             builder.append(symbol)
+        }
+    }
+
+    override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
+        val type = field.type
+        appendType(type, graph.method.memberScope, false)
+        appendOwnershipSuffix(type)
+        builder.append(' ')
+        builder.append(field.name).append(" = ")
+        appendDefaultValue(type)
+        builder.append(";")
+        nextLine()
+    }
+
+    override fun appendDefaultValue(valueType: Type) {
+        when (valueType) {
+            Types.Boolean -> builder.append("false")
+            in nativeTypes -> builder.append("0")
+            else -> {
+                if (valueType.isValue()) builder.append("{}")
+                else builder.append("nullptr")
+            }
         }
     }
 

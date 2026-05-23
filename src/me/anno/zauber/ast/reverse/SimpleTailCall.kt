@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.reverse
 
+import me.anno.utils.StringStyles.bold
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.ast.simple.SimpleBlock
@@ -16,6 +17,6 @@ class SimpleTailCall(val toBeCalled: SimpleBlock) :
     }
 
     override fun toString(): String {
-        return "SimpleTailCall[${toBeCalled.blockId}]"
+        return "${bold("SimpleTailCall")}[${toBeCalled.str()}]"
     }
 }

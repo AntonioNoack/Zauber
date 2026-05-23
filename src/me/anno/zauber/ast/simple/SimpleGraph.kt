@@ -19,7 +19,6 @@ class SimpleGraph(val method0: Specialization) {
 
     val method = method0.method
 
-    private var numFields = 0
     val blocks = ArrayList<SimpleBlock>()
     val startBlock = SimpleBlock(this)
     val simpleFields = ArrayList<SimpleField>()
@@ -53,7 +52,8 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun field(type: Type, constantRef: Expression? = null): SimpleField {
-        val field = SimpleField(type, numFields++, constantRef)
+        val id = if (simpleFields.isEmpty()) 0 else simpleFields.last().id + 1
+        val field = SimpleField(type, id, constantRef)
         simpleFields.add(field)
         return field
     }
@@ -83,7 +83,7 @@ class SimpleGraph(val method0: Specialization) {
         }
     }
 
-    private fun createLocalField(field: Field?, name: String, type: Type, insideMethod: Boolean): LocalField {
+    fun createLocalField(field: Field?, name: String, type: Type, insideMethod: Boolean): LocalField {
         val localField = LocalField(field, name, type, localFields.size, insideMethod)
         localFields.add(localField)
         return localField
@@ -100,7 +100,7 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     override fun toString(): String {
-        return "${bold("Graph")}[${blocks.size} nodes, $numFields fields]\n" +
+        return "${bold("Graph")}[${blocks.size} nodes, ${simpleFields.size} + ${localFields.size} fields]\n" +
                 "${bold("this:")} $thisField\n" +
                 "${bold("self:")} $selfField\n" +
                 "${bold("unit:")} $unitField\n" +
@@ -199,6 +199,26 @@ class SimpleGraph(val method0: Specialization) {
                 field.name = newName
                 return
             }
+        }
+    }
+
+    fun validateBlocks() {
+        for (block in blocks) {
+            val b0 = block.ifBranch
+            val b1 = block.elseBranch
+            if (b0 != null) {
+                check(b0 in blocks)
+                check(block in b0.inputBlocks)
+            }
+            if (b1 != null) {
+                check(b1 in blocks)
+                check(block in b1.inputBlocks)
+            }
+        }
+        for (i in 1 until blocks.size) {
+            val b0 = blocks[i - 1]
+            val b1 = blocks[i]
+            check(b0.blockId < b1.blockId)
         }
     }
 

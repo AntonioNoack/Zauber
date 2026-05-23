@@ -4,7 +4,6 @@ import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
@@ -16,17 +15,10 @@ class SimpleGetLocalField(
 
     override fun execute(): BlockReturn? {
         // cannot crash at runtime (if ASTSimplified correctly) -> past-path
-        val call = runtime.getCall()
-        val value = call.localFields[field.id]
+        val runtime = runtime
+        runtime[dst] = runtime.getCall().localFields[field.id]
             ?: throw IllegalStateException("Missing local field #${field.id}")
-        call.setSimple(dst, value)
         return null
-    }
-
-    override fun eval(): BlockReturn {
-        val value = runtime.getCall().localFields[field.id]
-            ?: throw IllegalStateException("Missing local field #${field.id}")
-        return BlockReturn(ReturnType.VALUE, value)
     }
 
     override fun toString(): String {

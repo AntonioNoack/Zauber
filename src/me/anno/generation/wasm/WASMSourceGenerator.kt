@@ -7,6 +7,8 @@ import me.anno.utils.FullMap
 import me.anno.utils.ListOfByteArrays
 import me.anno.zauber.Compile.root
 import me.anno.zauber.ast.reverse.SimpleBranch
+import me.anno.zauber.ast.reverse.SimpleConditionalInt
+import me.anno.zauber.ast.reverse.SimpleLocalFieldEqualsInt
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
@@ -81,7 +83,7 @@ class WASMSourceGenerator : CSourceGenerator() {
                 if (method.valueParameters.size != 1) return false
                 if (method.valueParameters[0].type != ownerType) return false
                 return when (method.name) {
-                    "plus", "minus", "times", "div" -> true
+                    "plus", "minus", "times", "div", "rem", "equals" -> true
                     else -> false
                 }
             }
@@ -876,7 +878,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.u8(WASMOpcode.REF_IS_NULL)
         nextLine()
 
-        emptyResultIf()
+        beginIf()
 
         builder.append("struct.new_default $").append(structNullable.typeName)
         binary.structNewDefault(structNullable.typeIndex)
@@ -896,7 +898,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
 
         appendDrop()
-        emptyResultEnd()
+        endIfElse()
 
         globalGet(globalIndex)
         nextLine()
@@ -924,7 +926,7 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
-    fun emptyResultIf() {
+    fun beginIf() {
         builder.append("(if (then")
         depth++
         nextLine()
@@ -933,14 +935,14 @@ class WASMSourceGenerator : CSourceGenerator() {
         binary.u8(0x40) // empty block
     }
 
-    fun emptyResultElse() {
+    fun beginElse() {
         builder.append(") (else")
         nextLine()
 
         binary.u8(WASMOpcode.ELSE)
     }
 
-    fun emptyResultEnd() {
+    fun endIfElse() {
         builder.append("))")
         depth--
         nextLine()
@@ -1049,40 +1051,67 @@ class WASMSourceGenerator : CSourceGenerator() {
         nextLine()
     }
 
+    fun continueLoop(name: String, jumpDepth: Int) {
+        builder.append("br $").append(name)
+        binary.u8(WASMOpcode.BR)
+        binary.u8(jumpDepth) // how many extra loops/blocks are broken
+        depth--
+        nextLine()
+    }
+
+    fun beginLoop(name: String) {
+        builder.append("(loop $").append(name)
+        binary.u8(WASMOpcode.LOOP)
+        binary.u8(0x40) // empty
+        depth++
+        nextLine()
+    }
+
+    fun endLoop() {
+        builder.append(')')
+        binary.u8(WASMOpcode.END)
+        nextLine()
+    }
+
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
             is SimpleBranch -> {
                 appendGetField(graph, expr.condition)
-                emptyResultIf()
+                beginIf()
                 /**/appendSimpleBlock(graph, expr.ifTrue)
-                emptyResultElse()
-                /**/appendSimpleBlock(graph, expr.ifFalse)
-                emptyResultEnd()
+                if (expr.ifFalse != null) {
+                    beginElse()
+                    appendSimpleBlock(graph, expr.ifFalse)
+                }
+                endIfElse()
             }
             is SimpleLoop -> {
-                check(expr.condition == null) { "Loop with condition not yet implemented" }
                 val name = "b${expr.body.blockId}"
-                builder.append("(loop $").append(name)
-                depth++
-                nextLine()
+                if (expr.condition == null) {
 
-                binary.u8(WASMOpcode.LOOP)
-                binary.u8(0x40) // empty
+                    beginLoop(name)
+                    appendSimpleBlock(graph, expr.body)
+                    continueLoop(name, 0)
+                    endLoop()
 
-                appendSimpleBlock(graph, expr.body)
+                    appendUnreachable()
+                    // nothing else can come after
 
-                binary.u8(WASMOpcode.BR)
-                binary.u8(0) // depth 0
-                binary.u8(WASMOpcode.END)
+                } else {
+                    beginLoop(name)
+                    appendSimpleBlock(graph, expr.conditionBlock!!)
+                    appendGetField(graph, expr.condition)
 
-                builder.append("br $").append(name)
-                depth--
-                nextLine()
-                builder.append(')')
-                nextLine()
+                    beginIf()
+                    if (expr.negate) beginElse()
+                    /**/appendSimpleBlock(graph, expr.body)
+                    /**/continueLoop(name, 1)
+                    endIfElse()
 
-                appendUnreachable()
+                    endLoop()
+                    // stuff may come after
+                }
             }
             is SimpleReturn -> {
                 appendGetField(graph, expr.field)
@@ -1253,6 +1282,49 @@ class WASMSourceGenerator : CSourceGenerator() {
                     TODO("Call method, then compare to zero for $ownerType,$paramType")
                 }
             }
+            is SimpleCheckEquals -> {
+                val method = expr.method.resolved
+                method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+
+                val ownerType = method.ownerScope.typeWithArgs
+                val paramType = method.valueParameters[0].type.specialize()
+                if (ownerType == paramType && ownerType in nativeNumbers) {
+                    appendGetField(graph, expr.left)
+                    appendGetField(graph, expr.right)
+                    appendNativeEquals(ownerType, expr.negated)
+                } else {
+                    TODO("Call method, then compare to zero for $ownerType,$paramType")
+                }
+            }
+            is SimpleLocalFieldEqualsInt -> {
+                builder.append("local.get $").append(expr.field.name)
+                binary.localGet(expr.field.id)
+                nextLine()
+
+                i32Const(expr.expected)
+                nextLine()
+
+                builder.append("i32.eq")
+                binary.u8(WASMOpcode.I32_EQ)
+                nextLine()
+            }
+            is SimpleConditionalInt -> {
+                appendGetField(graph, expr.condition)
+
+                i32Const(expr.ifTrue - expr.ifFalse)
+                nextLine()
+
+                builder.append("i32.mul")
+                binary.u8(WASMOpcode.I32_MUL)
+                nextLine()
+
+                i32Const(expr.ifFalse)
+                nextLine()
+
+                builder.append("i32.add")
+                binary.u8(WASMOpcode.I32_ADD)
+                nextLine()
+            }
             is SimpleMerge -> {}
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }
@@ -1310,6 +1382,23 @@ class WASMSourceGenerator : CSourceGenerator() {
                 CompareType.GREATER -> WASMOpcode.F64_GT
                 CompareType.GREATER_EQUALS -> WASMOpcode.F64_GE
             }
+            else -> throw NotImplementedError("Implement compare for $valueType")
+        }
+        binary.u8(wasmInstr)
+        nextLine()
+    }
+
+    fun appendNativeEquals(valueType: Type, negated: Boolean) {
+        val numberType = getWASMType(valueType)
+        val compareName = if (negated) "ne" else "eq"
+        builder.append(numberType.wasmName)
+            .append('.').append(compareName)
+        val wasmInstr = when (valueType) {
+            Types.Byte, Types.Short, Types.Int,
+            Types.UByte, Types.UShort, Types.Char, Types.UInt -> if (negated) WASMOpcode.I32_NE else WASMOpcode.I32_EQ
+            Types.Long, Types.ULong -> if (negated) WASMOpcode.I64_NE else WASMOpcode.I64_EQ
+            Types.Float, Types.Half -> if (negated) WASMOpcode.F32_NE else WASMOpcode.F32_EQ
+            Types.Double -> if (negated) WASMOpcode.F64_NE else WASMOpcode.F64_EQ
             else -> throw NotImplementedError("Implement compare for $valueType")
         }
         binary.u8(wasmInstr)
