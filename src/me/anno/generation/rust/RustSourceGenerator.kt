@@ -9,13 +9,12 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
-import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
@@ -352,25 +351,45 @@ class RustSourceGenerator : JavaSourceGenerator() {
         else builder.append(ownership.typeSuffix)
     }
 
-    override fun appendCode(
-        context: ResolutionContext,
-        method1: Specialization,
-        body: Expression,
-        skipSuperCall: Boolean
+    override fun appendMethods(
+        classScope: Scope, className: String,
+        methods: Collection<Specialization>, headerOnly: Boolean
     ) {
-        writeBlock {
-            val graph = ASTSimplifier.simplify(method1)
-            if (skipSuperCall) graph.removeSuperCalls()
-            prepareGraph(graph)
+        for (method0 in methods) {
+            val method = method0.method
+            if (method !is Method) continue
+            if (method.scope.parent != classScope) {
+                // an inherited method -> skip, because it's already defined in the parent
+                continue
+            }
 
-            // todo simplify all entry points as methods...
+            if (method.body == null && getNativeImplementation(method) == null) continue
+            appendMethod(classScope, className, method0, headerOnly)
+        }
+    }
 
-            declareLocalFields(graph)
+    override fun appendConstructorBody(
+        classScope: Scope, className: String,
+        constructor: Constructor, headerOnly: Boolean
+    ) {
+        val body = constructor.body
+        when {
+            headerOnly -> {
+                builder.append(";")
+                nextLine()
+            }
+            body != null -> {
+                val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+                writeBlock {
+                    if (classScope == Types.Array.clazz) {
+                        appendArrayContentInitialization(constructor)
+                    }
 
-            val pos0 = builder.length
-            appendSimpleBlock(graph, graph.startBlock)
-
-            appendMissingDeclarations(graph, pos0)
+                    val methodSpec = specialization
+                    check(methodSpec.method === constructor)
+                    appendCode(context, methodSpec, body, true)
+                }
+            }
         }
     }
 
@@ -525,10 +544,38 @@ class RustSourceGenerator : JavaSourceGenerator() {
         builder.append(field.name)
         builder.append(": ")
         appendTypeDecl(valueType, graph.method.memberScope)
-        //builder.append(" = ")
-        //appendDefaultValue(valueType)
+        if (valueType in nativeTypes) {
+            builder.append(" = ")
+            appendDefaultValue(valueType)
+        }
         builder.append(";")
         nextLine()
+    }
+
+    override fun appendTailCallCode(graph: SimpleGraph) {
+        builder.append("let mut nextBlockId: i32 = 0;"); nextLine()
+        builder.append("'blockTable: loop ")
+        writeBlock {
+            builder.append("match nextBlockId ")
+            writeBlock {
+                val targets = findTailCallTargets(graph)
+                val blocks = graph.blocks
+                for (i in blocks.indices) {
+                    val block = blocks[i]
+                    if (i == 0 || targets[block.blockId]) {
+                        builder.append(block.blockId).append(" => ")
+                        writeBlock {
+                            appendSimpleBlock(graph, block)
+                        }
+                        trimWhitespaceAtEnd()
+                        builder.append(',')
+                        nextLine()
+                    }
+                }
+                builder.append("_ => {},")
+                nextLine()
+            }
+        }
     }
 
     override fun appendFieldName(
@@ -634,6 +681,11 @@ class RustSourceGenerator : JavaSourceGenerator() {
                     appendSimpleBlock(graph, expr.body)
                 }
             }
+            is SimpleTailCall -> {
+                builder.append("nextBlockId = ").append(expr.toBeCalled.blockId).append(';')
+                nextLine()
+                builder.append("continue 'blockTable;")
+            }
             else -> super.appendInstrImpl(graph, expr)
         }
     }
@@ -656,9 +708,10 @@ class RustSourceGenerator : JavaSourceGenerator() {
 
     override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
         // ensure import
-        val selfType = expr.thisInstance.type
+        val selfType = resolveType(expr.thisInstance.type) as ClassType
         val position = builder.length
         appendType(selfType, expr.scope, true)
+        imports[selfType.clazz.name] = selfType.clazz.path
         builder.setLength(position)
 
         builder.append(needsCastForFirstValue.boxed).append("::new(")

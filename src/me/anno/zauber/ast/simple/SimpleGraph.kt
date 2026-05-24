@@ -138,14 +138,6 @@ class SimpleGraph(val method0: Specialization) {
         removeFieldIf { it.numReads == 0 }
     }
 
-    fun removeFieldsByLocalFields() {
-        removeFieldIf { it.fromLocalField != null && it.mergeInfo == null }
-    }
-
-    fun removeMergedFields() {
-        removeFieldIf { it.mergeInfo != null }
-    }
-
     fun replaceYieldsByInnerClass() {
         // todo if inner classes/methods reference a mutable field,
         //  create an inner class, too

@@ -885,8 +885,7 @@ open class JavaSourceGenerator : Generator() {
         return targets
     }
 
-    fun appendTailCallCode(graph: SimpleGraph) {
-
+    open fun appendTailCallCode(graph: SimpleGraph) {
         builder.append("int nextBlockId = 0;"); nextLine()
         builder.append("blockTable: while (true) ")
         writeBlock {
@@ -1409,7 +1408,6 @@ open class JavaSourceGenerator : Generator() {
                 builder.append("nextBlockId = ").append(expr.toBeCalled.blockId).append(';')
                 nextLine()
                 builder.append("continue blockTable;")
-                nextLine()
             }
             else -> throw NotImplementedError("Implement ${expr.javaClass.simpleName}")
         }

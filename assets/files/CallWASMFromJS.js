@@ -20,12 +20,6 @@ const imports = {
             console.log(value);
             return lib["obj_zauber_Unit"]()
         },
-        'zauber_Array_get_724980837_sfuzcq': () => {
-            throw 'Implement Array-access'
-        },
-        'zauber_Array_set_724980837_14ox0cd': () => {
-            throw 'Implement Array-access'
-        }
     }
 };
 
