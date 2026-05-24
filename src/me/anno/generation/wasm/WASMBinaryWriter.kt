@@ -100,6 +100,11 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         u32(i)
     }
 
+    fun callIndirect(typeIndex: Int) {
+        u8(WASMOpcode.CALL_INDIRECT)
+        u32(typeIndex)
+    }
+
     fun drop() {
         u8(WASMOpcode.DROP)
     }

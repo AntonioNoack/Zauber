@@ -14,6 +14,7 @@ object WASMOpcode {
     const val RETURN = 0x0f
 
     const val CALL = 0x10
+    const val CALL_INDIRECT = 0x11
 
     const val LOCAL_GET = 0x20
     const val LOCAL_SET = 0x21

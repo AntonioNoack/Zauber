@@ -1,5 +1,6 @@
 package me.anno.generation.llvm
 
+import me.anno.generation.InheritanceTable
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
@@ -59,6 +60,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
     val structs = HashMap<Specialization, LLVMStruct>()
 
+    lateinit var inheritanceTable: InheritanceTable
+
     fun defineObjectGetters(data: DependencyData) {
         // find constructed object-likes
         val objects = data.createdClasses.filter { it.clazz.isObjectLike() }
@@ -71,6 +74,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
+
+        inheritanceTable = InheritanceTable(data)
 
         defineObjectGetters(data)
 

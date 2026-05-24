@@ -1,5 +1,6 @@
 package me.anno.generation.wasm
 
+import me.anno.generation.InheritanceTable
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.wasm.WASMType.Companion.anyRef
@@ -75,6 +76,14 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     val structs = HashMap<TypeDef, WASMStructLike>()
 
+    // tail-call logic:
+    var blockTableDepth = 0
+    var currBlockTableIndex = 0
+    var nextBlockIdIdx = -1
+    lateinit var blockTableOptions: List<SimpleBlock>
+
+    lateinit var inheritanceTable: InheritanceTable
+
     fun isInlinedMethod(method0: Specialization): Boolean {
         val method = method0.method
         when (val ownerType = method.ownerScope.typeWithArgs) {
@@ -131,6 +140,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
+
+        inheritanceTable = InheritanceTable(data)
 
         registerMethods(data, mainMethod)
         defineObjectGetters(data)
@@ -656,10 +667,6 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         else appendSimpleBlock(graph, graph.startBlock)
     }
 
-    var nextBlockIdIdx = 65536 // todo set this: we need one extra local for it
-
-    lateinit var blockTableOptions: List<SimpleBlock>
-
     override fun appendTailCallCode(graph: SimpleGraph) {
         builder.append("(local \$nextBlockId i32)"); nextLine()
 
@@ -1144,9 +1151,6 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         blockTableDepth--
     }
 
-    var blockTableDepth = 0
-    var currBlockTableIndex = 0
-
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
@@ -1583,14 +1587,48 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         appendValueParams(graph, expr.valueParameters)
 
         if (expr.methods !is FullMap) {
+
+            // todo if thisInstance is strictly known (no child types),
+            //  just call it directly
+
+            appendGetField(graph, expr.thisInstance)
+            appendLoadClassIndex()
+
+            // resolve function to call
             if (expr.sample.ownerScope.isInterface()) {
-                TODO("interface method-res")
+                val callIndex = inheritanceTable.getInterfaceCallIndex(expr.specialization)
+                i32Const(callIndex); nextLine()
+                callMethod(interfaceCallSpec)
             } else {
-                TODO("child-class method-res")
+                val callIndex = inheritanceTable.getClassCallIndex(expr.specialization)
+                i32Const(callIndex); nextLine()
+                callMethod(interfaceCallSpec)
             }
+
+            // call it
+            val typeIndex = getFunctionTypeIndex(expr.specialization)
+            builder.append("call_indirect ")
+                .append(typeList[typeIndex] as FunctionType)
+            binary.callIndirect(typeIndex)
+            nextLine()
+
+        } else {
+            // direct call
+            callMethod(expr.specialization)
+            nextLine()
         }
-        callMethod(expr.specialization)
-        nextLine()
+    }
+
+    val interfaceCallSpec: Specialization by lazy {
+        TODO()
+    }
+
+    val methodCallSpec: Specialization by lazy {
+        TODO()
+    }
+
+    fun appendLoadClassIndex() {
+
     }
 
     fun appendConstructorCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {
