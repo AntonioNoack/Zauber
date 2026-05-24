@@ -45,7 +45,7 @@ object LinearTreeSimplification {
             val db = depths[b.blockId]
             check(da >= 0)
             check(db >= 0)
-            val targetDepth = min(da, db) - 1
+            val targetDepth = if (da == db) da - 1 else min(da, db)
             a = getParentAtDepth(a, depths, targetDepth)
             b = getParentAtDepth(b, depths, targetDepth)
         }
@@ -60,7 +60,11 @@ object LinearTreeSimplification {
         var node = node
         var depth = depths[node.blockId]
         check(depth >= 0)
+        check(targetDepth >= 0) { "Target-depth cannot be negative" }
         while (depth > targetDepth) {
+            if (node.inputBlocks.isEmpty()) {
+                throw IllegalStateException("How can ${node.str()} be unreachable?")
+            }
             node = node.inputBlocks.minBy { depths[it.blockId] }
             depth = depths[node.blockId]
             check(depth >= 0)

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 class GraphToClassTests {
     @Test
     fun testGraphToClass() {
+        // todo bug: how does this return 0?
         LogManager.enable("ASTSimplifier")
         val code = """
         fun classifyNumber(n: Int): Int {
@@ -16,7 +17,7 @@ class GraphToClassTests {
         
             var score = 0
         
-            /*if (n % 2 == 0) {
+            if (n % 2 == 0) {
                 score += 2
             } else {
                 score += 1
@@ -28,21 +29,21 @@ class GraphToClassTests {
         
             if (n % 5 == 0) {
                 score += 5
-            }*/
+            }
         
-            var digitSum = 0
-            /*var temp = n
+            /*var digitSum = 0
+            var temp = n
         
             while (temp > 0) {
                 digitSum += temp % 10
                 temp /= 10
-            }*/
+            }
         
             when {
                 digitSum > 30 -> score += 4
                 digitSum > 15 -> score += 2
                 else -> score += 1
-            }
+            }*/
         
             return when {
                 score >= 12 -> 4
