@@ -113,7 +113,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
     fun appendMainMethodCode(mainMethod: Method) {
         builder.append("define i32 @main(i32 %argc, i8** %argv) #0 {")
-        depth++
+        indentation++
         nextLine()
 
         val tmp = getObjectInstanceField(mainMethod.ownerScope)
@@ -125,7 +125,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         nextLine()
 
         dedent()
-        depth--
+        indentation--
         builder.append("}")
         nextLine()
     }
@@ -382,14 +382,14 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 .append(returnType.ir).append(" ")
                 .append(getObjectGetterName(objectScope))
                 .append("() {")
-            depth++
+            indentation++
             nextLine()
 
             appendGetObjectInstanceImpl(objectScope)
 
             // close body
             dedent()
-            depth--
+            indentation--
             builder.append("}")
             nextLine()
         }
@@ -607,7 +607,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
     fun ifOrElseBranch(label: String, endLabel: String, run: () -> Unit) {
         builder.append(label).append(":")
-        depth++
+        indentation++
         nextLine()
 
         val prevBranch = currBranch
@@ -615,7 +615,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         run()
         currBranch = prevBranch
 
-        depth--
+        indentation--
         builder.append("br label %").append(endLabel)
         nextLine()
         nextLine()

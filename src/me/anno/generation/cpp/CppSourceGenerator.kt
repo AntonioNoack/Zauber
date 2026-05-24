@@ -273,14 +273,14 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 nextLine()
             }
         }
-        depth++
+        indentation++
         nextLine()
     }
 
     override fun endPackageDeclaration(packagePath: List<String>, file: File) {
         if (packagePath.isEmpty()) return
         val packageDepth = if (cppVersion >= 17) 1 else packagePath.size
-        depth--
+        indentation--
         nextLine()
         repeat(packageDepth) {
             builder.append("}")

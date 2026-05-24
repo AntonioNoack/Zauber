@@ -7,7 +7,11 @@ sealed interface WASMInstruction {
     data object Unreachable : WASMInstruction
     data object Nop : WASMInstruction
 
-    data class Block(val blockType: Int) : WASMInstruction
+    data class Block(
+        val blockType: Int,
+        val body: List<WASMInstruction>
+    ) : WASMInstruction
+
     data class Loop(
         val blockType: Int,
         val body: List<WASMInstruction>
@@ -21,9 +25,16 @@ sealed interface WASMInstruction {
 
     data object Else : WASMInstruction
     data object End : WASMInstruction
+
     data class Br(val depth: Int) : WASMInstruction {
         fun next(): Br? {
             return if (depth == 0) null else br[depth - 1]
+        }
+    }
+
+    class BrTable(val targets: IntArray) : WASMInstruction {
+        override fun toString(): String {
+            return "br_table ${targets.joinToString(", ")}"
         }
     }
 

@@ -6,11 +6,9 @@ import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.FullMap
 import me.anno.utils.ListOfByteArrays
+import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.Compile.root
-import me.anno.zauber.ast.reverse.SimpleBranch
-import me.anno.zauber.ast.reverse.SimpleConditionalInt
-import me.anno.zauber.ast.reverse.SimpleLocalFieldEqualsInt
-import me.anno.zauber.ast.reverse.SimpleLoop
+import me.anno.zauber.ast.reverse.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -20,6 +18,7 @@ import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.SimpleGraph
@@ -135,7 +134,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
         registerMethods(data, mainMethod)
         defineObjectGetters(data)
-        depth++
+        indentation++
 
         comment { builder.append("method imports") }
         for (method in functionIndexList) {
@@ -159,7 +158,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
         appendMainMethodCode(mainMethod)
 
-        depth--
+        indentation--
 
         val methodBodies = builder.toString()
         builder.clear()
@@ -204,7 +203,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
         builder.append("(func main (export \"main\") (type $")
             .append(getMainMethodType(mainMethod)).append(")")
-        depth++
+        indentation++
         nextLine()
 
         declareFuncHasNoLocalFields()
@@ -215,7 +214,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         appendDrop()
 
         dedent()
-        depth--
+        indentation--
         builder.append(")")
         nextLine()
 
@@ -245,26 +244,26 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
         builder.append("(")
 
-        depth++
+        indentation++
         nextLine()
 
         try {
             run()
 
             dedent()
-            depth--
+            indentation--
             builder.append(")\n")
             indent()
-            depth++
+            indentation++
 
         } finally {
-            depth--
+            indentation--
         }
     }
 
     fun beginModule() {
         builder.append("(module")
-        depth++
+        indentation++
         nextLine()
 
         comment { builder.append("memory") }
@@ -277,7 +276,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     fun endModule() {
         dedent()
         builder.append(")")
-        depth--
+        indentation--
     }
 
     fun writeMethodTypes() {
@@ -473,7 +472,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 .append(")")
         }
 
-        depth++
+        indentation++
         nextLine()
     }
 
@@ -523,7 +522,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             dedent()
             builder.append(")")
             binary.u8(WASMOpcode.END)
-            depth--
+            indentation--
             nextLine()
 
             bodies.finishBody()
@@ -621,7 +620,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             dedent()
             builder.append(")")
             binary.u8(WASMOpcode.END)
-            depth--
+            indentation--
             nextLine()
 
             bodies.finishBody()
@@ -637,7 +636,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             appendMethodHeader(type, methodName, method, false)
             trimWhitespaceAtEnd()
             builder.append("))")
-            depth--
+            indentation--
             nextLine()
         }
     }
@@ -653,7 +652,66 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         declareLocalFieldsAsVariables(graph)
 
         // write all code
-        appendSimpleBlock(graph, graph.startBlock)
+        if (graph.hasTailCalls()) appendTailCallCode(graph)
+        else appendSimpleBlock(graph, graph.startBlock)
+    }
+
+    var nextBlockIdIdx = 65536 // todo set this: we need one extra local for it
+
+    lateinit var blockTableOptions: List<SimpleBlock>
+
+    override fun appendTailCallCode(graph: SimpleGraph) {
+        builder.append("(local \$nextBlockId i32)"); nextLine()
+
+        i32Const(0); nextLine()
+        builder.append("local.set \$nextBlockId")
+        binary.localSet(nextBlockIdIdx)
+        nextLine()
+
+        beginLoop("blockTable")
+
+        val targets = findTailCallTargets(graph)
+        val options = graph.blocks.filterIndexed { index, block -> index == 0 || targets[block.blockId] }
+        blockTableOptions = options
+
+        repeat(options.size + 1) { index ->
+            builder.append("(block \$bbt").append(index)
+            binary.u8(WASMOpcode.BLOCK)
+            binary.u8(0x40) // no results
+            indentation++
+            blockTableDepth++
+            nextLine()
+        }
+
+        builder.append("local.get \$nextBlockId")
+        binary.localGet(nextBlockIdIdx)
+        nextLine()
+
+        // switching-block
+        builder.append("br_table")
+        binary.u8(WASMOpcode.BR_TABLE)
+        binary.u32(options.size) // number of targets
+        repeat(options.size) { index ->
+            builder.append(" \$bbt").append(index)
+            binary.u32(index) // trivial jump target
+        }
+        binary.u32(0) // default jump target (none)
+        indentation--
+        nextLine()
+        endLoop() // contains blockTableDepth--
+
+        // content blocks
+        for (i in options.indices) {
+            currBlockTableIndex = i
+            appendSimpleBlock(graph, options[i])
+            indentation--
+            dedent()
+            endLoop() // contains blockTableDepth--
+        }
+
+        indentation--// todo why is this needed???
+        dedent()
+        endLoop()
     }
 
     fun declareFuncHasNoLocalFields() {
@@ -691,6 +749,12 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             // needed for now
             typesForBinary.add(type)
         }
+
+        if (graph.hasTailCalls()) {
+            val numBuiltIn = 1 + graph.method.hasExplicitSelfType.toInt() + graph.method.valueParameters.size
+            nextBlockIdIdx = typesForBinary.size + numBuiltIn
+            typesForBinary.add(WASMType.I32)
+        } else nextBlockIdIdx = -1
 
         // we should reorder all field indices -> can do that later
         //  as an optimization step, not now
@@ -929,14 +993,16 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     fun beginIf() {
         builder.append("(if (then")
-        depth++
+        indentation++
         nextLine()
 
         binary.u8(WASMOpcode.IF)
         binary.u8(0x40) // empty block
+        blockTableDepth++
     }
 
     fun beginElse() {
+        dedent()
         builder.append(") (else")
         nextLine()
 
@@ -944,11 +1010,13 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     fun endIfElse() {
+        dedent()
         builder.append("))")
-        depth--
+        indentation--
         nextLine()
 
         binary.u8(WASMOpcode.END)
+        blockTableDepth--
     }
 
     fun globalGet(globalIndex: Int) {
@@ -1053,10 +1121,10 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     fun continueLoop(name: String, jumpDepth: Int) {
-        builder.append("br $").append(name)
+        builder.append("br $").append(name).append(" ;; ").append(jumpDepth)
         binary.u8(WASMOpcode.BR)
         binary.u8(jumpDepth) // how many extra loops/blocks are broken
-        depth--
+        indentation--
         nextLine()
     }
 
@@ -1064,15 +1132,20 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         builder.append("(loop $").append(name)
         binary.u8(WASMOpcode.LOOP)
         binary.u8(0x40) // empty
-        depth++
+        indentation++
         nextLine()
+        blockTableDepth++
     }
 
     fun endLoop() {
         builder.append(')')
         binary.u8(WASMOpcode.END)
         nextLine()
+        blockTableDepth--
     }
+
+    var blockTableDepth = 0
+    var currBlockTableIndex = 0
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
@@ -1100,6 +1173,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                     // nothing else can come after
 
                 } else {
+
                     beginLoop(name)
                     appendSimpleBlock(graph, expr.conditionBlock!!)
                     appendGetField(graph, expr.condition)
@@ -1325,6 +1399,36 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 builder.append("i32.add")
                 binary.u8(WASMOpcode.I32_ADD)
                 nextLine()
+            }
+            is SimpleTailCall -> {
+                // todo we have two options:
+                //  if the target is further along, just jump there directly
+                //  else, set the target id, and jump to the head
+
+                val targetIndex = blockTableOptions.indexOf(expr.toBeCalled)
+                if (targetIndex > currBlockTableIndex) {
+
+                    val jumpDepth = blockTableDepth - targetIndex - 2 // 1 jumped by default, 1 for outer loop
+
+                    builder.append("br \$bbt").append(targetIndex)
+                        .append(" ;; ").append(jumpDepth)
+                    binary.u8(WASMOpcode.BR)
+                    binary.u8(jumpDepth) // how many extra loops/blocks are broken
+                    nextLine()
+
+                } else {
+                    // jump to the head
+                    val jumpDepth = blockTableDepth - 1 // 1 is jumped by default
+                    i32Const(targetIndex); nextLine()
+                    builder.append("local.set \$nextBlockId")
+                    binary.localSet(nextBlockIdIdx)
+                    nextLine()
+
+                    builder.append("br \$blockTable ;; ").append(jumpDepth)
+                    binary.u8(WASMOpcode.BR)
+                    binary.u8(jumpDepth) // how many extra loops/blocks are broken
+                    nextLine()
+                }
             }
             is SimpleMerge -> {}
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")

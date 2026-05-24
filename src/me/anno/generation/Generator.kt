@@ -12,9 +12,9 @@ abstract class Generator(val blockSuffix: String = "}\n") {
 
     val builder = StringBuilder()
 
-    var depth = 0
+    var indentation = 0
     fun indent() {
-        repeat(depth) { builder.append("  ") }
+        repeat(indentation) { builder.append("  ") }
     }
 
     var commentDepth = 0
@@ -39,11 +39,11 @@ abstract class Generator(val blockSuffix: String = "}\n") {
 
     fun openBlock() {
         indent()
-        depth++
+        indentation++
     }
 
     fun closeBlock() {
-        depth--
+        indentation--
         indent()
     }
 
@@ -56,7 +56,7 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
         builder.append("{")
 
-        depth++
+        indentation++
         nextLine()
 
         try {
@@ -64,13 +64,13 @@ abstract class Generator(val blockSuffix: String = "}\n") {
 
             dedent()
 
-            depth--
+            indentation--
             builder.append("}\n")
             indent()
-            depth++
+            indentation++
 
         } finally {
-            depth--
+            indentation--
         }
     }
 

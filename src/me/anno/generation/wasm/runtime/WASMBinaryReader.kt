@@ -387,6 +387,16 @@ class WASMBinaryReader(
         }
     }
 
+    private fun readBlockBody(): List<WASMInstruction> {
+        val body = ArrayList<WASMInstruction>()
+        while (true) {
+            val instr = readInstruction()
+            if (instr == WASMInstruction.End) break
+            body.add(instr)
+        }
+        return body
+    }
+
     @Suppress("Since15")
     fun readInstruction(): WASMInstruction {
         return when (val opcode = u8()) {
@@ -394,19 +404,18 @@ class WASMBinaryReader(
             WASMOpcode.UNREACHABLE -> WASMInstruction.Unreachable
             WASMOpcode.NOP -> WASMInstruction.Nop
 
-            WASMOpcode.BLOCK -> WASMInstruction.Block(readVarInt().toInt())
+            WASMOpcode.BLOCK -> {
+                val type = u8()
+                assertEquals(0x40, type, "Unexpected block-type")
+                WASMInstruction.Block(type, readBlockBody())
+            }
+
             WASMOpcode.LOOP -> {
                 val type = u8()
                 assertEquals(0x40, type, "Unexpected loop-type")
-
-                val body = ArrayList<WASMInstruction>()
-                while (true) {
-                    val instr = readInstruction()
-                    if (instr == WASMInstruction.End) break
-                    body.add(instr)
-                }
-                WASMInstruction.Loop(type, body)
+                WASMInstruction.Loop(type, readBlockBody())
             }
+
             WASMOpcode.IF -> {
                 val type = u8()
                 assertEquals(0x40, type, "Unexpected if-type")
@@ -420,13 +429,7 @@ class WASMBinaryReader(
                 val last = ifBranch.removeLast()
 
                 val elseBranch = if (last == WASMInstruction.Else) {
-                    val elseBranch = ArrayList<WASMInstruction>()
-                    while (true) {
-                        val instr = readInstruction()
-                        if (instr == WASMInstruction.End) break
-                        elseBranch.add(instr)
-                    }
-                    elseBranch
+                    readBlockBody()
                 } else emptyList()
 
                 WASMInstruction.If(type, ifBranch, elseBranch)
@@ -437,6 +440,11 @@ class WASMBinaryReader(
             WASMOpcode.BR -> {
                 val depth = u32()
                 WASMInstruction.br[depth]
+            }
+            WASMOpcode.BR_TABLE -> {
+                val numTargets = u32()
+                val targets = IntArray(numTargets + 1) { u32() }
+                WASMInstruction.BrTable(targets)
             }
 
             WASMOpcode.RETURN -> WASMInstruction.Return

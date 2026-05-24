@@ -11,7 +11,7 @@ class FileWithImportsWriter(val self: JavaSourceGenerator, root: File) : DeltaWr
         check(content.packagePath != listOf("?"))
         self.beginPackageDeclaration(content.packagePath, file, content.imports, content.nativeImports)
 
-        if (self.depth > 0) {
+        if (self.indentation > 0) {
             // nicely formatted slow-path
             var i = 0
             val content = content.content

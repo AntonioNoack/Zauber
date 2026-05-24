@@ -109,7 +109,8 @@ class WASMRuntime(val binary: WASMBinary) {
                     val newStackSize = stackSize + type.results.size - type.params.size
                     check(newStackSize >= 0)
                     while (stack.size > newStackSize) {
-                        LOGGER.warn("Dropping ${stack.removeAt(newStackSize)}")
+                        val dropPosition = newStackSize - type.results.size
+                        LOGGER.warn("Dropping ${stack.removeAt(dropPosition)} from $stack")
                     }
                 }
 
@@ -153,7 +154,26 @@ class WASMRuntime(val binary: WASMBinary) {
                     }
                 }
 
+                is WASMInstruction.Block -> {
+                    val result = execute(call, instr.body)
+                    if (result is WASMInstruction.Br) {
+                        if (result.depth == 0) continue // continue instructions
+                        return result.next() // an outer loop was 'continued'
+                    } else {
+                        if (result != null) return result
+                        else continue
+                    }
+                }
+
                 is WASMInstruction.Br -> return instr
+                is WASMInstruction.BrTable -> {
+                    val index = popI32()
+                    val offset =
+                        if (index < 0 || index >= instr.targets.size) instr.targets.last()
+                        else instr.targets[index] // last target is default
+                    // println("branch offset[$index]: $offset")
+                    return WASMInstruction.br[offset]
+                }
 
                 is WASMInstruction.StructNewDefault -> {
                     val type = binary.types[instr.typeIndex] as WASMStruct
