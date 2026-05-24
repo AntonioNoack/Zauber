@@ -17,7 +17,7 @@ object CodeReconstruction {
 
         if (isSolved(graph)) return
 
-        println("code before reconstruction: $graph")
+        // println("code before reconstruction: $graph")
 
         var fine = true
         while (!isSolved(graph)) {
@@ -26,7 +26,10 @@ object CodeReconstruction {
             if (simplifyBranch(graph)) continue
             if (simplifyLoop(graph)) continue
 
-            if (onlyCheapSimplifications) return // early exit
+            if (onlyCheapSimplifications) {
+                // early exit
+                return
+            }
 
             // more expensive ones
             if (simplifyTree(graph)) continue
@@ -43,6 +46,8 @@ object CodeReconstruction {
             // last option
             return convertGraphToClass(graph)
         }
+
+        println("code after reconstruction: $graph")
     }
 
     private fun simplifySequence(graph: SimpleGraph): Boolean {

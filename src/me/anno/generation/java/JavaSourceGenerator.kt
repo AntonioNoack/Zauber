@@ -835,12 +835,13 @@ open class JavaSourceGenerator : Generator() {
 
     open fun prepareGraph(graph: SimpleGraph) {
 
-        println("input graph: $graph")
+        // println("input graph: $graph")
 
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
         graph.giveLocalFieldsUniqueNames()
+        graph.removeSimpleGetObject()
         graph.removeMergeInfoInstructions()
         graph.renumberFields()
 

@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
+import me.anno.zauber.ast.simple.expression.SimpleGetObject
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.scope.Scope
@@ -118,11 +119,12 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun removeConstantFields() {
-        removeFieldIf { it.constantRef != null }
+        removeFieldIf { it.constantRef != null && it.dst.mergeInfo == null }
         for (block in blocks) {
             block.instructions.removeIf {
                 it is SimpleAssignment &&
-                        it.dst.constantRef != null
+                        it.dst.constantRef != null &&
+                        it.dst.mergeInfo == null
             }
         }
     }
@@ -219,6 +221,12 @@ class SimpleGraph(val method0: Specialization) {
     fun removeMergeInfoInstructions() {
         for (block in blocks) {
             block.instructions.removeIf { it is SimpleMerge }
+        }
+    }
+
+    fun removeSimpleGetObject() {
+        for (block in blocks) {
+            block.instructions.removeIf { it is SimpleGetObject }
         }
     }
 

@@ -99,6 +99,9 @@ object ASTSimplifier {
     private fun finishFlows(flow1: FlowResult, method: Specialization, expr: Expression) {
         val flow1v = flow1.value
         if (flow1v != null) {
+            check(flow1v.block.nextBranch == null) {
+                "Last block must not continue flow: ${flow1v.block}"
+            }
             // missing return -> we do it ourselves
             // validate method returns Unit
             check(method.method.returnType == Types.Unit) {
@@ -544,15 +547,16 @@ object ASTSimplifier {
         }
 
         val field = expr.field.resolved
+        val graph = block0.graph
 
-        if (isLocalField(block0.graph, field)) {
-            val localField = block0.graph.getOrPutLocalField(field, context)
+        if (isLocalField(graph, field)) {
+            val localField = graph.getOrPutLocalField(field, context)
             val block2 = simplifyImpl(context, expr.value, flow0, true)
             val block2v = block2.value ?: return block2
             val value = block2v.value
 
-            block0.add(SimpleSetLocalField(localField, value.use(), expr.scope, expr.origin))
-            return flow0.withValue(unitInstance(block0.graph, expr))
+            block2v.block.add(SimpleSetLocalField(localField, value.use(), expr.scope, expr.origin))
+            return block2.withValue(unitInstance(graph, expr))
         }
 
         val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
@@ -562,6 +566,9 @@ object ASTSimplifier {
         val block2 = simplifyImpl(context, expr.value, block1, true)
         val block2v = block2.value ?: return block2
         val value = block2v.value
+
+        println("block for self: ${block1v.block}")
+        println("block for value: ${block2v.block}")
 
         if (!fieldHasSensibleType(context, field)) {
             LOGGER.info("Skipping non-sense setter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")
@@ -587,7 +594,7 @@ object ASTSimplifier {
         }
 
         if (useSetter) {
-            val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
+            val ownerTypes = (self.type as? ClassType)?.typeParameters ?: emptyParameterList()
             val setter = field.setter ?: throw IllegalStateException("Missing setter for $field")
             val newContext = context.withSpec(Specialization(setter.scope, ownerTypes))
             val resolvedSetter = ResolvedMethod(setter, newContext, expr.scope, MatchScore.zero)
@@ -601,11 +608,10 @@ object ASTSimplifier {
                 SimpleSetField(
                     self.use(), field, value.use(),
                     expr.field.specialization,
-                    expr.scope,
-                    expr.origin
+                    expr.scope, expr.origin
                 )
             )
-            return block2.withValue(unitInstance(block0.graph, expr), block2v.block)
+            return block2.withValue(unitInstance(graph, expr), block2v.block)
         }
     }
 

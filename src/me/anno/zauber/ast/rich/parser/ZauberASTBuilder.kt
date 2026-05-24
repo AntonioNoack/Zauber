@@ -439,7 +439,7 @@ class ZauberASTBuilder(
             }
 
             consumeIf("if") -> readIfBranch()
-            consumeIf("else") -> throw IllegalStateException("Standalone 'else' at ${tokens.err(i - 1)}")
+            consumeIf("else") -> error("Unexpected 'else' at ${tokens.err(i - 1)}")
             consumeIf("while") -> readWhileLoop(label)
             consumeIf("do") -> readDoWhileLoop(label)
             consumeIf("for") -> readForLoop(label)
@@ -447,7 +447,7 @@ class ZauberASTBuilder(
                 when {
                     tokens.equals(i, TokenType.OPEN_CALL) -> readWhenWithSubject(label)
                     tokens.equals(i, TokenType.OPEN_BLOCK) -> readWhenWithConditions(label)
-                    else -> throw IllegalStateException("Unexpected token after when at ${tokens.err(i)}")
+                    else -> error("Unexpected token after when, expected '(' or '{' at ${tokens.err(i)}")
                 }
             }
             consumeIf("try") -> readTryCatch()
@@ -759,6 +759,7 @@ class ZauberASTBuilder(
                 cases.add(WhenCase(condition, body))
             }
         }
+
         return whenBranchToIfElseChain(cases, currPackage, origin)
     }
 

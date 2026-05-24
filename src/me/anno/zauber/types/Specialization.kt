@@ -162,7 +162,11 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
     }
 
     override fun toString(): String {
-        return "[${scope?.pathStr}]" + List(typeParameters.generics.size) { index ->
+        return "[${scope?.pathStr}]" + toStringWithoutScope()
+    }
+
+    fun toStringWithoutScope(): String {
+        return List(typeParameters.generics.size) { index ->
             IndexedValue(index, typeParameters.generics[index].scope)
         }
             .groupBy { it.value }.entries

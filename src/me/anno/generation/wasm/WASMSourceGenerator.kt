@@ -797,11 +797,12 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     override fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing) {
-            val notNeeded = expr.dst.id < 0
-            if (notNeeded) {
-                appendDrop()
-            } else {
-                appendAssign(graph, expr)
+            val needed = expr.dst.dst.id >= 0
+            if (needed) appendAssign(graph, expr)
+            else {
+                builder.append("drop ;; %").append(expr.dst.dst.id).append(" not needed")
+                binary.drop()
+                nextLine()
             }
         }
         if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
@@ -1593,6 +1594,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
             appendGetField(graph, expr.thisInstance)
             appendLoadClassIndex()
+
+            // todo if there is few options, we can also create a switch-case
 
             // resolve function to call
             if (expr.sample.ownerScope.isInterface()) {

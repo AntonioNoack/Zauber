@@ -244,7 +244,7 @@ object CallWithNames {
         scope: Scope, origin: Long,
     ): Expression {
         val instanceType = getArrayOfExprInstanceType(context, instanceType0, values, scope, origin)
-        println("createArrayOfExpr($values, $instanceType), spec: ${Specializations.specialization}")
+        // println("createArrayOfExpr($values, $instanceType), spec: ${Specializations.specialization}")
         return ArrayOfExpr(values, instanceType, scope, origin)
     }
 

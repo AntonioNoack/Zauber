@@ -1,9 +1,11 @@
 package me.anno.zauber.ast.simple.fields
 
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.types.Type
@@ -42,20 +44,19 @@ class SimpleField(
         }
 
     override fun toString(): String {
-        val idName = style("%$id", StringStyles.YELLOW)
+        val idName = style("%$id", YELLOW)
         val typeColor = StringStyles.LINK
         return when {
-            id >= 0 && constantRef is NumberExpression ->
+            constantRef is NumberExpression ->
                 "${style("\"${constantRef.value}\"", StringStyles.BLUE)}$idName"
-            id >= 0 && constantRef is StringExpression ->
+            constantRef is StringExpression ->
                 "${style("\"${constantRef.value}\"", StringStyles.GREEN)}$idName"
-            id >= 0 && constantRef != null -> "\"$constantRef\"$idName"
-            constantRef != null -> "\"$constantRef\""
-            id >= 0 && type is ClassType && type.clazz.isObjectLike() ->
-                "[${style(type.clazz.pathStr, typeColor)}]$idName"
+            constantRef is SpecialValueExpression ->
+                "${style("${constantRef.type}", StringStyles.BLUE)}$idName"
+            constantRef != null -> "\"$constantRef\"$idName"
             type is ClassType && type.clazz.isObjectLike() ->
-                "[${style(type.clazz.pathStr, typeColor)}]"
+                "[${style(type.clazz.pathStr, typeColor)}]$idName"
             else -> "$idName[${style(type.toString(), typeColor)}]"
-        }
+        } + if (mergeInfo != null) "->${style("%${dst.id}", YELLOW)}" else ""
     }
 }

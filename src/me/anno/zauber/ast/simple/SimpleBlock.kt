@@ -235,7 +235,7 @@ class SimpleBlock(val graph: SimpleGraph) {
     fun str() = style("b$blockId", GREEN)
 
     fun isEmpty(): Boolean {
-        return branchCondition == null && ifBranch == null && elseBranch == null &&
+        return !isBranch && nextBranch == null &&
                 instructions.isEmpty()
     }
 

@@ -38,13 +38,9 @@ class CallExpression(
         private val LOGGER = LogManager.getLogger(CallExpression::class)
     }
 
-    init {
-        println("Created CallExpr $this")
-    }
-
     override fun resolveImpl(context: ResolutionContext): Expression {
         return super.resolveImpl(context).apply {
-            println("Resolved CallExpr to $this")
+            // println("Resolved CallExpr to $this")
         }
     }
 

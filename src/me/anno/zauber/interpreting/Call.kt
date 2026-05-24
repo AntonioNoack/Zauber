@@ -16,11 +16,7 @@ class Call(val method: MethodLike) {
     }
 
     fun setSimple(field: SimpleField, instance: Instance) {
-        var field = field
-        while (true) {
-            simpleFields[field.id] = instance
-            field = field.mergeInfo?.dst ?: return
-        }
+        simpleFields[field.dst.id] = instance
     }
 
     lateinit var graph: SimpleGraph
