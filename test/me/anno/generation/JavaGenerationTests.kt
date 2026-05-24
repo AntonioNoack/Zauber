@@ -8,7 +8,8 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~7s -> ~0.7s by not using Maven
+ * execution time: 1.1s
+ * ~7s -> ~0.7s by not using Maven
  * */
 class JavaGenerationTests : CodeGenerationTests() {
 

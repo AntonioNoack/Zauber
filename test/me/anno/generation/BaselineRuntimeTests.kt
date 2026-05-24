@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 /**
- * execution time: ~230 ms
+ * execution time: ~250 ms
  * */
 class BaselineRuntimeTests : CodeGenerationTests() {
 

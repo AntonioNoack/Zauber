@@ -1,7 +1,6 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
-import me.anno.compilation.MinimalJavaScriptCompiler
 import me.anno.compilation.MinimalPythonCompiler
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.typeresolution.TypeResolution
@@ -9,7 +8,7 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~0.5s for all
+ * execution time: ~0.4s for all
  * */
 class PythonGenerationTests : CodeGenerationTests() {
 

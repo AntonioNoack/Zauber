@@ -645,7 +645,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             val methodName = getMethodName(method)
             builder.append("(import \"env\" \"").append(methodName).append("\" ")
             appendMethodHeader(type, methodName, method, false)
-            removeWhitespaceAtEnd()
+            removeTrailingWhitespace()
             builder.append("))")
             indentation--
             nextLine()
@@ -719,6 +719,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         indentation--// todo why is this needed???
         dedent()
         endLoop()
+
+        appendUnreachable()
     }
 
     fun declareFuncHasNoLocalFields() {

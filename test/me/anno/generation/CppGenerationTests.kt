@@ -8,7 +8,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: ~2s for all when preserveFolder=true, instead of 3s
+ * execution time: 4.1s
+ * ~2s for all when preserveFolder=true, instead of 3s
  * */
 class CppGenerationTests : CodeGenerationTests() {
 

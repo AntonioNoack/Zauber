@@ -4,6 +4,7 @@ import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.Specializations.specialization
+import me.anno.generation.java.Import2
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -64,16 +65,6 @@ class RustSourceGenerator : JavaSourceGenerator() {
         val gcTraceImport = "gc::Trace".split("::")
         val gcFinalizeImport = "gc::Finalize".split("::")
         val mutexGuardImport = "std::sync::MutexGuard".split("::")
-
-        val libImports = listOf(
-            refCellImport,
-            gcCellImport,
-            gcImport,
-            gcTraceImport,
-            gcFinalizeImport,// must be defined, when we have no own finalize implementation
-            mutexGuardImport,
-        )
-
     }
 
     override val protectedTypes: Map<ClassType, BoxedType> get() = protectedRustTypes
@@ -151,8 +142,8 @@ class RustSourceGenerator : JavaSourceGenerator() {
             builder.append("#[derive(Clone)]") // maybe complicated copy
             nextLine()
         } else {
-            imports["Trace"] = gcTraceImport
-            imports["Finalize"] = gcFinalizeImport
+            imports["Trace"] = Import2(gcTraceImport, null)
+            imports["Finalize"] = Import2(gcFinalizeImport, null)
             builder.append("#[derive(Trace, Finalize, Clone)]") // maybe complicated copy
             nextLine()
         }
@@ -215,7 +206,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                 val superScope = call.type.clazz
                 val superClassName = getClassName(superScope, specialization.withScope(superScope)) + traitSuffix
                 // we have to import it...
-                imports[superClassName] = superScope.path.dropLast(1) + superClassName
+                imports[superClassName] = Import2(superScope.path.dropLast(1) + superClassName, superScope)
                 builder.append("impl ")
                     .append(superClassName)
                     .append(" for ").append(className)
@@ -250,7 +241,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
             builder.append("self.content[index as usize] = value;")
             nextLine()
 
-            imports["MutexGuard"] = mutexGuardImport
+            imports["MutexGuard"] = Import2(mutexGuardImport, null)
 
             builder.append("return ")
             appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
@@ -486,17 +477,17 @@ class RustSourceGenerator : JavaSourceGenerator() {
 
     fun getOwnership(type: Type): RustOwnershipType {
         val ownership = RustOwnership[resolveType(type)]
-        if (ownership.isFlatMutable) imports["RefCell"] = refCellImport
+        if (ownership.isFlatMutable) imports["RefCell"] = Import2(refCellImport, null)
         if (ownership.isDeepMutable) {
-            imports["GcCell"] = gcCellImport
-            imports["Gc"] = gcImport
+            imports["GcCell"] = Import2(gcCellImport, null)
+            imports["Gc"] = Import2(gcImport, null)
         }
         return ownership
     }
 
     override fun beginPackageDeclaration(
         packagePath: List<String>, file: File,
-        imports: Map<String, List<String>>, nativeImports: Set<String>
+        imports: Map<String, Import2>, nativeImports: Set<String>
     ) {
         appendImports(packagePath, imports)
     }
@@ -505,9 +496,9 @@ class RustSourceGenerator : JavaSourceGenerator() {
         // nothing to do
     }
 
-    override fun appendImport(packagePath: List<String>, import: List<String>) {
+    override fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
         builder.append("use ")
-        val fromZauber = import !in libImports
+        val fromZauber = importedScope != null
         if (fromZauber) {
             // internal imports start with "crate::"
             builder.append("crate::")
@@ -567,7 +558,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                         writeBlock {
                             appendSimpleBlock(graph, block)
                         }
-                        removeWhitespaceAtEnd()
+                        removeTrailingWhitespace()
                         builder.append(',')
                         nextLine()
                     }
@@ -666,7 +657,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
                 if (expr.ifFalse != null) {
-                    removeWhitespaceAtEnd()
+                    removeTrailingWhitespace()
                     builder.append(" else ")
                     writeBlock {
                         appendSimpleBlock(graph, expr.ifFalse)
@@ -711,7 +702,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         val selfType = resolveType(expr.thisInstance.type) as ClassType
         val position = builder.length
         appendType(selfType, expr.scope, true)
-        imports[selfType.clazz.name] = selfType.clazz.path
+        imports[selfType.clazz.name] = Import2(selfType.clazz.path, selfType.clazz)
         builder.setLength(position)
 
         builder.append(needsCastForFirstValue.boxed).append("::new(")

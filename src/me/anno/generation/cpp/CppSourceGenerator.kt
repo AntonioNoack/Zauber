@@ -5,6 +5,7 @@ import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.ImportSorter
 import me.anno.generation.Specializations.specialization
+import me.anno.generation.java.Import2
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
@@ -123,7 +124,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
                 appendSuperTypes(classScope)
                 appendClassBody(classScope, className, methods, fields, true)
-                removeWhitespaceAtEnd()
+                removeTrailingWhitespace()
                 builder.append(";")
                 nextLine()
 
@@ -290,7 +291,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun beginPackageDeclaration(
         packagePath: List<String>, file: File,
-        imports: Map<String, List<String>>,
+        imports: Map<String, Import2>,
         nativeImports: Set<String>
     ) {
         if (file.name.endsWith(".hpp")) builder.append("#pragma once\n")
@@ -324,12 +325,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         nextLine()
     }
 
-    fun writeUsingNamespace(imports: Map<String, List<String>>) {
-        if (imports.none { it.value.size > 1 }) return
+    fun writeUsingNamespace(imports: Map<String, Import2>) {
+        if (imports.none { it.value.path.size > 1 }) return
 
         val usingNamespace = imports.values
-            .filter { it.size > 1 }
-            .map { it.subList(0, it.size - 1) }
+            .filter { it.path.size > 1 }
+            .map { it.path.dropLast(1) }
             .distinct()
             .sortedWith(ImportSorter)
 
@@ -344,7 +345,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
-    override fun appendImport(packagePath: List<String>, import: List<String>) {
+    override fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
         builder.append("#include \"")
         builder.appendRelativePath(packagePath, import)
         builder.append(".hpp\"")

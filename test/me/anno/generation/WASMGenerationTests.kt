@@ -8,7 +8,7 @@ import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
- * execution time: 2.7s,
+ * execution time: 3.6s,
  * main cost is loading Node via NVM, I think -> yesss, custom runtime is 10x faster
  * */
 class WASMGenerationTests : CodeGenerationTests() {

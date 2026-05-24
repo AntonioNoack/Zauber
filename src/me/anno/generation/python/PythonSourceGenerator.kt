@@ -8,8 +8,9 @@ import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
+import me.anno.zauber.ast.reverse.SimpleLoop
+import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
@@ -67,6 +68,8 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
         val nativePythonTypes by threadLocal { protectedPythonTypes.filter { (_, it) -> it.boxed != it.native } }
         val nativePythonNumbers by threadLocal { nativePythonTypes - Types.Boolean }
+
+        private const val STATIC_INSTANCE_SUFFIX = "_S"
     }
 
     override val protectedTypes: Map<ClassType, BoxedType> get() = protectedPythonTypes
@@ -76,7 +79,12 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     override fun getExtension(headerOnly: Boolean): String = "py"
 
     override fun getMethodName(method: Specialization): String {
-        val base = if (method.method is Constructor) "__init_" else super.getMethodName(method)
+
+        if (method.method is Constructor && method.method.ownerScope.typeWithArgs in nativeNumbers) {
+            return "__init__"
+        }
+
+        val base = if (method.method is Constructor) "init_" else super.getMethodName(method)
         return "${base}_${hashMethodParameters(method)}"
     }
 
@@ -106,14 +114,24 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendPackageDeclaration(packagePath: List<String>, file: File) {
-        builder.append("# $packagePath")
+        builder.append("# ")
+        appendPath(packagePath)
+        builder.append('.')
+        builder.append(file.nameWithoutExtension)
         nextLine()
         nextLine()
     }
 
-    override fun appendImport(packagePath: List<String>, import: List<String>) {
-        builder.append("import ")
+    override fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
+        builder.append("from ")
         appendPath(import)
+        builder.append(" import ")
+        builder.append(import.last())
+
+        if (importedScope != null && importedScope.isObjectLike()) {
+            builder.append(STATIC_INSTANCE_SUFFIX)
+        }
+
         nextLine()
     }
 
@@ -222,7 +240,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 appendCode(context, methodSpec, body, true)
             }
 
-            removeWhitespaceAtEnd()
+            removeTrailingWhitespace()
             nextLine()
 
             if (builder.length <= i0) {
@@ -251,6 +269,20 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         removeTailingReturn()
 
         appendMissingDeclarations(graph, pos0)
+    }
+
+    override fun appendMissingDeclarations(graph: SimpleGraph, pos0: Int) {
+        val pos1 = builder.length
+        for (field in usedFields - declaredFields) {
+            appendDeclare(graph, field, graph.method.memberScope, false)
+            builder.append(" = ")
+            appendDefaultValue(field.type)
+            nextLine()
+        }
+        swapSections(pos0, pos1)
+
+        usedFields.clear()
+        declaredFields.clear()
     }
 
     override fun appendSuperCall0(classScope: Scope, className: String, constructor: Constructor) {
@@ -367,53 +399,54 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendNativeImplementation(nativeImpl: String, method: MethodLike) {
+        val i0 = builder.length
         builder.append(nativeImpl)
         nextLine()
-        appendReturnIfMissing(method)
+        appendReturnIfMissing(method, i0)
     }
 
     override fun appendArrayContentInitialization(constructor: Constructor) {
         val elementType = specialization.typeParameters[0]
         val sizeName = constructor.valueParameters[0].name
-        builder.append("self.content = new ")
-        val arrayName = when (elementType) {
-            Types.Byte -> "Int8Array"
-            Types.UByte -> "UInt8Array"
-            Types.Short -> "Int16Array"
-            Types.UShort, Types.Char -> "UInt16Array"
-            Types.Int -> "Int32Array"
-            Types.UInt -> "UInt32Array"
-            Types.Long -> "Int64Array"
-            Types.ULong -> "UInt64Array"
-            Types.Half -> "Float16Array"
-            Types.Float -> "Float32Array"
-            Types.Double -> "Float64Array"
-            else -> "Array"
-        }
-        builder.append(arrayName).append('(').append(sizeName).append(")")
+        builder.append("self.content = [")
+        appendDefaultValue(elementType)
+        builder.append("] * ").append(sizeName)
         nextLine()
     }
 
-    override fun appendArrayGetter(method0: Specialization) {
-        writeBlock {
-            builder.append("return self.content[index]")
+    override fun appendDefaultValue(valueType: Type) {
+        val str = when (valueType) {
+            Types.Boolean -> "False"
+            in nativeTypes -> if (isNumberFloat(valueType)) "0.0" else "0"
+            else -> "None"
+        }
+        builder.append(str)
+    }
+
+    override fun appendReturnIfMissing(method: MethodLike, i0: Int) {
+        if (builder.indexOf("return", i0) < 0) {
+            builder.append("return ")
+            appendGetObjectInstance(Types.Unit.clazz, method.scope)
             nextLine()
         }
+    }
+
+    override fun appendArrayGetter(method0: Specialization) {
+        builder.append("return self.content[index]")
+        nextLine()
     }
 
     override fun appendArraySetter(method0: Specialization) {
-        writeBlock {
-            builder.append("self.content[index] = value")
-            nextLine()
+        builder.append("self.content[index] = value")
+        nextLine()
 
-            builder.append("return ")
-            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
-            nextLine()
-        }
+        builder.append("return ")
+        appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+        nextLine()
     }
 
     override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
-        builder.append(field.name).append(" = undefined")
+        builder.append(field.name).append(" = None")
         nextLine()
     }
 
@@ -435,9 +468,14 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendStaticInstance(classScope: Scope, className: String) {
-        builder.append(OBJECT_FIELD_NAME)
+        builder.append(className).append(STATIC_INSTANCE_SUFFIX)
             .append(" = ").append(className).append("()")
         nextLine()
+    }
+
+    override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
+        appendType(objectScope.typeWithArgs, objectScope, false)
+        builder.append(STATIC_INSTANCE_SUFFIX)
     }
 
     override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
@@ -460,7 +498,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         builder.append(')')
     }
 
-    override fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
+    override fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         if (/*expr !is SimpleBlock &&*/ expr !is SimpleBranch) nextLine()
         if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
             builder.append("raise AssertionError(\"Unreachable\")")
@@ -471,7 +509,6 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleAllocateInstance -> {
-                builder.append("new ")
                 appendType(expr.allocatedType, expr.scope, true)
                 builder.append("()")
             }
@@ -480,8 +517,111 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 builder.append(getMethodName(expr.specialization))
                 appendValueParams(graph, expr.valueParameters)
             }
+            is SimpleBranch -> {
+                builder.append("if ")
+                appendFieldName(graph, expr.condition)
+                writeBlock {
+                    appendSimpleBlock(graph, expr.ifTrue)
+                }
+                if (expr.ifFalse != null) {
+                    builder.append("else")
+                    writeBlock {
+                        appendSimpleBlock(graph, expr.ifFalse)
+                    }
+                }
+            }
+            is SimpleLoop -> {
+                builder.append("while True")
+                writeBlock {
+                    if (expr.condition != null) {
+                        appendSimpleBlock(graph, expr.conditionBlock!!)
+                        builder.append("if ")
+                        if (!expr.negate) builder.append("not ")
+                        appendFieldName(graph, expr.condition)
+                        builder.append(":"); nextLine()
+                        builder.append("  break"); nextLine()
+                        nextLine()
+                    }
+                    appendSimpleBlock(graph, expr.body)
+                }
+            }
+            is SimpleTailCall -> {
+                builder.append("nextBlockId = ").append(expr.toBeCalled.blockId)
+                nextLine()
+                builder.append("raise StopIteration")
+            }
+            is SimpleCall -> {
+                // Number.toX() needs to be converted to a cast
+                val methodName = expr.methodName
+                val done = when (expr.valueParameters.size) {
+                    0 -> {
+                        val castSymbol = when (methodName) {
+                            "toInt" -> "(int) "
+                            "toLong" -> "(long) "
+                            "toFloat" -> "(float) "
+                            "toDouble" -> "(double) "
+                            "toByte" -> "(byte) "
+                            "toShort" -> "(short) "
+                            "toChar" -> "(char) "
+                            else -> null
+                        }
+                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
+                            builder.append(castSymbol)
+                            appendFieldName(graph, expr.thisInstance)
+                            true
+                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
+                            builder.append("not ")
+                            appendFieldName(graph, expr.thisInstance)
+                            true
+                        } else false
+                    }
+                    1 -> {
+                        val type = expr.thisInstance.type
+                        val supportsType = when (type) {
+                            Types.String, in nativeTypes -> true
+                            else -> false
+                        }
+                        val symbol = when (methodName) {
+                            "plus" -> " + "
+                            "minus" -> " - "
+                            "times" -> " * "
+                            "div" -> if (isNumberFloat(type)) " / " else " // "
+                            "rem" -> " % "
+                            else -> null
+                        }
+                        if (supportsType && symbol != null) {
+                            if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
+                                check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
+                                    "$type is missing field 'content'"
+                                }
+                                appendFieldName(graph, expr.thisInstance, ".")
+                                builder.append("content")
+                            } else {
+                                appendFieldName(graph, expr.thisInstance)
+                            }
+                            builder.append(symbol)
+                            appendFieldName(graph, expr.valueParameters[0])
+                            true
+                        } else false
+                    }
+                    else -> false
+                }
+                if (!done) {
+                    appendCallImpl(graph, expr)
+                }
+            }
             else -> super.appendInstrImpl(graph, expr)
         }
+    }
+
+    override fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
+        if (field.ownerScope == outsideClassLike(exprScope)) {
+            // if there is nothing dangerous in-between, we could use this.
+            builder.append("self")
+        } else {
+            appendGetObjectInstance(field.ownerScope, exprScope)
+        }
+        builder.append(forFieldAccess)
     }
 
     override fun appendType(type: Type, scope: Scope, needsBoxedType: Boolean) {
@@ -508,12 +648,10 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         val position = builder.length
         appendType(selfType, expr.scope, true)
         builder.setLength(position)
-        // todo bug: why is this not being imported???
 
-        builder.append("Object.assign(new ")
-        builder.append(needsCastForFirstValue.boxed).append("(), { content: ")
+        builder.append(needsCastForFirstValue.boxed).append("(")
         appendFieldName(graph, expr.thisInstance)
-        builder.append(" }).")
+        builder.append(").")
         builder.append(getMethodName(expr.specialization))
         appendValueParams(graph, expr.valueParameters)
     }
@@ -539,23 +677,31 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun appendTailCallCode(graph: SimpleGraph) {
         builder.append("nextBlockId = 0"); nextLine()
-        builder.append("blockTable: while (true) ")
+        builder.append("while True")
         writeBlock {
-            builder.append("switch (nextBlockId) ")
+            builder.append("try")
             writeBlock {
-                val targets = findTailCallTargets(graph)
-                val blocks = graph.blocks
-                for (i in blocks.indices) {
-                    val block = blocks[i]
-                    if (i == 0 || targets[block.blockId]) {
-                        builder.append("case ").append(block.blockId).append(':')
-                        writeBlock {
-                            appendSimpleBlock(graph, block)
+                builder.append("match nextBlockId")
+                writeBlock {
+                    val targets = findTailCallTargets(graph)
+                    val blocks = graph.blocks
+                    for (i in blocks.indices) {
+                        val block = blocks[i]
+                        if (i == 0 || targets[block.blockId]) {
+                            builder.append("case ").append(block.blockId)
+                            writeBlock {
+                                appendSimpleBlock(graph, block)
+                            }
                         }
                     }
                 }
             }
+            builder.append("except StopIteration")
+            writeBlock {
+                builder.append("pass")
+            }
         }
+        nextLine()
     }
 
     override fun comment(body: () -> Unit) {
@@ -564,9 +710,11 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             builder.append("# ")
             val len0 = builder.length
             body()
+            removeTrailingWhitespace()
             for (i in len0 until builder.length) {
                 if (builder[i] == '\n') builder[i] = '#'
             }
+            nextLine()
         } finally {
             commentDepth--
         }

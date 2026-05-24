@@ -357,7 +357,7 @@ open class JavaSourceGenerator : Generator() {
     open fun filterImports(name: String, packageScope: Scope, headerOnly: Boolean) {
         imports.entries.removeIf { (name1, path) ->
             // these are automatically imported:
-            name == name1 || path.subList(0, path.size - 1) == packageScope.path
+            name == name1 || path.path.dropLast(1) == packageScope.path
         }
     }
 
@@ -645,15 +645,16 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendNativeImplementation(nativeImpl: String, method: MethodLike) {
         writeBlock {
+            val i0 = builder.length
             builder.append(nativeImpl)
             builder.append(";")
             nextLine()
-            appendReturnIfMissing(method)
+            appendReturnIfMissing(method, i0)
         }
     }
 
-    fun appendReturnIfMissing(method: MethodLike) {
-        if ("return " !in builder) {
+    open fun appendReturnIfMissing(method: MethodLike, i0: Int) {
+        if (builder.indexOf("return", i0) < 0) {
             builder.append("return ")
             appendGetObjectInstance(Types.Unit.clazz, method.scope)
             builder.append(";")
@@ -890,7 +891,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append("int nextBlockId = 0;"); nextLine()
         builder.append("blockTable: while (true) ")
         writeBlock {
-         builder.append("switch (nextBlockId) ")
+            builder.append("switch (nextBlockId) ")
             writeBlock {
                 val targets = findTailCallTargets(graph)
                 val blocks = graph.blocks
@@ -973,7 +974,7 @@ open class JavaSourceGenerator : Generator() {
         builder.setLength(length)
     }
 
-    val imports = HashMap<String, List<String>>()
+    val imports = HashMap<String, Import2>()
     val nativeImports = LinkedHashSet<String>()
 
     open fun appendAssign(graph: SimpleGraph, expression: SimpleAssignment) {
@@ -999,7 +1000,7 @@ open class JavaSourceGenerator : Generator() {
         if (withEquals) builder.append(" = ")
     }
 
-    fun appendMissingDeclarations(graph: SimpleGraph, pos0: Int) {
+    open fun appendMissingDeclarations(graph: SimpleGraph, pos0: Int) {
         val pos1 = builder.length
         for (field in usedFields - declaredFields) {
             appendDeclare(graph, field, graph.method.memberScope, false)
@@ -1182,7 +1183,7 @@ open class JavaSourceGenerator : Generator() {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
                 if (expr.ifFalse != null) {
-                    removeWhitespaceAtEnd()
+                    removeTrailingWhitespace()
                     builder.append(" else ")
                     writeBlock {
                         appendSimpleBlock(graph, expr.ifFalse)
@@ -1596,13 +1597,13 @@ open class JavaSourceGenerator : Generator() {
             path0 + extraName
         } else path0
 
-        appendClassName(path1)
+        appendClassName(path1, type)
     }
 
-    fun appendClassName(path: List<String>) {
+    fun appendClassName(path: List<String>, scope: Scope) {
         val name = path.last()
-        val existingImport = imports.getOrPut(name) { path }
-        if (existingImport == path) {
+        val existingImport = imports.getOrPut(name) { Import2(path, scope) }
+        if (existingImport.path == path) {
             // good :)
             builder.append(name)
         } else {
@@ -1630,7 +1631,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun beginPackageDeclaration(
-        packagePath: List<String>, file: File, imports: Map<String, List<String>>,
+        packagePath: List<String>, file: File, imports: Map<String, Import2>,
         nativeImports: Set<String>
     ) {
         appendPackageDeclaration(packagePath, file)
@@ -1641,11 +1642,13 @@ open class JavaSourceGenerator : Generator() {
         // nothing to do in Java
     }
 
-    open fun appendImports(packagePath: List<String>, imports: Map<String, List<String>>) {
-        val importList = imports.values.sortedWith(ImportSorter)
+    open fun appendImports(packagePath: List<String>, imports: Map<String, Import2>) {
+        val importList = imports.values.sortedWith { a, b ->
+            ImportSorter.compare(a.path, b.path)
+        }
         val position = builder.length
         for (import in importList) {
-            appendImport(packagePath, import)
+            appendImport(packagePath, import.path, import.scope)
         }
         if (builder.length > position) nextLine()
     }
@@ -1657,7 +1660,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendImport(packagePath: List<String>, import: List<String>) {
+    open fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
         builder.append("import ")
         appendPath(import)
         builder.append(";\n")

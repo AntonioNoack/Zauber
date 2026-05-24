@@ -110,7 +110,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    override fun appendImport(packagePath: List<String>, import: List<String>) {
+    override fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
         builder.append("import { ")
         builder.append(import.last())
         builder.append(" } from \"")
