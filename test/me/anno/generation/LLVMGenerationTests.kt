@@ -8,6 +8,12 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
+// todo we need more tests:
+//  - type conversion
+//  - comparison of small ints after adding things to overflow
+//  - try-catch
+//  - yield
+
 class LLVMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {

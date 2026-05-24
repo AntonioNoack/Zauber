@@ -3,8 +3,6 @@ package me.anno.generation.llvm
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator
 import me.anno.utils.FullMap
-import me.anno.zauber.ast.reverse.SimpleBranch
-import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -13,6 +11,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.SimpleGraph
@@ -395,23 +394,28 @@ class LLVMSourceGenerator : CSourceGenerator() {
         }
     }
 
-    fun appendMethodImport(method: Specialization) {
-        method.use {
-            val returnType0 = method.method.resolveReturnType(method)
+    fun appendMethodImport(method0: Specialization) {
+        method0.use {
+            val method = method0.method
+            val returnType0 = method.resolveReturnType(method0)
             val returnType1 = getLLVMType(returnType0)
 
             builder.append("declare ")
                 .append(returnType1.ir)
                 .append(" ")
-                .append(getMethodName(method))
+                .append(getMethodName(method0))
                 .append("(")
 
             // self
-            builder.append(getLLVMType(method.method.ownerScope.typeWithArgs).ir)
+            builder.append(getLLVMType(method.ownerScope.typeWithArgs).ir)
 
-            // todo explicit self
+            // explicit self
+            if (method.hasExplicitSelfType) {
+                builder.append(", ")
+                builder.append(getLLVMType(method.selfType!!))
+            }
 
-            for (param in method.method.valueParameters) {
+            for (param in method.valueParameters) {
                 builder.append(", ")
                 builder.append(getLLVMType(param.type).ir)
             }
@@ -441,9 +445,48 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
         // write all code
         val pos0 = builder.length
-        appendSimpleBlock(graph, graph.startBlock)
+        val blocks = graph.blocks
+        check(blocks.first() == graph.startBlock)
+        for (i in blocks.indices) {
+            appendSimpleBlock(graph, blocks[i])
+        }
 
         appendMissingDeclarations(graph, pos0)
+    }
+
+    override fun appendSimpleBlock(graph: SimpleGraph, block: SimpleBlock) {
+        val instructions = block.instructions
+        startNextBlock(block)
+        for (i in instructions.indices) {
+            val instr = instructions[i]
+            appendSimpleInstruction(graph, instr)
+        }
+        jumpToNextBlock(graph, block)
+    }
+
+    private fun startNextBlock(block: SimpleBlock) {
+        if (block.blockId == 0) return // start block cannot be jumped to
+        currBranch = "b${block.blockId}"
+        dedent()
+        builder.append(currBranch).append(':')
+        nextLine()
+    }
+
+    private fun jumpToNextBlock(graph: SimpleGraph, block: SimpleBlock) {
+        if (block.isBranch) {
+            val condition = getSimpleFieldReg(graph, block.branchCondition!!)
+            builder.append("  br i1 ").append(condition)
+                .append(", label %b").append(block.ifBranch!!.blockId)
+                .append(", label %b").append(block.elseBranch!!.blockId)
+        } else {
+            val next = block.nextBranch
+            if (next != null) {
+                builder.append("br label %b").append(next.blockId)
+            } else {
+                builder.append("unreachable")
+            }
+        }
+        nextLine()
     }
 
     fun appendUnreachable() {
@@ -716,6 +759,14 @@ class LLVMSourceGenerator : CSourceGenerator() {
         return objectScope.getOrCreatePrimaryConstructorScope().selfAsConstructor == graph.method
     }
 
+    override fun prepareGraph(graph: SimpleGraph) {
+        graph.removeWriteOnlyFields()
+        graph.removeObjectFields()
+        graph.removeConstantFields()
+        graph.giveLocalFieldsUniqueNames()
+        graph.renumberFields()
+    }
+
     fun getSimpleFieldReg(graph: SimpleGraph, field: SimpleField): String {
         return if (field.isOwnerThis(graph)) {
             "%this"
@@ -792,38 +843,6 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
         when (expr) {
             is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
-            is SimpleBranch -> {
-                val branch = Branch(this)
-                val condition = getSimpleFieldReg(graph, expr.condition)
-                ifCondition(branch, condition)
-                ifBranch(branch) {
-                    appendSimpleBlock(graph, expr.ifTrue)
-                }
-                elseBranch(branch) {
-                    if (expr.ifFalse != null) appendSimpleBlock(graph, expr.ifFalse)
-                }
-            }
-            is SimpleLoop -> {
-                if (expr.conditionBlock == null) {
-                    check(!expr.negate)
-
-                    val loopLabel = nextLabel("loop")
-                    nextLine() // for style
-                    builder.append("br label %").append(loopLabel)
-                    nextLine()
-
-                    builder.append(loopLabel).append(":")
-                    depth++
-                    nextLine()
-
-                    appendSimpleBlock(graph, expr.body)
-                    builder.append("br label %").append(loopLabel)
-
-                    depth--
-                } else {
-                    TODO("implement conditional loop")
-                }
-            }
             is SimpleReturn -> {
                 val reg = getSimpleFieldReg(graph, expr.field)
                 val type = getLLVMType(expr.field.type)
@@ -893,14 +912,14 @@ class LLVMSourceGenerator : CSourceGenerator() {
                         } else false
                     }
                     1 -> {
-                        val supportsType = expr.thisInstance.type in nativeNumbers
+                        val type = resolveType(expr.thisInstance.type)
+                        val supportsType = type in nativeNumbers
                         val symbol = when (methodName) {
                             "plus" -> "add"
                             "minus" -> "sub"
                             "times" -> "mul"
-                            // todo depends on signedness
-                            "div" -> "sdiv"
-                            "rem" -> "smod"
+                            "div" -> if (isNumberSigned(type)) "sdiv" else "udiv"
+                            "rem" -> if (isNumberSigned(type)) "smod" else "umod"
                             else -> null
                         }
                         if (supportsType && symbol != null) {
@@ -908,7 +927,6 @@ class LLVMSourceGenerator : CSourceGenerator() {
                             val v1 = getSimpleFieldReg(graph, expr.valueParameters[0])
 
                             appendAssign(expr.dst)
-                            val type = resolveType(expr.thisInstance.type)
                             builder
                                 .append(symbol).append(' ')
                                 .append(getLLVMType(type).ir)
@@ -1061,7 +1079,6 @@ class LLVMSourceGenerator : CSourceGenerator() {
                 TODO("child-class method-res")
             }
         }
-        // todo we must also store the result
         val args = (listOf(expr.thisInstance) + expr.valueParameters).map {
             getSimpleFieldReg(graph, it)
         }
@@ -1077,27 +1094,30 @@ class LLVMSourceGenerator : CSourceGenerator() {
 
     fun callMethod(
         graph: SimpleGraph?,
-        method: Specialization,
+        method0: Specialization,
         args: List<String>
     ) {
 
-        val returnType = getLLVMType(
-            method.method.resolveReturnType(method)
-        )
+        val method = method0.method
+
+        val returnType = getLLVMType(method.resolveReturnType(method0))
 
         builder.append("call ")
             .append(returnType.ir)
-            .append(" ").append(getMethodName(method))
+            .append(" ").append(getMethodName(method0))
             .append("(")
 
         val methodParams = ArrayList<LLVMType>()
-        method.use { // <- for resolving types
+        method0.use { // <- for resolving types
             if (graph != null || args.isNotEmpty()) {
-                methodParams.add(getLLVMType(method.method.ownerScope.typeWithArgs))
+                methodParams.add(getLLVMType(method.ownerScope.typeWithArgs))
             }
 
-            // todo self-type
-            for (param in method.method.valueParameters) {
+            if (method.hasExplicitSelfType) {
+                methodParams.add(getLLVMType(method.selfType!!))
+            }
+
+            for (param in method.valueParameters) {
                 methodParams.add(getLLVMType(param.type))
             }
         }

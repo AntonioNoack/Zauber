@@ -1052,29 +1052,21 @@ open class JavaSourceGenerator : Generator() {
         if (withBrackets) builder.append(')')
     }
 
-    // todo we have converted SimpleBlock into a complex graph,
-    //  before we can use it, we must convert it back
-    open fun appendSimpleBlock(
-        graph: SimpleGraph, expr: SimpleBlock,
-        // loop: SimpleLoop? = null
-    ) {
-        val instructions = expr.instructions
+    open fun appendSimpleBlock(graph: SimpleGraph, block: SimpleBlock) {
+        val instructions = block.instructions
         for (i in instructions.indices) {
             val instr = instructions[i]
-            appendSimpleInstruction(graph, instr /*loop*/)
-            if (instr is SimpleAssignment &&
-                instr.dst.type == Types.Nothing
-            ) break
+            appendSimpleInstruction(graph, instr)
         }
-        if (expr.branchCondition == null) {
-            val next = expr.nextBranch
+        if (block.branchCondition == null) {
+            val next = block.nextBranch
             if (next != null) {
                 appendSimpleBlock(graph, next)
             }
         } else {
-            // todo this may or may not be simply be possible...
-            // todo this may be a loop, branch, or similar...
-            TODO("Jump to either branch")
+            // this may or may not be simply be possible...
+            // this may be a loop, branch, or similar...
+            throw NotImplementedError("Jump to either branch")
         }
     }
 
