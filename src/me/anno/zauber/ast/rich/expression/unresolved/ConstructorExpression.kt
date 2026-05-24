@@ -1,15 +1,15 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
-import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
 
 class ConstructorExpression(
@@ -56,7 +56,7 @@ class ConstructorExpression(
         val method = resolveMethod(context)
         val targetParams = method.resolved.valueParameters
         val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
-        return ResolvedCallExpression(null, method, params, scope, origin)
+        return ResolvedCallExpression(null, null, method, params, scope, origin)
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

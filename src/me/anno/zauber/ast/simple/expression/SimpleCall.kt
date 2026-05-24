@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.utils.FullMap
 import me.anno.utils.LazyMap
 import me.anno.utils.StringStyles
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.member.Method
@@ -93,7 +94,8 @@ class SimpleCall(
     constructor(
         dst: SimpleField,
         method: MethodLike,
-        self: SimpleField,
+        thisInstance: SimpleField,
+        selfInstance: SimpleField?,
         specialization: Specialization,
         typeParameters: List<SimpleField>,
         valueParameters: List<SimpleField>,
@@ -101,19 +103,20 @@ class SimpleCall(
         scope: Scope, origin: Long
     ) : this(
         dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method),
-        self, null, specialization,
+        thisInstance, selfInstance, specialization,
         typeParameters, valueParameters, scopeBridgingParameters, scope, origin
     )
 
     constructor(
         dst: SimpleField,
         method: MethodLike,
-        self: SimpleField,
+        thisInstance: SimpleField,
+        selfInstance: SimpleField?,
         specialization: Specialization,
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, method, self, specialization,
+        dst, method, thisInstance, selfInstance, specialization,
         emptyList(), valueParameters, emptyList(),
         scope, origin
     )
@@ -122,13 +125,14 @@ class SimpleCall(
         dst: SimpleField,
         method: MethodLike,
         methodMap: Map<ClassType, MethodLike>,
-        self: SimpleField,
+        thisInstance: SimpleField,
+        selfInstance: SimpleField?,
         specialization: Specialization,
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
         dst, (method as? Method)?.name ?: "?", methodMap,
-        self, null, specialization,
+        thisInstance, selfInstance, specialization,
         emptyList(), valueParameters, emptyList(),
         scope, origin
     )
@@ -136,6 +140,9 @@ class SimpleCall(
     init {
         for (method in methods.values) {
             check(method.valueParameters.size == valueParameters.size)
+        }
+        assertEquals(sample.hasExplicitSelfType, selfInstance != null) {
+            "Method $sample mismatches explicit-selfInstance $selfInstance"
         }
     }
 
@@ -179,6 +186,8 @@ class SimpleCall(
         val selfInstance =
             if (selfInstance != null) runtime[selfInstance]
             else null
+
+        println("Running $sample with $thisInstance/$selfInstance")
 
         val method = methods[thisInstance.clazz.type as ClassType] ?: sample
         val method1 = Specialization(method.memberScope, specialization.typeParameters)

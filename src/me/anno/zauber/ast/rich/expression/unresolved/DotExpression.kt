@@ -1,12 +1,12 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.SpecialFieldNames
-import me.anno.zauber.ast.rich.member.MethodLike
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.simple.ASTSimplifier.reorderResolveParameters
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -243,7 +243,7 @@ class DotExpression(
                         listOf(outer) + right.valueParameters
                     } else right.valueParameters
                 val valueParametersI = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
-                return ResolvedCallExpression(base, callable, valueParametersI, scope, origin)
+                return ResolvedCallExpression(base, null, callable, valueParametersI, scope, origin)
             }
             else -> throw NotImplementedError("Resolve DotExpression with type ${right.javaClass.simpleName}")
         }

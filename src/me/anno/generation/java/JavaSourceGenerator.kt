@@ -1056,8 +1056,12 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-        appendType(objectScope.typeWithArgs, objectScope, false)
-        builder.append('.').append(OBJECT_FIELD_NAME)
+        if (objectScope == outsideClassLike(exprScope)) {
+            builder.append("this")
+        } else {
+            appendType(objectScope.typeWithArgs, objectScope, false)
+            builder.append('.').append(OBJECT_FIELD_NAME)
+        }
     }
 
     open fun appendNumber(type: Type, expr: NumberExpression) {

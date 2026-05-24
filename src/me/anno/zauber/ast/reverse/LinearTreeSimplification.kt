@@ -140,9 +140,9 @@ object LinearTreeSimplification {
                 println(graph)
                 throw IllegalStateException("Node ${node.str()} has no inputs")
             }
-            val depth = node.inputBlocks.maxOf {
-                val depth = depths[it.blockId]
-                check(depth >= 0)
+            val depth = node.inputBlocks.maxOf { input ->
+                val depth = depths[input.blockId]
+                check(depth >= 0) { "Depth cannot be negative, because nodes are sortable" }
                 depth
             } + 1
             depths[node.blockId] = depth

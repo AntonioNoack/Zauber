@@ -504,7 +504,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 pushScope(ScopeType.FIELD_SETTER, "delegateSetter") { setterScope ->
                     val valueField = createValueField(field, setterName, setterScope, origin)
                     val valueExpr = FieldExpression(valueField, setterScope, origin)
-                    setterBody = createDelegateSetter(initial.scope, backingFieldExpr, valueExpr, origin)
+                    setterBody = createDelegateSetter(setterScope, backingFieldExpr, valueExpr, origin)
                 }
             }
         }

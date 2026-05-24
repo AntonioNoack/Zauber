@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple
 import me.anno.utils.FullMap
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles.bold
+import me.anno.utils.assertEquals
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
@@ -308,7 +309,18 @@ object ASTSimplifier {
                 val index = blockI.field(Types.Int, indexExpr)
                 blockI.add(SimpleNumber(index, indexExpr))
                 val valueParameters = listOf(index.use(), values[i].use())
-                blockI.add(SimpleCall(unit, setMethod, array.use(), specialization, valueParameters, scope, origin))
+                blockI.add(
+                    SimpleCall(
+                        unit,
+                        setMethod,
+                        array.use(),
+                        null,
+                        specialization,
+                        valueParameters,
+                        scope,
+                        origin
+                    )
+                )
             }
         }
 
@@ -380,8 +392,8 @@ object ASTSimplifier {
     ): FlowResult {
 
         // (base, block1)
-        val block1 = if (expr.self != null) {
-            simplifyImpl(context, expr.self, block0, flow0, true, contextExpr = expr)
+        val block1 = if (expr.selfExpr != null) {
+            simplifyImpl(context, expr.selfExpr, block0, flow0, true, contextExpr = expr)
         } else flow0
         val base = block1.value ?: return block1
 
@@ -392,11 +404,16 @@ object ASTSimplifier {
             blockI.value?.value ?: return blockI
         }
 
+        val thisExpr = if (expr.thisExpr != null) {
+            blockI = simplifyImpl(context, expr.thisExpr, blockI.value!!.block, blockI, false)
+            blockI.value?.value ?: return blockI
+        } else null
+
         val method = expr.callable
-        val selfExpr = if (expr.self != null) base.value.use() else null
-        val selfIfInsideConstructor = (expr.self as? SuperExpression)?.isThis
+        val selfExpr = if (expr.selfExpr != null) base.value.use() else null
+        val selfIfInsideConstructor = (expr.selfExpr as? SuperExpression)?.isThis
         return simplifyCall(
-            blockI.value!!.block, blockI, selfExpr, expr.self,
+            blockI.value!!.block, blockI, selfExpr, expr.selfExpr, thisExpr,
             valueParameters, method, selfIfInsideConstructor,
             expr.scope, expr.origin
         )
@@ -491,7 +508,7 @@ object ASTSimplifier {
             val newContext = context.withSpec(Specialization(getter.scope, ownerTypes))
             val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
-                block1v.block, block1, self, expr.self,
+                block1v.block, block1, self, expr.self, null,
                 emptyList(), resolvedGetter,
                 null, expr.scope, expr.origin
             )
@@ -590,7 +607,7 @@ object ASTSimplifier {
         if (needsCapture(selfMethod, valueMethod, field)) {
             block0.graph.onCapturedField(field)
 
-            TODO("Set captured field somehow...")
+            TODO("Set captured field $field somehow...")
         }
 
         if (useSetter) {
@@ -599,7 +616,7 @@ object ASTSimplifier {
             val newContext = context.withSpec(Specialization(setter.scope, ownerTypes))
             val resolvedSetter = ResolvedMethod(setter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
-                block2v.block, block2, self, expr.self,
+                block2v.block, block2, self, expr.self, null,
                 listOf(value), resolvedSetter,
                 null, expr.scope, expr.origin
             )
@@ -976,6 +993,9 @@ object ASTSimplifier {
 
         selfField: SimpleField?,
         selfExpr: Expression?,
+
+        thisField: SimpleField?,
+
         valueParameters: List<SimpleField>,
 
         method0: ResolvedMember<*>,
@@ -991,11 +1011,20 @@ object ASTSimplifier {
                 val dst = block0.field(method0.getTypeFromCall())
                 val specialization = method0.specialization
                 val selfField = selfField!!.use()
+                assertEquals(method.hasExplicitSelfType, thisField != null) {
+                    "Explicit this mismatch, $method vs $thisField"
+                }
                 val call = if (selfExpr is SuperExpression) {
+                    // super.xzy()
                     val methodMap = FullMap<ClassType, MethodLike>(method)
-                    SimpleCall(dst, method, methodMap, selfField, specialization, valueParameters, scope, origin)
+                    SimpleCall(dst, method, methodMap, selfField, null, specialization, valueParameters, scope, origin)
                 } else {
-                    SimpleCall(dst, method, selfField, specialization, valueParameters, scope, origin)
+                    if (thisField != null) {
+                        thisField.use()
+                        SimpleCall(dst, method, thisField, selfField, specialization, valueParameters, scope, origin)
+                    } else {
+                        SimpleCall(dst, method, selfField, null, specialization, valueParameters, scope, origin)
+                    }
                 }
                 handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
             }

@@ -210,7 +210,7 @@ class LambdaExpression(
             scope, MatchScore.zero,
         )
         val params = listOf(selfMethod).map { it.resolve(context) }
-        return ResolvedCallExpression(null, method, params, scope, origin)
+        return ResolvedCallExpression(null, null, method, params, scope, origin)
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {

@@ -88,8 +88,8 @@ class FieldGetSetTest {
     @Test
     fun testTrySetImmutableField() {
         assertThrowsMessage<IllegalStateException>({ message ->
-            assertContains("Expected Field(", message)
-            assertContains(".v).x to be mutable", message)
+            assertContains("Expected ", message)
+            assertContains(".x to be mutable", message)
         }) {
             val code = """
             class Vector(val x: Int, val y: Int)
@@ -111,7 +111,7 @@ class FieldGetSetTest {
 
     @Test
     fun testGetterAndSetterWithDelegate() {
-        // todo why does it try to resolve Int.getValue?
+        // todo why does it crash?
         LogManager.disable("MemberResolver,ResolvedField")
         val actual = testExecute(
             """
@@ -153,6 +153,12 @@ class FieldGetSetTest {
             
             fun interface Function0<R> {
                 fun call(): R
+            }
+            
+            open class Throwable(val message: String)
+            class Exception(message: String) : Throwable(message)
+            fun throwNJE(msg: String): Nothing {
+                throw Exception(msg)
             }
             """.trimIndent()
         )

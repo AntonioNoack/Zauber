@@ -1,10 +1,10 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -110,15 +110,17 @@ class GetMethodFromValueExpression(
                 LambdaVariable(type, field)
             }
 
+
             val base = TypeExpression(selfType, scope, origin)
             val valueParameters = variables.map {
                 NamedParameter(null, FieldExpression(it.field, scope, origin))
             }
-            return LambdaExpression(
+            val expr = LambdaExpression(
                 variables, tmpScope,
                 NamedCallExpression(base, name, nameAsImport, null, valueParameters, scope, origin)
-            ).resolve(context)
-
+            )
+            tmpScope.selfAsLambda = expr
+            return expr.resolve(context)
         } else {
             check(targetType.parameters.isNotEmpty()) {
                 "Expected at least one parameter to generate $this for $targetType"
@@ -139,10 +141,12 @@ class GetMethodFromValueExpression(
             val valueParameters = variables.subList(1, variables.size).map {
                 NamedParameter(null, FieldExpression(it.field, it.field.fieldScope, origin))
             }
-            return LambdaExpression(
+            val expr = LambdaExpression(
                 variables, tmpScope,
                 NamedCallExpression(base, name, nameAsImport, null, valueParameters, scope, origin)
-            ).resolve(context)
+            )
+            tmpScope.selfAsLambda = expr
+            return expr.resolve(context)
         }
     }
 

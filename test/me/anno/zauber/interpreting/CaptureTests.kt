@@ -1,13 +1,13 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class CaptureTests {
+
     @Test
-    fun testFieldCapture() {
+    fun testMutableCapturedField() {
         val code = """
             val tested: Int get() {
                 var x = 1
@@ -15,6 +15,28 @@ class CaptureTests {
                 inc()
                 inc()
                 return x
+            }
+            
+            package zauber
+            class Any
+            external class Int {
+                external operator fun plus(other: Int): Int
+            }
+            fun interface Function0<R> {
+                fun call(): R
+            }
+        """.trimIndent()
+        val value = testExecute(code)
+        assertEquals(3, value.castToInt())
+    }
+
+    @Test
+    fun testImmutableCapturedField() {
+        val code = """
+            val tested: Int get() {
+                var x = 1
+                val inc = { x+1 }
+                return inc()
             }
             
             package zauber

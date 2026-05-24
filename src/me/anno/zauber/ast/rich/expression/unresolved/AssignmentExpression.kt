@@ -168,7 +168,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
 
             val ownerField = owner.field
             val createNewVector = ResolvedCallExpression(
-                owner, field.resolveCopyMethod(),
+                owner, null, field.resolveCopyMethod(),
                 listOf(newValue), scope, origin
             )
             return ResolvedSetFieldExpression(owner.self, ownerField, createNewVector, scope, origin)

@@ -529,12 +529,8 @@ class ZauberASTBuilder(
     private fun readLambdaBlock(selfType: Type?): Expression {
         val scopeName = currPackage.generateName("lambda", origin(i))
         return pushBlock(ScopeType.LAMBDA, scopeName) { lambdaScope ->
-            val origin = origin(i)
             val lambda = readLambda(selfType)
-            lambdaScope.selfAsMethod = Method(
-                null, false, null, emptyList(), emptyList(),
-                lambdaScope, null, emptyList(), lambda, 0, origin
-            )
+            lambdaScope.selfAsLambda = lambda
             lambda
         }
     }
@@ -1010,7 +1006,7 @@ class ZauberASTBuilder(
         return variables
     }
 
-    private fun readLambda(selfType: Type?): Expression {
+    private fun readLambda(selfType: Type?): LambdaExpression {
         val arrow = tokens.findToken(i, "->")
         val variables = if (arrow >= 0) {
             readLambdaVariables(selfType, arrow)

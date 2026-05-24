@@ -141,7 +141,7 @@ class AssignIfMutableExpr(
         val (_, _, dstField, method) = resolveMethod(context)
         val left = left.resolve(context)
         val right = right.resolve(context)
-        val call = ResolvedCallExpression(left, method, listOf(right), scope, origin)
+        val call = ResolvedCallExpression(left, null, method, listOf(right), scope, origin)
         if (dstField != null) {
             // an assignment
             check(left is ResolvedGetFieldExpression) {

@@ -358,7 +358,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         return if (parent == null && name == "kotlin") "zauber" else name
     }
 
-    fun put(name: String, scopeType: ScopeType): Scope {
+    fun put(name: String, scopeType: ScopeType?): Scope {
         val name = langAlias(name)
         check(scopeHierarchyIsAllowed(this.scopeType, scopeType)) {
             "$scopeType cannot be placed inside ${this.scopeType} ($pathStr.$name)"
@@ -372,21 +372,14 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     fun getOrPut(name: String, scopeType: ScopeType?): Scope {
         val name = langAlias(name)
-        var child = children.firstOrNull { it.name == name }
+        val child = children.firstOrNull { it.name == name }
         if (child != null) {
             // if (child.fileName == null) child.fileName = fileName
             child.mergeScopeTypes(scopeType)
             return child
         }
 
-        check(scopeHierarchyIsAllowed(this.scopeType, scopeType)) {
-            "$scopeType cannot be placed inside ${this.scopeType} ($pathStr.$name)"
-        }
-
-        child = Scope(name, this)
-        child.scopeType = scopeType
-        children.add(child)
-        return child
+        return put(name, scopeType)
     }
 
     fun mergeScopeTypes(scopeType: ScopeType?) {

@@ -1,11 +1,12 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -21,7 +22,6 @@ import me.anno.zauber.typeresolution.ExtensionThis
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
-import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
@@ -164,7 +164,7 @@ abstract class CallExpressionBase(
                     }
                     val selfScope = typeToScope(selfType)
                     subContext = subContext.withExtensionThis(ExtensionThis(selfType, selfScope, baseField))
-                    val baseFieldExpr = FieldExpression(baseField, scope, origin)
+                    val baseFieldExpr = FieldExpression(baseField, baseField.ownerScope, origin)
                     body.add(AssignmentExpression(baseFieldExpr, self))
                 }
 
@@ -229,7 +229,7 @@ abstract class CallExpressionBase(
                     resolveInlineMethod(context, callable, params0)
                 } else {
                     // todo base must be defined, so resolve instance/this
-                    val base = if (
+                    val selfExpr = if (
                         (self !is FieldExpression && self !is UnresolvedFieldExpression) ||
                         this is NamedCallExpression
                     ) {
@@ -243,7 +243,13 @@ abstract class CallExpressionBase(
                     val paramContext = context.withSpec(context.specialization + callable.specialization)
                     // println("Base for $this: $base, targetParams: $targetParams, ctx: $paramContext")
                     val params = reorderResolveParameters(paramContext, valueParameters, targetParams, scope, origin)
-                    ResolvedCallExpression(base, callable, params, scope, origin)
+
+                    val thisExpr = if (callable.resolved.hasExplicitSelfType) {
+                        // todo check that 'this' is accessible from 'scope'
+                        ThisExpression(callable.resolved.ownerScope, scope, origin)
+                    } else null
+
+                    ResolvedCallExpression(selfExpr, thisExpr, callable, params, scope, origin)
                 }
             }
             is ResolvedConstructor -> {
@@ -257,7 +263,7 @@ abstract class CallExpressionBase(
 
                 val targetParams = callable.resolved.valueParameters
                 val params = reorderResolveParameters(context, valueParams, targetParams, scope, origin)
-                ResolvedCallExpression(self as? SuperExpression, callable, params, scope, origin)
+                ResolvedCallExpression(self as? SuperExpression, null, callable, params, scope, origin)
             }
             is ResolvedField -> {
                 val inlineBody = context.knownLambdas[callable.resolved]
@@ -275,7 +281,7 @@ abstract class CallExpressionBase(
                 val targetParams = calledMethod.resolved.valueParameters
                 val params = reorderResolveParameters(context, valueParameters, targetParams, scope, origin)
                 val base1 = ResolvedGetFieldExpression(base, callable, scope, origin)
-                ResolvedCallExpression(base1, calledMethod, params, scope, origin)
+                ResolvedCallExpression(base1, null, calledMethod, params, scope, origin)
             }
             else -> throw NotImplementedError()
         }

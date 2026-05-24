@@ -132,7 +132,7 @@ object FieldGetterSetter {
         val elseScope = getterScope.generate("if", ScopeType.METHOD_BODY)
         val debugInfoParam = StringExpression(field.name, ifScope, origin)
         val throwExpr = CallExpression(
-            UnresolvedFieldExpression("throwJNE", shouldBeResolvable, ifScope, origin),
+            UnresolvedFieldExpression("throwNJE", shouldBeResolvable, ifScope, origin),
             emptyList(), listOf(NamedParameter(null, debugInfoParam)), origin
         )
         return IfElseBranch(condition, throwExpr, backingFieldExpr.clone(elseScope))
@@ -164,9 +164,9 @@ object FieldGetterSetter {
     private fun createSetterMethod1(
         field: Field, expr0: Expression?,
         backingField: Field, valueField: Field,
-        setterScope: Scope, origin: Long,
+        setterScope0: Scope, origin: Long,
     ): Method {
-        var setterScope = setterScope
+        var setterScope = setterScope0
         while (setterScope.scopeType != ScopeType.FIELD_SETTER) {
             setterScope = setterScope.parent
                 ?: throw IllegalStateException("Expected setterScope to be FIELD_SETTER")

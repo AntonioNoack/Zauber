@@ -126,8 +126,8 @@ class Runtime {
     }
 
     fun executeCall(
-        thisInstance: Instance,
-        selfInstance: Instance?,
+        methodOwnerInstance: Instance,
+        explicitSelfInstance: Instance?,
         specialization: Specialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
@@ -135,7 +135,7 @@ class Runtime {
         // println("Calling $methodSpec on $self with $valueParameters")
         check(specialization.isMethodLike())
 
-        if (isNull(thisInstance)) {
+        if (isNull(methodOwnerInstance)) {
             throw IllegalArgumentException("Cannot execute $specialization on null instance")
         }
 
@@ -155,7 +155,7 @@ class Runtime {
             val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]
                 ?: throw IllegalStateException("Missing external method $key")
-            val value = method.process(thisInstance, valueParameters)
+            val value = method.process(methodOwnerInstance, valueParameters)
             return BlockReturn(ReturnType.RETURN, value)
         }
 
@@ -166,7 +166,7 @@ class Runtime {
         val graph = ASTSimplifier.simplify(specialization)
 
         val call = Call(method)
-        prepareCall(graph, call, thisInstance, selfInstance, valueParameters)
+        prepareCall(graph, call, methodOwnerInstance, explicitSelfInstance, valueParameters)
 
         val result = executeBlock(graph.startBlock)
 
