@@ -1,6 +1,6 @@
 package me.anno.generation.glsl
 
-import me.anno.generation.c.CSourceGenerator
+import me.anno.generation.java.JavaSourceGenerator
 
 // todo generate compilable GLSL, including uniform buffers and bindings to get the necessary context data
 // todo big difference to C: allocations are only possible on the stack, pointers are limited to out-variables
@@ -12,6 +12,6 @@ import me.anno.generation.c.CSourceGenerator
  *
  * todo we have some Vector- and Matrix-types predefined. It would be good to make use of them
  * */
-class GLSLSourceGenerator : CSourceGenerator() {
+class GLSLSourceGenerator : JavaSourceGenerator() {
 
 }

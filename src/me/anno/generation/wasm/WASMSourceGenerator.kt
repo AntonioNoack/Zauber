@@ -1,6 +1,7 @@
 package me.anno.generation.wasm
 
-import me.anno.generation.c.CSourceGenerator
+import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
+import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.FullMap
@@ -47,7 +48,7 @@ import java.io.File
  * directly encode binary WASM
  * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
  * */
-class WASMSourceGenerator : CSourceGenerator() {
+class WASMSourceGenerator : JavaSourceGenerator() {
 
     val functionTypes = HashMap<FunctionType, Int>()
     val typeList = ArrayList<WASMFuncTypeOrStruct>()

@@ -4,7 +4,7 @@ import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.Specializations.specialization
-import me.anno.generation.c.CSourceGenerator
+import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
@@ -37,7 +37,7 @@ import java.io.File
  * this has the same complexity as C, plus we must define ownership somehow...
  *  wrapping everything into GC is kind of lame...
  * */
-class RustSourceGenerator : CSourceGenerator() {
+class RustSourceGenerator : JavaSourceGenerator() {
 
     companion object {
 
@@ -81,7 +81,6 @@ class RustSourceGenerator : CSourceGenerator() {
     override val nativeTypes: Map<ClassType, BoxedType> get() = nativeRustTypes
     override val nativeNumbers: Map<ClassType, BoxedType> get() = nativeRustNumbers
 
-    override fun needsHeaders(): Boolean = false
     override fun getExtension(headerOnly: Boolean): String = "rs"
 
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {

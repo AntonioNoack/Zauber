@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.utils.StringStyles.bold
+import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
@@ -176,6 +177,7 @@ class SimpleGraph(val method0: Specialization) {
 
         // protect these special names:
         foundNames["this"] = null
+        foundNames["nextBlockId"] = null // for tail calls
         if (method.hasExplicitSelfType) foundNames["self"] = null
         for (param in method.valueParameters) foundNames[param.name] = null
 
@@ -219,6 +221,20 @@ class SimpleGraph(val method0: Specialization) {
             val b0 = blocks[i - 1]
             val b1 = blocks[i]
             check(b0.blockId < b1.blockId)
+        }
+    }
+
+    fun removeMergeInfoInstructions() {
+        for (block in blocks) {
+            block.instructions.removeIf { it is SimpleMerge }
+        }
+    }
+
+    fun hasTailCalls(): Boolean {
+        return blocks.any { block ->
+            block.instructions.any { instr ->
+                instr is SimpleTailCall
+            }
         }
     }
 

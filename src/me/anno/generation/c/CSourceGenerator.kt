@@ -8,7 +8,7 @@ import me.anno.zauber.types.Specialization
  * todo we need to implement inheritance explicitly
  * todo we also need to deduplicate methods with same name, but different parameters
  * */
-open class CSourceGenerator : CppSourceGenerator() {
+class CSourceGenerator : CppSourceGenerator() {
 
     companion object {
         fun hashMethodParameters(method: Specialization): String {

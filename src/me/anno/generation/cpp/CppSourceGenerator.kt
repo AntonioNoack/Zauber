@@ -9,8 +9,11 @@ import me.anno.generation.java.JavaSourceGenerator
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.ast.reverse.CodeReconstruction
+import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -19,6 +22,8 @@ import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
@@ -62,28 +67,6 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val nativeCppTypes by threadLocal { protectedCppTypes.filter { (_, it) -> it.boxed != it.native } }
         val nativeCppNumbers by threadLocal { nativeCppTypes - Types.Boolean }
 
-        fun StringBuilder.appendRelativePath(packagePath: List<String>, import: List<String>) {
-            var i = 0
-            while (i + 1 < import.size && i < packagePath.size && packagePath[i] == import[i]) {
-                // nothing to do
-                i++
-            }
-            val numBackwards = packagePath.size - i
-            if (numBackwards > 0) {
-                repeat(numBackwards) {
-                    append("../")
-                }
-            } else {
-                append("./")
-            }
-            var needsSlash = false
-            while (i < import.size) {
-                if (needsSlash) append("/")
-                append(import[i])
-                needsSlash = true
-                i++
-            }
-        }
     }
 
     override val protectedTypes: Map<ClassType, BoxedType> get() = protectedCppTypes
@@ -700,6 +683,71 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         appendValueParams(graph, expr.valueParameters)
     }
 
+    override fun prepareGraph(graph: SimpleGraph) {
+        graph.removeWriteOnlyFields()
+        graph.removeObjectFields()
+        graph.removeConstantFields()
+        graph.giveLocalFieldsUniqueNames()
+        graph.removeMergeInfoInstructions()
+        graph.renumberFields()
+
+        CodeReconstruction.createCodeFromGraph(graph, true)
+        graph.renumberFields() // necessary
+    }
+
+    override fun appendCode(
+        context: ResolutionContext, method1: Specialization,
+        body: Expression, skipSuperCall: Boolean
+    ) {
+        writeBlock {
+            val graph = ASTSimplifier.simplify(method1)
+            if (skipSuperCall) graph.removeSuperCalls()
+            prepareGraph(graph)
+
+            val pos0 = builder.length
+            declareLocalFields(graph)
+
+            val blocks = graph.blocks
+            for (i in blocks.indices) {
+                val block = graph.blocks[i]
+                if (i == 0 || block.inputBlocks.isNotEmpty()) {
+                    appendSimpleBlock(graph, block)
+                }
+            }
+            removeTailingReturn()
+
+            appendMissingDeclarations(graph, pos0)
+        }
+    }
+
+    override fun appendSimpleBlock(graph: SimpleGraph, block: SimpleBlock) {
+        // mark block as jumpable
+        if (block.inputBlocks.isNotEmpty()) {
+            dedent()
+            builder.append("b").append(block.blockId).append(':')
+            nextLine()
+        }
+
+        val instructions = block.instructions
+        for (i in instructions.indices) {
+            val instr = instructions[i]
+            appendSimpleInstruction(graph, instr)
+        }
+
+        // jump to next blocks
+        if (block.nextBranch != null) {
+            if (block.isBranch) {
+                builder.append("if (")
+                appendFieldName(graph, block.branchCondition!!)
+                builder.append(") goto b").append(block.ifBranch!!.blockId)
+                builder.append("; else goto b").append(block.elseBranch!!.blockId).append(';')
+            } else {
+                builder.append("goto b").append(block.nextBranch!!.blockId).append(';')
+            }
+            nextLine()
+        }
+    }
+
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleAllocateInstance -> {
@@ -715,6 +763,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     appendType(expr.allocatedType, expr.scope, true)
                     appendValueParams(graph, expr.paramsForLater)
                 }
+            }
+            is SimpleTailCall -> {
+                builder.append("goto b").append(expr.toBeCalled.blockId).append(';')
+                nextLine()
             }
             else -> super.appendInstrImpl(graph, expr)
         }

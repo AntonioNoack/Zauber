@@ -5,7 +5,6 @@ import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
-import me.anno.generation.cpp.CppSourceGenerator.Companion.appendRelativePath
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal

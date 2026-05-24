@@ -1,7 +1,8 @@
 package me.anno.generation.llvm
 
 import me.anno.generation.Specializations.specialization
-import me.anno.generation.c.CSourceGenerator
+import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
+import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.FullMap
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
@@ -36,7 +37,7 @@ import kotlin.math.max
  * generate LLVM directly instead of calling into C/C++, should be faster,
  * but make our life a little harder
  * */
-class LLVMSourceGenerator : CSourceGenerator() {
+class LLVMSourceGenerator : JavaSourceGenerator() {
 
     val typeList = ArrayList<LLVMStruct>()
 

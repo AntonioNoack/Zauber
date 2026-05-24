@@ -13,6 +13,7 @@ import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
+import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
@@ -53,6 +54,7 @@ import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
 import java.io.File
+import java.util.*
 
 /**
  * before generating JVM bytecode, create source code to be compiled with a normal Java compiler
@@ -133,6 +135,29 @@ open class JavaSourceGenerator : Generator() {
             if (getter?.body == null || getter.body!!.needsBackingField(getter.scope)) return true
             if (setter?.body == null) return field.isMutable
             return setter.body!!.needsBackingField(setter.scope)
+        }
+
+        fun StringBuilder.appendRelativePath(packagePath: List<String>, import: List<String>) {
+            var i = 0
+            while (i + 1 < import.size && i < packagePath.size && packagePath[i] == import[i]) {
+                // nothing to do
+                i++
+            }
+            val numBackwards = packagePath.size - i
+            if (numBackwards > 0) {
+                repeat(numBackwards) {
+                    append("../")
+                }
+            } else {
+                append("./")
+            }
+            var needsSlash = false
+            while (i < import.size) {
+                if (needsSlash) append("/")
+                append(import[i])
+                needsSlash = true
+                i++
+            }
         }
 
     }
@@ -816,9 +841,8 @@ open class JavaSourceGenerator : Generator() {
         graph.removeObjectFields()
         graph.removeConstantFields()
         graph.giveLocalFieldsUniqueNames()
+        graph.removeMergeInfoInstructions()
         graph.renumberFields()
-
-        // todo another step could be removing merge-infos, only LLVMs uses/requires them
 
         CodeReconstruction.createCodeFromGraph(graph)
         graph.renumberFields() // necessary
@@ -839,10 +863,47 @@ open class JavaSourceGenerator : Generator() {
 
             val pos0 = builder.length
             declareLocalFields(graph)
-            appendSimpleBlock(graph, graph.startBlock)
+
+            if (graph.hasTailCalls()) appendTailCallCode(graph)
+            else appendSimpleBlock(graph, graph.startBlock)
+
             removeTailingReturn()
 
             appendMissingDeclarations(graph, pos0)
+        }
+    }
+
+    fun findTailCallTargets(graph: SimpleGraph): BitSet {
+        val targets = BitSet(graph.blocks.size)
+        for (block in graph.blocks) {
+            for (instr in block.instructions) {
+                if (instr is SimpleTailCall) {
+                    targets.set(instr.toBeCalled.blockId)
+                }
+            }
+        }
+        return targets
+    }
+
+    fun appendTailCallCode(graph: SimpleGraph) {
+
+        builder.append("int nextBlockId = 0;"); nextLine()
+        builder.append("blockTable: while (true) ")
+        writeBlock {
+         builder.append("switch (nextBlockId) ")
+            writeBlock {
+                val targets = findTailCallTargets(graph)
+                val blocks = graph.blocks
+                for (i in blocks.indices) {
+                    val block = blocks[i]
+                    if (i == 0 || targets[block.blockId]) {
+                        builder.append("case ").append(block.blockId).append(':')
+                        writeBlock {
+                            appendSimpleBlock(graph, block)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1058,15 +1119,10 @@ open class JavaSourceGenerator : Generator() {
             val instr = instructions[i]
             appendSimpleInstruction(graph, instr)
         }
-        if (block.branchCondition == null) {
-            val next = block.nextBranch
-            if (next != null) {
-                appendSimpleBlock(graph, next)
-            }
-        } else {
+        if (block.nextBranch != null) {
             // this may or may not be simply be possible...
             // this may be a loop, branch, or similar...
-            throw NotImplementedError("Jump to either branch")
+            throw NotImplementedError("Arbitrary jumps are not supported in Java")
         }
     }
 
@@ -1349,6 +1405,12 @@ open class JavaSourceGenerator : Generator() {
             }
             is SimpleMerge -> { /* not usable in Java */
             }
+            is SimpleTailCall -> {
+                builder.append("nextBlockId = ").append(expr.toBeCalled.blockId).append(';')
+                nextLine()
+                builder.append("continue blockTable;")
+                nextLine()
+            }
             else -> throw NotImplementedError("Implement ${expr.javaClass.simpleName}")
         }
     }
@@ -1378,8 +1440,8 @@ open class JavaSourceGenerator : Generator() {
         graph: SimpleGraph,
     ) {
         when (expr.methodName) {
-            "inc" -> builder.append("1+")
-            "dec" -> builder.append("-1+")
+            "inc" -> builder.append("1 + ")
+            "dec" -> builder.append("-1 + ")
             else -> {
                 builder.append(needsCastForFirstValue.boxed).append('.')
                 val methodName = getMethodName(expr.specialization)

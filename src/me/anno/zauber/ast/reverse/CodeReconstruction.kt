@@ -13,7 +13,7 @@ object CodeReconstruction {
 
     private val LOGGER = LogManager.getLogger(CodeReconstruction::class)
 
-    fun createCodeFromGraph(graph: SimpleGraph) {
+    fun createCodeFromGraph(graph: SimpleGraph, onlyCheapSimplifications: Boolean = false) {
 
         if (isSolved(graph)) return
 
@@ -21,9 +21,14 @@ object CodeReconstruction {
 
         var fine = true
         while (!isSolved(graph)) {
+            // cheap simplifications
             if (simplifySequence(graph)) continue
             if (simplifyBranch(graph)) continue
             if (simplifyLoop(graph)) continue
+
+            if (onlyCheapSimplifications) return // early exit
+
+            // more expensive ones
             if (simplifyTree(graph)) continue
 
             if (fine) {
