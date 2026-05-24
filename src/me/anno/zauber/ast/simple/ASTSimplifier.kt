@@ -567,8 +567,8 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val value = block2v.value
 
-        println("block for self: ${block1v.block}")
-        println("block for value: ${block2v.block}")
+        // println("block for self: ${block1v.block}")
+        // println("block for value: ${block2v.block}")
 
         if (!fieldHasSensibleType(context, field)) {
             LOGGER.info("Skipping non-sense setter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")

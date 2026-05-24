@@ -29,7 +29,7 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         }
     }
 
-    fun trimWhitespaceAtEnd() {
+    fun removeWhitespaceAtEnd() {
         var lastIndex = builder.lastIndex
         while (lastIndex >= 0 && builder[lastIndex].isWhitespace()) {
             lastIndex--

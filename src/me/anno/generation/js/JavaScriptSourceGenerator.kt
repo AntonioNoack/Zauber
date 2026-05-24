@@ -469,4 +469,25 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         imports.remove(name)
     }
 
+    override fun appendTailCallCode(graph: SimpleGraph) {
+        builder.append("let nextBlockId = 0;"); nextLine()
+        builder.append("blockTable: while (true) ")
+        writeBlock {
+            builder.append("switch (nextBlockId) ")
+            writeBlock {
+                val targets = findTailCallTargets(graph)
+                val blocks = graph.blocks
+                for (i in blocks.indices) {
+                    val block = blocks[i]
+                    if (i == 0 || targets[block.blockId]) {
+                        builder.append("case ").append(block.blockId).append(':')
+                        writeBlock {
+                            appendSimpleBlock(graph, block)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }

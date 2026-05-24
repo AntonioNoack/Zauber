@@ -567,7 +567,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                         writeBlock {
                             appendSimpleBlock(graph, block)
                         }
-                        trimWhitespaceAtEnd()
+                        removeWhitespaceAtEnd()
                         builder.append(',')
                         nextLine()
                     }
@@ -666,7 +666,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
                 if (expr.ifFalse != null) {
-                    trimWhitespaceAtEnd()
+                    removeWhitespaceAtEnd()
                     builder.append(" else ")
                     writeBlock {
                         appendSimpleBlock(graph, expr.ifFalse)

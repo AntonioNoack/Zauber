@@ -1182,7 +1182,7 @@ open class JavaSourceGenerator : Generator() {
                     appendSimpleBlock(graph, expr.ifTrue)
                 }
                 if (expr.ifFalse != null) {
-                    trimWhitespaceAtEnd()
+                    removeWhitespaceAtEnd()
                     builder.append(" else ")
                     writeBlock {
                         appendSimpleBlock(graph, expr.ifFalse)

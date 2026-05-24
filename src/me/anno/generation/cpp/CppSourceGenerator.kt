@@ -123,7 +123,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
                 appendSuperTypes(classScope)
                 appendClassBody(classScope, className, methods, fields, true)
-                trimWhitespaceAtEnd()
+                removeWhitespaceAtEnd()
                 builder.append(";")
                 nextLine()
 

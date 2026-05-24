@@ -645,7 +645,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             val methodName = getMethodName(method)
             builder.append("(import \"env\" \"").append(methodName).append("\" ")
             appendMethodHeader(type, methodName, method, false)
-            trimWhitespaceAtEnd()
+            removeWhitespaceAtEnd()
             builder.append("))")
             indentation--
             nextLine()
