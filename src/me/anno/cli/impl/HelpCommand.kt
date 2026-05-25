@@ -5,7 +5,7 @@ import me.anno.cli.ZauberCLI.commands
 import java.io.File
 
 object HelpCommand : CommandImpl("help", "h", "man", "?") {
-    override fun execute(options: LinkedHashMap<String, String>, location: File) {
+    override fun execute(options: Options, location: File) {
         if ("usage" in options) {
             return showUsage()
         }

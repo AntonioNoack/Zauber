@@ -4,7 +4,7 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.utils.NumberUtils.toInt
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags

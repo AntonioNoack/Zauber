@@ -3,7 +3,7 @@ package me.anno.zauber.tokenizer
 import me.anno.utils.Maths.clamp
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.parser.SemanticTokenList
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope

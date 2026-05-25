@@ -4,7 +4,7 @@ import me.anno.cli.CommandImpl
 import java.io.File
 
 object UsageCommand : CommandImpl("usage", "u") {
-    override fun execute(options: LinkedHashMap<String, String>, location: File) {
+    override fun execute(options: Options, location: File) {
         options["usage"] = ""
         HelpCommand.execute(options, location)
     }

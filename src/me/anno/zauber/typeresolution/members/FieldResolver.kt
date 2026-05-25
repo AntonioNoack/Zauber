@@ -1,6 +1,6 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.logging.LogManager

@@ -2,6 +2,7 @@ package me.anno.libraries
 
 import me.anno.zauber.logging.LogManager
 import java.io.File
+import java.net.URI
 
 // todo TOML-style format like in Rust with cargo to add libraries,
 //  but we don't want to store anything ourselves,
@@ -40,13 +41,14 @@ object Libraries {
         }
         val text = file.readText()
         val toml = TOMLParser.parseTOML(text)
-        return loadProject(toml, "package.", "dependencies.")
+        return loadProject(file.parentFile, toml, "package.", "dependencies.")
     }
 
-    private fun loadProject(toml: Map<String, Any>, prefix: String, dependencyPrefix: String?): Library {
+    private fun loadProject(file: File, toml: Map<String, Any>, prefix: String, dependencyPrefix: String?): Library {
         val project = Library()
         project.name = toml["$prefix.name"].toString()
         project.version = toml["$prefix.version"].toString()
+        project.source = URI("file://${file.absolutePath}")
 
         if (dependencyPrefix != null) {
             for ((key, value) in toml.entries.filter { (it) -> it.startsWith(dependencyPrefix) }) {

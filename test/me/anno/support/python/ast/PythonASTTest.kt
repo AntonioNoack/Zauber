@@ -2,7 +2,7 @@ package me.anno.support.python.ast
 
 import me.anno.support.TokenizerBench
 import me.anno.support.python.tokenizer.PythonTokenizer
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import org.junit.jupiter.api.Test
 import java.io.File
 

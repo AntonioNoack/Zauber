@@ -1,7 +1,7 @@
 package me.anno.zauber.types
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
@@ -103,11 +103,14 @@ class TypesImpl {
         )
     }
 
+    // basics
     val Any = getType("Any", ScopeType.NORMAL_CLASS)
     val NullableAny = UnionType(listOf(Any, NullType))
     val Unit = getType("Unit", ScopeType.OBJECT)
     val Boolean = getType("Boolean", ScopeType.ENUM_CLASS)
+    val String = getType("String", ScopeType.NORMAL_CLASS)
 
+    // numbers:
     val Char = getType("Char", ScopeType.NORMAL_CLASS)
     val Number = getType("Number")
     val Byte = getType("Byte", ScopeType.NORMAL_CLASS)
@@ -122,27 +125,32 @@ class TypesImpl {
     val ULong = getType("ULong", ScopeType.NORMAL_CLASS)
     val Half = getType("Half", ScopeType.NORMAL_CLASS)
 
-    val String = getType("String", ScopeType.NORMAL_CLASS)
-    val Throwable = getType("Throwable", ScopeType.NORMAL_CLASS)
-    val Nothing = getType("Nothing", ScopeType.NORMAL_CLASS)
-
+    // collections:
     val Array = getType("Array", "V", NullableAny)
     val List = getType("List", "V", NullableAny)
     val ArrayList = getType("ArrayList", "V", NullableAny)
     val LinkedList = getType("LinkedList", "V", NullableAny)
     val Map = getType("Map", "KV", NullableAny)
 
+    // control-flow:
+    val Throwable = getType("Throwable", ScopeType.NORMAL_CLASS)
+    val NullPointerException = getType("NullPointerException")
     val Yielded = getType("Yielded", "RTY", NullableAny)
     val Yieldable = getType("Yieldable", "RTY", NullableAny)
+    val Nothing = getType("Nothing", ScopeType.NORMAL_CLASS)
 
+    // macros:
     val MacroContext = getType("MacroContext")
 
+    // reflections:
     val TypeT = getType("Type")
     val UnionType = getType("UnionType")
     val ClassType = getType("ClassType", "V", NullableAny)
     val GenericType = getType("GenericType")
     val Field = getType("Field")
 
-    val NullPointerException = getType("NullPointerException")
+    // unit testing:
+    val Test = getType("Test")
+    val ParameterizedTest = getType("ParameterizedTest")
 
 }

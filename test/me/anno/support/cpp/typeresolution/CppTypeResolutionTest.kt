@@ -6,7 +6,7 @@ import me.anno.support.cpp.ast.rich.CppStandard
 import me.anno.support.cpp.ast.rich.PointerType.Companion.ptr
 import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.utils.ResolutionUtils.ctr
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.utils.ResolutionUtils.getField
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext

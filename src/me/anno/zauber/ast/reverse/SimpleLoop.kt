@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.reverse
 
 import me.anno.utils.StringStyles.bold
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction

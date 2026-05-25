@@ -4,7 +4,7 @@ import me.anno.cli.CommandImpl
 import java.io.File
 
 object RunCommand : CommandImpl("run", "r") {
-    override fun execute(options: LinkedHashMap<String, String>, location: File) {
+    override fun execute(options: Options, location: File) {
         options["run"] = ""
         BuildCommand.execute(options, location)
     }

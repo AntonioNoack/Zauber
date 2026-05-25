@@ -3,7 +3,7 @@ package me.anno.utils
 import me.anno.generation.Specializations
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
-import me.anno.zauber.Compile
+import me.anno.zauber.Zauber
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.member.Constructor
@@ -63,12 +63,12 @@ object ResolutionUtils {
             }
         }
 
-        return Compile.root.children.first { it.name == testScopeName }
+        return Zauber.root.children.first { it.name == testScopeName }
     }
 
     fun getScope(path: String): Scope {
         val parts = path.split('.')
-        var scope = Compile.root
+        var scope = Zauber.root
         for (part in parts) {
             check(part.trim() == part)
             scope = scope.getOrPut(part, ScopeType.PACKAGE)
@@ -116,7 +116,7 @@ object ResolutionUtils {
         """.trimIndent(), "Test.zbr"
         ).tokenize()
         ZauberASTClassScanner.scanClasses(tokens)
-        return Compile.root.children.first { it.name == testScopeName }
+        return Zauber.root.children.first { it.name == testScopeName }
     }
 
     fun testTypeResolutionGetField(code: String, reset: Boolean): Field {

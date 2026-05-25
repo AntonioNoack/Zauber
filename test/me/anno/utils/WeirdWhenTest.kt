@@ -1,7 +1,6 @@
-package me.anno
+package me.anno.utils
 
 import me.anno.generation.WASMGenerationTests
-import me.anno.utils.assertEquals
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Test
 

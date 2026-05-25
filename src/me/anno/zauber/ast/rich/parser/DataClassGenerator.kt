@@ -1,7 +1,7 @@
 package me.anno.zauber.ast.rich.parser
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.controlflow.ShortcutOperator

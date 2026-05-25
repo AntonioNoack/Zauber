@@ -61,7 +61,9 @@ class Field(
         }
 
     val isMutableEx get() = isMutable || scope.flags.hasFlag(Flags.VALUE)
+
     var isCaptured = false
+
     val annotations = ArrayList<Annotation>()
 
     /**

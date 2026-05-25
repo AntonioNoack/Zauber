@@ -5,7 +5,7 @@ import me.anno.cli.CommandImpl
 import java.io.File
 
 object VersionCommand : CommandImpl("version", "v", "about") {
-    override fun execute(options: LinkedHashMap<String, String>, location: File) {
+    override fun execute(options: Options, location: File) {
         println("Zauber Version: $version")
         println("Zauber is developed by Antonio Noack from Jena, Germany")
     }

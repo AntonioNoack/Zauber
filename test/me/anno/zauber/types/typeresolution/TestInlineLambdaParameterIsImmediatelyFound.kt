@@ -2,14 +2,13 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.utils.ResolutionUtils.ctr
 import me.anno.utils.ResolutionUtils.firstChild
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
 import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner.Companion.scanClasses
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.CallExpression
-import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldResolvable
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType

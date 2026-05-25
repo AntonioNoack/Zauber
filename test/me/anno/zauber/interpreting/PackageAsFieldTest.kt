@@ -1,6 +1,6 @@
 package me.anno.zauber.interpreting
 
-import me.anno.MultiTest
+import me.anno.utils.MultiTest
 import me.anno.utils.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource

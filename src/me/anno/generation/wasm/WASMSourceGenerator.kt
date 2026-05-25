@@ -8,7 +8,7 @@ import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.FullMap
 import me.anno.utils.ListOfByteArrays
 import me.anno.utils.NumberUtils.toInt
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.reverse.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
@@ -33,10 +33,8 @@ import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type

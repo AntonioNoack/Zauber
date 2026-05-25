@@ -1,8 +1,7 @@
-package me.anno
+package me.anno.utils
 
 import me.anno.generation.*
 import me.anno.utils.ResolutionUtils.testTypeResolution
-import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.types.Type

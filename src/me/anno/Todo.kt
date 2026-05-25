@@ -1,11 +1,20 @@
 package me.anno
 
+// todo most important things:
+//  (1) functions in functions need Map<FromTo<MethodSpec,MethodSpec>, SharedFields> -> values get added to value parameters
+//    -> creates a hidden function in the owner's scope
+//  (2) classes in functions need the same -> values get added to constructor
+//  (3) lambdas: there will be only one lambda-type for the given method name, use that knowledge
+//    -> creates an anonymous instance
+
+
+
+
+
 // todo low-hanging fruits:
 //  - allow CLI to execute one script, like in tests
 //  - WASM optimizer: we have many repeating, useless structures (set+exclusive get immediately after), ungrouped local-field-IDs, unused local-field-IDs,...
-//  - JVM bytecode generator
 //  - JVM bytecode loader: create code tokens for debugging
-//  - Python generator
 
 /*
 * todo yield can be implemented by modifying graph + virtual class, and I think we can do that
@@ -30,6 +39,7 @@ package me.anno
 //    - properly support ref and value types
 //    - "in"/"out" variables???
 //       -> we could support C#-style "out var resultInMeters: Int", with declaration inside function parameters...
+//       -> in/out = Ref<V>
 //    - properly implement YIELD
 //       -> all method fields + active temporary fields need to become a struct
 //       -> or we need to calculate, which to keep at least
@@ -37,3 +47,5 @@ package me.anno
 //      ---------------------
 //       ==> we could actually just convert each function with yield into one class plus simplfied functions without yields
 //      ---------------------
+
+// todo low-priority task: class X: List<V> by ArrayList<V>

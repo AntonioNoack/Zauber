@@ -1,6 +1,6 @@
 package me.anno.zauber.interpreting
 
-import me.anno.MultiTest
+import me.anno.utils.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals

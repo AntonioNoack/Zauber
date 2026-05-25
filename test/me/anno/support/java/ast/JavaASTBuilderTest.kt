@@ -2,7 +2,7 @@ package me.anno.support.java.ast
 
 import me.anno.support.Language
 import me.anno.support.java.tokenizer.JavaTokenizer
-import me.anno.zauber.Compile
+import me.anno.zauber.Zauber
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.utils.NumberUtils.f1
 import org.junit.jupiter.api.Test
@@ -25,6 +25,42 @@ class JavaASTBuilderTest {
     //  -> I removed some printing, and now we're down to 10s -> good enough, if we eliminate all printing?
     // todo also, we should make type&name-scanning smarter, very often, it's not a type&name and the type-resolution is expensive
 
+    private val javaStdlib = """
+package zauber;
+class Any
+class Object extends Any
+class System
+
+// todo is this properly supported???
+@interface SuppressWarnings
+
+class Throwable
+class StackTraceElement
+
+class Error extends Throwable
+class AssertionError extends Error
+class ExceptionInInitializerError extends Error
+class InternalError extends Error
+
+class Exception extends Throwable
+class ArithmeticException extends Exception
+class IllegalAccessException extends Exception
+class NumberFormatException extends Exception
+class UnsupportedOperationException extends Exception
+
+interface Iterator<V>
+interface Runnable
+interface AutoCloseable
+interface FunctionalInterface
+interface Appendable // for BufferedWriter and such
+interface Comparable<T>
+// https://www.baeldung.com/java-20-scoped-values
+//  -> something like ThreadLocal, but can be written only once, and lifetime is limited
+class ScopedValue<T>
+class AtomicInteger
+class AtomicLong
+        """.trimIndent()
+
     @Test
     fun testJavaTokenizer() {
         val t0 = System.nanoTime()
@@ -34,45 +70,7 @@ class JavaASTBuilderTest {
         val t1 = System.nanoTime()
         println("Tokenized ${sources.size} files in ${(t1 - t0) / 1e6f} ms")
 
-        sources.add(
-            JavaTokenizer(
-                """
-            package zauber;
-            class Any
-            class Object extends Any
-            class System
-            
-            // todo is this properly supported???
-            @interface SuppressWarnings
-            
-            class Throwable
-            class StackTraceElement
-            
-            class Error extends Throwable
-            class AssertionError extends Error
-            class ExceptionInInitializerError extends Error
-            class InternalError extends Error
-            
-            class Exception extends Throwable
-            class ArithmeticException extends Exception
-            class IllegalAccessException extends Exception
-            class NumberFormatException extends Exception
-            class UnsupportedOperationException extends Exception
-            
-            interface Iterator<V>
-            interface Runnable
-            interface AutoCloseable
-            interface FunctionalInterface
-            interface Appendable // for BufferedWriter and such
-            interface Comparable<T>
-            // https://www.baeldung.com/java-20-scoped-values
-            //  -> something like ThreadLocal, but can be written only once, and lifetime is limited
-            class ScopedValue<T>
-            class AtomicInteger
-            class AtomicLong
-        """.trimIndent(), "helper.java"
-            ).tokenize()
-        )
+        sources.add(JavaTokenizer(javaStdlib, "helper.java").tokenize())
 
         for (source in sources) {
             JavaASTClassScanner.collectNamedJavaClasses(source)
@@ -86,7 +84,7 @@ class JavaASTBuilderTest {
         for (source in sources) {
             println("AST for ${source.fileName}")
             try {
-                JavaASTBuilder(source, Compile.root, false, Language.JAVA)
+                JavaASTBuilder(source, Zauber.root, false, Language.JAVA)
                     .readFileLevel()
                 success++
             } catch (e: Throwable) {

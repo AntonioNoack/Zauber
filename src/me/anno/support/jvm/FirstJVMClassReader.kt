@@ -3,7 +3,7 @@ package me.anno.support.jvm
 import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.RunOnceLazy
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression

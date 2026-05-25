@@ -5,7 +5,7 @@ import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
 import me.anno.support.jvm.expression.*
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression

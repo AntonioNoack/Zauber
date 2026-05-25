@@ -7,7 +7,7 @@ import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringUtils.capitalize1
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction

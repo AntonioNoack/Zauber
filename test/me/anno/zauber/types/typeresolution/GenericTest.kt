@@ -1,6 +1,6 @@
 package me.anno.zauber.types.typeresolution
 
-import me.anno.zauber.Compile.STDLIB_NAME
+import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.utils.ResolutionUtils.testTypeResolution

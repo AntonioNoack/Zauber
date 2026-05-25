@@ -1,6 +1,6 @@
 package me.anno.zauber.scope.lazy
 
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.root
 import me.anno.support.Language
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
 import me.anno.zauber.ast.rich.expression.Expression

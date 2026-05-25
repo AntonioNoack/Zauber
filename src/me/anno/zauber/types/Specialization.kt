@@ -2,7 +2,7 @@ package me.anno.zauber.types
 
 import me.anno.generation.Specializations
 import me.anno.utils.ResetThreadLocal
-import me.anno.zauber.Compile
+import me.anno.zauber.Zauber
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.Parameter
@@ -316,7 +316,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         }
 
         val noSpecialization by ResetThreadLocal.threadLocal {
-            Specialization(Compile.root, ParameterList.emptyParameterList())
+            Specialization(Zauber.root, ParameterList.emptyParameterList())
         }
     }
 }

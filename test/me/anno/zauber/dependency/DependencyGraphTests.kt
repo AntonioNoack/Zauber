@@ -2,7 +2,7 @@ package me.anno.zauber.dependency
 
 import me.anno.utils.ResolutionUtils
 import me.anno.utils.ResolutionUtils.printDependencies
-import me.anno.zauber.Compile
+import me.anno.zauber.Zauber
 import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -42,7 +42,7 @@ class DependencyGraphTests {
         val classes = dependencies.createdClasses
         val methods = dependencies.calledMethods
 
-        val zauberScope = Compile.root.getOrPut("zauber", ScopeType.PACKAGE)
+        val zauberScope = Zauber.root.getOrPut("zauber", ScopeType.PACKAGE)
         val printlnMethod = zauberScope
             .methods0.first { it.name == "println" }
         val intPlusMethod = Types.Int.clazz

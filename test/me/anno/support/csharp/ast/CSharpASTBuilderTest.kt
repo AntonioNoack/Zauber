@@ -1,7 +1,7 @@
 package me.anno.support.csharp.ast
 
 import me.anno.support.csharp.tokenizer.CSharpTokenizer
-import me.anno.zauber.Compile
+import me.anno.zauber.Zauber
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.utils.NumberUtils.f1
 import org.junit.jupiter.api.Test
@@ -52,7 +52,7 @@ class CSharpASTBuilderTest {
         for (source in sources) {
             println("AST for ${source.fileName}")
             try {
-                CSharpASTBuilder(source, Compile.root)
+                CSharpASTBuilder(source, Zauber.root)
                     .readFileLevel()
                 success++
             } catch (e: Throwable) {

@@ -4,8 +4,9 @@ import me.anno.cli.CommandImpl
 import java.io.File
 
 object TestCommand : CommandImpl("test", "t") {
-    override fun execute(options: LinkedHashMap<String, String>, location: File) {
+    override fun execute(options: Options, location: File) {
         options["test"] = ""
+        options["only-test"] = ""
         BuildCommand.execute(options, location)
     }
 

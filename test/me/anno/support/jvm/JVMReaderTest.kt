@@ -6,12 +6,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 
 fun main() {
 
-    LogManager.disable("" +
-            "MemberResolver,TypeResolver,TypeResolution," +
-            "ASTSimplifier,Runtime,Inheritance," +
-            "MethodResolver,CallExpression,ResolvedMethod," +
-            "Field,FieldExpression,FieldResolver,FieldResolver,FieldExpression,ResolvedField," +
-            "ConstructorResolver,")
     LogManager.disableLoggersCompletely("OverriddenMethods")
 
     // todo read a complex class like HashMap,

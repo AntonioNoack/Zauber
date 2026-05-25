@@ -1,6 +1,6 @@
 package me.anno.zauber.scope
 
-import me.anno.zauber.Compile.STDLIB_NAME
+import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation

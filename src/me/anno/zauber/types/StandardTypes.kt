@@ -1,7 +1,7 @@
 package me.anno.zauber.types
 
-import me.anno.zauber.Compile.STDLIB_NAME
-import me.anno.zauber.Compile.root
+import me.anno.zauber.Zauber.STDLIB_NAME
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
