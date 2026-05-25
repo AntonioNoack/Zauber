@@ -35,7 +35,6 @@ object CompileSources {
             val fileName = file.absolutePath.substring(rootLen)
             val source = ZauberTokenizer(text, fileName).tokenize()
             sources.add(source)
-            packageScope.sources.add(source)
             numLines += text.count { it == '\n' } + 1L
         }
     }

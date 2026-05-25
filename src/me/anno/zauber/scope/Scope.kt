@@ -3,6 +3,7 @@ package me.anno.zauber.scope
 import me.anno.zauber.Compile.STDLIB_NAME
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -22,7 +23,6 @@ import me.anno.zauber.expansion.AddSuperCallToPackages
 import me.anno.zauber.expansion.DefaultParameters
 import me.anno.zauber.expansion.EarlyTypeResolution
 import me.anno.zauber.expansion.MethodOverrides
-import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
@@ -61,8 +61,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     var fileName: String? = parent?.fileName
 
     var flags: FlagSet = 0
+    val annotations = ArrayList<Annotation>()
     val children = ArrayList<Scope>()
-    val sources = ArrayList<TokenList>()
 
     val code: ArrayList<Expression>
         get() = (selfAsConstructor!!.body as ExpressionList).list as ArrayList<Expression>

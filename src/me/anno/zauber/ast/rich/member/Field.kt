@@ -2,6 +2,7 @@ package me.anno.zauber.ast.rich.member
 
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -61,6 +62,7 @@ class Field(
 
     val isMutableEx get() = isMutable || scope.flags.hasFlag(Flags.VALUE)
     var isCaptured = false
+    val annotations = ArrayList<Annotation>()
 
     /**
      * when compiling languages, who dislike shadowing,

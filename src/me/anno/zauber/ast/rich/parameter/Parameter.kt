@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.parameter
 
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.scope.Scope
@@ -26,6 +27,7 @@ class Parameter(
     val isConst get() = mutability == ParameterMutability.CONST
     val isVararg get() = expansion == ParameterExpansion.VARARG
 
+    val annotations = ArrayList<Annotation>()
     var mustBeNamed = false
 
     fun getOrCreateField(selfType: Type?, keywords: FlagSet): Field {

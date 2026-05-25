@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.ast.rich.parser.ASTBuilderBase.Companion.shouldBeResolvable
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.TypeOfField
@@ -56,7 +57,9 @@ object FieldGetterSetter {
     fun ZauberASTBuilderBase.finishField(ownerScope: Scope, field: Field) {
         // println("Finishing field $field")
         flags = 0
-        check(ownerScope.isClassLike())
+        check(ownerScope.isClassLike()) {
+            "Expected $field for finishField to have class-like owner, got ${ownerScope.scopeType}"
+        }
         finishGetter(ownerScope, field)
         finishSetter(ownerScope, field)
     }

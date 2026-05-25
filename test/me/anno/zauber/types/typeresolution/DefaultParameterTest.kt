@@ -9,11 +9,16 @@ class DefaultParameterTest {
 
     @Test
     fun testDefaultParameterWithoutSelf() {
+        // todo bug: how is call not resolved???
         val actual = testTypeResolution(
             """
                 fun call(x: Int = 0): Float
                 
                 val tested = call()
+                
+                package zauber
+                external class Int
+                external class Float
             """.trimIndent()
         )
         assertEquals(Types.Float, actual)

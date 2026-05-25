@@ -60,12 +60,13 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     open fun skipAnnotations() {
-        if (tokens.equals(i, "@") && tokens.equals(i + 1, TokenType.NAME)) {
-            i += 2
-            while (tokens.equals(i, ".") && tokens.equals(i + 1, TokenType.NAME)) {
-                i += 2
+        while (consumeIf("@")) {
+            if (readType(null, true) != null) {
+                skipValueParameters()
+            } else {
+                i--
+                return
             }
-            skipValueParameters()
         }
     }
 
@@ -82,6 +83,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val classScope = parentScope.getOrPut(name, scopeType)
         classScope.addFlags(listenType or packFlags())
         classScope.fileName = tokens.fileName
+        classScope.annotations.addAll(annotations); annotations.clear()
 
         classScope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
 
@@ -482,6 +484,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             selfType0, selfType0 != null, isMutable, null,
             name, valueType, initialValue, flags, origin
         )
+        field.annotations.addAll(annotations); annotations.clear()
         field.typeParameters = typeParameters
 
         if (getterBody != null && delegateExpr != null) {
@@ -585,6 +588,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val constrScope = classScope.generate("constructor", origin, ScopeType.CONSTRUCTOR)
         constrScope.setEmptyTypeParams()
         constrScope.flags = constrScope.flags or packFlags()
+        constrScope.annotations.addAll(annotations); annotations.clear()
 
         pushScope(constrScope) {
             val selfType = classScope.typeWithArgs
@@ -645,6 +649,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
         val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
         methodScope.addFlags(packFlags())
+        methodScope.annotations.addAll(annotations); annotations.clear()
 
         pushScope(methodScope) {
             val typeParameters = readTypeParameterDeclarations(methodScope, true)
@@ -674,12 +679,13 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 else -> null
             }
 
-            methodScope.selfAsMethod = Method(
+            val method = Method(
                 selfType0, selfType0 != null, name,
                 typeParameters, valueParameters,
                 methodScope, returnType, whereConditions, body,
                 methodScope.flags, origin
             )
+            methodScope.selfAsMethod = method
 
             popGenericParams()
         }

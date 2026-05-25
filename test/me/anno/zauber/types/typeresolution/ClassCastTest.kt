@@ -12,14 +12,13 @@ class ClassCastTest {
     fun testTypeIsCastInBranch() {
         val actual = testTypeResolution(
             """
-                fun Int.plus(other: Float): Float
-                
                 val x: Int? = null
                 val tested = if (x == null) "Test" else x + 1f
                 
-                // ensure these are registered as classes
                 package zauber
-                external class Int
+                external class Int {
+                    external operator fun plus(other: Float): Float
+                }
                 external class Float
                 class String
             """.trimIndent(), reset = true
@@ -30,20 +29,27 @@ class ClassCastTest {
     @Test
     fun testTypeIsCastAfterReturningBranch() {
         // can we somehow test this?? we need to resolve the x+1f inside the getter...
-        //  -> yes, if it compiles, all is fine...
-        assertEquals(
-            unionTypes(Types.Float, NullType),
-            testTypeResolution(
-                """
+        val actual = testTypeResolution(
+            """
                 fun Int.plus(other: Float): Float
                 
                 val x: Int? = null
-                val tested: Float? get() {
+                val tested get() {
                     if (x == null) return null
                     return x+1f
                 }
+                
+                package zauber
+                external class Int {
+                    external fun plus(other: Int): Int
+                    external fun compareTo(other: Int): Int
+                    external fun equals(other: Int): Boolean
+                }
             """.trimIndent()
-            )
+        )
+        assertEquals(
+            unionTypes(Types.Float, NullType),
+            actual
         )
     }
 }

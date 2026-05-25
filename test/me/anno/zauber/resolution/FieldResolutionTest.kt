@@ -25,7 +25,7 @@ class FieldResolutionTest {
         fun tryFindField(scope: Scope, name: String): Field? {
             val field = scope[ScopeInitType.CODE_GENERATION]
                 .fields.firstOrNull { it.name == name }
-            println("Scanning $scope for $name: $field, options: ${scope.fields.map { it.name }}")
+            // println("Scanning $scope for $name: $field, options: ${scope.fields.map { it.name }}")
             if (field != null) return field
             for (child in scope.children) {
                 val field = tryFindField(child, name)
