@@ -65,7 +65,11 @@ object LinearTreeSimplification {
             if (node.inputBlocks.isEmpty()) {
                 throw IllegalStateException("How can ${node.str()} be unreachable?")
             }
-            node = node.inputBlocks.minBy { depths[it.blockId] }
+            node = node.inputBlocks.minBy {
+                val depth = depths[it.blockId]
+                check(depth >= 0)
+                depth
+            }
             depth = depths[node.blockId]
             check(depth >= 0)
         }
@@ -106,7 +110,7 @@ object LinearTreeSimplification {
         }
 
         // fill in nodes
-        for (i in 1 until nodes.size) {
+        for (i in 1 until nodes.lastIndex) {
             val node = nodes[i]
             val dst = findDominatorParent(node, depth).instructions
             val enterNode = graph.field(Types.Boolean)
@@ -134,6 +138,7 @@ object LinearTreeSimplification {
         depths.fill(-1)
         depths[nodes.first().blockId] = 0 // start at depth 0
 
+        val end = nodes.last()
         for (i in 1 until nodes.size) {
             val node = nodes[i]
             if (node.inputBlocks.isEmpty()) {
@@ -142,7 +147,10 @@ object LinearTreeSimplification {
             }
             val depth = node.inputBlocks.maxOf { input ->
                 val depth = depths[input.blockId]
-                check(depth >= 0) { "Depth cannot be negative, because nodes are sortable" }
+                check(depth >= 0 || node === end) {
+                    "Depth cannot be negative, because nodes are sortable, " +
+                            "${nodes.map { it.short() }}, ${node.str()} by ${node.inputBlocks.map { it.str() }}"
+                }
                 depth
             } + 1
             depths[node.blockId] = depth
@@ -186,7 +194,20 @@ object LinearTreeSimplification {
         }
 
         dfs(start)
+        validateRegionNodes(start, end, visited.keys)
         return visited.keys
+    }
+
+    private fun validateRegionNodes(start: SimpleBlock, end: SimpleBlock, visited: Set<SimpleBlock>) {
+        check(end in visited)
+        for (node in visited) {
+            if (node === start || node === end) continue
+            for (input in node.inputBlocks) {
+                check(input in visited) {
+                    "Expected ${input.short()} to be in ${start.short()} .. ${end.short()}"
+                }
+            }
+        }
     }
 
     private fun findUniqueExit(start: SimpleBlock): SimpleBlock? {

@@ -381,6 +381,12 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 foundNamedScope(name, Flags.NONE, ScopeType.TYPE_ALIAS)
             }
 
+            consumeIf("@") -> {
+                val type = readTypeNotNull(null, true)
+                val valueParameters = readValueParameters()
+                annotations.add(Annotation(type, valueParameters))
+            }
+
             else -> throw IllegalStateException("Unknown token ${tokens.err(i)}")
         }
     }

@@ -203,24 +203,7 @@ class SimpleBlock(val graph: SimpleGraph) {
     }
 
     override fun toString(): String {
-        val builder = StringBuilder()
-        builder
-            .append(StringStyles.style("b${blockId}", GREEN))
-            .append('[')
-
-        if (isEntryPoint) builder.append("->|")
-
-        if (nextBranch == null) {
-            builder.append(StringStyles.style("end", StringStyles.RED))
-        } else if (branchCondition != null) {
-            builder.append(branchCondition).append(" ? ")
-                .append(style("b${ifBranch!!.blockId}", GREEN)).append(" : ")
-                .append(style("b${elseBranch!!.blockId}", GREEN))
-        } else {
-            builder.append(style("b${nextBranch!!.blockId}", GREEN))
-        }
-
-        builder.append(']')
+        val builder = short()
         /*val or = onReturn
         if (or != null) builder.append('r').append(or.blockId)
         val ot = onThrow
@@ -233,6 +216,25 @@ class SimpleBlock(val graph: SimpleGraph) {
     }
 
     fun str() = style("b$blockId", GREEN)
+
+    fun short(): StringBuilder {
+        val builder = StringBuilder()
+        builder.append(str()).append('[')
+
+        if (isEntryPoint) builder.append("->|")
+
+        if (nextBranch == null) {
+            builder.append(StringStyles.style("end", StringStyles.RED))
+        } else if (branchCondition != null) {
+            builder.append(branchCondition).append(" ? ")
+                .append(style("b${ifBranch!!.blockId}", GREEN)).append(" : ")
+                .append(style("b${elseBranch!!.blockId}", GREEN))
+        } else {
+            builder.append(style("b${nextBranch!!.blockId}", GREEN))
+        }
+        builder.append(']')
+        return builder
+    }
 
     fun isEmpty(): Boolean {
         return !isBranch && nextBranch == null &&

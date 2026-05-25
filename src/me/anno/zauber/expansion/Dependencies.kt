@@ -94,7 +94,7 @@ object Dependencies {
         val ownerSpec = method0.withScope(ownerScope)
         for (childClass in reached.childClasses[ownerSpec].orEmpty()) {
             val childCandidates = childClass.scope!!.methods0
-                .filter { it.name == methodName && method in it.overriddenBy }
+                .filter { it.name == methodName && method in it.superMethods }
             if (childCandidates.size > 1) LOGGER.warn("More child-candidates than expected for $method in $childClass: $childCandidates")
             if (childCandidates.isEmpty()) LOGGER.warn("Missing child-candidate of $method in $childClass")
             for (candidate in childCandidates) {

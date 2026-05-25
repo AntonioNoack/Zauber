@@ -1,6 +1,7 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalWASMRuntimeCompiler
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Test
 
 /**
@@ -63,6 +64,7 @@ class WASMRuntimeTests : CodeGenerationTests() {
 
     @Test
     fun testClassInheritance() {
+        LogManager.enable("MethodOverrides")
         testClassInheritanceImpl()
     }
 

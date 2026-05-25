@@ -19,7 +19,6 @@ import me.anno.zauber.types.Type
 // start with high classes, and go down the hierarchy,
 //  and make each class complete, s.t. all methods are present for easier resolution
 
-// todo also check all sealed class, value class, open class, abstract class, etc having a valid type combination
 object MethodOverrides {
 
     private val LOGGER = LogManager.getLogger(MethodOverrides::class)
@@ -85,9 +84,11 @@ object MethodOverrides {
         selfMethods: Map<String, List<Method>>,
         foundMethods: HashSet<Method>
     ) {
-        val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0.filter { !it.hasExplicitSelfType }
+        val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0
         for (superMethod in superMethods) {
             if (superMethod.isPrivate()) continue
+
+            println("Checking out $superMethod for $superScope -> $scope")
 
             // find match
             val selfType = superMethod.selfType ?: scope.typeWithArgs
@@ -131,17 +132,19 @@ object MethodOverrides {
 
             } else {
 
+                println("Found override: $selfMethod for $superMethod")
+
                 foundMethods.add(selfMethod)
 
-                if (false) check(selfMethod.flags.hasFlag(Flags.OVERRIDE)) {
+                check(selfMethod.flags.hasFlag(Flags.OVERRIDE)) {
                     "Expected $scope.$selfMethod to have override flag for $superScope.$superMethod"
                 }
-                if (false) check(isOpen && !isExplicitlyClosed) {
+                check(isOpen && !isExplicitlyClosed) {
                     "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)}"
                 }
 
-                superMethod.overriddenFor += selfMethod
-                selfMethod.overriddenBy += superMethod
+                superMethod.childMethods += selfMethod
+                selfMethod.superMethods += superMethod
             }
         }
     }
@@ -175,8 +178,8 @@ object MethodOverrides {
                     "$scope.$selfField cannot both be open and closed, got ${Flags.toString(selfField.flags)}"
                 }
 
-                superField.overriddenFor += selfField
-                selfField.overriddenBy += superField
+                superField.childMethods += selfField
+                selfField.superMethods += superField
             }
         }
     }

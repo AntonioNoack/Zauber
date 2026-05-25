@@ -450,6 +450,7 @@ class WASMBinaryReader(
             WASMOpcode.RETURN -> WASMInstruction.Return
 
             WASMOpcode.CALL -> WASMInstruction.Call(u32())
+            WASMOpcode.CALL_INDIRECT -> WASMInstruction.CallIndirect(u32())
 
             WASMOpcode.LOCAL_GET -> WASMInstruction.LocalGet(u32())
             WASMOpcode.LOCAL_SET -> WASMInstruction.LocalSet(u32())

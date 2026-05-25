@@ -33,8 +33,10 @@ import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type
@@ -1603,11 +1605,11 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             if (expr.sample.ownerScope.isInterface()) {
                 val callIndex = inheritanceTable.getInterfaceCallIndex(expr.specialization)
                 i32Const(callIndex); nextLine()
-                callMethod(interfaceCallSpec)
+                callMethod(inheritanceTable.interfaceCallSpec)
             } else {
                 val callIndex = inheritanceTable.getClassCallIndex(expr.specialization)
                 i32Const(callIndex); nextLine()
-                callMethod(interfaceCallSpec)
+                callMethod(inheritanceTable.methodCallSpec)
             }
 
             // call it
@@ -1622,14 +1624,6 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             callMethod(expr.specialization)
             nextLine()
         }
-    }
-
-    val interfaceCallSpec: Specialization by lazy {
-        TODO()
-    }
-
-    val methodCallSpec: Specialization by lazy {
-        TODO()
     }
 
     fun appendLoadClassIndex() {

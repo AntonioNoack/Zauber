@@ -36,6 +36,6 @@ abstract class Member(
     abstract val memberScope: Scope
 
     // due to multi-interface, there may be many of them
-    var overriddenFor: List<Member> = emptyList()
-    var overriddenBy: List<Member> = emptyList()
+    var childMethods: List<Member> = emptyList()
+    var superMethods: List<Member> = emptyList()
 }

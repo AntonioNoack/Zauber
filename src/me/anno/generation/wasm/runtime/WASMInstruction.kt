@@ -40,6 +40,7 @@ sealed interface WASMInstruction {
 
     data object Return : WASMInstruction
     data class Call(val functionIndex: Int) : WASMInstruction
+    data class CallIndirect(val functionType: Int) : WASMInstruction
 
     data class LocalGet(val index: Int) : WASMInstruction
     data class LocalSet(val index: Int) : WASMInstruction

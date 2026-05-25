@@ -1,6 +1,7 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
+import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.utils.assertEquals
 
 /**
@@ -332,9 +333,14 @@ abstract class CodeGenerationTests {
             }
             package zauber
             class Any
-            class Int
+            class Int {
+                external operator fun plus(other: Int): Int
+                external operator fun times(other: Int): Int
+                external operator fun compareTo(other: Int): Int
+                external operator fun equals(other: Int): Boolean
+            }
             external fun println(arg0: Int)
-        """.trimIndent()
+        """.trimIndent() + inheritanceCode
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -355,7 +361,12 @@ abstract class CodeGenerationTests {
             }
             package zauber
             class Any
-            class Int
+            class Int {
+                external operator fun plus(other: Int): Int
+                external operator fun times(other: Int): Int
+                external operator fun compareTo(other: Int): Int
+                external operator fun equals(other: Int): Boolean
+            }
             external fun println(arg0: Int)
         """.trimIndent()
 

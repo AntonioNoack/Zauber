@@ -42,7 +42,7 @@ class Method(
     var backedField: Field? = null
 
     // can inline methods be open? explicit inheritance-tree would need to be inlined...
-    fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && overriddenBy.isEmpty() && body != null
+    fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && superMethods.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {
         val returnType = returnType
