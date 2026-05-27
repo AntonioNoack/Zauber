@@ -385,7 +385,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
             consumeIf("@") -> {
                 val type = readTypeNotNull(null, true)
-                val valueParameters = readValueParameters()
+                val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) readValueParameters() else emptyList()
                 annotations.add(Annotation(type, valueParameters))
             }
 
