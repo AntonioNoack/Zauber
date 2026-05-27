@@ -172,16 +172,23 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         super.appendConstructors(classScope, className, methods, headerOnly)
 
         // if this is a value class & we have no empty constructor, append one
-        if (headerOnly && classScope.typeWithArgs.isValue() &&
-            methods.none { spec ->
-                val method = spec.method
-                method is Constructor && method.valueParameters.isEmpty()
-            }
-        ) {
-            builder.append("public: ")
-            builder.append(className).append("(){}")
-            nextLine()
+        if (headerOnly && needsEmptyConstructor(classScope, methods)) {
+            appendEmptyConstructor(className)
         }
+    }
+
+    open fun needsEmptyConstructor(classScope: Scope, methods: Collection<Specialization>): Boolean {
+        return classScope.typeWithArgs.isValue() &&
+                methods.none { spec ->
+                    val method = spec.method
+                    method is Constructor && method.valueParameters.isEmpty()
+                }
+    }
+
+    fun appendEmptyConstructor(className: String) {
+        builder.append("public: ")
+        builder.append(className).append("(){}")
+        nextLine()
     }
 
     override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
@@ -295,17 +302,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         nativeImports: Set<String>
     ) {
         if (file.name.endsWith(".hpp")) builder.append("#pragma once\n")
-        if (nativeImports.isNotEmpty()) {
-            for (import in nativeImports) {
-                builder.append(import)
-                nextLine()
-            }
-            nextLine()
-        }
-
-        // only really needed, if we have allocations...
-        builder.append("#include \"${"../".repeat(packagePath.size)}CppStandardLib.hpp\"\n")
-        nextLine()
+        appendNativeImports()
+        appendStdlibImport(packagePath)
 
         appendImports(packagePath, imports)
         writeUsingNamespace(imports)
@@ -314,11 +312,27 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         appendPackageDeclaration(packagePath, file)
     }
 
+    fun appendNativeImports() {
+        if (nativeImports.isNotEmpty()) {
+            for (import in nativeImports) {
+                builder.append(import)
+                nextLine()
+            }
+            nextLine()
+        }
+    }
+
+    open fun appendStdlibImport(packagePath: List<String>) {
+        // only really needed, if we have allocations...
+        builder.append("#include \"${"../".repeat(packagePath.size)}CppStandardLib.hpp\"\n")
+        nextLine()
+    }
+
     override fun appendArrayContentField(classScope: Scope, headerOnly: Boolean) {
         if (!headerOnly) return
 
         val elementType = specialization.typeParameters[0]
-        builder.append("private: ")
+        appendVisibility(isPrivate = true)
         appendType(elementType, classScope, false)
         appendOwnershipSuffix(elementType)
         builder.append("* content;")
@@ -393,7 +407,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         nextLine()
     }
 
-    fun appendVisibility(isPrivate: Boolean) {
+    open fun appendVisibility(isPrivate: Boolean) {
         dedent()
         val visibility = if (isPrivate) "private:" else "public:"
         builder.append(visibility)

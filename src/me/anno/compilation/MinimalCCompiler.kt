@@ -1,23 +1,23 @@
 package me.anno.compilation
 
-import me.anno.generation.cpp.CppSourceGenerator
+import me.anno.generation.c.CSourceGenerator
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-open class MinimalCppCompiler(preserveFolder: Boolean = false) :
-    MinimalCompiler(if (preserveFolder) "ZauberCpp" else null) {
+open class MinimalCCompiler(preserveFolder: Boolean = false) :
+    MinimalCompiler(null) {
 
     companion object {
-        val minimalCMakeLists by lazy {
-            MinimalCppCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CMakeLists.txt")!!
+        val minimalCMakeListsForC by lazy {
+            MinimalCCompiler::class.java
+                .classLoader.getResourceAsStream("./files/CMakeLists-C.txt")!!
                 .readBytes().decodeToString()
         }
 
-        val cppStandardLib by lazy {
-            MinimalCppCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CppStandardLib.hpp")!!
+        val cStandardLib by lazy {
+            MinimalCCompiler::class.java
+                .classLoader.getResourceAsStream("./files/CStandardLib.h")!!
                 .readBytes()
         }
     }
@@ -26,7 +26,7 @@ open class MinimalCppCompiler(preserveFolder: Boolean = false) :
         projectFolder: File, srcFolder: File,
         dependencies: DependencyData, mainMethod: Method
     ) {
-        val gen = CppSourceGenerator()
+        val gen = CSourceGenerator()
         gen.generateCode(srcFolder, dependencies, mainMethod)
 
         val si = projectFolder.absolutePath.length + 1
@@ -35,10 +35,10 @@ open class MinimalCppCompiler(preserveFolder: Boolean = false) :
         }
 
         File(projectFolder, "CMakeLists.txt")
-            .writeText(minimalCMakeLists.replace("FILES_LIST", filesList))
+            .writeText(minimalCMakeListsForC.replace("FILES_LIST", filesList))
 
-        File(srcFolder, "CppStandardLib.hpp")
-            .writeBytes(cppStandardLib)
+        File(srcFolder, "CStandardLib.h")
+            .writeBytes(cStandardLib)
 
         val buildFolder = File(projectFolder, "build")
         buildFolder.mkdirs()

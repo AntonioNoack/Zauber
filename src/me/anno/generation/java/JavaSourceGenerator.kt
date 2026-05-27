@@ -7,8 +7,8 @@ import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringUtils.capitalize1
-import me.anno.zauber.Zauber.root
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleBranch
@@ -427,7 +427,7 @@ open class JavaSourceGenerator : Generator() {
         if (scope.flags.hasFlag(Flags.ABSTRACT)) builder.append("abstract ")
     }
 
-    fun appendClassPrefix(scope: Scope, className: String) {
+    open fun appendClassPrefix(scope: Scope, className: String) {
         builder.append(getClassType(scope))
             .append(' ').append(className)
     }
@@ -1587,7 +1587,7 @@ open class JavaSourceGenerator : Generator() {
         appendClassType(type.clazz, specialization)
     }
 
-    fun appendClassType(type: Scope, specialization: Specialization) {
+    open fun appendClassType(type: Scope, specialization: Specialization) {
 
         check(!type.isTypeAlias()) {
             "Resolved type $type cannot be a type-alias"
@@ -1604,7 +1604,7 @@ open class JavaSourceGenerator : Generator() {
         appendClassName(path1, type)
     }
 
-    fun appendClassName(path: List<String>, scope: Scope) {
+    open fun appendClassName(path: List<String>, scope: Scope) {
         val name = path.last()
         val existingImport = imports.getOrPut(name) { Import2(path, scope) }
         if (existingImport.path == path) {
