@@ -302,7 +302,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         nativeImports: Set<String>
     ) {
         if (file.name.endsWith(".hpp")) builder.append("#pragma once\n")
-        appendNativeImports()
+        appendNativeImports(nativeImports)
         appendStdlibImport(packagePath)
 
         appendImports(packagePath, imports)
@@ -312,7 +312,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         appendPackageDeclaration(packagePath, file)
     }
 
-    fun appendNativeImports() {
+    fun appendNativeImports(nativeImports: Set<String>) {
         if (nativeImports.isNotEmpty()) {
             for (import in nativeImports) {
                 builder.append(import)
@@ -480,6 +480,25 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
+    override fun appendArrayGetter(method0: Specialization) {
+        writeBlock {
+            builder.append("return this->content[index];")
+            nextLine()
+        }
+    }
+
+    override fun appendArraySetter(method0: Specialization) {
+        writeBlock {
+            builder.append("this->content[index] = value;")
+            nextLine()
+
+            builder.append("return ")
+            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+            builder.append(';')
+            nextLine()
+        }
+    }
+
     override fun appendFieldFlags(classScope: Scope, field: Field, allowFinal: Boolean) {
         // no flags yet
     }
@@ -537,7 +556,6 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             builder.append(" override")
         }
     }
-
 
     fun appendNativeImports(method: Method) {
         val nativeImpl = getNativeImplementation(method) ?: return

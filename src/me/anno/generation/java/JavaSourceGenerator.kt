@@ -313,12 +313,12 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun getClassName(scope: Scope, specialization: Specialization): String {
-        return scope.name + createSpecializationSuffix(specialization)
+        return if (scope.isPackage()) getPackageName(scope)
+        else scope.name + createSpecializationSuffix(specialization)
     }
 
-    open fun getPackageName(scope: Scope, specialization: Specialization): String {
+    open fun getPackageName(scope: Scope): String {
         check(scope.isPackage()) { "Expected scope for packageName to be package" }
-        check(specialization.typeParameters.isEmpty()) { "Expected package to have empty specialization" }
         return scope.name.capitalize1() + "Kt"
     }
 
@@ -338,7 +338,7 @@ open class JavaSourceGenerator : Generator() {
         val packageScope: Scope
         if (scope.scopeType == ScopeType.PACKAGE) {
             // we need some package helper
-            name = getPackageName(scope, specialization)
+            name = getPackageName(scope)
             packageScope = scope
         } else {
             name = getClassName(scope, specialization)
@@ -626,14 +626,14 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendArrayGetter(method0: Specialization) {
         writeBlock {
-            builder.append("return content[index];")
+            builder.append("return this.content[index];")
             nextLine()
         }
     }
 
     open fun appendArraySetter(method0: Specialization) {
         writeBlock {
-            builder.append("content[index] = value;")
+            builder.append("this.content[index] = value;")
             nextLine()
 
             builder.append("return ")
@@ -1111,7 +1111,7 @@ open class JavaSourceGenerator : Generator() {
     open fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean = true) {
         if (withBrackets) builder.append('(')
         for (i in valueParameters.indices) {
-            if (i > 0) builder.append(", ")
+            if (!builder.endsWith('(')) builder.append(", ")
             val parameter = valueParameters[i]
             appendFieldName(graph, parameter)
         }
@@ -1594,14 +1594,8 @@ open class JavaSourceGenerator : Generator() {
         }
 
         val className = getClassName(type, specialization)
-        val path0 = type.parent!!.path + className
-
-        val path1 = if (type.isPackage()) {
-            val extraName = getPackageName(type, specialization)
-            path0 + extraName
-        } else path0
-
-        appendClassName(path1, type)
+        val path0 = (if (type.isPackage()) type else type.parent!!).path + className
+        appendClassName(path0, type)
     }
 
     open fun appendClassName(path: List<String>, scope: Scope) {

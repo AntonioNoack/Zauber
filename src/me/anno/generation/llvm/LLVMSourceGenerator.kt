@@ -590,7 +590,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun getClassName(scope: Scope, specialization: Specialization): String {
-        return scope.pathStr + createSpecializationSuffix(specialization)
+        return if (scope.isPackage()) scope.pathStr + getPackageName(scope)
+        else scope.pathStr + createSpecializationSuffix(specialization)
     }
 
     class Branch(self: LLVMSourceGenerator) {

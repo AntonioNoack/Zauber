@@ -935,7 +935,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun getClassName(scope: Scope, specialization: Specialization): String {
-        return scope.pathStr.replace('.', '_') + createSpecializationSuffix(specialization)
+        return if (scope.isPackage()) getPackageName(scope)
+        else scope.pathStr.replace('.', '_') + createSpecializationSuffix(specialization)
     }
 
     fun appendGetObjectInstanceImpl(objectScope: Scope) {
