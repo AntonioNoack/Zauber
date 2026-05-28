@@ -1250,7 +1250,6 @@ open class JavaSourceGenerator : Generator() {
                 if (needsCopy) appendCopy(graph, expr.value.type)
             }
             is SimpleCompare -> {
-                // todo if this is not native, we must append a call
                 appendFieldName(graph, expr.left)
                 builder.append(' ')
                 builder.append(expr.type.symbol)
@@ -1426,20 +1425,20 @@ open class JavaSourceGenerator : Generator() {
     open fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
         val needsCastForFirstValue = nativeTypes[expr.thisInstance.type]
         if (needsCastForFirstValue != null) {
-            appendCallForPrimitive(needsCastForFirstValue, expr, graph)
+            appendNativeCall(needsCastForFirstValue, expr, graph)
         } else {
-            appendCallForNonPrimitive(expr, graph)
+            appendNonNativeCall(expr, graph)
         }
     }
 
-    open fun appendCallForNonPrimitive(expr: SimpleCall, graph: SimpleGraph) {
+    open fun appendNonNativeCall(expr: SimpleCall, graph: SimpleGraph) {
         appendFieldName(graph, expr.thisInstance, ".")
         val methodName = getMethodName(expr.specialization)
         builder.append(methodName)
         appendValueParams(graph, expr.valueParameters)
     }
 
-    open fun appendCallForPrimitive(
+    open fun appendNativeCall(
         needsCastForFirstValue: BoxedType, expr: SimpleCall,
         graph: SimpleGraph,
     ) {
@@ -1448,7 +1447,8 @@ open class JavaSourceGenerator : Generator() {
             "dec" -> builder.append("-1 + ")
             else -> {
                 builder.append(needsCastForFirstValue.boxed).append('.')
-                val methodName = getMethodName(expr.specialization)
+                var methodName = getMethodName(expr.specialization)
+                if (methodName == "compareTo") methodName = "compare"
                 builder.append(methodName)
             }
         }
@@ -1456,7 +1456,6 @@ open class JavaSourceGenerator : Generator() {
         builder.append('(')
         appendFieldName(graph, expr.thisInstance)
         if (expr.valueParameters.isNotEmpty()) {
-            builder.append(", ")
             appendValueParams(graph, expr.valueParameters, false)
         }
         builder.append(')')

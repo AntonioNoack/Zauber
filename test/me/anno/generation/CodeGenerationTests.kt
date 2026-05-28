@@ -375,4 +375,56 @@ abstract class CodeGenerationTests {
         assertEquals("2\n", printed)
     }
 
+    fun testNumberOverflowsImpl() {
+        val code: String = TODO()
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
+    }
+
+    fun testNumberConversionsImpl() {
+        val code: String = TODO()
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
+    }
+
+    fun testNumberComparisonsImpl() {
+        val code: String = TODO()
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
+    }
+
+    fun testNonNumberComparisonsImpl() {
+        val code = """
+            class Vector(val x: Int, val y: Int) {
+                operator fun compareTo(other: Vector): Int {
+                    val dx = x.compareTo(other.x)
+                    if (dx == 0) return y.compareTo(other.y)
+                    return dx
+                }
+            }
+            fun main() {
+                val condition = Vector(1, 2) > Vector(1, 3)
+                println(if(condition) 17 else 12)
+            }
+            package zauber
+            class Any
+            class Int {
+                external operator fun compareTo(other: Int): Int
+                external operator fun equals(other: Int): Boolean
+            }
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external operator fun set(index: Int, value: V)
+            }
+            external fun println(arg0: Int)
+        """.trimIndent()
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("12\n", printed)
+    }
+
 }

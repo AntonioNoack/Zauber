@@ -82,6 +82,31 @@ class JVMGenerationTests : CodeGenerationTests() {
         testInterfaceInheritanceImpl()
     }
 
+    @Test
+    fun testNumberOverflows() {
+        testNumberOverflowsImpl()
+    }
+
+    @Test
+    fun testNumberComparisons() {
+        testNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testNumberConversions() {
+        testNumberConversionsImpl()
+    }
+
+    @Test
+    fun testNonNumberComparisons() {
+        testNonNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testUseNativeLibrary() {
+        TODO("Call into a native library")
+    }
+
     // todo add .copy(name=value, name2=value2) as a special function on data classes
 
     // todo implement and test value classes being inlined:

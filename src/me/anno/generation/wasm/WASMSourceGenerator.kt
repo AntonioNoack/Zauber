@@ -1352,18 +1352,10 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 nextLine()
             }
             is SimpleCompare -> {
-                val method = expr.method.resolved
-                method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
-
-                val ownerType = method.ownerScope.typeWithArgs
-                val paramType = method.valueParameters[0].type.specialize()
-                if (ownerType == paramType && ownerType in nativeNumbers) {
-                    appendGetField(graph, expr.left)
-                    appendGetField(graph, expr.right)
-                    appendNativeCompare(ownerType, expr.type)
-                } else {
-                    TODO("Call method, then compare to zero for $ownerType,$paramType")
-                }
+                val ownerType = expr.numberType
+                appendGetField(graph, expr.left)
+                appendGetField(graph, expr.right)
+                appendNativeCompare(ownerType, expr.type)
             }
             is SimpleCheckEquals -> {
                 val method = expr.method.resolved

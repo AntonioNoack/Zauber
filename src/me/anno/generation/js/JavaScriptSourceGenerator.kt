@@ -434,7 +434,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         appendTypeImpl(type, scope, needsBoxedType)
     }
 
-    override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
         // ensure import
         val selfType = expr.thisInstance.type
         val position = builder.length

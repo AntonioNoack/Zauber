@@ -90,4 +90,29 @@ class LLVMGenerationTests : CodeGenerationTests() {
         testInterfaceInheritanceImpl()
     }
 
+    @Test
+    fun testNumberOverflows() {
+        testNumberOverflowsImpl()
+    }
+
+    @Test
+    fun testNumberComparisons() {
+        testNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testNumberConversions() {
+        testNumberConversionsImpl()
+    }
+
+    @Test
+    fun testNonNumberComparisons() {
+        testNonNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testUseNativeLibrary() {
+        TODO("Call into a native library")
+    }
+
 }

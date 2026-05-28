@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -17,6 +18,7 @@ object RuntimeCreate {
             Types.UInt -> base.asInt.toInt().toUInt()
             Types.Long -> base.asInt
             Types.ULong -> base.asInt.toULong()
+            Types.Half -> base.asFloat.toHalf()
             Types.Float -> base.asFloat.toFloat()
             Types.Double -> base.asFloat
             else -> throw NotImplementedError("Create instance of type $type")

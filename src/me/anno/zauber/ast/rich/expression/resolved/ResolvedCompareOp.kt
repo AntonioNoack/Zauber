@@ -8,6 +8,10 @@ import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
+/**
+ * for <, <=, >, >=
+ * == and != use CheckEqualsOp
+ * */
 class ResolvedCompareOp(
     val left: Expression,
     val right: Expression,

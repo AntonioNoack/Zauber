@@ -804,7 +804,9 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                         }
                         code.jump(op, lTrue)
                     }
-                    JVMValueType.REFERENCE -> error("Compare on references not supported by SimpleCompare")
+                    JVMValueType.REFERENCE -> {
+                        error("Compare on references not supported by SimpleCompare")
+                    }
                 }
                 code.iconst(0)
                 code.goTo(lEnd)

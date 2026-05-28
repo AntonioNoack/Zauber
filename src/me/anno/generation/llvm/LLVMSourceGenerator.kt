@@ -1018,21 +1018,13 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                     .append(", ptr ").append(tmp)
             }
             is SimpleCompare -> {
-                val method = expr.method.resolved
-                method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
-
-                val ownerType = method.ownerScope.typeWithArgs
-                val paramType = method.valueParameters[0].type.specialize()
-                if (ownerType == paramType && ownerType in nativeNumbers) {
-                    val left = getSimpleFieldReg(graph, expr.left)
-                    val right = getSimpleFieldReg(graph, expr.right)
-                    appendAssign(expr.dst)
-                    appendNativeCompare(ownerType, expr.type)
-                    builder.append(' ').append(getLLVMType(ownerType).ir)
-                        .append(' ').append(left).append(", ").append(right)
-                } else {
-                    TODO("Call method, then compare to zero for $ownerType,$paramType")
-                }
+                val ownerType = expr.numberType
+                val left = getSimpleFieldReg(graph, expr.left)
+                val right = getSimpleFieldReg(graph, expr.right)
+                appendAssign(expr.dst)
+                appendNativeCompare(ownerType, expr.type)
+                builder.append(' ').append(getLLVMType(ownerType).ir)
+                    .append(' ').append(left).append(", ").append(right)
             }
             is SimpleMerge -> {
                 // create phi instruction 😎

@@ -81,4 +81,39 @@ class PythonGenerationTests : CodeGenerationTests() {
         testInterfaceInheritanceImpl()
     }
 
+    @Test
+    fun testNumberOverflows() {
+        testNumberOverflowsImpl()
+    }
+
+    @Test
+    fun testNumberComparisons() {
+        testNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testNumberConversions() {
+        testNumberConversionsImpl()
+    }
+
+    @Test
+    fun testNonNumberComparisons() {
+        testNonNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testUseNativeLibrary() {
+        TODO("Call into a native library")
+    }
+
+    // todo test number conversions
+    // todo test overflows
+    // todo comparisons between all number types
+    // todo comparisons between non-number types
+    // todo somehow describe and connect to a Python library
+    // todo should we implement weird number comparisons? could be useful...
+    //  like Int and UInt, Float and Long, etc...
+    //  e.g. Int vs UInt must look at the sign, too
+    // to do disable specialization, where not necessary???
+
 }

@@ -697,7 +697,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         // not necessary, this is done by the owner-ship types
     }
 
-    override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
         // ensure import
         val selfType = resolveType(expr.thisInstance.type) as ClassType
         val position = builder.length
@@ -717,7 +717,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
     override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
         val needsCastForFirstValue = nativeTypes[expr.thisInstance.type]
         if (needsCastForFirstValue != null) {
-            appendCallForPrimitive(needsCastForFirstValue, expr, graph)
+            appendNativeCall(needsCastForFirstValue, expr, graph)
         } else {
             appendFieldName(graph, expr.thisInstance, "")
             if (!expr.thisInstance.type.isObjectLike()) {

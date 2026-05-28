@@ -83,12 +83,34 @@ class JavaGenerationTests : CodeGenerationTests() {
         testInterfaceInheritanceImpl()
     }
 
-    // todo add .copy(name=value, name2=value2) as a special function on data classes
+    @Test
+    fun testNumberOverflows() {
+        testNumberOverflowsImpl()
+    }
+
+    @Test
+    fun testNumberComparisons() {
+        testNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testNumberConversions() {
+        testNumberConversionsImpl()
+    }
+
+    @Test
+    fun testNonNumberComparisons() {
+        testNonNumberComparisonsImpl()
+    }
+
+    @Test
+    fun testUseNativeLibrary() {
+        TODO("Call into a native library")
+    }
 
     // todo implement and test value classes being inlined:
     //  we explode them, and must make their body-functions static...
 
     // todo implement and test working with strings
-    // todo test specialized classes being usable
 
 }

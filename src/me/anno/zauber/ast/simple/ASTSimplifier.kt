@@ -54,6 +54,17 @@ object ASTSimplifier {
     val voidResult = FlowResult(null, null, null)
 
     private val cache by threadLocal { HashMap</*Method*/Specialization, SimpleGraph>() }
+    private val nativeNumbers by threadLocal {
+        Types.run {
+            listOf(
+                Types.Byte, Types.UByte,
+                Types.UShort, Types.Short, Types.Char,
+                Types.UInt, Types.Int,
+                Types.Long, Types.ULong,
+                Types.Half, Types.Float, Types.Double
+            )
+        }
+    }
 
     fun unitInstance(graph: SimpleGraph, scope: Scope, origin: Long): SimpleField {
         var field = graph.unitField
@@ -668,6 +679,7 @@ object ASTSimplifier {
         block0: SimpleBlock,
         flow0: FlowResult
     ): FlowResult {
+
         val block1 = simplifyImpl(context, expr.left, block0, flow0, true)
         val block1v = block1.value ?: return block1
         val left = block1v.value
@@ -676,24 +688,37 @@ object ASTSimplifier {
         val block2v = block2.value ?: return block2
         val right = block2v.value
 
-        // val tmp = block2v.block.field(Types.Int)
-        val method = expr.callable
-        // val specialization = expr.callable.specialization
+        if (left.type in nativeNumbers && left.type == right.type) {
 
-        /*val block3 = handleThrown(
-            block2v.block, block2,
-            tmp, call, method.getThrownType(specialization)
-        )
-        val block3v = block3.value ?: return block3*/
+            val dst = block2v.block.field(Types.Boolean)
+            val instr = SimpleCompare(
+                dst, left.use(), right.use(), expr.type,
+                left.type, expr.scope, expr.origin
+            )
+            block2v.block.add(instr)
+            return block2.withValue(dst)
 
-        val dst = block2v.block.field(Types.Boolean)
-        val instr = SimpleCompare(
-            dst, left.use(), right.use(), expr.type,
-            method, expr.scope, expr.origin
-        )
-        // todo handle thrown...
-        block2v.block.add(instr)
-        return block2.withValue(dst)
+        } else {
+
+            // Simplify call, then compare with zero
+            val block3 = simplifyCall(
+                block2v.block, block2, left, expr.left, null, listOf(right),
+                expr.callable, null, expr.scope, expr.origin
+            )
+            val block3v = block3.value ?: return block3
+
+            val zeroExpr = NumberExpression("0", expr.scope, expr.origin)
+            val zero = block0.field(Types.Int, zeroExpr)
+            block3v.block.add(SimpleNumber(zero, zeroExpr))
+
+            val dst = block3v.block.field(Types.Boolean)
+            val instr = SimpleCompare(
+                dst, block3v.value.use(), zero.use(), expr.type,
+                Types.Int, expr.scope, expr.origin
+            )
+            block3v.block.add(instr)
+            return block3.withValue(dst)
+        }
     }
 
     private fun simplifyCheckEqualsOp(

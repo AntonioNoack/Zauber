@@ -275,7 +275,7 @@ class CSourceGenerator : CppSourceGenerator() {
         builder.append(path.joinToString("_"))
     }
 
-    override fun appendCallForNonPrimitive(expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNonNativeCall(expr: SimpleCall, graph: SimpleGraph) {
         val methodName = getMethodName(expr.specialization)
         builder.append(methodName).append('(')
         appendFieldName(graph, expr.thisInstance, "")
@@ -349,7 +349,7 @@ class CSourceGenerator : CppSourceGenerator() {
         }
     }
 
-    override fun appendCallForPrimitive(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
         check(expr.methodName == "inc")
         appendFieldName(graph, expr.thisInstance, "")
         builder.append(" + 1")
