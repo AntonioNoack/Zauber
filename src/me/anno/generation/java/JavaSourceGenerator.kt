@@ -1440,7 +1440,7 @@ open class JavaSourceGenerator : Generator() {
         } else false
     }
 
-    fun getBinarySymbol(methodName: String): String? {
+    open fun getBinarySymbol(methodName: String): String? {
         return when (methodName) {
             "plus" -> " + "
             "minus" -> " - "

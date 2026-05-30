@@ -7,6 +7,7 @@ import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
@@ -46,8 +47,10 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import java.io.File
 
-// todo this is just like JavaScript source code,
-//  just a little different indentation, and classes look different
+/**
+ * this is just like JavaScript source code,
+ *  just a little different indentation, and classes look different
+ * */
 class PythonSourceGenerator : JavaSourceGenerator() {
 
     companion object {
@@ -55,10 +58,17 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             Types.run {
                 mapOf(
                     Boolean to BoxedType("Boolean", "bool"),
+
                     Byte to BoxedType("Byte", "int"),
                     Short to BoxedType("Short", "int"),
                     Int to BoxedType("Int", "int"),
                     Long to BoxedType("Long", "int"),
+
+                    UByte to BoxedType("Byte", "int"),
+                    UShort to BoxedType("Short", "int"),
+                    UInt to BoxedType("Int", "int"),
+                    ULong to BoxedType("Long", "int"),
+
                     Char to BoxedType("Char", "int"), // string, but math is difficult...
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "float"),
@@ -84,7 +94,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             return "__init__"
         }
 
-        val base = if (method0.method is Constructor) "init_" else super.getMethodName(method0)
+        val base = if (method0.method is Constructor) "init_" else getMethodName0(method0)
         return "${base}_${hashMethodParameters(method0)}"
     }
 
@@ -387,7 +397,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             isArrayGetter(methodSpec) -> appendArrayGetter(methodSpec)
             isArraySetter(methodSpec) -> appendArraySetter(methodSpec)
             else -> {
-                builder.append("raise \"Missing implementation for $methodSpec\"")
+                builder.append("raise Exception(\"Missing implementation for $methodSpec\")")
                 nextLine()
             }
         }
@@ -459,11 +469,56 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         writeBlock {
             appendConstructors(classScope, className, methods, headerOnly)
             appendMethods(classScope, className, methods, headerOnly)
+            appendCastToMethod(classScope)
         }
 
         if (classScope.isObjectLike()) {
             nextLine()
             appendStaticInstance(classScope, className)
+        }
+    }
+
+    fun appendCastToMethod(classScope: Scope) {
+        val castToImpl = when (classScope) {
+            Types.Byte.clazz -> {
+                val indent = "  ".repeat(indentation + 1) // +1 for method block
+                "mask = (1 << 8) - 1;\n" +
+                        indent + "low = value & mask;\n" +
+                        indent + "return low - (1 << 8) if low & (1 << 7) else low;"
+            }
+            Types.Short.clazz -> {
+                val indent = "  ".repeat(indentation + 1) // +1 for method block
+                "mask = (1 << 16) - 1;\n" +
+                        indent + "low = value & mask;\n" +
+                        indent + "return low - (1 << 16) if low & (1 << 15) else low;"
+            }
+            Types.Int.clazz -> {
+                val indent = "  ".repeat(indentation + 1) // +1 for method block
+                "mask = (1 << 32) - 1;\n" +
+                        indent + "low = value & mask;\n" +
+                        indent + "return low - (1 << 32) if low & (1 << 31) else low;"
+            }
+            Types.Long.clazz -> {
+                val indent = "  ".repeat(indentation + 1) // +1 for method block
+                "mask = (1 << 64) - 1;\n" +
+                        indent + "low = value & mask;\n" +
+                        indent + "return low - (1 << 64) if low & (1 << 63) else low;"
+            }
+            Types.UByte.clazz -> "return value & 0xFF;"
+            Types.UShort.clazz -> "return value & 0xFFFF;"
+            Types.UInt.clazz -> "return value & 0xFFFF_FFFF"
+            Types.ULong.clazz -> "return value & 0xFFFF_FFFF_FFFF_FFFF"
+            else -> null
+        }
+        if (castToImpl != null) {
+            nextLine()
+            builder.append("@staticmethod")
+            nextLine()
+            builder.append("def castTo(value)")
+            writeBlock {
+                builder.append(castToImpl)
+                nextLine()
+            }
         }
     }
 
@@ -555,23 +610,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
                     0 -> appendUnaryOperator(graph, expr, methodName)
-                    1 -> {
-                        val type = expr.thisInstance.type
-                        val supportsType = when (type) {
-                            Types.String, in nativeTypes -> true
-                            else -> false
-                        }
-                        val symbol = when (methodName) {
-                            "div" -> if (isNumberFloat(type)) " / " else " // "
-                            else -> getBinarySymbol(methodName)
-                        }
-                        if (supportsType && symbol != null) {
-                            appendFirstParameter(graph, type, expr)
-                            builder.append(symbol)
-                            appendFieldName(graph, expr.valueParameters[0])
-                            true
-                        } else false
-                    }
+                    1 -> appendBinaryOperator(graph, expr, methodName)
                     else -> false
                 }
                 if (!done) {
@@ -626,9 +665,16 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun appendNumber(type: Type, expr: NumberExpression) {
         when (type) {
-            Types.Int, Types.UInt,
-            Types.Long, Types.ULong -> builder.append(expr.asInt)
-            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()) // f is not supported
+            Types.Byte -> builder.append(expr.asInt.toByte())
+            Types.UByte -> builder.append(expr.asInt.toUByte())
+            Types.Short -> builder.append(expr.asInt.toShort())
+            Types.UShort -> builder.append(expr.asInt.toUShort())
+            Types.Int -> builder.append(expr.asInt.toInt())
+            Types.UInt -> builder.append(expr.asInt.toUInt())
+            Types.Long -> builder.append(expr.asInt)
+            Types.ULong -> builder.append(expr.asInt.toULong())
+            Types.Half -> builder.append(expr.asFloat.toHalf().toFloat())
+            Types.Float -> builder.append(expr.asFloat.toFloat())
             Types.Double -> builder.append(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type")
         }
@@ -731,6 +777,34 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             }
         }
         builder.append(forFieldAccess)
+    }
+
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = expr.thisInstance.type
+        when (type) {
+            Types.String, in nativeTypes -> {}
+            else -> return false
+        }
+
+        val symbol = when (methodName) {
+            "div" -> if (isNumberFloat(type)) " / " else " // "
+            else -> getBinarySymbol(methodName)
+        }
+
+        val needsCast = type != Types.String
+        if (needsCast) {
+            // cast to the corresponding type
+            appendType(type, expr.scope, true)
+            builder.append(".castTo(")
+        }
+
+        appendFirstParameter(graph, type, expr)
+        builder.append(symbol)
+        appendFieldName(graph, expr.valueParameters[0])
+
+        if (needsCast) builder.append(')')
+
+        return true
     }
 
 }

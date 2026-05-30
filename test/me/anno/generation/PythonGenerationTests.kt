@@ -3,8 +3,8 @@ package me.anno.generation
 import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalPythonCompiler
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.python.PythonSourceGenerator.Companion.nativePythonNumbers
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
@@ -13,10 +13,12 @@ import org.junit.jupiter.api.Test
 class PythonGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "print(arg0)"
-        )
+        for ((type, _) in nativePythonNumbers) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "print(arg0)"
+            )
+        }
     }
 
     override fun generator(): MinimalCompiler = MinimalPythonCompiler()

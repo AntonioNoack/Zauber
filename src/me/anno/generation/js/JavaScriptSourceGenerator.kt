@@ -159,7 +159,10 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         methods: Collection<Specialization>, headerOnly: Boolean
     ) {
         super.appendMethods(classScope, className, methods, headerOnly)
+        appendCastToMethod(classScope)
+    }
 
+    fun appendCastToMethod(classScope: Scope) {
         val castToImpl = when (classScope) {
             Types.Byte.clazz -> "return (value << 24) >> 24;"
             Types.UByte.clazz -> "return value & 0xFF;"
@@ -510,7 +513,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         val symbol = getBinarySymbol(methodName)
             ?: return false
 
-        // todo for Int.times use Math.imul()
+        // for Int.times use Math.imul()
         if (methodName == "mul" && type == Types.Int) {
             builder.append("Math.imul(")
             appendFirstParameter(graph, type, expr)
