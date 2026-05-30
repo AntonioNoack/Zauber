@@ -4,7 +4,6 @@ import me.anno.compilation.MinimalCppCompiler
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
@@ -14,11 +13,39 @@ import org.junit.jupiter.api.Test
 class CppGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
+        for (type in listOf(Types.Byte, Types.Short, Types.Int)) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "#include <stdio.h>\n" +
+                        "printf(\"%d\\n\",arg0)"
+            )
+        }
+        for (type in listOf(Types.UByte, Types.UShort, Types.UInt)) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "#include <stdio.h>\n" +
+                        "printf(\"%u\\n\",arg0)"
+            )
+        }
+
         JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
+            TypeResolution.langScope, "println", listOf(Types.Long),
             "#include <stdio.h>\n" +
-                    "printf(\"%d\\n\",arg0)"
+                    "printf(\"%ld\\n\",arg0)"
         )
+        JavaSourceGenerator.register(
+            TypeResolution.langScope, "println", listOf(Types.ULong),
+            "#include <stdio.h>\n" +
+                    "printf(\"%lu\\n\",arg0)"
+        )
+
+        for (type in listOf(Types.Float, Types.Double)) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "#include <stdio.h>\n" +
+                        "printf(\"%f\\n\",arg0)"
+            )
+        }
     }
 
     override fun generator() = MinimalCppCompiler(true)

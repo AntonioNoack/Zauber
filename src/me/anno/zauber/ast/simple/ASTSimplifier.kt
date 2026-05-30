@@ -592,7 +592,8 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
-        val block2 = simplifyImpl(context.withTargetType(field.valueType!!), expr.value, block1, true)
+        val fieldType = field.resolveValueType(context)
+        val block2 = simplifyImpl(context.withTargetType(fieldType), expr.value, block1, true)
         val block2v = block2.value ?: return block2
         val value = block2v.value
 

@@ -16,6 +16,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -54,10 +55,17 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             Types.run {
                 mapOf(
                     Boolean to BoxedType("Boolean", "bool"),
-                    Byte to BoxedType("Byte", "byte"),
-                    Short to BoxedType("Short", "short"),
-                    Int to BoxedType("Int", "int"),
-                    Long to BoxedType("Long", "long"),
+
+                    Byte to BoxedType("Byte", "int8_t"),
+                    Short to BoxedType("Short", "int16_t"),
+                    Int to BoxedType("Int", "int32_t"),
+                    Long to BoxedType("Long", "int64_t"),
+
+                    UByte to BoxedType("Byte", "uint8_t"),
+                    UShort to BoxedType("Short", "uint16_t"),
+                    UInt to BoxedType("Int", "uint32_t"),
+                    ULong to BoxedType("Long", "uint64_t"),
+
                     Char to BoxedType("Char", "char"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
@@ -640,7 +648,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     val localField = field.fromLocalField
                     if (localField != null) {
-                        builder.append(localField.name)
+                        appendFieldName(localField)
                     } else {
                         builder.append("tmp").append(field.id)
                         usedFields.add(field)
@@ -667,7 +675,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         appendType(type, graph.method.memberScope, false)
         appendOwnershipSuffix(type)
         builder.append(' ')
-        builder.append(field.name).append(" = ")
+        appendFieldName(field)
+        builder.append(" = ")
         appendDefaultValue(type)
         builder.append(";")
         nextLine()
@@ -803,6 +812,39 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             }
             else -> super.appendInstrImpl(graph, expr)
         }
+    }
+
+    override fun handleBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = expr.thisInstance.type
+        when (type) {
+            Types.String, in nativeTypes -> true
+            else -> return false
+        }
+
+        val symbol = when (methodName) {
+            "plus" -> " + "
+            "minus" -> " - "
+            "times" -> " * "
+            "div" -> " / "
+            "rem" -> " % "
+            else -> return false
+        }
+
+        // append first parameter
+        if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
+            check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
+                "$type is missing field 'content'"
+            }
+            appendFieldName(graph, expr.thisInstance, ".")
+            builder.append("content")
+        } else {
+            appendFieldName(graph, expr.thisInstance)
+        }
+
+        builder.append(symbol)
+        appendFieldName(graph, expr.valueParameters[0])
+
+        return true
     }
 
 }

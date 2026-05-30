@@ -2,6 +2,8 @@
 
 // for calloc
 #include <stdlib.h>
+// for integers with precise size
+#include <stdint.h>
 
 // for std::forward and custom-new
 #include <utility>

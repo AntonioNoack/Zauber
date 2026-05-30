@@ -327,7 +327,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun appendArrayContentInitialization(constructor: Constructor) {
         val elementType = specialization.typeParameters[0]
-        val sizeName = constructor.valueParameters[0].name
+        val sizeName = constructor.valueParameters[0].newName
         builder.append("this.content = new ")
         val arrayName = when (elementType) {
             Types.Byte -> "Int8Array"

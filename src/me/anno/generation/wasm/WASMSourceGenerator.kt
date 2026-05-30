@@ -473,7 +473,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             }
             for (i in valueParameters.indices) {
                 val param = valueParameters[i]
-                appendParamWithName(type.params[j + i], param.name)
+                appendParamWithName(type.params[j + i], param.newName)
             }
         } // else object getter
 

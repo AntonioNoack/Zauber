@@ -424,8 +424,8 @@ open class JavaSourceGenerator : Generator() {
                 val params = specialization.typeParameters
                 for (i in params.indices) {
                     if (!builder.endsWith(": ")) builder.append(", ")
-                    builder.append(params.generics[i].name).append('=')
-                    builder.append(params.getOrNull(i))
+                    appendFieldName(params.generics[i])
+                    builder.append('=').append(params.getOrNull(i))
                 }
                 nextLine()
             }
@@ -828,7 +828,9 @@ open class JavaSourceGenerator : Generator() {
         val elementType = specialization.typeParameters[0]
         builder.append("content = new ")
         appendType(elementType, constructor.scope, false)
-        builder.append("[").append(constructor.valueParameters[0].name).append("];")
+        builder.append("[")
+        appendFieldName(constructor.valueParameters[0])
+        builder.append("];")
         nextLine()
     }
 
@@ -846,7 +848,8 @@ open class JavaSourceGenerator : Generator() {
         builder.append('<')
         for (param in valueParameters) {
             if (!builder.endsWith("<")) builder.append(", ")
-            builder.append(param.name)
+            ensureFieldName(param)
+            builder.append(param.newName)
             if (param.type != Types.Any && param.type != Types.NullableAny) {
                 builder.append(" extends ")
                 appendType(param.type, scope, false)
@@ -972,7 +975,7 @@ open class JavaSourceGenerator : Generator() {
             builder.append('<')
             for ((i, param) in typeParams.withIndex()) {
                 if (i > 0) builder.append(", ")
-                builder.append(param.name)
+                appendFieldName(param)
                 if (param.type != Types.NullableAny) {
                     builder.append(" extends ")
                     appendType(param.type, scope, true)
@@ -1065,9 +1068,7 @@ open class JavaSourceGenerator : Generator() {
         val type = field.type
         appendType(type, graph.method.memberScope, false)
         builder.append(' ')
-        if (isProtectedFieldName(field.newName)) {
-            field.newName += "_"
-        }
+        ensureFieldName(field)
         builder.append(field.newName).append(" = ")
         appendDefaultValue(type)
         builder.append(";")
@@ -1377,76 +1378,8 @@ open class JavaSourceGenerator : Generator() {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
-                    0 -> {
-                        val castSymbol = when (methodName) {
-                            "toInt" -> "(int) "
-                            "toLong" -> "(long) "
-                            "toFloat" -> "(float) "
-                            "toDouble" -> "(double) "
-                            "toByte" -> "(byte) "
-                            "toShort" -> "(short) "
-                            "toChar" -> "(char) "
-                            else -> null
-                        }
-                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
-                            builder.append(castSymbol)
-                            appendFieldName(graph, expr.thisInstance)
-                            true
-                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
-                            builder.append('!')
-                            appendFieldName(graph, expr.thisInstance)
-                            true
-                        } else false
-                    }
-                    1 -> {
-                        val type = expr.thisInstance.type
-                        val supportsType = when (type) {
-                            Types.String, in nativeTypes -> true
-                            else -> false
-                        }
-                        val symbol = when (methodName) {
-                            "plus" -> " + "
-                            "minus" -> " - "
-                            "times" -> " * "
-                            "div" -> " / "
-                            "rem" -> " % "
-                            else -> null
-                        }
-                        if (supportsType && symbol != null) {
-
-                            // some unsigned operations need special helpers: unsigned div, unsigned rem
-                            if ((methodName == "div" || methodName == "rem") && type.isUnsigned()) {
-                                TODO("Special call: $methodName on $type")
-                            }
-
-                            when (type) {
-                                Types.Short, Types.UShort -> builder.append("(short) (")
-                                Types.Byte, Types.UByte -> builder.append("(byte) (")
-                                else -> {}
-                            }
-
-                            // append first parameter
-                            if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
-                                check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
-                                    "$type is missing field 'content'"
-                                }
-                                appendFieldName(graph, expr.thisInstance, ".")
-                                builder.append("content")
-                            } else {
-                                appendFieldName(graph, expr.thisInstance)
-                            }
-
-                            builder.append(symbol)
-                            appendFieldName(graph, expr.valueParameters[0])
-
-                            when (type) {
-                                Types.Short, Types.UShort,
-                                Types.Byte, Types.UByte -> builder.append(")")
-                                else -> {}
-                            }
-                            true
-                        } else false
-                    }
+                    0 -> handleUnaryOperator(graph, expr, methodName)
+                    1 -> handleBinaryOperator(graph, expr, methodName)
                     else -> false
                 }
                 if (!done) {
@@ -1483,6 +1416,78 @@ open class JavaSourceGenerator : Generator() {
             }
             else -> throw NotImplementedError("Implement ${expr.javaClass.simpleName}")
         }
+    }
+
+    open fun handleUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val castSymbol = when (methodName) {
+            "toInt" -> "(int) "
+            "toLong" -> "(long) "
+            "toFloat" -> "(float) "
+            "toDouble" -> "(double) "
+            "toByte" -> "(byte) "
+            "toShort" -> "(short) "
+            "toChar" -> "(char) "
+            else -> null
+        }
+        return if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
+            builder.append(castSymbol)
+            appendFieldName(graph, expr.thisInstance)
+            true
+        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
+            builder.append('!')
+            appendFieldName(graph, expr.thisInstance)
+            true
+        } else false
+    }
+
+    open fun handleBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = expr.thisInstance.type
+        when (type) {
+            Types.String, in nativeTypes -> true
+            else -> return false
+        }
+
+        val symbol = when (methodName) {
+            "plus" -> " + "
+            "minus" -> " - "
+            "times" -> " * "
+            "div" -> " / "
+            "rem" -> " % "
+            else -> return false
+        }
+
+        // some unsigned operations need special helpers: unsigned div, unsigned rem
+        if ((methodName == "div" || methodName == "rem") && type.isUnsigned()) {
+            TODO("Special call: $methodName on $type")
+        }
+
+        when (type) {
+            Types.Short, Types.UShort -> builder.append("(short) (")
+            Types.Byte, Types.UByte -> builder.append("(byte) (")
+            else -> {}
+        }
+
+        // append first parameter
+        if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
+            check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
+                "$type is missing field 'content'"
+            }
+            appendFieldName(graph, expr.thisInstance, ".")
+            builder.append("content")
+        } else {
+            appendFieldName(graph, expr.thisInstance)
+        }
+
+        builder.append(symbol)
+        appendFieldName(graph, expr.valueParameters[0])
+
+        when (type) {
+            Types.Short, Types.UShort,
+            Types.Byte, Types.UByte -> builder.append(")")
+            else -> {}
+        }
+
+        return true
     }
 
     open fun appendCopy(graph: SimpleGraph, valueType: Type) {
@@ -1681,21 +1686,41 @@ open class JavaSourceGenerator : Generator() {
         return fieldName in JavaTokenizer.KEYWORDS
     }
 
+    fun ensureFieldName(field: Field) {
+        if (isProtectedFieldName(field.newName)) {
+            field.newName += "_"
+        }
+    }
+
+    fun ensureFieldName(field: LocalField) {
+        if (isProtectedFieldName(field.newName)) {
+            field.newName += "_"
+        }
+    }
+
+    fun ensureFieldName(field: Parameter) {
+        if (isProtectedFieldName(field.newName)) {
+            field.newName += "_"
+        }
+    }
+
     fun appendFieldName(field: Field) {
         if (!field.ownerScope.isClassLike()) {
             // append("__").append(field.ownerScope.depth).append('_')
         }
-        if (isProtectedFieldName(field.newName)) {
-            field.newName += "_"
-        }
+        ensureFieldName(field)
         builder.append(field.newName)
     }
 
     fun appendFieldName(field: Parameter) {
         // append("__").append(field.scope.depth).append('_')
-        if (isProtectedFieldName(field.newName)) {
-            field.newName += "_"
-        }
+        ensureFieldName(field)
+        builder.append(field.newName)
+    }
+
+    fun appendFieldName(field: LocalField) {
+        // append("__").append(field.scope.depth).append('_')
+        ensureFieldName(field)
         builder.append(field.newName)
     }
 

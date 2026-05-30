@@ -1,9 +1,6 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCCompiler
-import me.anno.generation.java.JavaSourceGenerator
-import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
@@ -12,11 +9,7 @@ import org.junit.jupiter.api.Test
 class CGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "#include <stdio.h>\n" +
-                    "printf(\"%d\\n\",arg0)"
-        )
+        CppGenerationTests().registerLib()
     }
 
     override fun generator() = MinimalCCompiler(true)

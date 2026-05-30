@@ -231,20 +231,18 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         builder.append(" ")
             .append(getMethodName(method)).append("(")
 
-        val params = ArrayList<String>()
-
-        params.add("${getLLVMType(method.method.ownerScope.typeWithArgs).ir} %this")
+        builder.append(getLLVMType(method.method.ownerScope.typeWithArgs).ir)
+            .append(" %this")
 
         // todo append self-type
 
         for (param in method.method.valueParameters) {
-            params.add(
-                "${getLLVMType(param.type).ir} %${param.name}"
-            )
+            ensureFieldName(param)
+            builder.append(getLLVMType(param.type).ir).append(" %")
+            appendFieldName(param)
         }
 
-        builder.append(params.joinToString(", "))
-            .append(")")
+        builder.append(")")
     }
 
     override fun getMethodName(method0: Specialization): String {
@@ -824,12 +822,14 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendNumber(type: Type, expr: NumberExpression) {
-        when (getLLVMType(type)) {
+        when (val typeI = getLLVMType(type)) {
+            LLVMType.I8 -> builder.append(expr.asInt.toByte())
+            LLVMType.I16 -> builder.append(expr.asInt.toShort())
             LLVMType.I32 -> builder.append(expr.asInt.toInt())
             LLVMType.I64 -> builder.append(expr.asInt)
             LLVMType.F32 -> builder.append(expr.asFloat.toFloat())
             LLVMType.F64 -> builder.append(expr.asFloat)
-            else -> throw NotImplementedError("Append number of type $type")
+            else -> throw NotImplementedError("Append number of type $type -> $typeI")
         }
     }
 

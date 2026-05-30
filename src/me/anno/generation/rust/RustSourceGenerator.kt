@@ -427,7 +427,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
             builder.append("obj.__init__(")
             for (param in constructor.valueParameters) {
                 if (!builder.endsWith("(")) builder.append(", ")
-                builder.append(param.name)
+                appendFieldName(param)
             }
             builder.append(");")
             nextLine()
@@ -610,7 +610,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
 
     override fun appendArrayContentInitialization(constructor: Constructor) {
         // todo we need to somehow get a null/zero element...
-        val sizeName = constructor.valueParameters[0].name
+        val sizeName = constructor.valueParameters[0].newName
         val elementType = specialization.typeParameters[0]
         val ownership = getOwnership(elementType)
         builder.append("for i in 0..$sizeName { self.content.push(")

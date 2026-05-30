@@ -1,10 +1,7 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalJVMCompiler
-import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
@@ -13,10 +10,7 @@ import org.junit.jupiter.api.Test
 class JVMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "System.out.println(arg0)"
-        )
+        JavaGenerationTests().registerLib()
     }
 
     override fun generator() = MinimalJVMCompiler()

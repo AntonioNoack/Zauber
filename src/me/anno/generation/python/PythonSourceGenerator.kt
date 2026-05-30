@@ -407,7 +407,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun appendArrayContentInitialization(constructor: Constructor) {
         val elementType = specialization.typeParameters[0]
-        val sizeName = constructor.valueParameters[0].name
+        val sizeName = constructor.valueParameters[0].newName
         builder.append("self.content = [")
         appendDefaultValue(elementType)
         builder.append("] * ").append(sizeName)
