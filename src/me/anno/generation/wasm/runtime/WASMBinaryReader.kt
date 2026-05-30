@@ -470,83 +470,8 @@ class WASMBinaryReader(
             WASMOpcode.REF_IS_NULL -> WASMInstruction.RefIsNull
             WASMOpcode.REF_AS_NON_NULL -> WASMInstruction.RefAsNonNull
 
-            // i32 comparisons
-            WASMOpcode.I32_EQZ,
-            WASMOpcode.I32_EQ,
-            WASMOpcode.I32_NE,
-            WASMOpcode.I32_LT_S,
-            WASMOpcode.I32_LT_U,
-            WASMOpcode.I32_GT_S,
-            WASMOpcode.I32_GT_U,
-            WASMOpcode.I32_LE_S,
-            WASMOpcode.I32_LE_U,
-            WASMOpcode.I32_GE_S,
-            WASMOpcode.I32_GE_U,
-
-                // i64 comparisons
-            WASMOpcode.I64_EQZ,
-            WASMOpcode.I64_EQ,
-            WASMOpcode.I64_NE,
-            WASMOpcode.I64_LT_S,
-            WASMOpcode.I64_LT_U,
-            WASMOpcode.I64_GT_S,
-            WASMOpcode.I64_GT_U,
-            WASMOpcode.I64_LE_S,
-            WASMOpcode.I64_LE_U,
-            WASMOpcode.I64_GE_S,
-            WASMOpcode.I64_GE_U,
-
-                // f32 comparisons
-            WASMOpcode.F32_EQ,
-            WASMOpcode.F32_NE,
-            WASMOpcode.F32_LT,
-            WASMOpcode.F32_GT,
-            WASMOpcode.F32_LE,
-            WASMOpcode.F32_GE,
-
-                // f64 comparisons
-            WASMOpcode.F64_EQ,
-            WASMOpcode.F64_NE,
-            WASMOpcode.F64_LT,
-            WASMOpcode.F64_GT,
-            WASMOpcode.F64_LE,
-            WASMOpcode.F64_GE,
-
-                // i32 math
-            WASMOpcode.I32_ADD,
-            WASMOpcode.I32_SUB,
-            WASMOpcode.I32_MUL,
-            WASMOpcode.I32_DIV_S,
-            WASMOpcode.I32_DIV_U,
-            WASMOpcode.I32_REM_S,
-            WASMOpcode.I32_REM_U,
-
-                // i64 math
-            WASMOpcode.I64_ADD,
-            WASMOpcode.I64_SUB,
-            WASMOpcode.I64_MUL,
-            WASMOpcode.I64_DIV_S,
-            WASMOpcode.I64_DIV_U,
-            WASMOpcode.I64_REM_S,
-            WASMOpcode.I64_REM_U,
-
-                // f32 math
-            WASMOpcode.F32_ADD,
-            WASMOpcode.F32_SUB,
-            WASMOpcode.F32_MUL,
-            WASMOpcode.F32_DIV,
-            WASMOpcode.F32_MIN,
-            WASMOpcode.F32_MAX,
-            WASMOpcode.F32_REM,
-
-                // f64 math
-            WASMOpcode.F64_ADD,
-            WASMOpcode.F64_SUB,
-            WASMOpcode.F64_MUL,
-            WASMOpcode.F64_DIV,
-            WASMOpcode.F64_MIN,
-            WASMOpcode.F64_MAX,
-            WASMOpcode.F64_REM -> WASMInstruction.simple[opcode]
+            // simple operations
+            in WASMOpcode.I32_EQZ .. WASMOpcode.F64_REM -> WASMInstruction.simple[opcode]
 
             0xfb -> {
                 when (val gcOpcode = u32()) {

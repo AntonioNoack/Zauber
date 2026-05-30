@@ -4,7 +4,6 @@ import me.anno.compilation.MinimalWASMCompiler
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
@@ -14,10 +13,12 @@ import org.junit.jupiter.api.Test
 class WASMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "console.log(arg0)"
-        )
+        for ((type, _) in JavaSourceGenerator.nativeJavaNumbers) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "console.log(arg0.toString())" // toString() is needed for BigInt() to hide the 'n'
+            )
+        }
     }
 
     override fun generator() = MinimalWASMCompiler()

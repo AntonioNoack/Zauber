@@ -87,8 +87,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     fun isInlinedMethod(method0: Specialization): Boolean {
         val method = method0.method
         when (val ownerType = method.ownerScope.typeWithArgs) {
-            Types.Int, Types.Long,
-            Types.Float, Types.Double -> {
+            in nativeNumbers -> {
                 if (method.valueParameters.size != 1) return false
                 if (method.valueParameters[0].type != ownerType) return false
                 return when (method.name) {
@@ -1291,6 +1290,27 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                                 .append('.').append(symbol)
                             binary.u8(getSimpleMathOp(type, symbol))
                             nextLine()
+
+                            // clamp if small type
+                            when (type) {
+                                Types.Byte, Types.Short -> {
+                                    val bits = if (type == Types.Byte) 24 else 16
+                                    i32Const(bits); nextLine()
+                                    builder.append("i32.shl"); nextLine()
+                                    binary.u8(WASMOpcode.I32_SHL)
+
+                                    i32Const(bits); nextLine()
+                                    builder.append("i32.shr_s"); nextLine()
+                                    binary.u8(WASMOpcode.I32_SHR_S)
+                                }
+                                Types.UByte, Types.UShort -> {
+                                    val mask = if (type == Types.Byte) 0xff else 0xffff
+                                    i32Const(mask); nextLine()
+                                    builder.append("i32.and"); nextLine()
+                                    binary.u8(WASMOpcode.I32_AND)
+                                }
+                                // else fine
+                            }
                             true
                         } else false
                     }
@@ -1520,7 +1540,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     fun getSimpleMathOp(type: Type, symbol: String): Int {
         return when (type) {
-            Types.Int -> when (symbol) {
+            Types.Byte, Types.Short, Types.Int -> when (symbol) {
                 "add" -> WASMOpcode.I32_ADD
                 "sub" -> WASMOpcode.I32_SUB
                 "mul" -> WASMOpcode.I32_MUL
@@ -1528,7 +1548,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 "mod" -> WASMOpcode.I32_REM_S
                 else -> null
             }
-            Types.UInt -> when (symbol) {
+            Types.UByte, Types.UShort, Types.UInt -> when (symbol) {
                 "add" -> WASMOpcode.I32_ADD
                 "sub" -> WASMOpcode.I32_SUB
                 "mul" -> WASMOpcode.I32_MUL

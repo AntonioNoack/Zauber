@@ -12,15 +12,8 @@ let lib = {}
 
 // Declare imported functions
 const imports = {
-    js: {
-        mem: memory
-    },
-    env: {
-        'zauber_println_wjpkxu': (self, value) => {
-            console.log(value);
-            return lib["obj_zauber_Unit"]()
-        },
-    }
+    js: { mem: memory },
+    env: { IMPORTED_FUNCTIONS }
 };
 
 async function loadAndRun() {

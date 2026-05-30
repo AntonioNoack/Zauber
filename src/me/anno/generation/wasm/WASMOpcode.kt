@@ -78,6 +78,14 @@ object WASMOpcode {
     const val I32_DIV_U = 0x6E
     const val I32_REM_S = 0x6F
     const val I32_REM_U = 0x70
+    const val I32_AND = 0x71
+    const val I32_OR = 0x72
+    const val I32_XOR = 0x73
+    const val I32_SHL = 0x74
+    const val I32_SHR_S = 0x75
+    const val I32_SHR_U = 0x76
+    const val I32_ROTL = 0x77
+    const val I32_ROTR = 0x78
 
     const val I64_ADD = 0x7C
     const val I64_SUB = 0x7D
@@ -86,6 +94,14 @@ object WASMOpcode {
     const val I64_DIV_U = 0x80
     const val I64_REM_S = 0x81
     const val I64_REM_U = 0x82
+    const val I64_AND = 0x83
+    const val I64_OR = 0x84
+    const val I64_XOR = 0x85
+    const val I64_SHL = 0x86
+    const val I64_SHR_S = 0x87
+    const val I64_SHR_U = 0x88
+    const val I64_ROTL = 0x89
+    const val I64_ROTR = 0x8a
 
     const val F32_ADD = 0x92
     const val F32_SUB = 0x93

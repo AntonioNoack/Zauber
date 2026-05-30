@@ -318,6 +318,14 @@ class WASMRuntime(val binary: WASMBinary) {
             WASMOpcode.I32_DIV_S -> stack.add(popI32(1) / popI32())
             WASMOpcode.I32_DIV_U -> stack.add(Integer.divideUnsigned(popI32(1), popI32()))
 
+            WASMOpcode.I32_AND -> stack.add(popI32() and popI32())
+            WASMOpcode.I32_OR -> stack.add(popI32() or popI32())
+            WASMOpcode.I32_XOR -> stack.add(popI32() xor popI32())
+
+            WASMOpcode.I32_SHL -> stack.add(popI32(1) shl popI32())
+            WASMOpcode.I32_SHR_S -> stack.add(popI32(1) shr popI32())
+            WASMOpcode.I32_SHR_U -> stack.add(popI32(1) ushr popI32())
+
             WASMOpcode.I64_ADD -> stack.add(popI64() + popI64())
             WASMOpcode.I64_SUB -> stack.add(popI64() - popI64())
             WASMOpcode.I64_MUL -> stack.add(popI64() * popI64())
