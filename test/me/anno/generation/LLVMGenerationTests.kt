@@ -2,10 +2,7 @@ package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
 import me.anno.compilation.MinimalLLVMCompiler
-import me.anno.generation.java.JavaSourceGenerator
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 // todo we need more tests:
@@ -20,11 +17,7 @@ import org.junit.jupiter.api.Test
 class LLVMGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        // todo use these registered functions to generate a .c file
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "System.out.println(arg0)" // todo adjust this
-        )
+        CGenerationTests().registerLib()
     }
 
     override fun generator(): MinimalCompiler = MinimalLLVMCompiler()

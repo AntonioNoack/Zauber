@@ -237,6 +237,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         // todo append self-type
 
         for (param in method.method.valueParameters) {
+            builder.append(", ")
             ensureFieldName(param)
             builder.append(getLLVMType(param.type).ir).append(" %")
             appendFieldName(param)

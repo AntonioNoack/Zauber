@@ -17,33 +17,33 @@ class CppGenerationTests : CodeGenerationTests() {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
-                        "printf(\"%d\\n\",arg0)"
+                        "printf(\"%d\\n\",arg0);"
             )
         }
         for (type in listOf(Types.UByte, Types.UShort, Types.UInt)) {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
-                        "printf(\"%u\\n\",arg0)"
+                        "printf(\"%u\\n\",arg0);"
             )
         }
 
         JavaSourceGenerator.register(
             TypeResolution.langScope, "println", listOf(Types.Long),
             "#include <stdio.h>\n" +
-                    "printf(\"%ld\\n\",arg0)"
+                    "printf(\"%ld\\n\",arg0);"
         )
         JavaSourceGenerator.register(
             TypeResolution.langScope, "println", listOf(Types.ULong),
             "#include <stdio.h>\n" +
-                    "printf(\"%lu\\n\",arg0)"
+                    "printf(\"%lu\\n\",arg0);"
         )
 
         for (type in listOf(Types.Float, Types.Double)) {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
-                        "printf(\"%f\\n\",arg0)"
+                        "printf(\"%f\\n\",arg0);"
             )
         }
     }

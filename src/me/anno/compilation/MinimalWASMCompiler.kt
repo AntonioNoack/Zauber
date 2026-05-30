@@ -4,8 +4,6 @@ import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.wasm.WASMSourceGenerator
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
-import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 import java.io.File
 
@@ -38,21 +36,11 @@ class MinimalWASMCompiler : MinimalCompiler() {
         }
     }
 
-    override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
-
-        val builder = StringBuilder()
-        builder.append(minimalJS[0])
-
+    private fun buildRegisteredMethodsIntoJSFile(builder: StringBuilder) {
         val sample = WASMSourceGenerator()
         for ((key, impl) in JavaSourceGenerator.registeredMethods) {
 
-            val method = key.ownerScope.methods0.firstOrNull { option ->
-                option.name == key.methodName && // todo this search is inefficient
-                        option.valueParameters.map { it.type } == key.valueParameterTypes
-            } ?: continue
-
-            val method0 = Specialization(method.memberScope, emptyParameterList())
-            val methodName = sample.getMethodName(method0)
+            val methodName = key.findMethodName(sample)
             val params = key.valueParameterTypes.indices.joinToString("") { index -> ", arg$index" }
 
             builder.append("\n'")
@@ -74,6 +62,13 @@ class MinimalWASMCompiler : MinimalCompiler() {
             }
             builder.append("},")
         }
+    }
+
+    override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
+
+        val builder = StringBuilder()
+        builder.append(minimalJS[0])
+        buildRegisteredMethodsIntoJSFile(builder)
         builder.append(minimalJS[1])
 
         File(projectFolder, "CallWASMFromJS.js")
