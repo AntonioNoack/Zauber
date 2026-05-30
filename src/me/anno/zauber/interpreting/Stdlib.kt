@@ -1,14 +1,18 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.Half
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createByte
 import me.anno.zauber.interpreting.RuntimeCreate.createChar
 import me.anno.zauber.interpreting.RuntimeCreate.createDouble
 import me.anno.zauber.interpreting.RuntimeCreate.createFloat
+import me.anno.zauber.interpreting.RuntimeCreate.createHalf
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.interpreting.RuntimeCreate.createLong
 import me.anno.zauber.interpreting.RuntimeCreate.createShort
 import me.anno.zauber.interpreting.RuntimeCreate.createString
+import me.anno.zauber.interpreting.RuntimeCreate.createUInt
+import me.anno.zauber.interpreting.RuntimeCreate.createULong
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -100,13 +104,109 @@ object Stdlib {
         }
     }
 
+    fun registerByteMethods() {
+        val rt = runtime
+        rt.registerBinaryByteMethod("plus", Byte::plus)
+        rt.registerBinaryByteMethod("minus", Byte::minus)
+        rt.registerBinaryByteMethod("times", Byte::times)
+        rt.registerBinaryByteMethod("div", Byte::div)
+        rt.registerBinaryByteMethod("rem", Byte::rem)
+        rt.registerBinaryByteMethod("compareTo", Byte::compareTo)
+    }
+
+    fun registerUByteMethods() {
+        val rt = runtime
+        rt.registerBinaryUByteMethod("plus", UByte::plus)
+        rt.registerBinaryUByteMethod("minus", UByte::minus)
+        rt.registerBinaryUByteMethod("times", UByte::times)
+        rt.registerBinaryUByteMethod("div", UByte::div)
+        rt.registerBinaryUByteMethod("rem", UByte::rem)
+        rt.registerBinaryMethod(Types.UByte, "compareTo") { a, b ->
+            rt.createInt(a.castToUByte().compareTo(b.castToUByte()))
+        }
+    }
+
+    fun registerShortMethods() {
+        val rt = runtime
+        rt.registerBinaryShortMethod("plus", Short::plus)
+        rt.registerBinaryShortMethod("minus", Short::minus)
+        rt.registerBinaryShortMethod("times", Short::times)
+        rt.registerBinaryShortMethod("div", Short::div)
+        rt.registerBinaryShortMethod("rem", Short::rem)
+        rt.registerBinaryShortMethod("compareTo", Short::compareTo)
+    }
+
+    fun registerUShortMethods() {
+        val rt = runtime
+        rt.registerBinaryUShortMethod("plus", UShort::plus)
+        rt.registerBinaryUShortMethod("minus", UShort::minus)
+        rt.registerBinaryUShortMethod("times", UShort::times)
+        rt.registerBinaryUShortMethod("div", UShort::div)
+        rt.registerBinaryUShortMethod("rem", UShort::rem)
+        rt.registerBinaryMethod(Types.UShort, "compareTo") { a, b ->
+            rt.createInt(a.castToUShort().compareTo(b.castToUShort()))
+        }
+    }
+
     fun registerIntMethods() {
         val rt = runtime
         rt.registerBinaryIntMethod("plus", Int::plus)
         rt.registerBinaryIntMethod("minus", Int::minus)
         rt.registerBinaryIntMethod("times", Int::times)
         rt.registerBinaryIntMethod("div", Int::div)
+        rt.registerBinaryIntMethod("rem", Int::rem)
+        rt.registerBinaryIntMethod("shl", Int::shl)
+        rt.registerBinaryIntMethod("shr", Int::shr)
+        rt.registerBinaryIntMethod("ushr", Int::ushr)
         rt.registerBinaryIntMethod("compareTo", Int::compareTo)
+    }
+
+    fun registerUIntMethods() {
+        val rt = runtime
+        rt.registerBinaryUIntMethod("plus", UInt::plus)
+        rt.registerBinaryUIntMethod("minus", UInt::minus)
+        rt.registerBinaryUIntMethod("times", UInt::times)
+        rt.registerBinaryUIntMethod("div", UInt::div)
+        rt.registerBinaryUIntMethod("rem", UInt::rem)
+        rt.registerBinaryMethod(Types.UInt, "compareTo") { a, b ->
+            rt.createInt(a.castToUInt().compareTo(b.castToUInt()))
+        }
+    }
+
+    fun registerLongMethods() {
+        val rt = runtime
+        rt.registerBinaryLongMethod("plus", Long::plus)
+        rt.registerBinaryLongMethod("minus", Long::minus)
+        rt.registerBinaryLongMethod("times", Long::times)
+        rt.registerBinaryLongMethod("div", Long::div)
+        rt.registerBinaryLongMethod("rem", Long::rem)
+        rt.registerBinaryMethod(Types.Long, "compareTo") { a, b ->
+            rt.createInt(a.castToLong().compareTo(b.castToLong()))
+        }
+    }
+
+    fun registerULongMethods() {
+        val rt = runtime
+        rt.registerBinaryULongMethod("plus", ULong::plus)
+        rt.registerBinaryULongMethod("minus", ULong::minus)
+        rt.registerBinaryULongMethod("times", ULong::times)
+        rt.registerBinaryULongMethod("div", ULong::div)
+        rt.registerBinaryULongMethod("rem", ULong::rem)
+        rt.registerBinaryMethod(Types.ULong, "compareTo") { a, b ->
+            rt.createInt(a.castToULong().compareTo(b.castToULong()))
+        }
+    }
+
+    fun registerHalfMethods() {
+        val rt = runtime
+        rt.registerBinaryHalfMethod("plus", Half::plus)
+        rt.registerBinaryHalfMethod("minus", Half::minus)
+        rt.registerBinaryHalfMethod("times", Half::times)
+        rt.registerBinaryHalfMethod("div", Half::div)
+        rt.registerBinaryHalfMethod("rem", Half::rem)
+        rt.registerBinaryMethod(Types.Half, "compareTo") { a, b ->
+            rt.createInt(a.castToHalf().compareTo(b.castToHalf()))
+        }
     }
 
     fun registerFloatMethods() {
@@ -115,8 +215,21 @@ object Stdlib {
         rt.registerBinaryFloatMethod("minus", Float::minus)
         rt.registerBinaryFloatMethod("times", Float::times)
         rt.registerBinaryFloatMethod("div", Float::div)
+        rt.registerBinaryFloatMethod("rem", Float::rem)
         rt.registerBinaryMethod(Types.Float, "compareTo") { a, b ->
             rt.createInt(a.castToFloat().compareTo(b.castToFloat()))
+        }
+    }
+
+    fun registerDoubleMethods() {
+        val rt = runtime
+        rt.registerBinaryDoubleMethod("plus", Double::plus)
+        rt.registerBinaryDoubleMethod("minus", Double::minus)
+        rt.registerBinaryDoubleMethod("times", Double::times)
+        rt.registerBinaryDoubleMethod("div", Double::div)
+        rt.registerBinaryDoubleMethod("rem", Double::rem)
+        rt.registerBinaryMethod(Types.Double, "compareTo") { a, b ->
+            rt.createInt(a.castToDouble().compareTo(b.castToDouble()))
         }
     }
 
@@ -157,6 +270,63 @@ object Stdlib {
         }
     }
 
+    fun registerAllMethods() {
+        registerSmallIntMethods()
+
+        registerByteMethods()
+        registerUByteMethods()
+
+        registerShortMethods()
+        registerUShortMethods()
+
+        registerIntMethods()
+        registerUIntMethods()
+
+        registerLongMethods()
+        registerULongMethods()
+
+        registerHalfMethods()
+        registerFloatMethods()
+        registerDoubleMethods()
+
+        registerStringMethods()
+        registerPrintln()
+        registerArrayAccess()
+        registerTypeMethods()
+    }
+
+    fun Runtime.registerBinaryByteMethod(name: String, calc: (a: Byte, b: Byte) -> Int) {
+        registerBinaryMethod(Types.Byte, name) { a, b ->
+            LOGGER.info("Executing Byte.$name ($a, $b)")
+            val result = calc(a.castToByte(), b.castToByte())
+            createInt(result)
+        }
+    }
+
+    fun Runtime.registerBinaryUByteMethod(name: String, calc: (a: UByte, b: UByte) -> UInt) {
+        registerBinaryMethod(Types.UByte, name) { a, b ->
+            LOGGER.info("Executing UByte.$name ($a, $b)")
+            val result = calc(a.castToUByte(), b.castToUByte())
+            createUInt(result)
+        }
+    }
+
+    fun Runtime.registerBinaryShortMethod(name: String, calc: (a: Short, b: Short) -> Int) {
+        registerBinaryMethod(Types.Short, name) { a, b ->
+            LOGGER.info("Executing Short.$name ($a, $b)")
+            val result = calc(a.castToShort(), b.castToShort())
+            createInt(result)
+        }
+    }
+
+    fun Runtime.registerBinaryUShortMethod(name: String, calc: (a: UShort, b: UShort) -> UInt) {
+        registerBinaryMethod(Types.UShort, name) { a, b ->
+            LOGGER.info("Executing UShort.$name ($a, $b)")
+            val result = calc(a.castToUShort(), b.castToUShort())
+            createUInt(result)
+        }
+    }
+
     fun Runtime.registerBinaryIntMethod(name: String, calc: (a: Int, b: Int) -> Int) {
         registerBinaryMethod(Types.Int, name) { a, b ->
             LOGGER.info("Executing Int.$name ($a, $b)")
@@ -165,11 +335,51 @@ object Stdlib {
         }
     }
 
+    fun Runtime.registerBinaryUIntMethod(name: String, calc: (a: UInt, b: UInt) -> UInt) {
+        registerBinaryMethod(Types.UInt, name) { a, b ->
+            LOGGER.info("Executing UInt.$name ($a, $b)")
+            val result = calc(a.castToUInt(), b.castToUInt())
+            createUInt(result)
+        }
+    }
+
+    fun Runtime.registerBinaryLongMethod(name: String, calc: (a: Long, b: Long) -> Long) {
+        registerBinaryMethod(Types.Long, name) { a, b ->
+            LOGGER.info("Executing Long.$name ($a, $b)")
+            val result = calc(a.castToLong(), b.castToLong())
+            createLong(result)
+        }
+    }
+
+    fun Runtime.registerBinaryULongMethod(name: String, calc: (a: ULong, b: ULong) -> ULong) {
+        registerBinaryMethod(Types.ULong, name) { a, b ->
+            LOGGER.info("Executing ULong.$name ($a, $b)")
+            val result = calc(a.castToULong(), b.castToULong())
+            createULong(result)
+        }
+    }
+
+    fun Runtime.registerBinaryHalfMethod(name: String, calc: (a: Half, b: Half) -> Half) {
+        registerBinaryMethod(Types.Half, name) { a, b ->
+            LOGGER.info("Executing Half.$name ($a, $b)")
+            val result = calc(a.castToHalf(), b.castToHalf())
+            createHalf(result)
+        }
+    }
+
     fun Runtime.registerBinaryFloatMethod(name: String, calc: (a: Float, b: Float) -> Float) {
         registerBinaryMethod(Types.Float, name) { a, b ->
             LOGGER.info("Executing Float.$name ($a, $b)")
             val result = calc(a.castToFloat(), b.castToFloat())
             createFloat(result)
+        }
+    }
+
+    fun Runtime.registerBinaryDoubleMethod(name: String, calc: (a: Double, b: Double) -> Double) {
+        registerBinaryMethod(Types.Double, name) { a, b ->
+            LOGGER.info("Executing Double.$name ($a, $b)")
+            val result = calc(a.castToDouble(), b.castToDouble())
+            createDouble(result)
         }
     }
 

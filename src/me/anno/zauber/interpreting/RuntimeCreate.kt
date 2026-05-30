@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.Half
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.types.Types
@@ -34,8 +35,20 @@ object RuntimeCreate {
         return instance
     }
 
+    fun Runtime.createUByte(value: UByte): Instance {
+        val instance = getClass(Types.UByte).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
     fun Runtime.createShort(value: Short): Instance {
         val instance = getClass(Types.Short).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
+    fun Runtime.createUShort(value: UShort): Instance {
+        val instance = getClass(Types.UShort).createInstance()
         instance.rawValue = value
         return instance
     }
@@ -52,8 +65,26 @@ object RuntimeCreate {
         return instance
     }
 
+    fun Runtime.createUInt(value: UInt): Instance {
+        val instance = getClass(Types.UInt).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
     fun Runtime.createLong(value: Long): Instance {
         val instance = getClass(Types.Long).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
+    fun Runtime.createULong(value: ULong): Instance {
+        val instance = getClass(Types.ULong).createInstance()
+        instance.rawValue = value
+        return instance
+    }
+
+    fun Runtime.createHalf(value: Half): Instance {
+        val instance = getClass(Types.Half).createInstance()
         instance.rawValue = value
         return instance
     }

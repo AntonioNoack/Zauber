@@ -2,6 +2,7 @@ package me.anno.zauber.interpreting
 
 import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.interpreting.Stdlib.registerAllMethods
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Specialization
@@ -12,16 +13,6 @@ import org.junit.jupiter.api.Test
 class BasicRuntimeTests {
 
     companion object {
-
-        fun createTestRuntime() {
-            Stdlib.registerSmallIntMethods()
-            Stdlib.registerIntMethods()
-            Stdlib.registerFloatMethods()
-            Stdlib.registerStringMethods()
-            Stdlib.registerPrintln()
-            Stdlib.registerArrayAccess()
-            Stdlib.registerTypeMethods()
-        }
 
         fun testExecute(code: String, reset: Boolean = true): Instance {
             val value = testExecuteCatch(code, reset)
@@ -38,7 +29,7 @@ class BasicRuntimeTests {
             val getter = field.getter
                 ?: throw IllegalStateException("Missing getter for $field")
 
-            createTestRuntime()
+            registerAllMethods()
 
             val specialization = Specialization(getter.scope, emptyParameterList())
             val self = runtime.getObjectInstance(scope.typeWithArgs)

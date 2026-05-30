@@ -9,6 +9,12 @@ value class Half(val binary: Short) : Comparable<Half> {
     fun toFloat(): Float = float16ToFloat32(binary.toInt())
     fun toDouble() = toFloat().toDouble()
 
+    operator fun plus(rhs: Half) = Half(toFloat() + rhs.toFloat())
+    operator fun minus(rhs: Half) = Half(toFloat() - rhs.toFloat())
+    operator fun times(rhs: Half) = Half(toFloat() * rhs.toFloat())
+    operator fun div(rhs: Half) = Half(toFloat() / rhs.toFloat())
+    operator fun rem(rhs: Half) = Half(toFloat() % rhs.toFloat())
+
     override fun compareTo(other: Half): Int {
         return toFloat().compareTo(other.toFloat())
     }
