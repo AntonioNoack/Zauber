@@ -2,8 +2,8 @@ package me.anno.generation
 
 import me.anno.compilation.MinimalRustCompiler
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.rust.RustSourceGenerator.Companion.nativeRustNumbers
 import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 /**
@@ -12,10 +12,12 @@ import org.junit.jupiter.api.Test
 class RustGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "println!(\"{}\", arg0)"
-        )
+        for ((type, _) in nativeRustNumbers) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "println!(\"{}\", arg0)"
+            )
+        }
     }
 
     override fun generator() = MinimalRustCompiler(true)

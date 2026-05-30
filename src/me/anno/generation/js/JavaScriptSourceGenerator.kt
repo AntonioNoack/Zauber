@@ -510,7 +510,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             else -> return false
         }
 
-        val symbol = getBinarySymbol(methodName)
+        val symbol = getBinarySymbol(type, methodName)
             ?: return false
 
         // for Int.times use Math.imul()

@@ -1440,7 +1440,7 @@ open class JavaSourceGenerator : Generator() {
         } else false
     }
 
-    open fun getBinarySymbol(methodName: String): String? {
+    open fun getBinarySymbol(type: Type, methodName: String): String? {
         return when (methodName) {
             "plus" -> " + "
             "minus" -> " - "
@@ -1473,7 +1473,7 @@ open class JavaSourceGenerator : Generator() {
             else -> return false
         }
 
-        val symbol = getBinarySymbol(methodName)
+        val symbol = getBinarySymbol(type, methodName)
             ?: return false
 
         // some unsigned operations need special helpers: unsigned div, unsigned rem

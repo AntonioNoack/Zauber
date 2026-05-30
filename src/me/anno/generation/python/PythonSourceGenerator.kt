@@ -779,6 +779,12 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         builder.append(forFieldAccess)
     }
 
+    override fun getBinarySymbol(type: Type, methodName: String): String? {
+        return if (methodName == "div") {
+            if (isNumberFloat(type)) " / " else " // "
+        } else super.getBinarySymbol(type, methodName)
+    }
+
     override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
         val type = expr.thisInstance.type
         when (type) {
@@ -786,11 +792,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             else -> return false
         }
 
-        val symbol = when (methodName) {
-            "div" -> if (isNumberFloat(type)) " / " else " // "
-            else -> getBinarySymbol(methodName)
-        }
-
+        val symbol = getBinarySymbol(type, methodName)
         val needsCast = type != Types.String
         if (needsCast) {
             // cast to the corresponding type

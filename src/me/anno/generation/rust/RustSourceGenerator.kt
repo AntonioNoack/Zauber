@@ -4,14 +4,17 @@ import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.Specializations.specialization
+import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.Import2
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
 import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -45,10 +48,17 @@ class RustSourceGenerator : JavaSourceGenerator() {
             Types.run {
                 mapOf(
                     Boolean to BoxedType("Boolean", "bool"),
+
                     Byte to BoxedType("Byte", "i8"),
                     Short to BoxedType("Short", "i16"),
                     Int to BoxedType("Int", "i32"),
                     Long to BoxedType("Long", "i64"),
+
+                    UByte to BoxedType("Byte", "u8"),
+                    UShort to BoxedType("Short", "u16"),
+                    UInt to BoxedType("Int", "u32"),
+                    ULong to BoxedType("Long", "u64"),
+
                     Char to BoxedType("Char", "char"),
                     Float to BoxedType("Float", "f32"),
                     Double to BoxedType("Double", "f64"),
@@ -106,6 +116,11 @@ class RustSourceGenerator : JavaSourceGenerator() {
 
     override fun getMainMethodFile(dst: File): File {
         return File(dst, "main.rs")
+    }
+
+    override fun getMethodName(method0: Specialization): String {
+        val base = if (method0.method is Constructor) "__init_" else super.getMethodName0(method0)
+        return "${base}_${hashMethodParameters(method0)}"
     }
 
     override fun defineMainMethodCallEntry(
@@ -729,6 +744,60 @@ class RustSourceGenerator : JavaSourceGenerator() {
             builder.append(methodName)
             appendValueParams(graph, expr.valueParameters)
         }
+    }
+
+    override fun appendNumber(type: Type, expr: NumberExpression) {
+        when (type) {
+            Types.Byte -> builder.append(expr.asInt.toByte()).append("i8")
+            Types.UByte -> builder.append(expr.asInt.toUByte()).append("u8")
+            Types.Short -> builder.append(expr.asInt.toShort()).append("i16")
+            Types.UShort -> builder.append(expr.asInt.toUShort()).append("u16")
+            Types.Int -> builder.append(expr.asInt.toInt()).append("i32")
+            Types.UInt -> builder.append(expr.asInt.toUInt()).append("u32")
+            Types.Long -> builder.append(expr.asInt).append("i64")
+            Types.ULong -> builder.append(expr.asInt.toULong()).append("u64")
+            Types.Half -> builder.append(expr.asFloat.toHalf().toFloat()).append("f16")
+            Types.Float -> builder.append(expr.asFloat.toFloat()).append("f32")
+            Types.Double -> builder.append(expr.asFloat).append("f64")
+            else -> throw NotImplementedError("Append number of type $type")
+        }
+    }
+
+    override fun getBinarySymbol(type: Type, methodName: String): String? {
+        return if (type.isFloat()) super.getBinarySymbol(type, methodName)
+        else if (type in nativeNumbers) {
+            when (methodName) {
+                "plus" -> ".wrapping_add"
+                "minus" -> ".wrapping_sub"
+                "times" -> ".wrapping_mul"
+                "div" -> ".wrapping_div"
+                "rem" -> ".wrapping_rem"
+                else -> super.getBinarySymbol(type, methodName)
+            }
+        } else null
+    }
+
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = expr.thisInstance.type
+        when (type) {
+            Types.String, in nativeTypes -> {}
+            else -> return false
+        }
+
+        val symbol = getBinarySymbol(type, methodName)
+            ?: return false
+
+        if (symbol.startsWith('.')) {
+            appendFirstParameter(graph, type, expr)
+            builder.append(symbol).append('(')
+            appendFieldName(graph, expr.valueParameters[0])
+            builder.append(')')
+        } else {
+            appendFirstParameter(graph, type, expr)
+            builder.append(symbol)
+            appendFieldName(graph, expr.valueParameters[0])
+        }
+        return true
     }
 
 }

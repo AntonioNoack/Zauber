@@ -820,7 +820,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             else -> return false
         }
 
-        val symbol = getBinarySymbol(methodName)
+        val symbol = getBinarySymbol(type, methodName)
             ?: return false
 
         appendFirstParameter(graph, type, expr)
