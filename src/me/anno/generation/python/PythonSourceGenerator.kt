@@ -554,27 +554,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
-                    0 -> {
-                        val castSymbol = when (methodName) {
-                            "toInt" -> "(int) "
-                            "toLong" -> "(long) "
-                            "toFloat" -> "(float) "
-                            "toDouble" -> "(double) "
-                            "toByte" -> "(byte) "
-                            "toShort" -> "(short) "
-                            "toChar" -> "(char) "
-                            else -> null
-                        }
-                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
-                            builder.append(castSymbol)
-                            appendFieldName(graph, expr.thisInstance)
-                            true
-                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
-                            builder.append("not ")
-                            appendFieldName(graph, expr.thisInstance)
-                            true
-                        } else false
-                    }
+                    0 -> appendUnaryOperator(graph, expr, methodName)
                     1 -> {
                         val type = expr.thisInstance.type
                         val supportsType = when (type) {
@@ -582,23 +562,11 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                             else -> false
                         }
                         val symbol = when (methodName) {
-                            "plus" -> " + "
-                            "minus" -> " - "
-                            "times" -> " * "
                             "div" -> if (isNumberFloat(type)) " / " else " // "
-                            "rem" -> " % "
-                            else -> null
+                            else -> getBinarySymbol(methodName)
                         }
                         if (supportsType && symbol != null) {
-                            if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
-                                check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
-                                    "$type is missing field 'content'"
-                                }
-                                appendFieldName(graph, expr.thisInstance, ".")
-                                builder.append("content")
-                            } else {
-                                appendFieldName(graph, expr.thisInstance)
-                            }
+                            appendFirstParameter(graph, type, expr)
                             builder.append(symbol)
                             appendFieldName(graph, expr.valueParameters[0])
                             true

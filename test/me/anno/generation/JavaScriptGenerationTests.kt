@@ -13,10 +13,24 @@ import org.junit.jupiter.api.Test
 class JavaScriptGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        JavaSourceGenerator.register(
-            TypeResolution.langScope, "println", listOf(Types.Int),
-            "console.log(arg0)"
-        )
+        for (type in listOf(
+            Types.Byte, Types.UByte, Types.Short, Types.UShort, Types.Int,
+            Types.Half, Types.Float, Types.Double,
+        )) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "console.log(arg0)"
+            )
+        }
+        for (type in listOf(
+            Types.UInt,
+            Types.Long, Types.ULong,
+        )) {
+            JavaSourceGenerator.register(
+                TypeResolution.langScope, "println", listOf(type),
+                "console.log(arg0.toString())" // to remove the 'n' at the end
+            )
+        }
     }
 
     override fun generator(): MinimalCompiler = MinimalJavaScriptCompiler()

@@ -1378,8 +1378,8 @@ open class JavaSourceGenerator : Generator() {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
-                    0 -> handleUnaryOperator(graph, expr, methodName)
-                    1 -> handleBinaryOperator(graph, expr, methodName)
+                    0 -> appendUnaryOperator(graph, expr, methodName)
+                    1 -> appendBinaryOperator(graph, expr, methodName)
                     else -> false
                 }
                 if (!done) {
@@ -1418,7 +1418,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun handleUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    open fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
         val castSymbol = when (methodName) {
             "toInt" -> "(int) "
             "toLong" -> "(long) "
@@ -1440,21 +1440,41 @@ open class JavaSourceGenerator : Generator() {
         } else false
     }
 
-    open fun handleBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
-        val type = expr.thisInstance.type
-        when (type) {
-            Types.String, in nativeTypes -> true
-            else -> return false
-        }
-
-        val symbol = when (methodName) {
+    fun getBinarySymbol(methodName: String): String? {
+        return when (methodName) {
             "plus" -> " + "
             "minus" -> " - "
             "times" -> " * "
             "div" -> " / "
             "rem" -> " % "
+            "and" -> " & "
+            "or" -> " | "
+            "xor" -> " ^ "
+            else -> null
+        }
+    }
+
+    fun appendFirstParameter(graph: SimpleGraph, type: Type, expr: SimpleCall) {
+        if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
+            check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
+                "$type is missing field 'content'"
+            }
+            appendFieldName(graph, expr.thisInstance, ".")
+            builder.append("content")
+        } else {
+            appendFieldName(graph, expr.thisInstance)
+        }
+    }
+
+    open fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = expr.thisInstance.type
+        when (type) {
+            Types.String, in nativeTypes -> {}
             else -> return false
         }
+
+        val symbol = getBinarySymbol(methodName)
+            ?: return false
 
         // some unsigned operations need special helpers: unsigned div, unsigned rem
         if ((methodName == "div" || methodName == "rem") && type.isUnsigned()) {
@@ -1467,17 +1487,7 @@ open class JavaSourceGenerator : Generator() {
             else -> {}
         }
 
-        // append first parameter
-        if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
-            check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
-                "$type is missing field 'content'"
-            }
-            appendFieldName(graph, expr.thisInstance, ".")
-            builder.append("content")
-        } else {
-            appendFieldName(graph, expr.thisInstance)
-        }
-
+        appendFirstParameter(graph, type, expr)
         builder.append(symbol)
         appendFieldName(graph, expr.valueParameters[0])
 

@@ -7,6 +7,7 @@ import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
@@ -19,13 +20,13 @@ import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
-import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.LocalField
+import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
@@ -150,6 +151,38 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             appendSuperTypes(classScope)
 
             appendClassBody(classScope, className, methods, fields, headerOnly)
+        }
+    }
+
+    override fun appendMethods(
+        classScope: Scope, className: String,
+        methods: Collection<Specialization>, headerOnly: Boolean
+    ) {
+        super.appendMethods(classScope, className, methods, headerOnly)
+
+        val castToImpl = when (classScope) {
+            Types.Byte.clazz -> "return (value << 24) >> 24;"
+            Types.UByte.clazz -> "return value & 0xFF;"
+            Types.Short.clazz -> "return (value << 16) >> 16;"
+            Types.UShort.clazz -> "return value & 0xFFFF;"
+            Types.Int.clazz -> "return value | 0;"
+            Types.UInt.clazz -> "return value & (0xFFFF_FFFFn)"
+            Types.Long.clazz -> {
+                val indent = "  ".repeat(indentation + 1) // +1 for method block
+                "const mask = (1n << 64n) - 1n;\n" +
+                        indent + "const low = value & mask;\n" +
+                        indent + "return (low & (1n << 63n)) ? low - (1n << 64n) : low;"
+            }
+            Types.ULong.clazz -> "return value & (0xFFFF_FFFF_FFFF_FFFFn)"
+            else -> null
+        }
+        if (castToImpl != null) {
+            nextLine()
+            builder.append("static castTo(value) ")
+            writeBlock {
+                builder.append(castToImpl)
+                nextLine()
+            }
         }
     }
 
@@ -452,12 +485,55 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun appendNumber(type: Type, expr: NumberExpression) {
         when (type) {
-            Types.Int, Types.UInt,
-            Types.Long, Types.ULong -> builder.append(expr.asInt)
-            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()) // f is not supported
+            Types.Byte -> builder.append(expr.asInt.toByte())
+            Types.UByte -> builder.append(expr.asInt.toUByte())
+            Types.Short -> builder.append(expr.asInt.toShort())
+            Types.UShort -> builder.append(expr.asInt.toUShort())
+            Types.Int -> builder.append(expr.asInt)
+            Types.UInt -> builder.append(expr.asInt.toUInt()).append('n')
+            Types.Long -> builder.append(expr.asInt).append('n')
+            Types.ULong -> builder.append(expr.asInt.toULong()).append('n')
+            Types.Half -> builder.append(expr.asFloat.toHalf().toFloat())
+            Types.Float -> builder.append(expr.asFloat.toFloat()) // f is not supported
             Types.Double -> builder.append(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type")
         }
+    }
+
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = expr.thisInstance.type
+        when (type) {
+            Types.String, in nativeTypes -> {}
+            else -> return false
+        }
+
+        val symbol = getBinarySymbol(methodName)
+            ?: return false
+
+        // todo for Int.times use Math.imul()
+        if (methodName == "mul" && type == Types.Int) {
+            builder.append("Math.imul(")
+            appendFirstParameter(graph, type, expr)
+            builder.append(", ")
+            appendFieldName(graph, expr.valueParameters[0])
+            builder.append(')')
+            return true
+        }
+
+        val needsCast = type != Types.String
+        if (needsCast) {
+            // cast to the corresponding type
+            appendType(type, expr.scope, true)
+            builder.append(".castTo(")
+        }
+
+        appendFirstParameter(graph, type, expr)
+        builder.append(symbol)
+        appendFieldName(graph, expr.valueParameters[0])
+
+        if (needsCast) builder.append(')')
+
+        return true
     }
 
     override fun appendCopy(graph: SimpleGraph, valueType: Type) {

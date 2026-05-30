@@ -16,7 +16,6 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -814,33 +813,17 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
-    override fun handleBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
         val type = expr.thisInstance.type
         when (type) {
-            Types.String, in nativeTypes -> true
+            in nativeTypes -> {}
             else -> return false
         }
 
-        val symbol = when (methodName) {
-            "plus" -> " + "
-            "minus" -> " - "
-            "times" -> " * "
-            "div" -> " / "
-            "rem" -> " % "
-            else -> return false
-        }
+        val symbol = getBinarySymbol(methodName)
+            ?: return false
 
-        // append first parameter
-        if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
-            check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
-                "$type is missing field 'content'"
-            }
-            appendFieldName(graph, expr.thisInstance, ".")
-            builder.append("content")
-        } else {
-            appendFieldName(graph, expr.thisInstance)
-        }
-
+        appendFirstParameter(graph, type, expr)
         builder.append(symbol)
         appendFieldName(graph, expr.valueParameters[0])
 

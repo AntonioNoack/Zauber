@@ -123,6 +123,8 @@ class TypesImpl {
     val UShort = getType("UShort", ScopeType.NORMAL_CLASS)
     val UInt = getType("UInt", ScopeType.NORMAL_CLASS)
     val ULong = getType("ULong", ScopeType.NORMAL_CLASS)
+
+    // todo define other ML types like FP8, BF16?
     val Half = getType("Half", ScopeType.NORMAL_CLASS)
 
     // collections:
