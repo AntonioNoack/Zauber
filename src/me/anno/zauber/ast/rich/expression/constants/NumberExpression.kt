@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression.constants
 
+import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
@@ -347,6 +348,10 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
 
         if (actualType == Types.Double && expectedType == Types.Float) {
             checkFloatLoss { it.toFloat().toDouble() }
+            return expectedType
+        }
+
+        if (expectedType in nativeJavaNumbers) {
             return expectedType
         }
 

@@ -1118,6 +1118,15 @@ open class JavaSourceGenerator : Generator() {
             Types.Long, Types.ULong -> builder.append(expr.asInt).append('L')
             Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()).append('f')
             Types.Double -> builder.append(expr.asFloat)
+            Types.Char -> {
+                builder.append('\'')
+                when (val value = expr.asInt.toInt().toChar()) {
+                    in 'A'..'Z', in 'a'..'z', in '0'..'9' -> builder.append(value)
+                    else -> builder.append("\\u")
+                        .append(value.code.toString(16).padStart(4, '0'))
+                }
+                builder.append('\'')
+            }
             else -> throw NotImplementedError("Append number of type $type")
         }
     }

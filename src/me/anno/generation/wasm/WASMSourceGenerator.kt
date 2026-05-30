@@ -368,7 +368,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     fun getWASMType(type: Type): WASMType {
         return when (val type = resolveType(type)) {
 
-            Types.Boolean,
+            Types.Boolean, Types.Char,
             Types.Byte, Types.UByte,
             Types.Short, Types.UShort,
             Types.Int, Types.UInt -> WASMType.I32
@@ -1094,12 +1094,12 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendNumber(type: Type, expr: NumberExpression) {
-        when (getWASMType(type)) {
+        when (val wasmType = getWASMType(type)) {
             WASMType.I32 -> i32Const(expr.asInt.toInt())
             WASMType.I64 -> i64Const(expr.asInt)
             WASMType.F32 -> f32Const(expr.asFloat.toFloat())
             WASMType.F64 -> f64Const(expr.asFloat)
-            else -> throw NotImplementedError("Append number of type $type")
+            else -> throw NotImplementedError("Append number of type $type -> $wasmType")
         }
         nextLine()
     }

@@ -793,6 +793,8 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         }
 
         val symbol = getBinarySymbol(type, methodName)
+            ?: return false
+
         val needsCast = type != Types.String
         if (needsCast) {
             // cast to the corresponding type

@@ -62,6 +62,16 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 else -> JVMValueType.REFERENCE
             }
         }
+
+        private val inlineBinaryNames = setOf(
+            "plus", "minus", "times", "div", "rem",
+            "shl", "shr", "ushr", "and", "or", "xor"
+        )
+
+        private val inlineUnaryNames = setOf(
+            "hashCode", "toString", "inv"
+        )
+
     }
 
     override fun getExtension(headerOnly: Boolean): String = "class"
@@ -667,12 +677,13 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
             is SimpleCall -> {
                 val methodName = instr.methodName
                 val thisType = resolveType(instr.thisInstance.type)
-                val binaryInline = (thisType in nativeNumbers) &&
+                val thisIsNumber = thisType in nativeNumbers
+                val binaryInline = thisIsNumber &&
                         instr.valueParameters.size == 1 &&
-                        methodName in setOf("plus", "minus", "times", "div", "rem")
-                val unaryInline = (thisType in nativeNumbers) &&
+                        methodName in inlineBinaryNames
+                val unaryInline = thisIsNumber &&
                         instr.valueParameters.isEmpty() &&
-                        methodName in setOf("hashCode", "toString")
+                        methodName in inlineUnaryNames
                 when {
                     unaryInline -> {
                         val jvmType = toJVMValueType(thisType)

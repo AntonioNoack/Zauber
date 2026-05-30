@@ -2,7 +2,9 @@ package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
 import me.anno.generation.InheritanceTable.Companion.inheritanceCode
+import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.assertEquals
+import me.anno.zauber.types.Types
 
 /**
  * execution time: 2s,
@@ -452,6 +454,7 @@ abstract class CodeGenerationTests {
     }
 
     fun testNumberConversionsImpl() {
+        // todo test all number conversions somehow...
         val code: String = TODO()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -459,10 +462,57 @@ abstract class CodeGenerationTests {
     }
 
     fun testNumberComparisonsImpl() {
-        val code: String = TODO()
+        var ctr = 0
+        val types = nativeJavaNumbers.keys
+        val runnableCode = types.joinToString("") { type ->
+            val min = when (type) {
+                Types.Char -> "' '"
+                Types.Float -> "0f"
+                Types.Double -> "0.0"
+                else -> "0"
+            }
+            val max = when (type) {
+                // if comparison is signed for unsigned numbers,
+                // UNSIGNED.MAX_VALUE is -1, and would give the wrong answer
+                Types.Byte -> "${Byte.MAX_VALUE}"
+                Types.UByte -> "${UByte.MAX_VALUE}"
+                Types.Short -> "${Short.MAX_VALUE}"
+                Types.UShort -> "${UShort.MAX_VALUE}"
+                Types.Int -> "${Int.MAX_VALUE}"
+                Types.UInt -> "${UInt.MAX_VALUE}"
+                Types.Long -> "${Long.MAX_VALUE}"
+                Types.ULong -> "${ULong.MAX_VALUE}"
+                Types.Half -> "65e3h"
+                Types.Float -> "1e38f"
+                Types.Double -> "1e308"
+                Types.Char -> "${UShort.MAX_VALUE}"
+                else -> throw NotImplementedError("Max for $type")
+            }
+            val type = type.clazz.name
+            "" +
+                    "val v${ctr++}: $type = $min\n" +
+                    "val v${ctr++}: $type = $max\n" +
+                    "println(if(v${ctr - 2} < v${ctr - 1}) 1 else 0)\n"
+        }
+        val numberClasses = types.joinToString("") { type ->
+            val type = type.clazz.name
+            "" +
+                    "external class $type(val content: $type) {\n" +
+                    "   external fun compareTo(other: $type): Int\n" +
+                    "}\n" +
+                    "external fun println(arg0: $type)"
+        }
+        val code: String = """
+            fun main() {
+                $runnableCode
+            }
+            
+            package zauber
+            $numberClasses
+        """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("2\n", printed)
+        assertEquals("1\n".repeat(types.size), printed)
     }
 
     fun testNonNumberComparisonsImpl() {

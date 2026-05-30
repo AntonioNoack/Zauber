@@ -65,7 +65,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     UInt to BoxedType("Int", "uint32_t"),
                     ULong to BoxedType("Long", "uint64_t"),
 
-                    Char to BoxedType("Char", "char"),
+                    // todo having uint16_t twice causes issues if we have multiple functions with the same name...
+                    Char to BoxedType("Char", "uint16_t"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
                 )

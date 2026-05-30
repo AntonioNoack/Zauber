@@ -332,6 +332,16 @@ class WASMRuntime(val binary: WASMBinary) {
             WASMOpcode.I64_DIV_S -> stack.add(popI64(1) / popI64())
             WASMOpcode.I64_DIV_U -> stack.add(java.lang.Long.divideUnsigned(popI64(1), popI64()))
 
+            WASMOpcode.F32_LT -> pushBool(popF32(1) < popF32())
+            WASMOpcode.F32_GT -> pushBool(popF32(1) > popF32())
+            WASMOpcode.F32_LE -> pushBool(popF32(1) <= popF32())
+            WASMOpcode.F32_GE -> pushBool(popF32(1) >= popF32())
+
+            WASMOpcode.F64_LT -> pushBool(popF64(1) < popF64())
+            WASMOpcode.F64_GT -> pushBool(popF64(1) > popF64())
+            WASMOpcode.F64_LE -> pushBool(popF64(1) <= popF64())
+            WASMOpcode.F64_GE -> pushBool(popF64(1) >= popF64())
+
             else -> error("Opcode 0x${opcode.toString(16)} not yet implemented")
         }
     }

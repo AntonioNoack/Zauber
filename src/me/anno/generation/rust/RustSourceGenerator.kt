@@ -699,7 +699,8 @@ class RustSourceGenerator : JavaSourceGenerator() {
     override fun appendDefaultValue(valueType: Type) {
         when (val type = resolveType(valueType)) {
             Types.Boolean -> builder.append("false")
-            in nativeTypes -> builder.append("0")
+            Types.Char -> builder.append("'\\u{0000}'")
+            in nativeTypes -> builder.append(if (type.isFloat()) "0.0" else "0")
             is ClassType -> appendCreateEmptyInstance(
                 type.clazz,
                 getClassName(type.clazz, Specialization(type))
@@ -759,6 +760,17 @@ class RustSourceGenerator : JavaSourceGenerator() {
             Types.Half -> builder.append(expr.asFloat.toHalf().toFloat()).append("f16")
             Types.Float -> builder.append(expr.asFloat.toFloat()).append("f32")
             Types.Double -> builder.append(expr.asFloat).append("f64")
+            Types.Char -> {
+                builder.append('\'')
+                when (val value = expr.asInt.toInt().toChar()) {
+                    in 'A'..'Z', in 'a'..'z', in '0'..'9' -> builder.append(value)
+                    else -> builder.append("\\u{").append(
+                        value.code.toString(16)
+                            .padStart(4, '0')
+                    ).append('}')
+                }
+                builder.append('\'')
+            }
             else -> throw NotImplementedError("Append number of type $type")
         }
     }

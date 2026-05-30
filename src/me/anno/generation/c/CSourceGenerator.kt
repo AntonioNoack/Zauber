@@ -6,6 +6,7 @@ import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.Import2
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -353,6 +354,12 @@ class CSourceGenerator : CppSourceGenerator() {
         check(expr.methodName == "inc")
         appendFieldName(graph, expr.thisInstance, "")
         builder.append(" + 1")
+    }
+
+    override fun appendNumber(type: Type, expr: NumberExpression) {
+        if (type == Types.Char) {
+            builder.append("(uint16_t) ").append(expr.asInt.toUShort())
+        } else super.appendNumber(type, expr)
     }
 
 }

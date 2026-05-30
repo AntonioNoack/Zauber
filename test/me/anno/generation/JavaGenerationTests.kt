@@ -17,17 +17,17 @@ class JavaGenerationTests : CodeGenerationTests() {
         for (type in listOf(Types.Byte, Types.Short, Types.Int, Types.Long, Types.Float, Types.Double)) {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
-                "System.out.println(arg0)"
+                "System.out.println(arg0);"
             )
         }
         for (type in listOf(Types.UByte, Types.UShort, Types.UInt, Types.ULong)) {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 when (type) {
-                    Types.UByte -> "System.out.println(arg0 & 0xff)"
-                    Types.UShort -> "System.out.println(arg0 & 0xffff)"
-                    Types.UInt -> "System.out.println(arg0 & 0xffff_ffffL)"
-                    else -> "System.out.println(java.lang.Long.toUnsignedString(arg0))"
+                    Types.UByte -> "System.out.println(arg0 & 0xff);"
+                    Types.UShort -> "System.out.println(arg0 & 0xffff);"
+                    Types.UInt -> "System.out.println(arg0 & 0xffff_ffffL);"
+                    else -> "System.out.println(java.lang.Long.toUnsignedString(arg0));"
                 }
             )
         }

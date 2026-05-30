@@ -103,6 +103,9 @@ class LLVMGenerationTests : CodeGenerationTests() {
         testNonNumberComparisonsImpl()
     }
 
+    // todo test all logical (and, or, xor, inv) and all shift (shl, shr, ushr) operations
+    //  for all relevant number types...
+
     @Test
     fun testUseNativeLibrary() {
         TODO("Call into a native library")
