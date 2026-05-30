@@ -4,6 +4,8 @@ import me.anno.compilation.MinimalCompiler
 import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.assertEquals
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
 /**
@@ -454,47 +456,193 @@ abstract class CodeGenerationTests {
     }
 
     fun testNumberConversionsImpl() {
-        // todo test all number conversions somehow...
-        val code: String = TODO()
+        // todo fix: compilation is slow :(
+
+        val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
+        val builder = StringBuilder()
+        val expected = StringBuilder()
+
+        var ctr = 0
+        for (i in numberTypes.indices) {
+            for (j in numberTypes.indices) {
+                val fromType = numberTypes[i]
+                val toType = numberTypes[j]
+
+                // todo test all number conversions somehow...
+                //  test normal numbers, and from float, also test +Inf and -Inf
+
+                val value = getMaxValueForTesting(fromType)
+                builder.append("val v$ctr: ${fromType.clazz.name} = $value\n")
+                builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
+                ctr++
+
+                val expected0 = when (fromType) {
+                    // todo printing chars shouldn't print a number...
+                    Types.Byte -> when {
+                        toType.isFloat() -> "$value.0"
+                        else -> value
+                    }
+                    Types.UByte -> when {
+                        toType.isFloat() -> "$value.0"
+                        toType == Types.Byte -> "-1"
+                        else -> value
+                    }
+                    Types.Short -> when {
+                        toType.isFloat() -> "$value.0"
+                        toType == Types.Byte -> "-1"
+                        toType == Types.UByte -> "255"
+                        else -> value
+                    }
+                    Types.UShort -> when {
+                        toType.isFloat() -> "$value.0"
+                        toType == Types.Byte || toType == Types.Short -> "-1"
+                        toType == Types.UByte -> "255"
+                        else -> value
+                    }
+                    Types.Int -> when {
+                        toType.isFloat() -> "$value.0"
+                        toType == Types.Byte || toType == Types.Short -> "-1"
+                        toType == Types.UByte || toType == Types.UShort ->
+                            getPositiveInfValueForTesting(toType)
+                        else -> value
+                    }
+                    Types.UInt -> when {
+                        toType.isFloat() -> "$value.0"
+                        toType == Types.Byte || toType == Types.Short || toType == Types.Int -> "-1"
+                        toType == Types.UByte || toType == Types.UShort ->
+                            getPositiveInfValueForTesting(toType)
+                        else -> value
+                    }
+                    Types.Long -> when (toType) {
+                        Types.Half, Types.Float, Types.Double -> "$value.0"
+                        Types.Byte, Types.Short, Types.Int -> "-1"
+                        Types.UByte, Types.UShort, Types.UInt ->
+                            getPositiveInfValueForTesting(toType)
+                        else -> value
+                    }
+                    Types.ULong -> when (toType) {
+                        Types.Half, Types.Float, Types.Double -> "$value.0"
+                        Types.Byte, Types.Short, Types.Int, Types.Long -> "-1"
+                        else -> getPositiveInfValueForTesting(toType)
+                    }
+                    Types.Half -> when (toType) {
+                        Types.Half, Types.Float, Types.Double -> value
+                        // all these types fit:
+                        Types.UShort, Types.Int, Types.UInt, Types.ULong, Types.Long -> "65000"
+                        // Byte, UByte, Short are max-value
+                        else -> getPositiveInfValueForTesting(toType)
+                    }
+                    Types.Float -> when (toType) {
+                        Types.Float, Types.Double -> value
+                        else -> getPositiveInfValueForTesting(toType)
+                    }
+                    Types.Double -> when (toType) {
+                        Types.Double -> value
+                        else -> getPositiveInfValueForTesting(toType)
+                    }
+                    else -> throw NotImplementedError("Add $fromType -> $toType")
+                }
+                expected.append(expected0).append('\n')
+
+                if (fromType.isFloat()) {
+                    builder.append("val v$ctr: ${fromType.clazz.name} = 1e1000\n")
+                    builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
+                    expected.append(getPositiveInfValueForTesting(toType)).append('\n')
+                    ctr++
+
+                    builder.append("val v$ctr: ${fromType.clazz.name} = -1e1000\n")
+                    builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
+                    expected.append(getNegativeInfValueForTesting(toType)).append('\n')
+                    ctr++
+                }
+            }
+        }
+
+        val numberClasses = numberTypes.joinToString("") { type ->
+            val type = type.clazz.name
+            "" +
+                    "external class $type(val content: $type) {\n" +
+                    "   external fun compareTo(other: $type): Int\n" +
+                    numberTypes.joinToString("") {
+                        "   external fun to${it.clazz.name}(): ${it.clazz.name}"
+                    } +
+                    "}\n" +
+                    "external fun println(arg0: $type)"
+        }
+        val code: String = """
+            fun main() {
+                $builder
+            }
+            
+            package zauber
+            $numberClasses
+        """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("2\n", printed)
+        assertEquals(expected, printed)
+    }
+
+    fun getPositiveInfValueForTesting(type: Type): String {
+        return when (type) {
+            // if comparison is signed for unsigned numbers,
+            // UNSIGNED.MAX_VALUE is -1, and would give the wrong answer
+            Types.Byte -> "${Byte.MAX_VALUE}"
+            Types.UByte -> "${UByte.MAX_VALUE}"
+            Types.Short -> "${Short.MAX_VALUE}"
+            Types.UShort -> "${UShort.MAX_VALUE}"
+            Types.Int -> "${Int.MAX_VALUE}"
+            Types.UInt -> "${UInt.MAX_VALUE}"
+            Types.Long -> "${Long.MAX_VALUE}"
+            Types.ULong -> "${ULong.MAX_VALUE}"
+            Types.Half, Types.Float, Types.Double -> "Infinity"
+            Types.Char -> "${UShort.MAX_VALUE}"
+            else -> throw NotImplementedError("Max for $type")
+        }
+    }
+
+    fun getNegativeInfValueForTesting(type: Type): String {
+        return when (type) {
+            // if comparison is signed for unsigned numbers,
+            // UNSIGNED.MAX_VALUE is -1, and would give the wrong answer
+            Types.Byte -> "${Byte.MIN_VALUE}"
+            Types.Short -> "${Short.MIN_VALUE}"
+            Types.Int -> "${Int.MIN_VALUE}"
+            Types.Long -> "${Long.MIN_VALUE}"
+            Types.Half, Types.Float, Types.Double -> "-Infinity"
+            Types.UByte, Types.UShort, Types.UInt, Types.ULong, Types.Char -> "0"
+            else -> throw NotImplementedError("Min for $type")
+        }
+    }
+
+    fun getMaxValueForTesting(type: Type): String {
+        return when (type) {
+            Types.Half -> "65e3h"
+            Types.Float -> "1e38f"
+            Types.Double -> "1e308"
+            else -> getPositiveInfValueForTesting(type)
+        }
     }
 
     fun testNumberComparisonsImpl() {
+        // if comparison is signed for unsigned numbers,
+        // UNSIGNED.MAX_VALUE is -1, and would give the wrong answer
         var ctr = 0
-        val types = nativeJavaNumbers.keys
-        val runnableCode = types.joinToString("") { type ->
+        val numberTypes = nativeJavaNumbers.keys
+        val runnableCode = numberTypes.joinToString("") { type ->
             val min = when (type) {
                 Types.Char -> "' '"
                 Types.Float -> "0f"
                 Types.Double -> "0.0"
                 else -> "0"
             }
-            val max = when (type) {
-                // if comparison is signed for unsigned numbers,
-                // UNSIGNED.MAX_VALUE is -1, and would give the wrong answer
-                Types.Byte -> "${Byte.MAX_VALUE}"
-                Types.UByte -> "${UByte.MAX_VALUE}"
-                Types.Short -> "${Short.MAX_VALUE}"
-                Types.UShort -> "${UShort.MAX_VALUE}"
-                Types.Int -> "${Int.MAX_VALUE}"
-                Types.UInt -> "${UInt.MAX_VALUE}"
-                Types.Long -> "${Long.MAX_VALUE}"
-                Types.ULong -> "${ULong.MAX_VALUE}"
-                Types.Half -> "65e3h"
-                Types.Float -> "1e38f"
-                Types.Double -> "1e308"
-                Types.Char -> "${UShort.MAX_VALUE}"
-                else -> throw NotImplementedError("Max for $type")
-            }
+            val max = getMaxValueForTesting(type)
             val type = type.clazz.name
             "" +
                     "val v${ctr++}: $type = $min\n" +
                     "val v${ctr++}: $type = $max\n" +
                     "println(if(v${ctr - 2} < v${ctr - 1}) 1 else 0)\n"
         }
-        val numberClasses = types.joinToString("") { type ->
+        val numberClasses = numberTypes.joinToString("") { type ->
             val type = type.clazz.name
             "" +
                     "external class $type(val content: $type) {\n" +
@@ -512,7 +660,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("1\n".repeat(types.size), printed)
+        assertEquals("1\n".repeat(numberTypes.size), printed)
     }
 
     fun testNonNumberComparisonsImpl() {
