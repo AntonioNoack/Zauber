@@ -376,10 +376,79 @@ abstract class CodeGenerationTests {
     }
 
     fun testNumberOverflowsImpl() {
-        val code: String = TODO()
+
+        // todo implement and test automatic widening,
+        //  half -> float -> double,
+        //  byte -> short -> int -> long,
+        //  ubyte -> ushort -> uint -> ulong
+
+        // todo some languages need to escape these names :D, e.g. Java
+        val code: String = """
+            fun main() {
+                val byte: Byte = ${Byte.MAX_VALUE}
+                val short: Short = ${Short.MAX_VALUE}
+                val int: Int = ${Int.MAX_VALUE}
+                val long: Long = ${Long.MAX_VALUE}
+                
+                println(byte + byte)
+                println(short + short)
+                println(int + int)
+                println(long + long)
+                
+                val ubyte: UByte = ${UByte.MAX_VALUE}
+                val ushort: UShort = ${UShort.MAX_VALUE}
+                val uint: UInt = ${UInt.MAX_VALUE}
+                val ulong: ULong = ${ULong.MAX_VALUE}
+                println(ubyte)
+                println(ushort)
+                println(uint)
+                println(ulong)
+            }
+            
+            package zauber
+            class Any
+            class Byte {
+                external operator fun plus(other: Byte): Byte
+            }
+            class Short {
+                external operator fun plus(other: Short): Short
+            }
+            class Int {
+                external operator fun plus(other: Int): Int
+            }
+            class Long {
+                external operator fun plus(other: Long): Long
+            }
+            
+            class UByte
+            class UShort
+            class UInt
+            class ULong
+            
+            external fun println(arg0: Byte)
+            external fun println(arg0: Short)
+            external fun println(arg0: Int)
+            external fun println(arg0: Long)
+            
+            external fun println(arg0: UByte)
+            external fun println(arg0: UShort)
+            external fun println(arg0: UInt)
+            external fun println(arg0: ULong)
+        """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals("2\n", printed)
+        assertEquals(
+            listOf(
+                (Byte.MAX_VALUE * 2).toByte(),
+                (Short.MAX_VALUE * 2).toShort(),
+                (Int.MAX_VALUE * 2),
+                (Long.MAX_VALUE * 2),
+                UByte.MAX_VALUE,
+                UShort.MAX_VALUE,
+                UInt.MAX_VALUE,
+                ULong.MAX_VALUE,
+            ).joinToString("") { "$it\n" }, printed
+        )
     }
 
     fun testNumberConversionsImpl() {

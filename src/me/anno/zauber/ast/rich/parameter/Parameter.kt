@@ -4,6 +4,7 @@ import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Field.Companion.cleanNameForCompilation
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Type
 
@@ -29,6 +30,8 @@ class Parameter(
 
     val annotations = ArrayList<Annotation>()
     var mustBeNamed = false
+
+    var newName = cleanNameForCompilation(name)
 
     fun getOrCreateField(selfType: Type?, keywords: FlagSet): Field {
         // automatically gets added to fieldScope

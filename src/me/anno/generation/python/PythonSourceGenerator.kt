@@ -78,14 +78,14 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun getExtension(headerOnly: Boolean): String = "py"
 
-    override fun getMethodName(method: Specialization): String {
+    override fun getMethodName(method0: Specialization): String {
 
-        if (method.method is Constructor && method.method.ownerScope.typeWithArgs in nativeNumbers) {
+        if (method0.method is Constructor && method0.method.ownerScope.typeWithArgs in nativeNumbers) {
             return "__init__"
         }
 
-        val base = if (method.method is Constructor) "init_" else super.getMethodName(method)
-        return "${base}_${hashMethodParameters(method)}"
+        val base = if (method0.method is Constructor) "init_" else super.getMethodName(method0)
+        return "${base}_${hashMethodParameters(method0)}"
     }
 
     override fun getMainMethodFile(dst: File): File {
@@ -745,9 +745,9 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
                 is SpecialValueExpression -> when (expr.type) {
-                    SpecialValue.NULL -> builder.append("null")
-                    SpecialValue.TRUE -> builder.append("true")
-                    SpecialValue.FALSE -> builder.append("false")
+                    SpecialValue.NULL -> builder.append("None")
+                    SpecialValue.TRUE -> builder.append("True")
+                    SpecialValue.FALSE -> builder.append("False")
                 }
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }

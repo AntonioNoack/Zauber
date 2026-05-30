@@ -14,6 +14,13 @@ class LocalField(
     val field: Field?, var name: String, val type: Type, val id: Int,
     val isInsideMethod: Boolean
 ) {
+
+    var newName: String
+        get() = name
+        set(value) {
+            name = value
+        }
+
     override fun toString(): String {
         return "${style("local#$id", YELLOW)}, ${style(name, GREEN)}: ${style(type.toString(), LINK)}"
     }

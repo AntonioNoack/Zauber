@@ -141,7 +141,10 @@ object Dependencies {
                     is SimpleCallable -> addMethod(instr.specialization)
                     is SimpleAllocateInstance -> addClass(instr.allocatedType)
                     is SimpleString -> addClass(Types.String, true)
-                    is SimpleNumber -> addClass(instr.dst.type as ClassType, true)
+                    is SimpleNumber -> {
+                        // println("found number $instr, marking ${instr.dst.type} reachable")
+                        addClass(instr.dst.type as ClassType, true)
+                    }
                     is SimpleGetObject -> {
                         val scope = instr.objectScope[ScopeInitType.AFTER_DISCOVERY]
                         addClass(scope.typeWithArgs)

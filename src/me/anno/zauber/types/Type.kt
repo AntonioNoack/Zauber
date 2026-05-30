@@ -295,5 +295,7 @@ abstract class Type {
 
     open fun not(): Type = NotType(this)
 
+    fun nonNull(): Type = andTypes(this, NotType(NullType))
+
     open val resolvedName: Type get() = this
 }

@@ -208,6 +208,7 @@ object ASTSimplifier {
             is ResolvedSetFieldExpression -> return simplifySetField(context, expr, block0, flow0)
 
             is NumberExpression -> {
+                // println("resolving number, $expr, ${expr.resolvedType0}, ${context.targetType}")
                 val type = TypeResolution.resolveType(context, expr)
                 val dst = block0.field(type, expr)
                 block0.add(SimpleNumber(dst, expr))
@@ -579,7 +580,7 @@ object ASTSimplifier {
 
         if (isLocalField(graph, field)) {
             val localField = graph.getOrPutLocalField(field, context)
-            val block2 = simplifyImpl(context, expr.value, flow0, true)
+            val block2 = simplifyImpl(context.withTargetType(localField.type), expr.value, flow0, true)
             val block2v = block2.value ?: return block2
             val value = block2v.value
 
@@ -591,7 +592,7 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
-        val block2 = simplifyImpl(context, expr.value, block1, true)
+        val block2 = simplifyImpl(context.withTargetType(field.valueType!!), expr.value, block1, true)
         val block2v = block2.value ?: return block2
         val value = block2v.value
 

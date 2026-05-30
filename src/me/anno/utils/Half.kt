@@ -7,6 +7,7 @@ value class Half(val binary: Short) : Comparable<Half> {
     fun isFinite(): Boolean = toFloat().isFinite()
     fun isNaN(): Boolean = toFloat().isNaN()
     fun toFloat(): Float = float16ToFloat32(binary.toInt())
+    fun toDouble() = toFloat().toDouble()
 
     override fun compareTo(other: Half): Int {
         return toFloat().compareTo(other.toFloat())

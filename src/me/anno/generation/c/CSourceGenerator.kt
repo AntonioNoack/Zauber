@@ -41,7 +41,7 @@ class CSourceGenerator : CppSourceGenerator() {
                 val hash = method.method.valueParameters.joinToString {
                     "${it.name}: ${resolveType(it.type)}"
                 }.hashCode()
-                hash.toUInt().toString(36)
+                hash.toUInt().toString(manglingBasis)
             }
         }
     }
@@ -101,18 +101,18 @@ class CSourceGenerator : CppSourceGenerator() {
         return false
     }
 
-    override fun getMethodName(method: Specialization): String {
-        val ownerScope = method.method.ownerScope
-        val ownerSpec = method.withScope(ownerScope)
+    override fun getMethodName(method0: Specialization): String {
+        val ownerScope = method0.method.ownerScope
+        val ownerSpec = method0.withScope(ownerScope)
         val clazzName = getClassName(ownerSpec.clazz, ownerSpec)
         val packagePrefix = (ownerScope.parent?.path ?: emptyList())
             .joinToString("") { name -> name + "_" }
-        val base = if (method.method is Constructor) "_init_" else {
-            super.getMethodName0(method)
+        val base = if (method0.method is Constructor) "_init_" else {
+            super.getMethodName0(method0)
                 .replace('-', '_')
                 .replace('.', '_')
         }
-        return "${packagePrefix}${clazzName}_${base}_${hashMethodParameters(method)}"
+        return "${packagePrefix}${clazzName}_${base}_${hashMethodParameters(method0)}"
     }
 
     override fun getExtension(headerOnly: Boolean): String {

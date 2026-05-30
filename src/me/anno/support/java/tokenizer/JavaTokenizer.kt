@@ -10,7 +10,7 @@ class JavaTokenizer(src: String, fileName: String) :
     }
 
     companion object {
-        private val KEYWORDS = setOf(
+        val KEYWORDS = setOf(
             "true", "false", "null",
             "package", "import",
             "class", "interface",
@@ -28,7 +28,10 @@ class JavaTokenizer(src: String, fileName: String) :
             "transient", // not serialized
             "default", // default methods for interfaces
             "yield", // inside switches with expressions
-            "non-sealed"
+            "non-sealed",
+
+            "byte", "short", "int", "long", "char",
+            "float", "double", "boolean"
         )
     }
 }

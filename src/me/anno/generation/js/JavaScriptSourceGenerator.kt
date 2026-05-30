@@ -72,9 +72,9 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun getExtension(headerOnly: Boolean): String = "js"
 
-    override fun getMethodName(method: Specialization): String {
-        val base = if (method.method is Constructor) "__init_" else super.getMethodName(method)
-        return "${base}_${hashMethodParameters(method)}"
+    override fun getMethodName(method0: Specialization): String {
+        val base = if (method0.method is Constructor) "__init_" else super.getMethodName(method0)
+        return "${base}_${hashMethodParameters(method0)}"
     }
 
     override fun getMainMethodFile(dst: File): File {

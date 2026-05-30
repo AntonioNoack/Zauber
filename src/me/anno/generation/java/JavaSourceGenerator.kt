@@ -4,6 +4,7 @@ import me.anno.generation.*
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCall
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
+import me.anno.support.java.tokenizer.JavaTokenizer
 import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringUtils.capitalize1
@@ -18,6 +19,8 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isSigned
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -69,15 +72,30 @@ open class JavaSourceGenerator : Generator() {
 
     companion object {
 
+        /**
+         * we may have multiple mangling logic,
+         * and defaults shall be empty, so we need prefixes.
+         * These prefixes must be special characters.
+         * Reserved for that role: UVWXYZ, U = unsigned, Z = specialization
+         * */
+        val manglingBasis = 10 + ('U'.code - 'A'.code)
+
         val protectedJavaTypes by threadLocal {
             Types.run {
                 mapOf(
                     String to BoxedType("java.lang.String", "java.lang.String"),
                     Boolean to BoxedType("Boolean", "boolean"),
+
                     Byte to BoxedType("Byte", "byte"),
                     Short to BoxedType("Short", "short"),
                     Int to BoxedType("Integer", "int"),
                     Long to BoxedType("Long", "long"),
+
+                    UByte to BoxedType("UByte", "byte"),
+                    UShort to BoxedType("UShort", "short"),
+                    UInt to BoxedType("UInt", "int"),
+                    ULong to BoxedType("ULong", "long"),
+
                     Char to BoxedType("Character", "char"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
@@ -662,15 +680,37 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun getMethodName(method: Specialization): String {
-        return getMethodName0(method)
+    open fun getMethodName(method0: Specialization): String {
+        return getMethodName0(method0) + getUnsignedMangling(method0)
     }
 
-    fun getMethodName0(methodSpec: Specialization): String {
-        val method = methodSpec.method
-        return if (methodSpec.isNotEmpty()) {
-            "${method.name}_${methodSpec.hash.toString(36)}"
+    fun getMethodName0(method0: Specialization): String {
+        val method = method0.method
+        return if (method0.isNotEmpty()) {
+            "${method.name}_Z${method0.hash.toString(manglingBasis)}"
         } else method.name
+    }
+
+    /**
+     * println(Int) and println(UInt) would have the same signature in Java,
+     * so we must separate them
+     * */
+    fun getUnsignedMangling(method0: Specialization): String {
+        var flags = 0L
+        val params = method0.method.valueParameters
+        var j = 0
+        for (i in params.indices) {
+            val type = params[i].type
+            if (type.isUnsigned()) {
+                check(j < 64) {
+                    "Only parameters<64 may be unsigned (causes mangling issues)"
+                }
+                flags = flags or (1L shl j)
+                j++
+            } else if (type.isSigned()) j++
+        }
+        return if (flags == 0L) ""
+        else "_U${flags.toString(manglingBasis)}"
     }
 
     open fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
@@ -1025,7 +1065,10 @@ open class JavaSourceGenerator : Generator() {
         val type = field.type
         appendType(type, graph.method.memberScope, false)
         builder.append(' ')
-        builder.append(field.name).append(" = ")
+        if (isProtectedFieldName(field.newName)) {
+            field.newName += "_"
+        }
+        builder.append(field.newName).append(" = ")
         appendDefaultValue(type)
         builder.append(";")
         nextLine()
@@ -1066,8 +1109,12 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendNumber(type: Type, expr: NumberExpression) {
         when (type) {
-            Types.Int, Types.UInt,
-            Types.Long, Types.ULong -> builder.append(expr.asInt)
+            // todo how do we want to handle U-ints? ideally as ints, but whenever we call or so...
+            //  -> we need to mangle the method name for unsigned parameters
+            Types.Byte, Types.UByte -> builder.append(expr.asInt.toByte())
+            Types.Short, Types.UShort -> builder.append(expr.asInt.toShort())
+            Types.Int, Types.UInt -> builder.append(expr.asInt.toInt())
+            Types.Long, Types.ULong -> builder.append(expr.asInt).append('L')
             Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()).append('f')
             Types.Double -> builder.append(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type")
@@ -1096,7 +1143,7 @@ open class JavaSourceGenerator : Generator() {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     val localField = field.fromLocalField
                     if (localField != null) {
-                        builder.append(localField.name)
+                        builder.append(localField.newName)
                     } else {
                         builder.append("tmp").append(field.id)
                         usedFields.add(field)
@@ -1222,7 +1269,7 @@ open class JavaSourceGenerator : Generator() {
             }
             is SimpleGetLocalField -> {
                 if (expr.field.id == 0 && expr.field.type in nativeNumbers) builder.append("this.content")
-                else builder.append(expr.field.name)
+                else builder.append(expr.field.newName)
             }
             is SimpleGetField -> {
                 if (expr.dst.dst.id >= 0) {
@@ -1231,7 +1278,7 @@ open class JavaSourceGenerator : Generator() {
                 } // else skip
             }
             is SimpleSetLocalField -> {
-                builder.append(expr.field.name)
+                builder.append(expr.field.newName)
                 builder.append(" = ")
 
                 appendFieldName(graph, expr.value)
@@ -1366,6 +1413,19 @@ open class JavaSourceGenerator : Generator() {
                             else -> null
                         }
                         if (supportsType && symbol != null) {
+
+                            // some unsigned operations need special helpers: unsigned div, unsigned rem
+                            if ((methodName == "div" || methodName == "rem") && type.isUnsigned()) {
+                                TODO("Special call: $methodName on $type")
+                            }
+
+                            when (type) {
+                                Types.Short, Types.UShort -> builder.append("(short) (")
+                                Types.Byte, Types.UByte -> builder.append("(byte) (")
+                                else -> {}
+                            }
+
+                            // append first parameter
                             if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
                                 check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
                                     "$type is missing field 'content'"
@@ -1375,8 +1435,15 @@ open class JavaSourceGenerator : Generator() {
                             } else {
                                 appendFieldName(graph, expr.thisInstance)
                             }
+
                             builder.append(symbol)
                             appendFieldName(graph, expr.valueParameters[0])
+
+                            when (type) {
+                                Types.Short, Types.UShort,
+                                Types.Byte, Types.UByte -> builder.append(")")
+                                else -> {}
+                            }
                             true
                         } else false
                     }
@@ -1609,16 +1676,27 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    open fun isProtectedFieldName(fieldName: String): Boolean {
+        // todo this may result in collisions :/
+        return fieldName in JavaTokenizer.KEYWORDS
+    }
+
     fun appendFieldName(field: Field) {
         if (!field.ownerScope.isClassLike()) {
             // append("__").append(field.ownerScope.depth).append('_')
+        }
+        if (isProtectedFieldName(field.newName)) {
+            field.newName += "_"
         }
         builder.append(field.newName)
     }
 
     fun appendFieldName(field: Parameter) {
         // append("__").append(field.scope.depth).append('_')
-        builder.append(field.name)
+        if (isProtectedFieldName(field.newName)) {
+            field.newName += "_"
+        }
+        builder.append(field.newName)
     }
 
     open fun appendPackageDeclaration(packagePath: List<String>, file: File) {

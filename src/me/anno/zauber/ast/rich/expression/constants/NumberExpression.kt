@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression.constants
 
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -7,6 +8,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import java.math.BigInteger
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -118,10 +120,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
             return if (value.startsWith('-')) -result else +result
         }
 
-        fun parseInt(value: String, basis: Int): Long {
+        fun parseInt(value: String, basis: Int, isUnsigned: Boolean): Long {
             if (basis == CHAR_BASE) return parseChar(value).code.toLong()
 
-            var result = 0L
             var i = 0
             val isNegative = value.startsWith('-')
             if (isNegative) i++ // skip sign
@@ -131,26 +132,38 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 check(basis != 10)
                 i += 2
             }
-            while (i < value.length) {
-                val char = value[i++]
-                if (char == '_') continue
-                val digit = parseDigit(char)
-                if (digit >= basis) {
-                    i--
-                    break
+
+            var result = 0L
+            try {
+                while (i < value.length) {
+                    val char = value[i++]
+                    if (char == '_') continue
+                    val digit = parseDigit(char)
+                    if (digit >= basis) {
+                        i--
+                        break
+                    }
+                    if (isUnsigned) {
+                        result = multiplyExactUnsigned(result, basis.toLong())
+                        result = addExactUnsigned(result, digit.toLong())
+                    } else {
+                        // sum negatively, so we can parse min_value
+                        result = Math.multiplyExact(result, basis.toLong())
+                        result = Math.subtractExact(result, digit.toLong())
+                    }
                 }
-                // sum negatively, so we can parse min_value
-                result = Math.multiplyExact(result, basis.toLong())
-                result = Math.subtractExact(result, digit.toLong())
+            } catch (e: ArithmeticException) {
+                throw IllegalStateException("${e.message} in '$value'@$i, basis $basis, ${if (isUnsigned) "unsigned" else "signed"}")
             }
+
             if (i < value.length && value[i] in "lLuU") i++
             check(i == value.length) {
                 "Missed reading int part '${value[i]}' @$i in '$value'"
             }
-            if (!isNegative && result == Long.MIN_VALUE) {
+            if (!isNegative && !isUnsigned && result == Long.MIN_VALUE) {
                 throw ArithmeticException("long overflow")
             }
-            return if (isNegative) result else -result
+            return if (isNegative || isUnsigned) result else -result
         }
 
         fun parseChar(value: String): Char {
@@ -183,6 +196,39 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 else -> 10
             }
         }
+
+        fun Type.isFloat() = this == Types.Half || this == Types.Float || this == Types.Double
+        fun Type.isSigned() = this == Types.Byte || this == Types.Short || this == Types.Int || this == Types.Long
+        fun Type.isUnsigned() = this == Types.UByte || this == Types.UShort || this == Types.UInt || this == Types.ULong
+
+        fun addExactUnsigned(a: Long, b: Long): Long {
+            val remainingSpace = min(a.countLeadingZeroBits(), b.countLeadingZeroBits())
+            if (remainingSpace <= 1) {
+                // todo we could be smarter here...
+                val ai = BigInteger(a.toULong().toString())
+                val bi = BigInteger(b.toULong().toString())
+                val result = ai + bi
+                check(result.bitLength() <= 64) {
+                    "Cannot multiply ${a.toULong()} by ${b.toULong()} safely"
+                }
+                return result.toLong() // exact version would crash
+            }
+            return a + b
+        }
+
+        fun multiplyExactUnsigned(a: Long, b: Long): Long {
+            val usedBits = (64 - a.countLeadingZeroBits()) + (64 - b.countLeadingZeroBits())
+            if (usedBits > 64) {
+                val ai = BigInteger(a.toULong().toString())
+                val bi = BigInteger(b.toULong().toString())
+                val result = ai * bi
+                check(result.bitLength() <= 64) {
+                    "Cannot multiply ${a.toULong()} by ${b.toULong()} safely"
+                }
+                return result.toLong() // exact version would crash
+            }
+            return a * b
+        }
     }
 
     val basis = parseBasis(value)
@@ -199,19 +245,23 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         else -> resolveIntType()
     }
 
-    val isFloaty = resolvedType0 == Types.Half || resolvedType0 == Types.Float || resolvedType0 == Types.Double
+    val isFloat = resolvedType0.isFloat()
     val isChar get() = value.first() == '\''
+    val isUnsigned = resolvedType0.isUnsigned()
 
     // todo bug: ULong would currently overflow, although it is correct and valid
     val asFloat = parseFloat(value, basis) // should always work
-    val asInt = if (isFloaty) asFloat.toLong() else parseInt(value, basis)
+    val asInt = if (isFloat) asFloat.toLong() else parseInt(value, basis, isUnsigned)
 
     private fun resolveIntType(): ClassType {
         val extraLength = value.count { it in "_-" }
         return if (value.length <= 10 + extraLength &&
             value.replace("_", "")
                 .toIntOrNull() != null
-        ) Types.Int else Types.Long
+        ) Types.Int else if (value.length <= 20 + extraLength &&
+            value.replace("_", "")
+                .toLongOrNull() != null
+        ) Types.Long else Types.ULong
     }
 
     private fun resolveHexIntType(): ClassType {
@@ -221,7 +271,10 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
             value.removeRange(start, start + 2)
                 .replace("_", "")
                 .toIntOrNull(16) != null
-        ) Types.Int else Types.Long
+        ) Types.Int else if (value.length <= 16 + extraLength &&
+            value.replace("_", "")
+                .toLongOrNull(16) != null
+        ) Types.Long else Types.ULong
     }
 
     private fun resolveBinIntType(): ClassType {
@@ -231,7 +284,10 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
             value.removeRange(start, start + 2)
                 .replace("_", "")
                 .toIntOrNull(2) != null
-        ) Types.Int else Types.Long
+        ) Types.Int else if (value.length <= 64 + extraLength &&
+            value.replace("_", "")
+                .toLongOrNull(2) != null
+        ) Types.Long else Types.ULong
     }
 
     private fun typeBySuffix(): ClassType? {
@@ -262,32 +318,39 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type {
-        val dataType = resolvedType0
-        val targetType = context.targetType ?: return dataType
-        if (targetType == dataType) return targetType
-        // todo if targetType is nullable, remove that type
-        if (dataType == Types.Int && when (targetType) {
-                Types.Long -> true
+        val actualType = resolvedType0
+        val expectedType = context.targetType?.nonNull() ?: return actualType
+        if (expectedType == actualType) return expectedType
+
+        if ((actualType == Types.Int || actualType == Types.Long || actualType == Types.ULong) &&
+            when (expectedType) {
+                Types.Long, Types.ULong -> true
+
                 Types.Byte -> checkIntLoss { it.toInt().toByte().toLong() }
                 Types.Short -> checkIntLoss { it.toInt().toShort().toLong() }
-                Types.Half, // todo check for loss
+
+                Types.UByte -> checkIntLoss { it.toInt().toUByte().toLong() }
+                Types.UShort -> checkIntLoss { it.toInt().toUShort().toLong() }
+                Types.UInt -> checkIntLoss { it.toUInt().toLong() }
+
+                Types.Half -> checkFloatLoss { it.toHalf().toDouble() }
                 Types.Float -> checkFloatLoss { it.toFloat().toDouble() }
                 Types.Double -> true
                 else -> false
             }
-        ) return targetType
-        if (dataType == Types.Half && targetType == Types.Double) {
-            // todo toHalf()
-            checkFloatLoss { it.toFloat().toDouble() }
-            return targetType
+        ) return expectedType
+
+        if ((actualType == Types.Float || actualType == Types.Double) && expectedType == Types.Half) {
+            checkFloatLoss { it.toHalf().toDouble() }
+            return expectedType
         }
-        if (dataType == Types.Float && targetType == Types.Double) {
+
+        if (actualType == Types.Double && expectedType == Types.Float) {
             checkFloatLoss { it.toFloat().toDouble() }
-            return targetType
+            return expectedType
         }
-        // todo if resolvedType is int, but context requests byte or short,
-        //  and the value fits, then return that instead
-        return dataType
+
+        return actualType
     }
 
     fun checkIntLoss(cast: (Long) -> Long): Boolean {

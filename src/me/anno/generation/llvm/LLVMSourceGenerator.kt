@@ -247,9 +247,9 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             .append(")")
     }
 
-    override fun getMethodName(method: Specialization): String {
-        val base = if (method.method is Constructor) "_init_" else super.getMethodName0(method)
-        return "@${method.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method)}"
+    override fun getMethodName(method0: Specialization): String {
+        val base = if (method0.method is Constructor) "_init_" else super.getMethodName0(method0)
+        return "@${method0.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method0)}"
     }
 
     fun appendMethodCode(method0: Specialization) {
