@@ -2,7 +2,6 @@ package me.anno.zauber.types
 
 import me.anno.generation.Specializations.specialization
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.types.impl.TypeOfField
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase.Companion.resolveTypeByName
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -75,10 +74,10 @@ abstract class Type {
         }
     }
 
-    fun removeNull(): Type {
+    fun nonNull(): Type {
         return when (this) {
             is ClassType -> this
-            is UnresolvedType -> resolvedName.removeNull()
+            is UnresolvedType -> resolvedName.nonNull()
             is NullType -> Types.Nothing
             is UnionType -> {
                 if (types.any { it == NullType }) unionTypes(types - NullType)
@@ -88,7 +87,7 @@ abstract class Type {
                 if (types.any { it is NotType && it.type == NullType }) this
                 else andTypes(this, NotType(NullType))
             }
-            is ModifierType -> withType(type.removeNull())
+            is ModifierType -> withType(type.nonNull())
             else -> andTypes(this, NotType(NullType))
         }
     }
@@ -178,9 +177,6 @@ abstract class Type {
                 val typeArgs = typeParameters
                 if (typeArgs.isNullOrEmpty()) return this
                 val newTypeArgs = typeArgs.map { genericValues.resolveGenerics(selfType, it) }
-                if (false && typeArgs != newTypeArgs) {
-                    LOGGER.info("Mapped types: $typeArgs -> $newTypeArgs")
-                }
                 ClassType(clazz, newTypeArgs)
             }
             NullType, UnknownType -> this
@@ -287,15 +283,15 @@ abstract class Type {
     }
 
     abstract fun toStringImpl(depth: Int): String
-    override fun toString(): String = toStringImpl(10)
+    override fun toString(): String {
+        return toStringImpl(10)
+    }
 
     fun toString(depth: Int): String {
         return if (depth >= 0) toStringImpl(depth - 1) else "${javaClass.simpleName}..."
     }
 
     open fun not(): Type = NotType(this)
-
-    fun nonNull(): Type = andTypes(this, NotType(NullType))
 
     open val resolvedName: Type get() = this
 }

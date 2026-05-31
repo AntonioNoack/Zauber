@@ -3,14 +3,17 @@ package me.anno.zauber.typeresolution
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.Zauber.root
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.*
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.ComptimeValue
+import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.NonObjectClassType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NotType
 import me.anno.zauber.types.impl.arithmetic.NullType
@@ -39,22 +42,6 @@ object TypeResolution {
     // todo make this depend on which language we currently parse
     val langScope by threadLocal { root.getOrPut(STDLIB_NAME, null) }
 
-    fun getSelfType(scope: Scope): Type? {
-        // println("Searching selfType for $scope")
-        var scope = scope
-        while (true) {
-            if (scope.isClassLike()) {
-                return scope.typeWithArgs
-            }
-
-            // if inside method, we need to check method.selfType
-            val selfType = scope.selfAsMethod?.selfType
-            if (selfType != null) return selfType
-
-            scope = scope.parent ?: return null
-        }
-    }
-
     var depth = 0
 
     /**
@@ -66,9 +53,10 @@ object TypeResolution {
      * */
     fun resolveType(context: ResolutionContext, expr: Expression): Type {
         // if already resolved, just use that type
-        LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
+        val withLogging = LOGGER.isInfoEnabled
+        if (withLogging) LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
         val type = expr.resolveReturnType(context).resolvedName.specialize(context)
-        LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
+        if (withLogging) LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
         return type
     }
 

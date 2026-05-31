@@ -40,7 +40,7 @@ class FieldExpression(
 
     override fun resolveField(context: ResolutionContext): ResolvedField {
         if (LOGGER.isInfoEnabled) LOGGER.info("FieldExpr.findGenerics(${field.selfType ?: field.ownerScope}.${field.name} in context), must return non-null")
-        val scopeSelfType = TypeResolution.getSelfType(scope)
+        val scopeSelfType = scope.selfType
         val fieldReturnType = FieldResolver.getFieldReturnType(scopeSelfType, field, context.targetType)
         return FindMemberMatch.findMemberMatch(
             field, fieldReturnType, context.targetType,

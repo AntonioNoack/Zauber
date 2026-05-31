@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.logging.LogManager
@@ -8,13 +9,11 @@ import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.*
-import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.types.impl.arithmetic.AndType
-import me.anno.zauber.types.impl.arithmetic.NotType
-import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.impl.arithmetic.UnionType
-import me.anno.zauber.types.impl.arithmetic.UnknownType
+import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.NonObjectClassType
+import me.anno.zauber.types.impl.arithmetic.*
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 /**
@@ -112,8 +111,10 @@ object Inheritance {
 
         if (typeParamIdx == -1) {
             if (insertMode != InsertMode.WEAK) {
-                LOGGER.warn("Missing generic parameter ${expectedType.name}, " +
-                        "ignoring it, expected: $expectedTypeParams")
+                LOGGER.warn(
+                    "Missing generic parameter ${expectedType.name}, " +
+                            "ignoring it, expected: $expectedTypeParams"
+                )
             }// else can be safely ignored ;)
             return true
         }
@@ -361,7 +362,7 @@ object Inheritance {
             // todo if super type has generics, we need to inject them into the super type
             return getSuperCalls(actualType.clazz).any { superCall ->
                 val superType = superCall.type
-                LOGGER.info("super($actualType): $superType")
+                if (LOGGER.isInfoEnabled) LOGGER.info("super($actualType): $superType")
                 isSubTypeOf(
                     expectedType,
                     superType,

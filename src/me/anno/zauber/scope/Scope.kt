@@ -1,7 +1,7 @@
 package me.anno.zauber.scope
 
-import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
+import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
@@ -116,10 +116,9 @@ class Scope(val name: String, val parent: Scope? = null) {
     operator fun get(scopeInitType: ScopeInitType): Scope {
         // println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
 
-        parent?.get(scopeInitType)
-
-        if (scopeInitType > this@Scope.scopeInitType) {
-            this@Scope.scopeInitType = scopeInitType
+        if (scopeInitType > this.scopeInitType) {
+            parent?.get(scopeInitType)
+            this.scopeInitType = scopeInitType
         }
 
         while (initParts.isNotEmpty() && initParts.last().type < scopeInitType) {
@@ -623,7 +622,16 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     val atomic = if (parent == null) rootIndex.incrementAndGet() else -1
-    val root: Scope get() = parent?.root ?: this
+    val root: Scope by lazy { parent?.root ?: this }
+
+    val selfType: Type by lazy {
+        if (isClassLike()) typeWithArgs
+        else {
+            this[ScopeInitType.AFTER_DISCOVERY]
+            val selfType = selfAsMethod?.selfType
+            selfType ?: parent!!.selfType
+        }
+    }
 
     override fun hashCode(): Int {
         var hash = 1

@@ -1,12 +1,12 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class TryCatchTests {
@@ -180,7 +180,7 @@ class TryCatchTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
-        assertEquals(listOf("Hello World"), runtime.printed)
+        assertEquals("Hello World\n", runtime.printed.toString())
     }
 
     @Test
@@ -206,7 +206,7 @@ class TryCatchTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
-        assertEquals(listOf("Hello ", "World"), runtime.printed)
+        assertEquals("Hello \nWorld\n", runtime.printed.toString())
     }
 
     @Test
@@ -263,7 +263,7 @@ class TryCatchTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
-        assertEquals(listOf("0", "1", "2", "3"), runtime.printed)
+        assertEquals("0\n1\n2\n3\n", runtime.printed.toString())
     }
 
     @Test

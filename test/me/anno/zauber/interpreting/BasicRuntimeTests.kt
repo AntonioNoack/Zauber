@@ -50,7 +50,7 @@ class BasicRuntimeTests {
             external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
-        assertEquals(listOf("Hello World!"), runtime.printed)
+        assertEquals("Hello World!\n", runtime.printed.toString())
         assertEquals(0, value.castToInt())
     }
 

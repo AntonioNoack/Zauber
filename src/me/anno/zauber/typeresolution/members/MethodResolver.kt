@@ -8,7 +8,6 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.members.FieldResolver.resolveField
@@ -31,7 +30,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         val sit1 = ScopeInitType.AFTER_OVERRIDES
         val sit2 = ScopeInitType.AFTER_DISCOVERY
 
-        val scopeSelfType = getSelfType(scope)
+        val scopeSelfType = scope.selfType
         val children = scope[sit1].children
 
         if (name == "copy") DataClassGenerator.generateCopyMethodIfNeeded(

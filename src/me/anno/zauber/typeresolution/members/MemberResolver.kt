@@ -42,14 +42,18 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
 
             // todo objects don't need actualSelfType, if properly in scope or imported...
             if ((expectedSelfType != null) != (actualSelfType != null)) {
-                LOGGER.info("SelfType mismatch: $expectedSelfType vs $actualSelfType")
+                if (LOGGER.isInfoEnabled) {
+                    LOGGER.info("SelfType mismatch: $expectedSelfType vs $actualSelfType")
+                }
                 return null
             }
 
-            LOGGER.info("Checking types: $expectedTypeParameters vs $actualTypeParameters")
-            LOGGER.info("  and   values: $expectedValueParameters vs $actualValueParameters")
-            LOGGER.info("  and   selves: $expectedSelfType vs $actualSelfType")
-            LOGGER.info("  and  returns: $expectedReturnType vs $actualReturnType")
+            if (LOGGER.isInfoEnabled) {
+                LOGGER.info("Checking types: $expectedTypeParameters vs $actualTypeParameters")
+                LOGGER.info("  and   values: $expectedValueParameters vs $actualValueParameters")
+                LOGGER.info("  and   selves: $expectedSelfType vs $actualSelfType")
+                LOGGER.info("  and  returns: $expectedReturnType vs $actualReturnType")
+            }
 
             // first match everything by name
             // todo resolve default values... -> could be expanded earlier :)
@@ -58,12 +62,12 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             val isVararg = expectedValueParameters.lastOrNull()?.isVararg == true
             if (isVararg) {
                 if (expectedValueParameters.size > actualValueParameters.size + 1) {
-                    LOGGER.info("  param-size too low, ${expectedValueParameters.size} vs ${actualValueParameters.size}")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("  param-size too low, ${expectedValueParameters.size} vs ${actualValueParameters.size}")
                     return null
                 }
             } else {
                 if (expectedValueParameters.size != actualValueParameters.size) {
-                    LOGGER.info("  param-size mismatch: expected ${expectedValueParameters.size}, but got ${actualValueParameters.size}")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("  param-size mismatch: expected ${expectedValueParameters.size}, but got ${actualValueParameters.size}")
                     return null
                 }
             }
@@ -75,11 +79,11 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
 
             val sortedValueParameters = resolveNamedParameters(expectedValueParameters, actualValueParameters)
                 ?: run {
-                    LOGGER.info("  param-name mismatch")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("  param-name mismatch")
                     return null
                 }
 
-            LOGGER.info("Sorted value parameters: $sortedValueParameters")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Sorted value parameters: $sortedValueParameters")
 
             check(sortedValueParameters.size == expectedValueParameters.size) {
                 "Incorrectly sorted value parameters, expected ${expectedValueParameters.size} but got ${sortedValueParameters.size}"
@@ -88,7 +92,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             val actualTypeParametersI = actualTypeParameters?.readonly()
                 ?: ParameterList(expectedTypeParameters)
 
-            LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters, expected: $expectedTypeParameters")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Actual type parameters: $actualTypeParametersI from $actualTypeParameters, expected: $expectedTypeParameters")
 
             // LOGGER.info("Checking method-match, self-types: $expectedSelfType vs $actualSelfType")
             if (expectedSelfType != null &&
@@ -103,10 +107,10 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
                     InsertMode.STRONG,
                     matchScore?.at(0)
                 )
-                LOGGER.info("Done checking self-type")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Done checking self-type")
 
                 if (!matchesSelfType) {
-                    LOGGER.info("  selfType-mismatch: $actualSelfType !is $expectedSelfType")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("  selfType-mismatch: $actualSelfType !is $expectedSelfType")
                     return null
                 }
             }
@@ -115,7 +119,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             //  missing generic parameters can be temporarily inserted...
             // LOGGER.info("matchesReturnType($expectedReturnType vs $actualReturnType)")
             if (expectedReturnType != null && actualReturnType != null) {
-                LOGGER.info("Start checking return-type")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Start checking return-type")
                 /*val matchesReturnType =*/ isSubTypeOf(
                     expectedReturnType,
                     actualReturnType,
@@ -124,14 +128,14 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
                     InsertMode.WEAK,
                     matchScore?.at(expectedValueParameters.size + 1)
                 )
-                LOGGER.info("Done checking return-type")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Done checking return-type")
 
                 /*if (!matchesReturnType) {
                     LOGGER.info("  returnType-mismatch: $actualReturnType !is $expectedReturnType")
                     return null
                 }*/
             } else {
-                LOGGER.info(
+                if (LOGGER.isInfoEnabled) LOGGER.info(
                     "Skipped return-type matching: " +
                             "$expectedReturnType != null && " +
                             "$actualReturnType != null"
@@ -141,8 +145,10 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
             for (i in expectedValueParameters.indices) {
                 val expectedValueParameter = expectedValueParameters[i]
                 val actualValueParameter = sortedValueParameters[i]
-                LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
-                LOGGER.info("                       [$i]: $expectedTypeParameters vs $actualTypeParametersI")
+                if (LOGGER.isInfoEnabled) {
+                    LOGGER.info("Start checking argument[$i]: $expectedValueParameter vs $actualValueParameter")
+                    LOGGER.info("                       [$i]: $expectedTypeParameters vs $actualTypeParametersI")
+                }
                 if (!isSubTypeOf(
                         actualSelfType,
                         expectedValueParameter, actualValueParameter,
@@ -151,15 +157,17 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
                     )
                 ) {
                     val type = actualValueParameter.getType(expectedValueParameter.type)
-                    LOGGER.info("  type mismatch: $type is not always a ${expectedValueParameter.type}")
-                    LOGGER.info("End checking arguments")
-                    LOGGER.info("End checking argument[$i]")
+                    if (LOGGER.isInfoEnabled) {
+                        LOGGER.info("  type mismatch: $type is not always a ${expectedValueParameter.type}")
+                        LOGGER.info("End checking arguments")
+                        LOGGER.info("End checking argument[$i]")
+                    }
                     return null
                 }
-                LOGGER.info("End checking argument[$i]")
+                if (LOGGER.isInfoEnabled) LOGGER.info("End checking argument[$i]")
             }
 
-            LOGGER.info("Found match: $actualTypeParametersI")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Found match: $actualTypeParametersI")
             return actualTypeParametersI.readonly()
         }
     }

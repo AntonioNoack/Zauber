@@ -187,7 +187,7 @@ class SimpleCall(
             if (selfInstance != null) runtime[selfInstance]
             else null
 
-        println("Running $sample with $thisInstance/$selfInstance")
+        // println("Running $sample with $thisInstance/$selfInstance")
 
         val method = methods[thisInstance.clazz.type as ClassType] ?: sample
         val method1 = Specialization(method.memberScope, specialization.typeParameters)

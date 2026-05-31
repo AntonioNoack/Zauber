@@ -1,9 +1,9 @@
 package me.anno.zauber.interpreting
 
+import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class DeferTests {
@@ -30,7 +30,7 @@ class DeferTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
-        assertEquals(listOf("Hello ", "World"), runtime.printed)
+        assertEquals("Hello \nWorld\n", runtime.printed.toString())
     }
 
     @Test
@@ -65,7 +65,7 @@ class DeferTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
-        assertEquals(listOf("Hello ", "World"), runtime.printed)
+        assertEquals("Hello \nWorld\n", runtime.printed.toString())
     }
 
     @Test
@@ -91,7 +91,7 @@ class DeferTests {
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
-        assertEquals(listOf("Hello!"), runtime.printed)
+        assertEquals("Hello!\n", runtime.printed.toString())
     }
 
 }

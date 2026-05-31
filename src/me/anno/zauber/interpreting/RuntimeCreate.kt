@@ -3,13 +3,13 @@ package me.anno.zauber.interpreting
 import me.anno.utils.Half
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 object RuntimeCreate {
 
-    fun Runtime.createNumber(base: NumberExpression): Instance {
-        val type = base.resolvedType ?: base.resolvedType0
+    fun Runtime.createNumber(base: NumberExpression, type: Type): Instance {
         val rawValue = when (type) {
             Types.Byte -> base.asInt.toByte()
             Types.UByte -> base.asInt.toUByte()
@@ -22,6 +22,7 @@ object RuntimeCreate {
             Types.Half -> base.asFloat.toHalf()
             Types.Float -> base.asFloat.toFloat()
             Types.Double -> base.asFloat
+            Types.Char -> base.asInt.toInt().toChar()
             else -> throw NotImplementedError("Create instance of type $type")
         }
         val instance = getClass(type).createInstance()

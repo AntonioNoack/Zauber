@@ -45,7 +45,7 @@ class Runtime {
 
     val callStack = ArrayList<Call>()
     val externalMethods = HashMap<ExternalKey, ExternalMethod>()
-    val printed = ArrayList<String>()
+    val printed = StringBuilder()
 
     fun getCall() = callStack.last()
 
@@ -154,7 +154,7 @@ class Runtime {
             }
             val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]
-                ?: throw IllegalStateException("Missing external method $key")
+                ?: throw IllegalStateException("Missing external method ${key.str()}")
             val value = method.process(methodOwnerInstance, valueParameters)
             return BlockReturn(ReturnType.RETURN, value)
         }

@@ -17,7 +17,7 @@ class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
     override fun execute(): BlockReturn? {
         // fast-path, because it cannot crash
         val runtime = runtime
-        runtime[dst] = runtime.createNumber(base)
+        runtime[dst] = runtime.createNumber(base, dst.type)
         return null
     }
 }

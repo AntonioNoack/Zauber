@@ -21,4 +21,8 @@ data class ExternalKey(val ownerScope: Scope, val methodName: String, val valueP
         val method0 = Specialization(method.memberScope, emptyParameterList())
         return sample.getMethodName(method0)
     }
+
+    fun str(): String {
+        return "$ownerScope.$methodName(${valueParameterTypes.joinToString(", ")})"
+    }
 }

@@ -97,6 +97,20 @@ class BaselineRuntimeTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testNumberConversionsBenchmark() {
+        LogManager.disable("ResolutionUtils,MinimalCompiler")
+        for (i in 0 until 10) {
+            val t0 = System.nanoTime()
+            try {
+                testNumberConversionsImpl()
+            } catch (e: Exception) {
+            }
+            val t1 = System.nanoTime()
+            println("Run $i, ${(t1 - t0) * 1e-6f } ms")
+        }
+    }
+
+    @Test
     fun testNonNumberComparisons() {
         testNonNumberComparisonsImpl()
     }

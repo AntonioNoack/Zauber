@@ -6,9 +6,7 @@ import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.Stdlib.registerAllMethods
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
-import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Specialization
-import me.anno.zauber.types.Types
 import java.io.File
 
 /**
@@ -35,18 +33,11 @@ class RuntimeCompiler : MinimalCompiler() {
 
         registerAllMethods() // register testing methods
 
-        // register printing to buffer, so we can keep track of it
-        val buffer = StringBuilder()
-        runtime.register(langScope, "println", listOf(Types.Int)) { _, params ->
-            buffer.append(params[0].castToInt()).append('\n')
-            runtime.getUnit()
-        }
-
         val main = mainMethod
         val self = runtime.getObjectInstance(main.ownerScope.typeWithArgs)
         val spec = Specialization(main.memberScope, emptyParameterList())
         val result = runtime.executeCall(self, null, spec, emptyList())
         check(result.type == ReturnType.RETURN) { "Call failed: $result" }
-        return buffer.toString()
+        return runtime.printed.toString()
     }
 }

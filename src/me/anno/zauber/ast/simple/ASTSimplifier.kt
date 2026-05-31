@@ -33,6 +33,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
+import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -54,7 +55,7 @@ object ASTSimplifier {
     val voidResult = FlowResult(null, null, null)
 
     private val cache by threadLocal { HashMap</*Method*/Specialization, SimpleGraph>() }
-    private val nativeNumbers by threadLocal {
+    val nativeNumbers by threadLocal {
         Types.run {
             listOf(
                 Types.Byte, Types.UByte,
@@ -592,10 +593,16 @@ object ASTSimplifier {
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
-        val fieldType = field.resolveValueType(context)
-        val block2 = simplifyImpl(context.withTargetType(fieldType), expr.value, block1, true)
+        val expectedValueType = field.resolveValueType(context)
+        val block2 = simplifyImpl(context.withTargetType(expectedValueType), expr.value, block1, true)
         val block2v = block2.value ?: return block2
         val value = block2v.value
+
+        val actualValueType = value.type
+        // check that assignments use the correct type
+        check(isSubTypeOf(expectedValueType, actualValueType)) {
+            "Expected value for $field-setter to be $expectedValueType, but got $actualValueType"
+        }
 
         // println("block for self: ${block1v.block}")
         // println("block for value: ${block2v.block}")

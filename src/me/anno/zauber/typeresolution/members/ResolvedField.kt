@@ -1,6 +1,5 @@
 package me.anno.zauber.typeresolution.members
 
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
@@ -16,6 +15,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -163,7 +163,7 @@ class ResolvedField(
         get() = resolved.isMutableEx
 
     fun getValueType(): Type {
-        LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}, selfType: $selfType")
+        if (LOGGER.isInfoEnabled) LOGGER.info("Getting type of $resolved in scope ${codeScope.pathStr}, selfType: $selfType")
 
         val valueType = resolved.resolveValueType(context)
         val valueTypeSpec = specialization.typeParameters.resolveGenerics(selfType, valueType)

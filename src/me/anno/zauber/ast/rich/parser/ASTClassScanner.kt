@@ -36,7 +36,6 @@ import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.scope.lazy.TokenSubList
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import kotlin.math.max
@@ -424,7 +423,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val typeParameters = readTypeParameterDeclarations(ownerScope, false)
 
         val selfType0 = readSelfTypeIfPresent(end)
-        val selfType = selfType0 ?: getSelfType(ownerScope)
+        val selfType = selfType0 ?: ownerScope.selfType
         // if (selfType != null) selfType = selfType.resolve()
 
         val fieldName = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
@@ -655,7 +654,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             val typeParameters = readTypeParameterDeclarations(methodScope, true)
 
             val selfType0 = readSelfTypeIfPresent(end)
-            val selfType = selfType0 ?: getSelfType(ownerScope)
+            val selfType = selfType0 ?: ownerScope.selfType
 
             val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 

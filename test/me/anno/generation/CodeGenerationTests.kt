@@ -3,6 +3,7 @@ package me.anno.generation
 import me.anno.compilation.MinimalCompiler
 import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.types.Type
@@ -386,7 +387,8 @@ abstract class CodeGenerationTests {
         //  byte -> short -> int -> long,
         //  ubyte -> ushort -> uint -> ulong
 
-        // todo some languages need to escape these names :D, e.g. Java
+        // todo byte and shorts actually create ints... respect/implement that...
+
         val code: String = """
             fun main() {
                 val byte: Byte = ${Byte.MAX_VALUE}
@@ -412,10 +414,10 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             class Byte {
-                external operator fun plus(other: Byte): Byte
+                external operator fun plus(other: Byte): Int
             }
             class Short {
-                external operator fun plus(other: Short): Short
+                external operator fun plus(other: Short): Int
             }
             class Int {
                 external operator fun plus(other: Int): Int
@@ -429,8 +431,6 @@ abstract class CodeGenerationTests {
             class UInt
             class ULong
             
-            external fun println(arg0: Byte)
-            external fun println(arg0: Short)
             external fun println(arg0: Int)
             external fun println(arg0: Long)
             
@@ -443,8 +443,8 @@ abstract class CodeGenerationTests {
             .testCompileMainAndRun(code, ::registerLib)
         assertEquals(
             listOf(
-                (Byte.MAX_VALUE * 2).toByte(),
-                (Short.MAX_VALUE * 2).toShort(),
+                (Byte.MAX_VALUE * 2),
+                (Short.MAX_VALUE * 2),
                 (Int.MAX_VALUE * 2),
                 (Long.MAX_VALUE * 2),
                 UByte.MAX_VALUE,
@@ -456,8 +456,6 @@ abstract class CodeGenerationTests {
     }
 
     fun testNumberConversionsImpl() {
-        // todo fix: compilation is slow :(
-
         val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
         val builder = StringBuilder()
         val expected = StringBuilder()
@@ -468,7 +466,7 @@ abstract class CodeGenerationTests {
                 val fromType = numberTypes[i]
                 val toType = numberTypes[j]
 
-                // todo test all number conversions somehow...
+                // test all number conversions somehow...
                 //  test normal numbers, and from float, also test +Inf and -Inf
 
                 val value = getMaxValueForTesting(fromType)
@@ -476,7 +474,7 @@ abstract class CodeGenerationTests {
                 builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
                 ctr++
 
-                val expected0 = when (fromType) {
+                val expected0: String = when (fromType) {
                     // todo printing chars shouldn't print a number...
                     Types.Byte -> when {
                         toType.isFloat() -> "$value.0"
@@ -499,29 +497,37 @@ abstract class CodeGenerationTests {
                         toType == Types.UByte -> "255"
                         else -> value
                     }
-                    Types.Int -> when {
-                        toType.isFloat() -> "$value.0"
-                        toType == Types.Byte || toType == Types.Short -> "-1"
-                        toType == Types.UByte || toType == Types.UShort ->
+                    Types.Int -> when (toType) {
+                        Types.Half -> value.toFloat().toHalf().toString()
+                        Types.Float -> value.toFloat().toString()
+                        Types.Double -> value.toDouble().toString()
+                        Types.Byte, Types.Short -> "-1"
+                        Types.UByte, Types.UShort ->
                             getPositiveInfValueForTesting(toType)
                         else -> value
                     }
-                    Types.UInt -> when {
-                        toType.isFloat() -> "$value.0"
-                        toType == Types.Byte || toType == Types.Short || toType == Types.Int -> "-1"
-                        toType == Types.UByte || toType == Types.UShort ->
+                    Types.UInt -> when (toType) {
+                        Types.Half -> value.toFloat().toHalf().toString()
+                        Types.Float -> value.toFloat().toString()
+                        Types.Double -> value.toDouble().toString()
+                        Types.Byte, Types.Short, Types.Int -> "-1"
+                        Types.UByte, Types.UShort ->
                             getPositiveInfValueForTesting(toType)
                         else -> value
                     }
                     Types.Long -> when (toType) {
-                        Types.Half, Types.Float, Types.Double -> "$value.0"
+                        Types.Half -> value.toFloat().toHalf().toString()
+                        Types.Float -> value.toFloat().toString()
+                        Types.Double -> value.toDouble().toString()
                         Types.Byte, Types.Short, Types.Int -> "-1"
                         Types.UByte, Types.UShort, Types.UInt ->
                             getPositiveInfValueForTesting(toType)
                         else -> value
                     }
                     Types.ULong -> when (toType) {
-                        Types.Half, Types.Float, Types.Double -> "$value.0"
+                        Types.Half -> value.toFloat().toHalf().toString()
+                        Types.Float -> value.toFloat().toString()
+                        Types.Double -> value.toDouble().toString()
                         Types.Byte, Types.Short, Types.Int, Types.Long -> "-1"
                         else -> getPositiveInfValueForTesting(toType)
                     }
@@ -616,9 +622,9 @@ abstract class CodeGenerationTests {
 
     fun getMaxValueForTesting(type: Type): String {
         return when (type) {
-            Types.Half -> "65e3h"
-            Types.Float -> "1e38f"
-            Types.Double -> "1e308"
+            Types.Half -> "65000.0"
+            Types.Float -> "1.0E38"
+            Types.Double -> "1.0E308"
             else -> getPositiveInfValueForTesting(type)
         }
     }
@@ -656,6 +662,11 @@ abstract class CodeGenerationTests {
             }
             
             package zauber
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external operator fun set(i: Int, value: V)
+            }
+            
             $numberClasses
         """.trimIndent()
         val printed = generator()

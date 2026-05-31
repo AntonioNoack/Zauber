@@ -1,13 +1,12 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.Zauber.root
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Import
@@ -30,7 +29,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         val selfType = context.selfType
         val returnType = context.targetType
 
-        val scopeSelfType = getSelfType(scope)
+        val scopeSelfType = scope.selfType
         var bestMatch: ResolvedField? = null
         for (field in scope.fields) {
             if (field.name != name) continue

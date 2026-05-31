@@ -1,6 +1,10 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.Half
+import me.anno.utils.Half.Companion.toHalf
+import me.anno.utils.Maths.clamp
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
+import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createByte
 import me.anno.zauber.interpreting.RuntimeCreate.createChar
@@ -11,15 +15,21 @@ import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.interpreting.RuntimeCreate.createLong
 import me.anno.zauber.interpreting.RuntimeCreate.createShort
 import me.anno.zauber.interpreting.RuntimeCreate.createString
+import me.anno.zauber.interpreting.RuntimeCreate.createUByte
 import me.anno.zauber.interpreting.RuntimeCreate.createUInt
 import me.anno.zauber.interpreting.RuntimeCreate.createULong
+import me.anno.zauber.interpreting.RuntimeCreate.createUShort
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 
+/**
+ * Standard library implementation for interpreter / compile-time execution
+ * */
 object Stdlib {
 
     private val LOGGER = LogManager.getLogger(Stdlib::class)
@@ -34,14 +44,19 @@ object Stdlib {
         runtime.register(langScope, "println", listOf(Types.String)) { _, params ->
             runPrintln(params[0].castToString())
         }
-        runtime.register(langScope, "println", listOf(Types.Int)) { _, params ->
-            runPrintln(params[0].castToInt().toString())
+        for (type in ASTSimplifier.nativeNumbers) {
+            runtime.register(langScope, "println", listOf(type)) { _, params ->
+                val value = params[0]
+                check(value.clazz.type == type)
+                check(value.rawValue != null)
+                runPrintln(value.rawValue.toString())
+            }
         }
     }
 
     private fun runPrintln(content: String): Instance {
         val rt = runtime
-        rt.printed += content
+        rt.printed.append(content).append('\n')
         println(content)
         return rt.getUnit()
     }
@@ -233,6 +248,89 @@ object Stdlib {
         }
     }
 
+    fun registerNumberConversions() {
+        val types = ASTSimplifier.nativeNumbers
+        val rt = runtime
+        for (i in types.indices) {
+            for (j in types.indices) {
+                val fromType = types[i]
+                val toType = types[j]
+
+                rt.registerUnaryMethod(fromType, "to${toType.clazz.name}") { from ->
+                    if (fromType.isFloat()) {
+                        val fromValue = getFloatValue(from, fromType)
+                        rt.createNumberFromFloat(fromValue, toType)
+                    } else {
+                        val fromValue = getIntValue(from, fromType)
+                        rt.createNumberFromInt(fromValue, toType)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getFloatValue(from: Instance, fromType: Type): Double {
+        return when (fromType) {
+            Types.Half -> from.castToHalf().toDouble()
+            Types.Float -> from.castToFloat().toDouble()
+            Types.Double -> from.castToDouble()
+            else -> throw NotImplementedError()
+        }
+    }
+
+    private fun getIntValue(from: Instance, fromType: Type): Long {
+        return when (fromType) {
+            Types.Char -> from.castToChar().code.toLong()
+            Types.Byte -> from.castToByte().toLong()
+            Types.UByte -> from.castToUByte().toLong()
+            Types.Short -> from.castToShort().toLong()
+            Types.UShort -> from.castToUShort().toLong()
+            Types.Int -> from.castToInt().toLong()
+            Types.UInt -> from.castToUInt().toLong()
+            Types.Long -> from.castToLong()
+            Types.ULong -> from.castToULong().toLong()
+            else -> throw NotImplementedError()
+        }
+    }
+
+    private fun Runtime.createNumberFromFloat(from: Double, toType: Type): Instance {
+        return when (toType) {
+            Types.Half -> createHalf(from.toHalf())
+            Types.Float -> createFloat(from.toFloat())
+            Types.Double -> createDouble(from)
+
+            Types.Char -> createChar(from.toInt().toChar())
+            Types.Byte -> createByte(clamp(from.toInt(), -128, 127).toByte())
+            Types.UByte -> createUByte(clamp(from.toInt(), 0, 255).toUByte())
+            Types.Short -> createShort(clamp(from.toInt(), -0x8000, 0x7fff).toShort())
+            Types.UShort -> createUShort(clamp(from.toInt(), 0, 0xffff).toUShort())
+            Types.Int -> createInt(from.toInt())
+            Types.UInt -> createUInt(from.toUInt())
+            Types.Long -> createLong(from.toLong())
+            Types.ULong -> createULong(from.toULong())
+            else -> throw NotImplementedError("Create $toType from Double")
+        }
+    }
+
+    private fun Runtime.createNumberFromInt(from: Long, toType: Type): Instance {
+        return when (toType) {
+            Types.Half -> createHalf(from.toFloat().toHalf())
+            Types.Float -> createFloat(from.toFloat())
+            Types.Double -> createDouble(from.toDouble())
+
+            Types.Char -> createChar(from.toInt().toChar())
+            Types.Byte -> createByte(from.toByte())
+            Types.UByte -> createUByte(from.toUByte())
+            Types.Short -> createShort(from.toShort())
+            Types.UShort -> createUShort(from.toUShort())
+            Types.Int -> createInt(from.toInt())
+            Types.UInt -> createUInt(from.toUInt())
+            Types.Long -> createLong(from)
+            Types.ULong -> createULong(from.toULong())
+            else -> throw NotImplementedError("Create $toType from Long")
+        }
+    }
+
     fun registerStringMethods() {
         val rt = runtime
         rt.registerBinaryMethod(Types.String, "plus") { a, b ->
@@ -289,6 +387,8 @@ object Stdlib {
         registerFloatMethods()
         registerDoubleMethods()
 
+        registerNumberConversions()
+
         registerStringMethods()
         registerPrintln()
         registerArrayAccess()
@@ -297,7 +397,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryByteMethod(name: String, calc: (a: Byte, b: Byte) -> Int) {
         registerBinaryMethod(Types.Byte, name) { a, b ->
-            LOGGER.info("Executing Byte.$name ($a, $b)")
             val result = calc(a.castToByte(), b.castToByte())
             createInt(result)
         }
@@ -305,7 +404,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryUByteMethod(name: String, calc: (a: UByte, b: UByte) -> UInt) {
         registerBinaryMethod(Types.UByte, name) { a, b ->
-            LOGGER.info("Executing UByte.$name ($a, $b)")
             val result = calc(a.castToUByte(), b.castToUByte())
             createUInt(result)
         }
@@ -313,7 +411,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryShortMethod(name: String, calc: (a: Short, b: Short) -> Int) {
         registerBinaryMethod(Types.Short, name) { a, b ->
-            LOGGER.info("Executing Short.$name ($a, $b)")
             val result = calc(a.castToShort(), b.castToShort())
             createInt(result)
         }
@@ -321,7 +418,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryUShortMethod(name: String, calc: (a: UShort, b: UShort) -> UInt) {
         registerBinaryMethod(Types.UShort, name) { a, b ->
-            LOGGER.info("Executing UShort.$name ($a, $b)")
             val result = calc(a.castToUShort(), b.castToUShort())
             createUInt(result)
         }
@@ -329,7 +425,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryIntMethod(name: String, calc: (a: Int, b: Int) -> Int) {
         registerBinaryMethod(Types.Int, name) { a, b ->
-            LOGGER.info("Executing Int.$name ($a, $b)")
             val result = calc(a.castToInt(), b.castToInt())
             createInt(result)
         }
@@ -337,7 +432,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryUIntMethod(name: String, calc: (a: UInt, b: UInt) -> UInt) {
         registerBinaryMethod(Types.UInt, name) { a, b ->
-            LOGGER.info("Executing UInt.$name ($a, $b)")
             val result = calc(a.castToUInt(), b.castToUInt())
             createUInt(result)
         }
@@ -345,7 +439,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryLongMethod(name: String, calc: (a: Long, b: Long) -> Long) {
         registerBinaryMethod(Types.Long, name) { a, b ->
-            LOGGER.info("Executing Long.$name ($a, $b)")
             val result = calc(a.castToLong(), b.castToLong())
             createLong(result)
         }
@@ -353,7 +446,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryULongMethod(name: String, calc: (a: ULong, b: ULong) -> ULong) {
         registerBinaryMethod(Types.ULong, name) { a, b ->
-            LOGGER.info("Executing ULong.$name ($a, $b)")
             val result = calc(a.castToULong(), b.castToULong())
             createULong(result)
         }
@@ -361,7 +453,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryHalfMethod(name: String, calc: (a: Half, b: Half) -> Half) {
         registerBinaryMethod(Types.Half, name) { a, b ->
-            LOGGER.info("Executing Half.$name ($a, $b)")
             val result = calc(a.castToHalf(), b.castToHalf())
             createHalf(result)
         }
@@ -369,7 +460,6 @@ object Stdlib {
 
     fun Runtime.registerBinaryFloatMethod(name: String, calc: (a: Float, b: Float) -> Float) {
         registerBinaryMethod(Types.Float, name) { a, b ->
-            LOGGER.info("Executing Float.$name ($a, $b)")
             val result = calc(a.castToFloat(), b.castToFloat())
             createFloat(result)
         }
@@ -377,17 +467,13 @@ object Stdlib {
 
     fun Runtime.registerBinaryDoubleMethod(name: String, calc: (a: Double, b: Double) -> Double) {
         registerBinaryMethod(Types.Double, name) { a, b ->
-            LOGGER.info("Executing Double.$name ($a, $b)")
             val result = calc(a.castToDouble(), b.castToDouble())
             createDouble(result)
         }
     }
 
     fun Runtime.registerUnaryMethod(selfType: ClassType, name: String, calc: (self: Instance) -> Instance) {
-        register(selfType.clazz, name, emptyList()) { self, _ ->
-            LOGGER.info("Executing ${selfType.clazz.pathStr}.$name ($self)")
-            calc(self)
-        }
+        register(selfType.clazz, name, emptyList()) { self, _ -> calc(self) }
     }
 
 }

@@ -34,7 +34,7 @@ class EnsureNotNullExpression(
     override fun clone(scope: Scope) = EnsureNotNullExpression(value.clone(scope), scope, origin)
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
-        val contextI = context.withTargetType(context.targetType?.removeNull())
+        val contextI = context.withTargetType(context.targetType?.nonNull())
         return value.hasLambdaOrUnknownGenericsType(contextI)
     }
 
@@ -53,8 +53,8 @@ class EnsureNotNullExpression(
     }
 
     override fun resolveReturnType(context: ResolutionContext): Type {
-        val contextI = context.withTargetType(context.targetType?.removeNull())
-        return value.resolveReturnType(contextI).removeNull()
+        val contextI = context.withTargetType(context.targetType?.nonNull())
+        return value.resolveReturnType(contextI).nonNull()
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {

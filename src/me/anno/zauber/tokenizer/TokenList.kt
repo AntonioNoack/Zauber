@@ -3,6 +3,7 @@ package me.anno.zauber.tokenizer
 import me.anno.utils.Maths.clamp
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
+import me.anno.utils.Warning
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.parser.SemanticTokenList
 import me.anno.zauber.logging.LogManager
@@ -134,6 +135,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
     fun setType(i: Int, keyword: TokenType) {
         tokenTypes[i] = keyword.ordinal.toByte()
     }
+
+    // todo replace using err with a more generic function,
+    //  where we can get a list of warnings for VSCode
+    val warnings = ArrayList<Warning>()
 
     fun err(startI: Int, endI: Int = startI): String {
         val startI = clamp(startI, 0, size - 1)

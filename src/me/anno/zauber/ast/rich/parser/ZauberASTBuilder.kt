@@ -29,7 +29,6 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
-import me.anno.zauber.typeresolution.TypeResolution.getSelfType
 import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -161,12 +160,12 @@ class ZauberASTBuilder(
 
         check(tokens.equals(i, TokenType.NAME))
         val selfType0 = readFieldOrMethodSelfType(typeParameters, methodScope)
-        val selfType = selfType0 ?: getSelfType(methodScope)
+        val selfType = selfType0 ?: methodScope.selfType
 
         check(tokens.equals(i, TokenType.NAME))
         val name = consumeName(VSCodeType.METHOD, VSCodeModifier.DECLARATION.flag)
 
-        if (LOGGER.isDebugEnabled) LOGGER.debug("fun <$typeParameters> ${if (selfType != null) "$selfType." else ""}$name(...")
+        if (LOGGER.isDebugEnabled) LOGGER.debug("fun <$typeParameters> $selfType.$name(...")
 
         // parse parameters (...)
         check(tokens.equals(i, TokenType.OPEN_CALL)) {
