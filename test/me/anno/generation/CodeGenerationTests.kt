@@ -78,11 +78,13 @@ abstract class CodeGenerationTests {
             external class Int(val content: Int) {
                 external operator fun plus(other: Int): Int
                 external operator fun times(other: Int): Int
+                external operator fun compareTo(other: Int): Int
+                external operator fun equals(other: Int): Boolean
                 fun hashCode(): Int = content
             }
             
             external fun println(arg0: Int)
-        """.trimIndent()
+        """.trimIndent() + inheritanceCode
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
