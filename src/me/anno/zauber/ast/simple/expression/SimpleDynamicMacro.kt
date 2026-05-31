@@ -18,9 +18,9 @@ class SimpleDynamicMacro(
     dst: SimpleField,
     val original: DynamicMacroExpression,
     self: SimpleField,
-    val valueParameters: List<SimpleField>,
+    valueParameters: List<SimpleField>,
     scope: Scope, origin: Long
-) : SimpleCallable(dst, self, original.method.specialization, scope, origin) {
+) : SimpleCallable(dst, self, original.method.specialization, valueParameters, scope, origin) {
 
     val method get() = original.method
     val methodName get() = method.resolved.name

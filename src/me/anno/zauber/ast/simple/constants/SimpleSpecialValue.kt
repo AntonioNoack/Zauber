@@ -1,6 +1,7 @@
-package me.anno.zauber.ast.simple.expression
+package me.anno.zauber.ast.simple.constants
 
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime

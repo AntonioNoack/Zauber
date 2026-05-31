@@ -726,6 +726,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     }
 
     override fun prepareGraph(graph: SimpleGraph) {
+        graph.findBoxingAndUnboxing()
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()

@@ -1,23 +1,24 @@
-package me.anno.zauber.ast.simple.expression
+package me.anno.zauber.ast.simple.constants
 
 import me.anno.utils.StringStyles
-import me.anno.zauber.ast.rich.expression.constants.StringExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.interpreting.RuntimeCreate.createString
+import me.anno.zauber.interpreting.RuntimeCreate.createNumber
 
-class SimpleString(dst: SimpleField, val base: StringExpression) :
+class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
     SimpleAssignment(dst, base.scope, base.origin) {
 
     override fun toString(): String {
-        return "$dst = ${StringStyles.style(base.toString(), StringStyles.GREEN)}"
+        return "$dst = ${StringStyles.style(base.value, StringStyles.BLUE)}"
     }
 
     override fun execute(): BlockReturn? {
         // fast-path, because it cannot crash
         val runtime = runtime
-        runtime[dst] = runtime.createString(base.value)
+        runtime[dst] = runtime.createNumber(base, dst.type)
         return null
     }
 }

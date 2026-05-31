@@ -1,11 +1,10 @@
-package me.anno.zauber.ast.simple.expression
+package me.anno.zauber.ast.simple.fields
 
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
-import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.interpreting.BlockReturn
-import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType

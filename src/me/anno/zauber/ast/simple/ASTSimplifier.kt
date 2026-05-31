@@ -21,12 +21,13 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.simple.constants.SimpleNumber
+import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
+import me.anno.zauber.ast.simple.constants.SimpleString
 import me.anno.zauber.ast.simple.controlflow.*
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
-import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -293,7 +294,12 @@ object ASTSimplifier {
         val size = blockI.field(Types.Int)
         blockI.add(SimpleNumber(size, NumberExpression("${expr.values.size}", scope, origin)))
         val allocateParams = listOf(size.use())
-        blockI.add(SimpleAllocateInstance(array, arrayType, allocateParams, scope, origin))
+        blockI.add(
+            SimpleAllocateInstance(
+                array, arrayType, allocateParams,
+                Specialization(arrayType), scope, origin
+            )
+        )
         // handle error?
 
         // find constructor method
@@ -539,7 +545,7 @@ object ASTSimplifier {
                 val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
                 // println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
                 val spec = Specialization(outerField.fieldScope, expr.field.specialization.typeParameters)
-                val getter = SimpleGetField(
+                val getter = SimpleGetClassField(
                     selfDst, self.use(), outerField,
                     spec, expr.scope, expr.origin
                 )
@@ -547,7 +553,7 @@ object ASTSimplifier {
                 self = selfDst
             }
 
-            val getter = SimpleGetField(
+            val getter = SimpleGetClassField(
                 dst, self.use(), field,
                 expr.field.specialization, expr.scope, expr.origin
             )
@@ -642,7 +648,7 @@ object ASTSimplifier {
             )
         } else {
             block2v.block.add(
-                SimpleSetField(
+                SimpleSetClassField(
                     self.use(), field, value.use(),
                     expr.field.specialization,
                     expr.scope, expr.origin
@@ -851,7 +857,7 @@ object ASTSimplifier {
         )
         val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
         val spec = Specialization(thrownField.fieldScope, emptyParameterList())
-        ifBlock.add(SimpleSetField(selfField, thrownField, block0.value, spec, expr.scope, expr.origin))
+        ifBlock.add(SimpleSetClassField(selfField, thrownField, block0.value, spec, expr.scope, expr.origin))
         return simplifyImpl(context, catch.body, ifBlock, ifFlow, needsValue)
     }
 
@@ -1107,7 +1113,13 @@ object ASTSimplifier {
                 selfType = selfType.clazz.typeWithArgs.specialize(method0.specialization) as ClassType
             }
             // todo allocation could fail, too...
-            block0.add(SimpleAllocateInstance(dst, selfType, valueParameters, scope, origin))
+            block0.add(
+                SimpleAllocateInstance(
+                    dst, selfType, valueParameters,
+                    method0.specialization.withScope(selfType.clazz),
+                    scope, origin
+                )
+            )
             val specialization = method0.specialization
             val call = SimpleConstructorCall(
                 unit, true, dst.use(),

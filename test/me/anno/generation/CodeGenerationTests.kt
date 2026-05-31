@@ -373,7 +373,7 @@ abstract class CodeGenerationTests {
                 external operator fun equals(other: Int): Boolean
             }
             external fun println(arg0: Int)
-        """.trimIndent()
+        """.trimIndent() + inheritanceCode
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)

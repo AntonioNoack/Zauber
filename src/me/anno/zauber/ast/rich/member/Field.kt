@@ -112,6 +112,10 @@ class Field(
     var hasCustomSetter = false
 
     fun resolveValueType(context: ResolutionContext): Type {
+
+        // validate context specialization, s.t. we have all type knowledge
+        val context = context.withSpec(context.specialization.withScope(ownerScope))
+
         val valueType = valueType
         if (valueType != null) {
             return valueType.resolvedName.specialize(context)

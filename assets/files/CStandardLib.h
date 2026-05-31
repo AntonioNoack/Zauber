@@ -7,4 +7,4 @@
 // for integers with precise size
 #include <stdint.h>
 
-#define gcNew(T) (T*) calloc(1, sizeof(T))
+void* gcNew(size_t size, uint32_t classIndex);

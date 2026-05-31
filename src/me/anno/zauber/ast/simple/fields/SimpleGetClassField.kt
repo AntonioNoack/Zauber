@@ -1,23 +1,22 @@
-package me.anno.zauber.ast.simple.expression
+package me.anno.zauber.ast.simple.fields
 
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.impl.ClassType
 
-class SimpleGetField(
+class SimpleGetClassField(
     dst: SimpleField,
     override val self: SimpleField,
     override val field: Field,
     override val specialization: Specialization,
     scope: Scope, origin: Long
-) : SimpleAssignment(dst, scope, origin), SimpleGetOrSetField {
+) : SimpleAssignment(dst, scope, origin), SimpleGSetClassField {
 
     init {
         check(specialization.scope == field.fieldScope) {
@@ -48,7 +47,7 @@ class SimpleGetField(
 
     override fun withField(field: Field): SimpleInstruction {
         val spec = Specialization(field.fieldScope, specialization.typeParameters)
-        return SimpleGetField(dst, self, field, spec, scope, origin)
+        return SimpleGetClassField(dst, self, field, spec, scope, origin)
     }
 
     override fun execute(): BlockReturn? {

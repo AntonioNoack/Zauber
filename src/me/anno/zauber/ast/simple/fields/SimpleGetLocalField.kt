@@ -9,9 +9,9 @@ import me.anno.zauber.scope.Scope
 
 class SimpleGetLocalField(
     dst: SimpleField,
-    val field: LocalField,
+    override val field: LocalField,
     scope: Scope, origin: Long
-) : SimpleAssignment(dst, scope, origin) {
+) : SimpleAssignment(dst, scope, origin), SimpleGSetLocalField {
 
     override fun execute(): BlockReturn? {
         // cannot crash at runtime (if ASTSimplified correctly) -> past-path

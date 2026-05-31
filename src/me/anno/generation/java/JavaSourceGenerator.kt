@@ -37,6 +37,9 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleMerge
+import me.anno.zauber.ast.simple.constants.SimpleNumber
+import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
+import me.anno.zauber.ast.simple.constants.SimpleString
 import me.anno.zauber.ast.simple.controlflow.SimpleExit
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
@@ -744,7 +747,7 @@ open class JavaSourceGenerator : Generator() {
 
     }
 
-    fun getNativeImplementation(method: MethodLike): String? {
+    open fun getNativeImplementation(method: MethodLike): String? {
         val classScope = method.ownerScope
         return if (method.flags.hasFlag(Flags.EXTERNAL)) {
             val valueParameterTypes = method.valueParameters.map { it.type.resolve(classScope) }
@@ -1188,11 +1191,14 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun needsAssignment(expr: SimpleAssignment): Boolean {
+        val dst = expr.dst.dst
+        return dst.numReads > 0 && !dst.isObjectLike() && expr.dst.type != Types.Nothing
+    }
+
     open fun appendInstrPrefix(graph: SimpleGraph, expr: SimpleInstruction) {
-        if (expr is SimpleAssignment && expr.dst.type != Types.Nothing && !expr.dst.isObjectLike()) {
-            val notNeeded = expr.dst.numReads <= 0
-            if (notNeeded) comment { appendAssign(graph, expr) }
-            else appendAssign(graph, expr)
+        if (expr is SimpleAssignment && needsAssignment(expr)) {
+            appendAssign(graph, expr)
         }
     }
 
@@ -1205,7 +1211,7 @@ open class JavaSourceGenerator : Generator() {
                 }// else we only placed a comment
             }
             is SimpleAssignment,
-            is SimpleSetField,
+            is SimpleSetClassField,
             is SimpleSetLocalField,
             is SimpleExit -> builder.append(';')
             else -> {}
@@ -1281,7 +1287,7 @@ open class JavaSourceGenerator : Generator() {
                 if (expr.field.id == 0 && expr.field.type in nativeNumbers) builder.append("this.content")
                 else builder.append(expr.field.newName)
             }
-            is SimpleGetField -> {
+            is SimpleGetClassField -> {
                 if (expr.dst.dst.id >= 0) {
                     appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
                     appendFieldName(expr.field)
@@ -1296,7 +1302,7 @@ open class JavaSourceGenerator : Generator() {
                 val needsCopy = expr.value.type.needsCopy()
                 if (needsCopy) appendCopy(graph, expr.value.type)
             }
-            is SimpleSetField -> {
+            is SimpleSetClassField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
                 appendFieldName(expr.field)
                 builder.append(" = ")

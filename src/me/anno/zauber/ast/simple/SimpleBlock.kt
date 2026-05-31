@@ -10,8 +10,8 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.simple.expression.SimpleGetField
-import me.anno.zauber.ast.simple.expression.SimpleGetObject
+import me.anno.zauber.ast.simple.fields.SimpleGetClassField
+import me.anno.zauber.ast.simple.fields.SimpleGetObject
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
@@ -183,7 +183,7 @@ class SimpleBlock(val graph: SimpleGraph) {
             println("Step: ${innerScopeI}.$field1 -> $dst, calling on $currField")
 
             val spec = Specialization(field1.fieldScope, specialization.typeParameters)
-            add(SimpleGetField(dst, currField, field1, spec, scope, origin))
+            add(SimpleGetClassField(dst, currField, field1, spec, scope, origin))
             currField = dst
             innerScopeI = outerScopeI
         }

@@ -12,11 +12,17 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.constants.SimpleNumber
+import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
+import me.anno.zauber.ast.simple.constants.SimpleString
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.fields.SimpleGetClassField
 import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
+import me.anno.zauber.ast.simple.fields.SimpleGetObject
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleSetClassField
 import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
@@ -646,14 +652,14 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 }
                 locals.storeField(instr.dst)
             }
-            is SimpleGetField -> {
+            is SimpleGetClassField -> {
                 locals.loadField(instr.self)
                 val ownerInternal = getJVMName(instr.field.ownerScope.typeWithArgs.specialize(instr.specialization))
                 val valueType = resolveType(instr.field.valueType ?: Types.NullableAny)
                 code.getfield(ownerInternal, instr.field.newName, descriptorOf(valueType, instr.scope))
                 locals.storeField(instr.dst)
             }
-            is SimpleSetField -> {
+            is SimpleSetClassField -> {
                 locals.loadField(instr.self)
                 locals.loadField(instr.value)
                 val ownerInternal = getJVMName(instr.field.ownerScope.typeWithArgs.specialize(instr.specialization))

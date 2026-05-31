@@ -5,12 +5,14 @@ import me.anno.zauber.ast.reverse.SimpleTailCall
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
+import me.anno.zauber.ast.simple.expression.SimpleBoxCast
+import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
-import me.anno.zauber.ast.simple.expression.SimpleGetObject
-import me.anno.zauber.ast.simple.fields.LocalField
-import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
@@ -234,6 +236,76 @@ class SimpleGraph(val method0: Specialization) {
         return blocks.any { block ->
             block.instructions.any { instr ->
                 instr is SimpleTailCall
+            }
+        }
+    }
+
+    fun findBoxingAndUnboxing(findAllCasts: Boolean = false) {
+        // todo for SimpleGraph, add a processing step,
+        //  where type transitions are detected (value -> reference | reference -> value),
+        //  and add explicit casts || [SimpleG/Set(Local)Field]
+
+        val context = ResolutionContext.minimal // todo we do need our specialization
+        for (block in blocks) {
+            val instructions = block.instructions
+            var i = instructions.size - 1
+            while (i >= 0) {
+                when (val instr = instructions[i]) {
+                    // getters are always fine
+                    is SimpleSetClassField -> {
+                        val fieldType = instr.field.resolveValueType(context)
+                            .specialize()
+                        val valueType = instr.value.type
+                        if (fieldType != valueType &&
+                            (findAllCasts || fieldType.isValue() || valueType.isValue())
+                        ) {
+                            TODO("Create cast for $instr")
+                        }
+                    }
+                    is SimpleSetLocalField -> {
+                        val fieldType = instr.field.type
+                        val valueType = instr.value.type
+                        if (fieldType != valueType &&
+                            (findAllCasts || fieldType.isValue() || valueType.isValue())
+                        ) {
+                            val tmpField = field(fieldType)
+                            val cast = SimpleBoxCast(tmpField, instr.value, instr.scope, instr.origin)
+                            instructions.add(i, cast)
+                            instr.value = tmpField.use()
+                        }
+                    }
+                    is SimpleMerge -> {
+                        val dstType = instr.dst.type
+                        val ifType = instr.ifField.type
+                        val elseType = instr.elseField.type
+                        val dstIsValue = dstType.isValue()
+                        if ((ifType != dstType && (findAllCasts || ifType.isValue() || dstIsValue))) {
+                            TODO("Insert cast into merge $instr")
+                        }
+                        if (elseType != dstType && (findAllCasts || elseType.isValue() || dstIsValue)) {
+                            TODO("Insert cast into merge $instr")
+                        }
+                    }
+                    // todo calls and constructors can require casts, too
+                    // todo for this, self, and parameters
+                    is SimpleCallable -> {
+                        for(i in instr.valueParameters.indices) {
+                            val parameter = instr.valueParameters[i]
+                            val expectedType = instr.sample.valueParameters[i].type
+                                .specialize(instr.specialization)
+                            val valueType = parameter.type
+                            if (expectedType != valueType &&
+                                (findAllCasts || expectedType.isValue() || valueType.isValue())) {
+
+                                val tmpField = field(expectedType)
+                                val cast = SimpleBoxCast(tmpField, parameter, instr.scope, instr.origin)
+                                instructions.add(i, cast)
+                                instr.setValueParameter(i, tmpField.use())
+                            }
+                        }
+                    }
+                }
+                i--
             }
         }
     }

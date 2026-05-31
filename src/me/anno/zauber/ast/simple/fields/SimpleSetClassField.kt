@@ -1,26 +1,24 @@
-package me.anno.zauber.ast.simple.expression
+package me.anno.zauber.ast.simple.fields
 
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 
-class SimpleSetField(
+class SimpleSetClassField(
     override val self: SimpleField,
     override val field: Field,
     val value: SimpleField,
     override val specialization: Specialization,
     scope: Scope, origin: Long
-) : SimpleInstruction(scope, origin), SimpleGetOrSetField {
+) : SimpleInstruction(scope, origin), SimpleGSetClassField {
 
     companion object {
-        private val LOGGER = LogManager.getLogger(SimpleSetField::class)
+        private val LOGGER = LogManager.getLogger(SimpleSetClassField::class)
     }
 
     init {
@@ -42,7 +40,7 @@ class SimpleSetField(
 
     override fun withField(field: Field): SimpleInstruction {
         val spec = Specialization(field.fieldScope, specialization.typeParameters)
-        return SimpleSetField(self, field, value, spec, scope, origin)
+        return SimpleSetClassField(self, field, value, spec, scope, origin)
     }
 
     override fun execute(): BlockReturn? {

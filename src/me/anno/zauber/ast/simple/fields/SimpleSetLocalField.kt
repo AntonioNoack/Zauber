@@ -7,9 +7,9 @@ import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
 class SimpleSetLocalField(
-    val field: LocalField,
-    val value: SimpleField, scope: Scope, origin: Long
-) : SimpleInstruction(scope, origin) {
+    override val field: LocalField,
+    var value: SimpleField, scope: Scope, origin: Long
+) : SimpleInstruction(scope, origin), SimpleGSetLocalField {
 
     override fun execute(): BlockReturn? {
         val runtime = runtime

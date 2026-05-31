@@ -18,6 +18,7 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleMerge
+import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.fields.*
@@ -766,6 +767,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun prepareGraph(graph: SimpleGraph) {
+        graph.findBoxingAndUnboxing()
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
@@ -958,7 +960,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                         .append(", ptr ").append(expr.field.name)
                 }
             }
-            is SimpleGetField -> {
+            is SimpleGetClassField -> {
                 if (expr.dst.id < 0) return
 
                 val selfType = expr.self.type as ClassType
@@ -997,7 +999,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                     .append(valueReg)
                     .append(", ptr ").append(expr.field.name)
             }
-            is SimpleSetField -> {
+            is SimpleSetClassField -> {
                 val needsCopy = expr.value.type.needsCopy()
                 val valueReg = getSimpleFieldReg(graph, expr.value)
                 // todo copy if necessary
@@ -1079,9 +1081,11 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 TODO("child-class method-res")
             }
         }
+
         val args = (listOf(expr.thisInstance) + expr.valueParameters).map {
             getSimpleFieldReg(graph, it)
         }
+
         appendAssign(graph, expr)
         callMethod(graph, expr.specialization, args)
     }

@@ -17,9 +17,9 @@ class SimpleConstructorCall(
     val isThis: Boolean,
     self: SimpleField,
     specialization: Specialization,
-    val valueParameters: List<SimpleField>,
+    valueParameters: List<SimpleField>,
     scope: Scope, origin: Long
-) : SimpleCallable(unusedDst, self, specialization, scope, origin) {
+) : SimpleCallable(unusedDst, self, specialization, valueParameters, scope, origin) {
 
     val method get() = sample
 

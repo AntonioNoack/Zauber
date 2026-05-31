@@ -1,7 +1,7 @@
 package me.anno.zauber.expansion
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -88,7 +88,7 @@ object MethodOverrides {
         for (superMethod in superMethods) {
             if (superMethod.isPrivate()) continue
 
-            println("Checking out $superMethod for $superScope -> $scope")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Checking out $superMethod for $superScope -> $scope")
 
             // find match
             val selfType = superMethod.selfType ?: scope.typeWithArgs
@@ -132,7 +132,7 @@ object MethodOverrides {
 
             } else {
 
-                println("Found override: $selfMethod for $superMethod")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Found override: $selfMethod for $superMethod")
 
                 foundMethods.add(selfMethod)
 

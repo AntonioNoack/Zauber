@@ -28,11 +28,10 @@ class SimpleCall(
     thisInstance: SimpleField,
     val selfInstance: SimpleField?,
     specialization: Specialization,
-    val typeParameters: List<SimpleField>,
-    val valueParameters: List<SimpleField>,
+    valueParameters: List<SimpleField>,
     val scopeBridgingParameters: List<SimpleField>,
     scope: Scope, origin: Long
-) : SimpleCallable(dst, thisInstance, specialization, scope, origin) {
+) : SimpleCallable(dst, thisInstance, specialization, valueParameters, scope, origin) {
 
     companion object {
 
@@ -104,7 +103,7 @@ class SimpleCall(
     ) : this(
         dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method),
         thisInstance, selfInstance, specialization,
-        typeParameters, valueParameters, scopeBridgingParameters, scope, origin
+        valueParameters, scopeBridgingParameters, scope, origin
     )
 
     constructor(
@@ -133,7 +132,7 @@ class SimpleCall(
     ) : this(
         dst, (method as? Method)?.name ?: "?", methodMap,
         thisInstance, selfInstance, specialization,
-        emptyList(), valueParameters, emptyList(),
+        valueParameters, emptyList(),
         scope, origin
     )
 

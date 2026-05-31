@@ -7,7 +7,12 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
+import me.anno.zauber.ast.simple.constants.SimpleNumber
+import me.anno.zauber.ast.simple.constants.SimpleString
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.fields.SimpleGetClassField
+import me.anno.zauber.ast.simple.fields.SimpleGetObject
+import me.anno.zauber.ast.simple.fields.SimpleSetClassField
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
@@ -154,8 +159,8 @@ object Dependencies {
                         }
                     }
                     is SimpleGetTypeInstance -> addClass(instr.dst.type as ClassType)
-                    is SimpleSetField -> reached.setFields.add(instr.specialization)
-                    is SimpleGetField -> reached.getFields.add(instr.specialization)
+                    is SimpleSetClassField -> reached.setFields.add(instr.specialization)
+                    is SimpleGetClassField -> reached.getFields.add(instr.specialization)
 
                     // how do we handle dynamic macros? can only be inside macros, so we're fine (?)
                 }

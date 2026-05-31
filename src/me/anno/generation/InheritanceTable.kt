@@ -6,27 +6,25 @@ import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.impl.ClassType
 
 class InheritanceTable(val data: DependencyData) {
 
     companion object {
+        private val LOGGER = LogManager.getLogger(InheritanceTable::class)
+
         val inheritanceCode by lazy {
             InheritanceTable::class.java
                 .classLoader.getResourceAsStream("./src/IndirectCall.kt")!!
                 .readBytes().decodeToString()
         }
-    }
-
-    private fun funToSpec(name: String): Specialization {
-        val method = helperScope.methods0.firstOrNull { it.name == name }
-            ?: throw IllegalStateException("Missing $name() in $helperScope")
-        return Specialization(method.memberScope, emptyParameterList())
     }
 
     val helperScope = TypeResolution.langScope
@@ -50,8 +48,13 @@ class InheritanceTable(val data: DependencyData) {
     val methodToMethodIndex = HashMap<Specialization, Int>()
     val methodToInterfaceIndex = HashMap<Specialization, Int>()
 
+    private val childrenRecursively = HashMap<Specialization, Collection<Specialization>>()
+    private val childImplementations = HashMap<Specialization, Collection<Specialization>>()
+
     init {
         registerAllMethods()
+
+        if (LOGGER.isInfoEnabled) LOGGER.info("inheritance: ${methodToMethodIndex.size}x + ${methodToInterfaceIndex.size}x")
 
         if (methodToMethodIndex.isNotEmpty() || methodToInterfaceIndex.isNotEmpty()) {
             data.calledMethods += interfaceCallSpec
@@ -59,10 +62,16 @@ class InheritanceTable(val data: DependencyData) {
             data.calledMethods += funToSpec("readFromClassTable")
             data.calledMethods += funToSpec("readFromInterfaceTable")
 
+            val helperConstr = helperScope.getOrCreatePrimaryConstructorScope()
             data.createdClasses += Specialization(helperScope, emptyParameterList())
-            data.calledMethods +=
-                Specialization(helperScope.getOrCreatePrimaryConstructorScope(), emptyParameterList())
+            data.calledMethods += Specialization(helperConstr, emptyParameterList())
         }
+    }
+
+    fun funToSpec(name: String): Specialization {
+        val method = helperScope.methods0.firstOrNull { it.name == name }
+            ?: throw IllegalStateException("Missing $name() in $helperScope")
+        return Specialization(method.memberScope, emptyParameterList())
     }
 
     fun registerAllMethods() {
@@ -115,13 +124,21 @@ class InheritanceTable(val data: DependencyData) {
 
         val method = method0.method as Method
         val owner = method0.withScope(method.ownerScope)
-        val children = getChildren(owner)
+        val children = childrenRecursively.getOrPut(owner) {
+            getChildrenRecursively(owner)
+        }
+
+        if (LOGGER.isInfoEnabled) LOGGER.info("children for $method0: $children")
+
         val implementations = collectChildImplementations(method)
         val adapted = children.map { child ->
             val impl = implementations[child.scope!!]
                 ?: throw IllegalStateException("Missing $method in $child")
             Specialization(impl.scope, method0.typeParameters + child.typeParameters)
         }
+
+        childImplementations[method0] = adapted
+
         for (child in adapted) {
             // todo only register, if child classes are known
             //  otherwise, we can just always call the method directly
@@ -144,7 +161,7 @@ class InheritanceTable(val data: DependencyData) {
         return result
     }
 
-    private fun getChildren(owner: Specialization): Collection<Specialization> {
+    private fun getChildrenRecursively(ownerClass: Specialization): Collection<Specialization> {
         val children = HashSet<Specialization>()
         fun addChild(child: Specialization) {
             if (children.add(child)) {
@@ -154,12 +171,51 @@ class InheritanceTable(val data: DependencyData) {
                 }
             }
         }
-        addChild(owner)
+        addChild(ownerClass)
         return children
     }
 
+    fun countImplementations(method0: Specialization): Int {
+        return childImplementations[method0]?.size ?: 1
+    }
+
+    fun getMethodOwner(method: Specialization): Specialization {
+        val ownerScope = method.scope!!.parent!!
+        return method.withScope(ownerScope)
+    }
+
+    fun getMethodOwnerType(method: Specialization): ClassType {
+        val ownerScope = method.scope!!.parent!!
+        return ownerScope.typeWithArgs.specialize(method) as ClassType
+    }
+
+    /**
+     * todo many classes may share the same implementation...
+     * returns List<(Class, Method)>
+     * */
+    fun createSwitchList(method0: Specialization): List<Pair<Specialization, Specialization>> {
+        val options = childImplementations[method0] ?: return emptyList()
+        return options.mapNotNull { method ->
+            val clazz = getMethodOwner(method)
+            if (isDirectlyConstructable(clazz)) {
+                clazz to method
+            } else null
+        }
+    }
+
+    fun isDirectlyConstructable(clazz: Specialization): Boolean {
+        val scope = clazz.scope!!
+        return !scope.isInterface() && !scope.flags.hasFlag(Flags.ABSTRACT)
+    }
+
     private val classes = ArrayList<Specialization>()
-    private val classIndices = HashMap<Specialization, Int>()
+    val classIndices = HashMap<Specialization, Int>()
+
+    fun getClassIndex(clazz: Specialization): Int {
+        return classIndices.getOrPut(clazz) {
+            classIndices.size
+        }
+    }
 
     fun getClassCallIndex(method0: Specialization): Int {
         return methodToMethodIndex[method0]!!

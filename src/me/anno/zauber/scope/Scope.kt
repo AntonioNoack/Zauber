@@ -629,7 +629,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         else {
             this[ScopeInitType.AFTER_DISCOVERY]
             val selfType = selfAsMethod?.selfType
-            selfType ?: parent!!.selfType
+            selfType ?: parent?.selfType ?: typeWithArgs
         }
     }
 

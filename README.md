@@ -11,6 +11,9 @@ Zauber is my personal learning project to learn more about compilers,
 so things may stay unstable for a while, and I'm probably turning it into a whole
 compiler framework, because I want to learn it all 🤩.
 
+For the framework topic, if I'm compiling to Python, I want to be able to emulate C++, if I need a library from it / auto-create bindings,
+and if I compile to C++, I want to be able to call Python libraries just like that. Both programs should be compilable to WASM, Java or JavaScript, too.
+
 ## Learn Zauber
 
 I've also written a small tutorial in this project to get you started:
@@ -221,21 +224,19 @@ For compiling, while a lot of targets have proof-of-concepts, none are productio
 Simple things like variables, branches, loops, and classes (non-inheritance) work in all targets.
 
 Available targets:
-- **JVM** via Java + JDK
+- **Java** (easiest, most similar)
 - **Rust** with single-threaded GC
+- **JVM** via JVM Bytecode (stack frames broken at the moment :/)
 - **C++** without memory-management (just infinite allocations like Zig's compiler)
-- **LLVM IR** without memory-management
+- **LLVM IR** without memory-management, nor inheritance
+- **C** without memory-management, nor inheritance
 - **WASM** (WAT + binary) with native GC
 - **JavaScript** with native GC
+- **Python**
 
 Planned targets:
-- **JVM** via JVM Bytecode, Java is already really close
 - **TypeScript** (because we have JavaScript, should be easy)
-- **Zig** (because we have Rust and borrowed its defer and errdefer)
-- **Python** (for machine learning)
-- **C** (without C++)
 
-Inheritance works in the Java target, I believe.
 For quickly testing WASM, there is also a small WASM reader and runtime.
 
 Eventually, the generated code should look nice,

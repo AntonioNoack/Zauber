@@ -24,11 +24,14 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isNullable
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleMerge
+import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleGetClassField
 import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.SimpleSetClassField
 import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
@@ -1325,7 +1328,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 binary.localGet(expr.field.id)
                 nextLine()
             }
-            is SimpleGetField -> {
+            is SimpleGetClassField -> {
 
 
                 // load field owner
@@ -1354,7 +1357,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 binary.localSet(expr.field.id)
                 nextLine()
             }
-            is SimpleSetField -> {
+            is SimpleSetClassField -> {
                 val needsCopy = expr.value.type.needsCopy()
 
                 appendGetField(graph, expr.self)

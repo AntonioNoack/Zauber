@@ -4,7 +4,7 @@ import me.anno.utils.CollectionUtils.sortedByTopology
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.expression.SimpleNumber
+import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.types.Types

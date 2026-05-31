@@ -3,20 +3,27 @@ package me.anno.generation.c
 import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
+import me.anno.generation.InheritanceTable
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.Import2
+import me.anno.utils.FullMap
+import me.anno.utils.assertEquals
+import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
+import me.anno.zauber.ast.simple.expression.SimpleBoxCast
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
@@ -29,9 +36,13 @@ import java.util.*
  * todo we need to implement inheritance explicitly
  * todo we also need to deduplicate methods with same name, but different parameters
  * */
-class CSourceGenerator : CppSourceGenerator() {
+open class CSourceGenerator : CppSourceGenerator() {
 
     companion object {
+
+        val CLASS_INDEX_NAME = "__class"
+        val INHERITANCE_SWITCH_LIMIT = 7
+
         fun hashMethodParameters(method: Specialization): String {
             check(method.isMethodLike())
             if (method.method.valueParameters.isEmpty()) {
@@ -45,6 +56,21 @@ class CSourceGenerator : CppSourceGenerator() {
                 hash.toUInt().toString(manglingBasis)
             }
         }
+    }
+
+    lateinit var inheritanceTable: InheritanceTable
+
+    // todo non-boxed types don't need classIndex, but boxed-types do:
+    //  - for all non-boxed types, create a boxed type, if it is cast to non-boxed
+    //  - find these boxing transitions in dependency analysis
+
+    // todo for normal inheritance, implement two ways, and choose the fastest:
+    //  - if-else-chain/switch for few values
+    //  - indirect call and table to all indirect calls
+
+    override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
+        inheritanceTable = InheritanceTable(data)
+        super.generateCode(dst, data, mainMethod)
     }
 
     private fun getDefineName(packagePath: List<String>, file: File): String {
@@ -143,7 +169,11 @@ class CSourceGenerator : CppSourceGenerator() {
                 appendClassPrefix(classScope, className)
 
                 writeBlock {
-                    // todo append truly all fields...
+                    // append fields; todo initialize this in constructor
+                    if (!classScope.isValueType()) {
+                        builder.append("uint32_t ").append(CLASS_INDEX_NAME).append(';')
+                        nextLine()
+                    }
                     appendFields(classScope, fields, true, headerOnly)
                 }
                 removeTrailingWhitespace()
@@ -272,13 +302,70 @@ class CSourceGenerator : CppSourceGenerator() {
     override fun appendClassName(path: List<String>, scope: Scope) {
         val name = path.joinToString(".") // everything needs to be imported
         imports.getOrPut(name) { Import2(path, scope) }
-
         builder.append(path.joinToString("_"))
     }
 
     override fun appendNonNativeCall(expr: SimpleCall, graph: SimpleGraph) {
-        val methodName = getMethodName(expr.specialization)
+
+        if (expr.methods !is FullMap) {
+            val options = inheritanceTable.createSwitchList(expr.specialization)
+            println("Switch list for ${expr.specialization}: $options")
+            if (options.size < 2) {
+
+                // call directly -> fallthrough
+                var specialization = expr.specialization
+                if (options.isNotEmpty()) {
+                    specialization = options.first().second
+                }
+                return appendNonNativeCall(graph, specialization, expr, true)
+
+            } else if (options.size <= INHERITANCE_SWITCH_LIMIT) {
+
+                val l0 = builder.length
+                appendFieldName(graph, expr.thisInstance, "")
+                val self = builder.substring(l0); builder.setLength(l0)
+                for (i in options.indices) {
+                    val (clazz, method) = options[i]
+
+                    // todo it would be nice if we could cache the classIndex in a local field...
+                    if (i > 0) builder.append(" : ")
+                    if (i < options.lastIndex) {
+                        builder.append(self)
+                            .append("->").append(CLASS_INDEX_NAME)
+                            .append(" == ").append(inheritanceTable.getClassIndex(clazz))
+                            .append(" ? ")
+                    }
+
+                    appendNonNativeCall(graph, method, expr, true)
+                }
+                return
+            } else {
+                if (expr.sample.ownerScope.isInterface()) {
+                    TODO("interface method-res")
+                } else {
+                    TODO("child-class method-res")
+                }
+            }
+        }
+
+        appendNonNativeCall(graph, expr.specialization, expr, false)
+    }
+
+    private fun appendNonNativeCall(
+        graph: SimpleGraph, method: Specialization, expr: SimpleCall,
+        withCast: Boolean
+    ) {
+        val methodName = getMethodName(method)
         builder.append(methodName).append('(')
+
+        if (withCast) {
+            builder.append('(')
+            val ownerType = inheritanceTable.getMethodOwnerType(method)
+            appendType(ownerType, expr.scope, true)
+            appendOwnershipSuffix(ownerType)
+            builder.append(") ")
+        }
+
         appendFieldName(graph, expr.thisInstance, "")
         appendValueParams(graph, expr.valueParameters, withBrackets = false)
         builder.append(')')
@@ -306,6 +393,15 @@ class CSourceGenerator : CppSourceGenerator() {
                 // todo convert argc/argv to String-array, if needed
                 content.append(
                     """
+                typedef struct {
+                    uint32_t classIndex;
+                } GCInstance;
+                void* gcNew(size_t size, uint32_t classIndex) {
+                    void* instance = calloc(1, size);
+                    ((GCInstance*) instance)->classIndex = classIndex;
+                    return instance;
+                }
+                
                 int main(int argc, char** argv) {
                     $methodName($objInstance${if (needsArgs) ", argv" else ""});
                     return 0;
@@ -326,15 +422,35 @@ class CSourceGenerator : CppSourceGenerator() {
         }
     }
 
+    override fun prepareGraph(graph: SimpleGraph) {
+        graph.findBoxingAndUnboxing(true)
+        graph.removeWriteOnlyFields()
+        graph.removeObjectFields()
+        graph.removeConstantFields()
+        graph.giveLocalFieldsUniqueNames()
+        graph.removeMergeInfoInstructions()
+        graph.renumberFields()
+
+        CodeReconstruction.createCodeFromGraph(graph, true)
+        graph.renumberFields() // necessary
+    }
+
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleAllocateInstance -> {
                 // this allocation is a ClassType, so it cannot be null ever
                 if (!expr.allocatedType.isValue()) {
                     // call GC-aware alloc instead
-                    builder.append("gcNew(")
+                    builder.append('(')
                     appendType(expr.allocatedType, expr.scope, true)
-                    builder.append(")")
+                    appendOwnershipSuffix(expr.allocatedType)
+                    builder.append(") ")
+
+                    builder.append("gcNew(sizeof(")
+                    appendType(expr.allocatedType, expr.scope, true)
+                    builder.append("), ")
+                        .append(inheritanceTable.getClassIndex(expr.specialization))
+                        .append(")")
                 } else {
                     builder.append("{}")
                 }
@@ -346,12 +462,22 @@ class CSourceGenerator : CppSourceGenerator() {
                 appendValueParams(graph, expr.valueParameters, withBrackets = false)
                 builder.append(");")
             }
+            is SimpleBoxCast -> {
+                if (expr.dst.type.isValue() || expr.value.type.isValue()) {
+                    TODO("Convert instances for $expr")
+                }
+                builder.append('(')
+                appendType(expr.dst.type, expr.scope, true)
+                appendOwnershipSuffix(expr.dst.type)
+                builder.append(") ")
+                appendFieldName(graph, expr.value)
+            }
             else -> super.appendInstrImpl(graph, expr)
         }
     }
 
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
-        check(expr.methodName == "inc")
+        assertEquals(expr.methodName, "inc")
         appendFieldName(graph, expr.thisInstance, "")
         builder.append(" + 1")
     }
@@ -360,6 +486,13 @@ class CSourceGenerator : CppSourceGenerator() {
         if (type == Types.Char) {
             builder.append("(uint16_t) ").append(expr.asInt.toUShort())
         } else super.appendNumber(type, expr)
+    }
+
+    override fun getNativeImplementation(method: MethodLike): String? {
+        if (method.name == "readFromClassTable" || method.name == "readFromInterfaceTable") {
+            return "return 0" // temporary fallback for linker to continue
+        }
+        return super.getNativeImplementation(method)
     }
 
 }

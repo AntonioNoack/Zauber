@@ -5,17 +5,12 @@ import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.simple.SimpleBlock
-import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleGetOrSetField
-import me.anno.zauber.ast.simple.fields.LocalField
-import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
-import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 
@@ -30,8 +25,8 @@ object GraphToClass {
 
         val origin = graph.method.origin
 
-        // todo each entry-point becomes a method
-        // todo start entry-point creates the class
+        // todo each entry-point becomes a method in a new class
+        // todo start entry-point creates the class instance
         val clazz = graph.method.memberScope.generate("graphToClass", ScopeType.VIRTUAL_CLASS)
         clazz.setEmptyTypeParams()
 
@@ -39,26 +34,33 @@ object GraphToClass {
         val constr = Constructor(emptyList(), constrScope, null, null, Flags.SYNTHETIC, origin)
         constrScope.selfAsConstructor = constr
 
-        val fields = collectFields(graph, clazz)
+        val simpleFields = collectSimpleFields(graph, clazz)
+        val localFields = collectLocalFields(graph, clazz)
 
         val newEntryGraph = SimpleGraph(graph.method0)
-        createEntryBlock(newEntryGraph, clazz, fields)
+        createEntryBlock(newEntryGraph, clazz, simpleFields, localFields)
 
-        val entryGraphs = graph.blocks.filter { it.isEntryPoint }
-            .map { createContentBlock(graph, it, clazz, fields) }
+        val entryGraphs = graph.blocks.filter { block -> block.isEntryPoint }
+            .map { block -> createContentBlock(graph, block, clazz, simpleFields, localFields) }
 
+        TODO("Register graphs as method bodies")
 
     }
 
-    fun createEntryBlock(graph: SimpleGraph, clazz: Scope, fields: Map<Field, Field>): SimpleBlock {
+    fun createEntryBlock(
+        newGraph: SimpleGraph, clazz: Scope,
+        simpleFields: Map<SimpleField, Field>,
+        localFields: Map<LocalField, Field>
+    ): SimpleBlock {
         // create clazz instance
-        val instance = graph.field(clazz.typeWithArgs)
-        val block = graph.startBlock
-        val scope = graph.method.scope
-        val origin = graph.method.origin
+        val instance = newGraph.field(clazz.typeWithArgs)
+        val block = newGraph.startBlock
+        val scope = newGraph.method.scope
+        val origin = newGraph.method.origin
         block.instructions.add(
             SimpleAllocateInstance(
                 instance, clazz.typeWithArgs, emptyList(),
+                Specialization(clazz, emptyParameterList()),
                 scope, origin
             )
         )
@@ -73,7 +75,8 @@ object GraphToClass {
         graph: SimpleGraph,
         block: SimpleBlock,
         newClass: Scope,
-        fields: Map<Field, Field>
+        simpleFields: Map<SimpleField, Field>,
+        localFields: Map<LocalField, Field>
     ): SimpleGraph {
         val methodScope = newClass.getOrPut("b${block.blockId}", ScopeType.METHOD)
         val origin = block.instructions.firstOrNull()?.origin ?: graph.method.origin
@@ -85,40 +88,53 @@ object GraphToClass {
         methodScope.selfAsMethod = method
         val graph = SimpleGraph(Specialization(method.scope, graph.method0.typeParameters))
         graph.startBlock.instructions.addAll(block.instructions)
-        replaceFields(block, fields)
-        replaceSharedFieldsWithLocals(graph, newClass, fields)
+        replaceFields(block, simpleFields, localFields)
+        replaceSharedFieldsWithLocals(graph, newClass, simpleFields, localFields)
         return graph
     }
 
-    fun replaceFields(block: SimpleBlock, fields: Map<Field, Field>) {
+    fun replaceFields(
+        block: SimpleBlock,
+        simpleFields: Map<SimpleField, Field>,
+        localFields: Map<LocalField, Field>
+    ) {
         for (i in block.instructions.indices) {
             val instr = block.instructions[i]
-            if (instr is SimpleGetOrSetField) {
-                val newField = fields[instr.field] ?: continue
-                block.instructions[i] = instr.withField(newField)
+            if (instr is SimpleGSetLocalField) {
+                val newField = localFields[instr.field] ?: continue
+                TODO()
+                // block.instructions[i] = instr.withField(newField)
             }
         }
     }
 
-    fun collectFields(graph: SimpleGraph, newClass: Scope): Map<Field, Field> {
-        val fieldMap = HashMap<Field, Field>()
-        for (i in graph.blocks.indices) {
-            val block = graph.blocks[i]
-            for (j in block.instructions.indices) {
-                val expr = block.instructions[j]
-                if (expr is SimpleGetOrSetField && expr.isLocalField()) {
-                    val field = expr.field
-                    fieldMap.getOrPut(field) {
-                        newClass.addField(
-                            null, false, field.isMutable, null, field.name,
-                            field.resolveValueType(ResolutionContext.minimal),
-                            field.initialValue, Flags.SYNTHETIC, field.origin
-                        )
-                    }
-                }
-            }
+    /**
+     * converts local fields into class fields
+     * */
+    fun collectLocalFields(graph: SimpleGraph, newClass: Scope): Map<LocalField, Field> {
+        return graph.localFields.associateWith { field ->
+            val origin = field.field?.origin ?: graph.method.origin
+            val isMutable = true
+            newClass.addField(
+                null, false, isMutable, null, field.name,
+                field.type, null, Flags.SYNTHETIC, origin
+            )
         }
-        return fieldMap
+    }
+
+    /**
+     * converts simple fields into class fields
+     * */
+    fun collectSimpleFields(graph: SimpleGraph, newClass: Scope): Map<SimpleField, Field> {
+        return graph.simpleFields.associateWith { field ->
+            val origin = graph.method.origin
+            val name = "tmp${field.id}"
+            val isMutable = true
+            newClass.addField(
+                null, false, isMutable, null, name,
+                field.type, null, Flags.SYNTHETIC, origin
+            )
+        }
     }
 
     /**
@@ -127,7 +143,11 @@ object GraphToClass {
      * todo explicit SimpleGetExplicitSelf(),
      *  SimpleSetLocalField(), SimpleGetSimpleField()
      * */
-    fun replaceSharedFieldsWithLocals(graph: SimpleGraph, newClass: Scope, fields: Map<Field, Field>) {
+    fun replaceSharedFieldsWithLocals(
+        graph: SimpleGraph, newClass: Scope,
+        simpleFields: Map<SimpleField, Field>,
+        localFields: Map<LocalField, Field>
+    ) {
         // find which simple-fields are used in which graph parts
 
         val sharedFields = HashMap<SimpleField, Field>()
