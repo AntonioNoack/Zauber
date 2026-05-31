@@ -1223,7 +1223,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun exprIsHandledImplicitly(expr: SimpleInstruction): Boolean {
+    open fun canSkipInstruction(expr: SimpleInstruction): Boolean {
         if (expr is SimpleGetObject) return true
         if (expr is SimpleGetLocalField && expr.dst.dst.fromLocalField == expr.field) return true
         return false
@@ -1233,7 +1233,7 @@ open class JavaSourceGenerator : Generator() {
         graph: SimpleGraph, expr: SimpleInstruction,
         // loop: SimpleLoop? = null
     ) {
-        if (exprIsHandledImplicitly(expr)) return
+        if (canSkipInstruction(expr)) return
 
         appendInstrPrefix(graph, expr)
         appendInstrImpl(graph, expr)

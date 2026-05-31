@@ -178,7 +178,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             Types.Boolean -> LLVMType.I1
 
             Types.Byte, Types.UByte -> LLVMType.I8
-            Types.Short, Types.UShort -> LLVMType.I16
+            Types.Short, Types.UShort, Types.Char -> LLVMType.I16
             Types.Int, Types.UInt -> LLVMType.I32
 
             Types.Long, Types.ULong -> LLVMType.I64
@@ -524,7 +524,9 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         if (expr is SimpleAssignment && expr.dst.type == Types.Nothing) {
             appendUnreachable()
         }
-        nextLine()
+        if (expr !is SimpleNumber && expr !is SimpleGetObject) {
+            nextLine()
+        }
     }
 
     fun writeObjectGlobals() {
@@ -844,7 +846,17 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             LLVMType.I16 -> builder.append(expr.asInt.toShort())
             LLVMType.I32 -> builder.append(expr.asInt.toInt())
             LLVMType.I64 -> builder.append(expr.asInt)
-            LLVMType.F32 -> builder.append(expr.asFloat.toFloat())
+            LLVMType.F32 -> {
+                val l0 = builder.length
+                builder.append(expr.asFloat.toFloat())
+                if (builder.indexOf('E', l0) >= 0) {
+                    builder.setLength(l0)
+                    // LLVM is freaking weird, not handling exponents properly
+                    builder.append("bitcast (i32 ")
+                        .append(expr.asFloat.toFloat().toRawBits())
+                        .append(" to float)")
+                }
+            }
             LLVMType.F64 -> builder.append(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type -> $typeI")
         }
@@ -860,17 +872,17 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    override fun exprIsHandledImplicitly(expr: SimpleInstruction): Boolean {
-        return expr is SimpleGetObject
-    }
+    override fun canSkipInstruction(expr: SimpleInstruction): Boolean = false
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
 
-        builder.append(";; ").append(expr.javaClass.simpleName)
-        nextLine()
+        if (false) {
+            builder.append(";; ").append(expr.javaClass.simpleName)
+            nextLine()
+        }
 
         when (expr) {
-            is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
+            is SimpleNumber, is SimpleGetObject -> {} // skip
             is SimpleReturn -> {
                 val reg = getSimpleFieldReg(graph, expr.field)
                 val type = getLLVMType(expr.field.type)

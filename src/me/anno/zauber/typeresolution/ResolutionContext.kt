@@ -1,10 +1,11 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.zauber.ast.rich.member.Field
+import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
-import me.anno.zauber.types.Type
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Type
 
 data class ResolutionContext(
     /**
@@ -57,7 +58,14 @@ data class ResolutionContext(
 
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
-        return ResolutionContext(newSelfType?.specialize(specialization), specialization, allowTypeless, targetType, knownLambdas, extensionThis)
+        return ResolutionContext(
+            newSelfType?.specialize(specialization),
+            specialization,
+            allowTypeless,
+            targetType,
+            knownLambdas,
+            extensionThis
+        )
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
@@ -72,7 +80,14 @@ data class ResolutionContext(
 
     fun withSpec(specialization: Specialization): ResolutionContext {
         if (this.specialization == specialization) return this
-        return ResolutionContext(selfType?.specialize(specialization), specialization, allowTypeless, targetType, knownLambdas, extensionThis)
+        return ResolutionContext(
+            selfType?.specialize(specialization),
+            specialization,
+            allowTypeless,
+            targetType,
+            knownLambdas,
+            extensionThis
+        )
     }
 
     fun withExtensionThis(extensionThis: ExtensionThis): ResolutionContext {
@@ -92,6 +107,9 @@ data class ResolutionContext(
     }
 
     companion object {
-        val minimal = ResolutionContext(null, false, null)
+        val minimal by threadLocal {
+            // stores Specialization -> must be ThreadLocal
+            ResolutionContext(null, false, null)
+        }
     }
 }

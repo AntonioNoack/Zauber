@@ -6,8 +6,6 @@ import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Test
 
 // todo we need more tests:
-//  - type conversion
-//  - comparison of small ints after adding things to overflow
 //  - try-catch
 //  - yield
 
