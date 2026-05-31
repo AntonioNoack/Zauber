@@ -2,12 +2,14 @@ package me.anno.generation.llvm
 
 import me.anno.generation.InheritanceTable
 import me.anno.generation.Specializations.specialization
+import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.utils.FullMap
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -552,7 +554,6 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 val superType0 = classSpecialization.superType
                 val superType = if (superType0 != null) getStruct(superType0) else null
 
-
                 created = true
                 val typeIndex = typeList.size
                 val typeName = "%" + getClassName(clazz, classSpecialization)
@@ -662,7 +663,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         val branch = Branch(this)
         ifCondition(branch, "%isNull")
         ifBranch(branch) {
-            val value = allocateStruct(struct)
+            val value = allocateStruct(
+                struct,
+                inheritanceTable.getClassIndex(Specialization.fromSimple(objectScope))
+            )
             builder.append("store ").append(struct.typeName)
                 .append("* ").append(value)
                 .append(", ptr ").append(globalName)
@@ -722,7 +726,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         return if (mod > 0) pos - mod + size else pos
     }
 
-    fun allocateStruct(struct: LLVMStruct): String {
+    fun allocateStruct(struct: LLVMStruct, classIndex: Int): String {
 
         val raw = nextReg()
         val typed = nextReg()
@@ -738,6 +742,16 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         builder.append(typed)
             .append(" = bitcast ptr ").append(raw)
             .append(" to ").append(struct.typeName).append("*")
+        nextLine()
+
+        val classIndexPtr = nextReg()
+        builder.append(classIndexPtr).append(" = getelementptr ")
+            .append(struct.typeName)
+            .append(", ptr ").append(typed)
+            .append(", i32 0, i32 0")
+        nextLine()
+        builder.append("store i32 ").append(classIndex)
+            .append(", ptr ").append(classIndexPtr)
         nextLine()
 
         return typed
@@ -837,6 +851,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
+        if (field.type is ClassType) {
+            // ensure struct is known
+            getStruct(Specialization(field.type))
+        }
         builder.append(field.name).append(" = ")
             .append("alloca ").append(getLLVMType(field.type).ir)
         nextLine()
@@ -883,6 +901,17 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                     val tmp = nextReg()
                     builder.append(tmp).append(" = call ptr @calloc(i32 1, i32 ").append(estimateStructSize(struct))
                         .append(")")
+                    nextLine()
+
+                    val classIndexPtr = nextReg()
+                    builder.append(classIndexPtr).append(" = getelementptr ")
+                        .append(struct.typeName)
+                        .append(", ptr ").append(tmp)
+                        .append(", i32 0, i32 0")
+                    nextLine()
+                    builder.append("store i32 ")
+                        .append(inheritanceTable.getClassIndex(expr.specialization))
+                        .append(", ptr ").append(classIndexPtr)
                     nextLine()
 
                     appendAssign(expr.dst)
@@ -1044,6 +1073,21 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                     .append(" ], [ ").append(fromElse).append(", %").append(elseBranch)
                     .append(" ]")
             }
+            is SimpleCheckEquals -> {
+                val type = expr.left.type
+                check(type == expr.right.type)
+                check(type in nativeNumbers)
+
+                val left = getSimpleFieldReg(graph, expr.left)
+                val right = getSimpleFieldReg(graph, expr.right)
+
+                appendAssign(expr.dst)
+                // icmp eq i64 %d, 0
+                builder.append(if (type.isFloat()) "fcmp" else "icmp")
+                    .append(if (expr.negated) " ne " else " eq ")
+                    .append(getLLVMType(type).ir)
+                    .append(left).append(", ").append(right)
+            }
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }
     }
@@ -1074,20 +1118,92 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
-        if (expr.methods !is FullMap) {
-            if (expr.sample.ownerScope.isInterface()) {
-                TODO("interface method-res")
-            } else {
-                TODO("child-class method-res")
-            }
-        }
-
         val args = (listOf(expr.thisInstance) + expr.valueParameters).map {
             getSimpleFieldReg(graph, it)
         }
 
+        if (expr.methods !is FullMap) {
+            val options = inheritanceTable.createSwitchList(expr.specialization)
+            if (options.size < 2) {
+                val specialization = if (options.isNotEmpty()) options.first().second else expr.specialization
+                appendAssign(graph, expr)
+                callMethod(graph, specialization, args)
+                return
+            } else if (options.size <= CSourceGenerator.INHERITANCE_SWITCH_LIMIT) {
+                appendInheritedCallSwitch(graph, expr, options, args)
+                return
+            }
+        }
+
         appendAssign(graph, expr)
         callMethod(graph, expr.specialization, args)
+    }
+
+    fun appendInheritedCallSwitch(
+        graph: SimpleGraph,
+        expr: SimpleCall,
+        options: List<Pair<Specialization, Specialization>>,
+        args: List<String>
+    ) {
+        val selfType = expr.thisInstance.type as ClassType
+        val struct = getStruct(Specialization(selfType))
+
+        val classIndexPtr = nextReg()
+        val classIndexReg = nextReg()
+        builder.append(classIndexPtr).append(" = getelementptr ")
+            .append(struct.typeName)
+            .append(", ptr ").append(args.first())
+            .append(", i32 0, i32 0")
+        nextLine()
+
+        builder.append(classIndexReg).append(" = load i32, ptr ")
+            .append(classIndexPtr)
+        nextLine()
+
+        val endLabel = nextLabel("call_end")
+        val caseLabels = options.indices.map { nextLabel("case") }
+        val returnType = getLLVMType(expr.specialization.method.resolveReturnType(expr.specialization))
+
+        builder.append("switch i32 ").append(classIndexReg)
+            .append(", label %").append(caseLabels.last())
+            .append(" [")
+        nextLine()
+
+        for (i in 0 until options.lastIndex) {
+            val (clazz, _) = options[i]
+            builder.append("  i32 ").append(inheritanceTable.getClassIndex(clazz))
+                .append(", label %").append(caseLabels[i])
+            nextLine()
+        }
+
+        builder.append("]")
+        nextLine()
+
+        val branchResults = ArrayList<String>(options.size)
+        for (i in options.indices) {
+            val (_, method) = options[i]
+            builder.append(caseLabels[i]).append(":")
+            nextLine()
+
+            val resultReg = nextReg()
+            branchResults += resultReg
+            builder.append(resultReg).append(" = ")
+            callMethod(graph, method, args)
+            nextLine()
+            builder.append("br label %").append(endLabel)
+            nextLine()
+        }
+
+        builder.append(endLabel).append(":")
+        nextLine()
+        currBranch = endLabel
+        appendAssign(graph, expr)
+        builder.append("phi ").append(returnType.ir)
+        for (i in branchResults.indices) {
+            if (i > 0) builder.append(", ")
+            builder.append("[ ").append(branchResults[i]).append(", %")
+                .append(caseLabels[i]).append(" ]")
+        }
     }
 
     fun appendConstructorCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {

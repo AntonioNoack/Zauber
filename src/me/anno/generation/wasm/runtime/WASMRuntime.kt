@@ -120,6 +120,11 @@ class WASMRuntime(val binary: WASMBinary) {
                     val value = stack.removeLast()
                     stack[call.local0 + instr.index] = value
                 }
+                is WASMInstruction.LocalTee -> {
+                    // todo check type
+                    val value = stack.last()
+                    stack[call.local0 + instr.index] = value
+                }
 
                 is WASMInstruction.GlobalGet -> stack.add(globals[instr.index])
                 is WASMInstruction.GlobalSet -> globals[instr.index] = stack.removeLast()

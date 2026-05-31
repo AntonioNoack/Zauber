@@ -1,6 +1,7 @@
 package me.anno.generation.wasm
 
 import me.anno.generation.InheritanceTable
+import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.wasm.WASMType.Companion.anyRef
@@ -27,12 +28,7 @@ import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleGetClassField
-import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
-import me.anno.zauber.ast.simple.fields.SimpleSetClassField
-import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -46,8 +42,6 @@ import me.anno.zauber.types.impl.ClassType
 import java.io.File
 
 /**
- * todo copy/adjust this class into JVM-bytecode
- *
  * directly encode binary WASM
  * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
  * */
@@ -626,7 +620,13 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 emptyList(), true
             )
 
-            declareFuncHasNoLocalFields()
+            // define struct as local variable; we need it to set classIndex
+            val structNullable = getStruct(Specialization.fromSimple(objectScope), isNullable = true)
+            builder.append("(local \$obj ").append(structNullable.type.wasmName).append(")")
+            nextLine()
+            binary.u32(1)
+            binary.u32(1)
+            binary.writeValueType(structNullable.type)
             appendGetObjectInstanceImpl(objectScope)
 
             // close body
@@ -800,6 +800,26 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
+        if (expr is SimpleAllocateInstance) {
+            // store instance, but we must also set the class index
+
+            val dst = expr.dst.dst
+            val struct = getStruct(Specialization(expr.allocatedType), false)
+            builder.append("local.tee \$tmp").append(dst.id)
+            binary.localTee(getSimpleFieldOffset(graph) + dst.id)
+            nextLine()
+
+            i32Const(inheritanceTable.getClassIndex(expr.specialization))
+            nextLine()
+
+            builder.append("struct.set $")
+                .append(struct.typeName).append(' ')
+                .append(0)
+            binary.structSet(struct.typeIndex, 0)
+            nextLine()
+
+            return
+        }
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing) {
             val needed = expr.dst.dst.id >= 0
             if (needed) appendAssign(graph, expr)
@@ -962,14 +982,31 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         binary.structNewDefault(structNullable.typeIndex)
         nextLine()
 
+        builder.append("local.tee \$obj")
+        binary.localTee(0)
+        nextLine()
+
         globalSet(globalIndex)
-        builder.append(' ')
-        globalGet(globalIndex)
+        nextLine()
+
+        builder.append("local.get \$obj")
+        binary.localGet(0)
+        nextLine()
+
+        i32Const(inheritanceTable.getClassIndex(Specialization.fromSimple(objectScope)))
+        nextLine()
+
+        builder.append("struct.set $").append(structNullable.typeName).append(" 0")
+        binary.structSet(structNullable.typeIndex, 0)
         nextLine()
 
         val constructor = objectScope
             .getOrCreatePrimaryConstructorScope()
             .selfAsConstructor!!
+
+        builder.append("local.get \$obj")
+        binary.localGet(0)
+        nextLine()
 
         castNonNull()
         callMethod(Specialization(constructor.memberScope, emptyParameterList()))
@@ -1004,13 +1041,21 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    fun beginIf() {
-        builder.append("(if (then")
+    fun beginIf(resultType: WASMType? = null) {
+        builder.append("(if")
+        if (resultType != null) {
+            builder.append(" (result ").append(resultType.wasmName).append(")")
+        }
+        builder.append(" (then")
         indentation++
         nextLine()
 
         binary.u8(WASMOpcode.IF)
-        binary.u8(0x40) // empty block
+
+        // todo how are multiple results encoded?
+        if (resultType == null) binary.u8(0x40) // empty block
+        else binary.writeValueType(resultType)
+
         blockTableDepth++
     }
 
@@ -1218,7 +1263,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                     val sizeParam = expr.paramsForLater[0]
                     check(sizeParam.type == Types.Int)
 
-                    i32Const(0) // classIndex field; todo push class index
+                    i32Const(inheritanceTable.getClassIndex(expr.specialization))
                     nextLine()
 
                     appendGetField(graph, sizeParam) // size for content
@@ -1602,18 +1647,28 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
-        appendGetField(graph, expr.thisInstance)
-        appendValueParams(graph, expr.valueParameters)
-
         if (expr.methods !is FullMap) {
+            val options = inheritanceTable.createSwitchList(expr.specialization)
+            if (options.size < 2) {
+                val specialization = if (options.isNotEmpty()) options.first().second else expr.specialization
+                appendGetField(graph, expr.thisInstance)
+                appendValueParams(graph, expr.valueParameters)
+                callMethod(specialization)
+                nextLine()
+                return
+            } else if (options.size <= CSourceGenerator.INHERITANCE_SWITCH_LIMIT) {
+                appendInheritedCallSwitch(graph, expr, options)
+                return
+            }
 
             // todo if thisInstance is strictly known (no child types),
             //  just call it directly
 
             appendGetField(graph, expr.thisInstance)
-            appendLoadClassIndex()
+            appendValueParams(graph, expr.valueParameters)
 
-            // todo if there is few options, we can also create a switch-case
+            appendGetField(graph, expr.thisInstance)
+            appendLoadClassIndex(expr.thisInstance)
 
             // resolve function to call
             if (expr.sample.ownerScope.isInterface()) {
@@ -1634,14 +1689,54 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             nextLine()
 
         } else {
+            appendGetField(graph, expr.thisInstance)
+            appendValueParams(graph, expr.valueParameters)
             // direct call
             callMethod(expr.specialization)
             nextLine()
         }
     }
 
-    fun appendLoadClassIndex() {
+    fun appendInheritedCallSwitch(
+        graph: SimpleGraph, expr: SimpleCall,
+        options: List<Pair<Specialization, Specialization>>,
+    ) {
+        val returnType = getWASMType(expr.dst.type)
+        for (optionIndex in options.indices) {
 
+            val needsBranch = optionIndex < options.lastIndex
+            if (needsBranch) {
+                appendGetField(graph, expr.thisInstance)
+                appendLoadClassIndex(expr.thisInstance)
+
+                i32Const(inheritanceTable.getClassIndex(options[optionIndex].first)); nextLine()
+
+                builder.append("i32.eq")
+                binary.u8(WASMOpcode.I32_EQ)
+                nextLine()
+
+                beginIf(returnType)
+            }
+
+            appendGetField(graph, expr.thisInstance)
+            appendValueParams(graph, expr.valueParameters)
+            callMethod(options[optionIndex].second)
+            nextLine()
+
+            if (needsBranch) beginElse()
+        }
+
+        repeat(options.size - 1) {
+            endIfElse() // close blocks
+        }
+    }
+
+    fun appendLoadClassIndex(field: SimpleField) {
+        val selfType = field.type as ClassType
+        val struct = getStruct(Specialization(selfType), false)
+        builder.append("struct.get $").append(struct.typeName).append(" 0")
+        binary.structGet(struct.typeIndex, 0)
+        nextLine()
     }
 
     fun appendConstructorCallImpl(graph: SimpleGraph, expr: SimpleConstructorCall) {

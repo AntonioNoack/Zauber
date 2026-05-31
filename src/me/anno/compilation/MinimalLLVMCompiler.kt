@@ -78,6 +78,11 @@ class MinimalLLVMCompiler : MinimalCompiler() {
             builder.append("}\n")
         }
 
+        builder.append("\n" +
+                "int zauber_inheritance_readFromClassTable_28khp45(void* self, int addr) { return 0; }\n" +
+                "int zauber_inheritance_readFromInterfaceTable_28khp45(void* self, int addr) { return 0; }\n" +
+                "")
+
         val cFile = "Zauber.c"
         File(projectFolder, cFile)
             .writeText(builder.toString())

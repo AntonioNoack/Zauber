@@ -85,6 +85,11 @@ class WASMBinaryWriter(val out: ByteArrayOutputStream2 = ByteArrayOutputStream2(
         u32(i)
     }
 
+    fun localTee(i: Int) {
+        u8(WASMOpcode.LOCAL_TEE)
+        u32(i)
+    }
+
     fun globalGet(i: Int) {
         u8(WASMOpcode.GLOBAL_GET)
         u32(i)
