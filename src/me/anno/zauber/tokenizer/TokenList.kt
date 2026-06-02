@@ -270,8 +270,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
             offsets = offsets.copyOf(size * 4)
         }
 
-        if (i0 > i1) throw IllegalStateException("i0 > i1, $i0 > $i1 in $fileName")
-        if (i1 > source.length) throw IllegalStateException("i1 > src.len, $i1 > ${source.length} in $fileName")
+        if (i0 > i1) error("i0 > i1, $i0 > $i1 in $fileName")
+        if (i1 > source.length) error("i1 > src.len, $i1 > ${source.length} in $fileName")
 
         if (size > 0 && type == TokenType.SYMBOL &&
             getType(size - 1) == TokenType.SYMBOL &&
@@ -340,7 +340,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     @Suppress("POTENTIALLY_NON_REPORTED_ANNOTATION")
     @Deprecated("Don't use this method")
     override fun equals(other: Any?): Boolean {
-        throw IllegalStateException("Incorrect equals used")
+        error("Incorrect equals used")
     }
 
     override fun hashCode(): Int {
@@ -395,7 +395,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
                         val number = tmp.substring(i - 1, i + 3).toInt(16)
                         tmp.append(number.toChar())
                     }
-                    else -> throw IllegalStateException("Unknown escape sequence \\$ci")
+                    else -> error("Unknown escape sequence \\$ci")
                 }
             } else {
                 tmp.append(c)

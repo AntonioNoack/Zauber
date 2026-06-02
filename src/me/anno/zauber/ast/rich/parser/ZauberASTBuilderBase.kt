@@ -429,7 +429,7 @@ abstract class ZauberASTBuilderBase(
 
     fun readTypeNotNull(selfType: Type?, allowSubTypes: Boolean): Type {
         return readType(selfType, allowSubTypes)
-            ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+            ?: error("Expected type at ${tokens.err(i)}")
     }
 
     open fun readType(
@@ -456,7 +456,7 @@ abstract class ZauberASTBuilderBase(
 
         if (allowSubTypes && consumeIf(".")) {
             base = readType(base, true, isAndType, insideTypeParams)
-                ?: throw IllegalStateException("Expected to be able to read subtype")
+                ?: error("Expected to be able to read subtype")
             return if (negate) base.not() else base
         }
 
@@ -494,12 +494,12 @@ abstract class ZauberASTBuilderBase(
         if (negate) base = base.not()
         while (consumeIf("&", VSCodeType.OPERATOR, 0)) {
             val typeB = readType(null, allowSubTypes, true, insideTypeParams)
-                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+                ?: error("Expected type at ${tokens.err(i)}")
             base = andTypes(base, typeB)
         }
         if (!isAndType && consumeIf("|", VSCodeType.OPERATOR, 0)) {
             val typeB = readType(null, allowSubTypes, false, insideTypeParams)
-                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+                ?: error("Expected type at ${tokens.err(i)}")
             return unionTypes(base, typeB)
         }
         return base
@@ -563,7 +563,7 @@ abstract class ZauberASTBuilderBase(
             val forbidden = !insideTypeParams && this !is TypeScriptClassScanner
             if (tokens.equals(i, TokenType.NUMBER)) {
                 if (forbidden) {
-                    throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+                    error("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
                 return ComptimeValue(Types.Number, listOf(value))
@@ -571,7 +571,7 @@ abstract class ZauberASTBuilderBase(
 
             if (tokens.equals(i, TokenType.STRING)) {
                 if (forbidden) {
-                    throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+                    error("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
                 return ComptimeValue(Types.String, listOf(value))
@@ -579,7 +579,7 @@ abstract class ZauberASTBuilderBase(
 
             if (tokens.equals(i, "true", "false")) {
                 if (forbidden) {
-                    throw IllegalStateException("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
+                    error("Comptime-Values are only supported in type-params, ${tokens.err(i)}")
                 }
                 val value = tokens.toString(i++)
                 return ComptimeValue(Types.Boolean, listOf(value))
@@ -601,7 +601,7 @@ abstract class ZauberASTBuilderBase(
             path is ClassType -> ClassType(path.clazz, typeArgs, origin(i))
             path is UnresolvedType -> UnresolvedType(path.className, typeArgs, currPackage, imports)
             typeArgs == null -> path
-            else -> throw IllegalStateException("Cannot combine $path with $typeArgs")
+            else -> error("Cannot combine $path with $typeArgs")
         }
 
         if (allowSubTypes && consumeIf(".")) {
@@ -654,12 +654,12 @@ abstract class ZauberASTBuilderBase(
             } else readType(selfType, allowSubTypes = true, isAndType = false, insideTypeParams = true)
 
             val type = type0
-                ?: throw IllegalStateException("Expected type at ${tokens.err(i)}")
+                ?: error("Expected type at ${tokens.err(i)}")
             args.add(type) // recursive type
             when {
                 consumeIf(",") -> {}
                 consumeIf(">") -> break
-                else -> throw IllegalStateException("Expected , or > in type arguments, got ${tokens.err(i)}")
+                else -> error("Expected , or > in type arguments, got ${tokens.err(i)}")
             }
         }
         return args
@@ -679,7 +679,7 @@ abstract class ZauberASTBuilderBase(
             } else if (tokens.equals(i, TokenType.NAME)) {
                 val type = readTypeNotNull(null, true)
                 result.add(LambdaParameter(null, type))
-            } else throw IllegalStateException("Expected name: Type or name at ${tokens.err(i)}")
+            } else error("Expected name: Type or name at ${tokens.err(i)}")
             readComma()
         }
         return result
@@ -758,7 +758,7 @@ abstract class ZauberASTBuilderBase(
             var scope = currPackage
             while (!scope.isClassLike()) {
                 scope = scope.parent
-                    ?: throw IllegalStateException("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
+                    ?: error("Could not resolve Self-type in $currPackage at ${tokens.err(i - 1)}")
             }
             return scope.typeWithArgs
         }
@@ -1001,7 +1001,7 @@ abstract class ZauberASTBuilderBase(
             semantic?.setLSType(i - 1, VSCodeType.KEYWORD, 0)
             return
         }
-        throw IllegalStateException("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
+        error("Unknown keyword ${tokens.toString(i)} at ${tokens.err(i)}")
     }
 
     fun readNamedCall(namePath: String, i0: Int, typeParameters: List<Type>?, origin: Long): Expression {
@@ -1032,7 +1032,7 @@ abstract class ZauberASTBuilderBase(
     }
 
     open fun consumeKeyword(): Int {
-        throw IllegalStateException("Unknown keyword ${tokens.err(i)}")
+        error("Unknown keyword ${tokens.err(i)}")
     }
 
 }

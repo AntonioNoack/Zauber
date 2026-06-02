@@ -71,7 +71,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
                 consumeIf(";") -> {}
 
-                else -> throw IllegalStateException("Unknown token at ${tokens.err(i)}")
+                else -> error("Unknown token at ${tokens.err(i)}")
             }
             i = max(i0 + 1, i)
         }
@@ -113,7 +113,7 @@ class TypeScriptClassScanner(tokens: TokenList) :
                 consumeIf(TokenType.OPEN_ARRAY) -> readGetProperty()
 
                 consumeIf(";") -> {}
-                else -> throw IllegalStateException("Unknown token at ${tokens.err(i)}")
+                else -> error("Unknown token at ${tokens.err(i)}")
             }
             i = max(i0 + 1, i)
         }

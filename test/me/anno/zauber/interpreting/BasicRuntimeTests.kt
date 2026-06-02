@@ -25,9 +25,9 @@ class BasicRuntimeTests {
         fun testExecuteCatch(code: String, reset: Boolean = true): BlockReturn {
             val scope = typeResolveScope(code, reset)[ScopeInitType.AFTER_DISCOVERY]
             val field = scope.fields.firstOrNull { it.name == "tested" }
-                ?: throw IllegalStateException("Missing 'tested' field in scope ${scope.pathStr}")
+                ?: error("Missing 'tested' field in scope ${scope.pathStr}")
             val getter = field.getter
-                ?: throw IllegalStateException("Missing getter for $field")
+                ?: error("Missing getter for $field")
 
             registerAllMethods()
 

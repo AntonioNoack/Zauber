@@ -7,6 +7,6 @@ interface FieldResolvable {
     fun resolveField(context: ResolutionContext): ResolvedField?
 
     fun onMissingField(): Nothing {
-        throw IllegalStateException("Unable to resolve field for $this")
+        error("Unable to resolve field for $this")
     }
 }

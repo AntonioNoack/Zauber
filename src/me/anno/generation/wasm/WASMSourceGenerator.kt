@@ -981,7 +981,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
                 val type = getWASMType(
                     field.valueType
-                        ?: throw IllegalStateException("Missing valueType for $field")
+                        ?: error("Missing valueType for $field")
                 )
                 s.properties += WASMProperty(field, type, s.properties.size)
             }
@@ -1915,7 +1915,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     fun callMethod(method0: Specialization) {
         val method = method0.method
         val index = functionIndexMap[method0]
-            ?: throw IllegalStateException("Missing $method @${method0}, cannot call it")
+            ?: error("Missing $method @${method0}, cannot call it")
         builder.append("call $").append(getMethodName(method0))
         binary.call(index)
     }

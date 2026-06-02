@@ -76,7 +76,7 @@ abstract class ZauberTokenizerBase(
                         '}' -> TokenType.CLOSE_BLOCK
                         '[' -> TokenType.OPEN_ARRAY
                         ']' -> TokenType.CLOSE_ARRAY
-                        else -> throw IllegalStateException()
+                        else -> error("Unreachable")
                     }
                     tokens.add(type, i, i + 1)
                     i++

@@ -37,7 +37,7 @@ class DotExpression(
             val self = resolvedName
             if (self is NonObjectClassType) {
                 val companion = self.type.clazz.companionObject
-                    ?: throw IllegalStateException("Expected $self to have companion object")
+                    ?: error("Expected $self to have companion object")
                 return companion.typeWithArgs
             }
             return self
@@ -194,7 +194,7 @@ class DotExpression(
     private fun findNOCTScope(baseType: NonObjectClassType, rightName: String): Scope {
         return baseType.type.clazz.children
             .firstOrNull { it.name == rightName && (it.isClassLike() || it.scopeType == ScopeType.ENUM_ENTRY_CLASS) }
-            ?: throw IllegalStateException("No valid object '${rightName}' found in ${baseType.type}")
+            ?: error("No valid object '${rightName}' found in ${baseType.type}")
     }
 
     fun handleNOCTField(
@@ -205,7 +205,7 @@ class DotExpression(
         val child = findNOCTScope(baseType, rightName)
         if (child.isObjectLike() || child.scopeType == ScopeType.ENUM_ENTRY_CLASS) {
             val field = child.objectField
-                ?: throw IllegalStateException("Missing object-field for ${baseType.type}")
+                ?: error("Missing object-field for ${baseType.type}")
             return ResolvedField(
                 field, context.withSpec(Specialization(field.scope, ParameterList.emptyParameterList())),
                 scope, MatchScore.zero,
@@ -225,14 +225,14 @@ class DotExpression(
         when {
             isFieldType() -> {
                 val field = resolveField(context, baseType)
-                    ?: throw IllegalStateException("Unresolved field for field type: (${right.javaClass.simpleName}) $baseType dot $right in $scope")
+                    ?: error("Unresolved field for field type: (${right.javaClass.simpleName}) $baseType dot $right in $scope")
                 return ResolvedGetFieldExpression(base, field, scope, origin)
             }
             isMethodType() -> {
                 right as CallExpression
                 val callable = resolveCallable(context, baseType)
                 if (callable.resolved !is MethodLike) {
-                    throw IllegalStateException("Implement DotExpression with methodType, but field: $this")
+                    error("Implement DotExpression with methodType, but field: $this")
                 }
                 val targetParams = callable.resolved.valueParameters
                 val isConstrForInnerClass = callable is ResolvedConstructor &&

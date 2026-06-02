@@ -21,7 +21,7 @@ object OpCode {
             ) continue
             val index = field.getInt(null)
             val prevName = opcodeNames[index]
-            if (prevName != null) throw IllegalStateException("Duplicate value $name/$prevName,$index")
+            if (prevName != null) error("Duplicate value $name/$prevName,$index")
             opcodeNames[index] = name
         }
     }

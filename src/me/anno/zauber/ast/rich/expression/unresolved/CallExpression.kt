@@ -79,7 +79,7 @@ class CallExpression(
         // find the best matching candidate...
         return when (self) {
             is MemberNameExpression ->
-                throw IllegalStateException("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
+                error("CallExpression with MemberNameExpression must be converted into NamedCallExpression")
             is UnresolvedFieldExpression -> resolveCallableByName(self, context, valueParameters)
             is FieldExpression -> self.resolveField(context)
             is TypeExpression -> {
@@ -99,9 +99,9 @@ class CallExpression(
                 ConstructorResolver.findMemberInScopeImpl(
                     baseScope, baseScope.name,
                     typeParameters, valueParameters, context, origin
-                ) ?: throw IllegalStateException("Missing constructor for $baseType<$typeParameters>($valueParameters)")
+                ) ?: error("Missing constructor for $baseType<$typeParameters>($valueParameters)")
             }
-            else -> throw IllegalStateException(
+            else -> error(
                 "Resolve field/method in Callable for ${self.javaClass} ($self) " +
                         "in ${TokenListIndex.resolveOrigin(origin)}"
             )

@@ -41,7 +41,7 @@ abstract class ResolvedMember<V : Member>(
                     return ThisExpression(baseScope, codeScope, origin)
                 }
                 baseScope = baseScope.parent
-                    ?: throw IllegalStateException("Resolved must be in class or package, but found nothing $resolvedScope")
+                    ?: error("Resolved must be in class or package, but found nothing $resolvedScope")
             }
         }
 
@@ -52,7 +52,7 @@ abstract class ResolvedMember<V : Member>(
 
         val specialization = specialization
         if (type in specialization) {
-            throw IllegalStateException("Type $type is in specialization, but not resolved?? $specialization")
+            error("Type $type is in specialization, but not resolved?? $specialization")
         }
 
         TODO("GetBaseIfMissing on $type (${type.javaClass.simpleName}), spec: $specialization")

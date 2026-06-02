@@ -29,7 +29,7 @@ class WASMRuntime(val binary: WASMBinary) {
 
     fun call(methodName: String, params: List<Any?>): List<Any?> {
         val funcIndex = binary.exports[methodName]
-            ?: throw IllegalStateException(
+            ?: error(
                 "'$methodName' is not an exported function, " +
                         "options: ${binary.exports.keys}"
             )
@@ -59,7 +59,7 @@ class WASMRuntime(val binary: WASMBinary) {
             }.asReversed()
 
             val callable = knownImports[name]
-                ?: throw IllegalStateException("Missing implementation for $name")
+                ?: error("Missing implementation for $name")
 
             val result = callable(params)
             check(result.size == type.results.size)

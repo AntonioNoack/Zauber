@@ -109,7 +109,7 @@ abstract class CallExpressionBase(
         val body = ArrayList<Expression>()
         val knownLambdas = HashMap(context.knownLambdas)
         val inlineBody = method.body
-            ?: throw IllegalStateException(
+            ?: error(
                 "Inline method must have a body, method: $method, " +
                         "at ${resolveOrigin(origin)}"
             )
@@ -147,7 +147,7 @@ abstract class CallExpressionBase(
         // println("Resolving inline invocation: $callable, $inlineBody")
 
         val parameter = callable.resolved.byParameter as? Parameter
-            ?: throw IllegalStateException(
+            ?: error(
                 "Expected field by lambda to belong to a parameter, " +
                         "field: $callable, at ${resolveOrigin(origin)}"
             )
@@ -303,7 +303,7 @@ abstract class CallExpressionBase(
                     if (scopeI == targetScope) return // all fine
                     scopeI = scopeI.parentIfSameFileAndVisible ?: break
                 }
-                throw IllegalStateException("$type is not defined in $scope")
+                error("$type is not defined in $scope")
             }
             else -> TODO("Is $type (${type.javaClass.simpleName}) generic?")
         }

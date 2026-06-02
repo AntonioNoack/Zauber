@@ -67,7 +67,7 @@ class MemberNameExpression(
 
     override fun resolveField(context: ResolutionContext): ResolvedField {
         return FieldResolver.resolveField(context, scope, name, nameAsImport, null, origin)
-            ?: throw IllegalStateException(
+            ?: error(
                 "Missing field/type '${name}' in ${context.selfType}, $scope, " +
                         TokenListIndex.resolveOrigin(origin)
             )

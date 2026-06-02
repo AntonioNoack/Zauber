@@ -93,7 +93,7 @@ object ASTSimplifier {
             method.use { // use scope
                 val context = ResolutionContext(null, method, true, null)
                 val expr = method.method.getSpecializedBody(method)
-                    ?: throw IllegalStateException("Specialized body is null? For $method")
+                    ?: error("Specialized body is null? For $method")
                 if (LOGGER.isInfoEnabled) LOGGER.info("Simplifying $expr")
 
                 val graph = SimpleGraph(method)
@@ -258,7 +258,7 @@ object ASTSimplifier {
             is ArrayOfExpr -> return simplifyArrayOf(context, expr, block0, flow0)
 
             else -> {
-                if (!expr.isResolved()) throw IllegalStateException("${expr.javaClass.simpleName} was not resolved")
+                if (!expr.isResolved()) error("${expr.javaClass.simpleName} was not resolved")
                 throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
             }
         }
@@ -306,7 +306,7 @@ object ASTSimplifier {
         val unit = unitInstance(blockI.graph, scope, origin)
         val constructor = Types.Array.clazz.constructors0
             .firstOrNull { it.valueParameters.size == 1 && it.valueParameters[0].type == Types.Int }
-            ?: throw IllegalStateException("Missing Array(size: Int) constructor")
+            ?: error("Missing Array(size: Int) constructor")
         val specParams = ParameterList(Types.Array.clazz.typeParameters, listOf(instanceType))
         val specialization = Specialization(constructor.memberScope, specParams)
         val constr = SimpleConstructorCall(unit, true, array.use(), specialization, allocateParams, scope, origin)
@@ -320,7 +320,7 @@ object ASTSimplifier {
                     it.name == "set" && it.valueParameters.size == 2 &&
                             it.valueParameters[0].type == Types.Int
                 }
-                ?: throw IllegalStateException("Missing Array(size: Int).set(index,value) method")
+                ?: error("Missing Array(size: Int).set(index,value) method")
 
             // execute all assignments
             for (i in values.indices) {
@@ -523,7 +523,7 @@ object ASTSimplifier {
             if (field.getter == null) finishGetter(field.ownerScope, field)
 
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
-            val getter = field.getter ?: throw IllegalStateException("Missing getter for $field")
+            val getter = field.getter ?: error("Missing getter for $field")
             val newContext = context.withSpec(Specialization(getter.scope, ownerTypes))
             val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
@@ -541,7 +541,7 @@ object ASTSimplifier {
             if (self.type is ClassType && self.type.clazz.isInnerClassOf(field.ownerScope)) {
                 val clazz = self.type.clazz
                 val outerField = clazz.fields.firstOrNull { it.name == OUTER_FIELD_NAME }
-                    ?: throw IllegalStateException("Missing $OUTER_FIELD_NAME field in $clazz for $field")
+                    ?: error("Missing $OUTER_FIELD_NAME field in $clazz for $field")
                 val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
                 // println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
                 val spec = Specialization(outerField.fieldScope, expr.field.specialization.typeParameters)
@@ -638,7 +638,7 @@ object ASTSimplifier {
 
         if (useSetter) {
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: emptyParameterList()
-            val setter = field.setter ?: throw IllegalStateException("Missing setter for $field")
+            val setter = field.setter ?: error("Missing setter for $field")
             val newContext = context.withSpec(Specialization(setter.scope, ownerTypes))
             val resolvedSetter = ResolvedMethod(setter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
@@ -1166,7 +1166,7 @@ object ASTSimplifier {
         scope: Scope, origin: Long
     ): List<Expression> {
         return resolveNamedParameters(dst, src, scope, origin)
-            ?: throw IllegalStateException("Failed to fill in call parameters at ${resolveOrigin(origin)}")
+            ?: error("Failed to fill in call parameters at ${resolveOrigin(origin)}")
     }
 
 }

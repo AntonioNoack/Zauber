@@ -17,7 +17,7 @@ fun whenBranchToIfElseChain(cases: List<WhenCase>, scope: Scope, origin: Long): 
         chain = if (caseI.condition != null) {
             IfElseBranch(caseI.condition, caseI.body, chain)
         } else {
-            if (chain != null) throw IllegalStateException("Else must be the last case")
+            if (chain != null) error("Else must be the last case")
             caseI.body
         }
     }

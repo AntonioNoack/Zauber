@@ -152,7 +152,7 @@ class Field(
             }
         }
 
-        throw IllegalStateException("Field $this at ${resolveOrigin(origin)} has neither type, nor initial/getter, cannot resolve type")
+        error("Field $this at ${resolveOrigin(origin)} has neither type, nor initial/getter, cannot resolve type")
     }
 
     fun findReturnExprType(context: ResolutionContext, expression: Expression): Type {

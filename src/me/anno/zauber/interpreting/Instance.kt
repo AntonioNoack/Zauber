@@ -69,73 +69,73 @@ class Instance(
     fun castToByte(): Byte {
         checkType(Types.Byte)
         return rawValue as? Byte
-            ?: throw IllegalStateException("Found illegal Byte-instance without raw value: $this")
+            ?: error("Found illegal Byte-instance without raw value: $this")
     }
 
     fun castToUByte(): UByte {
         checkType(Types.UByte)
         return rawValue as? UByte
-            ?: throw IllegalStateException("Found illegal UByte-instance without raw value: $this")
+            ?: error("Found illegal UByte-instance without raw value: $this")
     }
 
     fun castToShort(): Short {
         checkType(Types.Short)
         return rawValue as? Short
-            ?: throw IllegalStateException("Found illegal Short-instance without raw value: $this")
+            ?: error("Found illegal Short-instance without raw value: $this")
     }
 
     fun castToUShort(): UShort {
         checkType(Types.UShort)
         return rawValue as? UShort
-            ?: throw IllegalStateException("Found illegal UShort-instance without raw value: $this")
+            ?: error("Found illegal UShort-instance without raw value: $this")
     }
 
     fun castToChar(): Char {
         checkType(Types.Char)
         return rawValue as? Char
-            ?: throw IllegalStateException("Found illegal Char-instance without raw value: $this")
+            ?: error("Found illegal Char-instance without raw value: $this")
     }
 
     fun castToInt(): Int {
         checkType(Types.Int)
         return rawValue as? Int
-            ?: throw IllegalStateException("Found illegal Int-instance without raw value: $this")
+            ?: error("Found illegal Int-instance without raw value: $this")
     }
 
     fun castToUInt(): UInt {
         checkType(Types.UInt)
         return rawValue as? UInt
-            ?: throw IllegalStateException("Found illegal UInt-instance without raw value: $this")
+            ?: error("Found illegal UInt-instance without raw value: $this")
     }
 
     fun castToLong(): Long {
         checkType(Types.Long)
         return rawValue as? Long
-            ?: throw IllegalStateException("Found illegal Long-instance without raw value: $this")
+            ?: error("Found illegal Long-instance without raw value: $this")
     }
 
     fun castToULong(): ULong {
         checkType(Types.ULong)
         return rawValue as? ULong
-            ?: throw IllegalStateException("Found illegal ULong-instance without raw value: $this")
+            ?: error("Found illegal ULong-instance without raw value: $this")
     }
 
     fun castToHalf(): Half {
         checkType(Types.Half)
         return rawValue as? Half
-            ?: throw IllegalStateException("Found illegal Half-instance without raw value: $this")
+            ?: error("Found illegal Half-instance without raw value: $this")
     }
 
     fun castToFloat(): Float {
         checkType(Types.Float)
         return rawValue as? Float
-            ?: throw IllegalStateException("Found illegal Float-instance without raw value: $this")
+            ?: error("Found illegal Float-instance without raw value: $this")
     }
 
     fun castToDouble(): Double {
         checkType(Types.Double)
         return rawValue as? Double
-            ?: throw IllegalStateException("Found illegal Double-instance without raw value: $this")
+            ?: error("Found illegal Double-instance without raw value: $this")
     }
 
     fun castToString(): String {
@@ -194,7 +194,7 @@ class Instance(
         check(fieldIndex != -1) { "Instance $this does not have field $field (${field.scope})" }
 
         if (fieldIndex >= fields.size) {
-            throw IllegalStateException("Outdated instance? $this")
+            error("Outdated instance? $this")
         }
 
         if (fields[fieldIndex] == null &&
@@ -207,7 +207,7 @@ class Instance(
         ) initializeConstant(field, fieldIndex)
 
         return fields[fieldIndex]
-            ?: throw IllegalStateException("$this.${field.toStringWithoutDefault()}[$fieldIndex] accessed before initialization")
+            ?: error("$this.${field.toStringWithoutDefault()}[$fieldIndex] accessed before initialization")
     }
 
     private fun initializeConstant(field: Field, fieldIndex: Int) {

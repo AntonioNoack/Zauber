@@ -57,12 +57,12 @@ class CSharpTokenizer(src: String, fileName: String) :
                     // any other escape sequence is ignored
                 }
             }
-            throw IllegalStateException("Verbatim string without end at ${tokens.err(tokens.size - 1)}")
+            error("Verbatim string without end at ${tokens.err(tokens.size - 1)}")
         } else if (i + 2 < src.length && src[i + 1] == '"' && src[i + 2] == '"') {
             val eos = src.indexOf("\"\"\"", i + 3)
             if (eos < 0) {
                 tokens.add(TokenType.STRING, i, i)
-                throw IllegalStateException("Failed to find end of triple-string at ${tokens.err(tokens.size - 1)}")
+                error("Failed to find end of triple-string at ${tokens.err(tokens.size - 1)}")
             }
             tokens.add(TokenType.STRING, i, eos + 3)
             i = eos + 3

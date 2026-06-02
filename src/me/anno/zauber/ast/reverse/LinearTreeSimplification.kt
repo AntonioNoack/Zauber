@@ -26,7 +26,7 @@ object LinearTreeSimplification {
 
         val ordered = nodesInRegion.sortedByTopology { block ->
             if (block == region.start) emptyList() else block.inputBlocks
-        } ?: throw IllegalStateException("Content must be sortable")
+        } ?: error("Content must be sortable")
 
         check(ordered.first() === region.start)
         check(ordered.last() === region.end)
@@ -63,7 +63,7 @@ object LinearTreeSimplification {
         check(targetDepth >= 0) { "Target-depth cannot be negative" }
         while (depth > targetDepth) {
             if (node.inputBlocks.isEmpty()) {
-                throw IllegalStateException("How can ${node.str()} be unreachable?")
+                error("How can ${node.str()} be unreachable?")
             }
             node = node.inputBlocks.minBy {
                 val depth = depths[it.blockId]
@@ -143,7 +143,7 @@ object LinearTreeSimplification {
             val node = nodes[i]
             if (node.inputBlocks.isEmpty()) {
                 println(graph)
-                throw IllegalStateException("Node ${node.str()} has no inputs")
+                error("Node ${node.str()} has no inputs")
             }
             val depth = node.inputBlocks.maxOf { input ->
                 val depth = depths[input.blockId]

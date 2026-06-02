@@ -1071,9 +1071,9 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 val fromIf = getSimpleFieldReg(graph, expr.ifField)
                 val fromElse = getSimpleFieldReg(graph, expr.elseField)
                 val ifBranch = fieldBranches[expr.ifField]
-                    ?: throw IllegalStateException("Missing name for ifBranch ${expr.ifField}")
+                    ?: error("Missing name for ifBranch ${expr.ifField}")
                 val elseBranch = fieldBranches[expr.elseField]
-                    ?: throw IllegalStateException("Missing name for elseBranch ${expr.elseField}")
+                    ?: error("Missing name for elseBranch ${expr.elseField}")
                 appendAssign(expr.dst)
                 builder.append("phi ")
                     .append(getLLVMType(expr.dst.type).ir)

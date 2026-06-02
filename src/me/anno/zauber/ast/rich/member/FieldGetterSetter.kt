@@ -95,7 +95,7 @@ object FieldGetterSetter {
         var getterScope = getterScope
         while (getterScope.scopeType != ScopeType.FIELD_GETTER) {
             getterScope = getterScope.parent
-                ?: throw IllegalStateException("Expected getterScope to be FIELD_GETTER")
+                ?: error("Expected getterScope to be FIELD_GETTER")
         }
 
         val isInterface = getterScope.parent?.scopeType == ScopeType.INTERFACE
@@ -172,7 +172,7 @@ object FieldGetterSetter {
         var setterScope = setterScope0
         while (setterScope.scopeType != ScopeType.FIELD_SETTER) {
             setterScope = setterScope.parent
-                ?: throw IllegalStateException("Expected setterScope to be FIELD_SETTER")
+                ?: error("Expected setterScope to be FIELD_SETTER")
         }
 
         val isInterface = setterScope.parent?.scopeType == ScopeType.INTERFACE

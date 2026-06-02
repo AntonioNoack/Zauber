@@ -43,7 +43,7 @@ object BuildCommand : CommandImpl("build", "b") {
             "runtime" -> null
             else -> {
                 if ("run-only" in options || "test-only" in options) null
-                else throw IllegalStateException("You must specify a target")
+                else error("You must specify a target")
             }
         }
         // compile
@@ -90,7 +90,7 @@ object BuildCommand : CommandImpl("build", "b") {
             }
 
             if (!scanAll) {
-                throw IllegalStateException("Missing project file in $location")
+                error("Missing project file in $location")
             }
 
             // we still need to find the root file
@@ -101,7 +101,7 @@ object BuildCommand : CommandImpl("build", "b") {
                 .toList()
 
             if (sourceFiles.isEmpty()) {
-                throw IllegalStateException("Could not find any source files in $location")
+                error("Could not find any source files in $location")
             }
 
             val projectRoots = sourceFiles.map { findProjectRootFromPackage(it) }
@@ -109,7 +109,7 @@ object BuildCommand : CommandImpl("build", "b") {
             val biggestRoot = uniqueRoots.maxBy { it.value.size }
             if (biggestRoot.value.size < 2f / 3f * projectRoots.size) {
                 val candidates = uniqueRoots.entries.sortedByDescending { it.value.size }.take(3)
-                throw IllegalStateException(
+                error(
                     "Project has no consensus on what the root file is, " +
                             "best candidates: ${candidates.map { "${it.key} [${(it.value.size * 100) / projectRoots.size}%]" }}"
                 )
@@ -193,7 +193,7 @@ object BuildCommand : CommandImpl("build", "b") {
                 if ("only-test" in options) {
                     return createEmptyMainMethod()
                 } else {
-                    throw IllegalStateException("No main method found")
+                    error("No main method found")
                 }
             }
             check(candidates.size == 1) {

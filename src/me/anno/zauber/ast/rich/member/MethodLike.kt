@@ -83,7 +83,7 @@ open class MethodLike(
         }
 
         val body = getSpecializedBody(specialization)
-            ?: throw IllegalStateException("Either body or returnType must be defined for $this")
+            ?: error("Either body or returnType must be defined for $this")
         return body.resolveReturnType(createContext(specialization))
     }
 

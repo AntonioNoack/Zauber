@@ -31,7 +31,7 @@ class UnresolvedFieldExpression(
     }
 
     override fun onMissingField(): Nothing {
-        throw IllegalStateException("Failed to resolve field $name in $scope at ${resolveOrigin(origin)}")
+        error("Failed to resolve field $name in $scope at ${resolveOrigin(origin)}")
     }
 
     override fun splitsScope(): Boolean = false

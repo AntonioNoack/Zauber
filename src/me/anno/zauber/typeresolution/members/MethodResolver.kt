@@ -110,7 +110,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods0?.filter { it.name == name }}")
         LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods0.filter { it.name == name }}")
         LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods0.filter { it.name == name }}")
-        throw IllegalStateException(
+        error(
             "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
                     "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"
         )

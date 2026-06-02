@@ -89,7 +89,7 @@ class ZClass(val type: Type) {
         if (primaryConstructor != null) {
             when (scope.scopeType) {
                 null, ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {} // ok
-                else -> throw IllegalStateException("Cannot create object instance for $scope")
+                else -> error("Cannot create object instance for $scope")
             }
 
             check(primaryConstructor.valueParameters.isEmpty()) {
@@ -107,10 +107,10 @@ class ZClass(val type: Type) {
 
     fun createInstance(): Instance {
         if (type == NullType || type == Types.Nothing) {
-            throw IllegalStateException("Cannot create instance of $type")
+            error("Cannot create instance of $type")
         }
         if (type !is ClassType) {
-            throw IllegalStateException("Type to create must be concrete and fully specified ($type)")
+            error("Type to create must be concrete and fully specified ($type)")
         }
         return Instance(this, arrayOfNulls(fields.size), runtime.nextInstanceId())
     }

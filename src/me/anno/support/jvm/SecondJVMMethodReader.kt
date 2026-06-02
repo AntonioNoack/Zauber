@@ -238,7 +238,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     BALOAD -> Types.Byte
                     SALOAD -> Types.Short
                     CALOAD -> Types.Char
-                    else -> throw IllegalStateException()
+                    else -> error("Unreachable")
                 }
                 val index = stack.removeLast().use()
                 val array = stack.removeLast().use()
@@ -267,7 +267,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     BASTORE -> Types.Byte
                     SASTORE -> Types.Short
                     CASTORE -> Types.Char
-                    else -> throw IllegalStateException()
+                    else -> error("Unreachable")
                 }
                 val value = stack.removeLast().use()
                 val index = stack.removeLast().use()
@@ -307,7 +307,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val dst = graph.field(Types.Int)
                 val array = stack.removeLast().use()
                 val field = findField(Types.Array.clazz, "size")
-                    ?: throw IllegalStateException("Missing field 'size' in zauber.Array")
+                    ?: error("Missing field 'size' in zauber.Array")
                 val instr = JVMSimpleGetField(dst, array, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
@@ -394,7 +394,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val candidates = clazz[ScopeInitType.AFTER_DISCOVERY].methods0
         return candidates.firstOrNull {
             it.name == name && equalsParams(params, it.valueParameters)
-        } ?: throw IllegalStateException(
+        } ?: error(
             "Missing $clazz.$name(${params.joinToString()}), " +
                     "candidates: $candidates"
         )
@@ -435,11 +435,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     T_SHORT -> Types.Short
                     T_INT -> Types.Int
                     T_LONG -> Types.Long
-                    else -> throw IllegalStateException("Unexpected operand: $operand")
+                    else -> error("Unexpected operand: $operand")
                 }
                 createArray(elementType)
             }
-            else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
+            else -> error("Unexpected opcode ${OpCode[opcode]}")
         }
     }
 
@@ -477,7 +477,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val self = graph.field(nameToType(owner))
                 block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
-                    ?: throw IllegalStateException("Missing field '$name' in $ownerType")
+                    ?: error("Missing field '$name' in $ownerType")
                 val instr = JVMSimpleGetField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
@@ -487,7 +487,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val dst = graph.field(fieldType)
                 val self = stack.removeLast().use()
                 val field = findField(ownerType.clazz, name)
-                    ?: throw IllegalStateException("Missing field '$name' in $ownerType")
+                    ?: error("Missing field '$name' in $ownerType")
                 val instr = JVMSimpleGetField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
@@ -497,7 +497,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val self = graph.field(nameToType(owner))
                 block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
-                    ?: throw IllegalStateException("Missing field '$name' in $ownerType")
+                    ?: error("Missing field '$name' in $ownerType")
                 val instr = JVMSimpleSetField(self, field, value, methodScope, origin)
                 block.add(instr)
             }
@@ -508,11 +508,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val self = stack.removeLast().use()
                 LOGGER.debug("$self.$name = $value")
                 val field = findField(ownerType.clazz, name)
-                    ?: throw IllegalStateException("Missing field '$name' in $ownerType")
+                    ?: error("Missing field '$name' in $ownerType")
                 val instr = JVMSimpleSetField(self, field, value, methodScope, origin)
                 block.add(instr)
             }
-            else -> throw IllegalStateException("Unknown instruction ${OpCode[opcode]}")
+            else -> error("Unknown instruction ${OpCode[opcode]}")
         }
     }
 
@@ -528,7 +528,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 FLOAD, FSTORE -> Types.Float
                 DLOAD, DSTORE -> Types.Double
                 ALOAD, ASTORE -> Types.Any
-                else -> throw IllegalStateException("Unsupported opcode ${OpCode[opcode]}")
+                else -> error("Unsupported opcode ${OpCode[opcode]}")
             }
 
             // create self-field and assign it...
@@ -555,7 +555,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val value = stack.removeLast().use()
                 block.add(JVMSimpleSetField(methodField.use(), field, value, methodScope, origin))
             }
-            else -> throw IllegalStateException("Unsupported opcode ${OpCode[opcode]}")
+            else -> error("Unsupported opcode ${OpCode[opcode]}")
         }
     }
 
@@ -646,7 +646,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     IFGT -> CompareType.GREATER
                     IFLE -> CompareType.LESS_EQUALS
                     IFGE -> CompareType.GREATER_EQUALS
-                    else -> throw IllegalStateException()
+                    else -> error("Unreachable")
                 }
                 block.add(JVMSimpleCompare(condition, null, null, compareType, tmp, methodScope, origin))
             }
@@ -663,7 +663,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     IF_ICMPGT -> CompareType.GREATER
                     IF_ICMPLE -> CompareType.LESS_EQUALS
                     IF_ICMPGE -> CompareType.GREATER_EQUALS
-                    else -> throw IllegalStateException()
+                    else -> error("Unreachable")
                 }
                 block.add(JVMSimpleCompare(condition, p0, p1, compareType, tmp, methodScope, origin))
             }
@@ -681,7 +681,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val negate = opcode == IFNONNULL
                 block.add(JVMSimpleCheckIdentical(condition, p0, p1, negate, methodScope, origin))
             }
-            else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
+            else -> error("Unexpected opcode ${OpCode[opcode]}")
         }
 
         block.branchCondition = condition
@@ -807,7 +807,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 self = stack.removeLast().use()
                 method = resolveDynamicMethod(owner, name, descriptor, typeParameters, valueParameters)
             }
-            else -> throw IllegalStateException("Unexpected opcode ${OpCode[opcode]}")
+            else -> error("Unexpected opcode ${OpCode[opcode]}")
         }
 
         val enableInheritance = when (opcode) {
@@ -877,7 +877,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val method = scope[ScopeInitType.AFTER_DISCOVERY].constructors0.firstOrNull {
             // equals(typeParameters, it.typeParameters) &&
             equals(valueParameters, it.valueParameters)
-        } ?: throw IllegalStateException(
+        } ?: error(
             "Missing constructor ${scope.pathStr}<$ownerTypes>$descriptor -> " +
                     "(${valueParameters.joinToString { it.toString() }}), " +
                     "options: ${
@@ -921,7 +921,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 ?: break
         }
 
-        throw IllegalStateException(
+        error(
             "Missing $scope0.$name$descriptor -> " +
                     "(${valueParameters.joinToString { it.type.toString() }}), " +
                     "options: ${

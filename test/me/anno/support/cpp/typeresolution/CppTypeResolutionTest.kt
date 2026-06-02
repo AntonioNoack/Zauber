@@ -36,7 +36,7 @@ class CppTypeResolutionTest {
             val field = testScope[ScopeInitType.AFTER_DISCOVERY]
                 .fields.first { it.name == "tested" }
             return field.valueType
-                ?: throw IllegalStateException("Could not resolve type for $field")
+                ?: error("Could not resolve type for $field")
         }
 
     }

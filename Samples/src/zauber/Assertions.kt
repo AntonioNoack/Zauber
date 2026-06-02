@@ -4,14 +4,14 @@ package zauber
  * Use this to check state
  * */
 fun check(b: Boolean) {
-    if (!b) throw IllegalStateException()
+    if (!b) error()
 }
 
 /**
  * Use this to check state
  * */
 inline fun check(b: Boolean, getMessage: () -> String) {
-    if (!b) throw IllegalStateException(getMessage())
+    if (!b) error(getMessage())
 }
 
 /**

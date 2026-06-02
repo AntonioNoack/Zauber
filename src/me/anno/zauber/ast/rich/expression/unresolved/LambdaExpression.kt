@@ -84,7 +84,7 @@ class LambdaExpression(
                         }
                         else -> {
                             // instead of throwing, we should probably just return some impossible type or error type...
-                            throw IllegalStateException("Found lambda without parameters, but expected $size")
+                            error("Found lambda without parameters, but expected $size")
                         }
                     }
                 }
@@ -138,7 +138,7 @@ class LambdaExpression(
 
             selfMethodScope = selfMethodScope.parentIfSameFile
                 ?: return context.selfType
-                    ?: throw IllegalStateException("Missing method scope for $this by $scope in ${resolveOrigin(origin)}, context: $context")
+                    ?: error("Missing method scope for $this by $scope in ${resolveOrigin(origin)}, context: $context")
         }
     }
 

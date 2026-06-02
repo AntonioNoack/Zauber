@@ -71,7 +71,7 @@ class CppTokenizer(
                         ']' -> TokenType.CLOSE_ARRAY
                         ',' -> TokenType.COMMA
                         ';' -> TokenType.SEMICOLON
-                        else -> throw IllegalStateException("Unknown character $c")
+                        else -> error("Unknown character $c")
                     }
                     tokens.add(type, i++, i)
                 }

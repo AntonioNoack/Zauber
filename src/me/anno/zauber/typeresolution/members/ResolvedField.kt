@@ -132,9 +132,9 @@ class ResolvedField(
 
         fun resolveFunInterfaceType(type: Type): ClassType {
             val scope = typeToScope(type)
-                ?: throw IllegalStateException("Cannot resolve scope from $type for fun-interface")
+                ?: error("Cannot resolve scope from $type for fun-interface")
             val funScope = resolveFunInterfaceType(scope)
-                ?: throw IllegalStateException("Could not find fun-interface in $scope")
+                ?: error("Could not find fun-interface in $scope")
             return funScope.typeWithArgs
         }
 
@@ -206,7 +206,7 @@ class ResolvedField(
 
             val method = lambdaClassScope.getMethods(ScopeInitType.AFTER_DISCOVERY)
                 .firstOrNull { it.name == "call" && it.typeParameters.isEmpty() && it.valueParameters.size == numArguments }
-                ?: throw IllegalStateException("Fun-Interface $lambdaClassName is missing .call() method")
+                ?: error("Fun-Interface $lambdaClassName is missing .call() method")
 
             val scopeSelfType = lambdaClassScope.typeWithArgs
             val methodReturnType = baseType.returnType
@@ -224,7 +224,7 @@ class ResolvedField(
                 method, methodReturnType, context.targetType, scopeSelfType,
                 typeParameters, valueParameters, specialization, codeScope, resolved.origin
             ) as? ResolvedMethod
-                ?: throw IllegalStateException("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
+                ?: error("Failed to resolve fun-interface on lambda, $lambdaClassName (${valueParameters.size})")
         }
 
         TODO("Resolve type parameters for $baseType call on a function interface")
@@ -237,7 +237,7 @@ class ResolvedField(
             it.name == "copy" &&
                     it.valueParameters.size == 1 &&
                     it.valueParameters[0].run { name == field.name && type == field.valueType }
-        } ?: throw IllegalStateException("Missing copy method for $field, candidates: ${valueScope.methods0}")
+        } ?: error("Missing copy method for $field, candidates: ${valueScope.methods0}")
         return ResolvedMethod(
             method, context.withSpec(Specialization(method.scope, specialization.typeParameters)),
             codeScope, matchScore

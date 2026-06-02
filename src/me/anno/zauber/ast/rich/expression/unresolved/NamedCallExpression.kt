@@ -106,10 +106,10 @@ class NamedCallExpression(
             if (self is FieldExpression) {
                 println("self-type: ${self.field.valueType}")
                 if (self.field.name == "content" && self.field.valueType == Types.Array) {
-                    throw IllegalStateException("Expected ${self.field}: ${self.field.valueType} to have type parameters")
+                    error("Expected ${self.field}: ${self.field.valueType} to have type parameters")
                 }
             }
-            throw IllegalStateException("Missing type parameters for $baseType in $this, $context")
+            error("Missing type parameters for $baseType in $this, $context")
         }
 
         // println("Resolving callable $name, baseType: $baseType, constructor: $constructor")

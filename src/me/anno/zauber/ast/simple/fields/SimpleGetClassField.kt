@@ -29,7 +29,7 @@ class SimpleGetClassField(
             if (selfScope.isInnerClassOf(fieldScope) ||
                 fieldScope.isInnerClassOf(selfScope)
             ) {
-                throw IllegalStateException("Cannot get $field from $self")
+                error("Cannot get $field from $self")
             }
         }
         check(!field.ownerScope.isInterface()) {

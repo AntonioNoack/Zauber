@@ -44,7 +44,7 @@ object TokenListIndex {
         var idx = indices.binarySearch(i, 0, tokenLists.size)
         if (idx < 0) idx = max(-idx - 2, 0)
         if (idx !in tokenLists.indices) {
-            throw IllegalStateException("Failed token search of $i in ${indices.toList()}")
+            error("Failed token search of $i in ${indices.toList()}")
         }
         if (false) LOGGER.info("$i${indices.copyOf(tokenLists.size).toList()}->$idx -> ${tokenLists[idx].fileName}")
         return tokenLists[idx]

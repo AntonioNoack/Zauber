@@ -109,11 +109,11 @@ object Macro {
         while (true) {
             if (scope.isObjectLike()) return scope
             if (scope.isClassLike()) {
-                throw IllegalStateException("Expected objectLike scope for macro-execution in $currPackage, not $scope")
+                error("Expected objectLike scope for macro-execution in $currPackage, not $scope")
             }
 
             scope = scope.parentIfSameFile
-                ?: throw IllegalStateException("Missing objectLike scope for macro-execution in $currPackage")
+                ?: error("Missing objectLike scope for macro-execution in $currPackage")
         }
     }
 
@@ -131,7 +131,7 @@ object Macro {
                 // ignore last, which is the context
                 .run { subList(0, size - 1) }
             val valueParameters1 = resolveNamedParameters(expected, valueParameters, scope, origin)
-                ?: throw IllegalStateException(
+                ?: error(
                     "Unable to properly reorder parameters for $macro at ${resolveOrigin(origin)}, " +
                             "${expected.map { it.name }} vs ${valueParameters.map { it.name }}"
                 )
@@ -169,7 +169,7 @@ object Macro {
         macroCallDepth++
         println("[$macroCallDepth] Evaluating macro '${macro.resolved.name}' using $valueParameters")
 
-        if (macroCallDepth >= 100) throw IllegalStateException("Macro-death-spiral")
+        if (macroCallDepth >= 100) error("Macro-death-spiral")
 
         // todo we should be able to cache valueParameters...
         //  only if they're immutable though... maybe we can enforce all parameters to be values?
@@ -225,7 +225,7 @@ object Macro {
 
         val resultIndex = result.value.clazz.fields.indexOfFirst { it.name == "result" }
         val value = result.value.fields.getOrNull(resultIndex)
-            ?: throw IllegalStateException("Missing first property of TokenResult")
+            ?: error("Missing first property of TokenResult")
 
         // todo allow special character codes to encode where something came from...
         val tokenSource = value.castToString()

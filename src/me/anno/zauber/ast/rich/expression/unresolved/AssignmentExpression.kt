@@ -60,7 +60,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             }
             is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldResolvable -> {
                 val field = dstExpr.right.resolveField(context)
-                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                    ?: error("Could not resolve field for ${dstExpr.right}")
                 val owner = dstExpr.left
                 return ResolvedSetFieldExpression(owner, field, newValue, scope, origin)
             }
@@ -68,7 +68,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
                 val owner = dstExpr.left.resolve(context)
                 val ownerType = owner.resolveReturnType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
-                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                    ?: error("Could not resolve field for ${dstExpr.right}")
                 return if (!field.resolved.isMutable) {
                     // potentially chained case
                     handleImmutableAssignment(field, owner, newValue, dstExpr.left)
@@ -81,7 +81,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
                 val owner = dstExpr.left.resolve(context)
                 val ownerType = owner.resolveReturnType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
-                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                    ?: error("Could not resolve field for ${dstExpr.right}")
                 check(field.resolved.isMutable) {
                     "Expected ${dstExpr.left}.${field.resolved.name} to be mutable @${resolveOrigin(origin)}"
                 }
@@ -106,19 +106,19 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             }
             is DotExpression if dstExpr.left is ThisExpression && dstExpr.right is FieldResolvable -> {
                 dstExpr.right.resolveField(context)
-                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                    ?: error("Could not resolve field for ${dstExpr.right}")
             }
             is DotExpression if dstExpr.left is FieldExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
                 val ownerType = owner.resolveReturnType(context)
                 dstExpr.right.resolveField(context.withSelfType(ownerType))
-                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                    ?: error("Could not resolve field for ${dstExpr.right}")
             }
             is DotExpression if dstExpr.left is TypeExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
                 val ownerType = owner.resolveReturnType(context)
                 dstExpr.right.resolveField(context.withSelfType(ownerType))
-                    ?: throw IllegalStateException("Could not resolve field for ${dstExpr.right}")
+                    ?: error("Could not resolve field for ${dstExpr.right}")
             }
             is DotExpression -> {
                 throw NotImplementedError(
@@ -147,7 +147,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             return prepareSetterForCopy(owner, field, newValue)
         }
 
-        throw IllegalStateException(
+        error(
             "Expected ${leftExpr}.${field.resolved.name} " +
                     "to be mutable at ${resolveOrigin(origin)}"
         )
@@ -160,7 +160,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             if (!owner.field.isMutable) {
                 // todo it would be nice if we could do this recursively...
                 // handleImmutableAssignment(owner.field, owner.self, newValue, owner.self)
-                throw IllegalStateException(
+                error(
                     "Expected ${owner.self}.${owner.field.resolved.name}.${field.resolved.name} " +
                             "to be mutable at ${resolveOrigin(origin)}"
                 )

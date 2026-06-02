@@ -17,7 +17,7 @@ class FieldResolutionTest {
     companion object {
 
         fun findField(scope: Scope, name: String = "tested"): Field =
-            tryFindField(scope, name) ?: throw IllegalStateException("Missing field '$name' in scope '$scope'")
+            tryFindField(scope, name) ?: error("Missing field '$name' in scope '$scope'")
 
         fun findFieldType(scope: Scope, name: String = "tested"): Type =
             findField(scope, name).resolveValueType(ResolutionContext.minimal)

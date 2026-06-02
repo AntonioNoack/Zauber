@@ -42,7 +42,7 @@ object CapturedFields : MethodOrClassColoring<Set<Field>>() {
                 // todo but that's more of an inner function...
 
                 val field = expr.resolveField(context)?.resolved
-                    ?: throw IllegalStateException("Failed to resolve field $expr")
+                    ?: error("Failed to resolve field $expr")
 
                 if (belongsToOtherMethod(field, moc)) {
                     moc.method?.capturedFields += field

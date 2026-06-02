@@ -231,7 +231,7 @@ class ZauberASTBuilder(
         }
         check(tokens.equals(i, TokenType.NAME))
         val path = readTypePath(null)
-            ?: throw IllegalStateException("Expected type for annotation at ${tokens.err(i)}")
+            ?: error("Expected type for annotation at ${tokens.err(i)}")
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             readValueParameters()
         } else emptyList()
@@ -570,7 +570,7 @@ class ZauberASTBuilder(
         val i0 = i
         val origin = origin(i)
         val type = readType(selfType, true) as? ClassType
-            ?: throw IllegalStateException("SuperType must be a ClassType, at ${tokens.err(i0)}")
+            ?: error("SuperType must be a ClassType, at ${tokens.err(i0)}")
 
         val valueParams = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             readValueParameters()
@@ -688,7 +688,7 @@ class ZauberASTBuilder(
             }
         }
         if (!hadElse && conditions.isEmpty()) {
-            throw IllegalStateException("Missing conditions at ${tokens.err(i)}")
+            error("Missing conditions at ${tokens.err(i)}")
         }
         if (hadElse) return null
         return conditions
@@ -1047,7 +1047,7 @@ class ZauberASTBuilder(
 
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
-                    throw IllegalStateException("} in the middle at ${tokens.err(i)}")
+                    error("} in the middle at ${tokens.err(i)}")
 
                 consumeIf(";") -> {} // skip
                 consumeIf("@") -> annotations.add(readAnnotation())
@@ -1064,8 +1064,8 @@ class ZauberASTBuilder(
                 }
 
                 consumeIf("fun") -> readMethod() // will just get added to the scope for later resolution
-                consumeIf("inner") -> throw IllegalStateException("Inner classes inside methods are not supported")
-                consumeIf("enum") -> throw IllegalStateException("Enum classes inside methods are not supported")
+                consumeIf("inner") -> error("Inner classes inside methods are not supported")
+                consumeIf("enum") -> error("Enum classes inside methods are not supported")
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
                 consumeIf("typealias") -> readTypeAlias()
 
@@ -1173,7 +1173,7 @@ class ZauberASTBuilder(
         val names = readDestructuringFields()
         val value = if (consumeIf("=")) {
             readExpression()
-        } else throw IllegalStateException("Expected value for destructuring at ${tokens.err(i)}")
+        } else error("Expected value for destructuring at ${tokens.err(i)}")
         return createDestructuringAssignment(names, value, isMutable, fieldScope)
     }
 

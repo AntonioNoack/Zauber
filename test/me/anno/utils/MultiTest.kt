@@ -59,7 +59,7 @@ class MultiTest(val code: String) {
 
     fun runTest(type: String) {
         val runnable = runnables[type]
-            ?: throw IllegalStateException("Missing '$type'")
+            ?: error("Missing '$type'")
         runnable()
     }
 }

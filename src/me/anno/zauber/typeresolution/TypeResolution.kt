@@ -88,7 +88,7 @@ object TypeResolution {
                 else -> {}
             }
             scope = scope.parentIfSameFile
-                ?: throw IllegalStateException("Failed to resolve 'this' in $scope0")
+                ?: error("Failed to resolve 'this' in $scope0")
         }
     }
 
@@ -116,7 +116,7 @@ object TypeResolution {
                 else -> {}
             }
             scopeI = scopeI.parent
-                ?: throw IllegalStateException("Failed to resolve SelfType in $scope")
+                ?: error("Failed to resolve SelfType in $scope")
         }
     }
 

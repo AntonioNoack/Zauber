@@ -1,5 +1,6 @@
 package me.anno.zauber.scope
 
+import me.anno.libraries.Library
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.ast.FlagSet
@@ -41,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class Scope(val name: String, val parent: Scope? = null) {
 
     var scopeType: ScopeType? = null
+    var sourceLibrary: Library? = null
 
     val path: List<String>
         get() {
@@ -296,7 +298,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         val other = fields.firstOrNull { it.name == field.name }
         if (other != null) {
             if (other === field) return field
-            throw IllegalStateException(
+            error(
                 "Each field must only be declared once per scope [$pathStr], ${field.name} " +
                         "at ${TokenListIndex.resolveOrigin(field.origin)} " +
                         "vs ${TokenListIndex.resolveOrigin(other.origin)}"
@@ -385,11 +387,11 @@ class Scope(val name: String, val parent: Scope? = null) {
         val self = this
         if (scopeType != null) {
             if (self.scopeType == null || self.scopeType == scopeType) self.scopeType = scopeType
-            else throw IllegalStateException("ScopeType conflict in '$pathStr'! ${self.scopeType} vs $scopeType")
+            else error("ScopeType conflict in '$pathStr'! ${self.scopeType} vs $scopeType")
         }
         val parentType = parent?.scopeType
         if (!scopeHierarchyIsAllowed(parentType, scopeType)) {
-            throw IllegalStateException("$scopeType cannot be placed inside $parentType} ($pathStr)")
+            error("$scopeType cannot be placed inside $parentType} ($pathStr)")
         }
     }
 
@@ -417,7 +419,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun resolveTypeSameFolder(name: String): Scope? {
         var folderScope = this
         if (fileName == null) {
-            // throw IllegalStateException("No file assigned to $this?")
+            // error("No file assigned to $this?")
             return null
         }
         while (folderScope.fileName == fileName) {
@@ -532,7 +534,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun resolveType(name: String, imports: List<Import>): Type {
         val name = if (name == "kotlin") "zauber" else name
         return resolveTypeOrNull(name, imports, true)
-            ?: throw IllegalStateException("Unresolved type '$name' in $this, children: ${children.map { it.name }}")
+            ?: error("Unresolved type '$name' in $this, children: ${children.map { it.name }}")
     }
 
     fun resolveTypeOrNull(name: String, imports: List<Import>): Type? {

@@ -320,7 +320,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                     superType.clazz, superCall.origin, superType.clazz.name,
                     null, valueParams, context
                 )
-                    ?: throw IllegalStateException("Missing $superCall in $superType for $className, valueParams: $valueParams")
+                    ?: error("Missing $superCall in $superType for $className, valueParams: $valueParams")
                 builder.append(".__init__")
                     .append(hashMethodParameters(foundConstructor.specialization))
             }

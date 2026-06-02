@@ -64,7 +64,7 @@ class Runtime {
         return call.simpleFields[field.id]
             ?: run {
                 println(call.graph)
-                throw IllegalStateException(
+                error(
                     "Missing simple field $field, " +
                             "fields: ${call.simpleFields.withIndex().joinToString("") { (k, v) -> "\n  %$k=$v" }}"
                 )
@@ -110,12 +110,12 @@ class Runtime {
 
     fun getBool(bool: Boolean): Instance {
         val boolCompanion = Types.Boolean.clazz[ScopeInitType.AFTER_DISCOVERY].companionObject
-            ?: throw IllegalStateException("Missing definition for enum class Boolean")
+            ?: error("Missing definition for enum class Boolean")
         val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
         val fields = boolInstance.clazz.fields
         val name = if (bool) "TRUE" else "FALSE"
         val field = fields.firstOrNull { it.name == name }
-            ?: throw IllegalStateException("Missing enum Boolean.$name")
+            ?: error("Missing enum Boolean.$name")
         return boolInstance[field]
     }
 
@@ -154,13 +154,13 @@ class Runtime {
             }
             val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
             val method = externalMethods[key]
-                ?: throw IllegalStateException("Missing external method ${key.str()}")
+                ?: error("Missing external method ${key.str()}")
             val value = method.process(methodOwnerInstance, valueParameters)
             return BlockReturn(ReturnType.RETURN, value)
         }
 
         if (method.body == null) {
-            throw IllegalStateException("Missing body for method $method in ${method.scope.pathStr}")
+            error("Missing body for method $method in ${method.scope.pathStr}")
         }
 
         val graph = ASTSimplifier.simplify(specialization)
@@ -221,9 +221,9 @@ class Runtime {
             val (owner, capturedField) = capture
             val prevCall = findPrevCall(owner)
             val prevCallInstanceRef = prevCall.graph.thisField
-                ?: throw IllegalStateException("Missing thisField for ${capturedField.ownerScope} in $owner")
+                ?: error("Missing thisField for ${capturedField.ownerScope} in $owner")
             val prevCallInstance = prevCall.localFields[prevCallInstanceRef.id]
-                ?: throw IllegalStateException("Missing thisInstance for ${capturedField.ownerScope} in $owner")
+                ?: error("Missing thisInstance for ${capturedField.ownerScope} in $owner")
             call.setSimple(dstField, prevCallInstance[capturedField])
         }
     }
@@ -233,7 +233,7 @@ class Runtime {
             val call = callStack[i]
             if (call.method == owner) return call
         }
-        throw IllegalStateException("Missing $owner in callStack")
+        error("Missing $owner in callStack")
     }
 
     fun getUnit(): Instance {
@@ -313,7 +313,7 @@ class Runtime {
             } else {
                 LOGGER.info("Finished $block, next: ${block.nextBranch?.blockId}")
                 block.nextBranch
-            } ?: throw IllegalStateException("Exited without return from ${block0.graph.method}")
+            } ?: error("Exited without return from ${block0.graph.method}")
         }
     }
 

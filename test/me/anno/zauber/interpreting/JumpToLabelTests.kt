@@ -54,7 +54,7 @@ class JumpToLabelTests {
                     while(true) {
                         // if this was an unnamed break, we would fail
                         break@named
-                        throw IllegalStateException("Skipped break") // just in case
+                        error("Skipped break") // just in case
                     }
                 }
                 return 1

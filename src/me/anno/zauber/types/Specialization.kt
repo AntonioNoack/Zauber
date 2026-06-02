@@ -60,7 +60,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         val expectedGenerics = collectGenerics(scope)
         val matchesGenerics = actualGenerics.toSet() == expectedGenerics.toSet()
         if (!matchesGenerics) {
-            throw IllegalStateException("Mismatched generics for $scope: got $typeParameters, expected $expectedGenerics")
+            error("Mismatched generics for $scope: got $typeParameters, expected $expectedGenerics")
         }
     }
 
@@ -158,7 +158,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
                 return genNameI
             }
         }
-        throw IllegalStateException("Too many duplicates of $genName0")
+        error("Too many duplicates of $genName0")
     }
 
     override fun toString(): String {
@@ -247,7 +247,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
             }
             return scope.selfAsMethod
                 ?: scope.selfAsConstructor
-                ?: throw IllegalStateException("$scope[${scope.scopeType}] is method-like, but has no method?")
+                ?: error("$scope[${scope.scopeType}] is method-like, but has no method?")
         }
 
     val field: Field

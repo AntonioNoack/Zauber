@@ -70,7 +70,7 @@ class InheritanceTable(val data: DependencyData) {
 
     fun funToSpec(name: String): Specialization {
         val method = helperScope.methods0.firstOrNull { it.name == name }
-            ?: throw IllegalStateException("Missing $name() in $helperScope")
+            ?: error("Missing $name() in $helperScope")
         return Specialization(method.memberScope, emptyParameterList())
     }
 
@@ -133,7 +133,7 @@ class InheritanceTable(val data: DependencyData) {
         val implementations = collectChildImplementations(method)
         val adapted = children.map { child ->
             val impl = implementations[child.scope!!]
-                ?: throw IllegalStateException("Missing $method in $child")
+                ?: error("Missing $method in $child")
             Specialization(impl.scope, method0.typeParameters + child.typeParameters)
         }
 

@@ -236,7 +236,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val methodScope = skipTypeParametersToFindFunctionNameAndScope(origin(i))
         val typeParams = readTypeParameterDeclarations(methodScope, true)
         val tn = readTypeAndName()
-            ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
+            ?: error("Expected type and name @${tokens.err(i)}")
         check(tokens.equals(i, "("))
         readMethodInClass(tn.first!!, tn.second, typeParams)
     }
@@ -268,7 +268,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         } else {
             // todo for methods, we may have generic parameters
             val tn = readTypeAndName()
-                ?: throw IllegalStateException("Expected type and name @${tokens.err(i)}")
+                ?: error("Expected type and name @${tokens.err(i)}")
             if (tokens.equals(i, "(")) {
                 readMethodInClass(tn.first!!, tn.second, emptyList())
             } else {
@@ -372,7 +372,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
         check(tokens.equals(i, TokenType.NAME))
         val path = readTypePath(null)
-            ?: throw IllegalStateException("Expected type for annotation at ${tokens.err(i)}")
+            ?: error("Expected type for annotation at ${tokens.err(i)}")
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             readValueParameters()
         } else emptyList()
@@ -551,7 +551,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                             listOf(NamedParameter(null, type.size)), null,
                             currPackage, origin
                         )
-                        else -> throw IllegalStateException("Cannot construct $type")
+                        else -> error("Cannot construct $type")
                     }
                 }
             }
@@ -935,7 +935,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                                 is TypeExpression -> expr.type
                                 is UnresolvedFieldExpression -> nativeJavaTypes[expr.name]
                                     ?: currPackage.resolveType(expr.name, imports)
-                                else -> throw IllegalStateException("$expr (${expr.javaClass.simpleName}) is a type...")
+                                else -> error("$expr (${expr.javaClass.simpleName}) is a type...")
                             }
                             GetClassFromTypeExpression(type, scope, origin)
                         } else {
@@ -1110,7 +1110,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                         consumeIf("while") -> readWhileLoop(label)
                         consumeIf("for") -> readForLoop(label)
                         consumeIf("switch") -> readSwitch(label)
-                        else -> throw IllegalStateException("Unknown $label@${tokens.err(i)}")
+                        else -> error("Unknown $label@${tokens.err(i)}")
                     }
                 }
 
@@ -1122,7 +1122,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 consumeIf("final") -> {
                     val k = i
                     val tn = readTypeAndName()
-                        ?: throw IllegalStateException("Expected type and name after 'final' at ${tokens.err(k)}")
+                        ?: error("Expected type and name after 'final' at ${tokens.err(k)}")
                     result += readDeclaration(tn.first, tn.second)
                     while (consumeIf(",")) {
                         val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)

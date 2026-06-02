@@ -232,7 +232,7 @@ object CallWithNames {
             } ?: run {
                 val types = values.map { it.resolveReturnType(context.withTargetType(null)) }
                 if (types.isNotEmpty()) unionTypes(types) else null
-            } ?: throw IllegalStateException(
+            } ?: error(
                 "Unknown instance type for createArrayOfExpr (this will fail to resolve), " +
                         "at ${resolveOrigin(origin)}"
             )

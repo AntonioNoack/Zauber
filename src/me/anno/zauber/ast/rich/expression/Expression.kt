@@ -53,7 +53,7 @@ abstract class Expression(val scope: Scope, val origin: Long) {
     }
 
     fun exprHasNoType(context: ResolutionContext): Type {
-        if (!context.allowTypeless) throw IllegalStateException(
+        if (!context.allowTypeless) error(
             "Expected type, but found $this (${javaClass.simpleName}) in ${resolveOrigin(origin)}"
         )
         return Types.Unit

@@ -84,7 +84,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             end++
         }
 
-        throw IllegalStateException("Unexpected EOF for field/method at ${tokens.err(i)}")
+        error("Unexpected EOF for field/method at ${tokens.err(i)}")
     }
 
     fun readTypeUntil(endExcl: Int): Type {
@@ -123,7 +123,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             ?: genericParams.last()[name0]
             ?: currPackage.resolveTypeOrNull(name0, this)
             ?: (selfType as? ClassType)?.clazz?.resolveType(name0, this)
-            ?: throw IllegalStateException("Missing type '$name0'")
+            ?: error("Missing type '$name0'")
 
         while (tokens.equals(i, "::") && tokens.equals(i + 1, TokenType.NAME)) {
             path = (path as ClassType).clazz.getOrPut(tokens.toString(i + 1), null).typeWithArgs
@@ -455,7 +455,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                 expr
             }
 
-            else -> throw IllegalStateException("Unexpected token at ${tokens.err(i)}")
+            else -> error("Unexpected token at ${tokens.err(i)}")
         }
     }
 
@@ -557,7 +557,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             val oldNumFields = currPackage.fields.size
             when {
                 tokens.equals(i, TokenType.CLOSE_BLOCK) ->
-                    throw IllegalStateException("} in the middle at ${tokens.err(i)}")
+                    error("} in the middle at ${tokens.err(i)}")
                 else -> {
                     // todo read declaration or return or throw or try-catch
                     result.add(readExpression())

@@ -81,8 +81,8 @@ object Stdlib {
                 is LongArray -> rt.createLong(content[index])
                 is FloatArray -> rt.createFloat(content[index])
                 is DoubleArray -> rt.createDouble(content[index])
-                null -> throw IllegalStateException("Missing array content in $self")
-                else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
+                null -> error("Missing array content in $self")
+                else -> error("Unknown array content: ${content.javaClass.simpleName}")
             }
         }
         runtime.register(
@@ -105,8 +105,8 @@ object Stdlib {
                 is LongArray -> content[index] = value.castToLong()
                 is FloatArray -> content[index] = value.castToFloat()
                 is DoubleArray -> content[index] = value.castToDouble()
-                null -> throw IllegalStateException("Missing array content")
-                else -> throw IllegalStateException("Unknown array content: ${content.javaClass.simpleName}")
+                null -> error("Missing array content")
+                else -> error("Unknown array content: ${content.javaClass.simpleName}")
             }
             rt.getUnit()
         }

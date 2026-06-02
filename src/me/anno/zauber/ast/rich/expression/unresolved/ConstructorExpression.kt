@@ -49,7 +49,7 @@ class ConstructorExpression(
         return ConstructorResolver.findMemberInScope(
             clazz[ScopeInitType.AFTER_DISCOVERY], origin, clazz.name, context.targetType,
             null, typeParameters, valueParameters, context
-        ) ?: throw IllegalStateException("Missing constructor $clazz(${valueParameters.joinToString(", ")})")
+        ) ?: error("Missing constructor $clazz(${valueParameters.joinToString(", ")})")
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {

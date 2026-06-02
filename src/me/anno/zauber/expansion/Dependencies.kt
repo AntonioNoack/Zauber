@@ -133,7 +133,7 @@ object Dependencies {
                         dstType as ClassType
                         val method = dstType.clazz.methods0
                             .firstOrNull { it.name == "copy" && it.valueParameters.isEmpty() }
-                            ?: throw IllegalStateException("Missing .copy() in value-type $dstType")
+                            ?: error("Missing .copy() in value-type $dstType")
                         val spec = Specialization(
                             method.scope, dstType.typeParameters
                                 ?: emptyParameterList()

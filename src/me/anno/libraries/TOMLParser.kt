@@ -31,17 +31,19 @@ object TOMLParser {
 
     private fun parseValue(line: String): Any? {
         return when {
+            line.isEmpty() -> null
             line == "true" -> true
             line == "false" -> false
             line.startsWith('"') && line.endsWith('"') -> parseString(line)
             line.startsWith("0b") -> line.substring(2).toLongOrNull(2)
             line.startsWith("0x") -> line.substring(2).toLongOrNull(16)
+            line.first() in "{[" && line.last() in "]}" -> JSONParser.parseJSON(line)
             '.' in line -> line.toDoubleOrNull()
             else -> line.toLongOrNull()
         }
     }
 
-    private fun parseString(line: String): String {
+    fun parseString(line: String): String {
         val builder = StringBuilder()
         var i = 1
         while (i + 1 < line.length) {

@@ -48,7 +48,7 @@ class Method(
         val returnType = returnType
         if (returnType != null) return returnType
 
-        var body = body ?: throw IllegalStateException("Expected method to have either returnType or body $this")
+        var body = body ?: error("Expected method to have either returnType or body $this")
         if (body is ReturnExpression) body = body.value
         return TypeResolution.resolveType(context, body)
     }

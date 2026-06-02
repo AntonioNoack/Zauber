@@ -374,7 +374,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         while (candidateScope.isInsideExpression()) {
             if (candidateScope.scopeType == ScopeType.LAMBDA) {
                 val candidateLambda = candidateScope.selfAsLambda
-                    ?: throw IllegalStateException("$candidateScope is marked as a lambda, so it must set selfAsLambda")
+                    ?: error("$candidateScope is marked as a lambda, so it must set selfAsLambda")
                 // candidateLambda.resolveCallable()
                 // TODO("We're a lambda @$candidateScope, so find our selfType, $candidateLambda")
             }

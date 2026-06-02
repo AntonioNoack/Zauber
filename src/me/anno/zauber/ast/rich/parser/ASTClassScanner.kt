@@ -246,7 +246,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             when (tokens.getType(i)) {
                 TokenType.OPEN_BLOCK, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.INDENT,
                 TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK, TokenType.DEDENT ->
-                    throw IllegalStateException("Unexpected token ${tokens.err(i)}")
+                    error("Unexpected token ${tokens.err(i)}")
                 else -> readNamed()
             }
             i = max(i0 + 1, i)
@@ -346,7 +346,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                         addFlag(Flags.VALUE)
                         readField()
                     }
-                    else -> throw IllegalStateException("Expected class, val or var after 'value' at ${tokens.err(i)}")
+                    else -> error("Expected class, val or var after 'value' at ${tokens.err(i)}")
                 }
             }
 
@@ -388,7 +388,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 annotations.add(Annotation(type, valueParameters))
             }
 
-            else -> throw IllegalStateException("Unknown token ${tokens.err(i)}")
+            else -> error("Unknown token ${tokens.err(i)}")
         }
     }
 
@@ -487,11 +487,11 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         field.typeParameters = typeParameters
 
         if (getterBody != null && delegateExpr != null) {
-            throw IllegalStateException("Cannot have both getter and delegate at ${tokens.err(i0)}")
+            error("Cannot have both getter and delegate at ${tokens.err(i0)}")
         }
 
         if (initialValue != null && delegateExpr != null) {
-            throw IllegalStateException("Cannot have both initial value and delegate at ${tokens.err(i0)}")
+            error("Cannot have both initial value and delegate at ${tokens.err(i0)}")
         }
 
         if (delegateExpr != null) {
@@ -539,7 +539,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             } else if (consumeIf("=")) {
                 val originI = origin(i - 1)
                 ReturnExpression(readLazyValue(forField = true), null, newScope, originI)
-            } else throw IllegalStateException("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
+            } else error("Expected body for getter, got neither = nor { at ${tokens.err(i)}")
         }
     }
 
@@ -578,7 +578,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             check(depth >= 0) { "Invalid depth @${tokens.err(i)}" }
         }
 
-        throw IllegalStateException("Missing field end at ${tokens.err(i)}")
+        error("Missing field end at ${tokens.err(i)}")
     }
 
     open fun readConstructor() {
@@ -604,7 +604,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                         println("SuperCalls for $classScope: ${classScope.superCalls}")
                         val call = classScope.superCalls
                             .firstOrNull { it.isClassCall }
-                            ?: throw IllegalStateException("Missing super call in class for $superCall")
+                            ?: error("Missing super call in class for $superCall")
                         call.type.clazz
                     }
                 }
@@ -632,7 +632,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val type = when {
             consumeIf("this") -> InnerSuperCallTarget.THIS
             consumeIf("super") -> InnerSuperCallTarget.SUPER
-            else -> throw IllegalStateException("Expected this() or super() at ${tokens.err(i)}")
+            else -> error("Expected this() or super() at ${tokens.err(i)}")
         }
         val values = readValueParameters()
         return InnerSuperCall(type, values, origin)

@@ -28,7 +28,7 @@ class TypeExpression(val type: Type, scope: Scope, origin: Long) :
     override fun forEachExpression(callback: (Expression) -> Unit) {}
     override fun resolveImpl(context: ResolutionContext): Expression {
         val clazz = type as? ClassType
-            ?: throw IllegalStateException("Implement $this with ${type.javaClass.simpleName}")
+            ?: error("Implement $this with ${type.javaClass.simpleName}")
         return ThisExpression(clazz.clazz, scope, origin)
     }
 }

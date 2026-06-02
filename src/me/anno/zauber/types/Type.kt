@@ -97,10 +97,10 @@ abstract class Type {
         repeat(100) {
             if (self.isResolved()) return self
             val resolved = self.resolveImpl(selfScope)
-            if (resolved == self) throw IllegalStateException("Failed to resolve $this (${javaClass.simpleName}), returned self")
+            if (resolved == self) error("Failed to resolve $this (${javaClass.simpleName}), returned self")
             self = resolved
         }
-        throw IllegalStateException("Failed to resolve $self, too complicated, maybe a recursive type?")
+        error("Failed to resolve $self, too complicated, maybe a recursive type?")
     }
 
     fun resolveImpl(selfScope: Scope?): Type {
@@ -135,7 +135,7 @@ abstract class Type {
             is UnionType, is AndType -> withTypes(types.map { it.resolve(selfScope) })
             is UnresolvedType -> {
                 val baseType = resolveTypeByName(findSelfType(scope), className, scope, imports)
-                    ?: throw IllegalStateException("Could not resolve $this in '$scope'")
+                    ?: error("Could not resolve $this in '$scope'")
                 if (!typeParameters.isNullOrEmpty()) {
                     baseType as ClassType
                     check(
@@ -256,7 +256,7 @@ abstract class Type {
             is LambdaType -> (selfType?.isFullySpecialized() ?: true) &&
                     parameters.all { it.type.isFullySpecialized() } &&
                     returnType.isFullySpecialized()
-            else -> throw IllegalStateException("Is ${javaClass.simpleName} fully specialized?")
+            else -> error("Is ${javaClass.simpleName} fully specialized?")
         }
     }
 
@@ -278,7 +278,7 @@ abstract class Type {
             is UnresolvedType -> resolvedName.specialize(spec)
             // todo we need selfType to properly resolve them...
             is ThisType, is SelfType -> type.specialize(spec)
-            else -> throw IllegalStateException("Specialize ${javaClass.simpleName}")
+            else -> error("Specialize ${javaClass.simpleName}")
         }
     }
 

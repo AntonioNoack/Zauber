@@ -93,7 +93,7 @@ class CSharpASTBuilder(tokens: TokenList, root: Scope) :
         val i0 = --i // undo [-skip
         val path = pushArray {
             readTypePath(null)
-                ?: throw IllegalStateException("Expected type path at ${tokens.err(i0)}")
+                ?: error("Expected type path at ${tokens.err(i0)}")
         }
         return Annotation(path, emptyList())
     }

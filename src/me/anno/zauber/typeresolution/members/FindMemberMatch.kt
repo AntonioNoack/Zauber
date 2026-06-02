@@ -120,7 +120,7 @@ object FindMemberMatch {
             is Method -> ResolvedMethod(member, context, codeScope, matchScore)
             is Field -> ResolvedField(member, context, codeScope, matchScore)
             is Constructor -> ResolvedConstructor(member, context, codeScope, matchScore)
-            else -> throw IllegalStateException("Unknown member type: $member")
+            else -> error("Unknown member type: $member")
         }
     }
 

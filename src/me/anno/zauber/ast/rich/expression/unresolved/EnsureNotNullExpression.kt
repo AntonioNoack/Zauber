@@ -74,7 +74,7 @@ class EnsureNotNullExpression(
         val thrownConstr = ConstructorResolver.findMemberInScopeImpl(
             thrownScope, "NullPointerException", emptyList(),
             listOf(ValueParameterImpl(null, Types.String, false)), contextI, origin
-        ) ?: throw IllegalStateException("Missing constructor NullPointerException(String)")
+        ) ?: error("Missing constructor NullPointerException(String)")
         val thrownExpr = ResolvedCallExpression(null, null, thrownConstr, listOf(messageExpr), scope, origin)
         val throwExpr = ThrowExpression(thrownExpr, scope, origin)
 

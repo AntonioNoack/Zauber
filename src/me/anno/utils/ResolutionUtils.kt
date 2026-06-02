@@ -86,17 +86,17 @@ object ResolutionUtils {
 
     operator fun Scope.get(name: String): Scope {
         return this[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { it.name == name }
-            ?: throw IllegalStateException("Tried finding '$name', but only found ${children.map { it.name }}")
+            ?: error("Tried finding '$name', but only found ${children.map { it.name }}")
     }
 
     fun Scope.getField(name: String): Field {
         return this[ScopeInitType.AFTER_DISCOVERY].fields.firstOrNull { it.name == name && it.byParameter == null }
-            ?: throw IllegalStateException("Tried finding '$name', but only found ${fields.map { it.name }}")
+            ?: error("Tried finding '$name', but only found ${fields.map { it.name }}")
     }
 
     fun Scope.firstChild(scopeType: ScopeType): Scope {
         return this[ScopeInitType.AFTER_DISCOVERY].children.firstOrNull { it.scopeType == scopeType }
-            ?: throw IllegalStateException("Tried finding '$scopeType', but only found ${children.map { it.scopeType }}")
+            ?: error("Tried finding '$scopeType', but only found ${children.map { it.scopeType }}")
     }
 
 

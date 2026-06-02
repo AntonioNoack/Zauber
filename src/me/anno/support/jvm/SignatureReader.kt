@@ -104,7 +104,7 @@ class SignatureReader(val signature: String, val scope: Scope) {
                 Types.Array.withTypeParameter(subType)
             }
             'V' -> Types.Unit
-            else -> throw IllegalStateException("Read unknown type '${signature[i - 1]}': $signature@${i - 1}")
+            else -> error("Read unknown type '${signature[i - 1]}': $signature@${i - 1}")
         }
     }
 

@@ -19,7 +19,7 @@ class SimpleLocalFieldEqualsInt(
         // fast-path
         val runtime = runtime
         val actual = runtime.getCall().localFields[field.id]
-            ?: throw IllegalStateException("Missing value for $field")
+            ?: error("Missing value for $field")
         runtime[dst] = runtime.getBool(actual.castToInt() == expected)
         return null
     }

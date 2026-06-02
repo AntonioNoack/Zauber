@@ -154,7 +154,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                     }
                 }
             } catch (e: ArithmeticException) {
-                throw IllegalStateException("${e.message} in '$value'@$i, basis $basis, ${if (isUnsigned) "unsigned" else "signed"}")
+                error("${e.message} in '$value'@$i, basis $basis, ${if (isUnsigned) "unsigned" else "signed"}")
             }
 
             if (i < value.length && value[i] in "lLuU") i++

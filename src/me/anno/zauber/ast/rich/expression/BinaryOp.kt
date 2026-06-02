@@ -28,7 +28,7 @@ fun ASTBuilderBase.binaryOp(
         "!=" -> CheckEqualsOp(left, right, byPointer = false, negated = true, null, scope, origin)
         "===" -> CheckEqualsOp(left, right, byPointer = true, negated = false, null, scope, origin)
         "!==" -> CheckEqualsOp(left, right, byPointer = true, negated = true, null, scope, origin)
-        "&&", "||" -> throw IllegalStateException("&& and || should be handled separately")
+        "&&", "||" -> error("&& and || should be handled separately")
         "::" -> {
 
             fun getBase(): Scope = when {

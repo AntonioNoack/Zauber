@@ -102,7 +102,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
 
     fun readComma() {
         if (tokens.equals(i, TokenType.COMMA)) i++
-        else if (i < tokens.size) throw IllegalStateException("Expected comma, but got $i<${tokens.size} ${tokens.err(i)}")
+        else if (i < tokens.size) error("Expected comma, but got $i<${tokens.size} ${tokens.err(i)}")
     }
 
     fun consume(expected: String) {
@@ -174,7 +174,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             while (true) {
                 if (scope.jumpLabel != null) return scope
                 scope = scope.parentIfSameFile
-                    ?: throw IllegalStateException(
+                    ?: error(
                         "Could not resolve jump label $label@ " +
                                 "in $currPackage " +
                                 "at ${tokens.err(i)}, " +
@@ -185,7 +185,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             while (true) {
                 if (scope.jumpLabel == label) return scope
                 scope = scope.parentIfSameFile
-                    ?: throw IllegalStateException(
+                    ?: error(
                         "Could not resolve jump label $label@ " +
                                 "in $currPackage " +
                                 "at ${tokens.err(i)}, " +
@@ -216,7 +216,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             }
 
             scope = scope.parentIfSameFile
-                ?: throw IllegalStateException("Could not resolve this-label@$label in $currPackage")
+                ?: error("Could not resolve this-label@$label in $currPackage")
         }
     }
 
@@ -229,7 +229,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             }
 
             scope = scope.parentIfSameFile
-                ?: throw IllegalStateException("Could not resolve super-label@$label in $currPackage")
+                ?: error("Could not resolve super-label@$label in $currPackage")
         }
     }
 
@@ -240,7 +240,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             // todo this should be smarter w.r.t. when we access a child member,
             //  and we have multiple candidates (class and interfaces or multiple interfaces)
             //  we can at least check whether the member exists in the super class, and prefer that one
-            if (parents.isEmpty()) throw IllegalStateException("Cannot access super in $scope")
+            if (parents.isEmpty()) error("Cannot access super in $scope")
             if (parents.size == 1) return parents[0].type.clazz
 
             val uniqueScopes = parents.map { it.type.clazz }
@@ -256,7 +256,7 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             return uniqueScopes[0]
         } else {
             return resolveSuperLabelByName(label, scope)
-                ?: throw IllegalStateException("Missing super type called '$label' in $scope")
+                ?: error("Missing super type called '$label' in $scope")
         }
     }
 

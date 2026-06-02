@@ -179,7 +179,7 @@ class SimpleCall(
         val thisInstance = runtime[thisInstance]
         if (runtime.isNull(thisInstance)) {
             // this should never happen
-            throw IllegalStateException("Unexpected NPE: $this")
+            error("Unexpected NPE: $this")
         }
 
         val selfInstance =

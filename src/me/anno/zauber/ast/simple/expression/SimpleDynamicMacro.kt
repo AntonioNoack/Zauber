@@ -47,7 +47,7 @@ class SimpleDynamicMacro(
         val self = runtime[thisInstance]
         if (runtime.isNull(self)) {
             // this should never happen
-            throw IllegalStateException("Unexpected NPE: $this")
+            error("Unexpected NPE: $this")
         }
 
         val expression =

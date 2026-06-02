@@ -193,7 +193,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     // flags are not interesting anymore after this
                     bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
                 }
-                else -> throw IllegalStateException("Expected case/default in switch at ${tokens.err(i)}")
+                else -> error("Expected case/default in switch at ${tokens.err(i)}")
             }
         }
         scope

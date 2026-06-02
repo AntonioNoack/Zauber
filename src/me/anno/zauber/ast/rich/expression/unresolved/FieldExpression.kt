@@ -45,7 +45,7 @@ class FieldExpression(
         return FindMemberMatch.findMemberMatch(
             field, fieldReturnType, context.targetType,
             scopeSelfType, null, emptyList(), context.specialization, scope, origin
-        ) as? ResolvedField ?: throw IllegalStateException(
+        ) as? ResolvedField ?: error(
             "Generics could not be resolved for $field at " +
                     TokenListIndex.resolveOrigin(origin)
         )

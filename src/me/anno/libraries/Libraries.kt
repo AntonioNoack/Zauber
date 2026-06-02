@@ -49,6 +49,8 @@ object Libraries {
         project.name = toml["$prefix.name"].toString()
         project.version = toml["$prefix.version"].toString()
         project.source = URI("file://${file.absolutePath}")
+        project.newPackage = toml["$dependencyPrefix.newPackage"]?.toString() ?: ""
+        project.oldPackage = toml["$dependencyPrefix.oldPackage"]?.toString() ?: ""
 
         if (dependencyPrefix != null) {
             for ((key, value) in toml.entries.filter { (it) -> it.startsWith(dependencyPrefix) }) {

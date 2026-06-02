@@ -68,7 +68,7 @@ class SuperCallExpression(
         if (LOGGER.isInfoEnabled) LOGGER.info("Find call[UFE] '$name' with nameAsImport=null, tp: $typeParameters, vp: $valueParameters")
 
         return ConstructorResolver.findMemberInScopeImpl(targetScope, name, typeParameters, valueParameters, context, origin)
-            ?: throw IllegalStateException(
+            ?: error(
                 "Could not resolve constructor $targetScope$valueParameters, " +
                     "candidates: ${targetScope.constructors0.map { constr -> constr.valueParameters.map { it.type } }}"
             )
