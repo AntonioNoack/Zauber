@@ -3,6 +3,8 @@ package me.anno.generation.wasm.runtime
 import me.anno.generation.wasm.*
 import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.logging.LogManager
+import kotlin.math.max
+import kotlin.math.min
 
 @Suppress("Since15")
 class WASMRuntime(val binary: WASMBinary) {
@@ -291,10 +293,47 @@ class WASMRuntime(val binary: WASMBinary) {
     fun pushBool(b: Boolean) = stack.add(b.toInt())
 
     fun executeSimple(call: WASMCall, opcode: Int) {
-        // for now, we only have binary functions
-        check(stack.size - 2 >= call.stack0)
+        // handle unary operations
+        check(stack.size - 1 >= call.stack0)
         when (opcode) {
+            WASMOpcode.I32_EQZ -> pushBool(popI32() == 0)
+            WASMOpcode.I64_EQZ -> pushBool(popI64() == 0L)
 
+            WASMOpcode.I32_WRAP_I64 -> stack.add(popI64().toInt())
+            WASMOpcode.I64_EXTEND_I32S -> stack.add(popI32().toLong())
+            WASMOpcode.I64_EXTEND_I32U -> stack.add(popI32().toUInt().toLong())
+
+            WASMOpcode.F32_DEMOTE_F64 -> stack.add(popF64().toFloat())
+            WASMOpcode.F64_PROMOTE_F32 -> stack.add(popF32().toDouble())
+
+            WASMOpcode.I32S_TRUNC_F32 -> stack.add(popF32().toInt())
+            WASMOpcode.I32U_TRUNC_F32 -> stack.add(popF32().toUInt().toInt())
+            WASMOpcode.I32S_TRUNC_F64 -> stack.add(popF64().toInt())
+            WASMOpcode.I32U_TRUNC_F64 -> stack.add(popF64().toUInt().toInt())
+            WASMOpcode.I64S_TRUNC_F32 -> stack.add(popF32().toLong())
+            WASMOpcode.I64U_TRUNC_F32 -> stack.add(popF32().toULong().toLong())
+            WASMOpcode.I64S_TRUNC_F64 -> stack.add(popF64().toLong())
+            WASMOpcode.I64U_TRUNC_F64 -> stack.add(popF64().toULong().toLong())
+
+            WASMOpcode.F32_CONVERT_I32S -> stack.add(popI32().toFloat())
+            WASMOpcode.F32_CONVERT_I32U -> stack.add(popI32().toUInt().toFloat())
+            WASMOpcode.F32_CONVERT_I64S -> stack.add(popI64().toFloat())
+            WASMOpcode.F32_CONVERT_I64U -> stack.add(popI64().toULong().toFloat())
+            WASMOpcode.F64_CONVERT_I32S -> stack.add(popI32().toDouble())
+            WASMOpcode.F64_CONVERT_I32U -> stack.add(popI32().toUInt().toDouble())
+            WASMOpcode.F64_CONVERT_I64S -> stack.add(popI64().toDouble())
+            WASMOpcode.F64_CONVERT_I64U -> stack.add(popI64().toULong().toDouble())
+
+            else -> executeSimpleBinary(call, opcode)
+        }
+    }
+
+    fun executeSimpleBinary(call: WASMCall, opcode: Int) {
+        // handle binary operations
+        check(stack.size - 2 >= call.stack0) {
+            "Opcode may not have enough space, 0x${opcode.toString(16)}"
+        }
+        when (opcode) {
             WASMOpcode.I32_EQ -> pushBool(popI32() == popI32())
             WASMOpcode.I32_NE -> pushBool(popI32() != popI32())
             WASMOpcode.I32_LT_S -> pushBool(popI32(1) < popI32())
@@ -341,11 +380,15 @@ class WASMRuntime(val binary: WASMBinary) {
             WASMOpcode.F32_GT -> pushBool(popF32(1) > popF32())
             WASMOpcode.F32_LE -> pushBool(popF32(1) <= popF32())
             WASMOpcode.F32_GE -> pushBool(popF32(1) >= popF32())
+            WASMOpcode.F32_MIN -> stack.add(min(popF32(), popF32()))
+            WASMOpcode.F32_MAX -> stack.add(max(popF32(), popF32()))
 
             WASMOpcode.F64_LT -> pushBool(popF64(1) < popF64())
             WASMOpcode.F64_GT -> pushBool(popF64(1) > popF64())
             WASMOpcode.F64_LE -> pushBool(popF64(1) <= popF64())
             WASMOpcode.F64_GE -> pushBool(popF64(1) >= popF64())
+            WASMOpcode.F64_MIN -> stack.add(min(popF64(), popF64()))
+            WASMOpcode.F64_MAX -> stack.add(max(popF64(), popF64()))
 
             else -> error("Opcode 0x${opcode.toString(16)} not yet implemented")
         }

@@ -108,10 +108,6 @@ class PythonGenerationTests : CodeGenerationTests() {
         TODO("Call into a native library")
     }
 
-    // todo test number conversions
-    // todo test overflows
-    // todo comparisons between all number types
-    // todo comparisons between non-number types
     // todo somehow describe and connect to a Python library
     // todo should we implement weird number comparisons? could be useful...
     //  like Int and UInt, Float and Long, etc...

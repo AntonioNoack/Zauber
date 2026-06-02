@@ -54,7 +54,7 @@ class InheritanceTable(val data: DependencyData) {
     init {
         registerAllMethods()
 
-        if (LOGGER.isInfoEnabled) LOGGER.info("inheritance: ${methodToMethodIndex.size}x + ${methodToInterfaceIndex.size}x")
+        if (LOGGER.isInfoEnabled) LOGGER.info("Inheritance: ${methodToMethodIndex.size}x + ${methodToInterfaceIndex.size}x")
 
         if (methodToMethodIndex.isNotEmpty() || methodToInterfaceIndex.isNotEmpty()) {
             data.calledMethods += interfaceCallSpec

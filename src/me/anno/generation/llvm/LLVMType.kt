@@ -1,6 +1,7 @@
 package me.anno.generation.llvm
 
 sealed class LLVMType(val ir: String) {
+
     object I1 : LLVMType("i1")
     object I8 : LLVMType("i8")
     object I16 : LLVMType("i16")
@@ -14,6 +15,9 @@ sealed class LLVMType(val ir: String) {
         val isValueType: Boolean
     ) : LLVMType("${element.ir}*")
 
-    class Struct(val name: String, val isValueType: Boolean) : LLVMType("%$name")
+    class Struct(
+        val name: String, val isValueType: Boolean,
+        val sizeInBytes: Int
+    ) : LLVMType(name)
 
 }

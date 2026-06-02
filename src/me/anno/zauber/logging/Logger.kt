@@ -1,6 +1,7 @@
 package me.anno.zauber.logging
 
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.color
 import me.anno.utils.StringStyles.style
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -35,8 +36,17 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
     fun warn(message: String) {
         if (isWarnEnabled && knownWarnings.add(message)) {
             infoImpl(
-                style("ERR", StringStyles.RED),
-                style(message, StringStyles.RED)
+                style("WARN", WARN_ORANGE),
+                style(message, WARN_ORANGE)
+            )
+        }
+    }
+
+    fun error(message: String) {
+        if (isWarnEnabled && knownWarnings.add(message)) {
+            infoImpl(
+                style("ERROR", ERROR_RED),
+                style(message, ERROR_RED)
             )
         }
     }
@@ -55,7 +65,10 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     companion object {
 
-        val timeStyle = StringStyles.ITALIC + StringStyles.color(0x777777)
+        val WARN_ORANGE = StringStyles.BOLD + color(0xFF8F2B)
+        val ERROR_RED = StringStyles.BOLD + StringStyles.RED
+
+        val timeStyle = StringStyles.ITALIC + color(0x777777)
 
         private fun getTime(): String {
             val calendar = Calendar.getInstance()

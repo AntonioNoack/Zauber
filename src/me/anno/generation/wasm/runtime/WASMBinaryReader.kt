@@ -471,7 +471,7 @@ class WASMBinaryReader(
             WASMOpcode.REF_AS_NON_NULL -> WASMInstruction.RefAsNonNull
 
             // simple operations
-            in WASMOpcode.I32_EQZ .. WASMOpcode.F64_REM -> WASMInstruction.simple[opcode]
+            in WASMOpcode.I32_EQZ .. WASMOpcode.F64_PROMOTE_F32 -> WASMInstruction.simple[opcode]
 
             0xfb -> {
                 when (val gcOpcode = u32()) {

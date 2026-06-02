@@ -10,6 +10,7 @@ import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -42,6 +43,19 @@ import kotlin.math.max
  * but make our life a little harder
  * */
 class LLVMSourceGenerator : JavaSourceGenerator() {
+
+    companion object {
+        fun isCast(methodName: String): Boolean {
+            return when (methodName) {
+                "toByte", "toUByte",
+                "toShort", "toUShort", "toChar",
+                "toInt", "toUInt",
+                "toLong", "toULong",
+                "toHalf", "toFloat", "toDouble" -> true
+                else -> false
+            }
+        }
+    }
 
     val typeList = ArrayList<LLVMStruct>()
 
@@ -187,9 +201,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             Types.Double -> LLVMType.F64
 
             is ClassType -> {
-                val structName = getStructName(type)
+                val struct0 = getStruct(Specialization(type))
+                val structName = struct0.typeName
                 val isValue = type.isValue()
-                val struct = LLVMType.Struct(structName, isValue)
+                val struct = LLVMType.Struct(structName, isValue, struct0.sizeInBytes)
                 LLVMType.Ptr(struct, isValue)
             }
             else -> getLLVMType(Types.Any) // fallback
@@ -198,10 +213,6 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
     // todo we can make globals structs instead of pointers, because globals itself are pointers,
     //  and then store the init-flag within the global
-
-    fun getStructName(type: ClassType): String {
-        return getClassName(type.clazz, Specialization(type))
-    }
 
     // we cannot just quit -> removing try-catch
     override fun appendMethods(
@@ -559,25 +570,27 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 created = true
                 val typeIndex = typeList.size
                 val typeName = "%" + getClassName(clazz, classSpecialization)
-                val struct = LLVMStruct(superType, typeIndex, typeName, false)
+                val struct = LLVMStruct(superType, typeIndex, typeName, false, 0)
                 typeList.add(struct)
                 struct
             }
         }
         if (created) {
+
             // classIndexProp + props,
             s.properties.add(classIndexProp)
+            s.sizeInBytes += 4
 
             if (clazz == Types.Array.clazz) {
                 val elementType = classSpecialization.typeParameters[0]
                 val elementLLVMType = getLLVMType(elementType)
-                s.properties.add(
-                    LLVMProperty(
-                        null,
-                        LLVMType.Ptr(elementLLVMType, elementType.isValue()),
-                        s.properties.size
-                    )
+                val property = LLVMProperty(
+                    null,
+                    LLVMType.Ptr(elementLLVMType, elementType.isValue()),
+                    s.properties.size
                 )
+                s.properties.add(property)
+                s.sizeInBytes = align(s.sizeInBytes, 8) + 8
             }
 
             for (field in clazz.fields) {
@@ -587,6 +600,21 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
                 val type = getLLVMType(field.resolveValueType(ResolutionContext.minimal))
                 s.properties.add(LLVMProperty(field, type, s.properties.size))
+
+                var alignment = 0
+                val size = when (type) {
+                    LLVMType.I1, LLVMType.I8 -> 1
+                    LLVMType.I16 -> 2
+                    LLVMType.I32, LLVMType.F32 -> 4
+                    else -> if (type is LLVMType.Struct && type.isValueType) {
+                        alignment = 8
+                        type.sizeInBytes
+                    } else 8
+                }
+                if (alignment == 0) alignment = size
+
+                s.sizeInBytes = align(s.sizeInBytes, alignment)
+                s.sizeInBytes += size
             }
         }
         return s
@@ -849,15 +877,29 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             LLVMType.F32 -> {
                 val l0 = builder.length
                 builder.append(expr.asFloat.toFloat())
-                if (builder.indexOf('E', l0) >= 0) {
+                // LLVM is freaking weird, not handling exponents properly
+                if (builder.indexOf('E', l0) >= 0 ||
+                    builder.indexOf("Infinity", l0) >= 0 ||
+                    builder.indexOf("NaN", l0) >= 0
+                ) {
                     builder.setLength(l0)
-                    // LLVM is freaking weird, not handling exponents properly
                     builder.append("bitcast (i32 ")
                         .append(expr.asFloat.toFloat().toRawBits())
                         .append(" to float)")
                 }
             }
-            LLVMType.F64 -> builder.append(expr.asFloat)
+            LLVMType.F64 -> {
+                val l0 = builder.length
+                builder.append(expr.asFloat)
+                if (builder.indexOf("Infinity", l0) >= 0 ||
+                    builder.indexOf("NaN", l0) >= 0
+                ) {
+                    builder.setLength(l0)
+                    builder.append("bitcast (i64 ")
+                        .append(expr.asFloat.toRawBits())
+                        .append(" to double)")
+                }
+            }
             else -> throw NotImplementedError("Append number of type $type -> $typeI")
         }
     }
@@ -935,56 +977,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 }
             }
             is SimpleCall -> {
-                // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
-                    0 -> {
-                        val castSymbol = when (methodName) {
-                            "toInt" -> "(int) "
-                            "toLong" -> "(long) "
-                            "toFloat" -> "(float) "
-                            "toDouble" -> "(double) "
-                            "toByte" -> "(byte) "
-                            "toShort" -> "(short) "
-                            "toChar" -> "(char) "
-                            else -> null
-                        }
-                        // todo append correct casting method...
-                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
-                            getSimpleFieldReg(graph, expr.thisInstance)
-                            builder.append(castSymbol)
-                            TODO("find cast-instr")
-                            true
-                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
-                            getSimpleFieldReg(graph, expr.thisInstance)
-                            builder.append("i32.eqz")
-                            nextLine()
-                            true
-                        } else false
-                    }
-                    1 -> {
-                        val type = resolveType(expr.thisInstance.type)
-                        val supportsType = type in nativeNumbers
-                        val symbol = when (methodName) {
-                            "plus" -> "add"
-                            "minus" -> "sub"
-                            "times" -> "mul"
-                            "div" -> if (isNumberSigned(type)) "sdiv" else "udiv"
-                            "rem" -> if (isNumberSigned(type)) "smod" else "umod"
-                            else -> null
-                        }
-                        if (supportsType && symbol != null) {
-                            val v0 = getSimpleFieldReg(graph, expr.thisInstance)
-                            val v1 = getSimpleFieldReg(graph, expr.valueParameters[0])
-
-                            appendAssign(expr.dst)
-                            builder
-                                .append(symbol).append(' ')
-                                .append(getLLVMType(type).ir)
-                                .append(' ').append(v0).append(", ").append(v1)
-                            true
-                        } else false
-                    }
+                    0 -> appendUnaryOperator(graph, expr, methodName)
+                    1 -> appendBinaryOperator(graph, expr, methodName)
                     else -> false
                 }
                 if (!done) {
@@ -1102,6 +1098,137 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             }
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }
+    }
+
+    private fun getIntSize(type: LLVMType): Int {
+        return when (type) {
+            LLVMType.I8 -> 1
+            LLVMType.I16 -> 2
+            LLVMType.I32 -> 4
+            LLVMType.I64 -> 8
+            else -> -1
+        }
+    }
+
+    private fun getFloatSize(type: LLVMType): Int {
+        return when (type) {
+            LLVMType.F32 -> 4
+            LLVMType.F64 -> 8
+            else -> -1
+        }
+    }
+
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = resolveType(expr.thisInstance.type)
+        return if (isCast(methodName) && type in nativeNumbers) {
+
+            val inType = getLLVMType(type)
+            val outType0 = expr.dst.type
+            val outType = getLLVMType(outType0)
+
+            if (inType == outType) {
+                renames[expr.dst] = "%tmp${expr.thisInstance.id}"
+                builder.append(";; rename-cast: %tmp${expr.dst.id} = %tmp${expr.thisInstance.id}")
+                return true
+            }
+
+            val input = getSimpleFieldReg(graph, expr.thisInstance)
+
+            val inSize = getIntSize(inType)
+            val outSize = getIntSize(outType)
+
+            val inInt = inSize >= 1
+            val outInt = outSize >= 1
+
+            val symbol = when {
+                inInt && outInt -> {
+                    check(inSize != outSize)
+                    when {
+                        inSize > outSize -> "trunc"
+                        outType0.isUnsigned() -> "zext"
+                        else -> "sext"
+                    }
+                }
+                inInt -> {
+                    // int to float
+                    if (type.isUnsigned()) "uitofp" else "sitofp"
+                }
+                outInt -> {
+                    // float to int
+                    if (outType0.isUnsigned()) "fptoui" else "fptosi"
+                }
+                else -> {
+                    // float to float
+                    if (getFloatSize(inType) > getFloatSize(outType)) "fptrunc" else "fpext"
+                }
+            }
+
+            appendAssign(graph, expr)
+            builder.append(symbol).append(' ')
+                .append(inType.ir).append(' ')
+                .append(input).append(" to ")
+                .append(outType.ir)
+
+            true
+        } else if (type == Types.Boolean && methodName == "not") {
+            val input = getSimpleFieldReg(graph, expr.thisInstance)
+            appendAssign(graph, expr)
+            builder.append(" = xor i1 ").append(input).append(", true")
+            nextLine()
+            true
+        } else false
+    }
+
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = resolveType(expr.thisInstance.type)
+        if (type !in nativeNumbers) return false
+
+        val symbol = when (methodName) {
+            "plus" -> "add"
+            "minus" -> "sub"
+            "times" -> "mul"
+            "div" -> if (isNumberSigned(type)) "sdiv" else "udiv"
+            "rem" -> if (isNumberSigned(type)) "smod" else "umod"
+            else -> return false
+        }
+
+        val v0 = getSimpleFieldReg(graph, expr.thisInstance)
+        val v1 = getSimpleFieldReg(graph, expr.valueParameters[0])
+
+        val needsCastToI32 = when (type) {
+            Types.Byte, Types.UByte,
+            Types.Short, Types.UShort -> true
+            else -> false
+        }
+
+        val unsigned = type.isUnsigned()
+        val llvmType = getLLVMType(type).ir
+
+        if (needsCastToI32) {
+
+            val i0 = nextReg()
+            val i1 = nextReg()
+
+            // zext = zero-extend, sext = sign-extend
+            val castOp = if (unsigned) " = zext " else " = sext "
+            builder.append(i0).append(castOp)
+                .append(llvmType).append(' ').append(v0).append(" to i32"); nextLine()
+            builder.append(i1).append(castOp)
+                .append(llvmType).append(' ').append(v1).append(" to i32"); nextLine()
+
+            appendAssign(expr.dst)
+            builder
+                .append(symbol).append(" i32 ")
+                .append(i0).append(", ").append(i1)
+
+        } else {
+            appendAssign(expr.dst)
+            builder
+                .append(symbol).append(' ')
+                .append(llvmType)
+                .append(' ').append(v0).append(", ").append(v1)
+        }
+        return true
     }
 
     fun appendNativeCompare(valueType: Type, compareType: CompareType) {

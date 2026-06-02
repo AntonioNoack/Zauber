@@ -16,6 +16,8 @@ object WASMOpcode {
     const val CALL = 0x10
     const val CALL_INDIRECT = 0x11
 
+    const val DROP = 0x1a
+
     const val LOCAL_GET = 0x20
     const val LOCAL_SET = 0x21
     const val LOCAL_TEE = 0x22 // set + get = tee
@@ -109,7 +111,6 @@ object WASMOpcode {
     const val F32_DIV = 0x95
     const val F32_MIN = 0x96
     const val F32_MAX = 0x97
-    const val F32_REM = 0x99
 
     const val F64_ADD = 0xA0
     const val F64_SUB = 0xA1
@@ -117,11 +118,35 @@ object WASMOpcode {
     const val F64_DIV = 0xA3
     const val F64_MIN = 0xA4
     const val F64_MAX = 0xA5
-    const val F64_REM = 0xA7
 
+    const val I32_WRAP_I64 = 0xA7
 
+    const val I32S_TRUNC_F32 = 0xA8
+    const val I32U_TRUNC_F32 = 0xA9
+    const val I32S_TRUNC_F64 = 0xAA
+    const val I32U_TRUNC_F64 = 0xAB
 
-    const val DROP = 0x1a
+    const val I64_EXTEND_I32S = 0xAC
+    const val I64_EXTEND_I32U = 0xAD
+
+    const val I64S_TRUNC_F32 = 0xAE
+    const val I64U_TRUNC_F32 = 0xAF
+    const val I64S_TRUNC_F64 = 0xB0
+    const val I64U_TRUNC_F64 = 0xB1
+
+    const val F32_CONVERT_I32S = 0xB2
+    const val F32_CONVERT_I32U = 0xB3
+    const val F32_CONVERT_I64S = 0xB4
+    const val F32_CONVERT_I64U = 0xB5
+
+    const val F32_DEMOTE_F64 = 0xB6
+
+    const val F64_CONVERT_I32S = 0xB7
+    const val F64_CONVERT_I32U = 0xB8
+    const val F64_CONVERT_I64S = 0xB9
+    const val F64_CONVERT_I64U = 0xBA
+
+    const val F64_PROMOTE_F32 = 0xBB
 
     const val REF_NULL = 0xd0
     const val REF_IS_NULL = 0xd1

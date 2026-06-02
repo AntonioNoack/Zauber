@@ -5,6 +5,7 @@ data class LLVMStruct(
     val typeIndex: Int,
     val typeName: String,
     val isNullable: Boolean,
+    var sizeInBytes: Int
 ) {
 
     val properties = ArrayList<LLVMProperty>()

@@ -43,7 +43,7 @@ class CppGenerationTests : CodeGenerationTests() {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
-                        "printf(\"%f\\n\",arg0);"
+                        "printf(\"%g\\n\",arg0);"
             )
         }
     }

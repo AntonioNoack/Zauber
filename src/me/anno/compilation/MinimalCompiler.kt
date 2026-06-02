@@ -44,7 +44,7 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
             .directory(folder)
             .start()
         jvmProcess.inputStream.printToThread(LOGGER::info)
-        jvmProcess.errorStream.printToThread(LOGGER::warn)
+        jvmProcess.errorStream.printToThread(LOGGER::error)
         assertEquals(0, jvmProcess.waitFor()) { "Run(${params.joinToString()}) Failed" }
     }
 
@@ -53,7 +53,7 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
         val jvmProcess = ProcessBuilder(*params)
             .directory(folder)
             .start()
-        jvmProcess.errorStream.printToThread(LOGGER::warn)
+        jvmProcess.errorStream.printToThread(LOGGER::error)
         val printed = jvmProcess.inputStream.readBytes().decodeToString()
         assertEquals(0, jvmProcess.waitFor()) { "Run(${params.joinToString()}) Failed" }
         return printed

@@ -4,16 +4,23 @@ import me.anno.generation.InheritanceTable
 import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.llvm.LLVMSourceGenerator.Companion.isCast
 import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.FullMap
 import me.anno.utils.ListOfByteArrays
+import me.anno.utils.NumberUtils.toDoubleCeil
+import me.anno.utils.NumberUtils.toDoubleFloor
+import me.anno.utils.NumberUtils.toFloatCeil
+import me.anno.utils.NumberUtils.toFloatFloor
 import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.reverse.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -46,6 +53,56 @@ import java.io.File
  * like with generating JVM bytecode, we should convert simple-fields back to a stack, where possible -> not really necessary
  * */
 class WASMSourceGenerator : JavaSourceGenerator() {
+
+    companion object {
+        private val inFloatInstr = arrayOf(
+            WASMOpcode.I32S_TRUNC_F32 to "i32.trunc_f32_s",
+            WASMOpcode.I32U_TRUNC_F32 to "i32.trunc_f32_u",
+            WASMOpcode.I64S_TRUNC_F32 to "i64.trunc_f32_s",
+            WASMOpcode.I64U_TRUNC_F32 to "i64.trunc_f32_u",
+            WASMOpcode.I32S_TRUNC_F64 to "i32.trunc_f64_s",
+            WASMOpcode.I32U_TRUNC_F64 to "i32.trunc_f64_u",
+            WASMOpcode.I64S_TRUNC_F64 to "i64.trunc_f64_s",
+            WASMOpcode.I64U_TRUNC_F64 to "i64.trunc_f64_u",
+        )
+
+        private val outFloatInstr = arrayOf(
+            WASMOpcode.F32_CONVERT_I32S to "f32.convert_i32_s",
+            WASMOpcode.F32_CONVERT_I32U to "f32.convert_i32_u",
+            WASMOpcode.F32_CONVERT_I64S to "f32.convert_i64_s",
+            WASMOpcode.F32_CONVERT_I64U to "f32.convert_i64_u",
+            WASMOpcode.F64_CONVERT_I32S to "f64.convert_i32_s",
+            WASMOpcode.F64_CONVERT_I32U to "f64.convert_i32_u",
+            WASMOpcode.F64_CONVERT_I64S to "f64.convert_i64_s",
+            WASMOpcode.F64_CONVERT_I64U to "f64.convert_i64_u",
+        )
+
+        fun getMinIntValue(type: Type): Long {
+            return when (type) {
+                Types.Byte -> Byte.MIN_VALUE.toLong()
+                Types.Short -> Short.MIN_VALUE.toLong()
+                Types.Int -> Int.MIN_VALUE.toLong()
+                Types.Long -> Long.MIN_VALUE
+                Types.UByte, Types.UShort, Types.UInt, Types.ULong, Types.Char -> 0
+                else -> error("Get min of $type")
+            }
+        }
+
+        fun getMaxIntValue(type: Type): ULong {
+            return when (type) {
+                Types.Byte -> Byte.MAX_VALUE.toULong()
+                Types.UByte -> UByte.MAX_VALUE.toULong()
+                Types.Short -> Short.MAX_VALUE.toULong()
+                Types.UShort, Types.Char -> UShort.MAX_VALUE.toULong()
+                Types.Int -> Int.MAX_VALUE.toULong()
+                Types.UInt -> UInt.MAX_VALUE.toULong()
+                Types.Long -> Long.MAX_VALUE.toULong()
+                Types.ULong -> ULong.MAX_VALUE
+                else -> error("Get max of $type")
+            }
+        }
+
+    }
 
     val functionTypes = HashMap<FunctionType, Int>()
     val typeList = ArrayList<WASMFuncTypeOrStruct>()
@@ -85,11 +142,13 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         val method = method0.method
         when (val ownerType = method.ownerScope.typeWithArgs) {
             in nativeNumbers -> {
-                if (method.valueParameters.size != 1) return false
-                if (method.valueParameters[0].type != ownerType) return false
-                return when (method.name) {
+                if (method.valueParameters.size > 1) return false
+                if (method.valueParameters.size == 1 &&
+                    method.valueParameters[0].type != ownerType
+                ) return false
+                return when (val methodName = method.name) {
                     "plus", "minus", "times", "div", "rem", "equals" -> true
-                    else -> false
+                    else -> isCast(methodName)
                 }
             }
             // array getter and setter are not inlined
@@ -1295,73 +1354,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
-                    0 -> {
-                        val castSymbol = when (methodName) {
-                            "toInt" -> "(int) "
-                            "toLong" -> "(long) "
-                            "toFloat" -> "(float) "
-                            "toDouble" -> "(double) "
-                            "toByte" -> "(byte) "
-                            "toShort" -> "(short) "
-                            "toChar" -> "(char) "
-                            else -> null
-                        }
-                        // todo append correct casting method...
-                        if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
-                            appendGetField(graph, expr.thisInstance)
-                            builder.append(castSymbol)
-                            TODO("find cast-instr")
-                            true
-                        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
-                            appendGetField(graph, expr.thisInstance)
-                            builder.append("i32.eqz")
-                            binary.u8(WASMOpcode.I32_EQZ)
-                            nextLine()
-                            true
-                        } else false
-                    }
-                    1 -> {
-                        val supportsType = expr.thisInstance.type in nativeNumbers
-                        val symbol = when (methodName) {
-                            "plus" -> "add"
-                            "minus" -> "sub"
-                            "times" -> "mul"
-                            "div" -> "div"
-                            "rem" -> "mod"
-                            else -> null
-                        }
-                        if (supportsType && symbol != null) {
-                            appendGetField(graph, expr.thisInstance)
-                            appendGetField(graph, expr.valueParameters[0])
-                            val type = resolveType(expr.thisInstance.type)
-                            builder.append(getWASMType(type).wasmName)
-                                .append('.').append(symbol)
-                            binary.u8(getSimpleMathOp(type, symbol))
-                            nextLine()
-
-                            // clamp if small type
-                            when (type) {
-                                Types.Byte, Types.Short -> {
-                                    val bits = if (type == Types.Byte) 24 else 16
-                                    i32Const(bits); nextLine()
-                                    builder.append("i32.shl"); nextLine()
-                                    binary.u8(WASMOpcode.I32_SHL)
-
-                                    i32Const(bits); nextLine()
-                                    builder.append("i32.shr_s"); nextLine()
-                                    binary.u8(WASMOpcode.I32_SHR_S)
-                                }
-                                Types.UByte, Types.UShort -> {
-                                    val mask = if (type == Types.Byte) 0xff else 0xffff
-                                    i32Const(mask); nextLine()
-                                    builder.append("i32.and"); nextLine()
-                                    binary.u8(WASMOpcode.I32_AND)
-                                }
-                                // else fine
-                            }
-                            true
-                        } else false
-                    }
+                    0 -> appendUnaryOperator(graph, expr, methodName)
+                    1 -> appendBinaryOperator(graph, expr, methodName)
                     else -> false
                 }
                 if (!done) {
@@ -1503,6 +1497,177 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val type = resolveType(expr.thisInstance.type)
+        if (isCast(methodName) && type in nativeNumbers) {
+            appendGetField(graph, expr.thisInstance)
+
+            val outType0 = expr.dst.type
+            if (outType0 == type) return true // easy
+
+            val inType = getWASMType(type)
+            val outType = getWASMType(outType0)
+
+            val inFloat = type.isFloat()
+            val outFloat = outType0.isFloat()
+            when {
+                inFloat && outFloat -> {
+                    if (inType == WASMType.F32) {
+                        builder.append("f64.promote_f32")
+                        binary.u8(WASMOpcode.F64_PROMOTE_F32)
+                    } else {
+                        builder.append("f32.demote_f64")
+                        binary.u8(WASMOpcode.F32_DEMOTE_F64)
+                    }
+                    nextLine()
+                }
+                inFloat -> {
+
+                    val minValue = getMinIntValue(outType0)
+                    val maxValue = getMaxIntValue(outType0)
+
+                    // todo we could also use i32.trunc_sat_f32_s to save on instructions & to gain speed
+                    //  https://github.com/WebAssembly/nontrapping-float-to-int-conversions/blob/main/proposals/nontrapping-float-to-int-conversion/Overview.md
+                    //  NaN = Int-Min -> idk...
+
+                    // clamp value to range:
+                    // this is done before casting, so we avoid
+                    // "float unrepresentable in integer range"
+                    if (inType == WASMType.F32) {
+
+                        f32Const(minValue.toFloatCeil()); nextLine()
+                        builder.append("f32.max")
+                        binary.u8(WASMOpcode.F32_MAX)
+                        nextLine()
+
+                        f32Const(maxValue.toFloatFloor()); nextLine()
+                        builder.append("f32.min")
+                        binary.u8(WASMOpcode.F32_MIN)
+                        nextLine()
+
+                    } else {
+
+                        f64Const(minValue.toDoubleCeil()); nextLine()
+                        builder.append("f64.max")
+                        binary.u8(WASMOpcode.F64_MAX)
+                        nextLine()
+
+                        f64Const(maxValue.toDoubleFloor()); nextLine()
+                        builder.append("f64.min")
+                        binary.u8(WASMOpcode.F64_MIN)
+                        nextLine()
+
+                    }
+
+                    val outTypeIsLong = outType == WASMType.I64
+                    val outTypeUnsigned = outType0.isUnsigned()
+                    val inTypeIsDouble = inType == WASMType.F64
+
+                    val id = outTypeUnsigned.toInt() +
+                            outTypeIsLong.toInt(2) +
+                            inTypeIsDouble.toInt(4)
+                    val (code, name) = inFloatInstr[id]
+                    builder.append(name)
+                    binary.u8(code)
+                    nextLine()
+
+                }
+                outFloat -> {
+
+                    val inTypeIsLong = inType == WASMType.I64
+                    val inTypeUnsigned = type.isUnsigned()
+                    val outTypeIsDouble = outType == WASMType.F64
+
+                    val id = inTypeUnsigned.toInt() +
+                            inTypeIsLong.toInt(2) +
+                            outTypeIsDouble.toInt(4)
+                    val (code, name) = outFloatInstr[id]
+                    builder.append(name)
+                    binary.u8(code)
+                    nextLine()
+                }
+                else -> {
+                    if (inType != outType) {
+                        if (inType == WASMType.I32) {
+                            check(outType == WASMType.I64)
+
+                            val unsigned = outType0.isUnsigned()
+                            builder.append(if (unsigned) "i64.extend_i32_u" else "i64.extend_i32_s")
+                            binary.u8(if (unsigned) WASMOpcode.I64_EXTEND_I32U else WASMOpcode.I64_EXTEND_I32S)
+                            nextLine()
+                        } else {
+                            check(inType == WASMType.I64)
+                            check(outType == WASMType.I32)
+
+                            builder.append("i32.wrap_i64")
+                            binary.u8(WASMOpcode.I32_WRAP_I64)
+                            nextLine()
+                        }
+                    }
+
+                    maskToSmallInt(outType0)
+                }
+            }
+            return true
+        }
+
+        if (type == Types.Boolean && methodName == "not") {
+            appendGetField(graph, expr.thisInstance)
+            builder.append("i32.eqz")
+            binary.u8(WASMOpcode.I32_EQZ)
+            nextLine()
+            return true
+        }
+
+        return false
+    }
+
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        if (expr.thisInstance.type !in nativeNumbers) return false
+        val symbol = when (methodName) {
+            "plus" -> "add"
+            "minus" -> "sub"
+            "times" -> "mul"
+            "div" -> "div"
+            "rem" -> "mod"
+            else -> return false
+        }
+
+        appendGetField(graph, expr.thisInstance)
+        appendGetField(graph, expr.valueParameters[0])
+        val type = resolveType(expr.thisInstance.type)
+        builder.append(getWASMType(type).wasmName)
+            .append('.').append(symbol)
+        binary.u8(getSimpleMathOp(type, symbol))
+        nextLine()
+
+        maskToSmallInt(type)
+        return true
+    }
+
+    fun maskToSmallInt(type: Type) {
+        // clamp if small type
+        when (type) {
+            Types.Byte, Types.Short -> {
+                val bits = if (type == Types.Byte) 24 else 16
+                i32Const(bits); builder.append(' ')
+                builder.append("i32.shl"); builder.append(' ')
+                binary.u8(WASMOpcode.I32_SHL)
+
+                i32Const(bits); builder.append(' ')
+                builder.append("i32.shr_s"); nextLine()
+                binary.u8(WASMOpcode.I32_SHR_S)
+            }
+            Types.UByte, Types.UShort -> {
+                val mask = if (type == Types.Byte) 0xff else 0xffff
+                i32Const(mask); builder.append(' ')
+                builder.append("i32.and"); nextLine()
+                binary.u8(WASMOpcode.I32_AND)
+            }
+            // else fine
+        }
+    }
+
     fun appendNativeCompare(valueType: Type, compareType: CompareType) {
         val numberType = getWASMType(valueType)
         val compareName = when (compareType) {
@@ -1625,7 +1790,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 "sub" -> WASMOpcode.F32_SUB
                 "mul" -> WASMOpcode.F32_MUL
                 "div" -> WASMOpcode.F32_DIV
-                "mod" -> WASMOpcode.F32_REM
+                // mod does not exist
                 else -> null
             }
             Types.Double -> when (symbol) {
@@ -1633,7 +1798,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 "sub" -> WASMOpcode.F64_SUB
                 "mul" -> WASMOpcode.F64_MUL
                 "div" -> WASMOpcode.F64_DIV
-                "mod" -> WASMOpcode.F64_REM
+                // mod does not exist
                 else -> null
             }
             else -> null

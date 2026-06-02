@@ -477,7 +477,6 @@ abstract class CodeGenerationTests {
                 ctr++
 
                 val expected0: String = when (fromType) {
-                    // todo printing chars shouldn't print a number...
                     Types.Byte -> when {
                         toType.isFloat() -> "$value.0"
                         else -> value
