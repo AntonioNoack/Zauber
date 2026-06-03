@@ -33,11 +33,11 @@ class Parameter(
 
     var newName = cleanNameForCompilation(name)
 
-    fun getOrCreateField(selfType: Type?, keywords: FlagSet): Field {
+    fun getOrCreateField(selfType: Type?, flags: FlagSet): Field {
         // automatically gets added to fieldScope
         val field = field ?: scope.addField(
             selfType, selfType != null, isMutable = isVar, this,
-            name, type, defaultValue, keywords, origin
+            name, type, defaultValue, flags, origin
         )
         this.field = field
         return field

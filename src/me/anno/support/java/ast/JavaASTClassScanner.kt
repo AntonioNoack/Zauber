@@ -22,7 +22,7 @@ open class JavaASTClassScanner(tokens: TokenList, language: Language) :
         }
     }
 
-    override fun foundNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
+    override fun readNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
             readTypeParameterDeclarations(classScope, true)
 
@@ -83,6 +83,6 @@ open class JavaASTClassScanner(tokens: TokenList, language: Language) :
         }
 
         val name = consumeName(VSCodeType.TYPE, 0)
-        foundNamedScope(name, flags, scopeType)
+        readNamedScope(name, flags, scopeType)
     }
 }

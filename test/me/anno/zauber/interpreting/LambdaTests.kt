@@ -64,7 +64,7 @@ class LambdaTests {
                 val size: Int
             }
             class Array<V>(override val size: Int): List<V> {
-                external operator fun set(index: Int, value: V)
+                external override operator fun set(index: Int, value: V)
             }
             fun <V> listOf(vararg vs: V): List<V> = vs
             fun <V> arrayOf(vararg vs: V): Array<V> = vs

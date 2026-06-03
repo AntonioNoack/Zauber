@@ -253,15 +253,15 @@ class TypeScriptClassScanner(tokens: TokenList) :
 
     private fun readClass() {
         val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-        foundNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
+        readNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
     }
 
     private fun readEnum() {
         val name = consumeName(VSCodeType.ENUM, VSCodeModifier.DECLARATION.flag)
-        foundNamedScope(name, Flags.NONE, ScopeType.ENUM_CLASS)
+        readNamedScope(name, Flags.NONE, ScopeType.ENUM_CLASS)
     }
 
-    override fun foundNamedScope(
+    override fun readNamedScope(
         name: String,
         listenType: Int,
         scopeType: ScopeType

@@ -278,7 +278,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         name: String,
         valueType: Type?,
         initialValue: Expression?,
-        keywords: FlagSet,
+        flags: FlagSet,
         origin: Long
     ): Field {
         check((selfType != null) == explicitSelfType)
@@ -287,8 +287,9 @@ class Scope(val name: String, val parent: Scope? = null) {
         if (sameField != null) return sameField
         val instance = Field(
             this, selfType, explicitSelfType, isMutable, byParameter,
-            name, valueType, initialValue, keywords, origin
+            name, valueType, initialValue, flags, origin
         )
+
         check(instance !in fields)
         fields.add(instance)
         return instance

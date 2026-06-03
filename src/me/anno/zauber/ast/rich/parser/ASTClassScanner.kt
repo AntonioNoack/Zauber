@@ -107,7 +107,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         readLazily(classScope, false)
     }
 
-    open fun foundNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
+    open fun readNamedScope(name: String, listenType: FlagSet, scopeType: ScopeType) {
         val origin = origin(i - 1)
         pushNamedScopeLazy(name, listenType, scopeType) { classScope, readBody ->
             readTypeParameterDeclarations(classScope, true)
@@ -281,7 +281,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("fun") -> {
                 if (consumeIf("interface")) {
                     val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
-                    foundNamedScope(name, Flags.FUN_INTERFACE, ScopeType.INTERFACE)
+                    readNamedScope(name, Flags.FUN_INTERFACE, ScopeType.INTERFACE)
                 } else readMethod()
             }
             consumeIf("macro") -> {
@@ -317,26 +317,26 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("enum") -> {
                 consume("class")
                 val name = consumeName(VSCodeType.ENUM, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Flags.NONE, ScopeType.ENUM_CLASS)
+                readNamedScope(name, Flags.NONE, ScopeType.ENUM_CLASS)
             }
 
             consumeIf("inner") -> {
                 consume("class")
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Flags.NONE, ScopeType.INNER_CLASS)
+                readNamedScope(name, Flags.NONE, ScopeType.INNER_CLASS)
             }
 
             consumeIf("data") -> {
                 consume("class")
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Flags.DATA_CLASS, ScopeType.NORMAL_CLASS)
+                readNamedScope(name, Flags.DATA_CLASS, ScopeType.NORMAL_CLASS)
             }
 
             consumeIf("value") -> {
                 when {
                     consumeIf("class") -> {
                         val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                        foundNamedScope(name, Flags.VALUE, ScopeType.NORMAL_CLASS)
+                        readNamedScope(name, Flags.VALUE, ScopeType.NORMAL_CLASS)
                     }
                     consumeIf("val") -> {
                         addFlag(Flags.VALUE)
@@ -353,14 +353,14 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("class") -> {
                 check(!tokens.equals(i - 2, "::"))
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
+                readNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
             }
 
             tokens.equals(i, "object") && !tokens.equals(i - 1, "companion")
                     && !tokens.equals(i + 1, ":") -> {
                 i++ // skip 'object'
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Flags.NONE, ScopeType.OBJECT)
+                readNamedScope(name, Flags.NONE, ScopeType.OBJECT)
             }
 
             consumeIf("companion") -> {
@@ -368,18 +368,18 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 val name = if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
                     consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 } else "Companion"
-                foundNamedScope(name, Flags.NONE, ScopeType.COMPANION_OBJECT)
+                readNamedScope(name, Flags.NONE, ScopeType.COMPANION_OBJECT)
             }
 
             consumeIf("interface") -> {
                 val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
                 val keywords = if (tokens.equals(i - 2, "fun")) Flags.FUN_INTERFACE else Flags.NONE
-                foundNamedScope(name, keywords, ScopeType.INTERFACE)
+                readNamedScope(name, keywords, ScopeType.INTERFACE)
             }
 
             consumeIf("typealias") -> {
                 val name = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
-                foundNamedScope(name, Flags.NONE, ScopeType.TYPE_ALIAS)
+                readNamedScope(name, Flags.NONE, ScopeType.TYPE_ALIAS)
             }
 
             consumeIf("@") -> {
@@ -424,7 +424,6 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
         val selfType0 = readSelfTypeIfPresent(end)
         val selfType = selfType0 ?: ownerScope.selfType
-        // if (selfType != null) selfType = selfType.resolve()
 
         val fieldName = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
         check(name == fieldName) { "Expected same name, got mismatch: $name vs $fieldName at ${tokens.err(i - 1)}" }

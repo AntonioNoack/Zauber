@@ -1,15 +1,15 @@
 package me.anno.zauber.ast.rich.member
 
-import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishField
 import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
+import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishField
+import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.scope.Scope
 
 fun ZauberASTBuilderBase.createAssignmentInstructionsForPrimaryConstructor(
@@ -27,7 +27,8 @@ fun ZauberASTBuilderBase.createAssignmentInstructionsForPrimaryConstructor(
 
             val classField = classScope.addField(
                 null, false, isMutable = parameter.isVar,
-                parameter, parameter.name, parameter.type, null, Flags.SYNTHETIC, originI
+                parameter, parameter.name, parameter.type, null,
+                parameterField.flags, originI
             )
             val dstExpr = DotExpression(
                 ThisExpression(classScope, scope, originI), null,
