@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.typeresolution.members.ResolvedMember.Companion.resolveGenerics
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class ParameterList(val generics: List<Parameter>) : List<Type> {
@@ -69,6 +70,14 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         }
     }
 
+    operator fun get(type: GenericType): Type? {
+        val index0 = generics.indexOfFirst { it.name == type.name && it.scope == type.scope }
+        if (index0 < 0) return null
+        val resolved = getOrNull(index0)
+            ?: generics[index0].type
+        return if (type != resolved) resolved else null
+    }
+
     fun set(index: Int, newType: Type?, insertMode: InsertMode) {
         insertModes[index] = insertMode
         types[index] = newType
@@ -89,6 +98,14 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
     override fun lastIndexOf(element: Type): Int = types.lastIndexOf(element)
     override fun listIterator(): ListIterator<Type> = listIterator(0)
     override fun listIterator(index: Int): ListIterator<Type> = types.map { it!! }.listIterator(index)
+
+    fun indexOf2(type: GenericType): Int {
+        val index = generics.indexOfFirst { it.name == type.name && it.scope == type.scope }
+        if (index < 0) return -1
+        val resolved = getOrNull(index)
+            ?: generics[index].type
+        return if (type != resolved) index else -1
+    }
 
     fun map(mapping: (Type) -> Type): ParameterList {
         val dst = ParameterList(generics)

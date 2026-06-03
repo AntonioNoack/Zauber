@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -104,6 +105,10 @@ abstract class Expression(val scope: Scope, val origin: Long) {
             expr.forEachExpressionRecursively(callback)
             callback(expr)
         }
+    }
+
+    open fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
+        throw NotImplementedError("Replace fieldExpressions in (${javaClass.simpleName}) $this from $oldFields to $newFields")
     }
 
     companion object {

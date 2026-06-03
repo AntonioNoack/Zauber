@@ -3,6 +3,8 @@ package me.anno.zauber.interpreting
 import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.CollectionUtils.mapArray
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.utils.assertTrue
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -160,7 +162,10 @@ class Runtime {
         }
 
         if (method.body == null) {
-            error("Missing body for method $method in ${method.scope.pathStr}")
+            error(
+                "Missing body for method $method " +
+                        "in ${style(method.ownerScope.pathStr, StringStyles.LIGHT_BLUE)}"
+            )
         }
 
         val graph = ASTSimplifier.simplify(specialization)

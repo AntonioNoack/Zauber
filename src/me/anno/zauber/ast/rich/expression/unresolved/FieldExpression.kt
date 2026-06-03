@@ -1,15 +1,14 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.TokenListIndex
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution
-import me.anno.zauber.typeresolution.members.FindMemberMatch
 import me.anno.zauber.typeresolution.members.FieldResolver
+import me.anno.zauber.typeresolution.members.FindMemberMatch
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.types.Type
 
@@ -63,4 +62,17 @@ class FieldExpression(
 
     override fun splitsScope(): Boolean = false
     override fun forEachExpression(callback: (Expression) -> Unit) {}
+
+    override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
+        val index = oldFields.indexOf(field)
+        return if (index >= 0) {
+            val newField = newFields[index]
+            println("Replaced $field with $newField")
+            FieldExpression(newField, newField.ownerScope /* for visibility */, origin)
+        } else {
+            println("Tried finding $field for lambda, index: $index, oldFields: $oldFields")
+            this
+        }
+    }
+
 }

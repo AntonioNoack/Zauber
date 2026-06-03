@@ -78,30 +78,35 @@ class SimpleCall(
                     // fast-path
                     method
                 } else {
-                    val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
-                    val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
+                    Specialization(invokedType).use { // <- for resolving types
 
-                    // todo this is incorrect for Lambdas: somehow, resolve does not
-                    //  map zauber.Function2.P0 to Int, even though we specified selfScope
-                    println(
-                        "Looking for $methodTypeParameters, $methodValueParameters in " +
-                                "$invokedType: ${invokedType.clazz.superCalls}"
-                    )
+                        // todo: Specialization must scan all super-types for generics, and define them, too
 
-                    val clazzScope = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY]
-                    val choices = clazzScope.methods0.filter { option ->
-                        option.name == method.name &&
-                                sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
-                                sameParameters(selfScope, option.valueParameters, methodValueParameters)
+                        val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
+                        val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
+
+                        // todo this is incorrect for Lambdas: somehow, resolve does not
+                        //  map zauber.Function2.P0 to Int, even though we specified selfScope
+                        println(
+                            "Looking for $methodTypeParameters, $methodValueParameters in " +
+                                    "$invokedType: ${invokedType.clazz.superCalls}"
+                        )
+
+                        val clazzScope = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY]
+                        val choices = clazzScope.methods0.filter { option ->
+                            option.name == method.name &&
+                                    sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
+                                    sameParameters(selfScope, option.valueParameters, methodValueParameters)
+                        }
+                        check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
+                        check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
+                        if (false) println(
+                            "Selected ${choices.first().scope.pathStr}/${choices.first()} " +
+                                    "for $invokedType.$method, " +
+                                    "options: ${clazzScope.methods0.map { it.scope.pathStr }}"
+                        )
+                        choices.first()
                     }
-                    check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
-                    check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
-                    if (false) println(
-                        "Selected ${choices.first().scope.pathStr}/${choices.first()} " +
-                                "for $invokedType.$method, " +
-                                "options: ${clazzScope.methods0.map { it.scope.pathStr }}"
-                    )
-                    choices.first()
                 }
             }
         }
@@ -205,7 +210,7 @@ class SimpleCall(
         // println("Running $sample with $thisInstance/$selfInstance")
 
         val method = methods[thisInstance.clazz.type as ClassType] ?: sample
-        val method1 = Specialization(method.memberScope, specialization.typeParameters)
+        val method1 = specialization.withScope(method.memberScope)
         return runtime.executeCall(thisInstance, selfInstance, method1, valueParameters).retToVal()
     }
 }

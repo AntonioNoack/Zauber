@@ -43,11 +43,25 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         }
     }
 
+    private val superTypeCache = HashMap<SuperCall, Specialization>()
+
     val typeParameters = typeParameters.readonly()
     val hash = typeParameters.hashCode() and 0x7fff_ffff
 
     init {
         validateCompleteness()
+    }
+
+    val implicitTypeParameters = collectImplicitTypeParams()
+    fun collectImplicitTypeParams(): ParameterList {
+        if (scope == null || scope.superCalls.isEmpty()) return ParameterList.emptyParameterList()
+
+        val allParams = scope.superCalls.map { superCall ->
+            val p = getSuperType(superCall)
+            p.typeParameters + p.implicitTypeParameters
+        }.reduce { a, b -> a + b }
+
+        return allParams
     }
 
     /**
@@ -64,11 +78,12 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         }
     }
 
-    fun isEmpty(): Boolean = typeParameters.isEmpty()
-    fun isNotEmpty(): Boolean = typeParameters.isNotEmpty()
+    fun isEmpty(): Boolean = typeParameters.isEmpty() && implicitTypeParameters.isEmpty()
+    fun isNotEmpty(): Boolean = !isEmpty()
 
     fun containsGenerics(): Boolean {
-        return typeParameters.any { it is GenericType }
+        return typeParameters.any { it is GenericType } ||
+                implicitTypeParameters.any { it is GenericType }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -78,11 +93,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
     }
 
     operator fun get(type: GenericType): Type? {
-        val index = typeParameters.generics.indexOfFirst { it.name == type.name && it.scope == type.scope }
-        if (index < 0) return null
-        val resolved = typeParameters.getOrNull(index)
-            ?: typeParameters.generics[index].type
-        return if (type != resolved) resolved else null
+        return typeParameters[type] ?: implicitTypeParameters[type]
     }
 
     operator fun get(type: Parameter): Type? {
@@ -100,11 +111,9 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     fun indexOf(type: Type): Int {
         if (type !is GenericType) return -1
-        val index = typeParameters.generics.indexOfFirst { it.name == type.name && it.scope == type.scope }
-        if (index < 0) return -1
-        val resolved = typeParameters.getOrNull(index)
-            ?: typeParameters.generics[index].type
-        return if (type != resolved) index else -1
+        val i0 = typeParameters.indexOf2(type)
+        if (i0 >= 0) return i0
+        return implicitTypeParameters.indexOf2(type)
     }
 
     operator fun contains(type: Type): Boolean {
@@ -208,7 +217,12 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         }
 
     fun getSuperType(superCall: SuperCall): Specialization {
+        return superTypeCache.getOrPut(superCall) {
+            getSuperTypeImpl(superCall)
+        }
+    }
 
+    private fun getSuperTypeImpl(superCall: SuperCall): Specialization {
         val clazz = scope!!
         check(clazz.isClassLike())
 

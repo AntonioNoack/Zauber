@@ -1,10 +1,11 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.DotExpression.Companion.handleNOCTForCall
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -126,5 +127,15 @@ class NamedCallExpression(
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(self)
         for (param in valueParameters) callback(param.value)
+    }
+
+    override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
+        return NamedCallExpression(
+            self.replaceLambdaFieldsWithClassFields(oldFields, newFields),
+            name, nameAsImport, typeParameters,
+            valueParameters.map {
+                NamedParameter(it.name, it.value.replaceLambdaFieldsWithClassFields(oldFields, newFields))
+            }, scope, origin
+        )
     }
 }

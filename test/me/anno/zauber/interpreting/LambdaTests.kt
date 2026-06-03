@@ -95,8 +95,7 @@ class LambdaTests {
         return result
     }
     external class Int {
-        operator fun plus(other: Int): Int
-        operator fun plus(other: Float): Float
+        external operator fun plus(other: Int): Int
         external fun compareTo(other: Int): Int
         infix fun inc() = this + 1
     }
@@ -113,17 +112,14 @@ class LambdaTests {
     """.trimIndent()
 
     @Test
-    fun testArrayReduceWithLambda() {
-        // todo bug: Lambda-type doesn't register the call-method properly (call resolution)
-
-        // LogManager.enable("ASTSimplifier")
-        val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
+    fun testSimpleArrayReduceWithLambda() {
+        val code = "val tested = arrayOf(1, 2, 3).reduce { a: Int, b: Int -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }
 
     @Test
-    fun testSimpleArrayReduceWithLambda() {
-        val code = "val tested = arrayOf(1, 2, 3).reduce { a: Int, b: Int -> a + b }\n$stdlib"
+    fun testArrayReduceWithLambda() {
+        val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }
 

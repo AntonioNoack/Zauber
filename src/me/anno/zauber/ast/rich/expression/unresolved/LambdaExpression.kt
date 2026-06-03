@@ -1,7 +1,11 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.LIGHT_BLUE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -158,10 +162,10 @@ class LambdaExpression(
         val classScope = scope.generate("lambda", origin, ScopeType.INLINE_CLASS)
         val classConstructor = classScope.getOrCreatePrimaryConstructorScope()
 
-        val superType = resolveReturnType(context)
-        val lambdaTypeName = getLambdaTypeName(superType.parameters.size)
-        val typeParameters0 = superType.parameters.map { it.type }
-        val typeParameters = typeParameters0 + superType.returnType
+        val lambdaType = resolveReturnType(context)
+        val lambdaTypeName = getLambdaTypeName(lambdaType.parameters.size)
+        val typeParameters0 = lambdaType.parameters.map { it.type }
+        val typeParameters = typeParameters0 + lambdaType.returnType
         val superTypeI = ClassType(
             langScope.getOrPut(lambdaTypeName, ScopeType.INTERFACE),
             typeParameters, origin
@@ -182,17 +186,29 @@ class LambdaExpression(
         )
 
         val lambdaMethodScope = classScope.getOrPut("call", ScopeType.METHOD)
+        val newParameters = lambdaType.parameters.mapIndexed { index, it ->
+            Parameter(
+                index, it.name ?: "_", ParameterType.VALUE_PARAMETER, ParameterMutability.VAL, it.type,
+                lambdaMethodScope, it.origin
+            )
+        }
+        val newParameterFields = newParameters.map { it.getOrCreateField(lambdaType.selfType, Flags.NONE) }
+        val oldFields = lambdaType.parameters.mapNotNull { parameter ->
+            if (parameter.name != null)
+                body.scope.fields.firstOrNull { field -> field.name == parameter.name }
+                    ?: throw IllegalStateException(
+                        "Missing field '${style(parameter.name, GREEN)}' " +
+                                "in ${style(body.scope.pathStr, LIGHT_BLUE)}"
+                    )
+            else null
+        }
+        val adjustedBody = body.replaceLambdaFieldsWithClassFields(oldFields, newParameterFields)
         lambdaMethodScope.selfAsMethod = Method(
-            null, false, "call",
-            typeParameters = emptyList(),
-            valueParameters = superType.parameters.mapIndexed { index, it ->
-                Parameter(
-                    index, it.name ?: "_", ParameterType.VALUE_PARAMETER, ParameterMutability.VAL, it.type,
-                    scope, it.origin
-                )
-            },
-            lambdaMethodScope, superType.returnType, emptyList(),
-            body, Flags.SYNTHETIC or Flags.OVERRIDE, origin
+            lambdaType.selfType, lambdaType.selfType != null, "call",
+            typeParameters = emptyList(), valueParameters = newParameters,
+            lambdaMethodScope, lambdaType.returnType, emptyList(),
+            ReturnExpression(adjustedBody, null, scope, origin),
+            Flags.SYNTHETIC or Flags.OVERRIDE, origin
         )
 
         val constructorBody = ArrayList<Expression>()

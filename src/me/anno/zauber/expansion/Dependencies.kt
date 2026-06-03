@@ -173,8 +173,8 @@ object Dependencies {
 
         // mark all super-types as constructable (because they are)
         val scope = childType.clazz[ScopeInitType.AFTER_DISCOVERY]
-        for (superType in scope.superCalls) {
-            val superTypeI = childType.getSuperType(superType)
+        for (superCall in scope.superCalls) {
+            val superTypeI = childType.getSuperType(superCall)
             reached.childClasses.getOrPut(superTypeI, ::ArrayList)
                 .add(childType)
 

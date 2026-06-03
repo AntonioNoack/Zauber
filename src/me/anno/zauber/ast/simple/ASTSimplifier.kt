@@ -87,24 +87,27 @@ object ASTSimplifier {
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
-    fun simplify(method: Specialization): SimpleGraph {
-        check(method.isMethodLike())
-        return cache.getOrPut(method) {
-            method.use { // use scope
-                val context = ResolutionContext(null, method, true, null)
-                val expr = method.method.getSpecializedBody(method)
-                    ?: error("Specialized body is null? For $method")
-                if (LOGGER.isInfoEnabled) LOGGER.info("Simplifying $expr")
+    fun simplify(method0: Specialization): SimpleGraph {
+        check(method0.isMethodLike())
+        return cache.getOrPut(method0) {
+            method0.use { // use scope
+                val context = ResolutionContext(null, method0, true, null)
 
-                val graph = SimpleGraph(method)
+                if (LOGGER.isInfoEnabled) LOGGER.info("${bold("Simplifying")} ${method0.scope}, ${method0.method}" +
+                        "\n  ${method0.method.body}")
+
+                val expr = method0.method.getSpecializedBody(method0)
+                    ?: error("Specialized body is null? For $method0")
+
+                val graph = SimpleGraph(method0)
                 graph.initializeSpecialFields(context)
 
                 val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
                 val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
                 graph.endFlow = flow1
-                finishFlows(flow1, method, expr)
+                finishFlows(flow1, method0, expr)
 
-                if (LOGGER.isInfoEnabled) LOGGER.info("\n${bold("Simplified")} $method:\n  $flow1\n  to $graph\n")
+                if (LOGGER.isInfoEnabled) LOGGER.info("\n${bold("Simplified")} $method0:\n  $flow1\n  to $graph\n")
                 graph
             }
         }
