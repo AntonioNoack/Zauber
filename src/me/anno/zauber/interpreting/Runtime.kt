@@ -178,7 +178,7 @@ class Runtime {
         @Suppress("Since15")
         check(callStack.removeLast() === call)
         // println("Returning $result from call to $method")
-        return result ?: BlockReturn(ReturnType.RETURN, getUnit())
+        return result
     }
 
     fun <V> ArrayList<V?>.resizeTo(newSize: Int) {
@@ -252,7 +252,7 @@ class Runtime {
         return getClass(type).getOrCreateObjectInstance()
     }
 
-    fun executeBlock(block0: SimpleBlock): BlockReturn? {
+    fun executeBlock(block0: SimpleBlock): BlockReturn {
         var block = block0
         loop@ while (true) {
 
@@ -313,10 +313,13 @@ class Runtime {
             val condition = block.branchCondition
             block = if (condition != null) {
                 val conditionI = this[condition].castToBool()
-                LOGGER.info("Finished $block, condition: $conditionI -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.blockId}")
+                if (LOGGER.isInfoEnabled) LOGGER.info(
+                    "Finished $block, condition: ${style(conditionI.toString(), StringStyles.ORANGE)}" +
+                            " -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.str()}"
+                )
                 if (conditionI) block.ifBranch else block.elseBranch
             } else {
-                LOGGER.info("Finished $block, next: ${block.nextBranch?.blockId}")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Finished $block, next: ${block.nextBranch?.str()}")
                 block.nextBranch
             } ?: error("Exited without return from ${block0.graph.method}")
         }
