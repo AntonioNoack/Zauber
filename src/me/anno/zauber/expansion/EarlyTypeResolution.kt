@@ -1,5 +1,6 @@
 package me.anno.zauber.expansion
 
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaExpression
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaVariable
 import me.anno.zauber.ast.rich.member.Constructor
@@ -82,15 +83,25 @@ object EarlyTypeResolution {
     private fun replaceUnresolvedTypesForField(field: Field, selfScope: Scope?) {
         field.selfType = field.selfType?.resolve(selfScope)
         field.valueType = field.valueType?.resolve(selfScope) ?: run {
-            // todo define proper resolution context
+
             // todo we need knownLambdas and extensionThis -> this should already happen in the method
-            val selfType = null
+
+            val specForSelfScope = Specialization(getMethodOrClassScope(field).typeWithArgs)
+
             val ctx = ResolutionContext(
-                selfType, Specialization.noSpecialization,
+                selfType = null, specForSelfScope,
                 false, null, emptyMap(), emptyList()
             )
             if (field.initialValue == null && field.byParameter is LambdaVariable) null
             else field.resolveValueType(ctx)
+        }
+    }
+
+    private fun getMethodOrClassScope(field: Field): Scope {
+        var scope = field.ownerScope
+        while (true) {
+            if (scope.isClassLike() || scope.isMethodLike()) return scope
+            scope = scope.parentIfSameFile ?: return root
         }
     }
 

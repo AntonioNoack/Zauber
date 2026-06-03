@@ -60,7 +60,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         val expectedGenerics = collectGenerics(scope)
         val matchesGenerics = actualGenerics.toSet() == expectedGenerics.toSet()
         if (!matchesGenerics) {
-            error("Mismatched generics for $scope: got $typeParameters, expected $expectedGenerics")
+            error("Incomplete generics for $scope: got $typeParameters, expected $expectedGenerics")
         }
     }
 
