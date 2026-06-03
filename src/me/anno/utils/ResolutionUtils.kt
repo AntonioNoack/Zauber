@@ -172,7 +172,7 @@ object ResolutionUtils {
             val methodStr = when (val method = method.method) {
                 is Method -> {
                     style(method.flags().toString() + "fun ", StringStyles.ORANGE) +
-                            style(method.selfType(), StringStyles.MEDIUM_BLUE) +
+                            style(method.appendSelfType(), StringStyles.MEDIUM_BLUE) +
                             style(method.appendTypeParams(), StringStyles.GREEN) +
                             style(method.name, StringStyles.YELLOW) +
                             method.appendValueParams() +

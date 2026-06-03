@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.rich.member
 
-import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.LIGHT_BLUE
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
@@ -109,8 +112,11 @@ open class MethodLike(
     fun isPrivate(): Boolean = flags.hasFlag(Flags.PRIVATE)
     fun isProtected(): Boolean = flags.hasFlag(Flags.PROTECTED)
     fun isExternal(): Boolean = flags.hasFlag(Flags.EXTERNAL)
+    fun isOverride(): Boolean = flags.hasFlag(Flags.OVERRIDE)
+    fun isFinal(): Boolean = flags.hasFlag(Flags.FINAL)
+    fun isAbstract(): Boolean = flags.hasFlag(Flags.ABSTRACT)
 
-    fun isAbstract(): Boolean {
+    fun hasNoBody(): Boolean {
         scope[ScopeInitType.AFTER_DISCOVERY]
         return body == null
     }
@@ -118,15 +124,18 @@ open class MethodLike(
     var selfTypeIfNecessary: Type? = null
 
     fun flags(builder: StringBuilder = StringBuilder()): StringBuilder {
-        if (isPrivate()) builder.append("private ")
-        if (isProtected()) builder.append("protected ")
-        if (isExternal()) builder.append("external ")
+        if (isPrivate()) builder.append(style("private ", ORANGE))
+        if (isProtected()) builder.append(style("protected ", ORANGE))
+        if (isExternal()) builder.append(style("external ", ORANGE))
+        if (isAbstract()) builder.append(style("abstract ", ORANGE))
+        if (isOverride()) builder.append(style("override ", ORANGE))
+        if (isFinal()) builder.append(style("protected ", ORANGE))
         return builder
     }
 
-    fun selfType(builder: StringBuilder = StringBuilder()): StringBuilder {
+    fun appendSelfType(builder: StringBuilder = StringBuilder()): StringBuilder {
         if (selfType != null) {
-            builder.append(selfType.toString()).append('.')
+            builder.append(style(selfType.toString(), LIGHT_BLUE)).append('.')
         }
         return builder
     }
@@ -135,8 +144,8 @@ open class MethodLike(
         if (typeParameters.isNotEmpty()) {
             builder.append('<')
             builder.append(typeParameters.joinToString(", ") {
-                if (it.type == Types.NullableAny) it.name
-                else "${it.name}: ${it.type}"
+                if (it.type == Types.NullableAny) style(it.name, GREEN)
+                else "${style(it.name, GREEN)}: ${style(it.type.toString(), LIGHT_BLUE)}"
             })
             builder.append("> ")
         }
@@ -145,7 +154,7 @@ open class MethodLike(
 
     fun appendValueParams(builder: StringBuilder = StringBuilder()): StringBuilder {
         builder.append(valueParameters.joinToString(", ", "(", ")") {
-            "${style(it.name, StringStyles.GREEN)}: ${style(it.type.resolvedName.toString(), StringStyles.LIGHT_BLUE)}"
+            "${style(it.name, YELLOW)}: ${style(it.type.resolvedName.toString(), LIGHT_BLUE)}"
         })
         return builder
     }

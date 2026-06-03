@@ -127,7 +127,7 @@ object MethodOverrides {
                 // println("adding ${method.name} from $superScope to $scope, options: ${scope.methods0.map { it.name }}")
 
                 // somehow create a new method linking to the old one
-                check(ownerIsAbstract || !superMethod.isAbstract()) {
+                check(ownerIsAbstract || !superMethod.hasNoBody()) {
                     "Missing $superMethod in $scope, candidates: $selfMethods"
                 }
 

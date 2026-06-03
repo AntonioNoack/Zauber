@@ -114,7 +114,7 @@ object Dependencies {
     private fun markCalledMethodsReachable(method: Specialization) {
         // ASTSimplify method, and collect all called methods
         check(method.isMethodLike())
-        if (method.method.isExternal() || method.method.isAbstract()) return
+        if (method.method.isExternal() || method.method.hasNoBody()) return
 
         val simplified = ASTSimplifier.simplify(method)
         for (node in simplified.blocks) {

@@ -59,7 +59,7 @@ class Method(
         val builder = flags()
         builder.append(style("fun ", StringStyles.ORANGE))
         appendTypeParams(builder)
-        selfType(builder)
+        appendSelfType(builder)
         builder.append(style(name, StringStyles.GREEN))
         appendValueParams(builder)
         val returnType = returnType

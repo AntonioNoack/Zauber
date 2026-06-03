@@ -1,9 +1,12 @@
 package me.anno.zauber.ast.rich.member
 
+import me.anno.utils.StringStyles.LIGHT_ORANGE
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
+import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.Types
 
@@ -25,8 +28,8 @@ class Constructor(
 
     override fun toString(): String {
         val builder = StringBuilder()
-        builder.append("new ")
-        builder.append(selfTypeI.clazz.pathStr)
+        builder.append(style("new ", ORANGE))
+        builder.append(style(selfTypeI.clazz.pathStr, LIGHT_ORANGE))
         appendValueParams(builder)
         return builder.toString()
     }
