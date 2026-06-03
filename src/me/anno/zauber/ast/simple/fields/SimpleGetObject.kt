@@ -23,7 +23,7 @@ class SimpleGetObject(
     }
 
     override fun toString(): String {
-        return "$dst = ${bold("Object")}[${style(objectScope.pathStr, StringStyles.LINK)}]"
+        return "$dst = ${bold("Object")}[${style(objectScope.pathStr, StringStyles.LIGHT_BLUE)}]"
     }
 
     override fun execute(): BlockReturn? {

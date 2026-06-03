@@ -86,7 +86,7 @@ class GetMethodFromValueExpression(
             val method = methods.first()
             val lambdaType = LambdaType(
                 valueType.type,
-                method.valueParameters.map { LambdaParameter(it.name, it.type) },
+                method.valueParameters.map { LambdaParameter(it.name, it.type, it.origin) },
                 method.resolveReturnType(context)
             )
             LOGGER.info("Trying to resolve $this using $lambdaType")
@@ -107,7 +107,7 @@ class GetMethodFromValueExpression(
                     null, false, isMutable = false, null,
                     name, type, null, Flags.NONE, origin
                 )
-                LambdaVariable(type, field)
+                LambdaVariable(type, field, origin)
             }
 
 
@@ -135,7 +135,7 @@ class GetMethodFromValueExpression(
                     null, false, isMutable = false, null,
                     name, type, null, Flags.NONE, origin
                 )
-                LambdaVariable(type, field)
+                LambdaVariable(type, field, origin)
             }
             val base = FieldExpression(variables[0].field, tmpScope, origin)
             val valueParameters = variables.subList(1, variables.size).map {

@@ -129,7 +129,7 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                                                     name, type, initialValue,
                                                     Flags.NONE, origin
                                                 )
-                                                names += LambdaVariable(type, field)
+                                                names += LambdaVariable(type, field, origin)
                                             }
                                             readComma()
                                         }

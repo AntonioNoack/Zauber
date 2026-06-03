@@ -84,16 +84,53 @@ object StringStyles {
         return text.replace(removeStyleRegex, "")
     }
 
+    /**
+     * keywords
+     * */
     val ORANGE = color(0xff9000)
-    val WHITE = color(0xffffff)
-    val YELLOW = color(0xdddd77)
-    val BLUE = color(0x6699ff) // for numbers
-    val GREEN = color(0x66cc66)
-    val TEXT = color(0xd0d0d0) // slightly brighter than normal text
-    val LINK = color(0x99bbee) // for file names
-    val LIGHT_ORANGE = color(0xFFCC79)
-    val RED = color(0xff5555)
 
-    val LIGHT_BLUE = color(0x61B4D4) // for dependency-resolution
+    val WHITE = color(0xffffff)
+
+    /**
+     * local variables, arrows for underlining words
+     * */
+    val YELLOW = color(0xdddd77)
+
+    /**
+     * for types and numbers
+     * */
+    val DARK_BLUE = color(0x6699ff)
+
+    /**
+     * for dependency-resolution-types
+     * */
+    val MEDIUM_BLUE = color(0x61B4D4)
+
+    /**
+     * sometimes used for types, when BLUE is too dark;
+     * or for file names
+     * */
+    val LIGHT_BLUE = color(0x99bbee)
+
+    /**
+     * for blocks, field names and strings
+     * */
+    val GREEN = color(0x66cc66)
+
+    /**
+     * for line positions;
+     * slightly brighter than normal text
+     * */
+    val TEXT = color(0xd0d0d0)
+
+    /**
+     * for allocated types
+     * */
+    val LIGHT_ORANGE = color(0xFFCC79)
+
+    /**
+     * for errors, and ending blocks
+     * */
+    val RED = color(0xff5555)
 
 }

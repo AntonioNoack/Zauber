@@ -12,7 +12,7 @@ class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
     SimpleAssignment(dst, base.scope, base.origin) {
 
     override fun toString(): String {
-        return "$dst = ${StringStyles.style(base.value, StringStyles.BLUE)}"
+        return "$dst = ${StringStyles.style(base.value, StringStyles.DARK_BLUE)}"
     }
 
     override fun execute(): BlockReturn? {

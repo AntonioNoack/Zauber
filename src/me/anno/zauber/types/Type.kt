@@ -107,7 +107,7 @@ abstract class Type {
         return when (this) {
             is LambdaType -> {
                 LambdaType(selfType?.resolve(selfScope), parameters.map {
-                    LambdaParameter(it.name, it.type.resolve(selfScope))
+                    LambdaParameter(it.name, it.type.resolve(selfScope), it.origin)
                 }, returnType.resolve(selfScope))
             }
             is GenericType -> specialization[this] ?: superBounds
@@ -185,7 +185,7 @@ abstract class Type {
                 val newReturnType = genericValues.resolveGenerics(selfType, returnType)
                 val newParameters = parameters.map {
                     val newType = genericValues.resolveGenerics(selfType, it.type)
-                    LambdaParameter(it.name, newType)
+                    LambdaParameter(it.name, newType, it.origin)
                 }
                 LambdaType(newSelfType, newParameters, newReturnType)
             }
@@ -272,7 +272,7 @@ abstract class Type {
             is NotType -> type.specialize(spec).not()
             is LambdaType -> {
                 LambdaType(selfType?.specialize(spec), parameters.map {
-                    LambdaParameter(it.name, it.type.specialize(spec))
+                    LambdaParameter(it.name, it.type.specialize(spec), it.origin)
                 }, returnType.specialize(spec))
             }
             is UnresolvedType -> resolvedName.specialize(spec)

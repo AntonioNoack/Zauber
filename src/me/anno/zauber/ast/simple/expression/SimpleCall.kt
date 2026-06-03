@@ -12,6 +12,7 @@ import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.expansion.MethodOverrides.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
@@ -34,6 +35,8 @@ class SimpleCall(
 ) : SimpleCallable(dst, thisInstance, specialization, valueParameters, scope, origin) {
 
     companion object {
+
+        private val LOGGER = LogManager.getLogger(SimpleCall::class)
 
         fun selfTypeIsOpen(method: Method): Boolean {
             val selfType = method.ownerScope
@@ -61,9 +64,15 @@ class SimpleCall(
 
             // constructors aren't dynamic
             val dynamicDispatch = method is Method && selfTypeIsOpen(method)
-            if (!dynamicDispatch) return FullMap(method)
+            if (!dynamicDispatch) {
+                LOGGER.info("$method doesn't need dynamic dispatch")
+                return FullMap(method)
+            }
 
             return LazyMap { invokedType ->
+
+                LOGGER.info("Resolving $method for $invokedType (${invokedType.clazz.scopeType})")
+
                 val selfScope = invokedType.clazz
                 if (selfScope == method.scope.parent) {
                     // fast-path
@@ -71,6 +80,14 @@ class SimpleCall(
                 } else {
                     val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
                     val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
+
+                    // todo this is incorrect for Lambdas: somehow, resolve does not
+                    //  map zauber.Function2.P0 to Int, even though we specified selfScope
+                    println(
+                        "Looking for $methodTypeParameters, $methodValueParameters in " +
+                                "$invokedType: ${invokedType.clazz.superCalls}"
+                    )
+
                     val clazzScope = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY]
                     val choices = clazzScope.methods0.filter { option ->
                         option.name == method.name &&
@@ -96,7 +113,6 @@ class SimpleCall(
         thisInstance: SimpleField,
         selfInstance: SimpleField?,
         specialization: Specialization,
-        typeParameters: List<SimpleField>,
         valueParameters: List<SimpleField>,
         scopeBridgingParameters: List<SimpleField>,
         scope: Scope, origin: Long
@@ -116,7 +132,7 @@ class SimpleCall(
         scope: Scope, origin: Long
     ) : this(
         dst, method, thisInstance, selfInstance, specialization,
-        emptyList(), valueParameters, emptyList(),
+        valueParameters, emptyList(),
         scope, origin
     )
 

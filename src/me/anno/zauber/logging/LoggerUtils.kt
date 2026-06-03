@@ -8,7 +8,9 @@ object LoggerUtils {
                     "MethodResolver,ResolvedMethod," +
                     "ConstructorResolver," +
                     "ResolvedField,Field,FieldResolver,FieldExpression," +
-                    "SimpleGetField,SimpleSetField"
+                    "SimpleGetField,SimpleSetField,SimpleGetClassField,SimpleSetClassField," +
+                    "LambdaExpression," +
+                    "UnderdefinedValueParameter"
         )
     }
 }

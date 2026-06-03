@@ -84,6 +84,7 @@ object MethodOverrides {
         selfMethods: Map<String, List<Method>>,
         foundMethods: HashSet<Method>
     ) {
+        val ownerIsAbstract = scope.isAbstractClass()
         val superMethods = superScope[ScopeInitType.ADD_OVERRIDES].methods0
         for (superMethod in superMethods) {
             if (superMethod.isPrivate()) continue
@@ -104,14 +105,14 @@ object MethodOverrides {
                     .resolve(scope)
             }
 
-            val selfMethods = (selfMethods[superMethod.name] ?: emptyList())
+            val selfMethodsI = (selfMethods[superMethod.name] ?: emptyList())
                 .filter {
                     sameParameters(scope, it.typeParameters, methodTypeParameters) &&
                             sameParameters(scope, it.valueParameters, methodValueParameters)
                 }
 
-            if (selfMethods.size > 1) {
-                LOGGER.warn("Expected only one candidate for $superMethod in $scope, but found $selfMethods")
+            if (selfMethodsI.size > 1) {
+                LOGGER.warn("Expected only one candidate for $superMethod in $scope, but found $selfMethodsI")
             }
 
             val isOpen = superMethod.flags.hasFlag(Flags.OPEN) ||
@@ -120,12 +121,16 @@ object MethodOverrides {
 
             val isExplicitlyClosed = superMethod.flags.hasFlag(Flags.FINAL)
 
-            val selfMethod = selfMethods.firstOrNull()
+            val selfMethod = selfMethodsI.firstOrNull()
             if (selfMethod == null) {
 
                 // println("adding ${method.name} from $superScope to $scope, options: ${scope.methods0.map { it.name }}")
 
                 // somehow create a new method linking to the old one
+                check(ownerIsAbstract || !superMethod.isAbstract()) {
+                    "Missing $superMethod in $scope, candidates: $selfMethods"
+                }
+
                 val newScope = scope.generate("f:${superMethod.name}", ScopeType.METHOD)
                 newScope.setTypeParams(superMethod.typeParameters)
                 newScope.selfAsMethod = superMethod

@@ -8,6 +8,7 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.TokenListIndex.mergeOrigins
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -992,7 +993,8 @@ class ZauberASTBuilder(
                         null, false, isMutable = false, null,
                         name, null, null, Flags.SYNTHETIC, origin0
                     )
-                    val variable = LambdaDestructuring(names, field)
+                    val origin = mergeOrigins(origin0, origin(i - 1))
+                    val variable = LambdaDestructuring(names, field, origin)
                     field.byParameter = variable
                     variables.add(variable)
                 } else if (tokens.equals(i, TokenType.NAME)) {

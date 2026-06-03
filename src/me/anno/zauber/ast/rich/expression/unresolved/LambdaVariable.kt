@@ -3,7 +3,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.types.Type
 
-open class LambdaVariable(var type: Type?, val field: Field) {
+open class LambdaVariable(var type: Type?, val field: Field, val origin: Long) {
 
     val name get() = field.name
 

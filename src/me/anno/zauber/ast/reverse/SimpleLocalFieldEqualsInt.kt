@@ -25,6 +25,6 @@ class SimpleLocalFieldEqualsInt(
     }
 
     override fun toString(): String {
-        return "$dst = $field == ${style("$expected", StringStyles.BLUE)}"
+        return "$dst = $field == ${style("$expected", StringStyles.DARK_BLUE)}"
     }
 }

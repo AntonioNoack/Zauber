@@ -300,7 +300,7 @@ abstract class ZauberASTBuilderBase(
             null, false, isMutable = false, null,
             name, type, null, Flags.NONE, origin
         )
-        val variable = LambdaVariable(type, field)
+        val variable = LambdaVariable(type, field, origin)
         field.byParameter = variable
         return variable
     }
@@ -668,6 +668,7 @@ abstract class ZauberASTBuilderBase(
     fun readZauberLambdaParameters(): List<LambdaParameter> {
         val result = ArrayList<LambdaParameter>()
         loop@ while (i < tokens.size) {
+            val origin = origin(i)
             if (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                 tokens.equals(i + 1, ":")
             // && tokens.equals(i + 2, TokenType.NAME)
@@ -675,10 +676,10 @@ abstract class ZauberASTBuilderBase(
                 val name = tokens.toString(i)
                 i += 2
                 val type = readTypeNotNull(null, true)
-                result.add(LambdaParameter(name, type))
+                result.add(LambdaParameter(name, type, origin))
             } else if (tokens.equals(i, TokenType.NAME)) {
                 val type = readTypeNotNull(null, true)
-                result.add(LambdaParameter(null, type))
+                result.add(LambdaParameter(null, type, origin))
             } else error("Expected name: Type or name at ${tokens.err(i)}")
             readComma()
         }

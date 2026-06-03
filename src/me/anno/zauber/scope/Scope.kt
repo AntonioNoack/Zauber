@@ -674,6 +674,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     fun isPackage(): Boolean = scopeType == ScopeType.PACKAGE
     fun isInnerClass(): Boolean = scopeType == ScopeType.INNER_CLASS
     fun isDataOrValueClass(): Boolean = flags.hasFlag(Flags.DATA_CLASS) || flags.hasFlag(Flags.VALUE)
+    fun isLambda(): Boolean = scopeType == ScopeType.LAMBDA
 
     fun addFlags(flags: FlagSet) {
         this.flags = this.flags or flags
@@ -703,6 +704,10 @@ class Scope(val name: String, val parent: Scope? = null) {
             self = self.parent ?: return false
             if (self == scope) return true
         }
+    }
+
+    fun isAbstractClass(): Boolean {
+        return isInterface() || (isClass() && flags.hasFlag(Flags.ABSTRACT))
     }
 
     companion object {

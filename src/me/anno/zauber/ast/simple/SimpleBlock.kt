@@ -10,13 +10,11 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.simple.fields.SimpleGetClassField
-import me.anno.zauber.ast.simple.fields.SimpleGetObject
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
+import me.anno.zauber.ast.simple.fields.*
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -122,9 +120,17 @@ class SimpleBlock(val graph: SimpleGraph) {
             add(SimpleGetObject(dst, thisScope, scope, origin))
             return dst
         } else {
-            val isAmbiguous = thisScope.selfAsMethod?.hasExplicitSelfType == true
+            val isAmbiguous = graph.selfField != null
             val isExplicitSelf = if (isAmbiguous) {
-                when (contextExpr) {
+                val selfType = graph.selfField!!.type
+                val thisType = graph.thisField!!.type
+                if (isSubTypeOf(type, selfType)) {
+                    println("$selfType is a $type -> explicitSelf = true")
+                    true
+                } else if (isSubTypeOf(type, thisType)) {
+                    println("$thisType is a $type -> explicitSelf = false")
+                    false
+                } else when (contextExpr) {
                     is ReturnExpression -> true
                     is ResolvedCallExpression -> {
                         val methodOrField = contextExpr.callable.resolved
@@ -156,6 +162,22 @@ class SimpleBlock(val graph: SimpleGraph) {
             // println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
             val localField = if (isExplicitSelf) graph.selfField!! else graph.thisField!!
             val dst = field(type)
+
+            // todo 'this' from the Lambda gets incorrectly passed here...
+            //  it should be defined in the ResolutionContext somehow...
+            //  -> if it is inlined, this should be impossible, because the fields should be local fields
+            //  -> else, we should be in our own method-body, and it should be defined well
+
+            if (!isSubTypeOf(dst.type, localField.type)) {
+                println("isAmbiguous: $isAmbiguous")
+                println("isExplicitSelf: $isExplicitSelf")
+                println("ThisScope: $thisScope")
+                println("this: ${graph.thisField}")
+                println("self: ${graph.selfField}")
+                println("type: $type")
+                LOGGER.warn("Cannot assign $localField to $dst, ${(dst.type as? ClassType)?.clazz?.scopeType}")
+            }
+
             add(SimpleGetLocalField(dst, localField, scope, origin))
             dst.fromLocalField = localField
             return dst
@@ -249,6 +271,8 @@ class SimpleBlock(val graph: SimpleGraph) {
     }
 
     companion object {
+
+        private val LOGGER = LogManager.getLogger(SimpleBlock::class)
 
         fun Type.isValue(): Boolean {
             return needsCopy() || isNative()

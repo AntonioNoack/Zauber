@@ -1,5 +1,9 @@
 package me.anno.zauber.ast.rich.parameter
 
+import me.anno.utils.StringStyles.DARK_BLUE
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.Expression
@@ -63,10 +67,6 @@ class Parameter(
         parameterType, name, type, null, scope, origin
     )
 
-    override fun toString(): String {
-        return "${if (isVar) "var " else ""}${if (isVal) "val " else ""}${scope.pathStr}.$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
-    }
-
     override fun equals(other: Any?): Boolean {
         return other is Parameter &&
                 other.name == name &&
@@ -84,5 +84,12 @@ class Parameter(
             index, mutability, expansion, parameterType, name, type,
             defaultValue?.clone(scope), scope, origin
         )
+    }
+
+    override fun toString(): String {
+        return (if (isVar) style("var ", ORANGE) else "") +
+                (if (isVal) style("val ", ORANGE) else "") +
+                "${style(scope.pathStr, DARK_BLUE)}.${style(name, GREEN)}: " +
+                "${style(type.toString(), DARK_BLUE)}${if (defaultValue != null) " = $defaultValue" else ""}"
     }
 }

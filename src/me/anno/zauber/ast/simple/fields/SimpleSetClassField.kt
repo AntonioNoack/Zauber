@@ -34,7 +34,7 @@ class SimpleSetClassField(
     }
 
     override fun toString(): String {
-        return "$self?[${style(field.selfType.toString(), StringStyles.LINK)}]." +
+        return "$self?[${style(field.selfType.toString(), StringStyles.LIGHT_BLUE)}]." +
                 "${style(field.name, StringStyles.GREEN)} = $value"
     }
 
@@ -47,7 +47,7 @@ class SimpleSetClassField(
         val runtime = runtime
         val selfInstance = runtime[self]
         val value = runtime[value]
-        LOGGER.info("[SET] $selfInstance.${field.name} (${field.ownerScope}) = $value")
+        if (LOGGER.isInfoEnabled) LOGGER.info("[SET] $selfInstance.${field.name} (${field.ownerScope}) = $value")
         runtime[selfInstance, field] = value.cloneIfValue()
         return null
     }

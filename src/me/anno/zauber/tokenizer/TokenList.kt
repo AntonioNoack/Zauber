@@ -169,7 +169,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun lineNumberStr(lineNumber: Int): String {
-        return "${style(fileName, StringStyles.UNDERLINE + StringStyles.LINK)}:$lineNumber"
+        return "${style(fileName, StringStyles.UNDERLINE + StringStyles.LIGHT_BLUE)}:$lineNumber"
     }
 
     @Suppress("SameParameterValue")

@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich.member
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -55,16 +57,16 @@ class Method(
 
     override fun toString(): String {
         val builder = flags()
-        builder.append("fun ")
-        typeParams(builder)
+        builder.append(style("fun ", StringStyles.ORANGE))
+        appendTypeParams(builder)
         selfType(builder)
-        builder.append(name)
-        valueParams(builder)
+        builder.append(style(name, StringStyles.GREEN))
+        appendValueParams(builder)
         val returnType = returnType
         if (returnType != null) {
             builder.append(": ")
-                .append(returnType)
+                .append(style(returnType.toString(), StringStyles.LIGHT_BLUE))
         }
-        return builder.toString()
+        return style(builder.toString(), StringStyles.TEXT)
     }
 }

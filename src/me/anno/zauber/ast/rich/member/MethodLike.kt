@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich.member
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -129,7 +131,7 @@ open class MethodLike(
         return builder
     }
 
-    fun typeParams(builder: StringBuilder = StringBuilder()): StringBuilder {
+    fun appendTypeParams(builder: StringBuilder = StringBuilder()): StringBuilder {
         if (typeParameters.isNotEmpty()) {
             builder.append('<')
             builder.append(typeParameters.joinToString(", ") {
@@ -141,9 +143,9 @@ open class MethodLike(
         return builder
     }
 
-    fun valueParams(builder: StringBuilder = StringBuilder()): StringBuilder {
+    fun appendValueParams(builder: StringBuilder = StringBuilder()): StringBuilder {
         builder.append(valueParameters.joinToString(", ", "(", ")") {
-            "${it.name}: ${it.type.resolvedName}"
+            "${style(it.name, StringStyles.GREEN)}: ${style(it.type.resolvedName.toString(), StringStyles.LIGHT_BLUE)}"
         })
         return builder
     }

@@ -180,7 +180,7 @@ abstract class CallExpressionBase(
                                 "it", parameterType.parameters[i].type, null,
                                 Flags.NONE, origin
                             )
-                            listOf(LambdaVariable(null, field))
+                            listOf(LambdaVariable(null, field, origin))
                         }
 
                     val variable = variables[i]

@@ -114,8 +114,9 @@ class LambdaTests {
 
     @Test
     fun testArrayReduceWithLambda() {
-        // LogManager.enableAllLoggers()
-        LogManager.enable("ASTSimplifier")
+        // todo bug: Lambda-type doesn't register the call-method properly (call resolution)
+
+        // LogManager.enable("ASTSimplifier")
         val code = "val tested = arrayOf(1, 2, 3).reduce { a, b -> a + b }\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }

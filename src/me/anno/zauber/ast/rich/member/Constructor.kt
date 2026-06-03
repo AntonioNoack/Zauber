@@ -27,7 +27,7 @@ class Constructor(
         val builder = StringBuilder()
         builder.append("new ")
         builder.append(selfTypeI.clazz.pathStr)
-        valueParams(builder)
+        appendValueParams(builder)
         return builder.toString()
     }
 }

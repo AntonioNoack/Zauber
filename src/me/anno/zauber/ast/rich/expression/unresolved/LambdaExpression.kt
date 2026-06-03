@@ -1,6 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.Expression
@@ -8,7 +8,9 @@ import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.member.Constructor
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
+import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.logging.LogManager
@@ -54,7 +56,7 @@ class LambdaExpression(
     override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false // I don't think so
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveReturnType(context: ResolutionContext): LambdaType {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")
 
         val bodyContext = context
@@ -80,7 +82,7 @@ class LambdaExpression(
                                 autoParamName, type, null,
                                 Flags.NONE, origin
                             )
-                            listOf(LambdaVariable(type, field))
+                            listOf(LambdaVariable(type, field, origin))
                         }
                         else -> {
                             // instead of throwing, we should probably just return some impossible type or error type...
@@ -101,7 +103,7 @@ class LambdaExpression(
                 } else targetLambdaType.returnType // trust-me-bro
                 val newParameters = variables!!.mapIndexed { index, param ->
                     val type = param.type ?: targetLambdaType.parameters[index].type
-                    LambdaParameter(param.name, type)
+                    LambdaParameter(param.name, type, param.origin)
                 }
                 return LambdaType(newScopeType, newParameters, newReturnType)
             }
@@ -113,7 +115,7 @@ class LambdaExpression(
                 // else 'it' is not defined
                 val returnType = TypeResolution.resolveType(bodyContext, body)
                 return LambdaType(null, ensureVariables().map {
-                    LambdaParameter(it.name, it.type!!)
+                    LambdaParameter(it.name, it.type!!, it.origin)
                 }, returnType)
             }
             // else -> throw NotImplementedError("Extract LambdaType from $targetLambdaType")
@@ -156,16 +158,15 @@ class LambdaExpression(
         val classScope = scope.generate("lambda", origin, ScopeType.INLINE_CLASS)
         val classConstructor = classScope.getOrCreatePrimaryConstructorScope()
 
-        val superTypeI: ClassType = when (val superType = resolveReturnType(context)) {
-            is ClassType -> superType
-            is LambdaType -> {
-                val n = superType.parameters.size
-                ClassType(
-                    langScope.getOrPut(getLambdaTypeName(n), ScopeType.INTERFACE),
-                    superType.parameters.map { it.type } + superType.returnType, origin)
-            }
-            else -> throw NotImplementedError("Convert $superType to class type")
-        }
+        val superType = resolveReturnType(context)
+        val lambdaTypeName = getLambdaTypeName(superType.parameters.size)
+        val typeParameters0 = superType.parameters.map { it.type }
+        val typeParameters = typeParameters0 + superType.returnType
+        val superTypeI = ClassType(
+            langScope.getOrPut(lambdaTypeName, ScopeType.INTERFACE),
+            typeParameters, origin
+        )
+
         classScope.superCalls.clear()
         classScope.superCalls.add(SuperCall(superTypeI, null, null, origin))
 
@@ -178,6 +179,20 @@ class LambdaExpression(
         val methodField = classScope.addField(
             null, false, false, methodParameter, "self", selfMethodType,
             null, Flags.SYNTHETIC, 0,
+        )
+
+        val lambdaMethodScope = classScope.getOrPut("call", ScopeType.METHOD)
+        lambdaMethodScope.selfAsMethod = Method(
+            null, false, "call",
+            typeParameters = emptyList(),
+            valueParameters = superType.parameters.mapIndexed { index, it ->
+                Parameter(
+                    index, it.name ?: "_", ParameterType.VALUE_PARAMETER, ParameterMutability.VAL, it.type,
+                    scope, it.origin
+                )
+            },
+            lambdaMethodScope, superType.returnType, emptyList(),
+            body, Flags.SYNTHETIC or Flags.OVERRIDE, origin
         )
 
         val constructorBody = ArrayList<Expression>()
@@ -198,12 +213,6 @@ class LambdaExpression(
         )
 
         val selfMethod = ThisExpression(typeToScope(selfMethodType)!!, scope, origin)
-        /*return ConstructorExpression(
-            classScope, emptyList(),
-            listOf(NamedParameter(null, selfMethod)),
-            null, scope, origin
-        ).resolve(context)*/
-
         val method = ResolvedConstructor(
             classConstructor.selfAsConstructor!!,
             context.withSpec(context.specialization.withScope(classConstructor)),

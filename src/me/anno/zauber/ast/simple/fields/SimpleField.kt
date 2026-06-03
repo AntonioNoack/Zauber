@@ -45,14 +45,14 @@ class SimpleField(
 
     override fun toString(): String {
         val idName = style("%$id", YELLOW)
-        val typeColor = StringStyles.LINK
+        val typeColor = StringStyles.LIGHT_BLUE
         return when {
             constantRef is NumberExpression ->
-                "${style("\"${constantRef.value}\"", StringStyles.BLUE)}$idName"
+                "${style("\"${constantRef.value}\"", StringStyles.DARK_BLUE)}$idName"
             constantRef is StringExpression ->
                 "${style("\"${constantRef.value}\"", StringStyles.GREEN)}$idName"
             constantRef is SpecialValueExpression ->
-                "${style("${constantRef.type}", StringStyles.BLUE)}$idName"
+                "${style("${constantRef.type}", StringStyles.DARK_BLUE)}$idName"
             constantRef != null -> "\"$constantRef\"$idName"
             type is ClassType && type.clazz.isObjectLike() ->
                 "[${style(type.clazz.pathStr, typeColor)}]$idName"

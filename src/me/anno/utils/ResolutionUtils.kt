@@ -162,7 +162,7 @@ object ResolutionUtils {
 
         LOGGER.info(bold("Classes:"))
         for (clazz in data.createdClasses.map { clazz ->
-            "  - ${style(clazz.clazz.pathStr, StringStyles.LIGHT_BLUE)}, $clazz"
+            "  - ${style(clazz.clazz.pathStr, StringStyles.MEDIUM_BLUE)}, $clazz"
         }.sorted()) {
             LOGGER.info(clazz)
         }
@@ -172,17 +172,17 @@ object ResolutionUtils {
             val methodStr = when (val method = method.method) {
                 is Method -> {
                     style(method.flags().toString() + "fun ", StringStyles.ORANGE) +
-                            style(method.selfType(), StringStyles.LIGHT_BLUE) +
-                            style(method.typeParams(), StringStyles.GREEN) +
+                            style(method.selfType(), StringStyles.MEDIUM_BLUE) +
+                            style(method.appendTypeParams(), StringStyles.GREEN) +
                             style(method.name, StringStyles.YELLOW) +
-                            method.valueParams() +
+                            method.appendValueParams() +
                             " in " +
-                            style(method.ownerScope.pathStr, StringStyles.LIGHT_BLUE)
+                            style(method.ownerScope.pathStr, StringStyles.MEDIUM_BLUE)
                 }
                 is Constructor -> {
                     style("new " + method.flags(), StringStyles.ORANGE) +
-                            style(method.selfTypeI.toString(), StringStyles.LIGHT_BLUE) +
-                            method.valueParams()
+                            style(method.selfTypeI.toString(), StringStyles.MEDIUM_BLUE) +
+                            method.appendValueParams()
                 }
                 else -> method.toString()
             }
@@ -210,7 +210,7 @@ object ResolutionUtils {
             "  - ${style(field.name, StringStyles.YELLOW)} in ${
                 style(
                     fieldStr,
-                    StringStyles.LIGHT_BLUE
+                    StringStyles.MEDIUM_BLUE
                 )
             }, $fieldSpec: $str"
         }.sorted()) {

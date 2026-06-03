@@ -6,7 +6,7 @@ enum class TokenType(val style: String) {
 
     NAME(StringStyles.TEXT), // starts with A-Za-z_
     STRING(StringStyles.GREEN),
-    NUMBER(StringStyles.BLUE), // starts with 0-9.; a char is a special number
+    NUMBER(StringStyles.DARK_BLUE), // starts with 0-9.; a char is a special number
     SYMBOL(StringStyles.YELLOW), // anything like +-*/=&%$§
 
     KEYWORD(StringStyles.ORANGE),
