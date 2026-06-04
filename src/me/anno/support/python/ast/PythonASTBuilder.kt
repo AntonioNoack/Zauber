@@ -5,7 +5,7 @@ import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -16,12 +16,7 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterExpansion
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.ast.rich.parameter.SuperCall
+import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.ast.rich.parser.Associativity
 import me.anno.zauber.ast.rich.parser.Operator
 import me.anno.zauber.scope.Scope
@@ -559,7 +554,11 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return ExpressionList(body, methodScope, bodyOrigin)
     }
 
-    override fun readParameterDeclarations(selfType: Type?, extra: List<Parameter>, parameterType: ParameterType): List<Parameter> {
+    override fun readParameterDeclarations(
+        selfType: Type?,
+        extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter> {
         val parameters = ArrayList<Parameter>(extra)
         var mustBeNamed = false
         loop@ while (i < tokens.size) {
@@ -650,7 +649,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return IfElseBranch(condition, body, elseBranch)
     }
 
-    override fun readTryCatch(): Expression {
+    override fun readTryCatch(finallyOverride: Expression?): Expression {
         // try with resource
         val origin = origin(i - 1)
         consume(":")
@@ -683,12 +682,13 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             TODO("Implement try-catch-else at ${tokens.err(i)}")
         }
 
-        val finally = if (consumeIf("finally")) {
-            consume(":")
-            pushPythonBlock(ScopeType.METHOD_BODY, "finally") {
-                readMethodBody()
-            }
-        } else null
+        val finally = finallyOverride
+            ?: if (consumeIf("finally")) {
+                consume(":")
+                pushPythonBlock(ScopeType.METHOD_BODY, "finally") {
+                    readMethodBody()
+                }
+            } else null
         return TryCatchBlock(tryBody, catches, finally, currPackage, origin)
     }
 

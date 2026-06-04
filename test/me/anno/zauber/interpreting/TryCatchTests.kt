@@ -109,8 +109,10 @@ class TryCatchTests {
 
     @Test
     fun testNullPointerExceptionManual() {
-        LogManager.disable("ResolvedField,TypeResolution,Field,MemberResolver,Inheritance,ConstructorResolver," +
-                "FieldExpression,FieldResolver,CallExpression,SimpleGetField,CallWithNames")
+        LogManager.disable(
+            "ResolvedField,TypeResolution,Field,MemberResolver,Inheritance,ConstructorResolver," +
+                    "FieldExpression,FieldResolver,CallExpression,SimpleGetField,CallWithNames"
+        )
         val code = """
             val likeNull: Int? = null
             val tested = try {
@@ -282,6 +284,37 @@ class TryCatchTests {
         """.trimIndent()
             testExecute(code)
         }
+    }
+
+    @Test
+    fun testTryWithResource() {
+        val code = """
+        class Custom {
+            fun close() {
+                println("Closed")
+            }
+        }
+        class Another {
+            fun close() {
+                println("Another")
+            }
+        }
+        fun test(): Int {
+            try (val a = Custom(), val b = Another()) {
+                return 1
+            }
+        }
+        val tested = test()
+        
+        package zauber
+        class Any
+        class String
+        external fun println(str: String)
+        """.trimIndent()
+
+        val value = testExecute(code)
+        assertEquals(1, value.castToInt())
+        assertEquals("Closed\nAnother\n", runtime.printed.toString())
     }
 
 }

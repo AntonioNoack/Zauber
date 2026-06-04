@@ -9,6 +9,7 @@ import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.javascript.ast.FieldOfType
 import me.anno.support.javascript.ast.TypeScriptClassScanner
+import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.SpecialFieldNames.ENUM_NAME_NAME
 import me.anno.zauber.SpecialFieldNames.ENUM_ORDINAL_NAME
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
@@ -388,21 +389,69 @@ abstract class ZauberASTBuilderBase(
         parameterType: ParameterType
     ): List<Parameter>
 
-    open fun readTryCatch(): Expression {
+    open fun readParametersForTryWithResource(dst: ArrayList<Expression>): List<FieldExpression> {
+        val parameters = ArrayList<FieldExpression>()
+        loop@ while (i < tokens.size) {
+
+            readAnnotations()
+
+            val i0 = i
+            val isConst = consumeIf("const", VSCodeType.KEYWORD, 0)
+            val isVar = consumeIf("var", VSCodeType.KEYWORD, 0)
+            val isVal = consumeIf("val", VSCodeType.KEYWORD, 0)
+
+            check(isConst.toInt() + isVar.toInt() + isVal.toInt() <= 1) {
+                "Only one of 'var', 'val' and 'const' must be present at ${tokens.err(i0)}"
+            }
+
+            val origin = origin(i)
+            val name = consumeName(VSCodeType.PARAMETER, 0)
+
+            val type = if (consumeIf(":")) {
+                readTypeNotNull(null, true) // <-- handles generics now
+            } else null
+
+            consume("=")
+            val initialValue = readExpression()
+
+            val flags = Flags.NONE
+            val field = currPackage.addField(
+                null, false,
+                isMutable = isVar, null, name, type, initialValue, flags, origin
+            )
+            val fieldExpr = FieldExpression(field, currPackage, origin)
+            dst.add(AssignmentExpression(fieldExpr, initialValue))
+            parameters.add(fieldExpr)
+
+            readComma()
+
+        }
+        return parameters
+    }
+
+    open fun readTryWithResource(scope: Scope): Expression {
+        val origin = origin(i)
+        val instructions = ArrayList<Expression>()
+        val fields = pushCall { readParametersForTryWithResource(instructions) }
+
+        // close all listed resources in the finally-block
+        val finally = ExpressionList(
+            fields.map { field -> NamedCallExpression(field, "close", scope, origin) },
+            scope, origin
+        )
+
+        val catch = readTryCatch(finally)
+        instructions.add(catch)
+
+        return ExpressionList(instructions, scope, origin)
+    }
+
+    open fun readTryCatch(finallyOverride: Expression? = null): Expression {
         // try with resource
         val origin = origin(i - 1)
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
-            // read the declaration...
-            val origin = origin(i)
             return pushScope(ScopeType.METHOD_BODY, "useTry") { scope ->
-                // todo forbid scope-splitting, so we don't forget any
-                val init = pushCall { readMethodBody() }
-                val resources = scope.fields
-
-                val catch = readTryCatch()
-
-                // todo close all listed resources in the finally-block
-                ExpressionList(listOf(init, catch), scope, origin)
+                readTryWithResource(scope)
             }
         }
 
@@ -421,9 +470,11 @@ abstract class ZauberASTBuilderBase(
                 catches.add(Catch(params[0], handler, origin))
             }
         }
-        val finally = if (consumeIf("finally")) {
-            readBodyOrExpression(null)
-        } else null
+
+        val finally = finallyOverride
+            ?: if (consumeIf("finally")) {
+                readBodyOrExpression(null)
+            } else null
         return TryCatchBlock(tryBody, catches, finally, currPackage, origin)
     }
 

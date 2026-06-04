@@ -21,6 +21,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.FieldDeclaration
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.*
@@ -308,7 +309,7 @@ class ZauberASTBuilder(
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
-            val keywords = packFlags()
+            val flags = packFlags()
             val parameter = Parameter(
                 parameters.size,
                 when {
@@ -319,7 +320,7 @@ class ZauberASTBuilder(
                 if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
                 parameterType, name, type, initialValue, currPackage, origin
             )
-            parameter.getOrCreateField(null, keywords)
+            parameter.getOrCreateField(null, flags)
             parameters.add(parameter)
 
             readComma()
