@@ -46,7 +46,7 @@ class LazyExpression(
         eval(tokens.tokens, tokens.i0, tokens.i1, isBody, scope, imports, generics)
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = value.resolveReturnType(context)
+    override fun resolveValueType(context: ResolutionContext): Type = value.resolveValueType(context)
     override fun clone(scope: Scope): Expression = value.clone(scope)
     override fun toStringImpl(depth: Int): String = "LazyExpression(${tokens.extractString().replace("\n", "\\n")})"
 

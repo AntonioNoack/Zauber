@@ -15,7 +15,7 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : E
         else "[${list.joinToString(";") { "\n  " + it.toString(depth) }}]"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         if (list.isEmpty()) return exprHasNoType(context)
         // if any previous expression returns NothingType, return NothingType; else return the last found type
         lateinit var type: Type

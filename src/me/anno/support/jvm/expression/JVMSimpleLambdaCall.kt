@@ -12,5 +12,5 @@ class JVMSimpleLambdaCall(
     val interfaceType: Type,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = interfaceType
+    override fun resolveValueType(context: ResolutionContext): Type = interfaceType
 }

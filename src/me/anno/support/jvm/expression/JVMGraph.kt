@@ -21,7 +21,7 @@ class JVMGraph(scope: Scope, origin: Long) : Expression(scope, origin) {
     override fun needsBackingField(methodScope: Scope): Boolean = false
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
-    override fun resolveReturnType(context: ResolutionContext): Type = throw NotImplementedError()
+    override fun resolveValueType(context: ResolutionContext): Type = throw NotImplementedError()
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
         val unique = HashSet<JVMBlockExpression>()

@@ -29,8 +29,8 @@ class YieldExpression(value: Expression, scope: Scope, origin: Long) :
         return "yield ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
-    override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveReturnType(context)
+    override fun resolveValueType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveValueType(context)
     override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
 
     override fun clone(scope: Scope) = YieldExpression(value.clone(scope), scope, origin)

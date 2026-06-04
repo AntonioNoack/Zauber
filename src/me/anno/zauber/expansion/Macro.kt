@@ -124,7 +124,7 @@ object Macro {
         valueParameters: List<NamedParameter>, scope: Scope, origin: Long
     ): Expression {
         val context = createContext()
-        val valueParameterTypes = valueParameters.map { it.value.resolveReturnType(context) }
+        val valueParameterTypes = valueParameters.map { it.value.resolveValueType(context) }
         if (codeIsInsideAMacro(scope)) {
             val macro = resolveMacroByName(namePath, i0, typeParameters, valueParameterTypes, origin)
             // todo how is self found inside CallExpression/NamedCallExpression???

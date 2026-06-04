@@ -11,8 +11,8 @@ class GetClassFromValueExpression(val value: Expression, scope: Scope, origin: L
         return "${value.toString(depth)}::class"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
-        val type = value.resolveReturnType(context)
+    override fun resolveValueType(context: ResolutionContext): Type {
+        val type = value.resolveValueType(context)
         return Types.ClassType.withTypeParameter(type)
     }
 

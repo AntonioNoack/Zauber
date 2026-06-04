@@ -50,7 +50,7 @@ class FieldExpression(
         )
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return resolveField(context).getValueType()
     }
 

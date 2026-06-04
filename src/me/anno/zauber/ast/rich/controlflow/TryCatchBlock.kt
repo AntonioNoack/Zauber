@@ -14,7 +14,7 @@ class TryCatchBlock(
     val finally: Expression?, scope: Scope, origin: Long
 ) : Expression(scope, origin) {
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         val bodyType = TypeResolution.resolveType(context, tryBody)
         val catchTypes = catches.map {
             TypeResolution.resolveType(context, it.body)

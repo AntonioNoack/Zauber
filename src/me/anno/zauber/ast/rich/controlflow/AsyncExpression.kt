@@ -16,9 +16,9 @@ class AsyncExpression(val value: Expression, scope: Scope, origin: Long) : Expre
         return "async ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         val resolvedValue = value.resolve(context)
-        val returnType = resolvedValue.resolveReturnType(context)
+        val returnType = resolvedValue.resolveValueType(context)
         val thrownType = resolvedValue.resolveThrownType(context)
         val yieldedType = resolvedValue.resolveYieldedType(context)
         return Types.Yieldable.withTypeParameters(returnType, thrownType, yieldedType)

@@ -10,5 +10,5 @@ class JVMSimpleAllocateInstance(
     val selfType: ClassType,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = selfType
+    override fun resolveValueType(context: ResolutionContext): Type = selfType
 }

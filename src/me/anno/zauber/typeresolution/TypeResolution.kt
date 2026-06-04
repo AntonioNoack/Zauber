@@ -55,7 +55,7 @@ object TypeResolution {
         // if already resolved, just use that type
         val withLogging = LOGGER.isInfoEnabled
         if (withLogging) LOGGER.info("[${++depth}] Resolving type of (${expr.javaClass.simpleName}) $expr (targetType=${context.targetType})")
-        val type = expr.resolveReturnType(context).resolvedName.specialize(context)
+        val type = expr.resolveValueType(context).resolvedName.specialize(context)
         if (withLogging) LOGGER.info("[${depth--}] Resolved type of $expr to $type (${type.javaClass.simpleName})")
         return type
     }

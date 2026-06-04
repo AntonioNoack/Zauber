@@ -52,9 +52,9 @@ class EnsureNotNullExpression(
         return "${value.toString(depth)}!!"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         val contextI = context.withTargetType(context.targetType?.nonNull())
-        return value.resolveReturnType(contextI).nonNull()
+        return value.resolveValueType(contextI).nonNull()
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {

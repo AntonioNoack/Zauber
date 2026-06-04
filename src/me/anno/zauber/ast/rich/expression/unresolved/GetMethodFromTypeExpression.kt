@@ -13,7 +13,7 @@ class GetMethodFromTypeExpression(val base: Scope, val name: String, scope: Scop
         return "$base::$name"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         // todo resolve method, then convert signature into lambda
         TODO("Not yet implemented")
     }

@@ -16,7 +16,7 @@ class ResolvedSetFieldExpression(
     scope: Scope, origin: Long
 ) : ResolvedFieldExpression(owner, field, scope, origin) {
 
-    override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun resolveValueType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun clone(scope: Scope): Expression =
         ResolvedSetFieldExpression(self.clone(scope), field, value.clone(scope), scope, origin)
 

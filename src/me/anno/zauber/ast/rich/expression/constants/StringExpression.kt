@@ -15,7 +15,7 @@ class StringExpression(val value: String, scope: Scope, origin: Long) : Expressi
 
     override fun toStringImpl(depth: Int): String = "\"$value\""
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.String
+    override fun resolveValueType(context: ResolutionContext): Type = Types.String
     override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 

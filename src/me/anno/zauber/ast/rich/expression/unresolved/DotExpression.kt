@@ -215,8 +215,8 @@ class DotExpression(
         }
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
-        return resolve(context).resolveReturnType(context)
+    override fun resolveValueType(context: ResolutionContext): Type {
+        return resolve(context).resolveValueType(context)
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {

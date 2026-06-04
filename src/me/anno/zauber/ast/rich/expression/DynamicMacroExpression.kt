@@ -23,7 +23,7 @@ class DynamicMacroExpression(
     override fun isResolved(): Boolean = self.isResolved() && valueParameters.all { it.isResolved() }
     override fun splitsScope(): Boolean = self.splitsScope() || valueParameters.any { it.splitsScope() }
 
-    override fun resolveReturnType(context: ResolutionContext): Type =
+    override fun resolveValueType(context: ResolutionContext): Type =
         method.resolved.resolveReturnType(context)
 
     override fun clone(scope: Scope) = DynamicMacroExpression(

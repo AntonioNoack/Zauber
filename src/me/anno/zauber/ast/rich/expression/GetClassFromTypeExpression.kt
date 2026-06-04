@@ -13,7 +13,7 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Long) : E
         return "${type.toString(depth)}::class"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return when (type) {
             is UnionType -> Types.UnionType
             is ClassType -> Types.ClassType.withTypeParameter(type)

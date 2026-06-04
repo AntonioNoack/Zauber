@@ -256,7 +256,7 @@ object ASTSimplifier {
             }
 
             is GetClassFromTypeExpression -> {
-                val dst = block0.field(expr.resolveReturnType(context))
+                val dst = block0.field(expr.resolveValueType(context))
                 block0.add(SimpleGetTypeInstance(dst, expr.type, expr.scope, expr.origin))
                 return flow0.withValue(dst, block0)
             }
@@ -264,7 +264,7 @@ object ASTSimplifier {
             is GetClassFromValueExpression -> {
                 val block1 = simplifyImpl(context, expr.value, block0, flow0, true)
                 val block1v = block1.value ?: return block1
-                val dst = block0.field(expr.resolveReturnType(context))
+                val dst = block0.field(expr.resolveValueType(context))
                 block0.add(SimpleGetTypeFromInstance(dst, block1v.value.use(), expr.scope, expr.origin))
                 return flow0.withValue(dst, block0)
             }
@@ -298,7 +298,7 @@ object ASTSimplifier {
         var flowI = flow0
         var blockI = block0
 
-        val arrayType = expr.resolveReturnType(context)
+        val arrayType = expr.resolveValueType(context)
         val instanceType = (arrayType as ClassType).typeParameters!![0]
 
         val subContext = context
@@ -502,14 +502,14 @@ object ASTSimplifier {
             return flow0.withValue(dst)
         }
 
-        val selfType = expr.self.resolveReturnType(context.withTargetType(field.valueType))
+        val selfType = expr.self.resolveValueType(context.withTargetType(field.valueType))
         val contextI = context.withSelfType(selfType)
         if (!fieldHasSensibleType(contextI, field)) {
             LOGGER.info("Skipping non-sense getter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")
             return flow0
         }
 
-        val valueType = expr.resolveReturnType(contextI)
+        val valueType = expr.resolveValueType(contextI)
         // println("valueType for $expr: $valueType")
 
         if (isLocalField(block0.graph, field)) {

@@ -47,7 +47,7 @@ class IfElseBranch(
         }
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return if (elseBranch == null) {
             exprHasNoType(context)
         } else {

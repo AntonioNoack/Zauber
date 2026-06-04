@@ -61,7 +61,7 @@ class LambdaExpression(
     override fun isResolved(): Boolean = false
     override fun splitsScope(): Boolean = false // I don't think so
 
-    override fun resolveReturnType(context: ResolutionContext): LambdaType {
+    override fun resolveValueType(context: ResolutionContext): LambdaType {
         LOGGER.info("Handling lambda expression... target: ${context.targetType}")
 
         val bodyContext = context
@@ -165,7 +165,7 @@ class LambdaExpression(
 
         classScope.setTypeParams(emptyList())
 
-        val lambdaType = resolveReturnType(context)
+        val lambdaType = resolveValueType(context)
         val lambdaTypeName = getLambdaTypeName(lambdaType.parameters.size)
         val typeParameters0 = lambdaType.parameters.map { it.type }
         val typeParameters = typeParameters0 + lambdaType.returnType

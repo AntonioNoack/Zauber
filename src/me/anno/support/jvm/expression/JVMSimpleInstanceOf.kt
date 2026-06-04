@@ -12,5 +12,5 @@ class JVMSimpleInstanceOf(
     val type: ClassType,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.Boolean
+    override fun resolveValueType(context: ResolutionContext): Type = Types.Boolean
 }

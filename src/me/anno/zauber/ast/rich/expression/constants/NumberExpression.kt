@@ -319,7 +319,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         return "NumberExpr($value)"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         val actualType = resolvedType0
         val expectedType = context.targetType?.nonNull() ?: return actualType
         if (expectedType == actualType) return expectedType

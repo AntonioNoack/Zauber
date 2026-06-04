@@ -10,5 +10,5 @@ class JVMSimpleString(
     val value: String,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.String
+    override fun resolveValueType(context: ResolutionContext): Type = Types.String
 }

@@ -10,7 +10,7 @@ import me.anno.zauber.types.Type
  * */
 class SelfConstantRef(val type: Type, val kind: ConstantKind, scope: Scope, origin: Long) : Expression(scope, origin) {
 
-    override fun resolveReturnType(context: ResolutionContext): Type = type.specialize(context)
+    override fun resolveValueType(context: ResolutionContext): Type = type.specialize(context)
     override fun clone(scope: Scope): Expression = this
     override fun toStringImpl(depth: Int): String = kind.toString()
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false

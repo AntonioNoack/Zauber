@@ -73,7 +73,7 @@ abstract class CallExpressionBase(
         }
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return resolveCallable(context).getTypeFromCall()
     }
 

@@ -10,5 +10,5 @@ class JVMSimpleMultiArray(
     val dst: SimpleFieldExpr, val totalType: ClassType, val dimensions: List<SimpleFieldExpr>,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing
 }

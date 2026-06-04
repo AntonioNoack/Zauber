@@ -6,5 +6,5 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
 class JVMSimpleReturn(val value: SimpleFieldExpr, scope: Scope, origin: Long) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing
 }

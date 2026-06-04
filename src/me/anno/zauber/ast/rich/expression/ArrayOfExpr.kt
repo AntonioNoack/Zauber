@@ -12,7 +12,7 @@ class ArrayOfExpr(val values: List<Expression>, val type: Type, scope: Scope, or
         return "arrayOf(${values.joinToString(",") { "\n  " + it.toString(depth) }})"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return Types.Array.withTypeParameter(type.specialize(context))
     }
 

@@ -15,7 +15,7 @@ class TypeExpression(val type: Type, scope: Scope, origin: Long) :
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun needsBackingField(methodScope: Scope): Boolean = false
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         check(type is ClassType)
         if (type.clazz.isObjectLike()) return type
         return NonObjectClassType(type) // weird in-between type

@@ -12,7 +12,7 @@ class ContinueExpression(val label: Scope, scope: Scope, origin: Long) : Express
         return "continue@$label"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 

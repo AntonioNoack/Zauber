@@ -27,7 +27,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
     }
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return type
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return if (hasValue) resolveField(context).getValueType()
         else exprHasNoType(context)
     }
@@ -66,7 +66,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             }
             is DotExpression if dstExpr.left is FieldResolvable && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
-                val ownerType = owner.resolveReturnType(context)
+                val ownerType = owner.resolveValueType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
                     ?: error("Could not resolve field for ${dstExpr.right}")
                 return if (!field.resolved.isMutable) {
@@ -79,7 +79,7 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             }
             is DotExpression if dstExpr.left is TypeExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
-                val ownerType = owner.resolveReturnType(context)
+                val ownerType = owner.resolveValueType(context)
                 val field = dstExpr.right.resolveField(context.withSelfType(ownerType))
                     ?: error("Could not resolve field for ${dstExpr.right}")
                 check(field.resolved.isMutable) {
@@ -110,13 +110,13 @@ class AssignmentExpression(val dst: Expression, val src: Expression, val hasValu
             }
             is DotExpression if dstExpr.left is FieldExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
-                val ownerType = owner.resolveReturnType(context)
+                val ownerType = owner.resolveValueType(context)
                 dstExpr.right.resolveField(context.withSelfType(ownerType))
                     ?: error("Could not resolve field for ${dstExpr.right}")
             }
             is DotExpression if dstExpr.left is TypeExpression && dstExpr.right is FieldResolvable -> {
                 val owner = dstExpr.left.resolve(context)
-                val ownerType = owner.resolveReturnType(context)
+                val ownerType = owner.resolveValueType(context)
                 dstExpr.right.resolveField(context.withSelfType(ownerType))
                     ?: error("Could not resolve field for ${dstExpr.right}")
             }

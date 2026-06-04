@@ -274,7 +274,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 // find out hash of super-call...
                 val context = ResolutionContext(null, specialization, true, null)
                 val valueParams = superCall.valueParameters.map {
-                    val type = it.value.resolveReturnType(context)
+                    val type = it.value.resolveValueType(context)
                     ValueParameterImpl(it.name, type, false)
                 }
                 val foundConstructor = ConstructorResolver.findMemberInScope(

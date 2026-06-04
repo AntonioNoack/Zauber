@@ -36,14 +36,14 @@ class GetMethodFromValueExpression(
         return "${self.toString(depth)}::$name"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         val targetType = context.targetType
         if (targetType is LambdaType) {
             return targetType
         }
 
         // quick and dirty fallback:
-        return resolveImpl(context).resolveReturnType(context)
+        return resolveImpl(context).resolveValueType(context)
     }
 
     override fun resolveImpl(context: ResolutionContext): Expression {
@@ -73,7 +73,7 @@ class GetMethodFromValueExpression(
 
         // todo this itself is also ambiguous: Int::plus matches Int.(Int) -> Int and (Int,Int)->Int
 
-        val valueType = self.resolveReturnType(context)
+        val valueType = self.resolveValueType(context)
         if (valueType is NonObjectClassType) {
             // todo check visibility... private methods may only be resolved from inside this class...
             val methods = valueType.type.clazz[ScopeInitType.AFTER_OVERRIDES].methods0

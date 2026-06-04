@@ -1,8 +1,8 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -14,7 +14,7 @@ class ReturnExpression(value: Expression, label: String?, scope: Scope, origin: 
         else "return@$label ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveThrownType(context: ResolutionContext): Type = value.resolveThrownType(context)
     override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)
 

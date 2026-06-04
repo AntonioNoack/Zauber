@@ -16,7 +16,7 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
         return "${if (label != null) "$label@" else ""} do { ${body.toString(depth)} } while (${condition.toString(depth)})"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun resolveValueType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 

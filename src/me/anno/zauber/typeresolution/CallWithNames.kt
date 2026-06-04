@@ -1,6 +1,5 @@
 package me.anno.zauber.typeresolution
 
-import me.anno.generation.Specializations
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.ArrayOfExpr
 import me.anno.zauber.ast.rich.expression.Expression
@@ -230,7 +229,7 @@ object CallWithNames {
                     ?.nullIfUnknown(scope)
                 else null
             } ?: run {
-                val types = values.map { it.resolveReturnType(context.withTargetType(null)) }
+                val types = values.map { it.resolveValueType(context.withTargetType(null)) }
                 if (types.isNotEmpty()) unionTypes(types) else null
             } ?: error(
                 "Unknown instance type for createArrayOfExpr (this will fail to resolve), " +

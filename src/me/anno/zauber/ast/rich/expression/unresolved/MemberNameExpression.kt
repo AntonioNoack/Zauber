@@ -73,6 +73,6 @@ class MemberNameExpression(
             )
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = resolveField(context).getValueType()
+    override fun resolveValueType(context: ResolutionContext): Type = resolveField(context).getValueType()
     override fun forEachExpression(callback: (Expression) -> Unit) {}
 }

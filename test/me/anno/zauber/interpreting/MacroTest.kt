@@ -76,9 +76,6 @@ class String {
 
     @Test
     fun testCreatingSerializerAtCompileTime() {
-        // todo bug: why does it think the return-type of Array.iterator is Nothing???
-        // todo bug: why does the method return Unit, when we expect a string?
-
         val sourceCode = $$"""
 class Sample(var a: Int, var b: Float)
 
@@ -98,7 +95,7 @@ macro Serialize(input: String, ctx: MacroContext): String {
     return ctx.parse<String>(result)
 }
 
-fun serialize(sample: Sample) {
+fun serialize(sample: Sample): String {
     return Serialize"sample: Sample"
 }
 

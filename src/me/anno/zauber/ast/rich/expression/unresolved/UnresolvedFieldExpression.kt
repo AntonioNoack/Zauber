@@ -38,7 +38,7 @@ class UnresolvedFieldExpression(
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = false
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         val field = resolveField(context)
         return field?.getValueType() ?: run {
             val type0 = scope.resolveType(name, nameAsImport)

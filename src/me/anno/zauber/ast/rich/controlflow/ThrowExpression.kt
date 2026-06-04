@@ -14,10 +14,10 @@ class ThrowExpression(value: Expression, scope: Scope, origin: Long) :
         return "throw ${value.toString(depth)}"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveThrownType(context: ResolutionContext): Type {
         // if value returns or throws, we throw
-        return unionTypes(value.resolveReturnType(context), value.resolveThrownType(context))
+        return unionTypes(value.resolveValueType(context), value.resolveThrownType(context))
     }
 
     override fun resolveYieldedType(context: ResolutionContext): Type = value.resolveYieldedType(context)

@@ -8,6 +8,7 @@ import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.expansion.IsMethodRecursive
@@ -87,9 +88,10 @@ open class MethodLike(
             return returnType.specialize(specialization)
         }
 
-        val body = getSpecializedBody(specialization)
+        var body = getSpecializedBody(specialization)
             ?: error("Either body or returnType must be defined for $this")
-        return body.resolveReturnType(createContext(specialization))
+        while (body is ReturnExpression) body = body.value
+        return body.resolveValueType(createContext(specialization))
     }
 
     val specializations = HashMap<Specialization, Expression>()

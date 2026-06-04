@@ -10,7 +10,7 @@ import me.anno.zauber.types.Types
 class SuperExpression(val label: Scope, val isThis: Boolean, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String = "super@$label"
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         return resolveThisType(context, label)
     }
 

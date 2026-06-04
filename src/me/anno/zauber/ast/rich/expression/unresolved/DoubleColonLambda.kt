@@ -16,7 +16,7 @@ class DoubleColonLambda(val left: Scope, val methodName: String, scope: Scope, o
         return "($left)::$methodName"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         // todo we need to resolve the method...
         TODO("Not yet implemented")
     }

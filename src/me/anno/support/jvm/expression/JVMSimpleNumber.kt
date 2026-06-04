@@ -10,5 +10,5 @@ class JVMSimpleNumber(
     val value: NumberExpression,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveReturnType(context: ResolutionContext): Type = dst.type
+    override fun resolveValueType(context: ResolutionContext): Type = dst.type
 }

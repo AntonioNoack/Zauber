@@ -28,7 +28,7 @@ class JVMBlockExpression(val graph: JVMGraph, scope: Scope, origin: Long) : Expr
 
     fun field(type: Type) = graph.field(type)
 
-    override fun resolveReturnType(context: ResolutionContext): Type {
+    override fun resolveValueType(context: ResolutionContext): Type {
         TODO("Not yet implemented")
     }
 

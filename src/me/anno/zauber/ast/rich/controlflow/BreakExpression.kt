@@ -12,7 +12,7 @@ class BreakExpression(val label: Scope, scope: Scope, origin: Long) : Expression
         return "break@$label"
     }
 
-    override fun resolveReturnType(context: ResolutionContext): Type = exprHasNoType(context)
+    override fun resolveValueType(context: ResolutionContext): Type = exprHasNoType(context)
     override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
     override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
 
