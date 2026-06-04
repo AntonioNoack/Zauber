@@ -14,7 +14,6 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassFields() {
-        LogManager.disable("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
                 class Outer {
@@ -35,7 +34,6 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassFieldChain() {
-        LogManager.disable("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
                 class Outer {
@@ -56,7 +54,6 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassCanAccessOuterClassMethods() {
-        LogManager.disable("TypeResolution,MemberResolver,CallExpression")
         val value = testExecute(
             """
                 class Outer {
@@ -97,13 +94,6 @@ class InnerClassTests {
 
     @Test
     fun testCallInnerClassConstructorFromInside() {
-        LogManager.disable(
-            "" +
-                    "ASTSimplifier,TypeResolution,CallExpression,MemberResolver,Inheritance,Runtime," +
-                    "ResolvedMethod,MethodResolver," +
-                    "ConstructorResolver," +
-                    ""
-        )
         val type = testExecute(
             """
                 class Outer(var x: Int) {
@@ -128,14 +118,6 @@ class InnerClassTests {
 
     @Test
     fun testCallInnerClassConstructorFromInsideInner() {
-        LogManager.disable(
-            "" +
-                    "ASTSimplifier,TypeResolution,Inheritance,Runtime," +
-                    "CallExpression,MemberResolver,SuperCallExpression," +
-                    "ResolvedMethod,MethodResolver," +
-                    "ConstructorResolver," +
-                    "ResolvedField,FieldExpression,FieldResolver"
-        )
         val type = testExecute(
             """
                 class Outer(var x: Int) {
@@ -156,14 +138,6 @@ class InnerClassTests {
 
     @Test
     fun testInnerClassChainAndFieldAccess() {
-        LogManager.disable(
-            "" +
-                    "ASTSimplifier,TypeResolution,Inheritance,Runtime," +
-                    "CallExpression,MemberResolver,SuperCallExpression," +
-                    "ResolvedMethod,MethodResolver," +
-                    "ConstructorResolver," +
-                    "ResolvedField,FieldExpression,FieldResolver"
-        )
         val type = testExecute(
             """
                 class Outer(var x: Int) {

@@ -108,6 +108,7 @@ abstract class Expression(val scope: Scope, val origin: Long) {
     }
 
     open fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
+        if (oldFields.isEmpty()) return this
         throw NotImplementedError("Replace fieldExpressions in (${javaClass.simpleName}) $this from $oldFields to $newFields")
     }
 

@@ -145,6 +145,7 @@ object TypeResolution {
             is GenericType -> typeToScope(type.superBounds) // or should we choose null?
             is UnresolvedType -> typeToScope(type.resolve())
             // is NullableType -> typeToScope(type.base)
+            is NonObjectClassType -> type.type.clazz
             else -> throw NotImplementedError("typeToScope($type, ${type.javaClass.simpleName})")
         }
     }

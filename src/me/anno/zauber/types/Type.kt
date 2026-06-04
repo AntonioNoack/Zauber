@@ -256,6 +256,7 @@ abstract class Type {
             is LambdaType -> (selfType?.isFullySpecialized() ?: true) &&
                     parameters.all { it.type.isFullySpecialized() } &&
                     returnType.isFullySpecialized()
+            is NonObjectClassType -> type.isFullySpecialized()
             else -> error("Is ${javaClass.simpleName} fully specialized?")
         }
     }
@@ -278,6 +279,7 @@ abstract class Type {
             is UnresolvedType -> resolvedName.specialize(spec)
             // todo we need selfType to properly resolve them...
             is ThisType, is SelfType -> type.specialize(spec)
+            is NonObjectClassType -> NonObjectClassType(type.specialize(spec) as ClassType)
             else -> error("Specialize ${javaClass.simpleName}")
         }
     }
