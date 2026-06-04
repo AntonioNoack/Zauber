@@ -133,16 +133,24 @@ class Runtime {
         specialization: Specialization,
         valueParameters: List<SimpleField>
     ): BlockReturn {
+        val valueParameters = valueParameters.map { valueField ->
+            this[valueField].cloneIfValue()
+        }
+        return executeCall2(methodOwnerInstance, explicitSelfInstance, specialization, valueParameters)
+    }
+
+    fun executeCall2(
+        methodOwnerInstance: Instance,
+        explicitSelfInstance: Instance?,
+        specialization: Specialization,
+        valueParameters: List<Instance>
+    ): BlockReturn {
 
         // println("Calling $methodSpec on $self with $valueParameters")
         check(specialization.isMethodLike())
 
         if (isNull(methodOwnerInstance)) {
             throw IllegalArgumentException("Cannot execute $specialization on null instance")
-        }
-
-        val valueParameters = valueParameters.map { valueField ->
-            this[valueField].cloneIfValue()
         }
 
         val method = specialization.method
@@ -170,13 +178,14 @@ class Runtime {
 
         val graph = ASTSimplifier.simplify(specialization)
 
-        val call = Call(method)
+        val call = Call.create(method)
         prepareCall(graph, call, methodOwnerInstance, explicitSelfInstance, valueParameters)
 
         val result = executeBlock(graph.startBlock)
 
         @Suppress("Since15")
         check(callStack.removeLast() === call)
+        call.recycle()
         // println("Returning $result from call to $method")
         return result
     }

@@ -13,8 +13,10 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
-import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.interpreting.*
+import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.Instance
+import me.anno.zauber.interpreting.ReturnType
+import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.lazy.LazyExpression
@@ -195,27 +197,13 @@ object Macro {
         val runtime = Runtime.runtime
         val ownerScope = method.scope.parent
         check(ownerScope != null && ownerScope.isObjectLike())
+
         val owner = runtime.getObjectInstance(ownerScope.typeWithArgs)
         val method1 = byMethodCall.specialization
         check(byMethodCall.resolved.memberScope == method1.scope)
 
-        val callForFields = Call(method)
-        runtime.callStack.add(callForFields)
-
         val valueParameters1 = valueParameters + runtime.getObjectInstance(macroContextParam)
-        val valueParameters2 = valueParameters1.mapIndexed { index, instance ->
-            SimpleField(instance.clazz.type, index, null)
-        }
-
-        for (i in valueParameters2.indices) {
-            runtime[valueParameters2[i]] = valueParameters1[i]
-        }
-
-        val result = runtime.executeCall(owner, null, method1, valueParameters2)
-
-        @Suppress("Since15")
-        check(callForFields == runtime.callStack.removeLast())
-        return result
+        return runtime.executeCall2(owner, null, method1, valueParameters1)
     }
 
     fun extractTokensFromRuntime(result: BlockReturn, method: Method, origin: Long): TokenList {

@@ -5,9 +5,27 @@ import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 
-class Call(val method: MethodLike) {
+// todo create a pool of these
+class Call private constructor(var method: MethodLike) {
 
-    // todo we know how many there are, so we could replace this with an array
+    companion object {
+        private val pool = ThreadLocal.withInitial { ArrayList<Call>() }
+
+        fun create(method: MethodLike): Call {
+            val pool = pool.get()
+            val call = pool.removeLastOrNull() ?: Call(method)
+            call.method = method
+            return call
+        }
+    }
+
+    fun recycle() {
+        pool.get().add(this)
+    }
+
+    // we know how many there are, so we could replace this with an array
+    //  yes, but then we couldn't reuse this class for later calls
+
     val simpleFields = ArrayList<Instance?>()
     val localFields = ArrayList<Instance?>()
 

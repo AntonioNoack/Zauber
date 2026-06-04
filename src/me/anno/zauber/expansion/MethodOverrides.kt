@@ -1,6 +1,8 @@
 package me.anno.zauber.expansion
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles.LIGHT_BLUE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Field
@@ -89,7 +91,10 @@ object MethodOverrides {
         for (superMethod in superMethods) {
             if (superMethod.isPrivate()) continue
 
-            if (LOGGER.isInfoEnabled) LOGGER.info("Checking out $superMethod for $superScope -> $scope")
+            if (LOGGER.isInfoEnabled) LOGGER.info(
+                "Checking out $superMethod " +
+                        "for ${style(superScope.pathStr, LIGHT_BLUE)} -> ${style(scope.pathStr, LIGHT_BLUE)}"
+            )
 
             // find match
             val selfType = superMethod.selfType ?: scope.typeWithArgs
@@ -127,8 +132,9 @@ object MethodOverrides {
                 // println("adding ${method.name} from $superScope to $scope, options: ${scope.methods0.map { it.name }}")
 
                 // somehow create a new method linking to the old one
-                check(ownerIsAbstract || !superMethod.hasNoBody()) {
-                    "Missing $superMethod in $scope, candidates: $selfMethods"
+                check(ownerIsAbstract || !superMethod.isAbstract()) {
+                    "Missing $superMethod in $scope, candidates: $selfMethods." +
+                            "Scope is not abstract, and superMethod has no body"
                 }
 
                 val newScope = scope.generate("f:${superMethod.name}", ScopeType.METHOD)

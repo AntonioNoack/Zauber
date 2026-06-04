@@ -114,7 +114,7 @@ open class MethodLike(
     fun isExternal(): Boolean = flags.hasFlag(Flags.EXTERNAL)
     fun isOverride(): Boolean = flags.hasFlag(Flags.OVERRIDE)
     fun isFinal(): Boolean = flags.hasFlag(Flags.FINAL)
-    fun isAbstract(): Boolean = flags.hasFlag(Flags.ABSTRACT)
+    fun isAbstract(): Boolean = flags.hasFlag(Flags.ABSTRACT) || (ownerScope.isInterface() && body == null)
 
     fun hasNoBody(): Boolean {
         scope[ScopeInitType.AFTER_DISCOVERY]

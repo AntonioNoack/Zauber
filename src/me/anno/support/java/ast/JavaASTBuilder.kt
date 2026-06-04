@@ -691,7 +691,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             val value = readBodyOrExpression(null)
             val lambda = LambdaExpression(params, lambdaScope, value)
             lambdaScope.selfAsMethod = Method(
-                null, false, null, emptyList(), emptyList(),
+                null, false,"<lambda>", emptyList(), emptyList(),
                 lambdaScope, null, emptyList(), lambda, 0, origin
             )
             lambda

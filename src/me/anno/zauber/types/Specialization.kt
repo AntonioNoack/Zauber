@@ -12,6 +12,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
@@ -47,14 +48,15 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     val typeParameters = typeParameters.readonly()
     val hash = typeParameters.hashCode() and 0x7fff_ffff
+    var implicitTypeParameters = emptyParameterList() // partially required for itself
 
     init {
         validateCompleteness()
+        implicitTypeParameters = collectImplicitTypeParams()
     }
 
-    val implicitTypeParameters = collectImplicitTypeParams()
     fun collectImplicitTypeParams(): ParameterList {
-        if (scope == null || scope.superCalls.isEmpty()) return ParameterList.emptyParameterList()
+        if (scope == null || scope.superCalls.isEmpty()) return emptyParameterList()
 
         val allParams = scope.superCalls.map { superCall ->
             val p = getSuperType(superCall)
@@ -199,6 +201,14 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         }
     }
 
+    fun withScopeUnknownIfMissing(scope: Scope): Specialization {
+        return if (this.scope == scope) this
+        else {
+            val expected = collectGenerics(scope)
+            Specialization(scope, typeParameters.filterByGenericsUnknownIfMissing(expected))
+        }
+    }
+
     val superType: Specialization?
         get() {
 
@@ -327,6 +337,12 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
                 is ClassType if type.clazz.isValueType() -> type
                 else -> generic.type
             }
+        }
+
+        fun allUnknown(scope: Scope): Specialization {
+            val generics = collectGenerics(scope)
+            val parameters = ParameterList(generics, generics.map { it.type })
+            return Specialization(scope, parameters)
         }
 
         val noSpecialization by ResetThreadLocal.threadLocal {

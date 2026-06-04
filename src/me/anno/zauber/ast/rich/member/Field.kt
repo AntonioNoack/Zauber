@@ -114,7 +114,8 @@ class Field(
     fun resolveValueType(context: ResolutionContext): Type {
 
         // validate context specialization, s.t. we have all type knowledge
-        val context = context.withSpec(context.specialization.withScope(ownerScope))
+        val fieldSpec = context.specialization.withScopeUnknownIfMissing(ownerScope)
+        val context = context.withSpec(fieldSpec)
 
         val valueType = valueType
         if (valueType != null) {

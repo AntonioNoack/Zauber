@@ -86,7 +86,7 @@ object EarlyTypeResolution {
 
             // todo we need knownLambdas and extensionThis -> this should already happen in the method
 
-            val specForSelfScope = Specialization(getMethodOrClassScope(field).typeWithArgs)
+            val specForSelfScope = Specialization.allUnknown(getMethodOrClassScope(field))
 
             val ctx = ResolutionContext(
                 selfType = null, specForSelfScope,

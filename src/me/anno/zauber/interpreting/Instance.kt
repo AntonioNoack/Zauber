@@ -1,22 +1,27 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.Half
-import me.anno.zauber.ast.rich.member.Field
+import me.anno.utils.StringStyles.DARK_BLUE
+import me.anno.utils.StringStyles.LIGHT_BLUE
+import me.anno.utils.StringStyles.RED
+import me.anno.utils.StringStyles.bold
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.interpreting.ZClass.Companion.nativeTypes
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.Specialization
 
 class Instance(
     val clazz: ZClass,
@@ -27,13 +32,17 @@ class Instance(
     var rawValue: Any? = null
 
     override fun toString(): String {
-        return "Instance@$id($clazz,${fields.map { it?.toStringInner() }}${rawValueStr()})"
+        return bold("Instance") +
+                style("@$id", DARK_BLUE) +
+                "($clazz,${fields.map { it?.toStringInner() }}${rawValueStr()})"
     }
 
     fun toStringInner(): String {
         val rv = rawValueStr()
-        if (clazz.type is NullType) return "null@$id"
-        return "${(clazz.type as ClassType).clazz.pathStr}@$id${if (rv.isNotEmpty()) "($rv)" else ""}"
+        if (clazz.type is NullType) return style("null",RED) + style("@$id", DARK_BLUE)
+        return style((clazz.type as ClassType).clazz.pathStr, LIGHT_BLUE) +
+                style("@$id", DARK_BLUE) +
+                (if (rv.isNotEmpty()) "($rv)" else "")
     }
 
     private fun rawValueStr(): String {
@@ -230,7 +239,7 @@ class Instance(
         tmpMethodScope.hasTypeParameters = true
 
         val method = Method(
-            null, false, null,
+            null, false, "<exprUnsafe>",
             emptyList(), emptyList(), tmpMethodScope, valueType,
             emptyList(), ReturnExpression(value, null, value.scope, value.origin),
             flags, value.origin

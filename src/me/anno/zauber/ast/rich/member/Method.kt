@@ -17,7 +17,7 @@ import me.anno.zauber.types.Type
 class Method(
     selfType: Type?,
     explicitSelfType: Boolean,
-    name: String?,
+    name: String,
     typeParameters: List<Parameter>,
     valueParameters: List<Parameter>,
     // todo defined constructors need this extra scope, too
@@ -30,7 +30,7 @@ class Method(
 ) : MethodLike(
     selfType, explicitSelfType,
     typeParameters, valueParameters, returnType,
-    scope, name ?: "?", body, flags, origin
+    scope, name, body, flags, origin
 ) {
 
     /**

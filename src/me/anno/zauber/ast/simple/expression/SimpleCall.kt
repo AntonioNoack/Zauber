@@ -122,7 +122,8 @@ class SimpleCall(
         scopeBridgingParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, (method as? Method)?.name ?: "?", createDynamicDispatchMap(method),
+        dst, method.name,
+        createDynamicDispatchMap(method),
         thisInstance, selfInstance, specialization,
         valueParameters, scopeBridgingParameters, scope, origin
     )
@@ -151,7 +152,7 @@ class SimpleCall(
         valueParameters: List<SimpleField>,
         scope: Scope, origin: Long
     ) : this(
-        dst, (method as? Method)?.name ?: "?", methodMap,
+        dst, method.name, methodMap,
         thisInstance, selfInstance, specialization,
         valueParameters, emptyList(),
         scope, origin

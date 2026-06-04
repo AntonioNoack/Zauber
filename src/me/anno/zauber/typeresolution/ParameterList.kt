@@ -195,4 +195,11 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
         }
         return dst
     }
+
+    fun filterByGenericsUnknownIfMissing(newGenerics: List<Parameter>): ParameterList {
+        if (newGenerics.isEmpty()) return emptyParameterList()
+
+        val newTypes = newGenerics.map { get(GenericType(it.scope, it.name)) ?: it.type }
+        return ParameterList(newGenerics, newTypes)
+    }
 }

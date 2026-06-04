@@ -1,6 +1,10 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.LIGHT_BLUE
+import me.anno.utils.StringStyles.bold
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -136,6 +140,7 @@ class ZClass(val type: Type) {
         type is ClassType && type.clazz.flags.hasFlag(Flags.VALUE)
 
     override fun toString(): String {
-        return "ZClass($type,${fields.map { it.name }})"
+        return "${bold("ZClass")}(${style(type.toString(), LIGHT_BLUE)}," +
+                "[${fields.joinToString(",") { field -> style("\"${field.name}\"", GREEN) }}])"
     }
 }

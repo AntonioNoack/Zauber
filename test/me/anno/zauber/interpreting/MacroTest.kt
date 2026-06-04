@@ -76,13 +76,14 @@ class String {
 
     @Test
     fun testCreatingSerializerAtCompileTime() {
-        // todo serialization seems to be correct, but why is the method then returning Unit??
+        // todo bug: why does it think the return-type of Array.iterator is Nothing???
+        // todo bug: why does the method return Unit, when we expect a string?
 
         val sourceCode = $$"""
 class Sample(var a: Int, var b: Float)
 
-macro GetType(typeName: String, ctx: MacroContext): ClassType {
-    return ctx.parse<ClassType>(typeName + "::class")
+macro <R> GetType(typeName: String, ctx: MacroContext): ClassType<R> {
+    return ctx.parse<ClassType<R>>(typeName + "::class")
 }
 
 macro Serialize(input: String, ctx: MacroContext): String {
@@ -128,8 +129,8 @@ interface List<V>: Iterable<V> {
 
 class ArrayIterator<V>(val list: Array<V>): Iterator<V> {
     var index = 0
-    fun hasNext() = index < list.size
-    fun next(): V = list[index++]
+    override fun hasNext() = index < list.size
+    override fun next(): V = list[index++]
 }
 
 class Throwable(val message: String)

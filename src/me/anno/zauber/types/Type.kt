@@ -128,7 +128,8 @@ abstract class Type {
                 }
             }
             is TypeOfField -> {
-                val context = ResolutionContext(null, false, null, emptyMap())
+                val spec = specialization.withScopeUnknownIfMissing(field.scope)
+                val context = ResolutionContext(null, spec, false, null)
                 field.resolveValueType(context)
             }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)

@@ -2,7 +2,9 @@ package me.anno.zauber.ast.simple
 
 import me.anno.utils.FullMap
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.bold
+import me.anno.utils.StringStyles.style
 import me.anno.utils.assertEquals
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
@@ -115,7 +117,8 @@ object ASTSimplifier {
         }
     }
 
-    private fun finishFlows(flow1: FlowResult, method: Specialization, expr: Expression) {
+    private fun finishFlows(flow1: FlowResult, method0: Specialization, expr: Expression) {
+
         val flow1v = flow1.value
         if (flow1v != null) {
             check(flow1v.block.nextBranch == null) {
@@ -123,19 +126,35 @@ object ASTSimplifier {
             }
             // missing return -> we do it ourselves
             // validate method returns Unit
-            check(method.method.returnType == Types.Unit) {
-                "Expected $method to return Unit, because it's missing an explicit return"
+            check(method0.method.returnType == Types.Unit) {
+                "Expected $method0 to return Unit, because it's missing an explicit return"
             }
             // push object & return it
-            val objectType = Types.Unit
-            val instance = flow1v.block.field(objectType)
-            flow1v.block.add(SimpleGetObject(instance, objectType.clazz, expr.scope, expr.origin))
-            flow1v.block.add(SimpleReturn(instance.use(), expr.scope, expr.origin))
+            val unitType = Types.Unit
+            val instance = flow1v.block.field(unitType)
+            flow1v.block.add(SimpleGetObject(instance, unitType.clazz, expr.scope, expr.origin))
+            addSimpleReturn(method0, instance, expr, flow1v.block)
         }
+
         val flow1r = flow1.returned
-        flow1r?.block?.add(SimpleReturn(flow1r.value.use(), expr.scope, expr.origin))
+        if (flow1r != null) {
+            addSimpleReturn(method0, flow1r.value, expr, flow1r.block)
+        }
+
         val flow1t = flow1.thrown
         flow1t?.block?.add(SimpleThrow(flow1t.value.use(), expr.scope, expr.origin))
+    }
+
+    fun addSimpleReturn(method0: Specialization, value: SimpleField, expr: Expression, block: SimpleBlock) {
+
+        val expectedReturnType = method0.method.resolveReturnType(method0)
+        check(isSubTypeOf(expectedReturnType, value.type)) {
+            "Expected return value in ${style(method0.method.ownerScope.pathStr, LIGHT_BLUE)}.${method0.method} " +
+                    "to match ${style(expectedReturnType.toString(), LIGHT_BLUE)}, " +
+                    "got ${style(value.type.toString(), LIGHT_BLUE)}"
+        }
+
+        block.add(SimpleReturn(value.use(), expr.scope, expr.origin))
     }
 
     fun needsFieldByParameter(parameter: Any?): Boolean {

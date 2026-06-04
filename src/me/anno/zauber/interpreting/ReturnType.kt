@@ -6,6 +6,4 @@ enum class ReturnType(val symbol: String) {
     YIELD("yield"),
 
     VALUE("");
-
-    fun isValue() = this == VALUE || this == RETURN
 }
