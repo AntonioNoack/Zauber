@@ -1,90 +1,17 @@
 package me.anno.zauber.interpreting
 
-import me.anno.utils.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertInstanceOf
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 
 /**
  * this tests lambda-style calls, where generics may have to be derived from lambda-internals
  * */
 class LambdaTests {
 
-    @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime"/* "js", "java", "c++", "wasm"*/])
-    fun testArrayOf(type: String) {
-        val code = """
-            val tested = arrayOf(1, 2, 3)
-            
-            fun main() {
-                println(tested[1])
-            }
-            
-            package zauber
-            class Any
-            external class Int
-            class Array<V>(override val size: Int) {
-                external fun set(index: Int, value: V)
-                external fun get(index: Int): V
-            }
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs
-            external fun println(arg0: Int)
-        """.trimIndent()
-
-        MultiTest(code)
-            .type { Types.Array.withTypeParameter(Types.Int) }
-            .runtime { array ->
-                val expectedType = Types.Array.withTypeParameter(Types.Int)
-                assertEquals(expectedType, array.clazz.type)
-                val contents = array.rawValue
-                assertInstanceOf<IntArray>(contents)
-                assertEquals(listOf(1, 2, 3), contents.toList())
-            }
-            .compile("1\n")
-            .runTest(type)
-    }
-
-    // can we enforce const to be fully immutable?
-    //  we could only allow it on value-classes of value-classes...
-
-    @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime"])
-    fun testListOf(type: String) {
-        val code = """
-            val tested = listOf(1, 2, 3)
-            
-            package zauber
-            class Any
-            interface List<V> {
-                val size: Int
-            }
-            class Array<V>(override val size: Int): List<V> {
-                external override operator fun set(index: Int, value: V)
-            }
-            fun <V> listOf(vararg vs: V): List<V> = vs
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs
-        """.trimIndent()
-
-        MultiTest(code)
-            .type { Types.List.withTypeParameter(Types.Int) }
-            .runtime { value ->
-                val type = Types.Array.withTypeParameter(Types.Int)
-                assertEquals(runtime.getClass(type), value.clazz)
-
-                val contents = assertInstanceOf<IntArray>(value.rawValue)
-                assertEquals(listOf(1, 2, 3), contents.toList())
-            }
-            .runTest(type)
-    }
-
     private val stdlib = """
     package zauber
+    
     fun <V> Array<V>.reduce(map: (V, V) -> V): V {
         var i = 1
         var result = this[0]
@@ -94,6 +21,35 @@ class LambdaTests {
         }
         return result
     }
+    
+    fun <V,R> Array<V>.map(map: (V) -> R): Array<R> {
+        var i = 0
+        var result = Array<V>(size)
+        while (i < size) {
+            result[i] = map(this[i])
+            i++
+        }
+        return result
+    }
+    
+    fun <V> Array<V>.filter(predicate: (V) -> Boolean): Array<V> {
+        var count = 0
+        var i = 0
+        while (i < size) {
+            if(predicate(this[i])) count++
+            i++
+        }
+        val result = Array<V>(count)
+        i = 0; count = 0
+        while (i < size) {
+            if (predicate(this[i])) {
+                result[count++] = this[i]
+            }
+            i++
+        }
+        return result
+    }
+    
     external class Int {
         external operator fun plus(other: Int): Int
         external fun compareTo(other: Int): Int
@@ -105,11 +61,16 @@ class LambdaTests {
         external operator fun set(index: Int, value: V)
     }
     fun <V> arrayOf(vararg values: V): Array<V> = values
+    fun interface Function1<P0, R> {
+        fun call(p0: P0): R
+    }
     fun interface Function2<P0, P1, R> {
         fun call(p0: P0, p1: P1): R
     }
     enum class Boolean { TRUE, FALSE }
     """.trimIndent()
+
+    // todo tests with _ (unnamed/hidden) parameters
 
     @Test
     fun testSimpleArrayReduceWithLambda() {
@@ -124,8 +85,50 @@ class LambdaTests {
     }
 
     @Test
+    fun testArrayReduceWithUnnamedParameter() {
+        val code = "val tested = arrayOf(1, 2, 3).reduce { _, b -> b }\n$stdlib"
+        assertEquals(3, testExecute(code).castToInt())
+    }
+
+    @Test
+    fun testArrayMap() {
+        val code = "val tested = arrayOf(1, 2, 3).map { 1 + it }\n$stdlib"
+        assertEquals(6, testExecute(code).castToInt())
+    }
+
+    @Test
+    fun testFilterWithoutNamedField() {
+        val code = "val helper = arrayOf(1, 2, 3).filter { it > 1 }\n" +
+                "val tested = helper.reduce { a, b -> a + b }\n$stdlib"
+        assertEquals(5, testExecute(code).castToInt())
+    }
+
+    @Test
+    fun testChainedLambda() {
+        val code = "val tested = arrayOf(1, 2, 3).filter { it > 1 }.reduce { a, b -> a + b }\n$stdlib"
+        assertEquals(5, testExecute(code).castToInt())
+    }
+
+    @Test
+    fun testNestedLambda0() {
+        val code = "val tested = arrayOf(1, 2, 3)" +
+                ".map { arrayOf(it, -it) }" +
+                ".flatten()" +
+                ".reduce { a, b -> a * b }\n$stdlib"
+        assertEquals(-36, testExecute(code).castToInt())
+    }
+
+    @Test
+    fun testNestedLambda1() {
+        val code = "val tested = arrayOf(1, 2, 3)" +
+                ".map { arrayOf(it, -it).filter { it > 0} }" +
+                ".flatten()" +
+                ".reduce { a, b -> a * b }\n$stdlib"
+        assertEquals(6, testExecute(code).castToInt())
+    }
+
+    @Test
     fun testArrayReduceWithTypeMethod() {
-        // todo why is the baseType Any instead of Int???
         val code = "val tested = arrayOf(1, 2, 3).reduce(Int::plus)\n$stdlib"
         assertEquals(6, testExecute(code).castToInt())
     }

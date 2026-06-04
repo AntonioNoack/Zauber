@@ -1,6 +1,7 @@
 package me.anno.zauber.types.impl
 
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.parameter.Parameter
@@ -17,7 +18,7 @@ class GenericType(val scope: Scope, val name: String) : Type() {
     val byTypeParameter: Parameter
         get() = scope.typeParameters.firstOrNull { it.name == name /*&& it.scope == scope -> automatically filtered for */ }
             ?: error(
-                "Missing generic parameter ${style(name, LIGHT_BLUE)} " +
+                "Missing generic parameter ${style(name, GREEN)} " +
                         "in ${style(scope.pathStr, StringStyles.DARK_BLUE)}, " +
                         "options: ${scope.typeParameters.map { style(it.name, LIGHT_BLUE) }}"
             )

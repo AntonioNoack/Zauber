@@ -91,11 +91,12 @@ class TryCatchTests {
             
             package zauber
             class Any
+            class String
             class Throwable(val message: String?)
             class Exception(message: String?): Throwable(message)
             class NullPointerException(message: String?) : Exception(message)
             enum class Boolean { TRUE, FALSE }
-            fun throwJNE(name: String): Nothing {
+            fun throwNJI(name: String): Nothing {
                 throw NullPointerException(name)
             }
             class Array<V>(val size: Int) {

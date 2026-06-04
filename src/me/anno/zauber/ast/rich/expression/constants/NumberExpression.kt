@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich.expression.constants
 import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -386,4 +387,6 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
     override fun forEachExpression(callback: (Expression) -> Unit) {}
+
+    override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>) = this
 }

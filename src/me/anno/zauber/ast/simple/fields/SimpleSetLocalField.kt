@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple.fields
 
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.interpreting.BlockReturn
@@ -18,7 +19,9 @@ class SimpleSetLocalField(
     }
 
     override fun toString(): String {
-        return "${style("local#${field.id}", YELLOW)} = $value"
+        return style("local#${field.id}", YELLOW) +
+                style("\"${field.name}\"", GREEN) +
+                " = $value"
     }
 
 }

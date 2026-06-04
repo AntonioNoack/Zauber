@@ -4,6 +4,7 @@ import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCompareOp
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMethod
@@ -46,5 +47,13 @@ class CompareOp(
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(left)
         callback(right)
+    }
+
+    override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
+        return CompareOp(
+            left.replaceLambdaFieldsWithClassFields(oldFields, newFields),
+            right.replaceLambdaFieldsWithClassFields(oldFields, newFields),
+            type
+        )
     }
 }

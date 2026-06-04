@@ -93,8 +93,10 @@ object ASTSimplifier {
             method0.use { // use scope
                 val context = ResolutionContext(null, method0, true, null)
 
-                if (LOGGER.isInfoEnabled) LOGGER.info("${bold("Simplifying")} ${method0.scope}, ${method0.method}" +
-                        "\n  ${method0.method.body}")
+                if (LOGGER.isInfoEnabled) LOGGER.info(
+                    "${bold("Simplifying")} ${method0.scope}, ${method0.method}" +
+                            "\n  ${method0.method.body}"
+                )
 
                 val expr = method0.method.getSpecializedBody(method0)
                     ?: error("Specialized body is null? For $method0")
@@ -372,6 +374,7 @@ object ASTSimplifier {
     private fun fieldHasSensibleType(context: ResolutionContext, field: Field): Boolean {
         field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
 
+        println("Resolving type of $field in $context")
         val type0 = field.resolveValueType(context)
         return type0 !is ClassType || !type0.clazz.isObjectLike()
     }
@@ -480,23 +483,25 @@ object ASTSimplifier {
             return flow0.withValue(dst)
         }
 
-        if (!fieldHasSensibleType(context, field)) {
+        val selfType = expr.self.resolveReturnType(context.withTargetType(field.valueType))
+        val contextI = context.withSelfType(selfType)
+        if (!fieldHasSensibleType(contextI, field)) {
             LOGGER.info("Skipping non-sense getter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")
             return flow0
         }
 
-        val valueType = expr.resolveReturnType(context)
+        val valueType = expr.resolveReturnType(contextI)
         // println("valueType for $expr: $valueType")
 
         if (isLocalField(block0.graph, field)) {
-            val localField = block0.graph.getOrPutLocalField(field, context)
+            val localField = block0.graph.getOrPutLocalField(field, contextI)
             val dst = block0.field(valueType)
             block0.add(SimpleGetLocalField(dst, localField, expr.scope, expr.origin))
             dst.fromLocalField = localField
             return flow0.withValue(dst)
         }
 
-        val block1 = simplifyImpl(context, expr.self, block0, flow0, true, expr)
+        val block1 = simplifyImpl(contextI, expr.self, block0, flow0, true, expr)
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
@@ -527,7 +532,7 @@ object ASTSimplifier {
 
             val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
             val getter = field.getter ?: error("Missing getter for $field")
-            val newContext = context.withSpec(Specialization(getter.scope, ownerTypes))
+            val newContext = contextI.withSpec(Specialization(getter.scope, ownerTypes))
             val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
             return simplifyCall(
                 block1v.block, block1, self, expr.self, null,
@@ -545,7 +550,7 @@ object ASTSimplifier {
                 val clazz = self.type.clazz
                 val outerField = clazz.fields.firstOrNull { it.name == OUTER_FIELD_NAME }
                     ?: error("Missing $OUTER_FIELD_NAME field in $clazz for $field")
-                val selfDst = block1v.block.field(outerField.valueType!!.specialize(context))
+                val selfDst = block1v.block.field(outerField.valueType!!.specialize(contextI))
                 // println("Adding self = self.$field for $clazz -> ${outerField.valueType}")
                 val spec = Specialization(outerField.fieldScope, expr.field.specialization.typeParameters)
                 val getter = SimpleGetClassField(
@@ -608,9 +613,12 @@ object ASTSimplifier {
         val value = block2v.value
 
         val actualValueType = value.type
+        var expectedValueTypeI = expectedValueType
+        if (field.isLateinit()) expectedValueTypeI = expectedValueTypeI.orNull()
+
         // check that assignments use the correct type
-        check(isSubTypeOf(expectedValueType, actualValueType)) {
-            "Expected value for $field-setter to be $expectedValueType, but got $actualValueType"
+        check(isSubTypeOf(expectedValueTypeI, actualValueType)) {
+            "Expected value for $field-setter to be $expectedValueTypeI, but got $actualValueType"
         }
 
         // println("block for self: ${block1v.block}")
@@ -853,14 +861,9 @@ object ASTSimplifier {
         ifBlock: SimpleBlock,
     ): FlowResult {
         val ifFlow = FlowResult(Flow(unitInstance(ifBlock.graph, expr), ifBlock), null, null)
-        val methodType = catch.parameter.scope.typeWithArgs
-        val selfField = ifBlock.thisField(
-            methodType, catch.parameter.scope, expr.scope, expr.origin,
-            context.specialization, null
-        )
         val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
-        val spec = Specialization(thrownField.fieldScope, emptyParameterList())
-        ifBlock.add(SimpleSetClassField(selfField, thrownField, block0.value, spec, expr.scope, expr.origin))
+        val thrownLocalField = block0.block.graph.getOrPutLocalField(thrownField, context)
+        ifBlock.add(SimpleSetLocalField(thrownLocalField, block0.value, expr.scope, expr.origin))
         return simplifyImpl(context, catch.body, ifBlock, ifFlow, needsValue)
     }
 

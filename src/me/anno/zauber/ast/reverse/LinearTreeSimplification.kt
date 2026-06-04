@@ -165,14 +165,17 @@ object LinearTreeSimplification {
 
     private data class Region(
         val start: SimpleBlock,
-        val end: SimpleBlock
+        val end: SimpleBlock,
+        val nodes: Set<SimpleBlock>
     )
 
     private fun findLinearRegion(graph: SimpleGraph): Region? {
         for (start in graph.blocks) {
             val end = findUniqueExit(start)
             if (end != null && end != start) {
-                return Region(start, end)
+                val nodes = collectRegionNodes(start, end)
+                if (nodes.size < 3) continue
+                return Region(start, end, nodes)
             }
         }
         return null

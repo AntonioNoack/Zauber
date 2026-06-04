@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple.fields
 
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
@@ -22,6 +23,8 @@ class SimpleGetLocalField(
     }
 
     override fun toString(): String {
-        return "$dst = ${style("local#${field.id}", YELLOW)}"
+        return "$dst = " +
+                style("local#${field.id}", YELLOW) +
+                style("\"${field.name}\"", GREEN)
     }
 }

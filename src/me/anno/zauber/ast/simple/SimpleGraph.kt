@@ -9,7 +9,6 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleBoxCast
-import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.*
@@ -72,6 +71,11 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun initializeSpecialFields(context: ResolutionContext) {
+
+        check(localFields.isEmpty()) {
+            "Expected no local fields to be present"
+        }
+
         val method = method
         if (method.ownerScope.isClassLike()) {
             val selfType = method.ownerScope.typeWithArgs.specialize(context)
@@ -289,13 +293,14 @@ class SimpleGraph(val method0: Specialization) {
                     // todo calls and constructors can require casts, too
                     // todo for this, self, and parameters
                     is SimpleCallable -> {
-                        for(i in instr.valueParameters.indices) {
+                        for (i in instr.valueParameters.indices) {
                             val parameter = instr.valueParameters[i]
                             val expectedType = instr.sample.valueParameters[i].type
                                 .specialize(instr.specialization)
                             val valueType = parameter.type
                             if (expectedType != valueType &&
-                                (findAllCasts || expectedType.isValue() || valueType.isValue())) {
+                                (findAllCasts || expectedType.isValue() || valueType.isValue())
+                            ) {
 
                                 val tmpField = field(expectedType)
                                 val cast = SimpleBoxCast(tmpField, parameter, instr.scope, instr.origin)

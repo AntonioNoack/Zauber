@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.FieldResolver
@@ -58,4 +59,10 @@ class UnresolvedFieldExpression(
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {}
+
+    // will be replaced later on
+    override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
+        if (newFields.none { it.name == name }) return this
+        return UnresolvedFieldExpression(name, nameAsImport, newFields.first().scope, origin)
+    }
 }

@@ -1,6 +1,9 @@
 package me.anno.compilation
 
+import me.anno.utils.ResolutionUtils
+import me.anno.utils.ResolutionUtils.printDependencies
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.expansion.Dependencies
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -15,8 +18,25 @@ import java.io.File
  * */
 class RuntimeCompiler : MinimalCompiler() {
 
+    private val unusedFile = File(".")
+
     private lateinit var data: DependencyData
     private lateinit var mainMethod: Method
+
+    override fun testCompileMainAndRun(code: String, registerMethods: () -> Unit): String {
+        val testScope = ResolutionUtils.typeResolveScope(code)
+        registerMainMethod(testScope)
+
+        val dependencies = Dependencies.collectClassesAndMethods()
+        printDependencies(dependencies)
+
+        registerMethods()
+
+        val mainMethod = testScope.methods0.first { it.name == "main" }
+        compile(unusedFile, unusedFile, dependencies, mainMethod)
+
+        return execute(unusedFile)
+    }
 
     override fun compile(
         projectFolder: File,

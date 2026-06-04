@@ -45,7 +45,8 @@ enum class ScopeType {
     METHOD_BODY,
     MACRO,
     WHEN_CASES,
-    WHEN_ELSE, ;
+    WHEN_ELSE,
+    ;
 
     fun isClass(): Boolean {
         return when (this) {

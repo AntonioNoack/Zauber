@@ -3,6 +3,7 @@ package me.anno.zauber.ast.rich.expression.unresolved
 import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.style
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
@@ -162,6 +163,8 @@ class LambdaExpression(
         val classScope = scope.generate("lambda", origin, ScopeType.INLINE_CLASS)
         val classConstructor = classScope.getOrCreatePrimaryConstructorScope()
 
+        classScope.setTypeParams(emptyList())
+
         val lambdaType = resolveReturnType(context)
         val lambdaTypeName = getLambdaTypeName(lambdaType.parameters.size)
         val typeParameters0 = lambdaType.parameters.map { it.type }
@@ -186,12 +189,15 @@ class LambdaExpression(
         )
 
         val lambdaMethodScope = classScope.getOrPut("call", ScopeType.METHOD)
+        lambdaMethodScope.setTypeParams(emptyList())
+
         val newParameters = lambdaType.parameters.mapIndexed { index, it ->
             Parameter(
                 index, it.name ?: "_", ParameterType.VALUE_PARAMETER, ParameterMutability.VAL, it.type,
                 lambdaMethodScope, it.origin
             )
         }
+
         val newParameterFields = newParameters.map { it.getOrCreateField(lambdaType.selfType, Flags.NONE) }
         val oldFields = lambdaType.parameters.mapNotNull { parameter ->
             if (parameter.name != null)
@@ -202,6 +208,7 @@ class LambdaExpression(
                     )
             else null
         }
+        assertEquals(oldFields.size, newParameterFields.size)
         val adjustedBody = body.replaceLambdaFieldsWithClassFields(oldFields, newParameterFields)
         lambdaMethodScope.selfAsMethod = Method(
             lambdaType.selfType, lambdaType.selfType != null, "call",

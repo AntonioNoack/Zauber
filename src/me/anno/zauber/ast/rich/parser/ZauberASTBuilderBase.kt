@@ -394,7 +394,7 @@ abstract class ZauberASTBuilderBase(
         if (tokens.equals(i, TokenType.OPEN_CALL)) {
             // read the declaration...
             val origin = origin(i)
-            return pushScope(ScopeType.METHOD_BODY, "tryWithRes") { scope ->
+            return pushScope(ScopeType.METHOD_BODY, "useTry") { scope ->
                 // todo forbid scope-splitting, so we don't forget any
                 val init = pushCall { readMethodBody() }
                 val resources = scope.fields

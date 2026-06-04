@@ -157,7 +157,7 @@ class FieldGetSetTest {
             
             open class Throwable(val message: String)
             class Exception(message: String) : Throwable(message)
-            fun throwNJE(msg: String): Nothing {
+            fun throwNJI(msg: String): Nothing {
                 throw Exception(msg)
             }
             """.trimIndent()

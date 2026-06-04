@@ -15,6 +15,16 @@ class LocalField(
     val isInsideMethod: Boolean
 ) {
 
+    companion object {
+        var maxNumLocalFields = 500
+    }
+
+    init {
+        check(id < maxNumLocalFields) {
+            "Too many local fields, infinite loop?"
+        }
+    }
+
     var newName: String
         get() = name
         set(value) {

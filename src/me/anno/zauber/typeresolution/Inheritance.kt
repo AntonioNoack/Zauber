@@ -1,7 +1,7 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.utils.StringStyles.LIGHT_BLUE
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
@@ -114,7 +114,7 @@ object Inheritance {
         if (typeParamIdx == -1) {
             if (insertMode != InsertMode.WEAK) {
                 LOGGER.warn(
-                    "Missing generic parameter ${style(expectedType.name, LIGHT_BLUE)}, " +
+                    "Missing generic parameter ${style(expectedType.name, GREEN)}, " +
                             "ignoring it, expected: $expectedTypeParams"
                 )
             }// else can be safely ignored ;)

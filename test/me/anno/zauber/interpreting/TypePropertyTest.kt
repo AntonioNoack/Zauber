@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -14,6 +15,9 @@ class TypePropertyTest {
 
     @Test
     fun testTypeName() {
+        // todo bug: ClassType is missing generics somehow...
+        //  probably ::class doesn't set them?
+        LogManager.enableAllLoggers()
         val code = """
             val tested = Int::class.name
             

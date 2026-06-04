@@ -135,7 +135,7 @@ object FieldGetterSetter {
         val elseScope = getterScope.generate("if", ScopeType.METHOD_BODY)
         val debugInfoParam = StringExpression(field.name, ifScope, origin)
         val throwExpr = CallExpression(
-            UnresolvedFieldExpression("throwNJE", shouldBeResolvable, ifScope, origin),
+            UnresolvedFieldExpression("throwNJI", shouldBeResolvable, ifScope, origin),
             emptyList(), listOf(NamedParameter(null, debugInfoParam)), origin
         )
         return IfElseBranch(condition, throwExpr, backingFieldExpr.clone(elseScope))

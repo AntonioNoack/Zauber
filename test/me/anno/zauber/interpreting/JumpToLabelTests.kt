@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.MultiTest
+import me.anno.zauber.ast.simple.fields.LocalField.Companion.maxNumLocalFields
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
@@ -107,8 +108,11 @@ class JumpToLabelTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["type", /*"runtime", "js", "java", "c++",*/ "wasm"])
+    @ValueSource(strings = ["type", "runtime", "js", /*"java", "c++", */"wasm"])
     fun testContinueToFor(type: String) {
+
+        maxNumLocalFields = 20
+
         val code = """
             fun call(): Int {
                 var x = 1

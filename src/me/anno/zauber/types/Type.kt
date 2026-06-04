@@ -292,6 +292,7 @@ abstract class Type {
     }
 
     open fun not(): Type = NotType(this)
+    open fun orNull(): Type = unionTypes(this, NullType)
 
     open val resolvedName: Type get() = this
 }
