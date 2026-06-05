@@ -9,6 +9,11 @@
 #include <utility>
 #include <new>
 
+// todo instead of using calloc,
+//  allocate larger buffers,
+//  fill in the values there,
+//  and for sweeping GC, we find one with enough space,
+//  and create the instance inside
 template<typename T, typename... Args>
 T* gcNew(Args&&... args)
 {

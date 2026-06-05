@@ -1369,7 +1369,6 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             }
             is SimpleGetClassField -> {
 
-
                 // load field owner
                 appendGetField(graph, expr.self)
 

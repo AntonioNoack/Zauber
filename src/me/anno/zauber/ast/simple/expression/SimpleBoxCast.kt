@@ -12,7 +12,7 @@ class SimpleBoxCast(
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
-        return "$dst = (boxing) $value"
+        return "$dst = (from ${value.type}) $value"
     }
 
     override fun execute(): BlockReturn? {

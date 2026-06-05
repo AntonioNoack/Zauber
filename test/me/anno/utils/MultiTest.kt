@@ -14,11 +14,13 @@ class MultiTest(val code: String) {
         // languages, that work pretty well
         val languages = listOf(
             "c++" to CppGenerationTests(),
+            "c" to CGenerationTests(),
             "java" to JavaGenerationTests(),
             "js" to JavaScriptGenerationTests(),
             "wasm" to WASMRuntimeTests(),
             "rust" to RustGenerationTests(),
             "llvm" to LLVMGenerationTests(),
+            "python" to PythonGenerationTests(),
         )
     }
 

@@ -28,6 +28,7 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
+import me.anno.zauber.ast.simple.expression.SimpleBoxCast
 import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
@@ -45,6 +46,7 @@ import java.io.File
  * structs are directly supported, inheritance is still supported
  * todo needs custom GC
  * todo mode, where we pack all implementation into one cpp file
+ * todo for types only containing simple classes, use atomic<shared_ptr> instead of gc<>/raw-ptr
  * */
 open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() {
 
@@ -66,7 +68,11 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     ULong to BoxedType("Long", "uint64_t"),
 
                     // todo having uint16_t twice causes issues if we have multiple functions with the same name...
+                    //  char is a dirty-type anyway, can we get rid of it? Maybe legacy Char = UShort.
                     Char to BoxedType("Char", "uint16_t"),
+
+                    // todo having float twice causes issues if we have multiple functions with the same name...
+                    Half to BoxedType("Half", "float"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
                 )
@@ -591,8 +597,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-        appendType(objectScope.typeWithArgs, objectScope, false)
-        builder.append("::get").append(OBJECT_FIELD_NAME).append("()")
+        if (objectScope == outsideClassLike(exprScope)) {
+            builder.append("this")
+        } else {
+            appendType(objectScope.typeWithArgs, objectScope, false)
+            builder.append("::get").append(OBJECT_FIELD_NAME).append("()")
+        }
     }
 
     override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
@@ -605,13 +615,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     }
 
     override fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
-        check(forFieldAccess == ".")
-        if (field.ownerScope == outsideClassLike(exprScope)) {
-            builder.append("this->")
-        } else {
-            appendGetObjectInstance(field.ownerScope, exprScope)
-            builder.append("->")
-        }
+        appendGetObjectInstance(field.ownerScope, exprScope)
+        builder.append(if (forFieldAccess == ".") "->" else "")
     }
 
     // add "virtual" fun getClassId() (?)
@@ -810,6 +815,42 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             is SimpleTailCall -> {
                 builder.append("goto b").append(expr.toBeCalled.blockId).append(';')
                 nextLine()
+            }
+            is SimpleBoxCast -> {
+                // todo use static_cast (num->num) or dynamic_cast (ref->ref) where possible
+                val srcType = expr.value.type
+                val dstType = expr.dst.type
+                val srcNum = srcType in nativeNumbers
+                val dstNum = dstType in nativeNumbers
+
+                val srcRef = !srcNum && srcType.isValue()
+                val dstRef = !dstNum && dstType.isValue()
+
+                when {
+                    srcNum && dstNum -> {
+                        builder.append("static_cast<")
+                        appendType(dstType, expr.scope, false)
+                        builder.append(">(")
+                        appendFieldName(graph, expr.value)
+                        builder.append(')')
+                    }
+                    srcRef && dstRef -> {
+                        builder.append("dynamic_cast<")
+                        appendType(dstType, expr.scope, true)
+                        appendOwnershipSuffix(expr.dst.type)
+                        builder.append(">(")
+                        appendFieldName(graph, expr.value)
+                        builder.append(')')
+                    }
+                    else -> {
+                        builder.append('(')
+                        appendType(dstType, expr.scope, true)
+                        appendOwnershipSuffix(expr.dst.type)
+                        builder.append(") ")
+                        appendFieldName(graph, expr.value)
+                    }
+                }
+
             }
             else -> super.appendInstrImpl(graph, expr)
         }

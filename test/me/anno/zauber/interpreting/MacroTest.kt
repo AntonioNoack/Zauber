@@ -18,6 +18,14 @@ class MacroTest {
     //  class/type info is then put into MacroContext?
     //  macros may add types and functions, so we can only put partial types in there...
 
+    // annotations having
+    //  - beforeCall(), afterCall()
+    //  - onReturn(), onThrow(), onYield()
+    //  - onAllocate(), onDestroy()
+    //  may be useful (like dotNET EntityFramework filters),
+    //  and it may also be useful to define an annotation as for-fields/methods, and attaching it to a class then applies to all
+    //  -> what can be done using reflections should be done using them, I don't think we need these features
+
     @Test
     fun testParsingXMLAtCompileTime() {
         val value = testExecute(

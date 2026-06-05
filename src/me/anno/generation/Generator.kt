@@ -52,6 +52,13 @@ abstract class Generator(val blockSuffix: String = "}\n") {
         indent()
     }
 
+    fun appendLines(text: String) {
+        for (line in text.lines()) {
+            builder.append(line)
+            nextLine()
+        }
+    }
+
     open fun writeBlock(run: () -> Unit) {
         if (builder.isNotEmpty() && builder.last() != ' ') builder.append(' ')
         builder.append("{")

@@ -202,6 +202,15 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         fun Type.isFloat() = this == Types.Half || this == Types.Float || this == Types.Double
         fun Type.isSigned() = this == Types.Byte || this == Types.Short || this == Types.Int || this == Types.Long
         fun Type.isUnsigned() = this == Types.UByte || this == Types.UShort || this == Types.UInt || this == Types.ULong
+        fun Type.getNumBits(): Int {
+            return when (this) {
+                Types.Byte, Types.UByte -> 8
+                Types.Short, Types.UShort, Types.Char -> 16
+                Types.Int, Types.UInt -> 32
+                Types.Long, Types.ULong -> 64
+                else -> error("Not an integer type: $this")
+            }
+        }
 
         fun addExactUnsigned(a: Long, b: Long): Long {
             val remainingSpace = min(a.countLeadingZeroBits(), b.countLeadingZeroBits())

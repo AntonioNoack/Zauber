@@ -5,6 +5,7 @@ import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
+import me.anno.generation.java.Import2
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.Half.Companion.toHalf
@@ -13,6 +14,9 @@ import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -50,7 +54,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     companion object {
         val protectedJSTypes by threadLocal {
             Types.run {
-                mapOf(
+                mapOf( // todo this is very wrong for JS...
                     Boolean to BoxedType("Boolean", "boolean"),
                     Byte to BoxedType("Byte", "byte"),
                     Short to BoxedType("Short", "short"),
@@ -86,6 +90,16 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         // skip
     }
 
+    override fun beginPackageDeclaration(
+        packagePath: List<String>, file: File, imports: Map<String, Import2>,
+        nativeImports: Set<String>
+    ) {
+        super.beginPackageDeclaration(packagePath, file, imports, nativeImports)
+        if (file.name == "main.js") {
+            appendGlobalHelpers()
+        }
+    }
+
     override fun defineMainMethodCallEntry(
         dst: File, writer: FileWithImportsWriter,
         mainMethod: Method, className: String
@@ -109,6 +123,49 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         builder.append("'use strict';")
         nextLine()
         nextLine()
+    }
+
+    private fun appendGlobalHelpers() {
+        builder.append("const __halfBuffer = new Float16Array(1);")
+        nextLine()
+
+        builder.append("globalThis.__toHalf = function(value) ")
+        writeBlock {
+            appendLines(
+                """
+                __halfBuffer[0] = value;
+                return __halfBuffer[0];
+                """.trimIndent()
+            )
+        }
+
+        builder.append("globalThis.__floatToLong = function(value) ")
+        writeBlock {
+            appendLines(
+                """
+                if (Number.isNaN(value)) return 0n;
+                if (!Number.isFinite(value)) return value > 0 ? 9223372036854775807n : -9223372036854775808n;
+                const trunc = Math.trunc(value);
+                if (trunc >= 9223372036854776000) return 9223372036854775807n;
+                if (trunc <= -9223372036854776000) return -9223372036854775808n;
+                return BigInt(trunc);
+                """.trimIndent()
+            )
+        }
+
+        builder.append("globalThis.__floatToULong = function(value) ")
+        writeBlock {
+            appendLines(
+                """
+                if (Number.isNaN(value)) return 0n;
+                if (!Number.isFinite(value)) return value > 0 ? 18446744073709551615n : 0n;
+                const trunc = Math.trunc(value);
+                if (trunc <= 0) return 0n;
+                if (trunc >= 18446744073709552000) return 18446744073709551615n;
+                return BigInt(trunc);
+                """.trimIndent()
+            )
+        }
     }
 
     override fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
@@ -501,6 +558,185 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             Types.Double -> builder.append(expr.asFloat)
             else -> throw NotImplementedError("Append number of type $type")
         }
+    }
+
+    private fun Type.isBigIntType(): Boolean {
+        return this == Types.Long || this == Types.ULong || this == Types.UInt
+    }
+
+    private fun Type.isUnsignedInt(): Boolean {
+        return when (this) {
+            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> true
+            else -> false
+        }
+    }
+
+    private fun appendSourceValue(graph: SimpleGraph, expr: SimpleCall) {
+        appendFieldName(graph, expr.thisInstance)
+    }
+
+    private fun appendFloatClamp(graph: SimpleGraph, expr: SimpleCall, minValue: Double, maxValue: Double) {
+        builder.append("Math.trunc(Math.min(")
+        builder.append(maxValue)
+        builder.append(", Math.max(")
+        builder.append(minValue)
+        builder.append(", ")
+        appendSourceValue(graph, expr)
+        builder.append(")))")
+    }
+
+    private fun appendIntegerCast(graph: SimpleGraph, expr: SimpleCall, sourceType: Type, targetType: Type) {
+        when {
+            sourceType.isFloat() -> {
+                when (targetType) {
+                    Types.Byte -> {
+                        appendFloatClamp(graph, expr, -128.0, 127.0)
+                        builder.append(" << 24 >> 24")
+                    }
+                    Types.UByte -> {
+                        appendFloatClamp(graph, expr, 0.0, 255.0)
+                        builder.append(" & 0xFF")
+                    }
+                    Types.Short -> {
+                        appendFloatClamp(graph, expr, -32768.0, 32767.0)
+                        builder.append(" << 16 >> 16")
+                    }
+                    Types.UShort, Types.Char -> {
+                        appendFloatClamp(graph, expr, 0.0, 65535.0)
+                        builder.append(" & 0xFFFF")
+                    }
+                    Types.Int -> {
+                        appendFloatClamp(graph, expr, Int.MIN_VALUE.toDouble(), Int.MAX_VALUE.toDouble())
+                        builder.append(" | 0")
+                    }
+                    Types.UInt -> {
+                        appendFloatClamp(graph, expr, 0.0, UInt.MAX_VALUE.toDouble())
+                        builder.append(" >>> 0")
+                    }
+                    Types.Long -> {
+                        builder.append("globalThis.__floatToLong(")
+                        appendSourceValue(graph, expr)
+                        builder.append(')')
+                    }
+                    Types.ULong -> {
+                        builder.append("globalThis.__floatToULong(")
+                        appendSourceValue(graph, expr)
+                        builder.append(')')
+                    }
+                    else -> error("Not an integer target type: $targetType")
+                }
+            }
+            sourceType.isBigIntType() -> {
+                val castFunction = if (targetType.isUnsigned()) "BigInt.asUintN" else "BigInt.asIntN"
+                when (targetType) {
+                    Types.Byte, Types.UByte, Types.Short, Types.UShort, Types.Char, Types.Int, Types.UInt -> {
+                        builder.append("Number(")
+                        builder.append(castFunction).append('(').append(targetType.getNumBits()).append(", ")
+                        appendSourceValue(graph, expr)
+                        builder.append("))")
+                    }
+                    Types.Long, Types.ULong -> {
+                        builder.append(castFunction).append("(64, ")
+                        appendSourceValue(graph, expr)
+                        builder.append(')')
+                    }
+                    else -> error("Not an integer target type: $targetType")
+                }
+            }
+            else -> {
+                when (targetType) {
+                    Types.Byte -> {
+                        builder.append("((")
+                        appendSourceValue(graph, expr)
+                        builder.append(" << 24) >> 24)")
+                    }
+                    Types.UByte -> {
+                        builder.append('(')
+                        appendSourceValue(graph, expr)
+                        builder.append(" & 0xFF)")
+                    }
+                    Types.Short -> {
+                        builder.append("((")
+                        appendSourceValue(graph, expr)
+                        builder.append(" << 16) >> 16)")
+                    }
+                    Types.UShort, Types.Char -> {
+                        builder.append('(')
+                        appendSourceValue(graph, expr)
+                        builder.append(" & 0xFFFF)")
+                    }
+                    Types.Int -> {
+                        builder.append('(')
+                        appendSourceValue(graph, expr)
+                        builder.append(" | 0)")
+                    }
+                    Types.UInt -> {
+                        builder.append('(')
+                        appendSourceValue(graph, expr)
+                        builder.append(" >>> 0)")
+                    }
+                    Types.Long, Types.ULong -> {
+                        val castFunction = if (targetType.isUnsigned()) "BigInt.asUintN" else "BigInt.asIntN"
+                        builder.append(castFunction).append("(64, BigInt(")
+                        appendSourceValue(graph, expr)
+                        builder.append("))")
+                    }
+                    else -> error("Not an integer target type: $targetType")
+                }
+            }
+        }
+    }
+
+    private fun appendNumericCast(graph: SimpleGraph, expr: SimpleCall, targetType: Type): Boolean {
+        val sourceType = resolveType(expr.thisInstance.type)
+        when (targetType) {
+            Types.Half -> {
+                builder.append("globalThis.__toHalf(")
+                if (sourceType.isBigIntType()) builder.append("Number(")
+                appendSourceValue(graph, expr)
+                if (sourceType.isBigIntType()) builder.append(')')
+                builder.append(')')
+            }
+            Types.Float -> {
+                builder.append("Math.fround(")
+                if (sourceType.isBigIntType()) builder.append("Number(")
+                appendSourceValue(graph, expr)
+                if (sourceType.isBigIntType()) builder.append(')')
+                builder.append(')')
+            }
+            Types.Double -> {
+                if (sourceType.isBigIntType()) builder.append("Number(")
+                appendSourceValue(graph, expr)
+                if (sourceType.isBigIntType()) builder.append(')')
+            }
+            else -> appendIntegerCast(graph, expr, sourceType, targetType)
+        }
+        return true
+    }
+
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val targetType = when (methodName) {
+            "toByte" -> Types.Byte
+            "toUByte" -> Types.UByte
+            "toShort" -> Types.Short
+            "toUShort" -> Types.UShort
+            "toChar" -> Types.Char
+            "toInt" -> Types.Int
+            "toUInt" -> Types.UInt
+            "toLong" -> Types.Long
+            "toULong" -> Types.ULong
+            "toHalf" -> Types.Half
+            "toFloat" -> Types.Float
+            "toDouble" -> Types.Double
+            else -> null
+        }
+
+        if (targetType != null && expr.thisInstance.type in nativeNumbers) {
+            appendNumericCast(graph, expr, targetType)
+            return true
+        }
+
+        return super.appendUnaryOperator(graph, expr, methodName)
     }
 
     override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {

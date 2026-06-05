@@ -637,7 +637,9 @@ object ASTSimplifier {
 
         // check that assignments use the correct type
         check(isSubTypeOf(expectedValueTypeI, actualValueType)) {
-            "Expected value for $field-setter to be $expectedValueTypeI, but got $actualValueType"
+            "Expected value for $field-setter " +
+                    "to be ${style(expectedValueTypeI.toString(), LIGHT_BLUE)}, " +
+                    "but got ${style(actualValueType.toString(), LIGHT_BLUE)}"
         }
 
         // println("block for self: ${block1v.block}")

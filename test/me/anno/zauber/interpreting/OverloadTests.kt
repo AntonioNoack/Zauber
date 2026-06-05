@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource
 class OverloadTests {
 
     @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "c", "llvm", "wasm", "python"])
     fun testMethodOverloads(type: String) {
         MultiTest("""
             fun f(x: Int) = 12

@@ -273,6 +273,7 @@ class SimpleGraph(val method0: Specialization) {
                             (findAllCasts || fieldType.isValue() || valueType.isValue())
                         ) {
                             val tmpField = field(fieldType)
+                            println("set-cast: $fieldType <- $valueType")
                             val cast = SimpleBoxCast(tmpField, instr.value, instr.scope, instr.origin)
                             instructions.add(i, cast)
                             instr.value = tmpField.use()
@@ -301,7 +302,7 @@ class SimpleGraph(val method0: Specialization) {
                             if (expectedType != valueType &&
                                 (findAllCasts || expectedType.isValue() || valueType.isValue())
                             ) {
-
+                                println("call-cast: $expectedType <- $valueType")
                                 val tmpField = field(expectedType)
                                 val cast = SimpleBoxCast(tmpField, parameter, instr.scope, instr.origin)
                                 instructions.add(i, cast)

@@ -18,7 +18,9 @@ class WASMStruct(
     }
 
     fun getIndex(field: Field): Int {
-        return mapping[field]!!.index
+        val property = mapping[field]
+            ?: throw IllegalStateException("Missing $field in $typeName")
+        return property.index
     }
 
     override fun toString(): String {
