@@ -56,16 +56,19 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     companion object {
         val protectedJSTypes by threadLocal {
             Types.run {
-                mapOf( // todo this is very wrong for JS...
-                    Boolean to BoxedType("Boolean", "boolean"),
-                    Byte to BoxedType("Byte", "byte"),
-                    Short to BoxedType("Short", "short"),
-                    Int to BoxedType("Int", "int"),
-                    Long to BoxedType("Long", "long"),
-                    UInt to BoxedType("UInt", "bigint"),
-                    Char to BoxedType("Char", "char"),
-                    Float to BoxedType("Float", "float"),
-                    Double to BoxedType("Double", "double"),
+                mapOf(
+                    Boolean to BoxedType("Boolean", "Boolean"),
+                    Byte to BoxedType("Byte", "Number"),
+                    UByte to BoxedType("UByte", "Number"),
+                    Short to BoxedType("Short", "Number"),
+                    UShort to BoxedType("UShort", "Number"),
+                    Int to BoxedType("Int", "Number"),
+                    UInt to BoxedType("UInt", "BigInt"),
+                    Long to BoxedType("Long", "BigInt"),
+                    ULong to BoxedType("ULong", "BigInt"),
+                    Char to BoxedType("Char", "String"), // ?
+                    Float to BoxedType("Float", "Number"),
+                    Double to BoxedType("Double", "Number"),
                 )
             }
         }
@@ -129,12 +132,14 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     }
 
     private fun appendGlobalHelpers() {
-        appendLines("""
+        appendLines(
+            """
             const Float16ArrayPoly = (typeof globalThis.Float16Array === 'function')
               ? globalThis.Float16Array
               : Float32Array;
             const __halfBuffer = new Float16ArrayPoly(1);
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         builder.append("globalThis.__toHalf = function(value) ")
         writeBlock {
@@ -730,28 +735,25 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
-        val targetType = when (methodName) {
-            "toByte" -> Types.Byte
-            "toUByte" -> Types.UByte
-            "toShort" -> Types.Short
-            "toUShort" -> Types.UShort
-            "toChar" -> Types.Char
-            "toInt" -> Types.Int
-            "toUInt" -> Types.UInt
-            "toLong" -> Types.Long
-            "toULong" -> Types.ULong
-            "toHalf" -> Types.Half
-            "toFloat" -> Types.Float
-            "toDouble" -> Types.Double
-            else -> null
-        }
-
-        if (targetType != null && expr.thisInstance.type in nativeNumbers) {
+        val thisType = expr.thisInstance.type
+        val targetType = getCastTargetType(methodName)
+        return if (targetType != null && thisType in nativeNumbers) {
             appendNumericCast(graph, expr, targetType)
-            return true
-        }
-
-        return super.appendUnaryOperator(graph, expr, methodName)
+            true
+        } else if (methodName == "inv" && thisType in nativeNumbers) {
+            val needsCast = thisType.isUnsigned()
+            if (needsCast) {
+                // cast to the corresponding type
+                appendType(thisType, expr.scope, true)
+                builder.append(".castTo(")
+            }
+            builder.append('~')
+            appendFieldName(graph, expr.thisInstance)
+            if (needsCast) {
+                builder.append(')')
+            }
+            true
+        } else super.appendUnaryOperator(graph, expr, methodName)
     }
 
     override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
@@ -774,7 +776,10 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             return true
         }
 
-        val needsCast = type != Types.String
+        val needsCast = when (methodName) {
+            "and", "or", "xor" -> false
+            else -> type != Types.String
+        }
         if (needsCast) {
             // cast to the corresponding type
             appendType(type, expr.scope, true)

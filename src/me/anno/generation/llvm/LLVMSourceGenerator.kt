@@ -1157,10 +1157,17 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 .append(outType.ir)
 
             true
-        } else if (type == Types.Boolean && methodName == "not") {
+        } else if (methodName == "not" && type == Types.Boolean) {
             val input = getSimpleFieldReg(graph, expr.thisInstance)
             appendAssign(graph, expr)
-            builder.append(" = xor i1 ").append(input).append(", true")
+            builder.append("xor i1 ").append(input).append(", true")
+            nextLine()
+            true
+        } else if (methodName == "inv" && type in nativeNumbers) {
+            val input = getSimpleFieldReg(graph, expr.thisInstance)
+            appendAssign(graph, expr)
+            builder.append("xor  ").append(getLLVMType(type).ir)
+            builder.append(' ').append(input).append(", -1")
             nextLine()
             true
         } else false
@@ -1176,6 +1183,9 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             "times" -> "mul"
             "div" -> if (isNumberSigned(type)) "sdiv" else "udiv"
             "rem" -> if (isNumberSigned(type)) "smod" else "umod"
+            "and" -> "and"
+            "or" -> "or"
+            "xor" -> "xor"
             else -> return false
         }
 
@@ -1184,7 +1194,10 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
         val needsCastToI32 = when (type) {
             Types.Byte, Types.UByte,
-            Types.Short, Types.UShort -> true
+            Types.Short, Types.UShort -> when (methodName) {
+                "and", "or", "xor" -> false
+                else -> true
+            }
             else -> false
         }
 

@@ -18,6 +18,8 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -831,12 +833,11 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val thisType = expr.thisInstance.type
         val targetType = getCastTargetType(methodName)
-        if (targetType != null && expr.thisInstance.type in nativeNumbers) {
-            val sourceType = resolveType(expr.thisInstance.type)
-
+        if (targetType != null && thisType in nativeNumbers) {
             when {
-                isNumberFloat(sourceType) && !isNumberFloat(targetType) -> {
+                thisType.isFloat() && !targetType.isFloat() -> {
                     val minValue = getMinIntValue(targetType).toString()
                     val maxValue = getMaxIntValue(targetType).toString()
                     builder.append("int(max(min(")
@@ -844,7 +845,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                     builder.append(", ").append(maxValue)
                     builder.append("), ").append(minValue).append("))")
                 }
-                isNumberFloat(targetType) -> {
+                targetType.isFloat() -> {
                     builder.append("float(")
                     appendFieldName(graph, expr.thisInstance)
                     builder.append(')')
@@ -856,7 +857,16 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                     builder.append(')')
                 }
             }
-
+            return true
+        } else if (methodName == "not" && thisType == Types.Boolean) {
+            builder.append("not ")
+            appendFieldName(graph, expr.thisInstance)
+            return true
+        } else if (methodName == "inv" && thisType in nativeNumbers) {
+            appendType(thisType, expr.scope, true)
+            builder.append(".castTo(~")
+            appendFieldName(graph, expr.thisInstance)
+            builder.append(')')
             return true
         }
 

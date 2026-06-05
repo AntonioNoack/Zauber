@@ -706,6 +706,9 @@ abstract class CodeGenerationTests {
     }
 
     fun testLogicalOperatorsImpl() {
+
+        // todo also test negation for all number types, not just integers
+
         val intTypes = nativeJavaNumbers.keys.filter { it != Types.Char && !it.isFloat() }
         val expectedResponse = StringBuilder()
         val runnableCode = intTypes.withIndex().joinToString("") { (ctr, type) ->

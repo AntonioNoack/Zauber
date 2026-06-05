@@ -122,7 +122,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                     method.valueParameters[0].type != ownerType
                 ) return false
                 return when (val methodName = method.name) {
-                    "plus", "minus", "times", "div", "rem", "equals" -> true
+                    "plus", "minus", "times", "div", "rem", "equals",
+                    "and", "or", "xor", "inv", "neg" -> true
                     else -> isCast(methodName)
                 }
             }
@@ -1474,118 +1475,11 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
         val type = resolveType(expr.thisInstance.type)
         if (isCast(methodName) && type in nativeNumbers) {
-            appendGetField(graph, expr.thisInstance)
-
-            val outType0 = expr.dst.type
-            if (outType0 == type) return true // easy
-
-            val inType = getWASMType(type)
-            val outType = getWASMType(outType0)
-
-            val inFloat = type.isFloat()
-            val outFloat = outType0.isFloat()
-            when {
-                inFloat && outFloat -> {
-                    if (inType == WASMType.F32) {
-                        builder.append("f64.promote_f32")
-                        binary.u8(WASMOpcode.F64_PROMOTE_F32)
-                    } else {
-                        builder.append("f32.demote_f64")
-                        binary.u8(WASMOpcode.F32_DEMOTE_F64)
-                    }
-                    nextLine()
-                }
-                inFloat -> {
-
-                    val minValue = getMinIntValue(outType0)
-                    val maxValue = getMaxIntValue(outType0)
-
-                    // todo we could also use i32.trunc_sat_f32_s to save on instructions & to gain speed
-                    //  https://github.com/WebAssembly/nontrapping-float-to-int-conversions/blob/main/proposals/nontrapping-float-to-int-conversion/Overview.md
-                    //  NaN = Int-Min -> idk...
-
-                    // clamp value to range:
-                    // this is done before casting, so we avoid
-                    // "float unrepresentable in integer range"
-                    if (inType == WASMType.F32) {
-
-                        f32Const(minValue.toFloatCeil()); nextLine()
-                        builder.append("f32.max")
-                        binary.u8(WASMOpcode.F32_MAX)
-                        nextLine()
-
-                        f32Const(maxValue.toFloatFloor()); nextLine()
-                        builder.append("f32.min")
-                        binary.u8(WASMOpcode.F32_MIN)
-                        nextLine()
-
-                    } else {
-
-                        f64Const(minValue.toDoubleCeil()); nextLine()
-                        builder.append("f64.max")
-                        binary.u8(WASMOpcode.F64_MAX)
-                        nextLine()
-
-                        f64Const(maxValue.toDoubleFloor()); nextLine()
-                        builder.append("f64.min")
-                        binary.u8(WASMOpcode.F64_MIN)
-                        nextLine()
-
-                    }
-
-                    val outTypeIsLong = outType == WASMType.I64
-                    val outTypeUnsigned = outType0.isUnsigned()
-                    val inTypeIsDouble = inType == WASMType.F64
-
-                    val id = outTypeUnsigned.toInt() +
-                            outTypeIsLong.toInt(2) +
-                            inTypeIsDouble.toInt(4)
-                    val (code, name) = inFloatInstr[id]
-                    builder.append(name)
-                    binary.u8(code)
-                    nextLine()
-
-                }
-                outFloat -> {
-
-                    val inTypeIsLong = inType == WASMType.I64
-                    val inTypeUnsigned = type.isUnsigned()
-                    val outTypeIsDouble = outType == WASMType.F64
-
-                    val id = inTypeUnsigned.toInt() +
-                            inTypeIsLong.toInt(2) +
-                            outTypeIsDouble.toInt(4)
-                    val (code, name) = outFloatInstr[id]
-                    builder.append(name)
-                    binary.u8(code)
-                    nextLine()
-                }
-                else -> {
-                    if (inType != outType) {
-                        if (inType == WASMType.I32) {
-                            check(outType == WASMType.I64)
-
-                            val unsigned = outType0.isUnsigned()
-                            builder.append(if (unsigned) "i64.extend_i32_u" else "i64.extend_i32_s")
-                            binary.u8(if (unsigned) WASMOpcode.I64_EXTEND_I32U else WASMOpcode.I64_EXTEND_I32S)
-                            nextLine()
-                        } else {
-                            check(inType == WASMType.I64)
-                            check(outType == WASMType.I32)
-
-                            builder.append("i32.wrap_i64")
-                            binary.u8(WASMOpcode.I32_WRAP_I64)
-                            nextLine()
-                        }
-                    }
-
-                    maskToSmallInt(outType0)
-                }
-            }
+            appendCast(graph, expr, type)
             return true
         }
 
-        if (type == Types.Boolean && methodName == "not") {
+        if (methodName == "not" && type == Types.Boolean) {
             appendGetField(graph, expr.thisInstance)
             builder.append("i32.eqz")
             binary.u8(WASMOpcode.I32_EQZ)
@@ -1593,7 +1487,143 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             return true
         }
 
+        if (methodName == "inv" && type in nativeNumbers) {
+            appendGetField(graph, expr.thisInstance)
+            val isLong = type == Types.Long || type == Types.ULong
+            if (isLong) i64Const(-1) else i32Const(-1)
+            builder.append(if (isLong) " i64.xor" else " i32.xor")
+            binary.u8(if (isLong) WASMOpcode.I64_XOR else WASMOpcode.I32_XOR)
+            nextLine()
+
+            when (type) {
+                Types.UByte -> {
+                    i32Const(0xff)
+                    builder.append(" i32.and")
+                    binary.u8(WASMOpcode.I32_AND)
+                    nextLine()
+                }
+                Types.UShort -> {
+                    i32Const(0xffff)
+                    builder.append(" i32.and")
+                    binary.u8(WASMOpcode.I32_AND)
+                    nextLine()
+                }
+            }
+            return true
+        }
+
         return false
+    }
+
+    private fun appendCast(graph: SimpleGraph, expr: SimpleCall, type: Type) {
+        appendGetField(graph, expr.thisInstance)
+
+        val outType0 = expr.dst.type
+        if (outType0 == type) return  // easy
+
+        val inType = getWASMType(type)
+        val outType = getWASMType(outType0)
+
+        val inFloat = type.isFloat()
+        val outFloat = outType0.isFloat()
+        when {
+            inFloat && outFloat -> {
+                if (inType == WASMType.F32) {
+                    builder.append("f64.promote_f32")
+                    binary.u8(WASMOpcode.F64_PROMOTE_F32)
+                } else {
+                    builder.append("f32.demote_f64")
+                    binary.u8(WASMOpcode.F32_DEMOTE_F64)
+                }
+                nextLine()
+            }
+            inFloat -> {
+
+                val minValue = getMinIntValue(outType0)
+                val maxValue = getMaxIntValue(outType0)
+
+                // todo we could also use i32.trunc_sat_f32_s to save on instructions & to gain speed
+                //  https://github.com/WebAssembly/nontrapping-float-to-int-conversions/blob/main/proposals/nontrapping-float-to-int-conversion/Overview.md
+                //  NaN = Int-Min -> idk...
+
+                // clamp value to range:
+                // this is done before casting, so we avoid
+                // "float unrepresentable in integer range"
+                if (inType == WASMType.F32) {
+
+                    f32Const(minValue.toFloatCeil()); nextLine()
+                    builder.append("f32.max")
+                    binary.u8(WASMOpcode.F32_MAX)
+                    nextLine()
+
+                    f32Const(maxValue.toFloatFloor()); nextLine()
+                    builder.append("f32.min")
+                    binary.u8(WASMOpcode.F32_MIN)
+                    nextLine()
+
+                } else {
+
+                    f64Const(minValue.toDoubleCeil()); nextLine()
+                    builder.append("f64.max")
+                    binary.u8(WASMOpcode.F64_MAX)
+                    nextLine()
+
+                    f64Const(maxValue.toDoubleFloor()); nextLine()
+                    builder.append("f64.min")
+                    binary.u8(WASMOpcode.F64_MIN)
+                    nextLine()
+
+                }
+
+                val outTypeIsLong = outType == WASMType.I64
+                val outTypeUnsigned = outType0.isUnsigned()
+                val inTypeIsDouble = inType == WASMType.F64
+
+                val id = outTypeUnsigned.toInt() +
+                        outTypeIsLong.toInt(2) +
+                        inTypeIsDouble.toInt(4)
+                val (code, name) = inFloatInstr[id]
+                builder.append(name)
+                binary.u8(code)
+                nextLine()
+
+            }
+            outFloat -> {
+
+                val inTypeIsLong = inType == WASMType.I64
+                val inTypeUnsigned = type.isUnsigned()
+                val outTypeIsDouble = outType == WASMType.F64
+
+                val id = inTypeUnsigned.toInt() +
+                        inTypeIsLong.toInt(2) +
+                        outTypeIsDouble.toInt(4)
+                val (code, name) = outFloatInstr[id]
+                builder.append(name)
+                binary.u8(code)
+                nextLine()
+            }
+            else -> {
+                if (inType != outType) {
+                    if (inType == WASMType.I32) {
+                        check(outType == WASMType.I64)
+
+                        val unsigned = outType0.isUnsigned()
+                        builder.append(if (unsigned) "i64.extend_i32_u" else "i64.extend_i32_s")
+                        binary.u8(if (unsigned) WASMOpcode.I64_EXTEND_I32U else WASMOpcode.I64_EXTEND_I32S)
+                        nextLine()
+                    } else {
+                        check(inType == WASMType.I64)
+                        check(outType == WASMType.I32)
+
+                        builder.append("i32.wrap_i64")
+                        binary.u8(WASMOpcode.I32_WRAP_I64)
+                        nextLine()
+                    }
+                }
+
+                maskToSmallInt(outType0)
+            }
+        }
     }
 
     override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
@@ -1604,18 +1634,23 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             "times" -> "mul"
             "div" -> "div"
             "rem" -> "mod"
+            "and", "or", "xor" -> methodName
             else -> return false
         }
 
         appendGetField(graph, expr.thisInstance)
         appendGetField(graph, expr.valueParameters[0])
+
         val type = resolveType(expr.thisInstance.type)
         builder.append(getWASMType(type).wasmName)
             .append('.').append(symbol)
         binary.u8(getSimpleMathOp(type, symbol))
         nextLine()
 
-        maskToSmallInt(type)
+        when (methodName) {
+            "and", "or", "xor" -> {} // no masking necessary
+            else -> maskToSmallInt(type)
+        }
         return true
     }
 
@@ -1727,36 +1762,27 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     fun getSimpleMathOp(type: Type, symbol: String): Int {
         return when (type) {
-            Types.Byte, Types.Short, Types.Int -> when (symbol) {
-                "add" -> WASMOpcode.I32_ADD
-                "sub" -> WASMOpcode.I32_SUB
-                "mul" -> WASMOpcode.I32_MUL
-                "div" -> WASMOpcode.I32_DIV_S
-                "mod" -> WASMOpcode.I32_REM_S
-                else -> null
-            }
+            Types.Byte, Types.Short, Types.Int,
             Types.UByte, Types.UShort, Types.UInt -> when (symbol) {
                 "add" -> WASMOpcode.I32_ADD
                 "sub" -> WASMOpcode.I32_SUB
                 "mul" -> WASMOpcode.I32_MUL
-                "div" -> WASMOpcode.I32_DIV_U
-                "mod" -> WASMOpcode.I32_REM_U
+                "div" -> if (type.isUnsigned()) WASMOpcode.I32_DIV_U else WASMOpcode.I32_DIV_S
+                "mod" -> if (type.isUnsigned()) WASMOpcode.I32_REM_U else WASMOpcode.I32_REM_S
+                "and" -> WASMOpcode.I32_AND
+                "or" -> WASMOpcode.I32_OR
+                "xor" -> WASMOpcode.I32_XOR
                 else -> null
             }
-            Types.Long -> when (symbol) {
+            Types.Long, Types.ULong -> when (symbol) {
                 "add" -> WASMOpcode.I64_ADD
                 "sub" -> WASMOpcode.I64_SUB
                 "mul" -> WASMOpcode.I64_MUL
-                "div" -> WASMOpcode.I64_DIV_S
-                "mod" -> WASMOpcode.I64_REM_S
-                else -> null
-            }
-            Types.ULong -> when (symbol) {
-                "add" -> WASMOpcode.I64_ADD
-                "sub" -> WASMOpcode.I64_SUB
-                "mul" -> WASMOpcode.I64_MUL
-                "div" -> WASMOpcode.I64_DIV_U
-                "mod" -> WASMOpcode.I64_REM_U
+                "div" -> if (type == Types.ULong) WASMOpcode.I64_DIV_U else WASMOpcode.I64_DIV_S
+                "mod" -> if (type == Types.ULong) WASMOpcode.I64_REM_U else WASMOpcode.I64_REM_S
+                "and" -> WASMOpcode.I64_AND
+                "or" -> WASMOpcode.I64_OR
+                "xor" -> WASMOpcode.I64_XOR
                 else -> null
             }
             Types.Float, Types.Half -> when (symbol) {

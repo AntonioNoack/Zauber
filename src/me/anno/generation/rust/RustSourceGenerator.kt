@@ -784,9 +784,21 @@ class RustSourceGenerator : JavaSourceGenerator() {
                 "times" -> ".wrapping_mul"
                 "div" -> ".wrapping_div"
                 "rem" -> ".wrapping_rem"
+                "and" -> " & "
+                "or" -> " | "
+                "xor" -> " ^ "
                 else -> super.getBinarySymbol(type, methodName)
             }
         } else null
+    }
+
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val thisType = expr.thisInstance.type
+        return if (methodName == "inv" && thisType in nativeNumbers) {
+            builder.append('!')
+            appendFieldName(graph, expr.thisInstance)
+            true
+        } else super.appendUnaryOperator(graph, expr, methodName)
     }
 
     override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
