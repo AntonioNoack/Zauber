@@ -369,12 +369,23 @@ class WASMRuntime(val binary: WASMBinary) {
             WASMOpcode.I32_SHL -> stack.add(popI32(1) shl popI32())
             WASMOpcode.I32_SHR_S -> stack.add(popI32(1) shr popI32())
             WASMOpcode.I32_SHR_U -> stack.add(popI32(1) ushr popI32())
+            WASMOpcode.I32_ROTL -> stack.add(popI32(1).rotateLeft(popI32()))
+            WASMOpcode.I32_ROTR -> stack.add(popI32(1).rotateRight(popI32()))
 
             WASMOpcode.I64_ADD -> stack.add(popI64() + popI64())
             WASMOpcode.I64_SUB -> stack.add(popI64() - popI64())
             WASMOpcode.I64_MUL -> stack.add(popI64() * popI64())
             WASMOpcode.I64_DIV_S -> stack.add(popI64(1) / popI64())
             WASMOpcode.I64_DIV_U -> stack.add(java.lang.Long.divideUnsigned(popI64(1), popI64()))
+
+            WASMOpcode.I64_AND -> stack.add(popI64() and popI64())
+            WASMOpcode.I64_OR -> stack.add(popI64() or popI64())
+            WASMOpcode.I64_XOR -> stack.add(popI64() xor popI64())
+            WASMOpcode.I64_SHL -> stack.add(popI64(1) shl popI64().toInt())
+            WASMOpcode.I64_SHR_S -> stack.add(popI64(1) shr popI64().toInt())
+            WASMOpcode.I64_SHR_U -> stack.add(popI64(1) ushr popI64().toInt())
+            WASMOpcode.I64_ROTL -> stack.add(popI64(1).rotateLeft(popI64().toInt()))
+            WASMOpcode.I64_ROTR -> stack.add(popI64(1).rotateRight(popI64().toInt()))
 
             WASMOpcode.F32_LT -> pushBool(popF32(1) < popF32())
             WASMOpcode.F32_GT -> pushBool(popF32(1) > popF32())

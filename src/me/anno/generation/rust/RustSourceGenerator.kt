@@ -787,6 +787,11 @@ class RustSourceGenerator : JavaSourceGenerator() {
                 "and" -> " & "
                 "or" -> " | "
                 "xor" -> " ^ "
+                "shl" -> "<<"
+                "shr" -> ">>"
+                "ushr" -> ">>>"
+                "rotateLeft" -> "rotateLeft"
+                "rotateRight" -> "rotateRight"
                 else -> super.getBinarySymbol(type, methodName)
             }
         } else null

@@ -20,6 +20,7 @@ import me.anno.zauber.ast.reverse.*
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -123,7 +124,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 ) return false
                 return when (val methodName = method.name) {
                     "plus", "minus", "times", "div", "rem", "equals",
-                    "and", "or", "xor", "inv", "neg" -> true
+                    "and", "or", "xor", "inv", "neg",
+                    "shl", "shr", "ushr", "rotateLeft", "rotateRight" -> true
                     else -> isCast(methodName)
                 }
             }
@@ -1634,21 +1636,62 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             "times" -> "mul"
             "div" -> "div"
             "rem" -> "mod"
-            "and", "or", "xor" -> methodName
+            "and", "or", "xor",
+            "shl", "shr", "ushr" -> methodName
+            "rotateLeft" -> "rotl"
+            "rotateRight" -> "rotr"
             else -> return false
         }
 
         appendGetField(graph, expr.thisInstance)
         appendGetField(graph, expr.valueParameters[0])
 
-        val type = resolveType(expr.thisInstance.type)
-        builder.append(getWASMType(type).wasmName)
-            .append('.').append(symbol)
-        binary.u8(getSimpleMathOp(type, symbol))
-        nextLine()
+        val type = expr.thisInstance.type
+        val wasmType = getWASMType(type)
+        if (wasmType == WASMType.I64 && when (symbol) {
+                "shl", "shr", "ushr", "rotl", "rotr" -> true
+                else -> false
+            }
+        ) {
+            // todo Kotlin only reads the lowest bits, what does WASM do?
+            builder.append("i64.extend_i32_u")
+            binary.u8(WASMOpcode.I64_EXTEND_I32U)
+            nextLine()
+        }
+
+        val numBits = type.getNumBits()
+        if ((symbol == "rotl" || symbol == "rotr") && numBits <= 16) {
+
+            builder.append("i32.").append(if (symbol == "rotl") "shl" else "shr_u")
+            binary.u8(if (symbol == "rotl") WASMOpcode.I32_SHL else WASMOpcode.I32_SHR_U)
+            nextLine()
+
+            appendGetField(graph, expr.thisInstance)
+
+            i32Const(numBits); nextLine()
+            builder.append("i32.sub")
+            binary.u8(WASMOpcode.I32_SUB)
+            nextLine()
+
+            appendGetField(graph, expr.valueParameters[0])
+
+            builder.append("i32.").append(if (symbol == "rotl") "shr_u" else "shl")
+            binary.u8(if (symbol == "rotl") WASMOpcode.I32_SHR_U else WASMOpcode.I32_SHL)
+            nextLine()
+
+            builder.append("i32.or")
+            binary.u8(WASMOpcode.I32_OR)
+            nextLine()
+
+        } else {
+            builder.append(wasmType.wasmName)
+                .append('.').append(symbol)
+            binary.u8(getSimpleMathOp(type, symbol))
+            nextLine()
+        }
 
         when (methodName) {
-            "and", "or", "xor" -> {} // no masking necessary
+            "and", "or", "xor", "shr", "ushr" -> {} // no masking necessary
             else -> maskToSmallInt(type)
         }
         return true
@@ -1769,9 +1812,16 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 "mul" -> WASMOpcode.I32_MUL
                 "div" -> if (type.isUnsigned()) WASMOpcode.I32_DIV_U else WASMOpcode.I32_DIV_S
                 "mod" -> if (type.isUnsigned()) WASMOpcode.I32_REM_U else WASMOpcode.I32_REM_S
+
                 "and" -> WASMOpcode.I32_AND
                 "or" -> WASMOpcode.I32_OR
                 "xor" -> WASMOpcode.I32_XOR
+
+                "shl" -> WASMOpcode.I32_SHL
+                "shr" -> if (type.isUnsigned()) WASMOpcode.I32_SHR_U else WASMOpcode.I32_SHR_S
+                "ushr" -> WASMOpcode.I32_SHR_U
+                "rotl" -> WASMOpcode.I32_ROTL
+                "rotr" -> WASMOpcode.I32_ROTR
                 else -> null
             }
             Types.Long, Types.ULong -> when (symbol) {
@@ -1780,9 +1830,17 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 "mul" -> WASMOpcode.I64_MUL
                 "div" -> if (type == Types.ULong) WASMOpcode.I64_DIV_U else WASMOpcode.I64_DIV_S
                 "mod" -> if (type == Types.ULong) WASMOpcode.I64_REM_U else WASMOpcode.I64_REM_S
+
                 "and" -> WASMOpcode.I64_AND
                 "or" -> WASMOpcode.I64_OR
                 "xor" -> WASMOpcode.I64_XOR
+
+                // todo these expect a second type of i64, not i32
+                "shl" -> WASMOpcode.I64_SHL
+                "shr" -> if (type.isUnsigned()) WASMOpcode.I64_SHR_U else WASMOpcode.I64_SHR_S
+                "ushr" -> WASMOpcode.I64_SHR_U
+                "rotl" -> WASMOpcode.I64_ROTL
+                "rotr" -> WASMOpcode.I64_ROTR
                 else -> null
             }
             Types.Float, Types.Half -> when (symbol) {

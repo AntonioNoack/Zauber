@@ -1186,6 +1186,11 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             "and" -> "and"
             "or" -> "or"
             "xor" -> "xor"
+            "shl" -> "shl"
+            "shr" -> "shr"
+            "ushr" -> "ushr"
+            "rotateLeft" -> "rotl"
+            "rotateRight" -> "rotr"
             else -> return false
         }
 

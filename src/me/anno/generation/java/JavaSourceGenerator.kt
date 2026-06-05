@@ -1493,6 +1493,9 @@ open class JavaSourceGenerator : Generator() {
             "and" -> " & "
             "or" -> " | "
             "xor" -> " ^ "
+            "shl" -> "<<"
+            "shr" -> if (type.isUnsigned()) ">>>" else ">>"
+            "ushr" -> ">>>"
             else -> null
         }
     }

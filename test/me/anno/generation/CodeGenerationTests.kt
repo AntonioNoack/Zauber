@@ -705,6 +705,10 @@ abstract class CodeGenerationTests {
         return result
     }
 
+    /**
+     * test all logical operators:
+     * and, or, xor, inverse, shl, shr, ushr, rotateLeft, rotateRight
+     * */
     fun testLogicalOperatorsImpl() {
 
         // todo also test negation for all number types, not just integers
@@ -716,19 +720,36 @@ abstract class CodeGenerationTests {
             val numBits = type.getNumBits()
             val repeats = numBits.shr(2)
 
+            val shift = 5
+
             val seqA = "0101".repeat(repeats)
             val seqB = "0011".repeat(repeats)
+
+            val seqAn = 0b0101.repeat4(repeats)
 
             val andExpected = 0b0001.repeat4(repeats)
             val orExpected = 0b0111.repeat4(repeats)
             val xorExpected = 0b0110.repeat4(repeats)
             val invExpected = 0b1010.repeat4(repeats)
 
+            val mask = (1L shl numBits) - 1
+            val shlExpected = seqAn.shl(shift).and(mask)
+            val shrExpected = invExpected.shr(shift)
+            val ushrExpected = invExpected.shl(64 - numBits).ushr(shift + (64 - numBits)).and(mask)
+            val rotlExpected = (seqA.drop(shift) + seqA.substring(0, shift)).toULong(2).toLong()
+            val rotrExpected = (seqA.drop(numBits - shift) + seqA.substring(0, numBits - shift)).toULong(2).toLong()
+
             if (type.isUnsigned()) {
                 expectedResponse.append(andExpected.toULong()).append('\n')
                 expectedResponse.append(orExpected.toULong()).append('\n')
                 expectedResponse.append(xorExpected.toULong()).append('\n')
                 expectedResponse.append(invExpected.toULong()).append('\n')
+
+                expectedResponse.append(shlExpected.toULong()).append('\n')
+                expectedResponse.append(shrExpected.toULong()).append('\n')
+                expectedResponse.append(ushrExpected.toULong()).append('\n')
+                expectedResponse.append(rotlExpected.toULong()).append('\n')
+                expectedResponse.append(rotrExpected.toULong()).append('\n')
             } else {
                 expectedResponse.append(andExpected).append('\n')
                 expectedResponse.append(orExpected).append('\n')
@@ -736,6 +757,12 @@ abstract class CodeGenerationTests {
                 val extraBits = 64 - numBits
                 val invExtended = invExpected.shl(extraBits).shr(extraBits)
                 expectedResponse.append(invExtended).append('\n')
+
+                expectedResponse.append(shlExpected).append('\n')
+                expectedResponse.append(shrExpected).append('\n')
+                expectedResponse.append(ushrExpected).append('\n')
+                expectedResponse.append(rotlExpected).append('\n')
+                expectedResponse.append(rotrExpected).append('\n')
             }
 
             val typeName = type.clazz.name
@@ -745,7 +772,12 @@ abstract class CodeGenerationTests {
                     "println(a${ctr} and b${ctr})\n" +
                     "println(a${ctr}  or b${ctr})\n" +
                     "println(a${ctr} xor b${ctr})\n" +
-                    "println(a${ctr}.inv())\n"
+                    "println(a${ctr}.inv())\n" +
+                    "println(a${ctr} shl $shift)\n" +
+                    "println(a${ctr}.inv() shr $shift)\n" +
+                    "println(a${ctr}.inv() ushr $shift)\n" +
+                    "println(a${ctr}.rotateLeft($shift))\n" +
+                    "println(a${ctr}.rotateRight($shift))\n"
         }
         val numberClasses = intTypes.joinToString("") { type ->
             val type = type.clazz.name
@@ -755,6 +787,11 @@ abstract class CodeGenerationTests {
                     "   external fun or(other: $type): $type\n" +
                     "   external fun xor(other: $type): $type\n" +
                     "   external fun inv(): $type\n" +
+                    "   external fun shl(shift: Int): $type\n" +
+                    "   external fun shr(shift: Int): $type\n" +
+                    "   external fun ushr(shift: Int): $type\n" +
+                    "   external fun rotateLeft(shift: Int): $type\n" +
+                    "   external fun rotateRight(shift: Int): $type\n" +
                     "}\n" +
                     "external fun println(arg0: $type)"
         }
