@@ -8,6 +8,8 @@ import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.Half.Companion.toHalf
+import me.anno.utils.NumberUtils.getMaxIntValue
+import me.anno.utils.NumberUtils.getMinIntValue
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.reverse.SimpleBranch
 import me.anno.zauber.ast.reverse.SimpleLoop
@@ -504,6 +506,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                         indent + "low = value & mask;\n" +
                         indent + "return low - (1 << 64) if low & (1 << 63) else low;"
             }
+            Types.Char.clazz -> "return value & 0xFFFF;"
             Types.UByte.clazz -> "return value & 0xFF;"
             Types.UShort.clazz -> "return value & 0xFFFF;"
             Types.UInt.clazz -> "return value & 0xFFFF_FFFF"
@@ -673,11 +676,27 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             Types.UInt -> builder.append(expr.asInt.toUInt())
             Types.Long -> builder.append(expr.asInt)
             Types.ULong -> builder.append(expr.asInt.toULong())
+            Types.Char -> builder.append(expr.asInt.toInt())
             Types.Half -> builder.append(expr.asFloat.toHalf().toFloat())
-            Types.Float -> builder.append(expr.asFloat.toFloat())
-            Types.Double -> builder.append(expr.asFloat)
+            Types.Float -> {
+                if (!expr.asFloat.isFinite()) appendInfinite(expr.asFloat)
+                else builder.append(expr.asFloat.toFloat())
+            }
+            Types.Double -> {
+                if (!expr.asFloat.isFinite()) appendInfinite(expr.asFloat)
+                else builder.append(expr.asFloat)
+            }
             else -> throw NotImplementedError("Append number of type $type")
         }
+    }
+
+    private fun appendInfinite(value: Double) {
+        val asString = when (value) {
+            Double.POSITIVE_INFINITY -> "float('inf')"
+            Double.NEGATIVE_INFINITY -> "float('-inf')"
+            else -> "0.0/0.0"
+        }
+        builder.append(asString)
     }
 
     override fun appendCopy(graph: SimpleGraph, valueType: Type) {
@@ -809,6 +828,39 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         if (needsCast) builder.append(')')
 
         return true
+    }
+
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+        val targetType = getCastTargetType(methodName)
+        if (targetType != null && expr.thisInstance.type in nativeNumbers) {
+            val sourceType = resolveType(expr.thisInstance.type)
+
+            when {
+                isNumberFloat(sourceType) && !isNumberFloat(targetType) -> {
+                    val minValue = getMinIntValue(targetType).toString()
+                    val maxValue = getMaxIntValue(targetType).toString()
+                    builder.append("int(max(min(")
+                    appendFieldName(graph, expr.thisInstance)
+                    builder.append(", ").append(maxValue)
+                    builder.append("), ").append(minValue).append("))")
+                }
+                isNumberFloat(targetType) -> {
+                    builder.append("float(")
+                    appendFieldName(graph, expr.thisInstance)
+                    builder.append(')')
+                }
+                else -> {
+                    appendType(targetType, expr.scope, true)
+                    builder.append(".castTo(")
+                    appendFieldName(graph, expr.thisInstance)
+                    builder.append(')')
+                }
+            }
+
+            return true
+        }
+
+        return super.appendUnaryOperator(graph, expr, methodName)
     }
 
 }

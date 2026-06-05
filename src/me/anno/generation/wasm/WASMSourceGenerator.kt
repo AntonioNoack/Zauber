@@ -4,11 +4,12 @@ import me.anno.generation.InheritanceTable
 import me.anno.generation.c.CSourceGenerator
 import me.anno.generation.c.CSourceGenerator.Companion.hashMethodParameters
 import me.anno.generation.java.JavaSourceGenerator
-import me.anno.generation.llvm.LLVMSourceGenerator.Companion.isCast
 import me.anno.generation.wasm.WASMType.Companion.anyRef
 import me.anno.utils.CollectionUtils.partitionBy
 import me.anno.utils.FullMap
 import me.anno.utils.ListOfByteArrays
+import me.anno.utils.NumberUtils.getMaxIntValue
+import me.anno.utils.NumberUtils.getMinIntValue
 import me.anno.utils.NumberUtils.toDoubleCeil
 import me.anno.utils.NumberUtils.toDoubleFloor
 import me.anno.utils.NumberUtils.toFloatCeil
@@ -76,32 +77,6 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             WASMOpcode.F64_CONVERT_I64S to "f64.convert_i64_s",
             WASMOpcode.F64_CONVERT_I64U to "f64.convert_i64_u",
         )
-
-        fun getMinIntValue(type: Type): Long {
-            return when (type) {
-                Types.Byte -> Byte.MIN_VALUE.toLong()
-                Types.Short -> Short.MIN_VALUE.toLong()
-                Types.Int -> Int.MIN_VALUE.toLong()
-                Types.Long -> Long.MIN_VALUE
-                Types.UByte, Types.UShort, Types.UInt, Types.ULong, Types.Char -> 0
-                else -> error("Get min of $type")
-            }
-        }
-
-        fun getMaxIntValue(type: Type): ULong {
-            return when (type) {
-                Types.Byte -> Byte.MAX_VALUE.toULong()
-                Types.UByte -> UByte.MAX_VALUE.toULong()
-                Types.Short -> Short.MAX_VALUE.toULong()
-                Types.UShort, Types.Char -> UShort.MAX_VALUE.toULong()
-                Types.Int -> Int.MAX_VALUE.toULong()
-                Types.UInt -> UInt.MAX_VALUE.toULong()
-                Types.Long -> Long.MAX_VALUE.toULong()
-                Types.ULong -> ULong.MAX_VALUE
-                else -> error("Get max of $type")
-            }
-        }
-
     }
 
     val functionTypes = HashMap<FunctionType, Int>()

@@ -9,6 +9,8 @@ import me.anno.generation.java.Import2
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.utils.Half.Companion.toHalf
+import me.anno.utils.NumberUtils.getMaxIntValue
+import me.anno.utils.NumberUtils.getMinIntValue
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
@@ -60,6 +62,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                     Short to BoxedType("Short", "short"),
                     Int to BoxedType("Int", "int"),
                     Long to BoxedType("Long", "long"),
+                    UInt to BoxedType("UInt", "bigint"),
                     Char to BoxedType("Char", "char"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
@@ -126,8 +129,12 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     }
 
     private fun appendGlobalHelpers() {
-        builder.append("const __halfBuffer = new Float16Array(1);")
-        nextLine()
+        appendLines("""
+            const Float16ArrayPoly = (typeof globalThis.Float16Array === 'function')
+              ? globalThis.Float16Array
+              : Float32Array;
+            const __halfBuffer = new Float16ArrayPoly(1);
+        """.trimIndent())
 
         builder.append("globalThis.__toHalf = function(value) ")
         writeBlock {
@@ -226,7 +233,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             Types.Short.clazz -> "return (value << 16) >> 16;"
             Types.UShort.clazz -> "return value & 0xFFFF;"
             Types.Int.clazz -> "return value | 0;"
-            Types.UInt.clazz -> "return value & (0xFFFF_FFFFn)"
+            Types.UInt.clazz -> "return BigInt.asUintN(32, value);"
             Types.Long.clazz -> {
                 val indent = "  ".repeat(indentation + 1) // +1 for method block
                 "const mask = (1n << 64n) - 1n;\n" +
@@ -428,16 +435,22 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             Types.Short -> "Int16Array"
             Types.UShort, Types.Char -> "UInt16Array"
             Types.Int -> "Int32Array"
-            Types.UInt -> "UInt32Array"
+            Types.UInt, Types.ULong -> "BigUint64Array"
             Types.Long -> "Int64Array"
-            Types.ULong -> "UInt64Array"
-            Types.Half -> "Float16Array"
+            Types.Half -> "Float16ArrayPoly"
             Types.Float -> "Float32Array"
             Types.Double -> "Float64Array"
             else -> "Array"
         }
         builder.append(arrayName).append('(').append(sizeName).append(");")
         nextLine()
+    }
+
+    override fun appendDefaultValue(valueType: Type) {
+        when (valueType) {
+            Types.UInt -> builder.append("0n")
+            else -> super.appendDefaultValue(valueType)
+        }
     }
 
     override fun appendArrayGetter(method0: Specialization) {
@@ -564,18 +577,13 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         return this == Types.Long || this == Types.ULong || this == Types.UInt
     }
 
-    private fun Type.isUnsignedInt(): Boolean {
-        return when (this) {
-            Types.UByte, Types.UShort, Types.Char, Types.UInt, Types.ULong -> true
-            else -> false
-        }
-    }
-
     private fun appendSourceValue(graph: SimpleGraph, expr: SimpleCall) {
         appendFieldName(graph, expr.thisInstance)
     }
 
-    private fun appendFloatClamp(graph: SimpleGraph, expr: SimpleCall, minValue: Double, maxValue: Double) {
+    private fun appendFloatClamp(graph: SimpleGraph, expr: SimpleCall, targetType: Type) {
+        val minValue = getMinIntValue(targetType).toDouble()
+        val maxValue = getMaxIntValue(targetType).toDouble()
         builder.append("Math.trunc(Math.min(")
         builder.append(maxValue)
         builder.append(", Math.max(")
@@ -590,28 +598,29 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
             sourceType.isFloat() -> {
                 when (targetType) {
                     Types.Byte -> {
-                        appendFloatClamp(graph, expr, -128.0, 127.0)
+                        appendFloatClamp(graph, expr, Types.Byte)
                         builder.append(" << 24 >> 24")
                     }
                     Types.UByte -> {
-                        appendFloatClamp(graph, expr, 0.0, 255.0)
+                        appendFloatClamp(graph, expr, Types.UByte)
                         builder.append(" & 0xFF")
                     }
                     Types.Short -> {
-                        appendFloatClamp(graph, expr, -32768.0, 32767.0)
+                        appendFloatClamp(graph, expr, Types.Short)
                         builder.append(" << 16 >> 16")
                     }
                     Types.UShort, Types.Char -> {
-                        appendFloatClamp(graph, expr, 0.0, 65535.0)
+                        appendFloatClamp(graph, expr, Types.UShort)
                         builder.append(" & 0xFFFF")
                     }
                     Types.Int -> {
-                        appendFloatClamp(graph, expr, Int.MIN_VALUE.toDouble(), Int.MAX_VALUE.toDouble())
+                        appendFloatClamp(graph, expr, Types.Int)
                         builder.append(" | 0")
                     }
                     Types.UInt -> {
-                        appendFloatClamp(graph, expr, 0.0, UInt.MAX_VALUE.toDouble())
-                        builder.append(" >>> 0")
+                        builder.append("BigInt(")
+                        appendFloatClamp(graph, expr, Types.UInt)
+                        builder.append(')')
                     }
                     Types.Long -> {
                         builder.append("globalThis.__floatToLong(")
@@ -630,10 +639,16 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 val castFunction = if (targetType.isUnsigned()) "BigInt.asUintN" else "BigInt.asIntN"
                 when (targetType) {
                     Types.Byte, Types.UByte, Types.Short, Types.UShort, Types.Char, Types.Int, Types.UInt -> {
-                        builder.append("Number(")
-                        builder.append(castFunction).append('(').append(targetType.getNumBits()).append(", ")
-                        appendSourceValue(graph, expr)
-                        builder.append("))")
+                        if (targetType == Types.UInt) {
+                            builder.append(castFunction).append("(32, ")
+                            appendSourceValue(graph, expr)
+                            builder.append(')')
+                        } else {
+                            builder.append("Number(")
+                            builder.append(castFunction).append('(').append(targetType.getNumBits()).append(", ")
+                            appendSourceValue(graph, expr)
+                            builder.append("))")
+                        }
                     }
                     Types.Long, Types.ULong -> {
                         builder.append(castFunction).append("(64, ")
@@ -671,9 +686,9 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                         builder.append(" | 0)")
                     }
                     Types.UInt -> {
-                        builder.append('(')
+                        builder.append("BigInt.asUintN(32, BigInt(")
                         appendSourceValue(graph, expr)
-                        builder.append(" >>> 0)")
+                        builder.append("))")
                     }
                     Types.Long, Types.ULong -> {
                         val castFunction = if (targetType.isUnsigned()) "BigInt.asUintN" else "BigInt.asIntN"

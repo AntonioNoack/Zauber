@@ -19,6 +19,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isSigned
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -181,11 +182,33 @@ open class JavaSourceGenerator : Generator() {
             }
         }
 
+        fun getCastTargetType(methodName: String): Type? {
+            return when (methodName) {
+                "toByte" -> Types.Byte
+                "toUByte" -> Types.UByte
+                "toShort" -> Types.Short
+                "toUShort" -> Types.UShort
+                "toChar" -> Types.Char
+                "toInt" -> Types.Int
+                "toUInt" -> Types.UInt
+                "toLong" -> Types.Long
+                "toULong" -> Types.ULong
+                "toFloat" -> Types.Float
+                "toDouble" -> Types.Double
+                else -> null
+            }
+        }
+
+        fun isCast(methodName: String): Boolean {
+            return getCastTargetType(methodName) != null
+        }
+
     }
 
     open val protectedTypes: Map<ClassType, BoxedType> get() = protectedJavaTypes
     open val nativeTypes: Map<ClassType, BoxedType> get() = nativeJavaTypes
     open val nativeNumbers: Map<ClassType, BoxedType> get() = nativeJavaNumbers
+    open val keywords: Set<String> get() = JavaTokenizer.KEYWORDS
 
     val declaredFields = HashSet<SimpleField>()
     val usedFields = HashSet<SimpleField>()
@@ -242,6 +265,7 @@ open class JavaSourceGenerator : Generator() {
         return method.ownerScope == Types.Array.clazz && method.name == "set"
     }
 
+    @Deprecated("Use .isSigned()")
     fun isNumberSigned(valueType: Type): Boolean {
         return when (valueType) {
             Types.Byte, Types.Short, Types.Int, Types.Long -> true
@@ -251,6 +275,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    @Deprecated("Use .isFloat()")
     fun isNumberFloat(valueType: Type): Boolean {
         return when (valueType) {
             Types.Byte, Types.Short, Types.Int, Types.Long,
@@ -260,6 +285,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    @Deprecated("Use .getNumBits()")
     fun getNumberSizeInBytes(valueType: Type, supportsHalfs: Boolean): Int {
         return when (valueType) {
             Types.Byte, Types.UByte -> 1
@@ -689,9 +715,12 @@ open class JavaSourceGenerator : Generator() {
 
     fun getMethodName0(method0: Specialization): String {
         val method = method0.method
+        val name = method.name
         return if (method0.isNotEmpty()) {
-            "${method.name}_Z${method0.hash.toString(manglingBasis)}"
-        } else method.name
+            "${name}_Z${method0.hash.toString(manglingBasis)}"
+        } else if (name in keywords) {
+            "${name}_"
+        } else name
     }
 
     /**
@@ -1434,25 +1463,24 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
-        val castSymbol = when (methodName) {
-            "toInt" -> "(int) "
-            "toLong" -> "(long) "
-            "toFloat" -> "(float) "
-            "toDouble" -> "(double) "
-            "toByte" -> "(byte) "
-            "toShort" -> "(short) "
-            "toChar" -> "(char) "
-            else -> null
-        }
-        return if (castSymbol != null && expr.thisInstance.type in nativeNumbers) {
-            builder.append(castSymbol)
-            appendFieldName(graph, expr.thisInstance)
-            true
-        } else if (expr.thisInstance.type == Types.Boolean && methodName == "not") {
+        val thisType = expr.thisInstance.type
+        val castTargetType = getCastTargetType(methodName)
+        if (castTargetType != null && thisType in nativeNumbers) {
+            builder.append('(').append(nativeNumbers[castTargetType]!!.native).append(") ")
+        } else if (methodName == "not" && thisType == Types.Boolean) {
             builder.append('!')
-            appendFieldName(graph, expr.thisInstance)
-            true
-        } else false
+        } else if (methodName == "inv" && thisType in nativeNumbers) {
+            if (thisType.getNumBits() <= 16) {
+                builder.append('(')
+                appendType(expr.dst.type, expr.scope, false)
+                builder.append(") ~")
+            } else {
+                builder.append('~')
+            }
+        } else return false
+
+        appendFieldName(graph, expr.thisInstance)
+        return true
     }
 
     open fun getBinarySymbol(type: Type, methodName: String): String? {

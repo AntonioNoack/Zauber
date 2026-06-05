@@ -101,6 +101,11 @@ class LLVMGenerationTests : CodeGenerationTests() {
         testNonNumberComparisonsImpl()
     }
 
+    @Test
+    fun testLogicalOperators() {
+        testLogicalOperatorsImpl()
+    }
+
     // todo test all logical (and, or, xor, inv) and all shift (shl, shr, ushr) operations
     //  for all relevant number types...
 

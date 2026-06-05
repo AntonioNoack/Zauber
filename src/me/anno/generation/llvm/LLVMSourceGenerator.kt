@@ -44,19 +44,6 @@ import kotlin.math.max
  * */
 class LLVMSourceGenerator : JavaSourceGenerator() {
 
-    companion object {
-        fun isCast(methodName: String): Boolean {
-            return when (methodName) {
-                "toByte", "toUByte",
-                "toShort", "toUShort", "toChar",
-                "toInt", "toUInt",
-                "toLong", "toULong",
-                "toHalf", "toFloat", "toDouble" -> true
-                else -> false
-            }
-        }
-    }
-
     val typeList = ArrayList<LLVMStruct>()
 
     var nextRegisterId = 0

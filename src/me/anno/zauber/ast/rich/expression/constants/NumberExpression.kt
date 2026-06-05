@@ -205,9 +205,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         fun Type.getNumBits(): Int {
             return when (this) {
                 Types.Byte, Types.UByte -> 8
-                Types.Short, Types.UShort, Types.Char -> 16
-                Types.Int, Types.UInt -> 32
-                Types.Long, Types.ULong -> 64
+                Types.Short, Types.UShort, Types.Char, Types.Half -> 16
+                Types.Int, Types.UInt, Types.Float -> 32
+                Types.Long, Types.ULong, Types.Double -> 64
                 else -> error("Not an integer type: $this")
             }
         }

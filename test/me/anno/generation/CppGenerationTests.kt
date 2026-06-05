@@ -131,6 +131,11 @@ class CppGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testLogicalOperators() {
+        testLogicalOperatorsImpl()
+    }
+
+    @Test
     fun testUseNativeLibrary() {
         TODO("Call into a native library")
     }

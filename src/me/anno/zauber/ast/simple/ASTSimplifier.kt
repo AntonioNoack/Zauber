@@ -393,7 +393,7 @@ object ASTSimplifier {
     private fun fieldHasSensibleType(context: ResolutionContext, field: Field): Boolean {
         field.ownerScope[ScopeInitType.AFTER_RESOLVE_TYPES]
 
-        println("Resolving type of $field in $context")
+        // println("Resolving type of $field in $context")
         val type0 = field.resolveValueType(context)
         return type0 !is ClassType || !type0.clazz.isObjectLike()
     }

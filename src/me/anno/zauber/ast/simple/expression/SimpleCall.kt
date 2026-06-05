@@ -65,13 +65,13 @@ class SimpleCall(
             // constructors aren't dynamic
             val dynamicDispatch = method is Method && selfTypeIsOpen(method)
             if (!dynamicDispatch) {
-                LOGGER.info("$method doesn't need dynamic dispatch")
+                if (LOGGER.isInfoEnabled) LOGGER.info("$method doesn't need dynamic dispatch")
                 return FullMap(method)
             }
 
             return LazyMap { invokedType ->
 
-                LOGGER.info("Resolving $method for $invokedType (${invokedType.clazz.scopeType})")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Resolving $method for $invokedType (${invokedType.clazz.scopeType})")
 
                 val selfScope = invokedType.clazz
                 if (selfScope == method.scope.parent) {

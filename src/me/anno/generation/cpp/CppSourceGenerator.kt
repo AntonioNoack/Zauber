@@ -7,6 +7,7 @@ import me.anno.generation.ImportSorter
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.java.Import2
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.support.jvm.FirstJVMClassReader.Companion.isPrivate
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
@@ -87,6 +88,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override val protectedTypes: Map<ClassType, BoxedType> get() = protectedCppTypes
     override val nativeTypes: Map<ClassType, BoxedType> get() = nativeCppTypes
     override val nativeNumbers: Map<ClassType, BoxedType> get() = nativeCppNumbers
+    override val keywords: Set<String> get() = CppTokenizer.cppKeywords
 
     val cppFiles = HashSet<File>()
 
