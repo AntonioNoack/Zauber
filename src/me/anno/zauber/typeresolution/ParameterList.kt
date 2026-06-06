@@ -28,7 +28,7 @@ class ParameterList(val generics: List<Parameter>) : List<Type> {
 
     constructor(generics: List<Parameter>, types: List<Type?>) : this(generics) {
         check(generics.size == types.size) {
-            "Expected generics and types to have the same size, ${generics.size} != ${types.size}"
+            "Expected generics and types to have the same size, $generics != $types"
         }
         if (types is ParameterList) {
             for (i in types.indices) {

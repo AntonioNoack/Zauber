@@ -30,6 +30,13 @@ class Int {
     external operator fun minus(other: Int): Int
     external operator fun compareTo(other: Int): Int
     external fun equals(other: Int): Boolean
+    external operator fun shr(other: Int): Int
+    external operator fun shl(other: Int): Int
+    external operator fun and(other: Int): Int
+    external operator fun toChar(): Char
+}
+class Char {
+
 }
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)

@@ -53,8 +53,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         fun splitPackage(name: String) = name.split('/', '$')
 
         private fun getScopeImpl(name: String, scopeType: ScopeType?): Scope {
-            check(!name.endsWith(';')) { "Name must not end with ';'" }
-            check(name[0] != '[') { "Name must not start with '['" }
+            check(!name.endsWith(';')) { "Name must not end with ';', invalid: '$name'" }
+            check(name[0] != '[') { "Name must not start with '[', invalid: '$name'" }
 
             if (name == "java/lang/Object") {
                 // must be overridden, otherwise

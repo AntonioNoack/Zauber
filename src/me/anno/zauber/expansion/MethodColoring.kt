@@ -10,7 +10,6 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.resolved.*
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.lazy.LazyExpression
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMethod
@@ -59,14 +58,14 @@ abstract class MethodColoring<Color : Any> : GraphColoring<Specialization, Color
                         val field = expr.field.resolved
                         val getter = field.getter
                         if (getter != null && (field.hasCustomGetter || field.isLateinit())) {
-                            result.add(Specialization(getter.memberScope, expr.field.specialization.typeParameters))
+                            result.add(expr.field.specialization.withScope(getter.memberScope))
                         }
                     }
                     is ResolvedSetFieldExpression -> {
                         val field = expr.field.resolved
                         val setter = field.setter
                         if (setter != null && field.hasCustomSetter) {
-                            result.add(Specialization(setter.memberScope, expr.field.specialization.typeParameters))
+                            result.add(expr.field.specialization.withScope(setter.memberScope))
                         }
                     }
                     else -> {

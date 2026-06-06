@@ -28,6 +28,10 @@ class SignatureReader(val signature: String, val scope: Scope) {
     }
 
     fun readClassType(): Type {
+        check(signature[i - 1] == 'L')
+        check(signature[i] != '['){
+            "Weird signature: [ after L @$i: '$signature'"
+        }
         val i0 = i
         while (i < signature.length && signature[i] !in "<;") {
             i++

@@ -16,5 +16,10 @@ class JVMSimpleCall(
 
     scope: Scope, origin: Long,
 ) : JVMSimpleExpr(scope, origin) {
+
+    init {
+        check(specialization.isMethodLike())
+    }
+
     override fun resolveValueType(context: ResolutionContext): Type = dst.type
 }

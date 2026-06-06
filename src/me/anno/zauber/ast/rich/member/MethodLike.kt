@@ -55,6 +55,7 @@ open class MethodLike(
 
     fun getThrownType(specialization: Specialization): Type {
         check(specialization.scope == memberScope)
+        println("Getting thrown type for $specialization")
         return IsMethodThrowing[specialization]
     }
 

@@ -3,10 +3,10 @@ package me.anno.zauber.expansion
 import me.anno.zauber.ast.rich.controlflow.ThrowExpression
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.zauber.types.Specialization
 
 object IsMethodThrowing : MethodColoring<Type>() {
 

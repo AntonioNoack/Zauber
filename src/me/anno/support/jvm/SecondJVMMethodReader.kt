@@ -92,6 +92,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         return SignatureReader("L$desc;", methodScope).readType()
     }
 
+    fun nameOrDescToType(desc: String): Type {
+        return when {
+            desc.endsWith(';') || desc.length <= 2 -> descToType(desc)
+            else -> nameToType(desc)
+        }
+    }
+
     val methodScope get() = method.scope
     val classScope = methodScope.parent!!
 
@@ -244,9 +251,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val array = stack.removeLast().use()
                 val dst = block.field(baseType)
                 val method = findMethod(Types.Array.clazz, "get", Types.Int)
+                val typeParams = ParameterList(Types.Array.clazz.typeParameters, listOf(baseType))
+                val spec = Specialization(method.memberScope, typeParams)
                 block.add(
                     JVMSimpleCall(
-                        dst, method, array, noSpecialization,
+                        dst, method, array, spec,
                         listOf(index),
                         enableInheritance = false,
                         methodScope, origin
@@ -273,18 +282,19 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val index = stack.removeLast().use()
                 val array = stack.removeLast().use()
                 val dst = block.field(Types.Unit)
-                val method = findMethod(Types.Array.clazz, "set", Types.Int, baseType)
-                block.add(
-                    JVMSimpleCall(
-                        dst,
-                        method,
-                        array,
-                        noSpecialization,
-                        listOf(index, value),
-                        enableInheritance = false,
-                        methodScope, origin
-                    )
+                val method = findMethod(
+                    Types.Array.clazz, "set", Types.Int,
+                    GenericType(Types.Array.clazz, Types.Array.clazz.typeParameters[0].name)
                 )
+                val paramTypes = ParameterList(Types.Array.clazz.typeParameters, listOf(baseType))
+                val spec = Specialization(method.memberScope, paramTypes)
+                val call = JVMSimpleCall(
+                    dst, method, array, spec,
+                    listOf(index, value),
+                    enableInheritance = false,
+                    methodScope, origin
+                )
+                block.add(call)
             }
 
             ARETURN, IRETURN, LRETURN, FRETURN, DRETURN -> {
@@ -330,13 +340,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p0 = stack.removeLast().use()
         val dst = graph.field(toType)
         val method = findMethod(fromType.clazz, name)
-        block.add(
-            JVMSimpleCall(
-                dst, method, p0, noSpecialization, emptyList(),
-                enableInheritance = false,
-                methodScope, origin
-            )
+        val spec = Specialization.fromSimple(method.memberScope)
+        val call = JVMSimpleCall(
+            dst, method, p0, spec, emptyList(),
+            enableInheritance = false, methodScope, origin
         )
+        block.add(call)
         stack.add(dst)
     }
 
@@ -352,7 +361,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val method = findMethod(type.clazz, name, type)
         block.add(
             JVMSimpleCall(
-                dst, method, p0, noSpecialization,
+                dst, method, p0, Specialization.fromSimple(method.memberScope),
                 listOf(p1), enableInheritance = false,
                 methodScope, origin
             )
@@ -365,19 +374,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val p0 = stack.removeLast()
         val dst = graph.field(Types.Boolean)
         val method = findMethod(type.clazz, "equals", type) as Method
-        val method1 = ResolvedMethod(
-            method, ResolutionContext.minimal, // todo this content is incorrect...
-            methodScope, MatchScore.zero
-        )
+        val spec = Specialization.fromSimple(method.memberScope)
+        val ctx = ResolutionContext.minimal.withSpec(spec)
+        val method1 = ResolvedMethod(method, ctx, methodScope, MatchScore.zero)
         block.add(JVMSimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
-        stack.add(dst)
-    }
-
-    fun identicalCall(negated: Boolean) {
-        val p1 = stack.removeLast().use()
-        val p0 = stack.removeLast().use()
-        val dst = graph.field(Types.Boolean)
-        block.add(JVMSimpleCheckIdentical(dst, p0, p1, negated, methodScope, origin))
         stack.add(dst)
     }
 
@@ -619,6 +619,15 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         stack.add(dst)
     }
 
+    fun visitLdcInsnInt(value: Int) {
+        val type = Types.Int
+        val ne = NumberExpression(value.toString(), methodScope, origin)
+        ne.resolvedType = type
+        val dst = graph.field(type)
+        block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
+        stack.add(dst)
+    }
+
     val blocksByLabel = HashMap<Label, JVMBlockExpression>()
     fun getBlockByLabel(label: Label): JVMBlockExpression {
         return blocksByLabel.getOrPut(label) { graph.addNode() }
@@ -712,7 +721,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 NULL -> NullType
                 UNINITIALIZED_THIS -> UnknownType
                 null -> UnknownType
-                is String -> nameToType(type0)
+                is String -> nameOrDescToType(type0)
 
                 // todo we can lookup this label to find out what object it is: it was allocated there
                 is Label -> UnknownType
@@ -772,7 +781,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             .map { stack.removeLast() }
             .asReversed()
 
-        // todo resolve method...
+        // resolve method
         val self: SimpleFieldExpr
         val method: ResolvedMember<*>
 
@@ -877,10 +886,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val method = scope[ScopeInitType.AFTER_DISCOVERY]
             .constructors0
             .firstOrNull {
-                // equals(typeParameters, it.typeParameters) &&
+                // equals(typeParameters, it.typeParameters) && // checking valueParams is sufficient, and saves us work
                 equals(valueParameters, it.valueParameters)
             } ?: error(
-            "Missing constructor ${scope.pathStr}<$ownerTypes>$descriptor -> " +
+            "Missing constructor $scope<$ownerTypes>$descriptor -> " +
                     "(${valueParameters.joinToString { it.toString() }}), " +
                     "options: ${
                         scope.constructors0
@@ -903,19 +912,27 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         var scope = scope0
         while (true) {
             val method = scope[ScopeInitType.AFTER_DISCOVERY]
-                .methods0
-                .firstOrNull {
+                .methods0.firstOrNull {
                     it.name == name &&
                             // equals(typeParameters, it.typeParameters) &&
                             equals1(valueParameters, it.valueParameters)
                 }
             if (method != null) {
-                return ResolvedMethod(
-                    method,
-                    ResolutionContext.minimal.withSpec(
-                        Specialization(method.scope, ParameterList(typeParameters + valueParameters))
-                    ), methodScope, MatchScore.zero
+                val typeParams = ParameterList(
+                    scope.typeParameters,
+                    typeParameters.map { it.type }.ifEmpty { scope.typeParameters.map { it.type } }
                 )
+                val typeParamsI = typeParams.ifEmpty {
+                    ParameterList(
+                        method.memberScope.typeParameters,
+                        method.memberScope.typeParameters.map { it.type })
+                }
+                val spec = Specialization(method.memberScope, typeParamsI)
+                val ctx = ResolutionContext(
+                    null, spec, true, null,
+                    emptyMap(), emptyList()
+                )
+                return ResolvedMethod(method, ctx, methodScope, MatchScore.zero)
             }
 
             // check super classes
@@ -969,14 +986,28 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         return true
     }
 
-    override fun visitLookupSwitchInsn(dflt: Label, keys: IntArray, labels: Array<out Label>) {
-        LOGGER.debug("visitLookupSwitchInsn: $dflt, ${keys.asList()}, ${labels.asList()}")
-        TODO("Handle")
+    override fun visitLookupSwitchInsn(defaultLabel: Label, keys: IntArray, labels: Array<out Label>) {
+        if (LOGGER.isDebugEnabled) LOGGER.debug("visitLookupSwitchInsn: $defaultLabel, ${keys.asList()}, ${labels.asList()}")
+        check(keys.size == labels.size)
+
+        for (i in keys.indices) {
+            visitInsn(DUP)
+            visitLdcInsnInt(keys[i])
+            visitJumpInsn(IF_ICMPEQ, labels[i])
+        }
+        visitJumpInsn(GOTO, defaultLabel)
     }
 
-    override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label, vararg labels: Label) {
-        LOGGER.debug("visitTableSwitchInsn: $min, $max, $dflt, ${labels.asList()}")
-        TODO("Handle")
+    override fun visitTableSwitchInsn(min: Int, max: Int, defaultLabel: Label, vararg labels: Label) {
+        if (LOGGER.isDebugEnabled) LOGGER.debug("visitTableSwitchInsn: $min, $max, $defaultLabel, ${labels.asList()}")
+        check(labels.size == max - min + 1)
+
+        for (i in labels.indices) {
+            visitInsn(DUP)
+            visitLdcInsnInt(min + i)
+            visitJumpInsn(IF_ICMPEQ, labels[i])
+        }
+        visitJumpInsn(GOTO, defaultLabel)
     }
 
     override fun visitTypeInsn(opcode: Int, type: String) {
