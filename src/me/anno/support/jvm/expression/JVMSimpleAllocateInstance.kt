@@ -7,8 +7,8 @@ import me.anno.zauber.types.impl.ClassType
 
 class JVMSimpleAllocateInstance(
     val dst: SimpleFieldExpr,
-    val selfType: ClassType,
+    val allocatedType: ClassType,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveValueType(context: ResolutionContext): Type = selfType
+    override fun resolveValueType(context: ResolutionContext): Type = allocatedType
 }

@@ -43,9 +43,26 @@ class Int {
     external operator fun ushr(other: Int): Int
     external operator fun toChar(): Char
     external operator fun toByte(): Byte
+    external operator fun toLong(): Long
 }
 class Char {}
 class Byte {}
+class Long {
+    external operator fun plus(other: Long): Long
+    external operator fun minus(other: Long): Long
+    external operator fun times(other: Long): Long
+    external operator fun div(other: Long): Long
+    external operator fun compareTo(other: Long): Int
+    operator fun unaryMinus(): Long = 0L - this
+    external fun equals(other: Long): Boolean
+    external operator fun and(other: Long): Long
+    external operator fun or(other: Long): Long
+    external operator fun xor(other: Long): Long
+    external operator fun shl(other: Int): Long
+    external operator fun shr(other: Int): Long
+    external operator fun ushr(other: Int): Long
+    external operator fun toInt(): Int
+}
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)
     external operator fun set(index: Int, value: Any)
