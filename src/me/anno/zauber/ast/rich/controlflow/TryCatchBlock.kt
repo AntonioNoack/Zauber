@@ -54,7 +54,7 @@ class TryCatchBlock(
 
     override fun clone(scope: Scope) = TryCatchBlock(tryBody.clone(scope), catches.map {
         Catch(
-            it.parameter.clone(it.parameter.scope /* I don't think we should override this */),
+            it.parameter.withScope(it.parameter.scope /* I don't think we should override this */),
             it.body.clone(scope), it.origin
         )
     }, finally?.clone(scope), scope, origin)

@@ -164,7 +164,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     fun addAnySuperCall(classScope: Scope) {
-        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz && !classScope.isInterface()) {
             val origin = origin(i - 1) // fine?
             classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
         }

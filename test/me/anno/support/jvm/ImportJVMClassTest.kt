@@ -58,5 +58,5 @@ class Array<V>(val size: Int) {
 }
 
 fun registerJavaClass(path: String) {
-    FirstJVMClassReader.getScope(path,null)
+    FirstJVMClassReader.getScope(path, null)
 }

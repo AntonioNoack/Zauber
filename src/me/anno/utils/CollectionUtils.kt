@@ -101,5 +101,14 @@ object CollectionUtils {
         }.finish(restoreOriginal)
     }
 
+    fun <V, K> List<V>.groupByMutable(selector: (V) -> K): HashMap<K, ArrayList<V>> {
+        val map = HashMap<K, ArrayList<V>>()
+        forEach { value ->
+            map.getOrPut(selector(value), ::ArrayList)
+                .add(value)
+        }
+        return map
+    }
+
 
 }

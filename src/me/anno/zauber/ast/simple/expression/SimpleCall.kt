@@ -69,40 +69,53 @@ class SimpleCall(
                 return FullMap(method)
             }
 
-            return LazyMap { invokedType ->
+            return LazyMap { childType ->
 
-                if (LOGGER.isInfoEnabled) LOGGER.info("Resolving $method for $invokedType (${invokedType.clazz.scopeType})")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Resolving $method for $childType (${childType.clazz.scopeType})")
 
-                val selfScope = invokedType.clazz
-                if (selfScope == method.scope.parent) {
+                val childClass = childType.clazz
+                if (childClass == method.scope.parent) {
                     // fast-path
                     method
                 } else {
-                    Specialization(invokedType).use { // <- for resolving types
+                    Specialization(childType).use { // <- for resolving types
 
                         // todo: Specialization must scan all super-types for generics, and define them, too
 
-                        val methodTypeParameters = method.typeParameters.map { it.type.resolve(selfScope) }
-                        val methodValueParameters = method.valueParameters.map { it.type.resolve(selfScope) }
+                        val methodTypeParameters = method.typeParameters.map { it.type.resolve(childClass) }
+                        val methodValueParameters = method.valueParameters.map { it.type.resolve(childClass) }
 
                         // todo this is incorrect for Lambdas: somehow, resolve does not
                         //  map zauber.Function2.P0 to Int, even though we specified selfScope
                         println(
                             "Looking for $methodTypeParameters, $methodValueParameters in " +
-                                    "$invokedType: ${invokedType.clazz.superCalls}"
+                                    "$childType: ${childType.clazz.superCalls}"
                         )
 
-                        val clazzScope = invokedType.clazz[ScopeInitType.AFTER_DISCOVERY]
-                        val choices = clazzScope.methods0.filter { option ->
-                            option.name == method.name &&
-                                    sameParameters(selfScope, option.typeParameters, methodTypeParameters) &&
-                                    sameParameters(selfScope, option.valueParameters, methodValueParameters)
+                        val superClass = method.ownerScope
+                        val superMethod = method.memberScope
+
+                        val clazzScope = childType.clazz[ScopeInitType.AFTER_DISCOVERY]
+                        val choices = clazzScope.methods0.filter { childMethod ->
+                            childMethod.name == method.name &&
+                                    sameParameters(
+                                        superClass, childClass,
+                                        superMethod, childMethod.memberScope,
+                                        childMethod.typeParameters,
+                                        methodTypeParameters
+                                    ) &&
+                                    sameParameters(
+                                        superClass, childClass,
+                                        superMethod, childMethod.memberScope,
+                                        childMethod.valueParameters,
+                                        methodValueParameters
+                                    )
                         }
-                        check(choices.isNotEmpty()) { "Missing $method in $invokedType" }
-                        check(choices.size == 1) { "Duplicate $method in $invokedType: $choices" }
+                        check(choices.isNotEmpty()) { "Missing $method in $childType" }
+                        check(choices.size == 1) { "Duplicate $method in $childType: $choices" }
                         if (false) println(
                             "Selected ${choices.first().scope.pathStr}/${choices.first()} " +
-                                    "for $invokedType.$method, " +
+                                    "for $childType.$method, " +
                                     "options: ${clazzScope.methods0.map { it.scope.pathStr }}"
                         )
                         choices.first()

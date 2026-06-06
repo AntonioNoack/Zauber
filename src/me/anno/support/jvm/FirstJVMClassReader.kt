@@ -1,13 +1,16 @@
 package me.anno.support.jvm
 
+import me.anno.generation.Specializations
 import me.anno.libraries.Library
 import me.anno.support.Language
+import me.anno.support.jvm.expression.LazyJVMExpression
 import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.RunOnceLazy
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -19,8 +22,8 @@ import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -49,11 +52,15 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
         fun splitPackage(name: String) = name.split('/', '$')
 
-        fun getScope(name: String, scopeType: ScopeType?): Scope {
-
-            if (name.isEmpty()) return root
+        private fun getScopeImpl(name: String, scopeType: ScopeType?): Scope {
             check(!name.endsWith(';')) { "Name must not end with ';'" }
             check(name[0] != '[') { "Name must not start with '['" }
+
+            if (name == "java/lang/Object") {
+                // must be overridden, otherwise
+                // ArrayList<E>, E cannot be Int, because Int !is java.lang.Object
+                return Types.Any.clazz
+            }
 
             val parts = splitPackage(name)
             var scope = root
@@ -65,6 +72,14 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
                 ) scopeType else null
                 scope = scope.getOrPut(part, type)
             }
+            return scope
+        }
+
+        fun getScope(name: String, scopeType: ScopeType?): Scope {
+
+            if (name.isEmpty()) return root
+
+            val scope = getScopeImpl(name, scopeType)
             scanned.getOrPutRecursive(name, { scope }) { name, _ ->
                 try {
                     scope.sourceLibrary = jvmLibrary
@@ -149,15 +164,6 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
     private val methodSignatures = HashMap<JVMMethodSignature, Scope>()
 
-    var isFinished = false
-    val methodReader = RunOnceLazy {
-        check(isFinished)
-        ClassReader(path).accept(
-            SecondJVMClassReaderFull(classScope, methodSignatures),
-            ClassReader.EXPAND_FRAMES // only needed when reading methods
-        )
-    }
-
     fun descToType(desc: String): Type {
         return SignatureReader(desc, classScope).readType()
     }
@@ -167,9 +173,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         return SignatureReader(desc, classScope).readClassType()
     }
 
-    override fun visitEnd() {
-        isFinished = true
-    }
+    override fun visitEnd() {}
 
     override fun visit(
         version: Int,
@@ -179,9 +183,6 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         superName: String?,
         interfaces: Array<out String>?
     ) {
-        val print = classScope.name == "ArrayList"
-        if (print) println("Visiting $name, access $access, version $version, signature: $signature, superName: $superName, interfaces: ${interfaces?.toList()}")
-
         // val classScope = getScope(name, getClassType(access)).scope
         if (classScope.scopeType == null) {
             classScope.scopeType = getClassType(access)
@@ -192,13 +193,13 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         val (typeParameters, superTypesWithGenerics) = parseClassSignature(classScope, signature)
         classScope.setTypeParams(typeParameters)
 
-        if (superName != null) {
-            val superScope = getScope(superName, ScopeType.NORMAL_CLASS)
-            val typeWithArgs = superTypesWithGenerics.firstOrNull { it.clazz == superScope }
-                ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
-            classScope.superCalls.add(SuperCall(typeWithArgs, emptyList(), null, -1))
-        } else {
-            val superType = if (name == "java/lang/Object") Types.Any else nameToType("java/lang/Object")
+        if (!classScope.isInterface() && classScope != Types.Any.clazz) {
+            val superType = if (superName != null) {
+                val superScope = getScope(superName, ScopeType.NORMAL_CLASS)
+                val typeWithArgs = superTypesWithGenerics.firstOrNull { it.clazz == superScope }
+                    ?: (if (superScope.hasTypeParameters) superScope.typeWithArgs else superScope.typeWithoutArgs)
+                typeWithArgs
+            } else Types.Any
             classScope.superCalls.add(SuperCall(superType, emptyList(), null, -1))
         }
 
@@ -211,6 +212,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
                 classScope.superCalls.add(SuperCall(typeWithArgs, null, null, -1))
             }
         }
+
+        println("superCalls[$classScope]: ${classScope.superCalls}")
     }
 
     override fun visitInnerClass(name: String, outerName: String?, innerName: String?, access: Int) {
@@ -260,7 +263,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         exceptions: Array<String>?
     ): MethodVisitor? {
 
-        if (name == "get") {
+        if (name == "getExactSizeIfKnown") {
             println("Visiting method: $path.$name, descriptor: $descriptor, signature: $signature, exceptions: ${exceptions?.toList()}, access: $access")
         }
 
@@ -286,23 +289,26 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
         val s = JVMMethodSignature(name, descriptor)
         methodSignatures[s] = methodScope
-        val lazy = RunOnceLazy {
-            val method = methodScope.selfAsMethod ?: methodScope.selfAsConstructor!!
-            ClassReader(path).accept(
-                SecondJVMClassReaderSingle(classScope, name, descriptor, method),
-                ClassReader.EXPAND_FRAMES // only needed when reading methods
-            )
-        }
-        methodScope.addInitPart(
-            ScopeInitType.RESOLVE_METHOD_BODY, {
-                try {
-                    lazy.value
-                } catch (e: Exception) {
-                    // todo mark body as having error...
-                    LOGGER.warn("Failed to read class body for $path.$name$descriptor", e)
+
+        val hasBody = !access.hasAnyFlag(ACC_ABSTRACT or ACC_NATIVE)
+        if (hasBody) {
+            val lazy = RunOnceLazy {
+                Specialization.noSpecialization.use {
+                    val method = methodScope.selfAsMethod ?: methodScope.selfAsConstructor!!
+                    ClassReader(path).accept(
+                        SecondJVMClassReaderSingle(classScope, name, descriptor, method),
+                        ClassReader.EXPAND_FRAMES // only needed when reading methods
+                    )
                 }
             }
-        )
+
+            val asMethod = (methodScope.selfAsMethod ?: methodScope.selfAsConstructor)!!
+            asMethod.body = LazyJVMExpression({
+                lazy.value
+                asMethod.body!!
+            }, methodScope, origin)
+        }
+
         return null
     }
 

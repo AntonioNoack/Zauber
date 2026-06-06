@@ -69,4 +69,10 @@ class Method(
         }
         return style(builder.toString(), StringStyles.TEXT)
     }
+
+    fun isOpen(): Boolean {
+        return flags.hasFlag(Flags.OPEN) ||
+                (flags.hasFlag(Flags.OVERRIDE) && !flags.hasFlag(Flags.FINAL)) ||
+                ownerScope.isInterface()
+    }
 }

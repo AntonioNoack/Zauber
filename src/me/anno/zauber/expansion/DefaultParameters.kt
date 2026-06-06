@@ -66,7 +66,7 @@ object DefaultParameters {
             val scope = scopeParent.generate("f:${self.name}", ScopeType.METHOD)
             scope.setTypeParams(self.typeParameters)
 
-            val subValueParameters = self.valueParameters.subList(0, i).map { it.clone(scope) }
+            val subValueParameters = self.valueParameters.subList(0, i).map { it.withScope(scope) }
             subValueParameters.forEach { param -> param.getOrCreateField(null, Flags.NONE) }
 
             val newTypeParameters = self.typeParameters.map { GenericType(scope, it.name) }

@@ -48,8 +48,7 @@ abstract class MethodColoring<Color : Any> : GraphColoring<Specialization, Color
                         }
                     }
                     is JVMSimpleCall -> {
-                        val method1 = expr.method
-                        result.add(Specialization(method1.memberScope, emptyParameterList()))
+                        result.add(expr.specialization)
                     }
                     is JVMSimpleExpr -> {}
                     is ResolvedCompareOp -> {

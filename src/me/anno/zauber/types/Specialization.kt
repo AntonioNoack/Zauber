@@ -2,6 +2,7 @@ package me.anno.zauber.types
 
 import me.anno.generation.Specializations
 import me.anno.utils.ResetThreadLocal
+import me.anno.utils.assertEquals
 import me.anno.zauber.Zauber
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
@@ -27,12 +28,7 @@ import me.anno.zauber.types.impl.arithmetic.UnknownType
 class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
     @Deprecated("This is incomplete for inner classes, where the outer class is generic")
-    constructor(classType: ClassType) : this(
-        classType.clazz, ParameterList(
-            classType.clazz.typeParameters,
-            classType.typeParameters ?: emptyList()
-        )
-    )
+    constructor(classType: ClassType) : this(classType.clazz, classType.createTypeParameterList())
 
     inline fun <R> use(runnable: () -> R): R {
         return try {
@@ -347,6 +343,15 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
         val noSpecialization by ResetThreadLocal.threadLocal {
             Specialization(Zauber.root, ParameterList.emptyParameterList())
+        }
+
+        fun ClassType.createTypeParameterList(): ParameterList {
+            val generics = clazz.typeParameters
+            val provided = (typeParameters ?: emptyList()).ifEmpty {  generics.map { it.type } }
+            assertEquals(generics.size, provided.size) {
+                "Generics-size mismatch: $generics vs $this"
+            }
+            return ParameterList(generics, provided)
         }
     }
 }

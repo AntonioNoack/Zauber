@@ -39,7 +39,7 @@ abstract class Type {
 
     fun containsGenerics(): Boolean {
         return when (this) {
-            NullType -> false
+            NullType, UnknownType -> false
             is ClassType -> typeParameters?.any { it.containsGenerics() } ?: false
             is CollectionType -> types.any { it.containsGenerics() }
             is ModifierType -> type.containsGenerics()

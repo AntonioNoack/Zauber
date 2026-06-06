@@ -1072,7 +1072,9 @@ abstract class ZauberASTBuilderBase(
     }
 
     fun addAnySuperCallIfNoneIsProvided(classScope: Scope, readBody: Boolean) {
-        if (readBody && classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+        if (readBody && classScope.superCalls.none { it.isClassCall } &&
+            classScope != Types.Any.clazz && !classScope.isInterface()) {
+
             val origin = origin(i - 1) // fine?
             // println("Adding super-Any to $classScope")
 

@@ -79,7 +79,14 @@ class Parameter(
         return result
     }
 
-    fun clone(scope: Scope): Parameter {
+    fun withScope(scope: Scope): Parameter {
+        return Parameter(
+            index, mutability, expansion, parameterType, name, type,
+            defaultValue?.clone(scope), scope, origin
+        )
+    }
+
+    fun withType(type: Type): Parameter {
         return Parameter(
             index, mutability, expansion, parameterType, name, type,
             defaultValue?.clone(scope), scope, origin

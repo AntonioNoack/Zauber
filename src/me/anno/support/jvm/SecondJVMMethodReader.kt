@@ -874,10 +874,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         valueParameters: List<Type>,
     ): ResolvedConstructor {
         println("Resolving constructor ${scope.pathStr}$descriptor")
-        val method = scope[ScopeInitType.AFTER_DISCOVERY].constructors0.firstOrNull {
-            // equals(typeParameters, it.typeParameters) &&
-            equals(valueParameters, it.valueParameters)
-        } ?: error(
+        val method = scope[ScopeInitType.AFTER_DISCOVERY]
+            .constructors0
+            .firstOrNull {
+                // equals(typeParameters, it.typeParameters) &&
+                equals(valueParameters, it.valueParameters)
+            } ?: error(
             "Missing constructor ${scope.pathStr}<$ownerTypes>$descriptor -> " +
                     "(${valueParameters.joinToString { it.toString() }}), " +
                     "options: ${
@@ -885,13 +887,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                             .map { "(${valueParameters.joinToString { it.toString() }})" }
                     }"
         )
-        return ResolvedConstructor(
-            method,
-            ResolutionContext.minimal.withSpec(
-                Specialization(method.scope, ownerTypes)
-            ),
-            methodScope, MatchScore.zero,
+        val spec = Specialization(ClassType(scope, ownerTypes))
+            .withScope(method.memberScope)
+        val ctx = ResolutionContext(
+            null, spec, true, null,
+            emptyMap(), emptyList()
         )
+        return ResolvedConstructor(method, ctx, methodScope, MatchScore.zero)
     }
 
     fun resolveMethod(
@@ -900,11 +902,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     ): ResolvedMethod {
         var scope = scope0
         while (true) {
-            val method = scope[ScopeInitType.AFTER_DISCOVERY].methods0.firstOrNull {
-                it.name == name &&
-                        // equals(typeParameters, it.typeParameters) &&
-                        equals1(valueParameters, it.valueParameters)
-            }
+            val method = scope[ScopeInitType.AFTER_DISCOVERY]
+                .methods0
+                .firstOrNull {
+                    it.name == name &&
+                            // equals(typeParameters, it.typeParameters) &&
+                            equals1(valueParameters, it.valueParameters)
+                }
             if (method != null) {
                 return ResolvedMethod(
                     method,

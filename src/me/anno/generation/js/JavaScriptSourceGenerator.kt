@@ -259,7 +259,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendSuperTypes(scope: Scope) {
-        if (scope.superCalls.isEmpty() && scope != Types.Any.clazz) {
+        if (scope.superCalls.isEmpty() && scope != Types.Any.clazz && !scope.isInterface()) {
             scope.superCalls.add(SuperCall(Types.Any, emptyList(), null, -1))
         }
         for (superCall in scope.superCalls) {

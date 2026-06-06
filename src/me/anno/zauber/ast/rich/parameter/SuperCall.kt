@@ -26,6 +26,7 @@ class SuperCall(
         }
 
     override fun toString(): String {
-        return "$type($valueParameters) by $delegate"
+        val prefix = "$type(${valueParameters?.joinToString(", ")})"
+        return if (delegate != null) "$prefix by $delegate" else prefix
     }
 }

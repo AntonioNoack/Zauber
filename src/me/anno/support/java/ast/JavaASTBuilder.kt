@@ -6,11 +6,9 @@ import me.anno.support.Language
 import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.readSwitch
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.debug
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -26,21 +24,10 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Compan
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parameter.InnerSuperCall
-import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterExpansion
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
-import me.anno.zauber.ast.rich.parameter.SuperCall
-import me.anno.zauber.ast.rich.parser.Associativity
-import me.anno.zauber.ast.rich.parser.Operator
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
-import me.anno.zauber.ast.rich.parser.createBranchExpression
-import me.anno.zauber.ast.rich.parser.createCastExpression
-import me.anno.zauber.ast.rich.parser.shouldSplitIntoSubScope
-import me.anno.zauber.ast.rich.parser.splitIntoSubScope
+import me.anno.zauber.ast.rich.parameter.*
+import me.anno.zauber.ast.rich.parser.*
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.debug
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -172,7 +159,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             } while (consumeIf(","))
         }
 
-        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz) {
+        if (classScope.superCalls.none { it.isClassCall } && classScope != Types.Any.clazz && !classScope.isInterface()) {
             val origin = origin(i - 1) // fine?
             classScope.superCalls.add(SuperCall(Types.Any, emptyList(), null, origin))
         }
@@ -691,7 +678,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             val value = readBodyOrExpression(null)
             val lambda = LambdaExpression(params, lambdaScope, value)
             lambdaScope.selfAsMethod = Method(
-                null, false,"<lambda>", emptyList(), emptyList(),
+                null, false, "<lambda>", emptyList(), emptyList(),
                 lambdaScope, null, emptyList(), lambda, 0, origin
             )
             lambda
