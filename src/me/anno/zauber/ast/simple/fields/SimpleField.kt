@@ -45,7 +45,6 @@ class SimpleField(
 
     override fun toString(): String {
         val idName = style("%$id", YELLOW)
-        val typeColor = StringStyles.LIGHT_BLUE
         return when {
             constantRef is NumberExpression ->
                 "${style("\"${constantRef.value}\"", StringStyles.DARK_BLUE)}$idName"
@@ -55,8 +54,8 @@ class SimpleField(
                 "${style("${constantRef.type}", StringStyles.DARK_BLUE)}$idName"
             constantRef != null -> "\"$constantRef\"$idName"
             type is ClassType && type.clazz.isObjectLike() ->
-                "[${style(type.clazz.pathStr, typeColor)}]$idName"
-            else -> "$idName[${style(type.toString(), typeColor)}]"
+                "[${type.clazz}]$idName"
+            else -> "$idName[$type]"
         } + if (mergeInfo != null) "->${style("%${dst.id}", YELLOW)}" else ""
     }
 }

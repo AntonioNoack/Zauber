@@ -65,7 +65,7 @@ class Method(
         val returnType = returnType
         if (returnType != null) {
             builder.append(": ")
-                .append(style(returnType.toString(), StringStyles.LIGHT_BLUE))
+                .append(returnType)
         }
         return style(builder.toString(), StringStyles.TEXT)
     }

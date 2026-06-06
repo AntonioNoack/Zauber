@@ -99,7 +99,7 @@ object StringStyles {
     /**
      * for types and numbers
      * */
-    val DARK_BLUE = color(0x6699ff)
+    val DARK_BLUE = color(0x85A0FF)
 
     /**
      * for dependency-resolution-types

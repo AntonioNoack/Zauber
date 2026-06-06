@@ -34,6 +34,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
 
         fun parseFloat(value: String, basis: Int): Double {
             if (basis == CHAR_BASE) return parseChar(value).code.toDouble()
+            if (value == "Infinity" || value == "+Infinity") return Double.POSITIVE_INFINITY
+            if (value == "-Infinity") return Double.NEGATIVE_INFINITY
+            if (value == "NaN") return Double.NaN
 
             var result = 0.0
             var i = 0
@@ -124,6 +127,9 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
 
         fun parseInt(value: String, basis: Int, isUnsigned: Boolean): Long {
             if (basis == CHAR_BASE) return parseChar(value).code.toLong()
+            if (value == "Infinity" || value == "+Infinity") return if (isUnsigned) ULong.MAX_VALUE.toLong() else Long.MAX_VALUE
+            if (value == "-Infinity") return if (isUnsigned) 0L else Long.MIN_VALUE
+            if (value == "NaN") return 0
 
             var i = 0
             val isNegative = value.startsWith('-')

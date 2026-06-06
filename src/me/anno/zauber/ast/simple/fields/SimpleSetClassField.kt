@@ -34,7 +34,7 @@ class SimpleSetClassField(
     }
 
     override fun toString(): String {
-        return "$self?[${style(field.selfType.toString(), StringStyles.LIGHT_BLUE)}]." +
+        return "$self?[${field.selfType}]." +
                 "${style(field.name, StringStyles.GREEN)} = $value"
     }
 

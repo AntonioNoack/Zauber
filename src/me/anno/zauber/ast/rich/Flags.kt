@@ -63,6 +63,7 @@ object Flags {
         if (flags.hasFlag(PRIVATE)) builder.append("private ")
         if (flags.hasFlag(PROTECTED)) builder.append("protected ")
         if (flags.hasFlag(OVERRIDE)) builder.append("override ")
+        if (flags.hasFlag(OPEN)) builder.append("open ")
         if (flags.hasFlag(FINAL)) builder.append("final ")
         if (flags.hasFlag(ABSTRACT)) builder.append("abstract ")
         if (flags.hasFlag(DATA_CLASS)) builder.append("data ")

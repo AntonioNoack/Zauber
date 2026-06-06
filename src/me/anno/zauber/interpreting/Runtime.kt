@@ -170,10 +170,7 @@ class Runtime {
         }
 
         if (method.body == null) {
-            error(
-                "Missing body for method $method " +
-                        "in ${style(method.ownerScope.pathStr, StringStyles.LIGHT_BLUE)}"
-            )
+            error("Missing body for method $method in ${method.ownerScope}")
         }
 
         val graph = ASTSimplifier.simplify(specialization)

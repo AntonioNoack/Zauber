@@ -1,6 +1,8 @@
 package me.anno.zauber.scope
 
 import me.anno.libraries.Library
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.ast.FlagSet
@@ -607,7 +609,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         )
     }
 
-    override fun toString(): String = pathStr
+    override fun toString(): String = style(pathStr, StringStyles.LIGHT_BLUE)
 
     override fun equals(other: Any?): Boolean {
         if (other is Scope) {

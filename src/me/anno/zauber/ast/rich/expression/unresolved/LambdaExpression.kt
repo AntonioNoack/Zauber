@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.utils.StringStyles.GREEN
-import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.style
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Flags
@@ -204,7 +203,7 @@ class LambdaExpression(
                 body.scope.fields.firstOrNull { field -> field.name == parameter.name }
                     ?: throw IllegalStateException(
                         "Missing field '${style(parameter.name, GREEN)}' " +
-                                "in ${style(body.scope.pathStr, LIGHT_BLUE)}"
+                                "in ${body.scope}"
                     )
             else null
         }

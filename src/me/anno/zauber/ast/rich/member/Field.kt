@@ -49,7 +49,7 @@ class Field(
         fun cleanNameForCompilation(name: String): String {
             var name = name
             while (name.startsWith('$')) name = name.substring(1)
-            if (name.first() in '0'..'9') name = "_$name"
+            if (name.isEmpty() || name.first() in '0'..'9') name = "_$name"
             return name
         }
     }

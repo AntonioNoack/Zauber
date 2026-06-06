@@ -54,7 +54,7 @@ object ResolutionUtils {
                 println("Test.zbr")
                 println(content.formatLines())
             }
-            val scope = getScope(packageName)
+            val scope = getPackageScope(packageName)
             // sit, so we can add the parts no matter what...
             // may cause us to skip some initialization :/
             scope.addInitPart(scope.scopeInitType) {
@@ -66,12 +66,16 @@ object ResolutionUtils {
         return Zauber.root.children.first { it.name == testScopeName }
     }
 
-    fun getScope(path: String): Scope {
-        val parts = path.split('.')
+    fun getPackageScope(path: String): Scope {
+        return getPackageScope(path.split('.'))
+    }
+
+    fun getPackageScope(parts: List<String>): Scope {
         var scope = Zauber.root
         for (part in parts) {
             check(part.trim() == part)
             scope = scope.getOrPut(part, ScopeType.PACKAGE)
+            scope.setEmptyTypeParams()
         }
         return scope
     }

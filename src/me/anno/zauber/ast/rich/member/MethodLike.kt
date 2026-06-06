@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.rich.member
 
 import me.anno.utils.StringStyles.GREEN
-import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.ORANGE
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
@@ -137,7 +136,7 @@ open class MethodLike(
 
     fun appendSelfType(builder: StringBuilder = StringBuilder()): StringBuilder {
         if (selfType != null) {
-            builder.append(style(selfType.toString(), LIGHT_BLUE)).append('.')
+            builder.append(selfType).append('.')
         }
         return builder
     }
@@ -147,7 +146,7 @@ open class MethodLike(
             builder.append('<')
             builder.append(typeParameters.joinToString(", ") {
                 if (it.type == Types.NullableAny) style(it.name, GREEN)
-                else "${style(it.name, GREEN)}: ${style(it.type.toString(), LIGHT_BLUE)}"
+                else "${style(it.name, GREEN)}: ${it.type}"
             })
             builder.append("> ")
         }
@@ -156,7 +155,7 @@ open class MethodLike(
 
     fun appendValueParams(builder: StringBuilder = StringBuilder()): StringBuilder {
         builder.append(valueParameters.joinToString(", ", "(", ")") {
-            "${style(it.name, YELLOW)}: ${style(it.type.resolvedName.toString(), LIGHT_BLUE)}"
+            "${style(it.name, YELLOW)}: ${it.type}"
         })
         return builder
     }

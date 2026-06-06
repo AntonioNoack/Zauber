@@ -41,7 +41,7 @@ class SimpleGetClassField(
     }
 
     override fun toString(): String {
-        return "$dst = $self?[${style(field.selfType?.toString() ?: field.ownerScope.pathStr, StringStyles.LIGHT_BLUE)}]." +
+        return "$dst = $self?[${field.selfType ?: field.ownerScope}]." +
                 style(field.name, StringStyles.GREEN)
     }
 

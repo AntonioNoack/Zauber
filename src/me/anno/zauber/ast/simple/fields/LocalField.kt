@@ -1,7 +1,6 @@
 package me.anno.zauber.ast.simple.fields
 
 import me.anno.utils.StringStyles.GREEN
-import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
@@ -32,6 +31,6 @@ class LocalField(
         }
 
     override fun toString(): String {
-        return "${style("local#$id", YELLOW)}[${style("\"$name\"", GREEN)}: ${style(type.toString(), LIGHT_BLUE)}]"
+        return "${style("local#$id", YELLOW)}[${style("\"$name\"", GREEN)}: $type]"
     }
 }

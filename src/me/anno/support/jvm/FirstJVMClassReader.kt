@@ -1,10 +1,13 @@
 package me.anno.support.jvm
 
+import me.anno.libraries.Library
+import me.anno.support.Language
 import me.anno.utils.CollectionUtils.getOrPutRecursive
+import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.RunOnceLazy
 import me.anno.zauber.Zauber.root
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -35,11 +38,17 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         const val API_LEVEL = ASM9
         private val LOGGER = LogManager.getLogger(FirstJVMClassReader::class)
 
+        val jvmLibrary = Library().apply {
+            language = Language.JAVA
+            name = "JVM Class Reader"
+        }
+
         val scanned by threadLocal {
             HashMap<String, Scope>()
         }
 
         fun splitPackage(name: String) = name.split('/', '$')
+
         fun getScope(name: String, scopeType: ScopeType?): Scope {
 
             if (name.isEmpty()) return root
@@ -58,6 +67,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             }
             scanned.getOrPutRecursive(name, { scope }) { name, _ ->
                 try {
+                    scope.sourceLibrary = jvmLibrary
                     ClassReader(name)
                         .accept(FirstJVMClassReader(name, scope), 0)
                 } catch (e: IOException) {
@@ -88,6 +98,9 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         fun Int.isTransitive() = hasFlag(ACC_TRANSITIVE)
         fun Int.isVarargs() = hasFlag(ACC_VARARGS)
         fun Int.isVolatile() = hasFlag(ACC_VOLATILE)
+
+        fun Int.isFinal() = hasFlag(ACC_FINAL)
+        fun Int.isAbstract() = hasFlag(ACC_ABSTRACT)
 
         // todo find out inner class by whether the parent package is a class
         fun getClassType(access: Int): ScopeType {
@@ -174,6 +187,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             classScope.scopeType = getClassType(access)
         }
 
+        classScope.addFlags(convertClassFlags(access))
+
         val (typeParameters, superTypesWithGenerics) = parseClassSignature(classScope, signature)
         classScope.setTypeParams(typeParameters)
 
@@ -210,6 +225,33 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         getScope(name, childType)
     }
 
+    fun convertVisibilityFlags(access: Int): Int {
+        var r = 0
+        r = r or access.isPublic().toInt(Flags.PUBLIC)
+        r = r or access.isPrivate().toInt(Flags.PRIVATE)
+        r = r or access.isProtected().toInt(Flags.PROTECTED)
+        return r
+    }
+
+    fun convertClassFlags(access: Int): Int {
+        var r = convertVisibilityFlags(access)
+        r = r or access.isFinal().toInt(Flags.FINAL)
+        r = r or (!access.isFinal()).toInt(Flags.OPEN)
+        r = r or access.isAbstract().toInt(Flags.ABSTRACT)
+        // todo strictfp-flag
+        return r
+    }
+
+    fun convertMethodFlags(access: Int): Int {
+        var r = convertVisibilityFlags(access)
+        r = r or access.isFinal().toInt(Flags.FINAL)
+        r = r or access.isNative().toInt(Flags.EXTERNAL)
+        r = r or (!access.isFinal()).toInt(Flags.OPEN)
+        r = r or access.isAbstract().toInt(Flags.ABSTRACT)
+        // todo strictfp-flag
+        return r
+    }
+
     override fun visitMethod(
         access: Int,
         name: String,
@@ -231,13 +273,14 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         val methodScope = classScope.generate(name, ScopeType.METHOD)
         val (typeParameters, valueParameters, returnType) = parseMethodSignature(methodScope, signature, true)
 
+        val flags = convertMethodFlags(access)
         if (name == "<init>" || name == "<clinit>") {
             // clinit is not really a constructor, but we have nothing better at the moment
-            methodScope.selfAsConstructor = Constructor(valueParameters, methodScope, null, null, Flags.NONE, origin)
+            methodScope.selfAsConstructor = Constructor(valueParameters, methodScope, null, null, flags, origin)
         } else {
             methodScope.selfAsMethod = Method(
                 null, false, name, typeParameters, valueParameters, methodScope, returnType,
-                emptyList(), null, Flags.NONE, origin
+                emptyList(), null, flags, origin
             )
         }
 
@@ -277,8 +320,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         val initialValueForConst = when (value) {
             null -> null
             is Int -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Int }
-            is Long -> NumberExpression("${value}l", classScope, origin).apply { resolvedType = Types.Long }
-            is Float -> NumberExpression("${value}f", classScope, origin).apply { resolvedType = Types.Float }
+            is Long -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Long }
+            is Float -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Float }
             is Double -> NumberExpression("$value", classScope, origin).apply { resolvedType = Types.Double }
             is String -> StringExpression(value, classScope, origin)
             else -> TODO("Get initial from ${value.javaClass.simpleName}")

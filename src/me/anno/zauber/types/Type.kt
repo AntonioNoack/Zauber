@@ -1,9 +1,10 @@
 package me.anno.zauber.types
 
 import me.anno.generation.Specializations.specialization
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase.Companion.resolveTypeByName
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -19,10 +20,6 @@ import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import me.anno.zauber.types.impl.unresolved.UnresolvedUnionType
 
 abstract class Type {
-
-    companion object {
-        private val LOGGER = LogManager.getLogger(Type::class)
-    }
 
     fun contains(type: GenericType): Boolean {
         if (this == type) return true
@@ -287,11 +284,12 @@ abstract class Type {
 
     abstract fun toStringImpl(depth: Int): String
     override fun toString(): String {
-        return toStringImpl(10)
+        return style(toStringImpl(10), StringStyles.DARK_BLUE)
     }
 
-    fun toString(depth: Int): String {
-        return if (depth >= 0) toStringImpl(depth - 1) else "${javaClass.simpleName}..."
+    open fun toString(depth: Int): String {
+        return if (depth >= 0) style(toStringImpl(depth - 1), StringStyles.DARK_BLUE)
+        else style("${javaClass.simpleName}...", StringStyles.LIGHT_BLUE)
     }
 
     open fun not(): Type = NotType(this)

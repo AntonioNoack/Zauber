@@ -20,7 +20,7 @@ class GenericType(val scope: Scope, val name: String) : Type() {
             ?: error(
                 "Missing generic parameter ${style(name, GREEN)} " +
                         "in ${style(scope.pathStr, StringStyles.DARK_BLUE)}, " +
-                        "options: ${scope.typeParameters.map { style(it.name, LIGHT_BLUE) }}"
+                        "options: ${scope.typeParameters.joinToString { style(it.name, LIGHT_BLUE) }}"
             )
 
     val superBounds: Type
@@ -32,12 +32,16 @@ class GenericType(val scope: Scope, val name: String) : Type() {
     val superBoundsOrNull: Type?
         get() = byTypeParameterOrNull?.type
 
+    override fun toString(): String {
+        // avoid color
+        return toStringImpl(10)
+    }
+
     override fun toStringImpl(depth: Int): String {
         val superBounds = superBoundsOrNull
-        return if (superBounds == Types.NullableAny || superBounds == null) {
-            "${scope.pathStr}.$name"
-        } else {
-            "(${scope.pathStr}.$name: ${superBounds.toString(depth)})"
+        val withoutBounds = "$scope." + style(name, GREEN)
+        return if (superBounds == Types.NullableAny || superBounds == null) withoutBounds else {
+            "($withoutBounds: ${superBounds.toString(depth)})"
         }
     }
 

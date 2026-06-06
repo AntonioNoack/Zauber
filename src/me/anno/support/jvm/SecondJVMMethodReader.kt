@@ -6,7 +6,7 @@ import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
 import me.anno.support.jvm.expression.*
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Zauber.root
-import me.anno.zauber.ast.rich.*
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -24,14 +24,14 @@ import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
 import me.anno.zauber.typeresolution.members.ResolvedMember
 import me.anno.zauber.typeresolution.members.ResolvedMethod
+import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
-import me.anno.zauber.types.Specialization
-import me.anno.zauber.types.Specialization.Companion.noSpecialization
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
@@ -396,7 +396,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             it.name == name && equalsParams(params, it.valueParameters)
         } ?: error(
             "Missing $clazz.$name(${params.joinToString()}), " +
-                    "candidates: $candidates"
+                    "candidates: ${if (candidates.any { it.name == name }) candidates.filter { it.name == name } else candidates}"
         )
     }
 

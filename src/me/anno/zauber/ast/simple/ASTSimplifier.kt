@@ -2,9 +2,7 @@ package me.anno.zauber.ast.simple
 
 import me.anno.utils.FullMap
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.bold
-import me.anno.utils.StringStyles.style
 import me.anno.utils.assertEquals
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
 import me.anno.zauber.ast.rich.Flags
@@ -149,9 +147,8 @@ object ASTSimplifier {
 
         val expectedReturnType = method0.method.resolveReturnType(method0)
         check(isSubTypeOf(expectedReturnType, value.type)) {
-            "Expected return value in ${style(method0.method.ownerScope.pathStr, LIGHT_BLUE)}.${method0.method} " +
-                    "to match ${style(expectedReturnType.toString(), LIGHT_BLUE)}, " +
-                    "got ${style(value.type.toString(), LIGHT_BLUE)}"
+            "Expected return value in ${method0.method.ownerScope}.${method0.method} " +
+                    "to match $expectedReturnType, got ${value.type}"
         }
 
         block.add(SimpleReturn(value.use(), expr.scope, expr.origin))
@@ -637,9 +634,7 @@ object ASTSimplifier {
 
         // check that assignments use the correct type
         check(isSubTypeOf(expectedValueTypeI, actualValueType)) {
-            "Expected value for $field-setter " +
-                    "to be ${style(expectedValueTypeI.toString(), LIGHT_BLUE)}, " +
-                    "but got ${style(actualValueType.toString(), LIGHT_BLUE)}"
+            "Expected value for $field-setter to be $expectedValueTypeI, but got $actualValueType"
         }
 
         // println("block for self: ${block1v.block}")

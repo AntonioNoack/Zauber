@@ -2,7 +2,6 @@ package me.anno.zauber.interpreting
 
 import me.anno.utils.Half
 import me.anno.utils.StringStyles.DARK_BLUE
-import me.anno.utils.StringStyles.LIGHT_BLUE
 import me.anno.utils.StringStyles.RED
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
@@ -39,8 +38,8 @@ class Instance(
 
     fun toStringInner(): String {
         val rv = rawValueStr()
-        if (clazz.type is NullType) return style("null",RED) + style("@$id", DARK_BLUE)
-        return style((clazz.type as ClassType).clazz.pathStr, LIGHT_BLUE) +
+        if (clazz.type is NullType) return style("null", RED) + style("@$id", DARK_BLUE)
+        return (clazz.type as ClassType).clazz.toString() +
                 style("@$id", DARK_BLUE) +
                 (if (rv.isNotEmpty()) "($rv)" else "")
     }

@@ -4,15 +4,20 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 
+// todo read a complex class like HashMap,
+//  and decode it fully into simple instructions...
+
+// todo ideally, we have some jars and can just lazy-load all contents
+
+// then try to instantiate and use an instance...
+// todo we need to fix generics... ArrayList.add() must return E, not Object
+
+// todo is there an interesting, non-generic class we can test?
+//  -> we could use any class we create, and Kotlin/Java compiles for us...
+
 fun main() {
 
     LogManager.disableLoggersCompletely("OverriddenMethods")
-
-    // todo read a complex class like HashMap,
-    //  and decode it fully into simple instructions...
-
-    // todo first select a target class to inspect...
-    //  maybe clear()
 
     // define some standard functions...
     testExecute(
@@ -34,14 +39,8 @@ class Array<V>(val size: Int) {
     """.trimIndent()
     )
 
-    // todo ideally, we have some jars and can just lazy-load all contents
+    registerJavaClass("java.util.ArrayList")
 
-    // then try to instantiate and use an instance...
-    // todo we need to fix generics... ArrayList.add() must return E, not Object
-
-    // todo is there an interesting, non-generic class we can test?
-    //  -> we could use any class we create, and Kotlin/Java compiles for us...
-    
     val value = testExecute(
         """
         import java.util.ArrayList
@@ -56,4 +55,8 @@ class Array<V>(val size: Int) {
     )
     assertEquals(1, value.castToInt())
 
+}
+
+fun registerJavaClass(path: String) {
+    FirstJVMClassReader.getScope(path,null)
 }

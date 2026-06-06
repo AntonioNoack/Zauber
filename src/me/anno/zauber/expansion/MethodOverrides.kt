@@ -1,8 +1,7 @@
 package me.anno.zauber.expansion
 
+import me.anno.support.jvm.FirstJVMClassReader
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.utils.StringStyles.LIGHT_BLUE
-import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Field
@@ -91,10 +90,7 @@ object MethodOverrides {
         for (superMethod in superMethods) {
             if (superMethod.isPrivate()) continue
 
-            if (LOGGER.isInfoEnabled) LOGGER.info(
-                "Checking out $superMethod " +
-                        "for ${style(superScope.pathStr, LIGHT_BLUE)} -> ${style(scope.pathStr, LIGHT_BLUE)}"
-            )
+            if (LOGGER.isInfoEnabled) LOGGER.info("Checking out $superMethod for $superScope -> $scope")
 
             // find match
             val selfType = superMethod.selfType ?: scope.typeWithArgs
@@ -133,7 +129,11 @@ object MethodOverrides {
 
                 // somehow create a new method linking to the old one
                 check(ownerIsAbstract || !superMethod.isAbstract()) {
-                    "Missing $superMethod in $scope, candidates: $selfMethods." +
+                    val methods =
+                        if (selfMethods.isEmpty()) selfMethodsI
+                        else selfMethods.values.flatten().sortedBy { it.name }
+                    val methods1 = methods.joinToString("") { method -> "\n- $method" }
+                    "Missing $superMethod in $scope, candidates: ${methods1}\n" +
                             "Scope is not abstract, and superMethod has no body"
                 }
 
@@ -147,11 +147,14 @@ object MethodOverrides {
 
                 foundMethods.add(selfMethod)
 
-                check(selfMethod.flags.hasFlag(Flags.OVERRIDE)) {
+                check(
+                    selfMethod.flags.hasFlag(Flags.OVERRIDE) ||
+                            selfMethod.ownerScope.sourceLibrary == FirstJVMClassReader.jvmLibrary // <- doesn't know that flag
+                ) {
                     "Expected $scope.$selfMethod to have override flag for $superScope.$superMethod"
                 }
                 check(isOpen && !isExplicitlyClosed) {
-                    "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)}"
+                    "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)} (${selfMethod.flags})"
                 }
 
                 superMethod.childMethods += selfMethod
