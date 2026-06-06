@@ -5,6 +5,9 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
+/**
+ * represents a stack element in JVM bytecode
+ * */
 class SimpleFieldExpr(val type: Type, val id: Int, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     override fun resolveValueType(context: ResolutionContext): Type = type

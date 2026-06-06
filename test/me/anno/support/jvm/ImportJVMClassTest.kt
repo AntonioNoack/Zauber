@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 // todo is there an interesting, non-generic class we can test?
 //  -> we could use any class we create, and Kotlin/Java compiles for us...
 
+// todo why TF is this exploring Regex???
+
 fun main() {
 
     LogManager.disableLoggersCompletely("OverriddenMethods")
@@ -28,16 +30,22 @@ package zauber
 class Int {
     external operator fun plus(other: Int): Int
     external operator fun minus(other: Int): Int
+    external operator fun times(other: Int): Int
+    external operator fun div(other: Int): Int
     external operator fun compareTo(other: Int): Int
+    operator fun unaryMinus(): Int = 0 - this
     external fun equals(other: Int): Boolean
-    external operator fun shr(other: Int): Int
-    external operator fun shl(other: Int): Int
     external operator fun and(other: Int): Int
+    external operator fun or(other: Int): Int
+    external operator fun xor(other: Int): Int
+    external operator fun shl(other: Int): Int
+    external operator fun shr(other: Int): Int
+    external operator fun ushr(other: Int): Int
     external operator fun toChar(): Char
+    external operator fun toByte(): Byte
 }
-class Char {
-
-}
+class Char {}
+class Byte {}
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)
     external operator fun set(index: Int, value: Any)

@@ -342,6 +342,7 @@ class Scope(val name: String, val parent: Scope? = null) {
         if ((self == ScopeType.METHOD_BODY || self == ScopeType.METHOD) && child == ScopeType.NORMAL_CLASS) {
             return true // exception for named classes inside methods
         }
+        if (self == ScopeType.COMPANION_OBJECT && child == ScopeType.NORMAL_CLASS) return true
         if (self == ScopeType.INNER_CLASS && child == ScopeType.COMPANION_OBJECT) return true
         if (self == ScopeType.COMPANION_OBJECT && child == ScopeType.COMPANION_OBJECT) return false // only one is allowed
         return self.getClassHierarchy() <= child.getClassHierarchy()

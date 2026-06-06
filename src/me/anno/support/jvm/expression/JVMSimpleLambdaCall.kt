@@ -5,6 +5,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMethod
 import me.anno.zauber.types.Type
 
+@Deprecated("Generate the classes instantly")
 class JVMSimpleLambdaCall(
     val dst: SimpleFieldExpr,
     val parameters: List<SimpleFieldExpr>,

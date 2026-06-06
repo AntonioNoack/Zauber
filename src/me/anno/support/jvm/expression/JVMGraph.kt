@@ -5,10 +5,15 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
+// todo: SimpleGraph has progress somewhat... do we want to keep this as-is?
 class JVMGraph(scope: Scope, origin: Long) : Expression(scope, origin) {
 
     val startBlock = addNode()
     val thisFields = HashMap<Scope, SimpleFieldExpr>()
+
+    fun getOrCreateThisField(scope: Scope): SimpleFieldExpr {
+        return thisFields.getOrPut(scope) { field(scope.typeWithArgs) }
+    }
 
     private var numFields = 0
 

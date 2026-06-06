@@ -5,11 +5,15 @@ import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
 import me.anno.support.jvm.expression.*
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.CompareType
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
@@ -178,7 +182,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             IAND -> binaryCall(Types.Int, "and")
             IOR -> binaryCall(Types.Int, "or")
             IXOR -> binaryCall(Types.Int, "xor")
-            INEG -> unaryCall(Types.Int, "negate")
+            INEG -> unaryCall(Types.Int, "unaryMinus")
 
             LADD -> binaryCall(Types.Long, "plus")
             LSUB -> binaryCall(Types.Long, "minus")
@@ -191,7 +195,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             LAND -> binaryCall(Types.Long, "and")
             LOR -> binaryCall(Types.Long, "or")
             LXOR -> binaryCall(Types.Long, "xor")
-            LNEG -> unaryCall(Types.Long, "negate")
+            LNEG -> unaryCall(Types.Long, "unaryMinus")
             LCMP -> binaryCall(Types.Long, "compareTo")
 
             FADD -> binaryCall(Types.Float, "plus")
@@ -199,7 +203,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             FMUL -> binaryCall(Types.Float, "times")
             FDIV -> binaryCall(Types.Float, "div")
             FREM -> binaryCall(Types.Float, "mod")
-            FNEG -> unaryCall(Types.Float, "negate")
+            FNEG -> unaryCall(Types.Float, "unaryMinus")
             // todo choose the correct variant...
             FCMPL, FCMPG -> binaryCall(Types.Float, "compareTo")
 
@@ -208,7 +212,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             DMUL -> binaryCall(Types.Double, "times")
             DDIV -> binaryCall(Types.Double, "div")
             DREM -> binaryCall(Types.Double, "mod")
-            DNEG -> unaryCall(Types.Double, "negate")
+            DNEG -> unaryCall(Types.Double, "unaryMinus")
             // todo choose the correct variant...
             DCMPL, DCMPG -> binaryCall(Types.Double, "compareTo")
 
@@ -408,7 +412,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     fun pushNull() {
         val dst = graph.field(NullType)
-        block.add(JVMSimpleSpecialValue(dst, SpecialValue.NULL, methodScope, origin))
+        block.add(JVMSimpleNull(dst, methodScope, origin))
         stack.add(dst)
     }
 
@@ -575,7 +579,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     override fun visitIincInsn(varIndex: Int, increment: Int) {
         visitVarInsn(ILOAD, varIndex)
-        pushConst(NumberExpression(increment.toString(), methodScope, origin).apply { resolvedType = Types.Int })
+        visitLdcInsnInt(increment)
         visitInsn(IADD)
         visitVarInsn(ISTORE, varIndex)
     }
@@ -734,16 +738,64 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     override fun visitInvokeDynamicInsn(name: String, descriptor: String, method: Handle, vararg args: Any?) {
         if (method.owner == "java/lang/invoke/LambdaMetafactory" && (method.name == "metafactory" || method.name == "altMetafactory") && args.size >= 3) {
-            LOGGER.debug("visitInvokeDynamicInsn: $name, $descriptor, $method, ${args.asList()}")
+            LOGGER.info("visitInvokeDynamicInsn: $name, $descriptor, $method, ${args.asList()}")
 
             val (typeArgs, valueArgs, retType) = parseMethodSignature(methodScope, descriptor, false)
+
+            // - create internal class
+            // - create constructor + todo call for it
+            // todo - create primary method, which calls the target method with ThisInput + MethodInput
+            // todo -> we need to find out what it is called...
+
+            val lambdaScope = classScope.generate(name, ScopeType.NORMAL_CLASS)
+            lambdaScope.setEmptyTypeParams()
+
+            // todo register super-type as SuperCall
+
+            val constructorScope = lambdaScope.getOrCreatePrimaryConstructorScope()
+
+            val constructorGraph = JVMGraph(constructorScope, origin)
+            val setters = ArrayList<Expression>()
+
+            if (valueArgs.isNotEmpty()) {
+                val lambdaFields = valueArgs.map { param ->
+                    lambdaScope.addField(
+                        null, false, false, param, param.name, param.type,
+                        null, Flags.SYNTHETIC, origin
+                    )
+                }
+                val lambdaConstrFields = valueArgs.map { param ->
+                    constructorScope.addField(
+                        null, false, false, param, param.name, param.type,
+                        null, Flags.SYNTHETIC, origin
+                    )
+                }
+
+                val constrSelf = constructorGraph.getOrCreateThisField(constructorScope)
+                val instanceSelf = constructorGraph.getOrCreateThisField(lambdaScope)
+
+                val constrBlock = constructorGraph.startBlock
+                for (i in lambdaFields.indices) {
+                    val dst = constructorGraph.field(valueArgs[i].type)
+                    val value = JVMSimpleGetField(dst, constrSelf, lambdaConstrFields[i], constructorScope, origin)
+                    constrBlock.add(value)
+                    constrBlock.add(JVMSimpleSetField(instanceSelf, lambdaFields[i], dst, constructorScope, origin))
+                }
+            }
+
+            constructorScope.selfAsConstructor = Constructor(
+                valueArgs, constructorScope,
+                null, ExpressionList(setters, constructorScope, origin), Flags.SYNTHETIC, origin
+            )
+
             // val baseClass = "java/lang/Object" //(args[0] as Type).returnType.descriptor
             // val interface1 = retType
             val dst1 = args[1] as Handle
-            val ownerScope = nameToType(dst1.owner) as ClassType
+            val ownerType = nameToType(dst1.owner) as ClassType
+            val staticScope = ownerType.clazz.getOrPutCompanion()
             val method = resolveMethod(
-                ownerScope.clazz, dst1.name, dst1.desc,
-                emptyList(), valueArgs,
+                staticScope, dst1.name, dst1.desc,
+                emptyList(), valueArgs, false
             )
 
             val valueArgs2 = valueArgs.map { stack.removeLast().use() }.asReversed()
@@ -751,6 +803,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             val dst = block.field(retType)
             block.add(JVMSimpleLambdaCall(dst, valueArgs2, method, retType, methodScope, origin))
             stack.add(dst)
+
+            TODO()
         } else {
             throw NotImplementedError("Unknown lambda type: $method, ${args.toList()}")
         }
@@ -796,7 +850,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     else -> {
                         self = stack.removeLast().use()
                         val scope = FirstJVMClassReader.getScope(owner, null)
-                        method = resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
+                        method = resolveMethod(scope, name, descriptor, typeParameters, valueParameters, true)
                     }
                 }
             }
@@ -843,7 +897,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         typeParameters: List<Parameter>, valueParameters: List<Parameter>,
     ): ResolvedMethod {
         val scope = FirstJVMClassReader.getScope(owner, null).getOrPutCompanion()
-        return resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
+        return resolveMethod(scope, name, descriptor, typeParameters, valueParameters, false)
     }
 
     fun resolveDynamicMethod(
@@ -856,7 +910,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             nameToType(owner)
         }
         val scope = (ownerType as ClassType).clazz
-        return resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
+        return resolveMethod(scope, name, descriptor, typeParameters, valueParameters, true)
     }
 
     fun resolveConstructor(
@@ -907,34 +961,22 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     fun resolveMethod(
         scope0: Scope, name: String, descriptor: String,
-        typeParameters: List<Parameter>, valueParameters: List<Parameter>
+        typeParameters: List<Parameter>, valueParameters: List<Parameter>,
+        allowSupScopes: Boolean
     ): ResolvedMethod {
         var scope = scope0
         while (true) {
             val method = scope[ScopeInitType.AFTER_DISCOVERY]
                 .methods0.firstOrNull {
                     it.name == name &&
-                            // equals(typeParameters, it.typeParameters) &&
+                            // equals(typeParameters, it.typeParameters) && // checking valueParams is sufficient, saves work
                             equals1(valueParameters, it.valueParameters)
                 }
             if (method != null) {
-                val typeParams = ParameterList(
-                    scope.typeParameters,
-                    typeParameters.map { it.type }.ifEmpty { scope.typeParameters.map { it.type } }
-                )
-                val typeParamsI = typeParams.ifEmpty {
-                    ParameterList(
-                        method.memberScope.typeParameters,
-                        method.memberScope.typeParameters.map { it.type })
-                }
-                val spec = Specialization(method.memberScope, typeParamsI)
-                val ctx = ResolutionContext(
-                    null, spec, true, null,
-                    emptyMap(), emptyList()
-                )
-                return ResolvedMethod(method, ctx, methodScope, MatchScore.zero)
+                return resolveMethodI(scope, typeParameters, method)
             }
 
+            if (!allowSupScopes) break
             // check super classes
             scope = scope.superCalls
                 .firstOrNull { it.isClassCall }
@@ -943,17 +985,38 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
 
         error(
-            "Missing $scope0.$name$descriptor -> " +
+            "Missing $scope0.$name, $descriptor -> " +
                     "(${valueParameters.joinToString { it.type.toString() }}), " +
                     "options: ${
                         scope0.methods0.filter { it.name == name }
-                            .map { "(${valueParameters.joinToString { it.type.toString() }})" }
-                    }"
+                            .map { "(${it.valueParameters.joinToString { vp -> vp.type.toString() }})" }
+                    }, ${scope0.methods0.map { style("\"${it.name}\"", GREEN) }.distinct().sorted()}"
         )
     }
 
+    fun resolveMethodI(scope: Scope, typeParameters: List<Parameter>, method: Method): ResolvedMethod {
+        val typeParams = ParameterList(
+            scope.typeParameters,
+            typeParameters.map { it.type }.ifEmpty { scope.typeParameters.map { it.type } }
+        )
+        val typeParamsI = typeParams.ifEmpty {
+            ParameterList(
+                method.memberScope.typeParameters,
+                method.memberScope.typeParameters.map { it.type })
+        }
+        val spec = Specialization(method.memberScope, typeParamsI)
+        val ctx = ResolutionContext(
+            null, spec, true, null,
+            emptyMap(), emptyList()
+        )
+        return ResolvedMethod(method, ctx, methodScope, MatchScore.zero)
+    }
+
     fun equals1(expected: List<Parameter>, actual: List<Parameter>): Boolean {
-        if (expected.size != actual.size) return false
+        if (expected.size != actual.size) {
+            println("Size-Mismatch: $expected != $actual")
+            return false
+        }
         for (i in expected.indices) {
             var expected = expected[i].type.resolvedName
             var actual = actual[i].type.resolvedName
@@ -978,12 +1041,28 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             if (actual is GenericType) {
                 actual = actual.superBounds
             }
-            if (expected != actual) {
-                // LOGGER.debug("Mismatch@$i: $expected != $actual")
+            if (!equals(expected, actual)) {
+                LOGGER.info("Mismatch@$i: $expected != $actual")
                 return false
             }
         }
         return true
+    }
+
+    fun equals(expected: Type, actual: Type): Boolean {
+        if (expected is ClassType && actual is ClassType) {
+            if (expected.clazz != actual.clazz) return false
+            val ep = expected.typeParameters ?: emptyList()
+            val ap = actual.typeParameters ?: emptyList()
+            check(ep.size == ap.size)
+            return ep.indices.all {
+                equals(ep[it], ap[it])
+            }
+        }
+        if (expected is ClassType && actual is GenericType) {
+            return actual.superBounds == expected
+        }
+        return expected == actual
     }
 
     override fun visitLookupSwitchInsn(defaultLabel: Label, keys: IntArray, labels: Array<out Label>) {
