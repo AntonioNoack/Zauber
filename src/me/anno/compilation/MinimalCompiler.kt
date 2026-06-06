@@ -82,7 +82,7 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
             else "Desktop/${preserveFolderName}"
         )
 
-        if (preserveFolderName == null) projectFolder.deleteRecursively()
+        if (preserveFolderName == null) projectFolder.deleteChildrenRecursively()
         projectFolder.mkdirs()
 
         val srcFolder = File(projectFolder, "src")
@@ -95,6 +95,12 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
         compile(projectFolder, srcFolder, dependencies, mainMethod)
 
         return execute(projectFolder)
+    }
+
+    fun File.deleteChildrenRecursively() {
+        for (child in listFiles() ?: return) {
+            child.deleteRecursively()
+        }
     }
 
     abstract fun execute(projectFolder: File): String

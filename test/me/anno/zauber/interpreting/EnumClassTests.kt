@@ -21,6 +21,10 @@ enum class Boolean { TRUE, FALSE }
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)
 }
+external class Int {
+    external operator fun plus(other: Int): Int
+    external operator fun times(other: Int): Int
+}
 external fun println(arg0: Boolean)
 external fun println(arg0: Int)
 external fun println(arg0: String)

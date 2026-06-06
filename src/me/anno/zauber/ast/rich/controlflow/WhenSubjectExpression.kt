@@ -2,13 +2,13 @@ package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.utils.GrowingList
 import me.anno.zauber.Zauber.root
-import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
@@ -32,10 +32,13 @@ class SubjectWhenCase(val conditions: List<SubjectCondition>?, val conditionScop
     }
 }
 
+fun lambdaTypeToScope(lambdaType: LambdaType): Scope {
+    return root.getOrPut(getLambdaTypeName(lambdaType.n), ScopeType.INTERFACE)
+}
+
 fun lambdaTypeToClassType(lambdaType: LambdaType, origin: Long): ClassType {
-    val n = lambdaType.parameters.size + if (lambdaType.selfType != null) 1 else 0
-    val base = root.getOrPut(getLambdaTypeName(n), ScopeType.INTERFACE)
-    val typeParams = ArrayList<Type>(n)
+    val base = lambdaTypeToScope(lambdaType)
+    val typeParams = ArrayList<Type>(lambdaType.n)
     if (lambdaType.selfType != null) typeParams.add(lambdaType.selfType)
     typeParams.addAll(lambdaType.parameters.map { it.type })
     typeParams.add(lambdaType.returnType)

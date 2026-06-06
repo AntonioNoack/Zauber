@@ -4,6 +4,11 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Assertions.assertEquals
 
+// todo next step:
+//   ClassType must include types from outer-classes ->
+//     this will solve quite a lot of issues,
+//     and also allow our code gen to continue on "Incomplete generics for java.util.HashMap.KeySet"
+
 // todo read a complex class like HashMap,
 //  and decode it fully into simple instructions...
 

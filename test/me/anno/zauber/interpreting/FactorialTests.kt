@@ -93,7 +93,7 @@ class FactorialTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime", "js"/*, "java", "c++", "wasm"*/])
+    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testFactorialAsForLoop(type: String) {
         val stdlib = """
             package zauber
@@ -142,8 +142,6 @@ class FactorialTests {
             }
             val tested = fac(10)
         """.trimIndent() + stdlib
-
-        // todo bug: why is the generated source code pretty much ending after the iterator call?
 
         val value1 = 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2
         MultiTest(code)

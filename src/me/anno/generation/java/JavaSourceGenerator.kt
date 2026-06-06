@@ -7,6 +7,7 @@ import me.anno.generation.java.JavaSuperCallWriter.appendSuperCallParams
 import me.anno.support.java.tokenizer.JavaTokenizer
 import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles
 import me.anno.utils.StringUtils.capitalize1
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.Zauber.root
@@ -449,12 +450,13 @@ open class JavaSourceGenerator : Generator() {
     fun appendSpecializationInfoComment() {
         if (specialization.isNotEmpty()) {
             comment {
-                builder.append("Specialization[${specialization.scope}]: ")
+                builder.append("Specialization[${specialization.scope!!.pathStr}]: ")
                 val params = specialization.typeParameters
                 for (i in params.indices) {
                     if (!builder.endsWith(": ")) builder.append(", ")
                     appendFieldName(params.generics[i])
-                    builder.append('=').append(params.getOrNull(i))
+                    val paramType = params.getOrNull(i)?.toString() ?: "null"
+                    builder.append('=').append(StringStyles.removeStyles(paramType))
                 }
                 nextLine()
             }
@@ -749,7 +751,9 @@ open class JavaSourceGenerator : Generator() {
 
         val method = method0.method
         if (method.flags.hasFlag(Flags.OVERRIDE)) {
-            builder.append("@Override")
+            // todo we must check if the super-type is actually defined,
+            //  before we can define this
+            // builder.append("@Override")
             nextLine()
         }
 
@@ -1168,7 +1172,7 @@ open class JavaSourceGenerator : Generator() {
         forFieldAccess: String = ""
     ) {
         if (field.isOwnerThis(graph)) {
-            builder.append("this")
+            builder.append(if (forFieldAccess == "" && field.type in nativeNumbers) "this.content" else "this")
         } else if (field.isObjectLike()) {
             val objectScope = (field.type as ClassType).clazz
             appendGetObjectInstance(objectScope, graph.method.scope)
@@ -1469,13 +1473,28 @@ open class JavaSourceGenerator : Generator() {
             builder.append('(').append(nativeNumbers[castTargetType]!!.native).append(") ")
         } else if (methodName == "not" && thisType == Types.Boolean) {
             builder.append('!')
-        } else if (methodName == "inv" && thisType in nativeNumbers) {
-            if (thisType.getNumBits() <= 16) {
-                builder.append('(')
-                appendType(expr.dst.type, expr.scope, false)
-                builder.append(") ~")
-            } else {
-                builder.append('~')
+        } else if (thisType in nativeNumbers) {
+            val needsCast = thisType.getNumBits() <= 16
+            when (methodName) {
+                "inv" -> if (needsCast) {
+                    builder.append('(')
+                    appendType(expr.dst.type, expr.scope, false)
+                    builder.append(") ~")
+                } else {
+                    builder.append('~')
+                }
+                "inc", "dec" -> {
+                    if (needsCast) {
+                        builder.append('(')
+                        appendType(expr.dst.type, expr.scope, false)
+                        builder.append(") (")
+                    }
+                    appendFieldName(graph, expr.thisInstance)
+                    builder.append(if (methodName == "inc") " + 1" else " - 1")
+                    if (needsCast) builder.append(')')
+                    return true
+                }
+                else -> return false
             }
         } else return false
 
@@ -1570,23 +1589,31 @@ open class JavaSourceGenerator : Generator() {
         needsCastForFirstValue: BoxedType, expr: SimpleCall,
         graph: SimpleGraph,
     ) {
+        var methodName = getMethodName(expr.specialization)
         when (expr.methodName) {
-            "inc" -> builder.append("1 + ")
-            "dec" -> builder.append("-1 + ")
-            else -> {
+            "compareTo" -> {
                 builder.append(needsCastForFirstValue.boxed).append('.')
-                var methodName = getMethodName(expr.specialization)
                 if (methodName == "compareTo") methodName = "compare"
                 builder.append(methodName)
+
+                builder.append('(')
+                appendFieldName(graph, expr.thisInstance)
+                if (expr.valueParameters.isNotEmpty()) {
+                    appendValueParams(graph, expr.valueParameters, false)
+                }
+                builder.append(')')
+            }
+            else -> {
+                // todo we could make them static, too...
+                val thisType = (expr.thisInstance.type as ClassType).clazz
+                builder.append("new ")
+                appendClassType(thisType, Specialization.fromSimple(thisType))
+                builder.append('(')
+                appendFieldName(graph, expr.thisInstance)
+                builder.append(").").append(methodName)
+                appendValueParams(graph, expr.valueParameters)
             }
         }
-
-        builder.append('(')
-        appendFieldName(graph, expr.thisInstance)
-        if (expr.valueParameters.isNotEmpty()) {
-            appendValueParams(graph, expr.valueParameters, false)
-        }
-        builder.append(')')
     }
 
     fun outsideClassLike(scope: Scope): Scope? {

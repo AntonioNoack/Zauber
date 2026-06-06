@@ -1,5 +1,6 @@
 package me.anno.zauber.types.impl
 
+import me.anno.utils.NumberUtils.toInt
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 
@@ -14,6 +15,8 @@ class LambdaType(
     val parameters: List<LambdaParameter>,
     val returnType: Type
 ) : Type() {
+
+    val n get() = (selfType != null).toInt() + parameters.size
 
     override fun toStringImpl(depth: Int): String {
         val scopeType = if (selfType != null) "self=${selfType.toString(depth)} | " else ""

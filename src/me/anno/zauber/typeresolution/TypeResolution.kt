@@ -3,6 +3,8 @@ package me.anno.zauber.typeresolution
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.Zauber.root
+import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
+import me.anno.zauber.ast.rich.controlflow.lambdaTypeToScope
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.parameter.NamedParameter
@@ -13,6 +15,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.ComptimeValue
 import me.anno.zauber.types.impl.GenericType
+import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.NonObjectClassType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NotType
@@ -146,6 +149,7 @@ object TypeResolution {
             is UnresolvedType -> typeToScope(type.resolve())
             // is NullableType -> typeToScope(type.base)
             is NonObjectClassType -> type.type.clazz
+            is LambdaType -> lambdaTypeToScope(type)
             else -> throw NotImplementedError("typeToScope($type, ${type.javaClass.simpleName})")
         }
     }

@@ -2,6 +2,7 @@ package me.anno.zauber.types
 
 import me.anno.generation.Specializations
 import me.anno.utils.ResetThreadLocal
+import me.anno.utils.StringStyles
 import me.anno.utils.assertEquals
 import me.anno.zauber.Zauber
 import me.anno.zauber.ast.rich.member.Field
@@ -137,7 +138,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
                 NullType -> "null"
                 null, UnknownType -> "?"
                 // todo prefer a short name, so don't use full paths...
-                else -> type.toString()
+                else -> StringStyles.removeStyles(type.toString())
             }
                 .replace("(ro)", "")
                 .replace(".", "")

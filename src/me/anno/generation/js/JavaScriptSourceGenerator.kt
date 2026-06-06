@@ -740,19 +740,34 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         return if (targetType != null && thisType in nativeNumbers) {
             appendNumericCast(graph, expr, targetType)
             true
-        } else if (methodName == "inv" && thisType in nativeNumbers) {
+        } else if (thisType in nativeNumbers) {
             val needsCast = thisType.isUnsigned()
-            if (needsCast) {
-                // cast to the corresponding type
-                appendType(thisType, expr.scope, true)
-                builder.append(".castTo(")
+            when (methodName) {
+                "inv" -> {
+                    if (needsCast) {
+                        // cast to the corresponding type
+                        appendType(thisType, expr.scope, true)
+                        builder.append(".castTo(")
+                    }
+                    builder.append('~')
+                    appendFieldName(graph, expr.thisInstance)
+                    if (needsCast) builder.append(')')
+                    true
+                }
+                "inc", "dec" -> {
+                    if (needsCast) {
+                        // cast to the corresponding type
+                        appendType(thisType, expr.scope, true)
+                        builder.append(".castTo(")
+                    }
+                    appendFieldName(graph, expr.thisInstance)
+                    builder.append(if (methodName == "inc") " + 1" else " - 1")
+                    if (thisType.isBigIntType()) builder.append('n')
+                    if (needsCast) builder.append(')')
+                    true
+                }
+                else -> false
             }
-            builder.append('~')
-            appendFieldName(graph, expr.thisInstance)
-            if (needsCast) {
-                builder.append(')')
-            }
-            true
         } else super.appendUnaryOperator(graph, expr, methodName)
     }
 
