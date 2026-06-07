@@ -1,5 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Method
@@ -107,12 +109,14 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): Nothing {
         val selfScope = context.selfScope
         val codeScope = expr.scope
+        val styledName = style(name, GREEN)
+        val typeParams = typeParameters?.joinToString(", ","<",">") ?: "<?>"
+        val valueParams = valueParameters.joinToString(", ","(",")")
         error(
-            "Could not resolve method ${selfScope}.'$name'<$typeParameters>($valueParameters)\n" +
-                    "  Self-scope methods[$selfScope.'$name']: ${selfScope?.methods0?.filter { it.name == name }}\n" +
-                    "  Code-scope methods[$codeScope.'$name']: ${codeScope.methods0.filter { it.name == name }}\n" +
-                    "  Lang-scope methods[$langScope.'$name']: ${langScope.methods0.filter { it.name == name }}\n" +
-                    "  scope: $codeScope\n" +
+            "Could not resolve method ${selfScope}.$styledName$typeParams$valueParams\n" +
+                    "  Self-scope methods[$selfScope]: ${selfScope?.methods0?.filter { it.name == name }}\n" +
+                    "  Code-scope methods[$codeScope]: ${codeScope.methods0.filter { it.name == name }}\n" +
+                    "  Lang-scope methods[$langScope]: ${langScope.methods0.filter { it.name == name }}\n" +
                     "  in ${resolveOrigin(expr.origin)}"
         )
     }

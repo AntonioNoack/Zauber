@@ -21,7 +21,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.FieldDeclaration
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.*
