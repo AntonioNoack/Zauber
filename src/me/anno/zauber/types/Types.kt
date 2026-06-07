@@ -61,11 +61,11 @@ fun getScope(i: String, genericNames: String, nat: Type, scopeType: ScopeType): 
 private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) {
     val numGenerics = genericNames.length
     if (scope.hasTypeParameters) {
-        check(scope.typeParameters.size == numGenerics) {
-            "Expected Types.getScope to have correct number of generics, ${scope.typeParameters.size} vs $numGenerics"
+        check(scope.declaredTypeParameters.size == numGenerics) {
+            "Expected Types.getScope to have correct number of generics, ${scope.declaredTypeParameters.size} vs $numGenerics"
         }
     } else {
-        scope.typeParameters =
+        val typeParams =
             if (numGenerics == 0) emptyList()
             else List(numGenerics) { index ->
                 val name = genericNames[index].toString()
@@ -75,7 +75,7 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
                     nat, scope, -1
                 )
             }
-        scope.hasTypeParameters = true
+        scope.setTypeParams(typeParams)
     }
 }
 

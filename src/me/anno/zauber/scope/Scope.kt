@@ -3,6 +3,7 @@ package me.anno.zauber.scope
 import me.anno.libraries.Library
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
+import me.anno.utils.assertEquals
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.ast.FlagSet
@@ -171,25 +172,37 @@ class Scope(val name: String, val parent: Scope? = null) {
      * */
     var jumpLabel: String? = null
 
+    var declaredTypeParameters: List<Parameter> = emptyList()
+        private set
+
     /**
-     * todo must contain type-params of outer-class;
-     * todo if we have a X<A>.I<Y>(), I<Y> must be valid syntax, too...
+     * Contains this scope's type parameters plus all outer/parent scope type parameters.
+     * Outer parameters come first, inner parameters come last.
      * */
     var typeParameters: List<Parameter> = emptyList()
-        set(value) {
-            if (hasTypeParameters && field.size != value.size) {
-                throw IllegalArgumentException("Cannot set $pathStr.typeParameters to $value, expected ${field.size} entries")
-            }
-            field = value
-        }
+        private set
+
+    private fun findOuterClassTypeParams(): List<Parameter> {
+        if (!isInnerClass()) return emptyList()
+        val parent = this@Scope.parent ?: error("Inner class $this must have parent")
+        check(parent.isClass()) { "Inner class $this must be inside a class, got ${parent.scopeType}" }
+        check(parent.hasTypeParameters) { "$parent misses type parameters" }
+        return parent.typeParameters
+    }
 
     fun setEmptyTypeParams() {
-        typeParameters = emptyList()
+        declaredTypeParameters = emptyList()
+        typeParameters = findOuterClassTypeParams()
         hasTypeParameters = true
     }
 
     fun setTypeParams(params: List<Parameter>) {
-        typeParameters = params
+        if (hasTypeParameters) {
+            assertEquals(params.size, declaredTypeParameters.size)
+        }
+
+        declaredTypeParameters = params
+        typeParameters = findOuterClassTypeParams() + params
         hasTypeParameters = true
     }
 
@@ -200,7 +213,7 @@ class Scope(val name: String, val parent: Scope? = null) {
 
     private fun getParameterList(): ParameterList {
         if (!hasTypeParameters && scopeType?.needsTypeParams() != true) {
-            typeParameters = emptyList()
+            declaredTypeParameters = emptyList()
             hasTypeParameters = true
         }
         check(hasTypeParameters) { "Missing type-params for $this ($scopeType) to take typeWithArgs" }
@@ -438,12 +451,10 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun resolveGenericType(name: String): GenericType? {
-        for (parameter in typeParameters) {
-            if (parameter.name == name) {
-                return GenericType(this, name)
-            }
+        declaredTypeParameters.firstOrNull { it.name == name }?.let {
+            return GenericType(this, name)
         }
-        return null
+        return parentIfSameFile?.resolveGenericType(name)
     }
 
     fun resolveTypeOrNull(name: String, astBuilder: ASTBuilderBase): Type? =

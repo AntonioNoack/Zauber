@@ -294,28 +294,19 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
         private val cache by ResetThreadLocal.threadLocal { HashMap<Scope, Specialization>() }
 
         fun fromSimple(scope: Scope): Specialization {
-            check(scope.typeParameters.isEmpty())
+            check(scope.declaredTypeParameters.isEmpty())
             check(scope.isClassLike() || scope.isMethodLike())
             return cache.getOrPut(scope) {
-                Specialization(scope, ParameterList.emptyParameterList())
+                Specialization(scope, emptyParameterList())
             }
         }
 
         fun collectGenerics(scope: Scope): List<Parameter> {
             var scope = scope
+            val scopes = ArrayList<Scope>()
             val result = ArrayList<Parameter>()
             while (true) {
-                result.addAll(scope.typeParameters)
-
-                if (scope.isClass()) {
-                    val constr = scope.getOrCreatePrimaryConstructorScope()
-                        .selfAsConstructor!!
-                    for (param in constr.valueParameters) {
-                        if (param.isConst) {
-                            result.add(param)
-                        }
-                    }
-                }
+                scopes.add(scope)
 
                 if (scope.isObjectLike()) break
                 if (scope.isClass() &&
@@ -323,8 +314,19 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
                     scope.scopeType != ScopeType.INLINE_CLASS
                 ) break
 
-                // todo only accept parent-parameters on some conditions
                 scope = scope.parentIfSameFile ?: break
+            }
+            for (scopeI in scopes.asReversed()) {
+                result.addAll(scopeI.declaredTypeParameters)
+                if (scopeI.isClass()) {
+                    val constr = scopeI.getOrCreatePrimaryConstructorScope()
+                        .selfAsConstructor!!
+                    for (param in constr.valueParameters) {
+                        if (param.isConst) {
+                            result.add(param)
+                        }
+                    }
+                }
             }
             return result
         }

@@ -37,16 +37,15 @@ class SignatureReader(val signature: String, val scope: Scope) {
             i++
         } // 'i' is now on '>' or ';'
         var name = signature.substring(i0, i)
-        var generics = readGenerics1()
+        val generics = ArrayList<Type>()
+        generics.addAll(readGenerics1())
         while (i < signature.length && signature[i] == '.') {
-            // todo an inner class with generics in the parent...
-            //  yes, we need that, but we have no way to represent it at the moment...
             val i0 = ++i
             while (i < signature.length && signature[i] !in "<;") {
                 i++
             }
             name += "/" + signature.substring(i0, i)
-            generics = readGenerics1()
+            generics.addAll(readGenerics1())
         }
         if (i < signature.length) consume(';')
         val clazz = getScope(name, null)
@@ -83,7 +82,7 @@ class SignatureReader(val signature: String, val scope: Scope) {
 
         var scope = scope
         if (scope.isMethodLike() &&
-            scope.typeParameters.none { it.name == name }
+            scope.declaredTypeParameters.none { it.name == name }
         ) scope = scope.parent!!
 
         return GenericType(scope, name)

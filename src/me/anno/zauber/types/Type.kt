@@ -136,9 +136,17 @@ abstract class Type {
                     ?: error("Could not resolve $this in '$scope'")
                 if (!typeParameters.isNullOrEmpty()) {
                     baseType as ClassType
+                    val expectedTypeParameters = baseType.clazz.typeParameters
                     check(
                         baseType.typeParameters == null ||
-                                baseType.typeParameters.all { it is GenericType && it.scope == baseType.clazz }) {
+                                baseType.typeParameters.indices.all { index ->
+                                    val typeParameter = baseType.typeParameters.getOrNull(index)
+                                    val expected = expectedTypeParameters.getOrNull(index)
+                                    typeParameter is GenericType &&
+                                            expected != null &&
+                                            typeParameter.scope == expected.scope &&
+                                            typeParameter.name == expected.name
+                                }) {
                         "Expected $baseType to not have type parameters, because we have $typeParameters"
                     }
                     baseType.withTypeParameters(typeParameters)

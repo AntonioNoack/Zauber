@@ -165,7 +165,7 @@ object TypeResolution {
                 return ClassType(selfMatch, typeParams, -1)
             }
 
-            val genericsMatch = scope.typeParameters.firstOrNull { it.name == name }
+            val genericsMatch = scope.resolveGenericType(name)
             if (genericsMatch != null) return GenericType(genericsMatch.scope, genericsMatch.name)
 
             scope = scope.parentIfSameFile ?: return null

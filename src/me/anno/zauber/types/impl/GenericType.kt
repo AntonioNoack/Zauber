@@ -16,8 +16,7 @@ import me.anno.zauber.types.Types
 class GenericType(val scope: Scope, val name: String) : Type() {
 
     val byTypeParameter: Parameter
-        get() = scope.typeParameters.firstOrNull { it.name == name /*&& it.scope == scope -> automatically filtered for */ }
-            ?: error(
+        get() = byTypeParameterOrNull ?: error(
                 "Missing generic parameter ${style(name, GREEN)} " +
                         "in ${style(scope.pathStr, StringStyles.DARK_BLUE)}, " +
                         "options: ${scope.typeParameters.joinToString { style(it.name, LIGHT_BLUE) }}"
@@ -27,7 +26,8 @@ class GenericType(val scope: Scope, val name: String) : Type() {
         get() = byTypeParameter.type
 
     val byTypeParameterOrNull: Parameter?
-        get() = scope.typeParameters.firstOrNull { it.name == name /*&& it.scope == scope -> automatically filtered for */ }
+        get() = scope.declaredTypeParameters.firstOrNull { it.name == name }
+            ?: scope.parentIfSameFile?.resolveGenericType(name)?.byTypeParameterOrNull
 
     val superBoundsOrNull: Type?
         get() = byTypeParameterOrNull?.type
