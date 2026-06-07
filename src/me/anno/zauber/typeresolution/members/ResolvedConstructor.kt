@@ -15,9 +15,25 @@ class ResolvedConstructor(
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 
-    override fun getTypeFromCall(): Type {
+    override fun resolveValueType(): Type {
         return resolved.selfTypeI.clazz.typeWithArgs
             .specialize(specialization)
+    }
+
+    private val thrownType = lazy {
+        specialize(resolved.resolveThrownType(context))
+    }
+
+    private val yieldedType = lazy {
+        specialize(resolved.resolveYieldedType(context))
+    }
+
+    override fun resolveThrownType(): Type {
+        return thrownType.value
+    }
+
+    override fun resolveYieldedType(): Type {
+        return yieldedType.value
     }
 
     override fun toString(): String {

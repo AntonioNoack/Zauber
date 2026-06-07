@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.rich.member
 
-import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.TEXT
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Flags
@@ -47,7 +49,7 @@ class Method(
     fun isInline(): Boolean = flags.hasFlag(Flags.INLINE) && superMethods.isEmpty() && body != null
 
     fun resolveReturnType(context: ResolutionContext): Type {
-        val returnType = returnType
+        val returnType = returnType // todo validate it in all overrides & self
         if (returnType != null) return returnType
 
         var body = body ?: error("Expected method to have either returnType or body $this")
@@ -57,17 +59,17 @@ class Method(
 
     override fun toString(): String {
         val builder = flags()
-        builder.append(style("fun ", StringStyles.ORANGE))
+        builder.append(style("fun ", ORANGE))
         appendTypeParams(builder)
         appendSelfType(builder)
-        builder.append(style(name, StringStyles.GREEN))
+        builder.append(style(name, GREEN))
         appendValueParams(builder)
         val returnType = returnType
         if (returnType != null) {
             builder.append(": ")
                 .append(returnType)
         }
-        return style(builder.toString(), StringStyles.TEXT)
+        return style(builder.toString(), TEXT)
     }
 
     fun isOpen(): Boolean {

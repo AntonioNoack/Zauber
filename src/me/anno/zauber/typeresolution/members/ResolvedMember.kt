@@ -7,6 +7,7 @@ import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList
+import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
@@ -27,8 +28,16 @@ abstract class ResolvedMember<V : Member>(
     val selfType get() = context.selfType
     val specialization get() = context.specialization
 
-    abstract fun getTypeFromCall(): Type
+    abstract fun resolveValueType(): Type
+    abstract fun resolveThrownType(): Type
+    abstract fun resolveYieldedType(): Type
+
     abstract fun getScopeOfResolved(): Scope
+
+    fun specialize(inGeneral: Type): Type {
+        val forSelf = specialization.typeParameters.resolveGenerics(context.selfType, inGeneral)
+        return forSelf.specialize(specialization)
+    }
 
     fun getBaseIfMissing(scope: Scope, origin: Long): Expression {
         val type = selfType?.resolve()

@@ -45,30 +45,30 @@ class ResolvedCallExpression(
         ) { "Explicit-self mismatch: $callable vs $thisExpr" }
     }
 
-
     val context get() = callable.context
 
     override fun clone(scope: Scope) = ResolvedCallExpression(
-        this@ResolvedCallExpression.selfExpr?.clone(scope), thisExpr?.clone(scope), callable,
+        this.selfExpr?.clone(scope), thisExpr?.clone(scope), callable,
         valueParameters.map { it.clone(scope) },
         scope, origin
     )
 
     override fun needsBackingField(methodScope: Scope): Boolean {
-        return (this@ResolvedCallExpression.selfExpr != null && this@ResolvedCallExpression.selfExpr.needsBackingField(
-            methodScope
-        )) ||
+        return (this.selfExpr != null && this.selfExpr.needsBackingField(methodScope)) ||
                 valueParameters.any { it.needsBackingField(methodScope) }
     }
 
-    override fun resolveValueType(context: ResolutionContext): Type = callable.getTypeFromCall()
+    override fun resolveValueType(context: ResolutionContext): Type = callable.resolveValueType()
+    override fun resolveThrownType(context: ResolutionContext): Type = callable.resolveThrownType()
+    override fun resolveYieldedType(context: ResolutionContext): Type = callable.resolveYieldedType()
+    
     override fun splitsScope(): Boolean = false
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun isResolved(): Boolean = true
 
     override fun toStringImpl(depth: Int): String {
         val base =
-            if (this@ResolvedCallExpression.selfExpr != null) "(${this@ResolvedCallExpression.selfExpr.toString(depth)})." else ""
+            if (this.selfExpr != null) "(${this.selfExpr.toString(depth)})." else ""
         val valueParameters = valueParameters.joinToString(", ", "(", ")") { it.toString(depth) }
         val typeParameters = callable.specialization.typeParameters
         val name = when (val m = callable.resolved) {
@@ -85,7 +85,7 @@ class ResolvedCallExpression(
     }
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
-        if (this@ResolvedCallExpression.selfExpr != null) callback(this@ResolvedCallExpression.selfExpr)
+        if (this.selfExpr != null) callback(this.selfExpr)
         for (param in valueParameters) callback(param)
     }
 

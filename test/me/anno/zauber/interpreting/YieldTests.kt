@@ -112,16 +112,19 @@ fun throwNPE(message: String): Nothing {
 
     @Test
     fun testSequenceUsingYield() {
+        // todo bug:
+        //  this fails, because yielded isn't respecting the while-condition...
+        //  to be fair, the field is reassigned...
         val code = """
             fun <V> collectYielded(runnable: () -> Unit): List<V> {
                 var yielded = async runnable()
                 val result = ArrayList<V>()
                 while (yielded is Yielded<*,*,V>) {
-                    result.add((yielded as Yielded<*,*,V>).yieldedValue)
+                    result.add(yielded.yieldedValue)
                     yielded = async yielded.continueRunning()
                 }
                 if (yielded is Thrown) {
-                    throw yielded.thrown;
+                    throw yielded.thrown
                 }
                 return result
             }
@@ -153,7 +156,7 @@ fun throwNPE(message: String): Nothing {
                     // work phase
                     while (workers.size > 0) {
                         val result = async workers[0]()
-                        if (result is Yielded<*,Sleep,*>) {
+                        if (result is Yielded<Unit,Sleep,Nothing>) {
                             sleeping.add(result)
                         } else {
                             workers.removeAt(0)

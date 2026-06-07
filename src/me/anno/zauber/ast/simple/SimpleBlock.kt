@@ -169,13 +169,13 @@ class SimpleBlock(val graph: SimpleGraph) {
             //  -> else, we should be in our own method-body, and it should be defined well
 
             if (!isSubTypeOf(dst.type, localField.type)) {
-                println("isAmbiguous: $isAmbiguous")
-                println("isExplicitSelf: $isExplicitSelf")
-                println("ThisScope: $thisScope")
-                println("this: ${graph.thisField}")
-                println("self: ${graph.selfField}")
-                println("type: $type")
-                LOGGER.warn("Cannot assign $localField to $dst, ${(dst.type as? ClassType)?.clazz?.scopeType}")
+                LOGGER.warn("Cannot assign $localField to $dst, ${(dst.type as? ClassType)?.clazz?.scopeType}\n" +
+                        "  isAmbiguous: $isAmbiguous\n" +
+                        "  isExplicitSelf: $isExplicitSelf\n" +
+                        "  ThisScope: $thisScope\n" +
+                        "  this: ${graph.thisField}\n" +
+                        "  self: ${graph.selfField}\n" +
+                        "  type: $type")
             }
 
             add(SimpleGetLocalField(dst, localField, scope, origin))

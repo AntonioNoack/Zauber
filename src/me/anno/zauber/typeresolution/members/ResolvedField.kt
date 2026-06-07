@@ -172,7 +172,7 @@ class ResolvedField(
         return filterTypeByScopeConditions(resolved, valueTypeSpec, context, codeScope)
     }
 
-    override fun getTypeFromCall(): Type {
+    override fun resolveValueType(): Type {
         val baseType = getValueType()
         if (baseType is LambdaType) {
             return baseType.returnType // easy-peasy :3
@@ -188,6 +188,16 @@ class ResolvedField(
         return method.resolveReturnType(context)
         // this must be a fun-interface, and we need to get the return type of the call...
         //  luckily, there is only a single method, but unfortunately, we need the call parameters...
+    }
+
+    override fun resolveThrownType(): Type {
+        LOGGER.warn("Todo: Implement resolveThrownType for field call")
+        return Types.Throwable
+    }
+
+    override fun resolveYieldedType(): Type {
+        LOGGER.warn("Todo: Implement resolveThrownType for field call")
+        return Types.Yielded
     }
 
     override fun toString(): String {

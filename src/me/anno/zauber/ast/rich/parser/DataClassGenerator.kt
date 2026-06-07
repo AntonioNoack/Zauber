@@ -23,6 +23,7 @@ import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -33,6 +34,8 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
 object DataClassGenerator {
+
+    private val LOGGER = LogManager.getLogger(DataClassGenerator::class)
 
     private class SpecialValues {
         val i31 = NumberExpression("31", root, -1)
@@ -294,7 +297,7 @@ object DataClassGenerator {
                         }
             }
             if (copyMethod == null) {
-                println("Creating copy(${setField.name}: $valueType) for $classScope")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Creating copy(${setField.name}: $valueType) for $classScope")
                 generateCopyMethod(classScope, primaryFields, listOf(setField), origin)
             }
         }

@@ -12,6 +12,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.expansion.IsMethodRecursive
 import me.anno.zauber.expansion.IsMethodThrowing
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -36,6 +37,10 @@ open class MethodLike(
     selfType, explicitSelfType, name, scope, flags,
     typeParameters, valueParameters, returnType, origin
 ) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(MethodLike::class)
+    }
 
     init {
         check(scope.isMethodLike()) {
@@ -159,6 +164,28 @@ open class MethodLike(
             "${style(it.name, YELLOW)}: ${it.type}"
         })
         return builder
+    }
+
+    fun resolveThrownType(context: ResolutionContext): Type {
+        val returnType = thrownType // todo if this is defined, validate it in all overrides & self
+        if (returnType != null) return returnType
+
+        val body = body ?: run {
+            if (!isAbstract()) LOGGER.warn("Expected method to have either 'throws' or body $this")
+            return Types.Throwable
+        }
+        return body.resolveThrownType(context)
+    }
+
+    fun resolveYieldedType(context: ResolutionContext): Type {
+        val returnType = yieldedType // todo if this is defined, validate it in all overrides & self
+        if (returnType != null) return returnType
+
+        val body = body ?: run {
+            if (!isAbstract()) LOGGER.warn("Expected method to have either 'yields' or body $this")
+            return Types.Yielded
+        }
+        return body.resolveYieldedType(context)
     }
 
 }

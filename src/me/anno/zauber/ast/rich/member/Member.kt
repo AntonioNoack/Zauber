@@ -38,4 +38,7 @@ abstract class Member(
     // due to multi-interface, there may be many of them
     var childMethods: List<Member> = emptyList()
     var superMethods: List<Member> = emptyList()
+
+    var thrownType: Type? = null
+    var yieldedType: Type? = null
 }

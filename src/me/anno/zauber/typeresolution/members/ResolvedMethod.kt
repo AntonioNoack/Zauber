@@ -1,9 +1,7 @@
 package me.anno.zauber.typeresolution.members
 
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
@@ -14,24 +12,31 @@ class ResolvedMethod(method: Method, context: ResolutionContext, codeScope: Scop
 
     override fun getScopeOfResolved(): Scope = resolved.scope
 
-    private val typeFromCallImpl = lazy {
-        val method = resolved
-        val context = this.context
-        if (LOGGER.isInfoEnabled) LOGGER.info("Resolved method $method, body: ${method.body}, returnType: ${method.returnType}")
-        val inGeneral = method.resolveReturnType(context)
-        val forSelf = specialization.typeParameters.resolveGenerics(context.selfType, inGeneral)
-        forSelf.specialize(specialization)
+    private val valueType = lazy {
+        specialize(resolved.resolveReturnType(context))
     }
 
-    override fun getTypeFromCall(): Type {
-        return typeFromCallImpl.value
+    private val thrownType = lazy {
+        specialize(resolved.resolveThrownType(context))
+    }
+
+    private val yieldedType = lazy {
+        specialize(resolved.resolveYieldedType(context))
+    }
+
+    override fun resolveValueType(): Type {
+        return valueType.value
+    }
+
+    override fun resolveThrownType(): Type {
+        return thrownType.value
+    }
+
+    override fun resolveYieldedType(): Type {
+        return yieldedType.value
     }
 
     override fun toString(): String {
         return "ResolvedMethod(method=$resolved, generics=$specialization)"
-    }
-
-    companion object {
-        private val LOGGER = LogManager.getLogger(ResolvedMethod::class)
     }
 }

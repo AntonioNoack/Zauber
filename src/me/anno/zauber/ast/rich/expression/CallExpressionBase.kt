@@ -74,7 +74,7 @@ abstract class CallExpressionBase(
     }
 
     override fun resolveValueType(context: ResolutionContext): Type {
-        return resolveCallable(context).getTypeFromCall()
+        return resolveCallable(context).resolveValueType()
     }
 
     abstract fun resolveCallable(context: ResolutionContext): ResolvedMember<*>

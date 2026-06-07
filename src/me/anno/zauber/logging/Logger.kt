@@ -14,40 +14,34 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     private val knownWarnings = HashSet<String>()
 
-    private fun infoImpl(prefix: String, message: String) {
-        val time = style(getTime(), timeStyle)
-        val prefix = "[$time,$name:$prefix] "
+    private fun infoImpl(prefix: String, message: String, styleI: String) {
+        val time = style(getTime(), TIME_STYLE)
+        val prefix = "[$time,$name:${style(prefix, styleI)}] "
         if ('\n' !in message) {
             print(prefix)
-            println(message)
+            println(style(message, styleI))
         } else {
             val lines = message.split('\n')
             for (i in lines.indices) {
                 print(prefix)
-                println(lines[i])
+                println(style(lines[i], styleI))
             }
         }
     }
 
     fun info(message: String) {
-        if (isInfoEnabled) infoImpl("INFO", message)
+        if (isInfoEnabled) infoImpl("INFO", message, "")
     }
 
     fun warn(message: String) {
         if (isWarnEnabled && knownWarnings.add(message)) {
-            infoImpl(
-                style("WARN", WARN_ORANGE),
-                style(message, WARN_ORANGE)
-            )
+            infoImpl("WARN", message, WARN_ORANGE)
         }
     }
 
     fun error(message: String) {
         if (isWarnEnabled && knownWarnings.add(message)) {
-            infoImpl(
-                style("ERROR", ERROR_RED),
-                style(message, ERROR_RED)
-            )
+            infoImpl("ERROR", message, ERROR_RED)
         }
     }
 
@@ -60,15 +54,14 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
     }
 
     fun debug(message: String) {
-        if (isDebugEnabled) infoImpl("DEBUG", message)
+        if (isDebugEnabled) infoImpl("DEBUG", message, "")
     }
 
     companion object {
 
         val WARN_ORANGE = StringStyles.BOLD + color(0xFF8F2B)
         val ERROR_RED = StringStyles.BOLD + StringStyles.RED
-
-        val timeStyle = StringStyles.ITALIC + color(0x777777)
+        val TIME_STYLE = StringStyles.ITALIC + color(0x777777)
 
         private fun getTime(): String {
             val calendar = Calendar.getInstance()

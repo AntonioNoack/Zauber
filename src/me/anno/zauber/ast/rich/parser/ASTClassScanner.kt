@@ -84,7 +84,6 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         classScope.fileName = tokens.fileName
         classScope.annotations.addAll(annotations); annotations.clear()
 
-        println("addInitPart discover to $classScope, $name")
         classScope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
 
             // store old state

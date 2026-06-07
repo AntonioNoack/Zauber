@@ -419,7 +419,7 @@ object ASTSimplifier {
         val block0 = blockI.value!!.block
         val selfExpr = base.value.use()
         // then execute it
-        val dst = block0.field(method0.getTypeFromCall())
+        val dst = block0.field(method0.resolveValueType())
         val specialization = method0.specialization
         val call = SimpleDynamicMacro(dst, expr, selfExpr.use(), valueParameters, expr.scope, expr.origin)
         return handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
@@ -1070,7 +1070,7 @@ object ASTSimplifier {
         return when (val method = method0.resolved) {
             is Method -> {
                 // then execute it
-                val dst = block0.field(method0.getTypeFromCall())
+                val dst = block0.field(method0.resolveValueType())
                 val specialization = method0.specialization
                 val selfField = selfField!!.use()
                 assertEquals(method.hasExplicitSelfType, thisField != null) {
@@ -1129,7 +1129,7 @@ object ASTSimplifier {
                 method.getThrownType(method0.specialization)
             )
         } else {
-            val dst = block0.field(method0.getTypeFromCall())
+            val dst = block0.field(method0.resolveValueType())
             var selfType = method.selfTypeI.specialize(method0.specialization) as ClassType
             if (selfType.typeParameters == null) {
                 selfType = selfType.clazz.typeWithArgs.specialize(method0.specialization) as ClassType

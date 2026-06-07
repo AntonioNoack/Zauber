@@ -29,7 +29,7 @@ class ConstructorExpression(
     }
 
     override fun resolveValueType(context: ResolutionContext): Type {
-        return resolveMethod(context).getTypeFromCall()
+        return resolveMethod(context).resolveValueType()
     }
 
     override fun splitsScope(): Boolean = valueParameters.any { it.value.splitsScope() }
