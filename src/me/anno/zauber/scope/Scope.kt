@@ -171,6 +171,10 @@ class Scope(val name: String, val parent: Scope? = null) {
      * */
     var jumpLabel: String? = null
 
+    /**
+     * todo must contain type-params of outer-class;
+     * todo if we have a X<A>.I<Y>(), I<Y> must be valid syntax, too...
+     * */
     var typeParameters: List<Parameter> = emptyList()
         set(value) {
             if (hasTypeParameters && field.size != value.size) {

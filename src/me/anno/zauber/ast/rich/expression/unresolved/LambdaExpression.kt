@@ -6,7 +6,6 @@ import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedCallExpression
@@ -31,6 +30,7 @@ import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.LambdaType.Companion.getLambdaTypeName
 
 class LambdaExpression(
     var variables: List<LambdaVariable>?,

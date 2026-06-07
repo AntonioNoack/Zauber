@@ -17,9 +17,13 @@ import me.anno.zauber.typeresolution.TypeResolution.resolveValueParameters
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ConstructorResolver
+import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.typeresolution.members.ResolvedMember
+import me.anno.zauber.typeresolution.members.ResolvedMethod
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.LambdaType
 
 /**
  * Calls base<typeParams>(valueParams), without anything on the left
@@ -101,10 +105,25 @@ class CallExpression(
                     typeParameters, valueParameters, context, origin
                 ) ?: error("Missing constructor for $baseType<$typeParameters>($valueParameters)")
             }
-            else -> TODO(
-                "Resolve field/method in Callable for ${self.javaClass.simpleName} ($self) " +
-                        "at ${resolveOrigin(origin)}"
-            )
+            else -> {
+                val selfType = self.resolveValueType(context.withTargetType(null))
+                when (selfType) {
+                    is LambdaType -> {
+                        // todo this has two options: with and without explicit self...
+                        val lambdaClass = selfType.toClassType(origin)
+                        println("Resolved lambda $selfType to $lambdaClass")
+                        val method = lambdaClass.clazz.methods0
+                            .first { it.name == "call" }
+                        val spec = Specialization(method.memberScope, lambdaClass.typeParameters!!)
+                        val context = context.withSpec(spec)
+                        return ResolvedMethod(method, context, scope, MatchScore.zero)
+                    }
+                }
+                TODO(
+                    "Resolve field/method in Callable for ${self.javaClass.simpleName} -> $selfType (${selfType.javaClass.simpleName}) " +
+                            "at ${resolveOrigin(origin)}"
+                )
+            }
         }
     }
 

@@ -1,6 +1,11 @@
 package me.anno.zauber.types.impl
 
+import me.anno.utils.GrowingList
 import me.anno.utils.NumberUtils.toInt
+import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
+import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 
@@ -8,13 +13,20 @@ import me.anno.zauber.types.Type
  * Lambda type, with always known parameter types...
  * Self.(A,B,C) -> R
  *
- * Int::plus can be understood as (Int,Int) -> Int, and Int.(Int) -> Int
+ * todo Int::plus can be understood as (Int,Int) -> Int, and Int.(Int) -> Int, test that both work
  * */
 class LambdaType(
     val selfType: Type?,
     val parameters: List<LambdaParameter>,
     val returnType: Type
 ) : Type() {
+
+    companion object {
+        private val lambdaTypeNames = GrowingList { n -> "Function$n" }
+        fun getLambdaTypeName(n: Int): String {
+            return lambdaTypeNames[n]
+        }
+    }
 
     val n get() = (selfType != null).toInt() + parameters.size
 
@@ -32,6 +44,19 @@ class LambdaType(
         return other is LambdaType &&
                 parameters == other.parameters &&
                 returnType == other.returnType
+    }
+
+    fun toScope(): Scope {
+        return langScope.getOrPut(getLambdaTypeName(n), ScopeType.INTERFACE)
+    }
+
+    fun toClassType( origin: Long): ClassType {
+        val base = toScope()[ScopeInitType.AFTER_DISCOVERY]
+        val typeParams = ArrayList<Type>(n)
+        if (selfType != null) typeParams.add(selfType)
+        typeParams.addAll(parameters.map { it.type })
+        typeParams.add(returnType)
+        return ClassType(base, typeParams, origin)
     }
 
     override fun hashCode(): Int {

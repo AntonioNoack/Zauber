@@ -1,11 +1,11 @@
 package me.anno.zauber.ast.rich.controlflow
 
-import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.binaryOp
-import me.anno.zauber.types.BooleanUtils.not
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
@@ -29,10 +29,10 @@ class SubjectCondition(
     }
 
     private fun buildIsExpr(expr: SubjectCondition, subject: Expression, newScope: Scope): Expression {
-        val type = when (expr.type) {
-            is ClassType -> expr.type
-            is LambdaType -> lambdaTypeToClassType(expr.type, subject.origin)
-            else -> throw NotImplementedError("Handle is ${expr.type?.javaClass}")
+        val type = when (val type = expr.type) {
+            is ClassType -> type
+            is LambdaType -> type.toClassType(subject.origin)
+            else -> throw NotImplementedError("Handle is ${type?.javaClass}")
         }
         return IsInstanceOfExpr(subject, type, newScope, subject.origin)
     }

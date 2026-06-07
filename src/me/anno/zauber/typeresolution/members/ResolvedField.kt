@@ -3,7 +3,6 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
-import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
 import me.anno.zauber.ast.rich.expression.CheckEqualsOp
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -31,6 +30,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.getScope
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.LambdaType.Companion.getLambdaTypeName
 import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 
 // todo we don't need only the type-param-generics, but also the self-type generics...

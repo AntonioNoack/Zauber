@@ -32,25 +32,6 @@ class SubjectWhenCase(val conditions: List<SubjectCondition>?, val conditionScop
     }
 }
 
-fun lambdaTypeToScope(lambdaType: LambdaType): Scope {
-    return root.getOrPut(getLambdaTypeName(lambdaType.n), ScopeType.INTERFACE)
-}
-
-fun lambdaTypeToClassType(lambdaType: LambdaType, origin: Long): ClassType {
-    val base = lambdaTypeToScope(lambdaType)
-    val typeParams = ArrayList<Type>(lambdaType.n)
-    if (lambdaType.selfType != null) typeParams.add(lambdaType.selfType)
-    typeParams.addAll(lambdaType.parameters.map { it.type })
-    typeParams.add(lambdaType.returnType)
-    return ClassType(base, typeParams, origin)
-}
-
-fun getLambdaTypeName(n: Int): String {
-    return lambdaTypeNames[n]
-}
-
-private val lambdaTypeNames = GrowingList { n -> "Function$n" }
-
 fun storeSubject(
     scope: Scope,
     subject: Expression,

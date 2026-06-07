@@ -127,7 +127,7 @@ object CallWithNames {
     ): List<Expression>? {
         val anyIsVararg = expectedParameters.any { it.isVararg }
         if (hasTooFewParameters(anyIsVararg, expectedParameters.size, actualParameters.size)) {
-            LOGGER.info("Too few parameters")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Too few parameters")
             return null
         }
 
@@ -143,7 +143,7 @@ object CallWithNames {
                 val name = valueParam.name ?: continue
                 val index = expectedParameters.indexOfFirst { it.name == name }
                 if (index < 0) {
-                    LOGGER.info("Missing parameter: $name")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Missing parameter: $name")
                     return null
                 }
                 check(result[index] == null)
@@ -160,7 +160,11 @@ object CallWithNames {
 
                 val ev = expectedParameters[index]
                 val vpHasVarargStar = false
-                if (!ev.isVararg && vpHasVarargStar) return null // incompatible
+                if (!ev.isVararg && vpHasVarargStar) {
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Got vararg*, but $ev is not vararg")
+                    return null
+                }
+
                 val isNormal = !ev.isVararg || vpHasVarargStar
                 if (isNormal) {
                     result[index++] = valueParam.value
@@ -181,7 +185,10 @@ object CallWithNames {
 
             if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
-                if (!ev.isVararg) return null
+                if (!ev.isVararg) {
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Too few parameters (?)")
+                    return null
+                }
 
                 val context = ResolutionContext(null, false, ev.type)
                 result[index] = createArrayOfExpr(context, ev, emptyList(), scope, origin)

@@ -242,7 +242,12 @@ abstract class ZauberASTBuilderBase(
                     readType(null, true)
                 }
 
-                parameters.add(Parameter(parameters.size, name, ParameterType.TYPE_PARAMETER, type, classScope, origin))
+                val param = Parameter(
+                    parameters.size, name,
+                    ParameterType.TYPE_PARAMETER, ParameterMutability.VAL,
+                    type, classScope, origin
+                )
+                parameters.add(param)
                 readComma()
             }
         }

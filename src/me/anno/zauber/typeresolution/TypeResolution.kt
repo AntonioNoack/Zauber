@@ -3,8 +3,6 @@ package me.anno.zauber.typeresolution
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.Zauber.root
-import me.anno.zauber.ast.rich.controlflow.getLambdaTypeName
-import me.anno.zauber.ast.rich.controlflow.lambdaTypeToScope
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.ArrayToVarargsStar
 import me.anno.zauber.ast.rich.parameter.NamedParameter
@@ -42,7 +40,7 @@ object TypeResolution {
         )
     }
 
-    // todo make this depend on which language we currently parse
+    // todo make this depend on which language we currently parse?
     val langScope by threadLocal { root.getOrPut(STDLIB_NAME, null) }
 
     var depth = 0
@@ -149,7 +147,7 @@ object TypeResolution {
             is UnresolvedType -> typeToScope(type.resolve())
             // is NullableType -> typeToScope(type.base)
             is NonObjectClassType -> type.type.clazz
-            is LambdaType -> lambdaTypeToScope(type)
+            is LambdaType -> type.toScope()
             else -> throw NotImplementedError("typeToScope($type, ${type.javaClass.simpleName})")
         }
     }

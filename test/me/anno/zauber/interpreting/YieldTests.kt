@@ -1,6 +1,7 @@
 package me.anno.zauber.interpreting
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.Test
 
 class YieldTests {
@@ -64,7 +65,7 @@ class ArrayList<V>(): List<V> {
     override operator fun get(index: Int): V {
         return content[index]
     }
-    override operator fun add(value: V) {
+    operator fun add(value: V) {
         if (size+1 > content.size) content = content.copyOf(max(size * 2, 16))
         content[size++] = value
     }
@@ -79,6 +80,9 @@ class ArrayList<V>(): List<V> {
 
 interface Function0<R> {
     fun call(): R
+}
+interface Function1<V0,R> {
+    fun call(v0: V0): R
 }
 class Any {
     open fun hashCode() = 0
@@ -175,6 +179,7 @@ fun throwNPE(message: String): Nothing {
                 { runWork(3) },
             ))
         """.trimIndent() + stdlib
+        LogManager.enable("CallWithNames")
         val value = testExecute(code)
         // todo we expect the following printed: 4,3,2, taking 3s total
     }

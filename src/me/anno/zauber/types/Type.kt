@@ -179,7 +179,7 @@ abstract class Type {
             }
             NullType, UnknownType -> this
             is LambdaType -> {
-                val newSelfType = genericValues.resolveGenericsOrNull(selfType, selfType)
+                val newSelfType = genericValues.resolveGenericsOrNull(selfType, this.selfType)
                 val newReturnType = genericValues.resolveGenerics(selfType, returnType)
                 val newParameters = parameters.map {
                     val newType = genericValues.resolveGenerics(selfType, it.type)
