@@ -5,7 +5,7 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecuteCatch
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertContains
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class NullTests {

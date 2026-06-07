@@ -4,7 +4,7 @@ import me.anno.utils.MultiTest
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource

@@ -1,6 +1,6 @@
 package me.anno.support.cpp.preprocessor
 
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 

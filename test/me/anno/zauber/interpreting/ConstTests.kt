@@ -3,7 +3,7 @@ package me.anno.zauber.interpreting
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import me.anno.zauber.logging.LogManager
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class ConstTests {

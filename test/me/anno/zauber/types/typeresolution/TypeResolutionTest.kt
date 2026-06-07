@@ -4,65 +4,38 @@ import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.utils.ResolutionUtils.testTypeResolutionGetField
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class TypeResolutionTest {
 
+    private fun expectBool(type: Type) {
+        assertEquals(Types.Boolean, type)
+    }
+
+    private fun expectType(type: Type, expected: Type) {
+        assertEquals(expected, type)
+    }
+
     @Test
     fun testConstants() {
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = true")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = false")
-        )
-        assertEquals(
-            NullType,
-            testTypeResolution("val tested = null")
-        )
-        assertEquals(
-            Types.Int,
-            testTypeResolution("val tested = 0")
-        )
-        assertEquals(
-            Types.Long,
-            testTypeResolution("val tested = 0L")
-        )
-        assertEquals(
-            Types.Float,
-            testTypeResolution("val tested = 0f")
-        )
-        assertEquals(
-            Types.Float,
-            testTypeResolution("val tested = 0.0f")
-        )
-        assertEquals(
-            Types.Double,
-            testTypeResolution("val tested = 0d")
-        )
-        assertEquals(
-            Types.Double,
-            testTypeResolution("val tested = 0.0")
-        )
-        assertEquals(
-            Types.Double,
-            testTypeResolution("val tested = 1e3")
-        )
-        assertEquals(
-            Types.Char,
-            testTypeResolution("val tested = ' '")
-        )
-        assertEquals(
-            Types.String,
-            testTypeResolution("val tested = \"Test 123\"")
-        )
+        expectBool(testTypeResolution("val tested = true"))
+        expectBool(testTypeResolution("val tested = false"))
+        expectType(testTypeResolution("val tested = null"), NullType)
+        expectType(testTypeResolution("val tested = 0"), Types.Int)
+        expectType(testTypeResolution("val tested = 0L"), Types.Long)
+        expectType(testTypeResolution("val tested = 0f"), Types.Float)
+        expectType(testTypeResolution("val tested = 0.0f"), Types.Float)
+        expectType(testTypeResolution("val tested = 0d"), Types.Double)
+        expectType(testTypeResolution("val tested = 0.0"), Types.Double)
+        expectType(testTypeResolution("val tested = 1e3"), Types.Double)
+        expectType(testTypeResolution("val tested = ' '"), Types.Char)
+        expectType(testTypeResolution("val tested = \"Test 123\""), Types.String)
     }
 
     @Test
@@ -124,74 +97,26 @@ class TypeResolutionTest {
 
     @Test
     fun testCompareOperators() {
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 < 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 <= 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 > 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 >= 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 == 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 != 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 === 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0 !== 1")
-        )
+        expectBool(testTypeResolution("val tested = 0 < 1"))
+        expectBool(testTypeResolution("val tested = 0 <= 1"))
+        expectBool(testTypeResolution("val tested = 0 > 1"))
+        expectBool(testTypeResolution("val tested = 0 >= 1"))
+        expectBool(testTypeResolution("val tested = 0 == 1"))
+        expectBool(testTypeResolution("val tested = 0 != 1"))
+        expectBool(testTypeResolution("val tested = 0 === 1"))
+        expectBool(testTypeResolution("val tested = 0 !== 1"))
     }
 
     @Test
     fun testCompareOperatorsMixed() {
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f < 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f <= 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f > 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f >= 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f == 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f != 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f === 1")
-        )
-        assertEquals(
-            Types.Boolean,
-            testTypeResolution("val tested = 0f !== 1")
-        )
+        expectBool(testTypeResolution("val tested = 0f < 1"))
+        expectBool(testTypeResolution("val tested = 0f <= 1"))
+        expectBool(testTypeResolution("val tested = 0f > 1"))
+        expectBool(testTypeResolution("val tested = 0f >= 1"))
+        expectBool(testTypeResolution("val tested = 0f == 1"))
+        expectBool(testTypeResolution("val tested = 0f != 1"))
+        expectBool(testTypeResolution("val tested = 0f === 1"))
+        expectBool(testTypeResolution("val tested = 0f !== 1"))
     }
 
     @Test

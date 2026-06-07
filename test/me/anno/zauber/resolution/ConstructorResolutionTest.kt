@@ -4,7 +4,7 @@ import me.anno.utils.ResolutionUtils.getField
 import me.anno.utils.ResolutionUtils.typeResolveScope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Types
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class ConstructorResolutionTest {

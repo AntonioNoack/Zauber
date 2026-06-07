@@ -4,7 +4,7 @@ import me.anno.utils.ResolutionUtils.testTypeResolution
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class ClassCastTest {

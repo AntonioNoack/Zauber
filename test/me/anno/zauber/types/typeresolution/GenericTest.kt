@@ -1,10 +1,10 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.utils.ResolutionUtils.testTypeResolution
+import me.anno.utils.assertEquals
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.utils.ResolutionUtils.testTypeResolution
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class GenericTest {

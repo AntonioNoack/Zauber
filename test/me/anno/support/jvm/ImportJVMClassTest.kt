@@ -2,7 +2,7 @@ package me.anno.support.jvm
 
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 
 // todo next step:
 //   ClassType must include types from outer-classes ->

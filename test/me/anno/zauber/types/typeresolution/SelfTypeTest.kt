@@ -1,11 +1,13 @@
 package me.anno.zauber.types.typeresolution
 
+import me.anno.utils.ResolutionUtils.testTypeResolution
+import me.anno.utils.assertEquals
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
-import me.anno.utils.ResolutionUtils.testTypeResolution
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SelfTypeTest {
@@ -99,7 +101,7 @@ class SelfTypeTest {
         )
         LOGGER.info("Resolved Self to $type (should be B)")
         assertTrue(type is ClassType)
-        assertTrue((type as ClassType).clazz.name == "B")
+        assertEquals("B", (type as ClassType).clazz.name)
     }
 
     @Test

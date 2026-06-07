@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class InnerResolutionTest {
     @Test
-    fun testResolvingMethodFromInsideInnerClass() {
+    fun testResolvingMethodFromInsideInlineClass() {
         testTypeResolution(
             """
             interface Calculator {

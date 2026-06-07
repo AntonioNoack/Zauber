@@ -2,7 +2,7 @@ package me.anno.zauber.types.typeresolution
 
 import me.anno.zauber.types.Types
 import me.anno.utils.ResolutionUtils.testTypeResolution
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class LinkedListIssueTest {
@@ -22,7 +22,7 @@ class LinkedListIssueTest {
             operator fun iterator(): Iterator<V>
         }
         
-        class List<V>: Iterable<V> {
+        abstract class List<V>: Iterable<V> {
             operator fun get(index: Int): V
         }
         
@@ -84,6 +84,8 @@ class LinkedListIssueTest {
         }
             """.trimIndent(), true
         )
+        // todo warn the user about open members in final classes
+        // todo warn the user about open constructors (impossible)
         assertEquals(Types.LinkedList.withTypeParameter(Types.Int), type)
     }
 }

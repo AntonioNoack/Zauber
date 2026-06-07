@@ -21,6 +21,7 @@ import me.anno.zauber.types.impl.CollectionType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
+import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 /**
  * start with high classes, and go down the hierarchy,
@@ -202,7 +203,7 @@ object MethodOverrides {
                     "Expected $scope.$selfMethod to have override flag for $superScope.$superMethod"
                 }
 
-                check(isOpen && !isExplicitlyClosed) {
+                check(!isOpen || !isExplicitlyClosed) {
                     "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)} (${selfMethod.flags}), " +
                             "scopeType: ${scope.scopeType}, superCalls: ${scope.superCalls}"
                 }
@@ -284,6 +285,7 @@ object MethodOverrides {
                     else -> TODO("Deep-replace $this, $superMethod -> $childMethod")
                 }
             }
+            is UnresolvedType -> resolvedName.adjustTo(superClass, childClass, superMethod, childMethod)
             else -> TODO("Replace generics in $this (${javaClass.simpleName}), $superMethod -> $childMethod")
         }
     }

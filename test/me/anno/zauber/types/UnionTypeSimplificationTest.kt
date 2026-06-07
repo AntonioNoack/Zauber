@@ -5,7 +5,7 @@ import me.anno.zauber.types.IsSubTypeOfTest.Companion.testInheritance
 import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.impl.arithmetic.UnknownType
-import org.junit.jupiter.api.Assertions.assertEquals
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class UnionTypeSimplificationTest {
