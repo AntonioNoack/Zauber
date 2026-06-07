@@ -151,7 +151,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val i1 = getI1(endI) - lastLineBreak
         // show position in line, and surroundings with arrow ^^^^ for the respective token
         return "${lineNumberStr(lineNumber)}, " +
-                style("${i0}-${i1}", StringStyles.TEXT) +
+                style("${i0}-${i1 - 1 /* i1 is exclusive */}", StringStyles.TEXT) +
                 if (startI == endI) {
                     val type = getTypeUnsafe(startI)
                     ", ${style(type.toString(), type.style)}" +

@@ -6,7 +6,6 @@ import me.anno.zauber.logging.LogManager
 import kotlin.math.max
 import kotlin.math.min
 
-@Suppress("Since15")
 class WASMRuntime(val binary: WASMBinary) {
 
     companion object {
@@ -90,7 +89,6 @@ class WASMRuntime(val binary: WASMBinary) {
         }
     }
 
-    @Suppress("Since15")
     fun execute(call: WASMCall, instructions: List<WASMInstruction>): WASMInstruction? {
         for (i in instructions.indices) {
             when (val instr = instructions[i]) {

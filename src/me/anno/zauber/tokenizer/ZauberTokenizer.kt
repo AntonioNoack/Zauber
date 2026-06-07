@@ -9,7 +9,7 @@ class ZauberTokenizer(src: String, fileName: String) :
             "class", "interface", "object",
             "package", "import",
             "val", "var", "vararg", "lateinit", "fun",
-            "abstract", "override",
+            "abstract", "override", "operator", "infix",
 
             "if", "else", "do", "while", "when", "for",
             "break", "continue",

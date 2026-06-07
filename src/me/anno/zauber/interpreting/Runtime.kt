@@ -6,6 +6,7 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.utils.assertTrue
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
@@ -170,7 +171,7 @@ class Runtime {
         }
 
         if (method.body == null) {
-            error("Missing body for method $method in ${method.ownerScope}")
+            error("Missing body for ${method.ownerScope}.$method\n  at ${resolveOrigin(method.origin)}")
         }
 
         val graph = ASTSimplifier.simplify(specialization)
@@ -180,7 +181,6 @@ class Runtime {
 
         val result = executeBlock(graph.startBlock)
 
-        @Suppress("Since15")
         check(callStack.removeLast() === call)
         call.recycle()
         // println("Returning $result from call to $method")
@@ -188,7 +188,6 @@ class Runtime {
     }
 
     fun <V> ArrayList<V?>.resizeTo(newSize: Int) {
-        @Suppress("Since15")
         while (size > newSize) removeLast()
         while (size < newSize) add(null)
     }

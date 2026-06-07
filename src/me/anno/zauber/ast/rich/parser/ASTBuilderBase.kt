@@ -160,7 +160,6 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
     }
 
     fun popGenericParams() {
-        @Suppress("Since15")
         genericParams.removeLast()
     }
 

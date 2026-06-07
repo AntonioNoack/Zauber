@@ -55,7 +55,6 @@ open class JavaASTClassScanner(tokens: TokenList, language: Language) :
         val name0 = classScope.superCalls.size
         readSuperCalls(classScope, false)
         while (classScope.superCalls.size > name0) {
-            @Suppress("Since15")
             classScope.superCalls.removeLast()
         }
     }

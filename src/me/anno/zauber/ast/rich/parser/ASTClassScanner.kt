@@ -9,6 +9,7 @@ import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.mergeOrigins
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
@@ -638,14 +639,16 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     open fun readMethod() {
-        val origin = origin(i - 1)
+
+        // todo use start of keywords instead
+        val originOnFun = origin(i - 1)
 
         val end = findParameterStart()
         val name = tokens.toString(end - 1)
         val ownerScope = currPackage
         if (ownerScope.isInterface()) addFlag(Flags.OPEN)
 
-        val methodScope = ownerScope.generate(name, origin, ScopeType.METHOD)
+        val methodScope = ownerScope.generate(name, originOnFun, ScopeType.METHOD)
         methodScope.addFlags(packFlags())
         methodScope.annotations.addAll(annotations); annotations.clear()
 
@@ -668,6 +671,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 Types.Unit
             } else null
 
+            val originBeforeBody = origin(i-1)
+
             val body = when {
                 tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
                 consumeIf("=") -> {
@@ -681,7 +686,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 selfType0, selfType0 != null, name,
                 typeParameters, valueParameters,
                 methodScope, returnType, whereConditions, body,
-                methodScope.flags, origin
+                methodScope.flags, mergeOrigins(originOnFun, originBeforeBody)
             )
             methodScope.selfAsMethod = method
 

@@ -122,7 +122,6 @@ class Scope(val name: String, val parent: Scope? = null) {
         // println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
 
         while (initParts.isNotEmpty() && initParts.last().type < scopeInitType) {
-            @Suppress("Since15")
             val element = initParts.removeLast()
             parent?.get(element.type.next())
             this.scopeInitType = element.type

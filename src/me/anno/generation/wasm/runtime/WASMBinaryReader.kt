@@ -397,7 +397,6 @@ class WASMBinaryReader(
         return body
     }
 
-    @Suppress("Since15")
     fun readInstruction(): WASMInstruction {
         return when (val opcode = u8()) {
 

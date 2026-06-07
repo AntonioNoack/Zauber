@@ -38,7 +38,6 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
             Specializations.specializations.add(this)
             runnable()
         } finally {
-            @Suppress("Since15")
             Specializations.specializations.removeLast()
         }
     }

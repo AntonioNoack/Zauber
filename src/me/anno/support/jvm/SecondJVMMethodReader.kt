@@ -53,7 +53,6 @@ import org.objectweb.asm.Opcodes.*
  * This just reads the commands and structures.
  * No specialization is applied yet.
  * */
-@Suppress("Since15")
 class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters: List<Parameter>) :
     MethodVisitor(API_LEVEL) {
 
