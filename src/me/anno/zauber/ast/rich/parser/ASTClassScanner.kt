@@ -384,9 +384,10 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             }
 
             consumeIf("@") -> {
+                val scope = readAnnotationScope()
                 val type = readTypeNotNull(null, true)
                 val valueParameters = if (tokens.equals(i, TokenType.OPEN_CALL)) readValueParameters() else emptyList()
-                annotations.add(Annotation(type, valueParameters))
+                annotations.add(Annotation(type, valueParameters, scope))
             }
 
             else -> error("Unknown token ${tokens.err(i)}")
@@ -671,7 +672,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                 Types.Unit
             } else null
 
-            val originBeforeBody = origin(i-1)
+            val originBeforeBody = origin(i - 1)
 
             val body = when {
                 tokens.equals(i, TokenType.OPEN_BLOCK) -> readLazyBody()
@@ -756,7 +757,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     }
 
     private fun readSelfType(end: Int): Type {
-        check(tokens.equals(end - 2, ".")) {
+        check(tokens.equals(end - 2, ".", "?.")) {
             "Expected period for field with receiver type at ${tokens.err(end - 2)}"
         }
 
@@ -764,8 +765,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             readTypeNotNull(null, true)
         }
 
-        consume(".")
-
+        if(!consumeIf("?.")) consume(".")
         return type
     }
 

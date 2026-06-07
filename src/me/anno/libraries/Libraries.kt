@@ -46,11 +46,15 @@ object Libraries {
 
     private fun loadProject(file: File, toml: Map<String, Any>, prefix: String, dependencyPrefix: String?): Library {
         val project = Library()
-        project.name = toml["$prefix.name"].toString()
-        project.version = toml["$prefix.version"].toString()
-        project.source = URI("file://${file.absolutePath}")
-        project.newPackage = toml["$dependencyPrefix.newPackage"]?.toString() ?: ""
-        project.oldPackage = toml["$dependencyPrefix.oldPackage"]?.toString() ?: ""
+        project.name = toml["${prefix}name"].toString()
+        project.version = toml["${prefix}version"].toString()
+
+        val source = toml["${prefix}source"]?.toString() ?: ""
+        val sourceFile = if (source.isEmpty()) file else File(file, source)
+
+        project.source = URI("file://${sourceFile.absolutePath}")
+        project.newPackage = toml["${dependencyPrefix}newPackage"]?.toString() ?: ""
+        project.oldPackage = toml["${dependencyPrefix}oldPackage"]?.toString() ?: ""
 
         if (dependencyPrefix != null) {
             for ((key, value) in toml.entries.filter { (it) -> it.startsWith(dependencyPrefix) }) {

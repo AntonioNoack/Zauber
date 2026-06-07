@@ -95,7 +95,7 @@ class CSharpASTBuilder(tokens: TokenList, root: Scope) :
             readTypePath(null)
                 ?: error("Expected type path at ${tokens.err(i0)}")
         }
-        return Annotation(path, emptyList())
+        return Annotation(path, emptyList(), "")
     }
 
 

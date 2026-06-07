@@ -3,7 +3,10 @@ package me.anno.zauber.ast.rich
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.types.Type
 
-class Annotation(val path: Type, val params: List<NamedParameter>) {
+class Annotation(
+    val path: Type, val params: List<NamedParameter>,
+    val scope: String /* e.g. @file:Suppress() -> "file" */
+) {
     override fun toString(): String {
         return "@$path(${params.joinToString(", ")})"
     }

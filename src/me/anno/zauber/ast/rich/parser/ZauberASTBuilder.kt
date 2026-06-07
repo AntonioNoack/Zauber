@@ -223,20 +223,14 @@ class ZauberASTBuilder(
     }
 
     override fun readAnnotation(): Annotation {
-        if (tokens.equals(i, TokenType.NAME) &&
-            tokens.equals(i + 1, ":") &&
-            tokens.equals(i + 2, TokenType.NAME)
-        ) {
-            // skipping scope
-            i += 2
-        }
+        val scope = readAnnotationScope()
         check(tokens.equals(i, TokenType.NAME))
         val path = readTypePath(null)
             ?: error("Expected type for annotation at ${tokens.err(i)}")
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             readValueParameters()
         } else emptyList()
-        return Annotation(path, params)
+        return Annotation(path, params, scope)
     }
 
     override fun consumeKeyword(): Int {

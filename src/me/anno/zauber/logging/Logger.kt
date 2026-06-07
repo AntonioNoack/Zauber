@@ -15,17 +15,17 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     private val knownWarnings = HashSet<String>()
 
-    private fun infoImpl(prefix: String, message: String, styleI: String) {
+    private fun infoImpl(prefix: String, message: String, style: String) {
         val time = style(getTime(), TIME_STYLE)
-        val prefix = "[$time,$name:${style(prefix, styleI)}] "
+        val prefix = "[$time,$name:${style(prefix, style)}] "
         if ('\n' !in message) {
             print(prefix)
-            println(style(message, styleI))
+            println(style(message, style))
         } else {
             val lines = message.split('\n')
             for (i in lines.indices) {
                 print(prefix)
-                println(style(lines[i], styleI))
+                println(style(lines[i], style))
             }
         }
     }
@@ -56,10 +56,12 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     private fun join(message: String, e: Throwable): String {
         val sb = StringWriter()
-        sb.append(message).append(": ")
+        if (message.isNotEmpty()) {
+            sb.append(message).append(": ")
+        }
         val pr = PrintWriter(sb)
         e.printStackTrace(pr)
-        return sb.toString()
+        return sb.toString().replace("\t", "  ")
     }
 
     fun debug(message: String) {

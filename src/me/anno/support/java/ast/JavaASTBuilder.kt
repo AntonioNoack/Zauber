@@ -342,19 +342,13 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
     }
 
     override fun readAnnotation(): Annotation {
-        if (tokens.equals(i, TokenType.NAME) &&
-            tokens.equals(i + 1, ":") &&
-            tokens.equals(i + 2, TokenType.NAME)
-        ) {
-            // skipping scope
-            i += 2
-        }
+        val scope = readAnnotationScope()
 
         if (tokens.equals(i, "Override") && !tokens.equals(i + 1, TokenType.OPEN_CALL)) {
             i++ // skip 'Override'
             addFlag(Flags.OVERRIDE)
             val type = langScope.getOrPut("Override", ScopeType.INTERFACE).typeWithArgs
-            return Annotation(type, emptyList())
+            return Annotation(type, emptyList(), scope)
         }
 
         check(tokens.equals(i, TokenType.NAME))
@@ -363,7 +357,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val params = if (tokens.equals(i, TokenType.OPEN_CALL)) {
             readValueParameters()
         } else emptyList()
-        return Annotation(path, params)
+        return Annotation(path, params, scope)
     }
 
     override fun readParameterDeclarations(

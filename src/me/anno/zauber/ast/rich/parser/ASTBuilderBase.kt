@@ -273,4 +273,14 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
         }
         return null
     }
+
+    fun readAnnotationScope(): String {
+        return if (tokens.equals(i, TokenType.NAME) &&
+            tokens.equals(i + 1, ":") &&
+            tokens.equals(i + 2, TokenType.NAME, TokenType.KEYWORD)
+        ) {
+            i += 2
+            tokens.toString(i - 2)
+        } else ""
+    }
 }
