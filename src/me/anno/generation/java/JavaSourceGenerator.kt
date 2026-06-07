@@ -25,6 +25,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.i
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -1180,6 +1181,7 @@ open class JavaSourceGenerator : Generator() {
             val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
+                is StringExpression -> appendString(expr.value)
                 is SpecialValueExpression -> when (expr.type) {
                     SpecialValue.NULL -> builder.append("null")
                     SpecialValue.TRUE -> builder.append("true")
@@ -1199,6 +1201,22 @@ open class JavaSourceGenerator : Generator() {
             }
         }
         builder.append(forFieldAccess)
+    }
+
+    open fun appendString(expr: String) {
+        builder.ensureCapacity(builder.length + expr.length + 2)
+        builder.append('\"')
+        for (c in expr) {
+            when (c) {
+                '\"' -> builder.append("\\\"")
+                '\n' -> builder.append("\\n")
+                '\r' -> builder.append("\\r")
+                '\t' -> builder.append("\\t")
+                in ' '..'~' -> builder.append(c) // printable
+                else -> builder.append("\\u").append(c.code.toString(16).padStart(4, '0'))
+            }
+        }
+        builder.append('\"')
     }
 
     open fun appendValueParams(graph: SimpleGraph, valueParameters: List<SimpleField>, withBrackets: Boolean = true) {
@@ -1837,6 +1855,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun appendPath(path: List<String>, separator: String = ".") {
+        if (path.isEmpty()) builder.append("ROOT")
         for (i in path.indices) {
             if (i > 0) builder.append(separator)
             builder.append(path[i])

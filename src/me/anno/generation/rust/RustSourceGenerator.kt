@@ -134,7 +134,9 @@ class RustSourceGenerator : JavaSourceGenerator() {
             .apply {
                 // todo convert argc/argv to String-array, if needed
                 // include all imports
-                content.append(writer[File(dst, "mod.rs")]!!.content)
+                val modRS = writer[File(dst, "mod.rs")]
+                    ?: error("Missing mod.rs")
+                content.append(modRS.content)
                 content.append(
                     "\n" + """
                 fn main() {

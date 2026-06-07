@@ -72,7 +72,7 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
         val testScope = ResolutionUtils.typeResolveScope(code)
         registerMainMethod(testScope)
 
-        val dependencies = Dependencies.collectClassesAndMethods()
+        val dependencies = Dependencies.collectDependencies()
         printDependencies(dependencies)
 
         // prepare folders

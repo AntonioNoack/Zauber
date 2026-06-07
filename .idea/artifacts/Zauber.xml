@@ -12,6 +12,7 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib-jdk8/2.2.20/kotlin-stdlib-jdk8-2.2.20.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib/2.2.20/kotlin-stdlib-2.2.20.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib-jdk7/2.2.20/kotlin-stdlib-jdk7-2.2.20.jar" path-in-jar="/" />
+      <element id="dir-copy" path="$PROJECT_DIR$/assets" />
     </root>
   </artifact>
 </component>

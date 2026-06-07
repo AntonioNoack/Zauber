@@ -11,13 +11,13 @@ open class MinimalCppCompiler(preserveFolder: Boolean = false) :
     companion object {
         val minimalCMakeLists by lazy {
             MinimalCppCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CMakeLists.txt")!!
+                .classLoader.getResourceAsStream("files/CMakeLists.txt")!!
                 .readBytes().decodeToString()
         }
 
         val cppStandardLib by lazy {
             MinimalCppCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CppStandardLib.hpp")!!
+                .classLoader.getResourceAsStream("files/CppStandardLib.hpp")!!
                 .readBytes()
         }
     }

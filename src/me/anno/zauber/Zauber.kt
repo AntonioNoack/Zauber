@@ -28,7 +28,7 @@ import me.anno.zauber.scope.ScopeType
 object Zauber {
     const val STDLIB_NAME = "zauber"
     val root by threadLocal {
-        Scope("*").apply {
+        Scope("ROOT").apply {
             scopeType = ScopeType.PACKAGE
             setEmptyTypeParams()
 

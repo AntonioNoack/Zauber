@@ -37,7 +37,7 @@ class DependencyGraphTests {
         val method = testScope[ScopeInitType.AFTER_DISCOVERY].methods0.first { it.name == "main" }
         Dependencies.addMethod(Specialization(method.scope, emptyParameterList()))
 
-        val dependencies = Dependencies.collectClassesAndMethods()
+        val dependencies = Dependencies.collectDependencies()
         printDependencies(dependencies)
         val classes = dependencies.createdClasses
         val methods = dependencies.calledMethods

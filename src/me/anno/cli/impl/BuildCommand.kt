@@ -12,7 +12,8 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
-import me.anno.zauber.expansion.DependencyData
+import me.anno.zauber.expansion.Dependencies
+import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -38,6 +39,7 @@ object BuildCommand : CommandImpl("build", "b") {
         "js" to MinimalJavaScriptCompiler(),
         "python" to MinimalPythonCompiler(),
         "c++" to MinimalCppCompiler(),
+        "c" to MinimalCCompiler(),
         "llvm" to MinimalLLVMCompiler(),
         "wasm" to MinimalWASMCompiler(),
         "rust" to MinimalRustCompiler(),
@@ -54,7 +56,7 @@ object BuildCommand : CommandImpl("build", "b") {
 
         val projectFolder = project.root
         try {
-            buildProject(project, compiler)
+            buildProject(project, compiler, options)
             if ("test" in options) runTests(project, compiler)
             if ("run" in options) compiler.execute(projectFolder)
         } catch (e: Exception) {
@@ -65,26 +67,58 @@ object BuildCommand : CommandImpl("build", "b") {
         }
     }
 
-    private fun buildProject(project: CompileProject, compiler: MinimalCompiler) {
-        val projectFolder = project.root
-        val data = DependencyData()
+    private fun markEntryMethodReachable(method: Method) {
+        val owner = Specialization.fromSimple(method.ownerScope)
+        Dependencies.addClass(owner)
+
+        val constr = method.ownerScope.getOrCreatePrimaryConstructorScope()
+        Dependencies.addMethod(Specialization.fromSimple(constr))
+
+        val method0 = Specialization.fromSimple(method.memberScope)
+        Dependencies.addMethod(method0)
+    }
+
+    private fun buildProject(project: CompileProject, compiler: MinimalCompiler, options: Options) {
+
+        // we must mark all entry points reachable
+        markEntryMethodReachable(project.mainMethod)
+        if ("test" in options) {
+            for (test in project.unitTests) {
+                markEntryMethodReachable(test)
+            }
+        }
+
+        val data = Dependencies.collectDependencies()
         val main = project.mainMethod
+        val projectFolder = File(project.root, "target")
         val srcFolder = File(projectFolder, "generated")
+        srcFolder.mkdirs()
         compiler.compile(projectFolder, srcFolder, data, main)
     }
 
+    private val instances = HashMap<Scope, Instance>()
     private fun runTests(project: CompileProject, compiler: MinimalCompiler?) {
         if (compiler == null) {
+            instances.clear()
             val testResults = project.unitTests.map { test ->
                 test to lazy {
                     val specialization = Specialization.fromSimple(test.memberScope)
-                    val self = runtime.getObjectInstance(test.ownerScope.typeWithArgs)
+                    // todo call beforeEach/beforeAll and afterEach/afterAll if defined
+                    val self = getSelfInstance(test.memberScope)
                     runtime.executeCall(self, null, specialization, emptyList())
                 }
             }
             showUnitTestResults(testResults)
         } else {
             TODO("compile and run unit tests")
+        }
+    }
+
+    private fun getSelfInstance(scope: Scope): Instance {
+        return instances.getOrPut(scope) {
+            val type = scope.typeWithArgs
+            if (scope.isObjectLike()) runtime.getObjectInstance(type)
+            else runtime.getClass(type).createInstance()
         }
     }
 

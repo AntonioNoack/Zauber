@@ -22,7 +22,7 @@ class InheritanceTable(val data: DependencyData) {
 
         val inheritanceCode by lazy {
             InheritanceTable::class.java
-                .classLoader.getResourceAsStream("./src/IndirectCall.kt")!!
+                .classLoader.getResourceAsStream("src/IndirectCall.kt")!!
                 .readBytes().decodeToString()
         }
     }

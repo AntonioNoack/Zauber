@@ -9,7 +9,7 @@ class MinimalJavaScriptCompiler : MinimalCompiler() {
     companion object {
         val minPackageJson by lazy {
             MinimalJavaScriptCompiler::class.java
-                .classLoader.getResourceAsStream("./files/package.json")!!
+                .classLoader.getResourceAsStream("files/package.json")!!
                 .readBytes()
         }
     }

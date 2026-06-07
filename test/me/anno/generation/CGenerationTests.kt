@@ -12,7 +12,7 @@ class CGenerationTests : CodeGenerationTests() {
         CppGenerationTests().registerLib()
     }
 
-    override fun generator() = MinimalCCompiler(true)
+    override fun generator() = MinimalCCompiler()
 
     @Test
     fun testSimpleMath() {

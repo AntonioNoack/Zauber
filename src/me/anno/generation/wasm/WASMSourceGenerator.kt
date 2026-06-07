@@ -1069,7 +1069,9 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     fun getObjectGetterFunctionIndex(objectScope: Scope): Int {
-        return functionIndexList.size + objectGetters[objectScope]!!
+        val getter = objectGetters[objectScope]
+            ?: error("Missing object-getter for $objectScope")
+        return functionIndexList.size + getter
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {

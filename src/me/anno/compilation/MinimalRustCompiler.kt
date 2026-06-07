@@ -11,7 +11,7 @@ open class MinimalRustCompiler(preserveFolder: Boolean = false) :
     companion object {
         val cargoToml by lazy {
             MinimalRustCompiler::class.java
-                .classLoader.getResourceAsStream("./files/Cargo.toml")!!
+                .classLoader.getResourceAsStream("files/Cargo.toml")!!
                 .readBytes()
         }
     }

@@ -7,7 +7,6 @@ import me.anno.generation.wasm.runtime.WASMBinaryReader
 import me.anno.generation.wasm.runtime.WASMRuntime
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
@@ -16,10 +15,6 @@ import me.anno.zauber.types.Types
 import java.io.File
 
 class MinimalWASMRuntimeCompiler : MinimalCompiler() {
-
-    companion object {
-        private val LOGGER = LogManager.getLogger(MinimalWASMRuntimeCompiler::class)
-    }
 
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
 

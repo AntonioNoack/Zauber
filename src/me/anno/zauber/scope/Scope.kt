@@ -47,19 +47,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     var scopeType: ScopeType? = null
     var sourceLibrary: Library? = null
 
-    val path: List<String>
-        get() {
-            val path = ArrayList<String>()
-            var that = this
-            while (true) {
-                if (that.name == "*") break
-                path.add(that.name)
-                that = that.parent!!
-            }
-            path.reverse()
-            return path
-        }
-
+    val path: List<String> = if (parent != null) parent.path + name else emptyList()
     val pathStr: String = path.joinToString(".")
     val depth get() = path.size
 
@@ -621,7 +609,8 @@ class Scope(val name: String, val parent: Scope? = null) {
         )
     }
 
-    override fun toString(): String = style(pathStr, StringStyles.LIGHT_BLUE)
+    override fun toString(): String =
+        style(pathStr.ifEmpty { "ROOT" }, StringStyles.LIGHT_BLUE)
 
     override fun equals(other: Any?): Boolean {
         if (other is Scope) {

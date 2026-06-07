@@ -27,7 +27,7 @@ class RuntimeCompiler : MinimalCompiler() {
         val testScope = ResolutionUtils.typeResolveScope(code)
         registerMainMethod(testScope)
 
-        val dependencies = Dependencies.collectClassesAndMethods()
+        val dependencies = Dependencies.collectDependencies()
         printDependencies(dependencies)
 
         registerMethods()

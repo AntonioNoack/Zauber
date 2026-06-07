@@ -9,7 +9,10 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.constants.SimpleString
-import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
+import me.anno.zauber.ast.simple.expression.SimpleCallable
+import me.anno.zauber.ast.simple.expression.SimpleGetTypeInstance
 import me.anno.zauber.ast.simple.fields.SimpleGetClassField
 import me.anno.zauber.ast.simple.fields.SimpleGetObject
 import me.anno.zauber.ast.simple.fields.SimpleSetClassField
@@ -56,7 +59,7 @@ object Dependencies {
     //  -> todo we could make casting one type to another be also data we collect, and then we can limit these interactions
 
     fun addMethod(method: Specialization) {
-        check(method.isMethodLike())
+        check(method.isMethodLike()) { "$method is not a method" }
         // if method is a macro, skip it, we cannot execute it at runtime anyway
         if (method.method.flags.hasFlag(Flags.MACRO)) return
 
@@ -192,7 +195,7 @@ object Dependencies {
         }
     }
 
-    fun collectClassesAndMethods(): DependencyData {
+    fun collectDependencies(): DependencyData {
         addClass(Types.Unit, true)
         return reached
     }

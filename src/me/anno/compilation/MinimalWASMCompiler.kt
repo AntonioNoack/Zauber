@@ -12,7 +12,7 @@ class MinimalWASMCompiler : MinimalCompiler() {
     companion object {
         val minimalJS by lazy {
             MinimalRustCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CallWASMFromJS.js")!!
+                .classLoader.getResourceAsStream("files/CallWASMFromJS.js")!!
                 .readBytes().decodeToString()
                 .split("IMPORTED_FUNCTIONS")
         }

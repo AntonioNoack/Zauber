@@ -5,19 +5,19 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
 
-open class MinimalCCompiler(preserveFolder: Boolean = false) :
+open class MinimalCCompiler :
     MinimalCompiler(null) {
 
     companion object {
         val minimalCMakeListsForC by lazy {
             MinimalCCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CMakeLists-C.txt")!!
+                .classLoader.getResourceAsStream("files/CMakeLists-C.txt")!!
                 .readBytes().decodeToString()
         }
 
         val cStandardLib by lazy {
             MinimalCCompiler::class.java
-                .classLoader.getResourceAsStream("./files/CStandardLib.h")!!
+                .classLoader.getResourceAsStream("files/CStandardLib.h")!!
                 .readBytes()
         }
     }

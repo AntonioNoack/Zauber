@@ -9,7 +9,7 @@ class MinimalJavaMavenCompiler : MinimalCompiler() {
     companion object {
         val minimalPom by lazy {
             MinimalJavaMavenCompiler::class.java
-                .classLoader.getResourceAsStream("./files/minimal.pom")!!
+                .classLoader.getResourceAsStream("files/minimal.pom")!!
                 .readBytes()
         }
     }
