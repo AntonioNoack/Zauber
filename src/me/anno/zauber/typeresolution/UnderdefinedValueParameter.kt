@@ -1,5 +1,7 @@
 package me.anno.zauber.typeresolution
 
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.TypeResolution.resolveType
@@ -26,6 +28,10 @@ class UnderdefinedValueParameter(
     }
 
     override fun toString(): String {
-        return "UnderdefinedValueParameter(name=$name,value=${param.value},context=$context)"
+        return if (name == null) {
+            "Underdefined[${param.value},context=$context]"
+        } else {
+            "Underdefined[${style("\"$name\"", GREEN)},${param.value},context=$context]"
+        }
     }
 }
