@@ -11,6 +11,7 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
 
     var isInfoEnabled: Boolean = true
     var isWarnEnabled: Boolean = true
+    var isErrorEnabled: Boolean = true
 
     private val knownWarnings = HashSet<String>()
 
@@ -45,12 +46,20 @@ class Logger(val name: String, var isDebugEnabled: Boolean) {
         }
     }
 
+    fun error(message: String, e: Throwable) {
+        if (isErrorEnabled) error(join(message, e))
+    }
+
     fun warn(message: String, e: Throwable) {
+        if (isWarnEnabled) warn(join(message, e))
+    }
+
+    private fun join(message: String, e: Throwable): String {
         val sb = StringWriter()
         sb.append(message).append(": ")
         val pr = PrintWriter(sb)
         e.printStackTrace(pr)
-        warn(sb.toString())
+        return sb.toString()
     }
 
     fun debug(message: String) {

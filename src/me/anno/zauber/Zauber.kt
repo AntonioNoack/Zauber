@@ -29,6 +29,9 @@ object Zauber {
     const val STDLIB_NAME = "zauber"
     val root by threadLocal {
         Scope("*").apply {
+            scopeType = ScopeType.PACKAGE
+            setEmptyTypeParams()
+
             // ensure zauber is a package
             getOrPut(STDLIB_NAME, ScopeType.PACKAGE).apply {
                 setEmptyTypeParams()

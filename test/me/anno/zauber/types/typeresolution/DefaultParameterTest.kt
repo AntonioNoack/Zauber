@@ -1,16 +1,14 @@
 package me.anno.zauber.types.typeresolution
 
 import me.anno.utils.ResolutionUtils.testTypeResolution
-import me.anno.zauber.types.Types
 import me.anno.utils.assertEquals
-import me.anno.zauber.logging.LogManager
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 
 class DefaultParameterTest {
 
     @Test
     fun testDefaultParameterWithoutSelf() {
-        LogManager.enableAllLoggers()
         val actual = testTypeResolution(
             """
                 fun call(x: Int = 0): Float

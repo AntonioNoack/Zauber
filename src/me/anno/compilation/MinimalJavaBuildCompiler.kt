@@ -45,7 +45,7 @@ class MinimalJavaBuildCompiler : MinimalCompiler() {
             // 1.8 with source and target is the fastest, even if it prints a few warnings
             "-source", "1.8",
             "-target", "1.8",
-           // "--release", "8",
+            // "--release", "8",
             "-d", classFolder.path
         ) + sourceFiles.map { it.path }
 
@@ -89,7 +89,7 @@ class MinimalJavaBuildCompiler : MinimalCompiler() {
 
             jar.putNextEntry(entry)
             file.inputStream().use { fileStream ->
-                fileStream.transferTo(jar)
+                fileStream.copyTo(jar)
             }
             jar.closeEntry()
         }

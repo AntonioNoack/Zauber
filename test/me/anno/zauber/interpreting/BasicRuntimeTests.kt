@@ -1,13 +1,12 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.ResolutionUtils.typeResolveScope
+import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.Stdlib.registerAllMethods
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.impl.ClassType
-import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 class BasicRuntimeTests {
@@ -31,10 +30,9 @@ class BasicRuntimeTests {
 
             registerAllMethods()
 
-            val specialization = Specialization(getter.scope, emptyParameterList())
+            val specialization = Specialization.fromSimple(getter.scope)
             val self = runtime.getObjectInstance(scope.typeWithArgs)
-            val value = runtime.executeCall(self, null, specialization, emptyList())
-            return value
+            return runtime.executeCall(self, null, specialization, emptyList())
         }
     }
 

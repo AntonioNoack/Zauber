@@ -1,6 +1,7 @@
 package me.anno.cli.impl
 
 import me.anno.cli.CommandImpl
+import me.anno.cli.impl.UnitTestResults.showUnitTestResults
 import me.anno.compilation.*
 import me.anno.libraries.Libraries
 import me.anno.libraries.Libraries.PROJECT_FILE_EXTENSION
@@ -12,50 +13,77 @@ import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
 import me.anno.zauber.expansion.DependencyData
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import java.io.File
 import java.net.URI
+import kotlin.system.exitProcess
+
+// todo load standard library from internal file...
 
 object BuildCommand : CommandImpl("build", "b") {
 
     private val LOGGER = LogManager.getLogger(BuildCommand::class)
+    private val compilers = listOf(
+        "java" to MinimalJavaBuildCompiler(),
+        "jvm" to MinimalJVMCompiler(),
+        "js" to MinimalJavaScriptCompiler(),
+        "python" to MinimalPythonCompiler(),
+        "c++" to MinimalCppCompiler(),
+        "llvm" to MinimalLLVMCompiler(),
+        "wasm" to MinimalWASMCompiler(),
+        "rust" to MinimalRustCompiler(),
+        "runtime" to RuntimeCompiler()
+    )
+
     private val zauberExtensions = arrayOf("zauber", "zbr", "kt", "kts")
 
     override fun execute(options: Options, location: File) {
-        println("options: $options")
         val project = readFiles(location, scanAll = "test" in options, options)
-        val compiler = when (options["target"]) {
-            "java" -> MinimalJavaBuildCompiler()
-            "jvm" -> MinimalJVMCompiler()
-            "js" -> MinimalJavaScriptCompiler()
-            "python" -> MinimalPythonCompiler()
-            "c++" -> MinimalCppCompiler()
-            "llvm" -> MinimalLLVMCompiler()
-            "wasm" -> MinimalWASMCompiler()
-            "rust" -> MinimalRustCompiler()
-            "runtime" -> null
-            else -> {
-                if ("run-only" in options || "test-only" in options) null
-                else error("You must specify a target")
-            }
-        }
-        // compile
-        if (compiler != null) {
-            val projectFolder = project.root
-            val data = DependencyData()
-            val main = project.mainMethod
-            val srcFolder = File(projectFolder, "generated")
-            compiler.compile(projectFolder, srcFolder, data, main)
+        val targetName = options["target"] ?: "runtime" // will be changed to LLVM once stable
+        val compiler = compilers.firstOrNull { it.first == targetName }?.second
+            ?: error("Invalid target $targetName")
+
+        val projectFolder = project.root
+        try {
+            buildProject(project, compiler)
+            if ("test" in options) runTests(project, compiler)
             if ("run" in options) compiler.execute(projectFolder)
+        } catch (e: Exception) {
+            val message = e.message ?: e.javaClass.simpleName
+            if ("debug" in options) LOGGER.error(message, e)
+            else LOGGER.error(message)
+            exitProcess(-1)
         }
-        if ("test" in options) {
+    }
+
+    private fun buildProject(project: CompileProject, compiler: MinimalCompiler) {
+        val projectFolder = project.root
+        val data = DependencyData()
+        val main = project.mainMethod
+        val srcFolder = File(projectFolder, "generated")
+        compiler.compile(projectFolder, srcFolder, data, main)
+    }
+
+    private fun runTests(project: CompileProject, compiler: MinimalCompiler?) {
+        if (compiler == null) {
+            val testResults = project.unitTests.map { test ->
+                test to lazy {
+                    val specialization = Specialization.fromSimple(test.memberScope)
+                    val self = runtime.getObjectInstance(test.ownerScope.typeWithArgs)
+                    runtime.executeCall(self, null, specialization, emptyList())
+                }
+            }
+            showUnitTestResults(testResults)
+        } else {
             TODO("compile and run unit tests")
         }
     }
@@ -65,7 +93,7 @@ object BuildCommand : CommandImpl("build", "b") {
         println("  Options:")
         println("    --run: also run the project")
         println("    --test: also run unit tests; you can specify a specific test, too")
-        println("    --target: define which target to compile to, options: [javascript, java, wasm, rust, c++]")
+        println("    --target: define which target to compile to, options: ${compilers.map { it.first }}")
     }
 
     // todo load dependencies, too...
@@ -121,8 +149,14 @@ object BuildCommand : CommandImpl("build", "b") {
         } else when (location.extension.lowercase()) {
             in zauberExtensions -> {
                 val root = findProjectRootFromPackage(location)
-                options["main"] = location.absolutePath.substring(root.absolutePath.length + 1)
-                val config = root.listFiles()!!.firstOrNull { it.extension == PROJECT_FILE_EXTENSION }
+                LOGGER.info("Project Root: $root")
+
+                options["main"] = location.absolutePath
+                    .substring(root.absolutePath.length + 1)
+                    .withoutExtension()
+                LOGGER.info("Main: ${options["main"]}")
+
+                val config = (root.listFiles() ?: emptyArray()).firstOrNull { it.extension == PROJECT_FILE_EXTENSION }
                 if (config != null) return readFiles(config, scanAll, options) // for dependencies
 
                 val sourceFiles = collectSourceFiles(root)
@@ -136,6 +170,10 @@ object BuildCommand : CommandImpl("build", "b") {
             }
             else -> error("Unknown file extension ${location.extension}")
         }
+    }
+
+    private fun String.withoutExtension(): String {
+        return substringBeforeLast('.')
     }
 
     fun collectSourceFiles(root: File): List<File> {
@@ -177,17 +215,26 @@ object BuildCommand : CommandImpl("build", "b") {
     }
 
     fun selectMainMethod(methods: List<Method>, options: Options): Method {
-        val candidates = methods.filter { method -> method.name == "main" && method.ownerScope.isObjectLike() }
-        val main = options["main"]
+        val candidates = methods.filter { method ->
+            method.name == "main" &&
+                    method.ownerScope.isObjectLike()
+        }
+        val main = options["main"]?.split('/', '.')
         if (main != null) {
-            val matches = candidates.filter { it.ownerScope.pathStr == main }
-            check(matches.isNotEmpty()) {
-                "No matching main method found, candidates: ${matches.map { it.ownerScope.pathStr }}"
+            val matches0 = candidates.filter { it.ownerScope.path == main }
+            val matches1 = matches0.ifEmpty {
+                if (main.last() == "main") {
+                    val main1 = main.dropLast(1)
+                    candidates.filter { it.ownerScope.path == main1 }
+                } else emptyList()
             }
-            check(matches.size == 1) {
-                "Main method is ambiguous: $matches"
+            check(matches1.isNotEmpty()) {
+                "No matching main method found in $main, candidates: ${matches1.map { it.ownerScope.pathStr }}"
             }
-            return matches.first()
+            check(matches1.size == 1) {
+                "Main method is ambiguous: $matches1"
+            }
+            return matches1.first()
         } else {
             if (candidates.isEmpty()) {
                 if ("only-test" in options) {
@@ -259,6 +306,7 @@ object BuildCommand : CommandImpl("build", "b") {
     }
 
     fun findProjectRootFromPackage(file: File): File {
+        val file = file.absoluteFile
         file.bufferedReader().use { reader ->
             while (true) {
                 val line = reader.readLine()?.trim() ?: break
@@ -272,16 +320,16 @@ object BuildCommand : CommandImpl("build", "b") {
                     var folder = file
                     for (segment in segments.asReversed()) {
                         if (segment.isEmpty()) continue
-                        folder = folder.parentFile
+                        folder = folder.parentFile ?: return folder
                         check(folder.name.equals(segment, true)) {
                             "Package/folder-name mismatch"
                         }
                     }
-                    return folder.parentFile
+                    return folder.parentFile ?: folder
                 }
             }
         }
         LOGGER.warn("Could not find package line in $file, assuming main package")
-        return file.parentFile
+        return file.parentFile ?: file
     }
 }
