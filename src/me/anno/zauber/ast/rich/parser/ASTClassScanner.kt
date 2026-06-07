@@ -354,6 +354,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("class") -> {
                 check(!tokens.equals(i - 2, "::"))
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
+                // println("Reading class $name")
                 readNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
             }
 
@@ -418,6 +419,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
         val end = findFieldNameEnd()
         val name = tokens.toString(end - 1)
+
+        // println("Reading field $name in $currPackage")
 
         val ownerScope = currPackage
         val flags = packFlags()
@@ -609,9 +612,9 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                         call.type.clazz
                     }
                 }
-                val base =
-                    SuperExpression(label, superCall.target == InnerSuperCallTarget.THIS, constrScope, superCall.origin)
-                println("Super-call for $superCall in $constrScope")
+                val isThis = superCall.target == InnerSuperCallTarget.THIS
+                val base = SuperExpression(label, isThis, constrScope, superCall.origin)
+                // println("Super-call for $superCall in $constrScope")
                 list.add(SuperCallExpression(base, null, superCall.valueParameters, origin))
             }
 
@@ -710,6 +713,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         check(i < tokens.size) { "Cannot read lazy-value at the end, ${tokens.err(i)}" }
         val end = findLazyValueEnd(forField)
         check(i < end) { "Lazy value must not be empty, @${tokens.err(i)}" }
+        if (false) println("End for lazy value: ${tokens.err(end)}")
         return pushScope(ScopeType.METHOD_BODY, "body") { scope ->
             val tokens1 = TokenSubList(tokens, i, end)
             val expr = LazyExpression(tokens1, false, scope, origin(i), imports, generics)
@@ -731,6 +735,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
     private fun findLazyValueEnd(forField: Boolean): Int {
         var end = i
         var depth = 0
+        var softDepth = 0
         searchEnd@ while (end < tokens.size) {
             val j0 = end++
             when (tokens.getType(j0)) {
@@ -739,7 +744,11 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                     if (depth == 0) return end
                     depth--
                 }
-                TokenType.COMMA, TokenType.SEMICOLON -> if (depth == 0) return j0
+                TokenType.COMMA -> if (depth == 0) {
+                    // todo this scenario is ambiguous, try the best we can...
+                    if (softDepth <= 0) return j0
+                }
+                TokenType.SEMICOLON -> if (depth == 0) return j0
                 else -> if (depth == 0) when {
                     tokens.equals(j0, ".", "+", "-", "*", "/", "%", "&&", "||") &&
                             tokens.equals(j0, TokenType.NAME, TokenType.KEYWORD) -> end++ // skip another one
@@ -750,6 +759,8 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                     // enum class, data class, private class... these depend on the work after them...
                     tokens.equals(j0 + 1, "class") && tokens.equals(j0, *classPrefixes) -> return j0
                     tokens.equals(j0, "class") && !tokens.equals(j0 - 1, "::") -> return j0
+                    tokens.equals(j0, "<") -> softDepth++
+                    tokens.equals(j0, ">") -> softDepth--
                 }
             }
         }
@@ -765,7 +776,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             readTypeNotNull(null, true)
         }
 
-        if(!consumeIf("?.")) consume(".")
+        if (!consumeIf("?.")) consume(".")
         return type
     }
 
@@ -844,7 +855,9 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
 
                 var type = readTypeNotNull(selfType, true)
 
-                val defaultValue = if (consumeIf("=")) readLazyValue(false) else null
+                val defaultValue =
+                    if (consumeIf("=")) readLazyValue(false)
+                    else null
 
                 if (isVararg) type = Types.Array.withTypeParameter(type)
                 val parameter = Parameter(

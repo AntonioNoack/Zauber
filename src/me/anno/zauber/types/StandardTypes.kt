@@ -211,7 +211,7 @@ object StandardTypes {
 
         for (name in nonGenericTypes) {
             val type = standardClasses[name]!!
-            type.hasTypeParameters = true
+            type.setEmptyTypeParams()
         }
 
         return standardClasses

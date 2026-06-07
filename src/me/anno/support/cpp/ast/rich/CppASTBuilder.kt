@@ -228,7 +228,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         }
         val enumName = tokens.toString(i++)
         pushScope(enumName, ScopeType.ENUM_CLASS) { classScope ->
-            classScope.hasTypeParameters = true
+            classScope.setEmptyTypeParams()
+
             var ordinal = 0 // todo use value instead???
             pushBlock(classScope) {
                 while (i < tokens.size) {
@@ -243,7 +244,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
 
                     val keywords = packFlags()
                     val entryScope = classScope.getOrPut(valueName, ScopeType.ENUM_ENTRY_CLASS)
-                    entryScope.hasTypeParameters = true
+                    entryScope.setEmptyTypeParams()
 
                     // todo avoid duplicates?
                     val numberExpr = value ?: NumberExpression((ordinal++).toString(), classScope, origin)
@@ -272,7 +273,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         check(tokens.equals(i, TokenType.NAME)) { "Expected class name at ${tokens.err(i)}" }
         val name = tokens.toString(i++)
         val classScope = currPackage.getOrPut(name, ScopeType.NORMAL_CLASS)
-        classScope.hasTypeParameters = true
+        classScope.setEmptyTypeParams()
         classScope.addFlags(packFlags())
         pushBlock(classScope) {
             readFileLevel()

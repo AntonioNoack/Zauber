@@ -88,7 +88,7 @@ fun ZauberASTBuilderBase.readEnumBody(): Int {
 
 fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Long) {
 
-    companionScope.hasTypeParameters = true
+    companionScope.setEmptyTypeParams()
 
     val constructorScope = companionScope.getOrCreatePrimaryConstructorScope()
     val listType = ClassType(Types.List.clazz, listOf(enumScope.typeWithArgs), origin)

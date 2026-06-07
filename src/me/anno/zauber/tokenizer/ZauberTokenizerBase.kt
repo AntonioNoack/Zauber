@@ -198,9 +198,11 @@ abstract class ZauberTokenizerBase(
         check(src[i - 1] == '{')
         var depth = 1
         loop@ while (i < n && depth > 0) {
-            when (src[i]) {
-                in "([{" -> depth++
-                in ")]}" -> depth--
+            when (val c = src[i]) {
+                '{', '}' -> {
+                    depth += if (c == '{') +1 else -1
+                    i++
+                }
                 '/' if (i + 1 < src.length && src[i + 1] == '/') -> skipLineComment()
                 '/' if (i + 1 < src.length && src[i + 1] == '*') -> skipBlockComment()
                 '"' -> {
@@ -210,8 +212,8 @@ abstract class ZauberTokenizerBase(
                     tokens.size = size
                     continue@loop // must not call i++
                 }
+                else -> i++
             }
-            i++
         }
         check(src[i - 1] == '}')
     }

@@ -149,7 +149,7 @@ class IsSubTypeOfTest {
             0, "V", ParameterType.TYPE_PARAMETER,
             Types.NullableAny, scope, -1
         )
-        scope.hasTypeParameters = false // this is a hack!
+        scope.resetTypeParams() // this is a hack!
         scope.setTypeParams(listOf(anyOrNullParameter))
 
         // parameter is available, writable -> true

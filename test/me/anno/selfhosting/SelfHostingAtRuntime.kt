@@ -5,6 +5,7 @@ import me.anno.libraries.Libraries.PROJECT_FILE_NAME
 import org.junit.jupiter.api.Test
 import java.io.File
 
+// todo - to run this, we need an extensive standard library...
 // todo - run the compiler within itself
 // todo - compile a small program
 

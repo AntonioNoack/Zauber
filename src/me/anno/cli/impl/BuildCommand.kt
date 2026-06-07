@@ -19,6 +19,8 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
+import me.anno.zauber.tokenizer.TokenList
+import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Specialization
@@ -234,8 +236,18 @@ object BuildCommand : CommandImpl("build", "b") {
             val fileName = file.absolutePath.substring(si)
             val tokenizer = ZauberTokenizer(file.readText(), fileName)
             val tokens = tokenizer.tokenize()
-            val scanner = ZauberASTClassScanner(tokens, Language.byFileName(file.name))
-            scanner.readFileLevel()
+
+            val readLazy = lazy {
+                val scanner = ZauberASTClassScanner(tokens, Language.byFileName(file.name))
+                scanner.readFileLevel()
+            }
+
+            findPackageScopes(tokens) { scope ->
+                scope.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
+                    readLazy.value
+                }
+            }
+
         }
 
         if (project != null && project.dependencies.isNotEmpty()) {
@@ -246,6 +258,41 @@ object BuildCommand : CommandImpl("build", "b") {
         val mainMethod = selectMainMethod(methods, options)
         val unitTests = methods.filter { method -> method.name != "main" || isUnitTest(method) }
         return CompileProject(root, mainMethod, unitTests)
+    }
+
+    fun findPackageScopes(tokens: TokenList, callback: (Scope) -> Unit) {
+        // todo skip annotations
+        var i = 0
+        var lastI = 0
+        val size = tokens.size
+        var depth = 0
+        while (i < size) {
+            when {
+                tokens.equals(i, TokenType.OPEN_BLOCK) -> depth++
+                tokens.equals(i, TokenType.CLOSE_BLOCK) -> depth--
+                tokens.equals(i, "package") -> {
+                    if (depth == 0) {
+                        if (lastI == 0 && i > 0) callback(root)
+
+                        i++ // skip 'package'
+                        var path = root
+                        while (true) {
+                            check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD))
+                            val name = tokens.toString(i)
+                            path = path.getOrPut(name, ScopeType.PACKAGE)
+                            if (!tokens.equals(i + 1, ".")) break
+                            i += 2 // skip name and '.'
+                        }
+                        callback(path)
+                        lastI = i
+                    }
+                }
+            }
+            i++
+        }
+        if (size > 0 && lastI == 0) {
+            callback(root)
+        }
     }
 
     fun selectMainMethod(methods: List<Method>, options: Options): Method {
@@ -311,8 +358,10 @@ object BuildCommand : CommandImpl("build", "b") {
         scope[ScopeInitType.AFTER_DISCOVERY]
 
         if (scope.isClassLike()) {
-            for (child in scope.children) {
-                findEntryPoints(child, result)
+            val children = scope.children
+            var i = 0
+            while (i < children.size) {
+                findEntryPoints(children[i++], result)
             }
         } else {
             val asMethod = scope.selfAsMethod

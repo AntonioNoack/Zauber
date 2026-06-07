@@ -27,6 +27,7 @@ import me.anno.zauber.expansion.AddSuperCallToPackages
 import me.anno.zauber.expansion.DefaultParameters
 import me.anno.zauber.expansion.EarlyTypeResolution
 import me.anno.zauber.expansion.MethodOverrides
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
@@ -178,14 +179,20 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun setEmptyTypeParams() {
-        declaredTypeParameters = emptyList()
-        typeParameters = findOuterClassTypeParams()
-        hasTypeParameters = true
+        setTypeParams(emptyList())
     }
 
     fun setTypeParams(params: List<Parameter>) {
+
+        if (params.isEmpty() && "me.anno.zauber.typeresolution.members.ResolvedMember" == pathStr) {
+            IllegalStateException("Testing-Bug: ResolvedMember has a parameter").printStackTrace()
+            error("Testing-Bug: ResolvedMember has a parameter")
+        }
+
         if (hasTypeParameters) {
-            assertEquals(params.size, declaredTypeParameters.size)
+            assertEquals(params.size, declaredTypeParameters.size) {
+                "Type-Param count mismatch: $params vs $declaredTypeParameters"
+            }
         }
 
         declaredTypeParameters = params
@@ -194,15 +201,26 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     var hasTypeParameters = false
+        private set
+
+    @Deprecated("Only for testing")
+    fun resetTypeParams() {
+        typeParameters = emptyList()
+        declaredTypeParameters = emptyList()
+        hasTypeParameters = false
+    }
 
     @Deprecated("There is few cases, where we don't need or don't have generic parameters")
     val typeWithoutArgs = ClassType(this, null)
 
     private fun getParameterList(): ParameterList {
+        this[ScopeInitType.AFTER_DISCOVERY]
+
         if (!hasTypeParameters && scopeType?.needsTypeParams() != true) {
-            declaredTypeParameters = emptyList()
-            hasTypeParameters = true
+            if (scopeType == null) LOGGER.warn("Missing scopeType for $this, assuming no-type-params")
+            setEmptyTypeParams()
         }
+
         check(hasTypeParameters) { "Missing type-params for $this ($scopeType) to take typeWithArgs" }
         return ParameterList(
             typeParameters,
@@ -714,6 +732,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     companion object {
+        private val LOGGER = LogManager.getLogger(Scope::class)
         private val nextAnonymousName = AtomicInteger(0)
         private val rootIndex = AtomicInteger(0)
     }

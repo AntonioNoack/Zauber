@@ -235,7 +235,7 @@ class Instance(
 
     fun evaluateExpressionUnsafe(value: Expression, flags: Int, valueType: Type?): BlockReturn {
         val tmpMethodScope = value.scope.generate("exprUnsafe", ScopeType.METHOD) // needed? not really...
-        tmpMethodScope.hasTypeParameters = true
+        tmpMethodScope.setEmptyTypeParams()
 
         val method = Method(
             null, false, "<exprUnsafe>",

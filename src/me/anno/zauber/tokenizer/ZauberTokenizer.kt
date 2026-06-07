@@ -96,6 +96,7 @@ class ZauberTokenizer(src: String, fileName: String) :
                         val innerStart = i
                         skipBlock()
                         val innerEnd = i - 1
+                        check(src[innerEnd] == '}')
 
                         val oldI = i
                         val oldN = n

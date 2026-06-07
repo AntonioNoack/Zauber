@@ -4,8 +4,8 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.utils.StringUtils.capitalize1
-import me.anno.zauber.ast.rich.*
 import me.anno.zauber.ast.rich.Annotation
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
