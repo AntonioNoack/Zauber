@@ -1,6 +1,7 @@
 package me.anno.libraries
 
 import me.anno.zauber.logging.LogManager
+import kotlin.math.min
 
 /**
  * Parses JSON into Map<String,?>, Array<?>, true, false, null, Long, Double
@@ -97,12 +98,15 @@ object JSONParser {
             val key = if (text[i] in "\"'") {
                 val key = readString(text, i)
                 i = skipWhitespace(text, key.i1)
-                check(text.startsWith(":", i)) { "Expected ':' at $i in '$text'" }
+                check(
+                    text.startsWith(":", i) ||
+                            text.startsWith("=", i)
+                ) { "Expected ':' or '=' at $i in '$text'" }
                 i++ // skip colon
                 key.value
             } else {
                 // needed for TOML
-                val end = text.indexOf(':', i)
+                val end = minIndex(text.indexOf(':', i), text.indexOf('=', i))
                 check(end > i) { "Expected ':' after $i in '$text'" }
                 val key = text.substring(i, end).trimEnd()
                 check(key.all { isNameChar(it) }) {
@@ -123,6 +127,14 @@ object JSONParser {
 
         check(text[i] == '}') { "Incomplete object at $i in '$text'" }
         return JSONResult(i + 1, result)
+    }
+
+    fun minIndex(a: Int, b: Int): Int {
+        return when {
+            a < 0 -> b
+            b < 0 -> a
+            else -> min(a, b)
+        }
     }
 
     fun readArray(text: String, i0: Int): JSONResult<List<Any?>> {

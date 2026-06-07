@@ -3,9 +3,9 @@ package me.anno.cli.impl
 import me.anno.cli.CommandImpl
 import me.anno.cli.impl.UnitTestResults.showUnitTestResults
 import me.anno.compilation.*
-import me.anno.libraries.Libraries
-import me.anno.libraries.Libraries.PROJECT_FILE_EXTENSION
 import me.anno.libraries.Library
+import me.anno.libraries.Library.Companion.PROJECT_FILE_EXTENSION
+import me.anno.libraries.Library.Companion.PROJECT_FILE_NAME
 import me.anno.support.Language
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.Flags
@@ -27,7 +27,6 @@ import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import java.io.File
-import java.net.URI
 import kotlin.system.exitProcess
 
 // todo load standard library from internal file...
@@ -80,8 +79,7 @@ object BuildCommand : CommandImpl("build", "b") {
         Dependencies.addMethod(method0)
     }
 
-    private fun buildProject(project: CompileProject, compiler: MinimalCompiler, options: Options) {
-
+    private fun markEntryPoints(project: CompileProject, options: Options) {
         // we must mark all entry points reachable
         markEntryMethodReachable(project.mainMethod)
         if ("test" in options) {
@@ -89,13 +87,16 @@ object BuildCommand : CommandImpl("build", "b") {
                 markEntryMethodReachable(test)
             }
         }
+    }
+
+    private fun buildProject(project: CompileProject, compiler: MinimalCompiler, options: Options) {
+
+        markEntryPoints(project, options)
 
         val data = Dependencies.collectDependencies()
-        val main = project.mainMethod
         val projectFolder = File(project.root, "target")
-        val srcFolder = File(projectFolder, "generated")
-        srcFolder.mkdirs()
-        compiler.compile(projectFolder, srcFolder, data, main)
+        val srcFolder = File(projectFolder, "generated").apply { mkdirs() }
+        compiler.compile(projectFolder, srcFolder, data, project.mainMethod)
     }
 
     private val instances = HashMap<Scope, Instance>()
@@ -141,14 +142,11 @@ object BuildCommand : CommandImpl("build", "b") {
             //  -> scan all folders above, too; todo if testing, limit the methods to folders inside
             var folder = location
             while (true) {
-                val projectFile = File(folder, Libraries.PROJECT_FILE_NAME)
+                val projectFile = File(folder, PROJECT_FILE_NAME)
                 if (projectFile.exists()) {
-                    LOGGER.info("Project File: $projectFile")
-                    val project = Libraries.loadProject(projectFile)
-                    val root = extractFileFromURI(project.source)
-                    val sourceFiles = collectSourceFiles(root)
-                    return registerFilesAndFindMain(root, sourceFiles, options, project)
+                    return readFiles(projectFile, scanAll, options)
                 }
+
                 folder = folder.parentFile
                     ?: break
             }
@@ -179,9 +177,11 @@ object BuildCommand : CommandImpl("build", "b") {
                 )
             }
 
-            val projectRoot = biggestRoot.key
-            LOGGER.info("Project Root: $projectRoot")
-            return registerFilesAndFindMain(projectRoot, sourceFiles, options, null) // dependencies unknown
+            val rootI = biggestRoot.key
+            val sourceFilesI = sourceFiles.toSourceFiles(rootI)
+
+            LOGGER.info("Project Root: $rootI")
+            return registerFilesAndFindMain(rootI, sourceFilesI, options) // dependencies unknown
         } else when (location.extension.lowercase()) {
             in zauberExtensions -> {
                 val root = findProjectRootFromPackage(location)
@@ -192,19 +192,41 @@ object BuildCommand : CommandImpl("build", "b") {
                     .withoutExtension()
                 LOGGER.info("Main: ${options["main"]}")
 
-                val config = (root.listFiles() ?: emptyArray()).firstOrNull { it.extension == PROJECT_FILE_EXTENSION }
-                if (config != null) return readFiles(config, scanAll, options) // for dependencies
+                val config = File(root, PROJECT_FILE_NAME)
+                if (config.exists()) return readFiles(config, scanAll, options) // for dependencies
 
                 val sourceFiles = collectSourceFiles(root)
-                return registerFilesAndFindMain(root, sourceFiles, options, null) // dependencies unknown
+                return registerFilesAndFindMain(root, sourceFiles, options) // dependencies unknown
             }
             PROJECT_FILE_EXTENSION -> {
-                val project = Libraries.loadProject(location)
-                val root = extractFileFromURI(project.source)
-                val sourceFiles = collectSourceFiles(root)
-                return registerFilesAndFindMain(root, sourceFiles, options, project)
+                val project = Library.loadProject(location)
+                val root = Library.extractFileFromURI(project.source)
+                val sourceFiles = loadAllSources(project)
+                return registerFilesAndFindMain(root, sourceFiles, options)
             }
             else -> error("Unknown file extension ${location.extension}")
+        }
+    }
+
+    private fun loadAllSources(project: Library): List<SourceFile> {
+        val roots = HashMap<String, Library>()
+        fun discover(library: Library) {
+            val oldDep = roots.put(library.name, library)
+            if (oldDep != null && oldDep.version > library.version) {
+                // oldDep is actually newer -> prefer it
+                roots[library.name] = oldDep
+                return // dependencies can be ignored
+            }
+
+            for (dep in library.dependencies) {
+                discover(dep)
+            }
+        }
+        discover(project)
+
+        return roots.flatMap { (_, library) ->
+            val libraryRoot = Library.extractFileFromURI(library.source)
+            collectSourceFiles(libraryRoot)
         }
     }
 
@@ -212,33 +234,25 @@ object BuildCommand : CommandImpl("build", "b") {
         return substringBeforeLast('.')
     }
 
-    fun collectSourceFiles(root: File): List<File> {
+    fun collectSourceFiles(root: File): List<SourceFile> {
         return root.walkTopDown()
-            .filter { it.isFile && it.extension.lowercase() in zauberExtensions }
-            .toList()
+            .filter { it.isFile && it.extension.lowercase() in zauberExtensions }.toList()
+            .toSourceFiles(root)
     }
 
-    fun extractFileFromURI(uri: URI?): File {
-        check(uri != null) { "Missing project source file" }
-        when (uri.scheme) {
-            "file" -> return File(uri.path)
-            "jar" -> TODO("'Extract' jar")
-            else -> TODO("Unknown scheme ${uri.scheme}")
-        }
-    }
-
-    fun registerFilesAndFindMain(
-        root: File, sourceFiles: List<File>, options: Options,
-        project: Library?
-    ): CompileProject {
+    fun List<File>.toSourceFiles(root: File): List<SourceFile> {
         val si = root.absolutePath.length
+        return map { file -> SourceFile(file, file.absolutePath.substring(si)) }
+    }
+
+    fun registerFilesAndFindMain(root: File, sourceFiles: List<SourceFile>, options: Options): CompileProject {
         for (file in sourceFiles) {
-            val fileName = file.absolutePath.substring(si)
-            val tokenizer = ZauberTokenizer(file.readText(), fileName)
+            val fileName = file.fileName
+            val tokenizer = ZauberTokenizer(file.file.readText(), fileName)
             val tokens = tokenizer.tokenize()
 
             val readLazy = lazy {
-                val scanner = ZauberASTClassScanner(tokens, Language.byFileName(file.name))
+                val scanner = ZauberASTClassScanner(tokens, Language.byFileName(fileName))
                 scanner.readFileLevel()
             }
 
@@ -247,11 +261,6 @@ object BuildCommand : CommandImpl("build", "b") {
                     readLazy.value
                 }
             }
-
-        }
-
-        if (project != null && project.dependencies.isNotEmpty()) {
-            TODO("Load files from dependencies")
         }
 
         val methods = findEntryPoints()

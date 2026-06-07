@@ -2,3 +2,6 @@
 name="Zauber"
 version="0.0.1"
 source="src"
+
+[dependencies]
+stdlib={source="Samples"}

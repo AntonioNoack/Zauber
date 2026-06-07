@@ -139,7 +139,7 @@ class TypesImpl {
     val NullPointerException = getType("NullPointerException")
     val Yielded = getType("Yielded", "RTY", NullableAny)
     val Yieldable = getType("Yieldable", "RTY", NullableAny)
-    val Nothing = getType("Nothing", ScopeType.NORMAL_CLASS)
+    val Nothing = getType("Nothing", ScopeType.ENUM_CLASS)
 
     // macros:
     val MacroContext = getType("MacroContext")

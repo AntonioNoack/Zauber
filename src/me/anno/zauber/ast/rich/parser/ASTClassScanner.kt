@@ -354,7 +354,13 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("class") -> {
                 check(!tokens.equals(i - 2, "::"))
                 val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
-                // println("Reading class $name")
+                readNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
+            }
+
+            tokens.equals(i, "annotation") && tokens.equals(i + 1, "class") -> {
+                addFlag(Flags.ANNOTATION); i += 2
+                addFlag(Flags.VALUE) // annotation classes are comp-time, so they are value classes
+                val name = consumeName(VSCodeType.CLASS, VSCodeModifier.DECLARATION.flag)
                 readNamedScope(name, Flags.NONE, ScopeType.NORMAL_CLASS)
             }
 
