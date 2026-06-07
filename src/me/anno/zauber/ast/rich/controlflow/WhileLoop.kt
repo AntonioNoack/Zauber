@@ -5,6 +5,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class WhileLoop(val condition: Expression, val body: Expression, val label: String?, val elseBranch: Expression?) :
     Expression(condition.scope, condition.origin) {
@@ -19,8 +20,17 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
     }
 
     override fun resolveValueType(context: ResolutionContext): Type = exprHasNoType(context)
-    override fun resolveThrownType(context: ResolutionContext): Type = Types.Nothing
-    override fun resolveYieldedType(context: ResolutionContext): Type = Types.Nothing
+    override fun resolveThrownType(context: ResolutionContext): Type = unionTypes(
+        condition.resolveThrownType(context.withTargetType(Types.Boolean)),
+        body.resolveThrownType(context.withTargetType(null)),
+        elseBranch?.resolveThrownType(context.withTargetType(null)) ?: Types.Nothing,
+    )
+
+    override fun resolveYieldedType(context: ResolutionContext): Type = unionTypes(
+        condition.resolveYieldedType(context.withTargetType(Types.Boolean)),
+        body.resolveYieldedType(context.withTargetType(null)),
+        elseBranch?.resolveYieldedType(context.withTargetType(null)) ?: Types.Nothing,
+    )
 
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false // this has no return value
     override fun needsBackingField(methodScope: Scope): Boolean = condition.needsBackingField(methodScope) ||

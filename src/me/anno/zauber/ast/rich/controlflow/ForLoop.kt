@@ -42,14 +42,16 @@ fun ASTBuilderBase.iteratorToHasNext(iteratorFieldExpr: FieldExpression, scope: 
     )
 }
 
-// for-loop with else like Python? :) idk if we want that complexity...
-//  we would need break-with-expression
 /**
  * val tmp = iterable()
  * while(tmp.hasNext()) {
  *    val variableName: variableType = tmp.next()
  *    body()
  * }
+ *
+ * todo if there is no import for iterator(), next(), hasNext(),
+ *  and if variableField is an IntRange or LongRange,
+ *  then extract the loop to avoid allocations(?)
  * */
 fun ASTBuilderBase.forLoop(
     variableField: Field, iterable: Expression,

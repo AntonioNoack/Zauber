@@ -1,7 +1,5 @@
 package me.anno.zauber.ast.rich.controlflow
 
-import me.anno.utils.GrowingList
-import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -11,10 +9,6 @@ import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression
 import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.LambdaType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 private val LOGGER = LogManager.getLogger("WhenSubjectExpression")

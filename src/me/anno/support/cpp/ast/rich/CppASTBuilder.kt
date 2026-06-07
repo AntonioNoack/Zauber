@@ -307,7 +307,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
 
     private fun readDoWhile(label: String?): DoWhileLoop {
         val body = readBodyOrExpression()
-        check(tokens.equals(i++, "while"))
+        consume("while")
         val condition = readExpressionCondition()
         return DoWhileLoop(body = body, condition = condition, label)
     }

@@ -16,6 +16,11 @@ class UnionType(types: List<Type>) : CollectionType(types) {
         // todo just like with And-types, we want some simplification!
         //  e.g. Int|Number -> Number, because Int extends Number
 
+        fun unionTypes(typeA: Type, typeB: Type, typeC: Type): Type {
+            return if (typeC == Types.Nothing) unionTypes(typeA, typeB)
+            else unionTypes(listOf(typeA, typeB, typeC))
+        }
+
         fun unionTypes(typeA: Type, typeB: Type): Type {
             if (typeA is UnresolvedType || typeB is UnresolvedType) {
                 return UnresolvedUnionType(listOf(typeA, typeB))
