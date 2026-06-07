@@ -31,7 +31,8 @@ object DefaultParameters {
     private fun createDefaultParameterMethodsImpl(scope: Scope) {
         val children = scope.children
         for (i in children.indices) {
-            val child = children[i][ScopeInitType.AFTER_DISCOVERY]
+            val child = children[i]
+            child[ScopeInitType.AFTER_DISCOVERY]
             when (child.scopeType) {
                 ScopeType.METHOD -> createDefaultParameterMethod(child)
                 ScopeType.CONSTRUCTOR -> createDefaultParameterConstructor(child)
@@ -41,8 +42,8 @@ object DefaultParameters {
     }
 
     private fun createDefaultParameterMethod(methodScope: Scope) {
-        val scopeParent = methodScope.parent ?: return
-        val self = methodScope.selfAsMethod ?: return
+        val scopeParent = methodScope.parent!!
+        val self = methodScope.selfAsMethod!!
         val valueParameters = self.valueParameters
         for (i in valueParameters.lastIndex downTo 0) {
             val param = valueParameters[i]
@@ -51,11 +52,12 @@ object DefaultParameters {
             // check if class has another function with that parameter defined
             val expectedParamsForMatch = self.valueParameters.subList(0, i)
             val match = scopeParent.children.firstOrNull { scope ->
-                val method = scope[ScopeInitType.DEFAULT_PARAMETERS].selfAsMethod
+                val method = scope.selfAsMethod
                 method != null && method.name == self.name &&
                         method.selfType == self.selfType &&
                         matchesParameters(expectedParamsForMatch, method.valueParameters)
             }
+
             if (match != null) {
                 LOGGER.info("Unused default-parameter: '$self'.${param.name} is already defined by $match")
                 continue
@@ -63,8 +65,8 @@ object DefaultParameters {
 
             val origin = self.origin
 
-            val scope = scopeParent.generate("f:${self.name}", ScopeType.METHOD)
-            scope.setTypeParams(self.typeParameters)
+            val scope = scopeParent.generate(self.name, ScopeType.METHOD)
+            scope.setTypeParams(self.typeParameters.map { it.withScope(scope) })
 
             val subValueParameters = self.valueParameters.subList(0, i).map { it.withScope(scope) }
             subValueParameters.forEach { param -> param.getOrCreateField(null, Flags.NONE) }

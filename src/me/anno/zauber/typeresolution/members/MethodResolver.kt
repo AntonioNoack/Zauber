@@ -3,7 +3,7 @@ package me.anno.zauber.typeresolution.members
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parser.DataClassGenerator
+import me.anno.zauber.ast.rich.parser.DataClassGenerator.generateCopyMethodIfNeeded
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -27,20 +27,20 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): ResolvedMethod? {
         scope ?: return null
 
-        val sit1 = ScopeInitType.AFTER_OVERRIDES
-        val sit2 = ScopeInitType.AFTER_DISCOVERY
+        val afterOverrides = ScopeInitType.AFTER_OVERRIDES
+        val afterDiscovery = ScopeInitType.AFTER_DISCOVERY
 
         val scopeSelfType = scope.selfType
-        val children = scope[sit1].children
+        val children = scope[afterOverrides].children
 
-        if (name == "copy") DataClassGenerator.generateCopyMethodIfNeeded(
-            scope, name, typeParameters, valueParameters, -1,
-        )
+        if (name == "copy") {
+            generateCopyMethodIfNeeded(scope, name, typeParameters, valueParameters, -1)
+        }
 
         var bestMatch: ResolvedMethod? = null
         for (i in children.indices) {
 
-            val child = children[i][sit2]
+            val child = children[i][afterDiscovery]
             val method = child.selfAsMethod ?: continue
             if (method.name != name) continue
 
@@ -107,12 +107,13 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
     ): Nothing {
         val selfScope = context.selfScope
         val codeScope = expr.scope
-        LOGGER.warn("Self-scope methods[${selfScope?.pathStr}.'$name']: ${selfScope?.methods0?.filter { it.name == name }}")
-        LOGGER.warn("Code-scope methods[${codeScope.pathStr}.'$name']: ${codeScope.methods0.filter { it.name == name }}")
-        LOGGER.warn("Lang-scope methods[${langScope.pathStr}.'$name']: ${langScope.methods0.filter { it.name == name }}")
         error(
-            "Could not resolve method ${selfScope?.pathStr}.'$name'<$typeParameters>($valueParameters) " +
-                    "in ${resolveOrigin(expr.origin)}, scopes: ${codeScope.pathStr}"
+            "Could not resolve method ${selfScope}.'$name'<$typeParameters>($valueParameters)\n" +
+                    "  Self-scope methods[$selfScope.'$name']: ${selfScope?.methods0?.filter { it.name == name }}\n" +
+                    "  Code-scope methods[$codeScope.'$name']: ${codeScope.methods0.filter { it.name == name }}\n" +
+                    "  Lang-scope methods[$langScope.'$name']: ${langScope.methods0.filter { it.name == name }}\n" +
+                    "  scope: $codeScope\n" +
+                    "  in ${resolveOrigin(expr.origin)}"
         )
     }
 
