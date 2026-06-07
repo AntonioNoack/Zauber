@@ -4,9 +4,17 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Test
 
 class YieldTests {
-
-    private val stdlib = "\n" + """
+    companion object {
+        val stdlib = "\n" + """
 package zauber
+
+enum class Boolean { TRUE, FALSE }
+external class Int(val content: Int) {
+    external fun compareTo(other: Int): Int
+    external fun plus(other: Int): Int
+    external fun times(other: Int): Int
+    fun inc(): Int = this + 1
+}
 
 sealed interface Yieldable<R, T: Throwable, Y> {}
 
@@ -23,9 +31,28 @@ interface List<V>(val size: Int) {
     operator fun get(index: Int): V
 }
 
+fun min(a: Int, b: Int): Int {
+    return if (a < b) a else b
+}
+
+fun max(a: Int, b: Int): Int {
+    return if (a > b) a else b
+}
+
 class Array<V>(override val size: Int): List<V> {
     override external operator fun set(index: Int, value: V)
     override external operator fun get(index: Int): V
+    
+    fun copyOf(newSize: Int): Array<V> {
+        var copy = Array<V>(newSize)
+        var i = 0
+        var minSize = min(size, newSize)
+        while (i < minSize) {
+            copy[i] = this[i]
+            i++
+        }
+        return copy
+    }
 }
 
 class ArrayList<V>(): List<V> {
@@ -38,7 +65,7 @@ class ArrayList<V>(): List<V> {
         return content[index]
     }
     override operator fun add(value: V) {
-        if (size+1 > content.size) content = content.copyOf(size * 2)
+        if (size+1 > content.size) content = content.copyOf(max(size * 2, 16))
         content[size++] = value
     }
     operator fun removeAt(index: Int) {
@@ -62,12 +89,22 @@ external fun currentTimeMillis(): Long
 fun <V> arrayOf(vararg vs: V): Array<V> = vs
 fun <V> arrayListOf(vararg vs: V): ArrayList<V> {
     val result = ArrayList<V>()
-    for (v in vs) {
-        result.add(v)
+    var i = 0
+    while (i < vs.size) {
+        result.add(vs[i])
+        i++
     }
     return result
 }
+
+class Throwable(val message: String?)
+class Exception(message: String?): Throwable(message)
+class NullPointerException(message: String?) : Exception(message)
+fun throwNPE(message: String): Nothing {
+   throw NullPointerException(message)
+}
     """.trimIndent()
+    }
 
     @Test
     fun testSequenceUsingYield() {
@@ -140,34 +177,6 @@ fun <V> arrayListOf(vararg vs: V): ArrayList<V> {
         """.trimIndent() + stdlib
         val value = testExecute(code)
         // todo we expect the following printed: 4,3,2, taking 3s total
-    }
-
-    @Test
-    fun testListOfLambdas() {
-        // todo bug: why can this not be resolved???
-        val code = """
-            fun runWork(x: Int) = Unit
-            val tested = arrayListOf<() -> Unit>(
-                { runWork(1) },
-                { runWork(2) },
-                { runWork(3) },
-            )
-        """.trimIndent() + stdlib
-        testExecute(code)
-    }
-
-    @Test
-    fun testListOfLambdasTotallyExplicit() {
-        // todo bug: why can this not be resolved???
-        val code = """
-            fun runWork(x: Int) = Unit
-            val tested = arrayListOf<() -> Unit>(
-                { -> runWork(1) },
-                { -> runWork(2) },
-                { -> runWork(3) },
-            )
-        """.trimIndent() + stdlib
-        testExecute(code)
     }
 
 }

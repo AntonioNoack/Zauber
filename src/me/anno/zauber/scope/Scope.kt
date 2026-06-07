@@ -104,7 +104,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun addInitPart(scopeInit: ScopeInit) {
-        // println("Adding ${scopeInit.type} to '$pathStr'")
+        println("Adding ${scopeInit.type} to '$pathStr'")
         check(scopeInit.type >= scopeInitType) { "Cannot add ${scopeInit.type} to '$pathStr', when $scopeInitType was already queried" }
         initParts.add(scopeInit)
         initParts.sort()
@@ -118,7 +118,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     operator fun get(scopeInitType: ScopeInitType): Scope {
-        // println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
+        println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
+       // if(pathStr == "")
 
         if (scopeInitType > this.scopeInitType) {
             parent?.get(scopeInitType)

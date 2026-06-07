@@ -30,7 +30,7 @@ object MethodOverrides {
 
     private val LOGGER = LogManager.getLogger(MethodOverrides::class)
     private val processedScopes by threadLocal { HashSet<Scope>() }
-    private var debuggedMethodName = "getExactSizeIfKnown"
+    var debuggedMethodName = "getExactSizeIfKnown"
 
     val methodOverrideCreator = ScopeInit(ScopeInitType.ADD_OVERRIDES) { scope: Scope ->
         resolveOverrides(scope)
@@ -60,6 +60,8 @@ object MethodOverrides {
     }
 
     private fun equalsIgnoreUnknowns(a: Type, b: Type): Boolean {
+        val a = a.resolvedName
+        val b = b.resolvedName
         if (a == UnknownType || b == UnknownType) return true
         if (a.javaClass != b.javaClass) return false
         return when (a) {
@@ -99,7 +101,10 @@ object MethodOverrides {
 
         // check that all methods with override-flag have found their partner
         for (method in selfMethods0) {
-            if (method.flags.hasFlag(Flags.OVERRIDE) && method !in foundMethods) {
+            if (method.flags.hasFlag(Flags.OVERRIDE) && method !in foundMethods &&
+                // will be checked by getter; and avoid warnings for val size: Int + override var size: Int
+                method.scope.scopeType != ScopeType.FIELD_SETTER
+            ) {
                 LOGGER.warn("No base-method found for $scope: $method, found: $foundMethods")
             }
         }

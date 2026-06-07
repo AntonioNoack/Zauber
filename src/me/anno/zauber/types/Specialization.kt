@@ -3,6 +3,8 @@ package me.anno.zauber.types
 import me.anno.generation.Specializations
 import me.anno.utils.ResetThreadLocal
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.utils.assertEquals
 import me.anno.zauber.Zauber
 import me.anno.zauber.ast.rich.member.Field
@@ -170,7 +172,7 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
     }
 
     override fun toString(): String {
-        return "[${scope?.pathStr}]" + toStringWithoutScope()
+        return "[$scope]" + toStringWithoutScope()
     }
 
     fun toStringWithoutScope(): String {
@@ -180,11 +182,11 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
             .groupBy { it.value }.entries
             .joinToString(", ", "{", "}") { (key, value) ->
                 val indices = value.map { it.index }
-                "${key.pathStr}: ${
+                "$key: ${
                     indices.map { index ->
                         val name = typeParameters.generics[index].name
                         val type = typeParameters.getOrNull(index)
-                        "$name=$type"
+                        "${style(name, GREEN)}=$type"
                     }
                 }"
             }

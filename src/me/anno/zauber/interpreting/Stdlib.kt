@@ -88,27 +88,38 @@ object Stdlib {
         runtime.register(
             Types.Array.clazz, "set",
             listOf(Types.Int, GenericType(Types.Array.clazz, "V"))
-        ) { self, (index0, value) ->
-            check((self.clazz.type as ClassType).clazz == Types.Array.clazz) {
-                "ClassCastException: $self is not an array"
-            }
-            val index = index0.castToInt()
-            val rt = runtime
-            @Suppress("UNCHECKED_CAST")
-            when (val content = self.rawValue) {
-                is Array<*> -> (content as Array<Instance>)[index] = value
-                is BooleanArray -> content[index] = value.castToBool()
-                is ByteArray -> content[index] = value.castToByte()
-                is ShortArray -> content[index] = value.castToShort()
-                is CharArray -> content[index] = value.castToChar()
-                is IntArray -> content[index] = value.castToInt()
-                is LongArray -> content[index] = value.castToLong()
-                is FloatArray -> content[index] = value.castToFloat()
-                is DoubleArray -> content[index] = value.castToDouble()
-                null -> error("Missing array content")
-                else -> error("Unknown array content: ${content.javaClass.simpleName}")
-            }
-            rt.getUnit()
+        ) { self, (index, value) ->
+            arraySet(self, index, value)
+            runtime.getUnit()
+        }
+        // todo why is this needed for "testListOfLambdasTotallyExplicit"?
+        runtime.register(
+            Types.Array.clazz, "set",
+            listOf(Types.Int, Types.NullableAny)
+        ) { self, (index, value) ->
+            arraySet(self, index, value)
+            runtime.getUnit()
+        }
+    }
+
+    private fun arraySet(self: Instance, index: Instance, value: Instance) {
+        check((self.clazz.type as ClassType).clazz == Types.Array.clazz) {
+            "ClassCastException: $self is not an array"
+        }
+        val index1 = index.castToInt()
+        @Suppress("UNCHECKED_CAST")
+        when (val content = self.rawValue) {
+            is Array<*> -> (content as Array<Instance>)[index1] = value
+            is BooleanArray -> content[index1] = value.castToBool()
+            is ByteArray -> content[index1] = value.castToByte()
+            is ShortArray -> content[index1] = value.castToShort()
+            is CharArray -> content[index1] = value.castToChar()
+            is IntArray -> content[index1] = value.castToInt()
+            is LongArray -> content[index1] = value.castToLong()
+            is FloatArray -> content[index1] = value.castToFloat()
+            is DoubleArray -> content[index1] = value.castToDouble()
+            null -> error("Missing array content")
+            else -> error("Unknown array content: ${content.javaClass.simpleName}")
         }
     }
 

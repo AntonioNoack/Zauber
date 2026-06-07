@@ -34,7 +34,7 @@ abstract class MethodColoring<Color : Any> : GraphColoring<Specialization, Color
                     is IfElseBranch, is WhileLoop, is DoWhileLoop, is ExpressionList, is TryCatchBlock,
                     is GetClassFromTypeExpression, is GetClassFromValueExpression,
                     is BreakExpression, is ContinueExpression, is IsInstanceOfExpr,
-                    is CheckEqualsOp, is SpecialValueExpression, is LazyExpression -> {
+                    is ArrayOfExpr, is CheckEqualsOp, is SpecialValueExpression, is LazyExpression -> {
                         // no direct call
                     }
                     is ResolvedCallExpression -> {

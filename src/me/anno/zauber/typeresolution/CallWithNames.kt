@@ -151,9 +151,7 @@ object CallWithNames {
             }
 
             // then all unnamed
-            // todo if vararg
-            //  if is Prefix with ARRAY_TO_VARARGS, then assign directly
-            //  else create an array, step by step...
+            // if vararg: is prefixed with '*' ? assign directly : create an array
             var index = 0
             for (j in actualParameters.indices) {
                 val valueParam = actualParameters[j]
@@ -184,8 +182,7 @@ object CallWithNames {
             if (index == result.lastIndex) {
                 val ev = expectedParameters[index]
                 if (!ev.isVararg) return null
-                // check(ev.isVararg) { "Expected vararg in last place" }
-                // println("Using instanceType $instanceType for empty varargs")
+
                 val context = ResolutionContext(null, false, ev.type)
                 result[index] = createArrayOfExpr(context, ev, emptyList(), scope, origin)
             }
@@ -220,7 +217,7 @@ object CallWithNames {
     fun getArrayOfExprInstanceType(
         context: ResolutionContext,
         instanceType0: Type?, values: List<Expression>,
-        scope: Scope, origin: Long,
+        scope: Scope,
     ): Type {
         return instanceType0?.nullIfUnknown(scope)
             ?: run {
@@ -229,12 +226,13 @@ object CallWithNames {
                     ?.nullIfUnknown(scope)
                 else null
             } ?: run {
-                val types = values.map { it.resolveValueType(context.withTargetType(null)) }
-                if (types.isNotEmpty()) unionTypes(types) else null
-            } ?: error(
-                "Unknown instance type for createArrayOfExpr (this will fail to resolve), " +
-                        "at ${resolveOrigin(origin)}"
-            )
+                if (values.isEmpty()) {
+                    Types.Nothing // this is fine, value is nothing, and anything
+                } else {
+                    val types = values.map { it.resolveValueType(context.withTargetType(null)) }
+                    unionTypes(types)
+                }
+            }
     }
 
     fun createArrayOfExpr(
@@ -242,7 +240,7 @@ object CallWithNames {
         instanceType0: Type?, values: List<Expression>,
         scope: Scope, origin: Long,
     ): Expression {
-        val instanceType = getArrayOfExprInstanceType(context, instanceType0, values, scope, origin)
+        val instanceType = getArrayOfExprInstanceType(context, instanceType0, values, scope)
         // println("createArrayOfExpr($values, $instanceType), spec: ${Specializations.specialization}")
         return ArrayOfExpr(values, instanceType, scope, origin)
     }

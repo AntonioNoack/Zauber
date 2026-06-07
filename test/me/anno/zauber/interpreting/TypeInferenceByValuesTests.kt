@@ -1,9 +1,11 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.MultiTest
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -75,6 +77,32 @@ class TypeInferenceByValuesTests {
                 assertEquals(listOf(1, 2, 3), contents.toList())
             }
             .runTest(type)
+    }
+
+    @Test
+    fun testListOfLambdas() {
+        val code = """
+            fun runWork(x: Int) = Unit
+            val tested = arrayListOf<() -> Unit>(
+                { runWork(1) },
+                { runWork(2) },
+                { runWork(3) },
+            )
+        """.trimIndent() + YieldTests.stdlib
+        testExecute(code)
+    }
+
+    @Test
+    fun testListOfLambdasTotallyExplicit() {
+        val code = """
+            fun runWork(x: Int) = Unit
+            val tested = arrayListOf<() -> Unit>(
+                { -> runWork(1) },
+                { -> runWork(2) },
+                { -> runWork(3) },
+            )
+        """.trimIndent() + YieldTests.stdlib
+        testExecute(code)
     }
 
 }
