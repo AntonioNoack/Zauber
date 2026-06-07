@@ -19,4 +19,8 @@ enum class ScopeInitType {
     AFTER_RESOLVE_METHOD_BODY,
 
     CODE_GENERATION,
+
+    ;
+
+    fun next() = entries[ordinal + 1]
 }

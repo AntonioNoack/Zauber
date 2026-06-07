@@ -1,11 +1,11 @@
 package me.anno.zauber.ast.rich.expression.unresolved
 
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.TokenListIndex
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.CallExpressionBase
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.TypeExpression
+import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -101,9 +101,9 @@ class CallExpression(
                     typeParameters, valueParameters, context, origin
                 ) ?: error("Missing constructor for $baseType<$typeParameters>($valueParameters)")
             }
-            else -> error(
-                "Resolve field/method in Callable for ${self.javaClass} ($self) " +
-                        "in ${TokenListIndex.resolveOrigin(origin)}"
+            else -> TODO(
+                "Resolve field/method in Callable for ${self.javaClass.simpleName} ($self) " +
+                        "at ${resolveOrigin(origin)}"
             )
         }
     }

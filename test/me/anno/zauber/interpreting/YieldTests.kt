@@ -20,7 +20,7 @@ sealed interface Yieldable<R, T: Throwable, Y> {}
 
 value class Yielded<R, T: Throwable, Y>(
     val yieldedValue: Y,
-    val continueRunning: () -> Yielded<R, T, Y>
+    val continueRunning: () -> Yieldable<R, T, Y>
 ) : Yieldable<R, T, Y> {}
 
 value class Thrown<T: Throwable>(val value: T) : Yieldable<Nothing, T, Nothing> {}
@@ -144,12 +144,12 @@ fun throwNPE(message: String): Nothing {
             }
             
             fun runWorkers(workers: ArrayList<() -> Unit>) {
-                val sleeping = ArrayList<Yielded<Sleep>>()
+                val sleeping = ArrayList<Yielded<Unit,Sleep,Nothing>>()
                 while (sleeping.size + workers.size > 0) {
                     // work phase
                     while (workers.size > 0) {
                         val result = async workers[0]()
-                        if (result is Yielded<Sleep>) {
+                        if (result is Yielded<*,Sleep,*>) {
                             sleeping.add(result)
                         } else {
                             workers.removeAt(0)

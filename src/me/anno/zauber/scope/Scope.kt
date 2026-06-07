@@ -104,7 +104,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     fun addInitPart(scopeInit: ScopeInit) {
-        println("Adding ${scopeInit.type} to '$pathStr'")
+        // println("Adding ${scopeInit.type} to '$pathStr'")
         check(scopeInit.type >= scopeInitType) { "Cannot add ${scopeInit.type} to '$pathStr', when $scopeInitType was already queried" }
         initParts.add(scopeInit)
         initParts.sort()
@@ -118,17 +118,13 @@ class Scope(val name: String, val parent: Scope? = null) {
     }
 
     operator fun get(scopeInitType: ScopeInitType): Scope {
-        println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
-       // if(pathStr == "")
-
-        if (scopeInitType > this.scopeInitType) {
-            parent?.get(scopeInitType)
-            this.scopeInitType = scopeInitType
-        }
+        // println("Querying $scopeInitType in '$pathStr', stored: ${initParts.map { it.type }}")
 
         while (initParts.isNotEmpty() && initParts.last().type < scopeInitType) {
             @Suppress("Since15")
             val element = initParts.removeLast()
+            parent?.get(element.type.next())
+            this.scopeInitType = element.type
             // println("Running ${element.type} in '$pathStr'...")
             element.runnable(this)
             // println("... Finished ${element.type} in '$pathStr'")
