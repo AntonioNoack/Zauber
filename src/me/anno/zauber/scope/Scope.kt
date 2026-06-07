@@ -651,7 +651,7 @@ class Scope(val name: String, val parent: Scope? = null) {
     val selfType: Type by lazy {
         if (isClassLike()) typeWithArgs
         else {
-            this[ScopeInitType.AFTER_DISCOVERY]
+            this[ScopeInitType.AFTER_DISCOVERY] // ensure selfAsMethod is defined
             val selfType = selfAsMethod?.selfType
             selfType ?: parent?.selfType ?: typeWithArgs
         }
