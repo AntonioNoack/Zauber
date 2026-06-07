@@ -17,6 +17,7 @@ import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.mergeOrigins
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
@@ -321,7 +322,7 @@ abstract class ZauberASTBuilderBase(
             return NamedCallExpression(
                 lhs, rhs.self.name, rhs.self.nameAsImport,
                 rhs.typeParameters, rhs.valueParameters,
-                rhs.scope, rhs.origin
+                rhs.scope, mergeOrigins(lhs.origin, rhs.origin)
             )
         }
         return binaryOp(currPackage, lhs, op.symbol, rhs)
@@ -333,8 +334,9 @@ abstract class ZauberASTBuilderBase(
     ): Expression {
         val name = currPackage.generateName("shortcut", origin)
         val right = pushScope(name, ScopeType.METHOD_BODY) { readRHS(op) }
-        return if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, origin)
-        else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, origin)
+        val joinedOrigin = mergeOrigins(expr.origin, right.origin)
+        return if (symbol == "&&") shortcutExpressionI(expr, ShortcutOperator.AND, right, scope, joinedOrigin)
+        else shortcutExpressionI(expr, ShortcutOperator.OR, right, scope, joinedOrigin)
     }
 
     open fun readIfBranch(): IfElseBranch {

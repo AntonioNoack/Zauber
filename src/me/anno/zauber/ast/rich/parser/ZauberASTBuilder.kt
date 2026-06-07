@@ -898,10 +898,11 @@ class ZauberASTBuilder(
                             val param = NamedParameter(null, rhs)
                             NamedCallExpression(
                                 expr, op.symbol, nameAsImport(op.symbol), null,
-                                listOf(param), expr.scope, origin
+                                listOf(param), expr.scope,
+                                mergeOrigins(expr.origin, rhs.origin)
                             )
                         } else {
-                            binaryOp(currPackage, expr, op.symbol, rhs, origin)
+                            binaryOp(currPackage, expr, op.symbol, rhs)
                         }
                     }
                 }

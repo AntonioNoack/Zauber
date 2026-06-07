@@ -19,7 +19,8 @@ class CompareOp(
     val left: Expression,
     val right: Expression,
     val type: CompareType,
-) : Expression(left.scope, left.origin) {
+    scope: Scope, origin: Long
+) : Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String {
         return "(${left.toString(depth)} ${type.symbol} ${right.toString(depth)})"
@@ -32,7 +33,7 @@ class CompareOp(
     override fun needsBackingField(methodScope: Scope): Boolean = left.needsBackingField(methodScope) ||
             right.needsBackingField(methodScope)
 
-    override fun clone(scope: Scope) = CompareOp(left.clone(scope), right.clone(scope), type)
+    override fun clone(scope: Scope) = CompareOp(left.clone(scope), right.clone(scope), type, scope, origin)
     override fun splitsScope(): Boolean = left.splitsScope() || right.splitsScope()
     override fun isResolved(): Boolean = false
 
@@ -53,7 +54,7 @@ class CompareOp(
         return CompareOp(
             left.replaceLambdaFieldsWithClassFields(oldFields, newFields),
             right.replaceLambdaFieldsWithClassFields(oldFields, newFields),
-            type
+            type, scope, origin
         )
     }
 }

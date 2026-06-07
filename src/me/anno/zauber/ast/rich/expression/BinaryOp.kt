@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.rich.TokenListIndex.mergeOrigins
 import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
@@ -17,13 +18,13 @@ private val LOGGER = LogManager.getLogger("BinaryOp")
 @Suppress("IntroduceWhenSubject") // this feature is experimental, why is it recommended???
 fun ASTBuilderBase.binaryOp(
     scope: Scope, left: Expression, symbol: String, right: Expression,
-    origin: Long = left.origin
+    origin: Long = mergeOrigins(left.origin, right.origin)
 ): Expression {
     return when (symbol) {
-        "<=" -> CompareOp(left, right, CompareType.LESS_EQUALS)
-        "<" -> CompareOp(left, right, CompareType.LESS)
-        ">=" -> CompareOp(left, right, CompareType.GREATER_EQUALS)
-        ">" -> CompareOp(left, right, CompareType.GREATER)
+        "<=" -> CompareOp(left, right, CompareType.LESS_EQUALS, scope, origin)
+        "<" -> CompareOp(left, right, CompareType.LESS, scope, origin)
+        ">=" -> CompareOp(left, right, CompareType.GREATER_EQUALS, scope, origin)
+        ">" -> CompareOp(left, right, CompareType.GREATER, scope, origin)
         "==" -> CheckEqualsOp(left, right, byPointer = false, negated = false, null, scope, origin)
         "!=" -> CheckEqualsOp(left, right, byPointer = false, negated = true, null, scope, origin)
         "===" -> CheckEqualsOp(left, right, byPointer = true, negated = false, null, scope, origin)

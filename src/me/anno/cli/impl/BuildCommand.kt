@@ -59,7 +59,7 @@ object BuildCommand : CommandImpl("build", "b") {
             if ("run" in options) compiler.execute(projectFolder)
         } catch (e: Exception) {
             val message = e.message ?: e.javaClass.simpleName
-            if ("debug" in options) LOGGER.error(message, e)
+            if ("debug" in options || '^' !in message /* missing code position */) LOGGER.error(message, e)
             else LOGGER.error(message)
             exitProcess(-1)
         }
