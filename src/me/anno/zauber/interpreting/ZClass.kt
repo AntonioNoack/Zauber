@@ -37,7 +37,7 @@ class ZClass(val type: Type) {
                 Types.UShort, Types.UShort, Types.Char,
                 Types.Int, Types.UInt,
                 Types.Long, Types.ULong,
-                Types.Float, Types.Double
+                Types.Half, Types.Float, Types.Double
             )
         }
 

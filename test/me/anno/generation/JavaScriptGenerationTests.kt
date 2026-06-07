@@ -101,6 +101,11 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testNumberNegation() {
+        testNumberNegationImpl()
+    }
+
+    @Test
     fun testNumberComparisons() {
         testNumberComparisonsImpl()
     }
@@ -118,6 +123,11 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
     @Test
     fun testLogicalOperators() {
         testLogicalOperatorsImpl()
+    }
+
+    @Test
+    fun testInstanceOf() {
+        testInstanceOfImpl()
     }
 
     @Test

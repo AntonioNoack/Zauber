@@ -89,6 +89,11 @@ class PythonGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testNumberNegation() {
+        testNumberNegationImpl()
+    }
+
+    @Test
     fun testNumberComparisons() {
         testNumberComparisonsImpl()
     }
@@ -106,6 +111,11 @@ class PythonGenerationTests : CodeGenerationTests() {
     @Test
     fun testLogicalOperators() {
         testLogicalOperatorsImpl()
+    }
+
+    @Test
+    fun testInstanceOf() {
+        testInstanceOfImpl()
     }
 
     @Test

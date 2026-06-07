@@ -80,6 +80,11 @@ class CGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testNumberNegation() {
+        testNumberNegationImpl()
+    }
+
+    @Test
     fun testNumberComparisons() {
         testNumberComparisonsImpl()
     }
@@ -97,6 +102,11 @@ class CGenerationTests : CodeGenerationTests() {
     @Test
     fun testLogicalOperators() {
         testLogicalOperatorsImpl()
+    }
+
+    @Test
+    fun testInstanceOf() {
+        testInstanceOfImpl()
     }
 
     @Test

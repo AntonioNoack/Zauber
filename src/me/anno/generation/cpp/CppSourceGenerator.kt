@@ -641,7 +641,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String) {
         val needsArrow = if (field.isOwnerThis(graph)) {
-            builder.append("this")
+            builder.append(if (forFieldAccess == "" && field.type in nativeNumbers) "this->content" else "this")
             true
         } else if (field.isObjectLike()) {
             val objectType = (field.type as ClassType).clazz

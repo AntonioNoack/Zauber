@@ -87,6 +87,11 @@ class LLVMGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testNumberNegation() {
+        testNumberNegationImpl()
+    }
+
+    @Test
     fun testNumberComparisons() {
         testNumberComparisonsImpl()
     }
@@ -104,6 +109,11 @@ class LLVMGenerationTests : CodeGenerationTests() {
     @Test
     fun testLogicalOperators() {
         testLogicalOperatorsImpl()
+    }
+
+    @Test
+    fun testInstanceOf() {
+        testInstanceOfImpl()
     }
 
     // todo test all logical (and, or, xor, inv) and all shift (shl, shr, ushr) operations

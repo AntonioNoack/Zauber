@@ -79,6 +79,11 @@ class WASMRuntimeTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testNumberNegation() {
+        testNumberNegationImpl()
+    }
+
+    @Test
     fun testNumberComparisons() {
         testNumberComparisonsImpl()
     }
@@ -96,6 +101,11 @@ class WASMRuntimeTests : CodeGenerationTests() {
     @Test
     fun testLogicalOperators() {
         testLogicalOperatorsImpl()
+    }
+
+    @Test
+    fun testInstanceOf() {
+        testInstanceOfImpl()
     }
 
     @Test

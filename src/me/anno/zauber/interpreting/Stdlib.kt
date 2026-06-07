@@ -19,7 +19,6 @@ import me.anno.zauber.interpreting.RuntimeCreate.createUByte
 import me.anno.zauber.interpreting.RuntimeCreate.createUInt
 import me.anno.zauber.interpreting.RuntimeCreate.createULong
 import me.anno.zauber.interpreting.RuntimeCreate.createUShort
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.typeresolution.Inheritance
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Type
@@ -31,8 +30,6 @@ import me.anno.zauber.types.impl.GenericType
  * Standard library implementation for interpreter / compile-time execution
  * */
 object Stdlib {
-
-    private val LOGGER = LogManager.getLogger(Stdlib::class)
 
     fun Runtime.registerBinaryMethod(type: ClassType, name: String, calc: (Instance, Instance) -> Instance) {
         register(type.clazz, name, listOf(type)) { self, params ->
@@ -357,10 +354,15 @@ object Stdlib {
         rt.register(Types.Any.clazz, "toString", emptyList()) { instance, _ ->
             val str = when (instance.clazz.type) {
                 Types.Byte -> instance.castToByte().toString()
+                Types.UByte -> instance.castToUByte().toString()
                 Types.Short -> instance.castToShort().toString()
+                Types.UShort -> instance.castToUShort().toString()
                 Types.Char -> instance.castToChar().toString()
                 Types.Int -> instance.castToInt().toString()
+                Types.UInt -> instance.castToUInt().toString()
                 Types.Long -> instance.castToLong().toString()
+                Types.ULong -> instance.castToULong().toString()
+                Types.Half -> instance.castToHalf().toString()
                 Types.Float -> instance.castToFloat().toString()
                 Types.Double -> instance.castToDouble().toString()
                 Types.Boolean -> instance.castToBool().toString()

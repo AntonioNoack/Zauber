@@ -179,7 +179,7 @@ abstract class ZauberTokenizerBase(
                 readExponent()
             }
         }
-        if (i < n && src[i] in supportedNumberSuffixes) i++
+        while (i < n && src[i] in supportedNumberSuffixes) i++
         tokens.add(TokenType.NUMBER, start, i)
     }
 

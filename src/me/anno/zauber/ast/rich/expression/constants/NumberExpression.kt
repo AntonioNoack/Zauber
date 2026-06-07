@@ -118,7 +118,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 if (isNegative) exponent = -exponent
                 result *= 10.0.pow(exponent)
             }
-            if (i < value.length && value[i] in "fFdDlLuU") i++
+            while (i < value.length && value[i] in "hHfFdDlLuU") i++
             check(i == value.length) {
                 "Missed reading float part '${value[i]}' @$i in '$value'"
             }
@@ -164,7 +164,7 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 error("${e.message} in '$value'@$i, basis $basis, ${if (isUnsigned) "unsigned" else "signed"}")
             }
 
-            if (i < value.length && value[i] in "lLuU") i++
+            while (i < value.length && value[i] in "lLuU") i++
             check(i == value.length) {
                 "Missed reading int part '${value[i]}' @$i in '$value'"
             }

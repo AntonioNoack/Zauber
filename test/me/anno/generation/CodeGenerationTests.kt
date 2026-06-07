@@ -461,6 +461,94 @@ abstract class CodeGenerationTests {
         )
     }
 
+    fun testNumberNegationImpl() {
+        val numberTypes = listOf(
+            Types.Byte,
+            Types.Short,
+            Types.Int,
+            Types.Long,
+
+            Types.UByte,
+            Types.UShort,
+            Types.UInt,
+            Types.ULong,
+
+            Types.Half,
+            Types.Float,
+            Types.Double,
+        )
+        val expected = listOf(
+            127, -0x7f,
+            0x7fff, -0x7fff,
+            Int.MAX_VALUE, -Int.MAX_VALUE,
+            Long.MAX_VALUE, -Long.MAX_VALUE,
+            // 255 -> -255 -> 1
+            UByte.MAX_VALUE, UInt.MAX_VALUE - 0xfeu,
+            UShort.MAX_VALUE, UInt.MAX_VALUE - 0xfffeu,
+            UInt.MAX_VALUE, 1,
+            ULong.MAX_VALUE, 1,
+
+            64992f, -64992f,
+            1e38f, -1e38f,
+            1e308, -1e308,
+        )
+        val runnableCode = numberTypes.joinToString("") { type ->
+            val max = getBigValueForTesting(type)
+            val type = type.clazz.name
+            "" +
+                    "val v$type: $type = $max\n" +
+                    "println(+v$type)\n" +
+                    "println(-v$type)\n"
+        }
+        // unsigned types shouldn't get unaryMinus...
+        val numberClasses = numberTypes.joinToString("") { type ->
+            val typeName = type.clazz.name
+            val resultTypeName = if (!type.isFloat() && type.getNumBits() <= 16) {
+                (if (type.isUnsigned()) Types.UInt else Types.Int).clazz.name
+            } else typeName
+            val zero = if (type.isFloat()) {
+                when (type) {
+                    // todo all versions should work with 0.0... (baseline fails, because it creates a double)
+                    Types.Half -> "0h"
+                    Types.Float -> "0f"
+                    else -> "0.0"
+                }
+            } else {
+                if (type.getNumBits() == 64) {
+                    if (type.isUnsigned()) "0ul" else "0l"
+                } else {
+                    if (type.isUnsigned()) "0u" else "0"
+                }
+            }
+            "" +
+                    "external class $typeName(val content: $typeName) {\n" +
+                    "   external operator fun minus(other: $typeName): $typeName\n" +
+                    (if (resultTypeName != typeName) {
+                        "" +
+                                "fun unaryPlus(): $resultTypeName = to$resultTypeName()\n" +
+                                "fun unaryMinus(): $resultTypeName = $zero - to$resultTypeName()\n" +
+                                "external fun to$resultTypeName(): $resultTypeName\n"
+                    } else {
+                        "" +
+                                "fun unaryPlus(): $typeName = content\n" +
+                                "fun unaryMinus(): $typeName = $zero - content\n"
+                    }) +
+                    "}\n" +
+                    "external fun println(arg0: $typeName)"
+        }
+        val code: String = """
+            fun main() {
+                $runnableCode
+            }
+            
+            package zauber
+            $numberClasses
+        """.trimIndent()
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals(expected.joinToString("") { "$it\n" }, printed)
+    }
+
     fun testNumberConversionsImpl() {
         val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
         val builder = StringBuilder()
@@ -613,7 +701,7 @@ abstract class CodeGenerationTests {
 
     fun getBigValueForTesting(type: Type): String {
         return when (type) {
-            Types.Half -> "65000.0"
+            Types.Half -> "64992h"
             Types.Float -> "1.0E38"
             Types.Double -> "1.0E308"
             else -> getMaxValueForTesting(type)
@@ -806,5 +894,24 @@ abstract class CodeGenerationTests {
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
         assertEquals(expectedResponse.toString(), printed)
+    }
+
+    fun testInstanceOfImpl() {
+        val code = """
+            fun getInt(v: Any): Int {
+                return if (v is Int) v else 3
+            }
+            fun main() {
+                println(getInt(2))
+            }
+            package zauber
+            class Any
+            class Int {}
+            external fun println(arg0: Int)
+        """.trimIndent() + inheritanceCode
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
     }
 }

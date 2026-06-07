@@ -20,7 +20,7 @@ value class Half(val binary: Short) : Comparable<Half> {
     }
 
     override fun toString(): String {
-        return "${toFloat()}h"
+        return toFloat().toString()
     }
 
     companion object {

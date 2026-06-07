@@ -771,7 +771,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String) {
         if (field.isOwnerThis(graph)) {
-            builder.append("self")
+            builder.append(if (forFieldAccess == "" && field.type in nativeNumbers) "self.content" else "self")
         } else if (field.isObjectLike()) {
             val objectScope = (field.type as ClassType).clazz
             appendGetObjectInstance(objectScope, graph.method.scope)
