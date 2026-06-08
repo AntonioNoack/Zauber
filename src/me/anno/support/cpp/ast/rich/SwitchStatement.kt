@@ -5,21 +5,17 @@ import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.support.java.ast.NamedCastExpression
 import me.anno.support.java.ast.NamedDestructuringExpression
 import me.anno.zauber.ast.rich.Flags
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.ast.rich.controlflow.IfElseBranch
 import me.anno.zauber.ast.rich.controlflow.createNamedBlock
 import me.anno.zauber.ast.rich.controlflow.storeSubject
-import me.anno.zauber.ast.rich.expression.CheckEqualsOp
-import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.ExpressionList
-import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
-import me.anno.zauber.ast.rich.expression.componentNames
+import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
 import me.anno.zauber.ast.rich.expression.unresolved.LambdaVariable
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenType
@@ -66,17 +62,30 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
             readCaseBody() // not executed, but read for fields
         }
 
+        fun handleDefaultBranch() {
+            val origin = origin(i - 1) // on default
+            // condition: noPrevBranch | prevBranchContinue
+            consume(checkExpr())
+            val totalCondition = noPrevBranchExpr.or(prevBranchContinueExpr)
+            val scopeName = scope.generateName("default", origin)
+            lateinit var bodyScope1: Scope
+            val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
+                bodyScope1 = bodyScopeI
+                readCaseBody()
+            }
+            // flags are not interesting anymore after this
+            bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
+        }
+
         // if a block does not end with a 'break', we need to enter the next block
-        while (i < tokens.size) {
+        loop@ while (i < tokens.size) {
             when {
-                tokens.equals(i, "case") -> {
+                consumeIf("case") -> {
                     // condition: (noPrevBranch & equals) | prevBranchContinues
                     val values = ArrayList<Expression>()
-
-                    val origin = origin(i)
+                    val origin = origin(i - 1)
 
                     // one or more `case X:`
-                    consume("case")
                     while (true) {
 
                         var foundCondition = false
@@ -147,21 +156,29 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                             i-- // undo skipping '->'/':'
                         }
 
-                        if (consumeIf("case")) continue // normal C/C++/Java
-                        if (consumeIf(",")) continue // supported for Java switch-expr
+                        if (language == Language.JAVA && consumeIf(",")) {
+                            // supported for Java switch-expr
+                            continue
+                        }
 
+                        consume(checkExpr())
+                        if (consumeIf("case")) continue // normal C/C++/Java
+
+                        // weird edge-case:
+                        if (tokens.equals(i, "default")) {
+                            // discard all previous conditions, they don't matter anymore
+                            continue@loop
+                        }
                         break
                     }
-
-                    // the end
-                    consume(checkExpr())
 
                     val equalsCondition = values.map {
                         if (it is NamedCastExpression || it is NamedDestructuringExpression) it
                         else CheckEqualsOp(it, switchValue, byPointer = false, false, null, scope, origin)
                     }.reduce { a, b -> a.or(b) }
 
-                    val normalCase = noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...
+                    val normalCase =
+                        noPrevBranchExpr.and(equalsCondition) // todo should probably use shortcutting...
                     val totalCondition = normalCase.or(prevBranchContinueExpr)
 
                     val scopeName = scope.generateName("case", origin)
@@ -180,18 +197,8 @@ fun ZauberASTBuilderBase.readSwitch(label: String?): Expression {
                     bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
                 }
                 consumeIf("default") -> {
-                    val origin = origin(i - 1) // on default
-                    // condition: noPrevBranch | prevBranchContinue
-                    consume(checkExpr())
-                    val totalCondition = noPrevBranchExpr.or(prevBranchContinueExpr)
-                    val scopeName = scope.generateName("default", origin)
-                    lateinit var bodyScope1: Scope
-                    val body = pushScope(scopeName, ScopeType.METHOD_BODY) { bodyScopeI ->
-                        bodyScope1 = bodyScopeI
-                        readCaseBody()
-                    }
-                    // flags are not interesting anymore after this
-                    bodyInstr.add(IfElseBranch(totalCondition, ExpressionList(body, bodyScope1, origin), null))
+                    handleDefaultBranch()
+                    break
                 }
                 else -> error("Expected case/default in switch at ${tokens.err(i)}")
             }

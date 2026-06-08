@@ -319,14 +319,14 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 // array
                 val origin = origin(i)
-                val elements = pushArray { readValueParametersImpl() }
+                val elements = pushArray { readValueParametersBody() }
                 namedCall1("createArray", elements, origin)
             }
 
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 // array
                 val origin = origin(i)
-                val elements = pushBlock { readValueParametersImpl() }
+                val elements = pushBlock { readValueParametersBody() }
                 namedCall1("createDict", elements, origin)
             }
 
@@ -351,7 +351,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 tokens.equals(i + 1, TokenType.OPEN_CALL)
     }
 
-    override fun readValueParametersImpl(): ArrayList<NamedParameter> {
+    override fun readValueParametersBody(): ArrayList<NamedParameter> {
         val elements = ArrayList<NamedParameter>()
         // println("params-end: ${tokens.size}, ${tokens.err(tokens.size)}")
         while (i < tokens.size) {

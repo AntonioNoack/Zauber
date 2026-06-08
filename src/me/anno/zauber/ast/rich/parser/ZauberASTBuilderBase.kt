@@ -271,10 +271,10 @@ abstract class ZauberASTBuilderBase(
     }
 
     fun readValueParameters(): ArrayList<NamedParameter> {
-        return pushCall { readValueParametersImpl() }
+        return pushCall { readValueParametersBody() }
     }
 
-    open fun readValueParametersImpl(): ArrayList<NamedParameter> {
+    open fun readValueParametersBody(): ArrayList<NamedParameter> {
         val parameters = ArrayList<NamedParameter>()
         while (i < tokens.size) {
             val name = if (

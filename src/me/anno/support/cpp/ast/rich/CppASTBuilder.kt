@@ -136,7 +136,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return pushBlock(ScopeType.NORMAL_CLASS, name) { scope ->
             scope.setEmptyTypeParams()
             while (i < tokens.size) {
-                readField(true)
+                readFields(true)
             }
             scope.typeWithArgs
         }
@@ -247,11 +247,13 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return TypeName(preType, nameType, name)
     }
 
-    fun readField(canReadMultiple: Boolean): Field {
-        return readField(readTypeAndName1(), canReadMultiple)
+    fun readFields(canReadMultiple: Boolean): List<Pair<Field, AssignmentExpression?>> {
+        return readFields(readTypeAndName1(), canReadMultiple)
     }
 
-    fun readField(typeAndName: TypeName, canReadMultiple: Boolean): Field {
+    fun readFields(typeAndName: TypeName, canReadMultiple: Boolean):
+            List<Pair<Field, AssignmentExpression?>> {
+
         val origin = origin(i)
         val (preType, type, name) = typeAndName
         val initialValue = if (consumeIf("=")) readExpression() else null
@@ -261,34 +263,32 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             name, type, initialValue, packFlags(), origin
         )
 
-        if (canReadMultiple) {
-            if (consumeIf("=")) {
-                readFieldAssignment(field)
-            }
-
-            while (consumeIf(",")) {
-
-                val origin = origin(i)
-                val (_, typeI, nameI) = readFieldName(preType)
-                val initialValue = if (consumeIf("=")) readExpression() else null
-
-                val fieldI = currPackage.addField(
-                    null, false, isMutable = true, null,
-                    nameI, typeI, initialValue, packFlags(), origin
-                )
-
-                if (consumeIf("=")) {
-                    readFieldAssignment(fieldI)
-                }
-            }
-
-            consume(";")
+        if (!canReadMultiple || !tokens.equals(i, TokenType.COMMA)) {
+            return listOf(field to createAssignment(field))
         }
-        return field
+
+        val result = ArrayList<Pair<Field, AssignmentExpression?>>()
+        while (consumeIf(",")) {
+
+            val origin = origin(i)
+            val (_, typeI, nameI) = readFieldName(preType)
+            val initialValue = if (consumeIf("=")) readExpression() else null
+
+            currPackage.addField(
+                null, false, isMutable = true, null,
+                nameI, typeI, initialValue, packFlags(), origin
+            )
+            result.add(field to createAssignment(field))
+        }
+
+        consume(";")
+        return result
     }
 
-    private fun readFieldAssignment(field: Field) {
-        TODO("Read assignment")
+    private fun createAssignment(field: Field): AssignmentExpression? {
+        val origin = field.origin
+        val initial = field.initialValue ?: return null
+        return AssignmentExpression(FieldExpression(field, currPackage, origin), initial)
     }
 
     private fun readParameters(parameterType: ParameterType): List<Parameter> {
@@ -299,7 +299,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         val parameters = ArrayList<Parameter>()
         while (i < tokens.size) {
             val origin = origin(i)
-            val field = readField(false)
+            val (field, isNull) = readFields(false)[0]
+            check(isNull == null)
             parameters.add(
                 Parameter(
                     parameters.size, field.name, parameterType,
@@ -317,7 +318,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         if (tokens.equals(i, "(")) {
             readMethod(typeAndName)
         } else {
-            readField(typeAndName, true)
+            readFields(typeAndName, true)
         }
     }
 
@@ -430,26 +431,6 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             alias.selfAsTypeAlias = type
         }
         consume(";")
-    }
-
-    private fun readIf(): IfElseBranch {
-        val condition = readExpressionCondition()
-        val ifBody = readBodyOrExpression()
-        val elseBody = if (consumeIf("else")) readBodyOrExpression() else null
-        return IfElseBranch(condition, ifBody, elseBody)
-    }
-
-    private fun readWhile(label: String?): WhileLoop {
-        val condition = readExpressionCondition()
-        val body = readBodyOrExpression()
-        return WhileLoop(condition, body, label, null)
-    }
-
-    private fun readDoWhile(label: String?): DoWhileLoop {
-        val body = readBodyOrExpression()
-        consume("while")
-        val condition = readExpressionCondition()
-        return DoWhileLoop(body = body, condition = condition, label)
     }
 
     override fun readExpression(minPrecedence: Int): Expression {
@@ -568,21 +549,6 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             tokens.equals(i, TokenType.STRING) ->
                 StringExpression(tokens.unescapeString(i++), currPackage, origin)
 
-            consumeIf("return") -> readReturn(label)
-
-            consumeIf("if") -> readIf()
-            consumeIf("do") -> readDoWhile(label)
-            consumeIf("while") -> readWhile(label)
-            consumeIf("switch") -> readSwitch(label)
-            consumeIf("continue") -> {
-                val label = resolveJumpLabel(readLabel())
-                ContinueExpression(label, currPackage, origin)
-            }
-            consumeIf("break") -> {
-                val label = resolveJumpLabel(readLabel())
-                BreakExpression(label, currPackage, origin)
-            }
-
             // todo try to resolve field immediately
             tokens.equals(i, TokenType.NAME) -> {
                 val name = tokens.toString(i++)
@@ -600,7 +566,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     }
 
     private fun readLabel(): String? {
-        if (!consumeIf(";")) {
+        if (i < tokens.size && !consumeIf(";")) {
             val label = tokens.toString(i++)
             consume(";")
             return label
@@ -610,9 +576,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     private fun readReturn(label: String?): ReturnExpression {
         val origin = origin(i) // skip return
         if (LOGGER.isDebugEnabled) LOGGER.debug("reading return")
-        val expr = if (i < tokens.size && tokens.isSameLine(i - 1, i) &&
-            !tokens.equals(i, ",", ";")
-        ) {
+        val expr = if (i < tokens.size && !tokens.equals(i, ",", ";")) {
             val value = readExpression()
             if (LOGGER.isDebugEnabled) LOGGER.debug("  with value $value")
             ReturnExpression(value, label, currPackage, origin)
@@ -624,17 +588,27 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return expr
     }
 
+    private fun readThrow(): ThrowExpression {
+        val origin = origin(i) // skip return
+        if (LOGGER.isDebugEnabled) LOGGER.debug("reading throw")
+        val value = readExpression()
+        if (LOGGER.isDebugEnabled) LOGGER.debug("  with value $value")
+        val expr = ThrowExpression(value, currPackage, origin)
+        consume(";")
+        return expr
+    }
+
     override fun tryReadPostfix(expr: Expression): Expression? {
         return when {
             // todo how about <>()?
             tokens.equals(i, "(") -> {
                 val origin = origin(i)
-                val valueParameters = pushCall { readValueParameters() }
+                val valueParameters = pushCall { readValueParametersBody() }
                 CallExpression(expr, null, valueParameters, origin)
             }
             tokens.equals(i, "[") -> {
                 val origin = origin(i)
-                val params = pushArray { readValueParameters() }
+                val params = pushArray { readValueParametersBody() }
                 NamedCallExpression(expr, "get", nameAsImport("get"), null, params, expr.scope, origin)
             }
             tokens.equals(i, "++") -> {
@@ -682,7 +656,10 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         val origin = origin(i)
         val tmpName = currPackage.generateName("expr", origin)
         return pushScope(tmpName, ScopeType.METHOD_BODY) {
-            readExpression()
+            val end = tokens.findToken(i, ";")
+            tokens.push(end) {
+                readExpression()
+            }
         }
     }
 
@@ -696,11 +673,39 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             val oldSize = result.size
             val oldNumFields = currPackage.fields.size
             when {
-                tokens.equals(i, TokenType.CLOSE_BLOCK) ->
-                    error("} in the middle at ${tokens.err(i)}")
+                consumeIf(";") -> {}
+                consumeIf("if") -> result.add(readIfBranch())
+                consumeIf("while") -> result.add(readWhileLoop(null))
+                consumeIf("do") -> result.add(readDoWhileLoop(null))
+                consumeIf("switch") -> result.add(readSwitch(null))
+                consumeIf("try") -> result.add(readTryCatch(null))
+                consumeIf("return") -> result.add(readReturn(null))
+                consumeIf("throw") -> result.add(readThrow())
+                consumeIf("continue") -> {
+                    val label = resolveJumpLabel(readLabel())
+                    result.add(ContinueExpression(label, currPackage, origin))
+                }
+                consumeIf("break") -> {
+                    val label = resolveJumpLabel(readLabel())
+                    result.add(BreakExpression(label, currPackage, origin))
+                }
+
                 else -> {
-                    // todo read declaration or return or throw or try-catch
-                    result.add(readExpression())
+                    // read declaration or assignment or method-call
+                    //  -> all of those occurred already, and we could lookup based on the first token,
+                    //  whether it is a type, method, or field
+
+                    check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD))
+                    if (tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD)) {
+                        consumeIf("struct") // optional in C++, mandatory in C -> skip it
+                        // println("Reading field ${tokens.err(i)}")
+                        val fields = readFields(canReadMultiple = true)
+                        for ((_, assignment) in fields) {
+                            if (assignment != null) result.add(assignment)
+                        }
+                    } else {
+                        result.add(readExpression())
+                    }
                     if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")
                 }
             }

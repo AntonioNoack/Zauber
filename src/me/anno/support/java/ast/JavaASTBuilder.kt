@@ -958,7 +958,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             }
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 val origin = origin(i)
-                val params = pushArray { readValueParametersImpl() }
+                val params = pushArray { readValueParametersBody() }
                 if (consumeIf("=")) {
                     val value = NamedParameter(null, readExpression())
                     NamedCallExpression(
