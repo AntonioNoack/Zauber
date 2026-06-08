@@ -391,7 +391,11 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             val isVararg = consumeIf("...")
             if (isVararg) type = ClassType(Types.Array.clazz, listOf(type), origin)
 
-            val name = consumeName(VSCodeType.PARAMETER, 0)
+            val name =
+                if ((language == Language.C || language == Language.CPP) &&
+                    !tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)
+                ) "__${parameters.size}"
+                else consumeName(VSCodeType.PARAMETER, 0)
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
@@ -528,7 +532,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                             currPackage, origin
                         )
                         is ArrayType -> ConstructorExpression(
-                            Types.Array.clazz, listOf(type.baseType),
+                            Types.Array.clazz, listOf(type.type),
                             listOf(NamedParameter(null, type.size)), null,
                             currPackage, origin
                         )

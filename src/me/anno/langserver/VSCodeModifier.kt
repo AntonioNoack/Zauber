@@ -2,7 +2,7 @@ package me.anno.langserver
 
 enum class VSCodeModifier(val code: String) {
     DECLARATION("declaration"), // declarations of symbols.
-    DEFINITION("definition"), // definitions of symbols, "), // example, in header files.
+    DEFINITION("definition"), // definitions of symbols, for example in header files.
     READONLY("readonly"), // readonly variables and member fields (constants).
     STATIC("static"), // class members (static members).
     DEPRECATED("deprecated"), // symbols that should no longer be used.

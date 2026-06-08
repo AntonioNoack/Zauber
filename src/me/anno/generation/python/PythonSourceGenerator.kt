@@ -94,7 +94,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun getMethodName(method0: Specialization): String {
 
-        if (method0.method is Constructor && method0.method.ownerScope.typeWithArgs in nativeNumbers) {
+        if (method0.method is Constructor && method0.method.ownerScope.typeWithArgs2 in nativeNumbers) {
             return "__init__"
         }
 

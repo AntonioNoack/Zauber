@@ -116,7 +116,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     fun isInlinedMethod(method0: Specialization): Boolean {
         val method = method0.method
-        when (val ownerType = method.ownerScope.typeWithArgs) {
+        when (val ownerType = method.ownerScope.typeWithArgs2) {
             in nativeNumbers -> {
                 if (method.valueParameters.size > 1) return false
                 if (method.valueParameters.size == 1 &&
@@ -536,7 +536,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         method0.use {
             appendMethodHeader(type, getMethodName(method0), method0, true)
 
-            if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
+            if (method !is Constructor || method.ownerScope.typeWithArgs2 !in nativeNumbers) {
                 when {
                     isArrayGetter(method0) -> appendArrayGetter(method0)
                     isArraySetter(method0) -> appendArraySetter(method0)
@@ -898,7 +898,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         val s = structs.getOrPut(key) {
             classSpecialization.use {
                 if (arrayDepth > 0) {
-                    val clazz = classSpecialization.clazz.typeWithArgs
+                    val clazz = classSpecialization.clazz.typeWithArgs2
                     if (clazz in nativeNumbers) {
                         // child is number, get native type instead...
                         val elementType = getWASMType(clazz)
@@ -1402,7 +1402,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 val method = expr.method.resolved
                 method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
 
-                val ownerType = method.ownerScope.typeWithArgs
+                val ownerType = method.ownerScope.typeWithArgs2
                 val paramType = method.valueParameters[0].type.specialize()
                 if (ownerType == paramType && ownerType in nativeNumbers) {
                     appendGetField(graph, expr.left)

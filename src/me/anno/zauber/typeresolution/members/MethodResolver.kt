@@ -2,6 +2,7 @@ package me.anno.zauber.typeresolution.members
 
 import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
+import me.anno.utils.StringUtils.iff
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Method
@@ -110,14 +111,18 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         val selfScope = context.selfScope
         val codeScope = expr.scope
         val styledName = style(name, GREEN)
-        val typeParams = typeParameters?.joinToString(", ","<",">") ?: "<?>"
-        val valueParams = valueParameters.joinToString(", ","(",")")
+        val typeParams = typeParameters?.joinToString(", ", "<", ">") ?: "<?>"
+        val valueParams = valueParameters.joinToString(", ", "(", ")")
+        val prefix = if (selfScope != null) "$selfScope." else ""
         error(
-            "Could not resolve method ${selfScope}.$styledName$typeParams$valueParams\n" +
-                    "  Self-scope methods[$selfScope]: ${selfScope?.methods0?.filter { it.name == name }}\n" +
-                    "  Code-scope methods[$codeScope]: ${codeScope.methods0.filter { it.name == name }}\n" +
-                    "  Lang-scope methods[$langScope]: ${langScope.methods0.filter { it.name == name }}\n" +
-                    "  in ${resolveOrigin(expr.origin)}"
+            "Could not resolve method $prefix$styledName$typeParams$valueParams\n" +
+                    "  Self-scope methods[$selfScope]: ${selfScope?.methods0?.filter { it.name == name }}\n"
+                        .iff(selfScope != null) +
+                    "  Code-scope methods[$codeScope]: ${codeScope.methods0.filter { it.name == name }}\n"
+                        .iff(codeScope != selfScope) +
+                    "  Lang-scope methods[$langScope]: ${langScope.methods0.filter { it.name == name }}\n"
+                        .iff(langScope != selfScope && langScope != codeScope) +
+                    "  at ${resolveOrigin(expr.origin)}"
         )
     }
 

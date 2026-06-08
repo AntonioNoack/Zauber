@@ -4,6 +4,8 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.utils.NumberUtils.toInt
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
@@ -133,7 +135,10 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
                     } else extra
 
                     if (classScope.flags.hasFlag(Flags.VALUE)) {
-                        validateValueClassParameters(name, valueParameters)
+                        validateValueClassParameters(
+                            name, valueParameters,
+                            classScope.flags.hasFlag(Flags.ANNOTATION)
+                        )
                     }
 
                     val instr = createAssignmentInstructionsForPrimaryConstructor(classScope, valueParameters, origin)
@@ -276,9 +281,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("package") -> readPackage()
             consumeIf("import") -> readImport()
             consumeIf("typealias") -> readTypeAlias()
-            consumeIf("var") ||
-                    consumeIf("val") ||
-                    consumeIf("const") -> readField()
+            consumeIf("var") || consumeIf("val") -> readField()
             consumeIf("fun") -> {
                 if (consumeIf("interface")) {
                     val name = consumeName(VSCodeType.INTERFACE, VSCodeModifier.DECLARATION.flag)
@@ -296,8 +299,10 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("protected") -> addFlag(Flags.PROTECTED)
             consumeIf("private") -> addFlag(Flags.PRIVATE)
             consumeIf("abstract") -> addFlag(Flags.ABSTRACT)
+            consumeIf("internal") -> addFlag(Flags.INTERNAL)
             consumeIf("operator") -> addFlag(Flags.OPERATOR)
             consumeIf("open") -> addFlag(Flags.OPEN)
+            consumeIf("final") -> addFlag(Flags.FINAL)
             consumeIf("sealed") -> addFlag(Flags.SEALED)
             consumeIf("tailrec") -> {}// addKeyword(Keywords.TAILREC)
             consumeIf("lateinit") -> addFlag(Flags.LATEINIT)
@@ -305,6 +310,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
             consumeIf("crossinline") -> addFlag(Flags.CROSS_INLINE)
             consumeIf("const") -> {
                 addFlag(Flags.CONSTEXPR)
+                consume("val")
                 readField()
             }
             consumeIf("infix") -> addFlag(Flags.INFIX)
@@ -414,12 +420,14 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         val i0 = i - 1
         val origin = origin(i0)
         val isMutable = tokens.equals(i0, "var")
-        val isConst = tokens.equals(i0, "const")
+        val isConst = flags.hasFlag(Flags.CONSTEXPR)
         if (isConst) {
-            addFlag(Flags.CONSTEXPR)
             check(currPackage.isObjectLike()) {
                 // we only allow constants in object-likes, so we can compute all of them at comptime
-                "Const fields are only supported in object-likes (object, companion object, package) at ${tokens.err(i - 1)}"
+                "${style("const", ORANGE)} fields are only supported in object-likes " +
+                        "(${style("object", ORANGE)}, " +
+                        "${style("companion object", ORANGE)}, " +
+                        "${style("package", ORANGE)})\n  at ${tokens.err(i - 1)}"
             }
         }
 

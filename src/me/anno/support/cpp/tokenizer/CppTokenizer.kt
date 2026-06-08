@@ -81,9 +81,9 @@ class CppTokenizer(
                     val spaceBefore = i > 0 && src[i - 1].isWhitespace()
                     val spaceAfter = i + 1 < src.length && src[i + 1].isWhitespace()
                     when {
-                        spaceBefore == spaceAfter -> tokens.add(TokenType.SYMBOL, i, i + 1)
-                        spaceBefore -> tokens.add(TokenType.SYMBOL, i - 1, i + 1)
-                        else -> tokens.add(TokenType.SYMBOL, i, i + 2)
+                        spaceBefore == spaceAfter -> tokens.add(TokenType.SYMBOL, i, i + 1, false)
+                        spaceBefore -> tokens.add(TokenType.SYMBOL, i - 1, i + 1, false)
+                        else -> tokens.add(TokenType.SYMBOL, i, i + 2, false)
                     }
                     i += if (spaceAfter) 2 else 1
                 }

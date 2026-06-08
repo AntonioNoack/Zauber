@@ -44,6 +44,7 @@ import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.arithmetic.NullType.typeOrNull
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.impl.arithmetic.UnknownType
+import me.anno.zauber.types.impl.unresolved.UnresolvedClassType
 import me.anno.zauber.types.impl.unresolved.UnresolvedSubType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import kotlin.math.min
@@ -65,8 +66,9 @@ abstract class ZauberASTBuilderBase(
             selfType: Type?, name: String,
             currPackage: Scope, imports: List<Import>
         ): Type? {
-            return currPackage.resolveTypeOrNull(name, imports, true)
+            val type = currPackage.resolveTypeOrNull(name, imports, true)
                 ?: (selfType as? ClassType)?.clazz?.resolveType(name, imports)
+            return type?.resolvedName
         }
 
         val operators = mapOf(
@@ -216,7 +218,7 @@ abstract class ZauberASTBuilderBase(
             return emptyList()
         }
 
-        val tmpSelf = classScope.typeWithoutArgs
+        val tmpSelf = classScope.typeWithArgs
         val parameters = ArrayList<Parameter>()
         tokens.push(i++, "<", ">") {
             while (i < tokens.size) {
@@ -254,13 +256,6 @@ abstract class ZauberASTBuilderBase(
         }
         consume(">")
         if (assignToScope) classScope.setTypeParams(parameters)
-
-        // replace classScope.typeWithoutArgs with classScope.typeWithArgs
-        val properSelf = classScope.typeWithArgs
-        for (param in parameters) {
-            param.type = param.type.replace(tmpSelf, properSelf)
-        }
-
         return parameters
     }
 
@@ -654,12 +649,18 @@ abstract class ZauberASTBuilderBase(
 
         val typeArgs = typeArgs0
             ?: (path as? ClassType)?.typeParameters
+            ?: (path as? UnresolvedSubType)?.typeParams
 
         val baseType = when {
             path is ClassType -> ClassType(path.clazz, typeArgs, origin(i))
+            path is UnresolvedClassType -> ClassType(path.clazz, typeArgs, origin(i))
             path is UnresolvedType -> UnresolvedType(path.className, typeArgs, currPackage, imports)
+            path is UnresolvedSubType -> {
+                check(path.typeParams == null)
+                path.withTypeParams(typeArgs)
+            }
             typeArgs == null -> path
-            else -> error("Cannot combine $path with $typeArgs")
+            else -> error("Cannot combine $path (${path.javaClass.simpleName}) with $typeArgs")
         }
 
         if (allowSubTypes && consumeIf(".")) {
@@ -810,7 +811,7 @@ abstract class ZauberASTBuilderBase(
     }
 
     private fun resolveSelfTypeI(selfType: Type?): Type {
-        if (selfType is ClassType) {
+        if (selfType is ClassType || selfType is UnresolvedClassType) {
             return selfType
         } else {
             check(selfType == null)
@@ -883,7 +884,7 @@ abstract class ZauberASTBuilderBase(
             path = if (path is ClassType && !path.clazz.isTypeAlias()) {
                 path.clazz.getOrPut(name, null).typeWithArgs
             } else {
-                UnresolvedSubType(path!!, name, currPackage, imports)
+                UnresolvedSubType(path!!, name, currPackage, imports, null)
             }
         }
 
@@ -925,7 +926,10 @@ abstract class ZauberASTBuilderBase(
         val constructorOrigin = origin(i)
         val constructorParams = readPrimaryConstructorValueParameters(classScope)
         if (flags.hasFlag(Flags.VALUE)) {
-            validateValueClassParameters(name, constructorParams)
+            validateValueClassParameters(
+                name, constructorParams,
+                classScope.flags.hasFlag(Flags.ANNOTATION)
+            )
         }
 
         val constructorBody = createAssignmentInstructionsForPrimaryConstructor(
@@ -955,11 +959,14 @@ abstract class ZauberASTBuilderBase(
         popGenericParams()
     }
 
-    fun validateValueClassParameters(name: String, constructorParams: List<Parameter>?) {
+    fun validateValueClassParameters(
+        name: String, constructorParams: List<Parameter>?,
+        isAnnotationType: Boolean
+    ) {
         check(constructorParams != null) {
             "Value class '$name' must have a primary constructor, at ${tokens.err(i - 1)}"
         }
-        check(constructorParams.isNotEmpty()) {
+        check(constructorParams.isNotEmpty() || isAnnotationType) {
             "Value class '$name' must have at least one field, at ${tokens.err(i - 1)}"
         }
         check(constructorParams.all { it.isVal }) {

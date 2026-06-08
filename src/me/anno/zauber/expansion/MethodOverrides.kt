@@ -106,7 +106,7 @@ object MethodOverrides {
                 // will be checked by getter; and avoid warnings for val size: Int + override var size: Int
                 method.scope.scopeType != ScopeType.FIELD_SETTER
             ) {
-                LOGGER.warn("No base-method found for $scope: $method, found: $foundMethods")
+                LOGGER.warn("No base-method found for $scope.$method, found: $foundMethods")
             }
         }
 

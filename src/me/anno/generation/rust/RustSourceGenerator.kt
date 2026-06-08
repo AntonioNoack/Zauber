@@ -154,7 +154,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
             nextLine()
         } else if (scope.isObjectLike() ||
             ownership.isDeepMutable ||
-            scope.typeWithArgs in nativeTypes
+            scope.typeWithArgs2 in nativeTypes
         ) {
             builder.append("#[derive(Clone)]") // maybe complicated copy
             nextLine()

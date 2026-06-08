@@ -483,7 +483,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         var ownerType = nameToType(owner) as ClassType
         if (opcode == GETSTATIC || opcode == PUTSTATIC) {
             ownerType = ownerType.clazz
-                .getOrPutCompanion().typeWithArgs
+                .getOrPutCompanion().typeWithArgs2
         }
         when (opcode) {
             GETSTATIC -> {
@@ -830,7 +830,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             val dst = block.field(interfaceType)
             val unit = block.field(Types.Unit)
-            block.add(JVMSimpleAllocateInstance(dst, lambdaScope.typeWithArgs, methodScope, origin))
+            block.add(JVMSimpleAllocateInstance(dst, lambdaScope.typeWithArgs2, methodScope, origin))
             block.add(
                 JVMSimpleCall(
                     unit, constructorScope.selfAsConstructor!!, dst,

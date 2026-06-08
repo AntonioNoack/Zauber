@@ -248,6 +248,14 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
         }
     }
 
+    override fun equals(other: Any?): Boolean {
+        return other is NumberExpression && other.value == value
+    }
+
+    override fun hashCode(): Int {
+        return value.hashCode()
+    }
+
     val basis = parseBasis(value)
 
     // based on the string content, decide what type this is

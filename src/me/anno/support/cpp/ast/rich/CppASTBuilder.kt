@@ -1,12 +1,11 @@
 package me.anno.support.cpp.ast.rich
 
-import me.anno.support.Language
+import me.anno.langserver.VSCodeModifier
+import me.anno.langserver.VSCodeType
 import me.anno.support.cpp.ast.rich.PointerType.Companion.ptr
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
-import me.anno.zauber.ast.rich.*
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.debug
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.*
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -18,6 +17,8 @@ import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.debug
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.parser.createCastExpression
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -25,9 +26,12 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.BooleanUtils.not
+import me.anno.zauber.types.LambdaParameter
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.LambdaType
+import me.anno.zauber.types.impl.unresolved.UnresolvedClassType
 
 class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     JavaASTBuilder(tokens, root, false, standard.kind()) {
@@ -52,77 +56,118 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
 
     override fun readFileLevel() {
         while (i < tokens.size) {
-            // println("Reading file $i < ${tokens.size}")
+            // println("Reading next at file level: ${tokens.err(i)}")
             when {
                 consumeIf("namespace") -> readNamespace()
                 consumeIf("class") -> readStructOrClass(false)
-                consumeIf("struct") -> readStructOrClass(true)
+                consumeIf("struct") -> {
+                    readStructOrClass(true)
+                    consume(";")
+                }
                 consumeIf("enum") -> readEnum()
                 consumeIf("using") -> {
                     consume("namespace")
                     TODO("read this as an import with star")
                 }
                 consumeIf("typedef") -> readTypeAlias()
+                consumeIf("const") -> {} // not const-expr, but a const type, more like final
+                consumeIf("volatile") -> {}
+                consumeIf(";") -> {} // ignore extra semicolons
                 else -> readFieldOrMethod()
             }
         }
     }
 
-    fun readFieldOrMethod() {
+    fun skipCallBlock(i0: Int): Int {
+        var depth = 1
+        check(tokens.equals(i0, TokenType.OPEN_CALL))
+        var i = i0 + 1
+        while (i < tokens.size && depth > 0) {
+            when (tokens.getType(i++)) {
+                TokenType.OPEN_CALL -> depth++
+                TokenType.CLOSE_CALL -> depth--
+                else -> {}
+            }
+        }
+        return i
+    }
+
+    fun findTypeNameEnd(supportLambdaTypes: Boolean): Int {
         var end = i
+        var depth = 0
         while (end < tokens.size) {
             when {
-                tokens.equals(end, ";") || tokens.equals(end, "=") -> {
-                    readField(end, true)
-                    return
-                }
-                tokens.equals(end, "(") -> {
-                    readMethod(end)
-                    return
+                tokens.equals(end, TokenType.OPEN_BLOCK) -> depth++
+                tokens.equals(end, TokenType.CLOSE_BLOCK) -> depth--
+                depth == 0 -> {
+                    if (supportLambdaTypes && tokens.equals(end, "(") && tokens.equals(end + 1, "*")) {
+                        end = skipCallBlock(end) // name
+                        end = skipCallBlock(end) // parameters
+                        return end
+                    }
+                    if (tokens.equals(end, ",", ";", "=", "(")) {
+                        return end
+                    }
                 }
             }
             end++
         }
-
-        error("Unexpected EOF for field/method at ${tokens.err(i)}")
+        return end
     }
 
     fun readTypeUntil(endExcl: Int): Type {
-        println("Reading type $i .. $endExcl")
-        val originalSize = tokens.size
-        tokens.size = endExcl
-        val type = readTypeImpl()
-        tokens.size = originalSize
-        return type
+        // println("Reading type $i .. $endExcl")
+        return tokens.push(endExcl) {
+            readTypeImpl()
+        }
+    }
+
+    fun readStructType(nameOverride: String?): Type {
+        val name = nameOverride ?: run {
+            // skip ahead and read name, if available
+            val structEnd = tokens.findBlockEnd(i, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK)
+            val name = tokens.push(tokens.totalSize) {
+                if (tokens.equals(structEnd + 1, TokenType.NAME, TokenType.KEYWORD)) {
+                    tokens.toString(structEnd + 1)
+                } else "struct"
+            }
+            currPackage.generateName(name, origin(i))
+        }
+        return pushBlock(ScopeType.NORMAL_CLASS, name) { scope ->
+            scope.setEmptyTypeParams()
+            while (i < tokens.size) {
+                readField(true)
+            }
+            scope.typeWithArgs
+        }
     }
 
     fun readTypeImpl(): Type {
-        var type = readTypePath(null)
-        loop@ while (true) {
-            if (consumeIf("* ")) {
-                type = type.ptr()
-                continue@loop
+        var type =
+            if (consumeIf("struct")) readStructType(null)
+            else readTypePath(null)
+
+        while (true) {
+            when {
+                consumeIf("* ") || consumeIf("*") -> type = type.ptr()
+                tokens.equals(i, TokenType.OPEN_ARRAY) -> {
+                    // todo I think this order is incorrect for multi-dimensional arrays
+                    val size = pushArray { readExpression() }
+                    type = ArrayType(type, size)
+                }
+                else -> break
             }
-            if (tokens.equals(i, TokenType.OPEN_ARRAY)) {
-                val size = pushArray { readExpression() }
-                type = ArrayType(type, size)
-                continue@loop
-            }
-            break
         }
         return type
     }
 
     override fun readTypePath(selfType: Type?): Type {
-        check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
-            "Expected name or keyword for type, but got ${tokens.err(i)}, $i vs ${tokens.size}"
-        }
-
-        val name0 = tokens.toString(i++)
+        val name0 = consumeName(VSCodeType.TYPE, 0)
         var path = builtInTypes[name0]
             ?: genericParams.last()[name0]
             ?: currPackage.resolveTypeOrNull(name0, this)
             ?: (selfType as? ClassType)?.clazz?.resolveType(name0, this)
+            ?: (selfType as? UnresolvedClassType)?.clazz?.resolveType(name0, this)
             ?: error("Missing type '$name0'")
 
         while (tokens.equals(i, "::") && tokens.equals(i + 1, TokenType.NAME)) {
@@ -136,24 +181,79 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         TODO("Not yet implemented")
     }
 
-    // todo name can have additional stars
-    fun readTypeAndName(typeNameEnd: Int): Pair<Type, String> {
-        // consumeKeyword()
-        val typeEnd = typeNameEnd - 1
-        //check(i < typeEnd) { "Not enough tokens for type and name at ${tokens.err(i)} .. $typeNameEnd" }
-        check(tokens.equals(typeEnd, TokenType.NAME)) {
-            "Expected field name at ${tokens.err(typeEnd)}"
-        }
-        val name = tokens.toString(typeEnd)
-        val type = readTypeUntil(typeEnd)
+    data class TypeName(
+        val preType: Type,
+        val nameType: Type,
+        val name: String
+    )
 
-        i = typeNameEnd
-        return type to name
+    fun skipTypeKeywords() {
+        while (true) {
+            when {
+                consumeIf("const") -> {}
+                consumeIf("volatile") -> {}
+                else -> break
+            }
+        }
     }
 
-    fun readField(typeNameEnd: Int, skipEnd: Boolean): Field {
+    fun readTypeAndName1(): TypeName {
+        skipTypeKeywords()
+        val typeNameEnd = findTypeNameEnd(supportLambdaTypes = true)
+
+        if (tokens.equals(typeNameEnd - 1, TokenType.CLOSE_CALL)) {
+            val returnTypeEnd = findTypeNameEnd(supportLambdaTypes = false)
+            val returnType = readTypeUntil(returnTypeEnd)
+            var arraySizes: List<Expression> = emptyList()
+            val name = pushCall {
+                consume("*")
+                val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+                // we can have array sizes here...
+                while (tokens.equals(i, TokenType.OPEN_ARRAY)) {
+                    @Suppress("SuspiciousCollectionReassignment")
+                    arraySizes += pushArray { readExpression() }
+                }
+                name
+            }
+            val parameters = pushCall {
+                readParameterDeclarations(null, emptyList(), ParameterType.VALUE_PARAMETER)
+                    .map { param -> LambdaParameter(param.name, param.type, param.origin) }
+            }
+            var type: Type = LambdaType(null, parameters, returnType)
+            for (size in arraySizes.lastIndex downTo 0) { // I think this order is correct
+                type = ArrayType(type, arraySizes[size])
+            }
+            return TypeName(type, type, name)
+        }
+
+        var typeEnd = typeNameEnd - 1
+        while (tokens.equals(typeEnd, " *", "*")) {
+            typeEnd--
+        }
+
+        val preType = readTypeUntil(typeEnd)
+        return readFieldName(preType)
+    }
+
+    fun readFieldName(preType: Type): TypeName {
+        skipTypeKeywords()
+
+        var nameType = preType
+        while (consumeIf(" *") || consumeIf("*")) {
+            nameType = nameType.ptr()
+        }
+
+        val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        return TypeName(preType, nameType, name)
+    }
+
+    fun readField(canReadMultiple: Boolean): Field {
+        return readField(readTypeAndName1(), canReadMultiple)
+    }
+
+    fun readField(typeAndName: TypeName, canReadMultiple: Boolean): Field {
         val origin = origin(i)
-        val (type, name) = readTypeAndName(typeNameEnd)
+        val (preType, type, name) = typeAndName
         val initialValue = if (consumeIf("=")) readExpression() else null
 
         val field = currPackage.addField(
@@ -161,8 +261,34 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             name, type, initialValue, packFlags(), origin
         )
 
-        if (skipEnd) check(tokens.equals(i++, ";", ",", ")"))
+        if (canReadMultiple) {
+            if (consumeIf("=")) {
+                readFieldAssignment(field)
+            }
+
+            while (consumeIf(",")) {
+
+                val origin = origin(i)
+                val (_, typeI, nameI) = readFieldName(preType)
+                val initialValue = if (consumeIf("=")) readExpression() else null
+
+                val fieldI = currPackage.addField(
+                    null, false, isMutable = true, null,
+                    nameI, typeI, initialValue, packFlags(), origin
+                )
+
+                if (consumeIf("=")) {
+                    readFieldAssignment(fieldI)
+                }
+            }
+
+            consume(";")
+        }
         return field
+    }
+
+    private fun readFieldAssignment(field: Field) {
+        TODO("Read assignment")
     }
 
     private fun readParameters(parameterType: ParameterType): List<Parameter> {
@@ -172,18 +298,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         }
         val parameters = ArrayList<Parameter>()
         while (i < tokens.size) {
-            var end = i
-            var depth = 0
-            while (end < tokens.size) {
-                when {
-                    (tokens.equals(end, ",", "(")) && depth == 0 -> break
-                    tokens.equals(end, "(", "[", "{") -> depth++
-                    tokens.equals(end, ")", "]", "}") -> depth--
-                }
-                end++
-            }
             val origin = origin(i)
-            val field = readField(end, false)
+            val field = readField(false)
             parameters.add(
                 Parameter(
                     parameters.size, field.name, parameterType,
@@ -196,19 +312,26 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return parameters
     }
 
-    fun readMethod(typeNameEnd: Int): Method {
+    fun readFieldOrMethod() {
+        val typeAndName = readTypeAndName1()
+        if (tokens.equals(i, "(")) {
+            readMethod(typeAndName)
+        } else {
+            readField(typeAndName, true)
+        }
+    }
+
+    fun readMethod(typeAndName: TypeName) {
         val origin = origin(i)
-        val (returnType, name) = readTypeAndName(typeNameEnd)
-        val genName = if (language == Language.C) name else currPackage.generateName("f:$name")
+        val (_, returnType, name) = typeAndName
+        val genName = currPackage.generateName(name, origin)
         val methodScope = currPackage.getOrPut(genName, ScopeType.METHOD)
         val keywords = packFlags()
         val arguments = pushScope(methodScope) {
             pushCall { readParameters(ParameterType.VALUE_PARAMETER) }
         }
         val body = if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-            pushBlock(methodScope) {
-                readBodyOrExpression()
-            }
+            readBodyOrExpression()
         } else {
             consume(";")
             null
@@ -219,7 +342,6 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             methodScope, returnType, emptyList(), body, keywords, origin
         )
         methodScope.selfAsMethod = method
-        return method
     }
 
     fun readEnum() {
@@ -271,12 +393,16 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     fun readStructOrClass(isStruct: Boolean) {
         if (isStruct) addFlag(Flags.CPP_STRUCT)
         check(tokens.equals(i, TokenType.NAME)) { "Expected class name at ${tokens.err(i)}" }
-        val name = tokens.toString(i++)
+        val name = consumeName(VSCodeType.TYPE, VSCodeModifier.DECLARATION.flag)
         val classScope = currPackage.getOrPut(name, ScopeType.NORMAL_CLASS)
         classScope.setEmptyTypeParams()
         classScope.addFlags(packFlags())
-        pushBlock(classScope) {
-            readFileLevel()
+
+        if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
+            // block can come later
+            pushBlock(classScope) {
+                readFileLevel()
+            }
         }
     }
 
@@ -290,7 +416,20 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     }
 
     override fun readTypeAlias() {
-        TODO()
+        if (consumeIf("struct")) {
+            // named structs in C++ are a little weird
+            val structEnd = tokens.findBlockEnd(i, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK) + 1
+            check(tokens.equals(structEnd, TokenType.NAME, TokenType.KEYWORD))
+            val structName = tokens.toString(structEnd)
+            readStructType(structName)
+            consume(structName)
+        } else {
+            val (_, type, name) = readTypeAndName1()
+            val alias = currPackage.getOrPut(name, ScopeType.TYPE_ALIAS)
+            alias.setEmptyTypeParams()
+            alias.selfAsTypeAlias = type
+        }
+        consume(";")
     }
 
     private fun readIf(): IfElseBranch {
@@ -593,10 +732,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                 // else we can skip adding it, I think
             }
         }
-        val code = ExpressionList(result, originalScope, origin)
-        originalScope.code.add(code)
         currPackage = originalScope // restore scope
-        return code
+        return ExpressionList(result, originalScope, origin)
     }
 
 }

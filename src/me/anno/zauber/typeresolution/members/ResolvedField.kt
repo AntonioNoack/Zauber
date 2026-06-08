@@ -135,7 +135,7 @@ class ResolvedField(
                 ?: error("Cannot resolve scope from $type for fun-interface")
             val funScope = resolveFunInterfaceType(scope)
                 ?: error("Could not find fun-interface in $scope")
-            return funScope.typeWithArgs
+            return funScope.typeWithArgs2
         }
 
         // todo we should also support multiple interfaces, and choose the best match

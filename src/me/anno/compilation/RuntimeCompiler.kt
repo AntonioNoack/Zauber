@@ -54,7 +54,7 @@ class RuntimeCompiler : MinimalCompiler() {
         registerAllMethods() // register testing methods
 
         val main = mainMethod
-        val self = runtime.getObjectInstance(main.ownerScope.typeWithArgs)
+        val self = runtime.getObjectInstance(main.ownerScope)
         val spec = Specialization(main.memberScope, emptyParameterList())
         val result = runtime.executeCall(self, null, spec, emptyList())
         check(result.type == ReturnType.RETURN) { "Call failed: $result" }

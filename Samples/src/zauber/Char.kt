@@ -1,7 +1,7 @@
 package zauber
 
 @Deprecated("This only exists for compatibility")
-value class Char(val value: NativeI8) {
+value class Char(val value: Char) {
     fun isLetter() = this in ('a'..'z') || this in ('A'..'Z')
     fun isDigit() = this in ('0'..'9')
     fun isLetterOrDigit() = isLetter() || isDigit()

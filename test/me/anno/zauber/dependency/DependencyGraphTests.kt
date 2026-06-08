@@ -53,8 +53,8 @@ class DependencyGraphTests {
             Types.Any,
             Types.Int,
             Types.Unit,
-            zauberScope.typeWithArgs,
-            testScope.typeWithArgs,
+            zauberScope.typeWithArgs2,
+            testScope.typeWithArgs2,
         ).map { Specialization(it) }
         assertEquals(expectedClasses.toSet(), classes)
 

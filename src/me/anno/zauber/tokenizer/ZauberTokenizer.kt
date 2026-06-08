@@ -7,8 +7,8 @@ class ZauberTokenizer(src: String, fileName: String) :
         val KEYWORDS = setOf(
             "true", "false", "null",
             "class", "interface", "object",
-            "package", "import",
-            "val", "var", "vararg", "lateinit", "fun",
+            "package", "import", "companion",
+            "val", "var", "vararg", "const", "lateinit", "fun",
             "abstract", "override", "operator", "infix",
 
             "if", "else", "do", "while", "when", "for",

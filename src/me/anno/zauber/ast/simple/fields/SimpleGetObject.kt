@@ -1,8 +1,6 @@
 package me.anno.zauber.ast.simple.fields
 
-import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.bold
-import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -28,7 +26,7 @@ class SimpleGetObject(
 
     override fun execute(): BlockReturn? {
         val runtime = runtime
-        runtime[dst] = runtime.getObjectInstance(objectScope.typeWithArgs)
+        runtime[dst] = runtime.getObjectInstance(objectScope)
         return null
     }
 }

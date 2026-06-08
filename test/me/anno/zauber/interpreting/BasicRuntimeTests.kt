@@ -31,7 +31,7 @@ class BasicRuntimeTests {
             registerAllMethods()
 
             val specialization = Specialization.fromSimple(getter.scope)
-            val self = runtime.getObjectInstance(scope.typeWithArgs)
+            val self = runtime.getObjectInstance(scope)
             return runtime.executeCall(self, null, specialization, emptyList())
         }
     }

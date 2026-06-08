@@ -23,7 +23,7 @@ class Constructor(
     Types.Unit, scope, "new-${scope.parent}", body, flags, origin
 ) {
 
-    val selfTypeI get() = ownerScope.typeWithArgs
+    val selfTypeI get() = ownerScope.typeWithArgs2
     val classScope get() = ownerScope
 
     override fun toString(): String {

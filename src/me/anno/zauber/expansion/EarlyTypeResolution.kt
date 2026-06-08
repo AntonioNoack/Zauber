@@ -38,8 +38,9 @@ object EarlyTypeResolution {
         val asLambda = scope.selfAsLambda
         if (asLambda != null) replaceUnresolvedTypesForLambda(asLambda, selfScope1)
 
-        for (field in scope.fields) {
-            replaceUnresolvedTypesForField(field, selfScope1)
+        val fields = scope.fields
+        for (i in fields.indices) {
+            replaceUnresolvedTypesForField(fields[i], selfScope1)
         }
     }
 

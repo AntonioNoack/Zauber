@@ -1,5 +1,8 @@
 package me.anno.zauber.scope
 
+import me.anno.utils.StringStyles.DARK_BLUE
+import me.anno.utils.StringStyles.style
+
 enum class ScopeType {
     // structural
     PACKAGE,
@@ -103,4 +106,8 @@ enum class ScopeType {
     }
 
     fun isConstructor(): Boolean = this == CONSTRUCTOR
+
+    override fun toString(): String {
+        return style(name, DARK_BLUE)
+    }
 }

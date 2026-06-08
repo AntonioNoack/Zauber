@@ -1,5 +1,6 @@
 package me.anno.zauber.typeresolution
 
+import glsl.clamp
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.Zauber.root
@@ -19,6 +20,7 @@ import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NotType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
+import me.anno.zauber.types.impl.unresolved.UnresolvedClassType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
 /**
@@ -100,7 +102,7 @@ object TypeResolution {
             LOGGER.info("Checking ${scopeI.pathStr}/${scopeI.scopeType} for 'this'")
             when {
                 scopeI.isClassLike() -> {
-                    val base = scopeI.typeWithArgs
+                    val base = scopeI.typeWithArgs2
                     return if (scopeI.isObjectLike()) base else NonObjectClassType(base)
                 }
                 scopeI.isMethodLike() -> {
@@ -145,6 +147,7 @@ object TypeResolution {
             }
             is GenericType -> typeToScope(type.superBounds) // or should we choose null?
             is UnresolvedType -> typeToScope(type.resolve())
+            is UnresolvedClassType -> type.clazz
             // is NullableType -> typeToScope(type.base)
             is NonObjectClassType -> type.type.clazz
             is LambdaType -> type.toScope()

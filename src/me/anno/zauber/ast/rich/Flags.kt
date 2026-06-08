@@ -7,46 +7,64 @@ object Flags {
 
     const val NONE = 0
     const val SYNTHETIC = 1 shl 0
+
+    /**
+     * visible everywhere, default
+     * */
     const val PUBLIC = 1 shl 1
+
+    /**
+     * visible in file only
+     * */
     const val PRIVATE = 1 shl 2
+
+    /**
+     * not visible for top-level (packages above)
+     * */
     const val PROTECTED = 1 shl 3
-    const val OVERRIDE = 1 shl 4
-    const val OPEN = 1 shl 5
-    const val FINAL = 1 shl 6
-    const val ABSTRACT = 1 shl 7
-    const val DATA_CLASS = 1 shl 8
-    const val VALUE = 1 shl 9
-    const val FUN_INTERFACE = 1 shl 10
-    const val EXTERNAL = 1 shl 11
-    const val OPERATOR = 1 shl 12
-    const val INLINE = 1 shl 13
-    const val CROSS_INLINE = 1 shl 14
-    const val INFIX = 1 shl 15
-    const val MACRO = 1 shl 16
+
+    /**
+     * only visible within that library
+     * */
+    const val INTERNAL = 1 shl 4
+
+    const val OVERRIDE = 1 shl 5
+    const val OPEN = 1 shl 6
+    const val FINAL = 1 shl 7
+    const val ABSTRACT = 1 shl 8
+    const val DATA_CLASS = 1 shl 9
+    const val VALUE = 1 shl 10
+    const val FUN_INTERFACE = 1 shl 11
+    const val EXTERNAL = 1 shl 12
+    const val OPERATOR = 1 shl 13
+    const val INLINE = 1 shl 14
+    const val CROSS_INLINE = 1 shl 15
+    const val INFIX = 1 shl 16
+    const val MACRO = 1 shl 17
 
     /**
      * class used for annotations;
      * is a pure value class, aka all members must be values and their properties must be, too
      * */
-    const val ANNOTATION = 1 shl 17
+    const val ANNOTATION = 1 shl 18
 
     /**
      * class cannot be extended by classes from other packages/modules
      * */
-    const val SEALED = 1 shl 18
+    const val SEALED = 1 shl 19
 
     /**
      * evaluated at compile time
      * */
-    const val CONSTEXPR = 1 shl 19
+    const val CONSTEXPR = 1 shl 20
 
     /**
      * guaranteed to be initialized when accessed, but not before;
      * cannot be applied to nullable types in Kotlin, I'm not sure about Zauber
      * */
-    const val LATEINIT = 1 shl 20
+    const val LATEINIT = 1 shl 21
 
-    const val CPP_STRUCT = 1 shl 21
+    const val CPP_STRUCT = 1 shl 22
 
     fun FlagSet.hasFlag(flag: FlagSet): Boolean {
         return (this and flag) == flag

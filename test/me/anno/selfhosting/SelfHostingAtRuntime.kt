@@ -5,6 +5,9 @@ import me.anno.libraries.Library.Companion.PROJECT_FILE_NAME
 import org.junit.jupiter.api.Test
 import java.io.File
 
+// todo we need to load a library replacing the JVM functionality,
+//  or ideally, we need to import that functionality
+
 // todo - run the compiler within itself
 // todo - compile a small program
 
@@ -23,6 +26,6 @@ class SelfHostingAtRuntime {
                 stdlib={source="Samples"}
             """.trimIndent()
             )
-        ZauberCLI.main(arrayOf("run"))
+        ZauberCLI.main(arrayOf("build"))
     }
 }

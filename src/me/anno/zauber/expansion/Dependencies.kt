@@ -73,7 +73,7 @@ object Dependencies {
     private fun markMethodObjectReachable(method: Specialization) {
         val ownerClass = method.method.ownerScope
         if (ownerClass.isObjectLike()) {
-            addClass(ownerClass.typeWithArgs, true)
+            addClass(ownerClass.typeWithArgs2, true)
         }
     }
 
@@ -155,7 +155,7 @@ object Dependencies {
                     }
                     is SimpleGetObject -> {
                         val scope = instr.objectScope[ScopeInitType.AFTER_DISCOVERY]
-                        addClass(scope.typeWithArgs)
+                        addClass(scope.typeWithArgs2)
                         val constr = scope.primaryConstructorScope
                         if (constr != null) {
                             addMethod(Specialization.fromSimple(constr))

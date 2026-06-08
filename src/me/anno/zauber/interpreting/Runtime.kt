@@ -114,7 +114,7 @@ class Runtime {
     fun getBool(bool: Boolean): Instance {
         val boolCompanion = Types.Boolean.clazz[ScopeInitType.AFTER_DISCOVERY].companionObject
             ?: error("Missing definition for enum class Boolean")
-        val boolInstance = getObjectInstance(boolCompanion.typeWithArgs)
+        val boolInstance = getObjectInstance(boolCompanion)
         val fields = boolInstance.clazz.fields
         val name = if (bool) "TRUE" else "FALSE"
         val field = fields.firstOrNull { it.name == name }
@@ -251,10 +251,14 @@ class Runtime {
     }
 
     fun getObjectInstance(type: ClassType): Instance {
-        check(type.clazz.isObjectLike() || type.clazz.scopeType == null) {
-            "Only objects have an object instance, not ${type.clazz.pathStr})"
+        return getObjectInstance(type.clazz)
+    }
+
+    fun getObjectInstance(scope: Scope): Instance {
+        check(scope.isObjectLike() || scope.scopeType == null) {
+            "Only objects have an object instance, not $scope"
         }
-        return getClass(type).getOrCreateObjectInstance()
+        return getClass(scope.typeWithArgs2).getOrCreateObjectInstance()
     }
 
     fun executeBlock(block0: SimpleBlock): BlockReturn {

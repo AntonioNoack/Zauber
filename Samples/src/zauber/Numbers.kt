@@ -16,34 +16,34 @@ interface Number : Comparable<Self> {
     fun unaryMinus(): Self
 }
 
-external class Int(val value: NativeI32) : Number,
+external class Int(val value: Int) : Number,
     Comparable<Long>, Comparable<Half>, Comparable<Float>, Comparable<Double> {
 
-    external operator fun plus(other: Int): Int
+    external override operator fun plus(other: Int): Int
     operator fun plus(other: Long): Long = toLong() + other
     operator fun plus(other: Half): Half = toHalf() + other
     operator fun plus(other: Float): Float = toFloat() + other
     operator fun plus(other: Double): Double = toDouble() + other
 
-    external operator fun minus(other: Int): Int
+    external override operator fun minus(other: Int): Int
     operator fun minus(other: Long): Long = toLong() - other
     operator fun minus(other: Half): Half = toHalf() - other
     operator fun minus(other: Float): Float = toFloat() - other
     operator fun minus(other: Double): Double = toDouble() - other
 
-    external operator fun times(other: Int): Int
+    external override operator fun times(other: Int): Int
     operator fun times(other: Long): Long = toLong() * other
     operator fun times(other: Half): Half = toHalf() * other
     operator fun times(other: Float): Float = toFloat() * other
     operator fun times(other: Double): Double = toDouble() * other
 
-    external operator fun div(other: Int): Int
+    external override operator fun div(other: Int): Int
     operator fun div(other: Long): Long = toLong() / other
     operator fun div(other: Half): Half = toHalf() / other
     operator fun div(other: Float): Float = toFloat() / other
     operator fun div(other: Double): Double = toDouble() / other
 
-    external operator fun rem(other: Int): Int
+    external override operator fun rem(other: Int): Int
     operator fun rem(other: Long): Long = toLong() % other
     operator fun rem(other: Half): Half = toHalf() % other
     operator fun rem(other: Float): Float = toFloat() % other
@@ -79,35 +79,35 @@ external class Int(val value: NativeI32) : Number,
     external override fun compareTo(other: Double): Int
 }
 
-value class Long(val value: NativeI64) : Number,
+value class Long(val value: Long) : Number,
     Comparable<Int>, Comparable<Half>, Comparable<Float>, Comparable<Double> {
 
     operator fun plus(other: Int): Long = plus(other.toLong())
-    external operator fun plus(other: Long): Long
+    external override operator fun plus(other: Long): Long
     operator fun plus(other: Half): Half = toHalf() + other
     operator fun plus(other: Float): Float = toFloat() + other
     operator fun plus(other: Double): Double = toDouble() + other
 
     operator fun minus(other: Int): Long = minus(other.toLong())
-    external operator fun minus(other: Long): Long
+    external override operator fun minus(other: Long): Long
     operator fun minus(other: Half): Half = toHalf() - other
     operator fun minus(other: Float): Float = toFloat() - other
     operator fun minus(other: Double): Double = toDouble() - other
 
     operator fun times(other: Int): Long = times(other.toLong())
-    external operator fun times(other: Long): Long
+    external override operator fun times(other: Long): Long
     operator fun times(other: Half): Half = toHalf() * other
     operator fun times(other: Float): Float = toFloat() * other
     operator fun times(other: Double): Double = toDouble() * other
 
     operator fun div(other: Int): Long = div(other.toLong())
-    external operator fun div(other: Long): Long
+    external override operator fun div(other: Long): Long
     operator fun div(other: Half): Half = toHalf() / other
     operator fun div(other: Float): Float = toFloat() / other
     operator fun div(other: Double): Double = toDouble() / other
 
     operator fun rem(other: Int): Long = rem(other.toLong())
-    external operator fun rem(other: Long): Long
+    external override operator fun rem(other: Long): Long
     operator fun rem(other: Half): Half = toHalf() % other
     operator fun rem(other: Float): Float = toFloat() % other
     operator fun rem(other: Double): Double = toDouble() % other
@@ -142,36 +142,36 @@ value class Long(val value: NativeI64) : Number,
     external override fun compareTo(other: Double): Int
 }
 
-value class Half(val value: NativeF16) : Number,
+value class Half(val value: Half) : Number,
     Comparable<Int>, Comparable<Long>, Comparable<Float>, Comparable<Double> {
 
     operator fun plus(other: Int): Half = plus(other.toLong())
     external operator fun plus(other: Long): Half
-    external operator fun plus(other: Half): Half
+    external override operator fun plus(other: Half): Half
     operator fun plus(other: Float): Float = toFloat().plus(other)
     operator fun plus(other: Double): Double = toDouble().plus(other)
 
     operator fun minus(other: Int): Half = minus(other.toLong())
     external operator fun minus(other: Long): Half
-    external operator fun minus(other: Half): Half
+    external override operator fun minus(other: Half): Half
     operator fun minus(other: Float): Float = toFloat().minus(other)
     operator fun minus(other: Double): Double = toDouble().minus(other)
 
     operator fun times(other: Int): Half = times(other.toLong())
     external operator fun times(other: Long): Half
-    external operator fun times(other: Half): Half
+    external override operator fun times(other: Half): Half
     operator fun times(other: Float): Float = toFloat().times(other)
     operator fun times(other: Double): Double = toDouble().times(other)
 
     operator fun div(other: Int): Half = div(other.toLong())
     external operator fun div(other: Long): Half
-    external operator fun div(other: Half): Half
+    external override operator fun div(other: Half): Half
     operator fun div(other: Float): Float = toFloat().div(other)
     operator fun div(other: Double): Double = toDouble().div(other)
 
     operator fun rem(other: Int): Half = rem(other.toLong())
     external operator fun rem(other: Long): Half
-    external operator fun rem(other: Half): Half
+    external override operator fun rem(other: Half): Half
     operator fun rem(other: Float): Float = toFloat().rem(other)
     operator fun rem(other: Double): Double = toDouble().rem(other)
 
@@ -193,37 +193,37 @@ value class Half(val value: NativeF16) : Number,
     override fun compareTo(other: Double): Int = toDouble().compareTo(other)
 }
 
-external class Float(val value: NativeF32) : Number,
+external class Float(val value: Float) : Number,
     Comparable<Int>, Comparable<Long>, Comparable<Half>, Comparable<Double> {
 
     operator fun plus(other: Int): Float = plus(other.toLong())
     external operator fun plus(other: Long): Float
     operator fun plus(other: Half): Float = plus(other.toFloat())
-    external operator fun plus(other: Float): Float
+    external override operator fun plus(other: Float): Float
     operator fun plus(other: Double): Double = toDouble().plus(other)
 
     operator fun minus(other: Int): Float = minus(other.toLong())
     external operator fun minus(other: Long): Float
     operator fun minus(other: Half): Float = minus(other.toFloat())
-    external operator fun minus(other: Float): Float
+    external override operator fun minus(other: Float): Float
     operator fun minus(other: Double): Double = toDouble().minus(other)
 
     operator fun times(other: Int): Float = times(other.toLong())
     external operator fun times(other: Long): Float
     operator fun times(other: Half): Float = times(other.toFloat())
-    external operator fun times(other: Float): Float
+    external override operator fun times(other: Float): Float
     operator fun times(other: Double): Double = toDouble().times(other)
 
     operator fun div(other: Int): Float = div(other.toLong())
     external operator fun div(other: Long): Float
     operator fun div(other: Half): Float = div(other.toFloat())
-    external operator fun div(other: Float): Float
+    external override operator fun div(other: Float): Float
     operator fun div(other: Double): Double = toDouble().div(other)
 
     operator fun rem(other: Int): Float = rem(other.toLong())
     external operator fun rem(other: Long): Float
     operator fun rem(other: Half): Float = rem(other.toFloat())
-    external operator fun rem(other: Float): Float
+    external override operator fun rem(other: Float): Float
     operator fun rem(other: Double): Double = toDouble().rem(other)
 
     external fun toInt(): Int
@@ -244,38 +244,38 @@ external class Float(val value: NativeF32) : Number,
     override fun compareTo(other: Double): Int = toDouble().compareTo(other)
 }
 
-value class Double(val value: NativeF64) : Number,
+value class Double(val value: Double) : Number,
     Comparable<Int>, Comparable<Long>, Comparable<Half>, Comparable<Float> {
 
     operator fun plus(other: Int): Double = plus(other.toLong())
     external operator fun plus(other: Long): Double
     operator fun plus(other: Half): Double = plus(other.toDouble())
     operator fun plus(other: Float): Double = plus(other.toDouble())
-    external operator fun plus(other: Double): Double
+    external override operator fun plus(other: Double): Double
 
     operator fun minus(other: Int): Double = minus(other.toLong())
     external operator fun minus(other: Long): Double
     operator fun minus(other: Half): Double = minus(other.toDouble())
     operator fun minus(other: Float): Double = minus(other.toDouble())
-    external operator fun minus(other: Double): Double
+    external override operator fun minus(other: Double): Double
 
     operator fun times(other: Int): Double = times(other.toLong())
     external operator fun times(other: Long): Double
     operator fun times(other: Half): Double = times(other.toDouble())
     operator fun times(other: Float): Double = times(other.toDouble())
-    external operator fun times(other: Double): Double
+    external override operator fun times(other: Double): Double
 
     operator fun div(other: Int): Double = div(other.toLong())
     external operator fun div(other: Long): Double
     operator fun div(other: Half): Double = div(other.toDouble())
     operator fun div(other: Float): Double = div(other.toDouble())
-    external operator fun div(other: Double): Double
+    external override operator fun div(other: Double): Double
 
     operator fun rem(other: Int): Double = rem(other.toLong())
     external operator fun rem(other: Long): Double
     operator fun rem(other: Half): Double = rem(other.toDouble())
     operator fun rem(other: Float): Double = rem(other.toDouble())
-    external operator fun rem(other: Double): Double
+    external override operator fun rem(other: Double): Double
 
     external fun toInt(): Int
     external fun toLong(): Long

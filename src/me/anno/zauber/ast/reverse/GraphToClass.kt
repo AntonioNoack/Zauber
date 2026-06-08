@@ -59,7 +59,7 @@ object GraphToClass {
         val origin = newGraph.method.origin
         block.instructions.add(
             SimpleAllocateInstance(
-                instance, clazz.typeWithArgs, emptyList(),
+                instance, clazz.typeWithArgs2, emptyList(),
                 Specialization(clazz, emptyParameterList()),
                 scope, origin
             )

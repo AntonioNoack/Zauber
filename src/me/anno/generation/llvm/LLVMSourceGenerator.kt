@@ -258,7 +258,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
             appendMethodHeader(method0)
             writeBlock {
                 val l0 = builder.length
-                if (method !is Constructor || method.ownerScope.typeWithArgs !in nativeNumbers) {
+                if (method !is Constructor || method.ownerScope.typeWithArgs2 !in nativeNumbers) {
                     when {
                         isArrayGetter(method0) -> appendArrayGetter(method0)
                         isArraySetter(method0) -> appendArraySetter(method0)

@@ -43,7 +43,8 @@ object DefaultParameters {
 
     private fun createDefaultParameterMethod(methodScope: Scope) {
         val scopeParent = methodScope.parent!!
-        val self = methodScope.selfAsMethod!!
+        val self = methodScope.selfAsMethod
+            ?: error("$methodScope (${methodScope.scopeType}) misses selfAsMethod")
         val valueParameters = self.valueParameters
         for (i in valueParameters.lastIndex downTo 0) {
             val param = valueParameters[i]

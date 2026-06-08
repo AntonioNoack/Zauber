@@ -14,16 +14,10 @@ class SuperCall(
     val type: ClassType
         get() = typeI.resolvedName as ClassType
 
-    val isClassCall: Boolean get() = !isInterfaceCall
+    val isClassCall: Boolean
+        get() = !isInterfaceCall
     val isInterfaceCall: Boolean
-        get() {
-            if (valueParameters != null) return false
-
-            check(type.clazz.scopeType != null) {
-                "Missing scopeType information for $typeI, is it an interface?"
-            }
-            return type.clazz.isInterface()
-        }
+        get() = valueParameters == null
 
     override fun toString(): String {
         val prefix = "$type(${valueParameters?.joinToString(", ")})"

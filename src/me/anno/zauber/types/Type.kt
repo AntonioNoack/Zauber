@@ -1,6 +1,8 @@
 package me.anno.zauber.types
 
 import me.anno.generation.Specializations.specialization
+import me.anno.support.cpp.ast.rich.ArrayType
+import me.anno.support.cpp.ast.rich.PointerType
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.parameter.Parameter
@@ -14,10 +16,7 @@ import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.arithmetic.*
 import me.anno.zauber.types.impl.arithmetic.AndType.Companion.andTypes
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
-import me.anno.zauber.types.impl.unresolved.UnresolvedAndType
-import me.anno.zauber.types.impl.unresolved.UnresolvedNotType
-import me.anno.zauber.types.impl.unresolved.UnresolvedType
-import me.anno.zauber.types.impl.unresolved.UnresolvedUnionType
+import me.anno.zauber.types.impl.unresolved.*
 
 abstract class Type {
 
@@ -46,6 +45,7 @@ abstract class Type {
             is GenericType -> true
             is LambdaType -> parameters.any { it.type.containsGenerics() } || returnType.containsGenerics()
             is UnresolvedType -> resolvedName.containsGenerics()
+            is UnresolvedClassType -> resolvedName.typeParameters!!.isNotEmpty()
             else -> throw NotImplementedError("Does $this contain generics?")
         }
     }
@@ -56,7 +56,8 @@ abstract class Type {
             is GenericType -> !specialization.contains(this)
             is TypeOfField,
             is UnresolvedType, is UnresolvedUnionType,
-            is UnresolvedNotType, is UnresolvedAndType -> false
+            is UnresolvedNotType, is UnresolvedAndType,
+            is UnresolvedClassType -> false
             is LambdaType -> selfType?.isResolved() != false &&
                     parameters.all { it.type.isResolved() } &&
                     returnType.isResolved()
@@ -89,7 +90,7 @@ abstract class Type {
         }
     }
 
-    fun resolve(selfScope: Scope? = null): Type {
+    open fun resolve(selfScope: Scope? = null): Type {
         var self = this
         repeat(100) {
             if (self.isResolved()) return self
@@ -152,10 +153,12 @@ abstract class Type {
                     baseType.withTypeParameters(typeParameters)
                 } else baseType
             }
+            is UnresolvedClassType -> resolvedName
             is UnresolvedNotType -> type.resolve(selfScope).not()
             is UnresolvedUnionType -> unionTypes(types.map { it.resolve(selfScope) })
             is UnresolvedAndType -> andTypes(types.map { it.resolve(selfScope) })
             is NotType -> withType(type.resolve(selfScope))
+            is PointerType -> PointerType(type.resolve(selfScope))
             else -> throw NotImplementedError("Resolve type ${javaClass.simpleName}, $this")
         }
     }
@@ -255,7 +258,8 @@ abstract class Type {
             is UnresolvedType,
             is UnresolvedAndType,
             is UnresolvedUnionType,
-            is UnresolvedNotType -> false
+            is UnresolvedNotType,
+            is UnresolvedClassType -> false
             is ClassType -> typeParameters?.all { member -> member.isFullySpecialized() } ?: true
             is CollectionType -> types.all { member -> member.isFullySpecialized() }
             is ModifierType -> type.isFullySpecialized()
@@ -263,6 +267,8 @@ abstract class Type {
                     parameters.all { it.type.isFullySpecialized() } &&
                     returnType.isFullySpecialized()
             is NonObjectClassType -> type.isFullySpecialized()
+            is PointerType -> type.isFullySpecialized()
+            is ArrayType -> type.isFullySpecialized()
             else -> error("Is ${javaClass.simpleName} fully specialized?")
         }
     }
@@ -283,9 +289,11 @@ abstract class Type {
                 }, returnType.specialize(spec))
             }
             is UnresolvedType -> resolvedName.specialize(spec)
+            is UnresolvedClassType -> resolvedName.specialize(spec)
             // todo we need selfType to properly resolve them...
             is ThisType, is SelfType -> type.specialize(spec)
             is NonObjectClassType -> NonObjectClassType(type.specialize(spec) as ClassType)
+            is PointerType -> PointerType(type.specialize(spec))
             else -> error("Specialize ${javaClass.simpleName}")
         }
     }

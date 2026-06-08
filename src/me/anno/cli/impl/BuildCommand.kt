@@ -119,9 +119,8 @@ object BuildCommand : CommandImpl("build", "b") {
 
     private fun getSelfInstance(scope: Scope): Instance {
         return instances.getOrPut(scope) {
-            val type = scope.typeWithArgs
-            if (scope.isObjectLike()) runtime.getObjectInstance(type)
-            else runtime.getClass(type).createInstance()
+            if (scope.isObjectLike()) runtime.getObjectInstance(scope)
+            else runtime.getClass(scope.typeWithArgs2).createInstance()
         }
     }
 
@@ -363,6 +362,7 @@ object BuildCommand : CommandImpl("build", "b") {
      * scan the file for @Test and fun main()
      * */
     fun findEntryPoints(scope: Scope, result: ArrayList<Method>) {
+        // todo flatten recursion like in Rem's Engine
 
         scope[ScopeInitType.AFTER_DISCOVERY]
 

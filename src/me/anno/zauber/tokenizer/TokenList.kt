@@ -66,6 +66,9 @@ class TokenList(val source: CharSequence, val fileName: String) {
         readImpl: () -> R
     ): R = push(findBlockEnd(i, openStr, closeStr), readImpl)
 
+    /**
+     * returns i at close-token
+     * */
     fun findBlockEnd(i: Int, open: TokenType, close: TokenType): Int {
         // todo we could easily pre-compute this in O(n)... does it matter??
         check(equals(i, open)) { "Expected $open, got ${err(i)}" }
@@ -141,8 +144,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
     val warnings = ArrayList<Warning>()
 
     fun err(startI: Int, endI: Int = startI): String {
-        val startI = clamp(startI, 0, size - 1)
-        val endI = clamp(endI, 0, size - 1)
+        val startI = clamp(startI, 0, totalSize - 1)
+        val endI = clamp(endI, 0, totalSize - 1)
 
         val ix = getI0(startI)
         val lineNumber = countLines(0, ix)
@@ -263,7 +266,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
         offsets[i * 2 + 1] = value
     }
 
-    fun add(type: TokenType, i0: Int, i1: Int) {
+    fun add(
+        type: TokenType, i0: Int, i1: Int,
+        allowCombination: Boolean = true
+    ) {
         if (size == tokenTypes.size) {
             // resizing
             tokenTypes = tokenTypes.copyOf(size * 2)
@@ -273,7 +279,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
         if (i0 > i1) error("i0 > i1, $i0 > $i1 in $fileName")
         if (i1 > source.length) error("i1 > src.len, $i1 > ${source.length} in $fileName")
 
-        if (size > 0 && type == TokenType.SYMBOL &&
+        if (allowCombination &&
+            size > 0 && type == TokenType.SYMBOL &&
             getType(size - 1) == TokenType.SYMBOL &&
             i0 == offsets[size * 2 - 1] &&
             source[i0] != ';' &&
@@ -485,9 +492,13 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return Import(path, allChildren, name) to j
     }
 
-    fun toDebugString(): String =
-        (0 until size).joinToString(" ") {
-            toString(it)
+    fun toDebugString(): String = toDebugString(0, totalSize)
+
+    fun toDebugString(i0: Int, i1: Int): String =
+        (i0 until i1).joinToString(" ") { index ->
+            val str = toStringUnsafe(index)
+            if (str.any { it.isWhitespace() }) "\"$str\""
+            else str
         }
 
     fun extractString(i0x: Int, i1x: Int): String {

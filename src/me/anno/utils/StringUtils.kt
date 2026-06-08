@@ -10,4 +10,8 @@ object StringUtils {
             tmp.toString()
         } else this
     }
+
+    fun String.iff(condition: Boolean): String {
+        return if (condition) this else ""
+    }
 }

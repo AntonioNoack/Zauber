@@ -140,7 +140,7 @@ object Macro {
             return DynamicMacroExpression(self, macro, valueParameters1, imports, generics, scope, origin)
         } else {
             val runtime = Runtime.runtime
-            val instance = runtime.getObjectInstance(getObjectScope(scope).typeWithArgs)
+            val instance = runtime.getObjectInstance(getObjectScope(scope))
             val valueParameters = valueParameters.mapIndexed { index, parameter ->
                 instance.evaluateExpression(parameter.value, Flags.NONE, valueParameterTypes[index])
             }
@@ -198,7 +198,7 @@ object Macro {
         val ownerScope = method.scope.parent
         check(ownerScope != null && ownerScope.isObjectLike())
 
-        val owner = runtime.getObjectInstance(ownerScope.typeWithArgs)
+        val owner = runtime.getObjectInstance(ownerScope)
         val method1 = byMethodCall.specialization
         check(byMethodCall.resolved.memberScope == method1.scope)
 

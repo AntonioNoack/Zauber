@@ -37,6 +37,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.SelfType
 import me.anno.zauber.types.impl.ThisType
+import me.anno.zauber.types.impl.unresolved.UnresolvedClassType
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -213,23 +214,8 @@ class Scope(val name: String, val parent: Scope? = null) {
     @Deprecated("There is few cases, where we don't need or don't have generic parameters")
     val typeWithoutArgs = ClassType(this, null)
 
-    private fun getParameterList(): ParameterList {
-        this[ScopeInitType.AFTER_DISCOVERY]
-
-        if (!hasTypeParameters && scopeType?.needsTypeParams() != true) {
-            if (scopeType == null) LOGGER.warn("Missing scopeType for $this, assuming no-type-params")
-            setEmptyTypeParams()
-        }
-
-        check(hasTypeParameters) { "Missing type-params for $this ($scopeType) to take typeWithArgs" }
-        return ParameterList(
-            typeParameters,
-            typeParameters.map { GenericType(it.scope, it.name) })
-    }
-
-    val typeWithArgs by lazy {
-        ClassType(this, getParameterList())
-    }
+    val typeWithArgs = UnresolvedClassType(this)
+    val typeWithArgs2 get() = typeWithArgs.resolvedName
 
     /**
      * each object Scope is also one field, and we store that here

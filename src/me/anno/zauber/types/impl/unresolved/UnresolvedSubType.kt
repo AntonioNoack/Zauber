@@ -1,16 +1,19 @@
 package me.anno.zauber.types.impl.unresolved
 
-import me.anno.zauber.types.Import
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 
 class UnresolvedSubType(
     val base: Type,
     val className: String,
     val scope: Scope,
-    val imports: List<Import>
+    val imports: List<Import>,
+    val typeParams: List<Type>?,
 ) : Type() {
     override fun toStringImpl(depth: Int): String {
-        return "$base.$className?"
+        return "$base.$className${typeParams?.joinToString(", ", "<", ">") ?: "<?>"}"
     }
+
+    fun withTypeParams(typeArgs: List<Type>?) = UnresolvedSubType(base, className, scope, imports, typeArgs)
 }
