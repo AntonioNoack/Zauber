@@ -381,7 +381,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 addFlag(keyword)
             }
 
-            val isVal = flags.hasFlag(Flags.FINAL)
+            val isVal = this@JavaASTBuilder.flags.hasFlag(Flags.FINAL)
             check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
                 "Expected name, but got ${tokens.err(i)}"
             }
@@ -391,22 +391,18 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             val isVararg = consumeIf("...")
             if (isVararg) type = ClassType(Types.Array.clazz, listOf(type), origin)
 
-            val name =
-                if ((language == Language.C || language == Language.CPP) &&
-                    !tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)
-                ) "__${parameters.size}"
-                else consumeName(VSCodeType.PARAMETER, 0)
+            val name = consumeName(VSCodeType.PARAMETER, 0)
 
             // println("Found $name: $type = $initialValue at ${resolveOrigin(i)}")
 
-            val keywords = packFlags()
+            val flags = packFlags()
             val parameter = Parameter(
                 parameters.size,
                 if (isVal) ParameterMutability.VAL else ParameterMutability.VAR,
                 if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
                 parameterType, name, type, null, currPackage, origin
             )
-            parameter.getOrCreateField(selfType, keywords)
+            parameter.getOrCreateField(selfType, flags)
             parameters.add(parameter)
 
             readComma()

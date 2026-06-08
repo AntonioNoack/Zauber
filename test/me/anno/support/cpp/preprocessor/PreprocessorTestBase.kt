@@ -6,11 +6,11 @@ import org.junit.jupiter.api.Assertions
 
 abstract class PreprocessorTestBase {
 
-    protected fun preprocess(source: String, fileName: String): TokenList {
+    fun preprocess(source: String, fileName: String): TokenList {
         return preprocess(mapOf(fileName to source), fileName)
     }
 
-    protected fun preprocess(files: Map<String, String>, fileName: String): TokenList {
+   fun preprocess(files: Map<String, String>, fileName: String): TokenList {
         val tokenized = files.mapValues { (fileName, source) ->
             CppTokenizer(source, fileName, true).tokenize()
         }

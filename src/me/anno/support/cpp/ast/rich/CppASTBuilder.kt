@@ -13,10 +13,7 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.parameter.NamedParameter
-import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.rich.parameter.ParameterMutability
-import me.anno.zauber.ast.rich.parameter.ParameterType
+import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.debug
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.ast.rich.parser.createCastExpression
@@ -42,12 +39,18 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         private val builtInTypes by threadLocal {
             Types.run {
                 mapOf(
+                    "char" to Byte,
+                    "unsigned char" to UByte,
+                    "short" to Short,
+                    "unsigned short" to UShort,
                     "int" to Int,
+                    "unsigned" to UInt,
                     "long" to Long,
+                    "unsigned long" to ULong,
                     "float" to Float,
                     "double" to Double,
+                    "long double" to Double,
                     "bool" to Boolean,
-                    "char" to Byte,
                     "void" to Unit,
                 )
             }
@@ -136,7 +139,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return pushBlock(ScopeType.NORMAL_CLASS, name) { scope ->
             scope.setEmptyTypeParams()
             while (i < tokens.size) {
-                readFields(true)
+                if (consumeIf(";")) continue
+                readFields(false)
             }
             scope.typeWithArgs
         }
@@ -162,7 +166,20 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     }
 
     override fun readTypePath(selfType: Type?): Type {
-        val name0 = consumeName(VSCodeType.TYPE, 0)
+        var name0 = consumeName(VSCodeType.TYPE, 0)
+
+        // handle weird types like
+        //  - unsigned long long
+        //  - long double
+        //  - unsigned
+        when (name0) {
+            "unsigned", "long" -> {
+                while (tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
+                    name0 = "$name0 ${tokens.toString(i++)}"
+                }
+            }
+        }
+
         var path = builtInTypes[name0]
             ?: genericParams.last()[name0]
             ?: currPackage.resolveTypeOrNull(name0, this)
@@ -192,6 +209,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             when {
                 consumeIf("const") -> {}
                 consumeIf("volatile") -> {}
+                consumeIf("extern") -> addFlag(Flags.EXTERNAL)
                 else -> break
             }
         }
@@ -235,12 +253,56 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         return readFieldName(preType)
     }
 
+    override fun readParameterDeclarations(
+        selfType: Type?,
+        extra: List<Parameter>,
+        parameterType: ParameterType
+    ): List<Parameter> {
+
+        val parameters = ArrayList<Parameter>(extra)
+        loop@ while (i < tokens.size) {
+
+            val isVal = consumeIf("const")
+            check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
+                "Expected name, but got ${tokens.err(i)}"
+            }
+
+            val (_, type0, name) = readTypeAndName1()
+
+            val origin = origin(i)
+            var type = type0
+            val isVararg = consumeIf("...") // todo is this supported in C/C++??
+            if (isVararg) type = ClassType(Types.Array.clazz, listOf(type), origin)
+
+            val flags = packFlags()
+            val parameter = Parameter(
+                parameters.size,
+                if (isVal) ParameterMutability.VAL else ParameterMutability.VAR,
+                if (isVararg) ParameterExpansion.VARARG else ParameterExpansion.NONE,
+                parameterType, name, type, null, currPackage, origin
+            )
+            parameter.getOrCreateField(selfType, flags)
+            parameters.add(parameter)
+
+            readComma()
+        }
+        return parameters
+    }
+
     fun readFieldName(preType: Type): TypeName {
         skipTypeKeywords()
 
         var nameType = preType
-        while (consumeIf(" *") || consumeIf("*")) {
-            nameType = nameType.ptr()
+
+        while (true) {
+            nameType = when {
+                consumeIf(" *") || consumeIf("*") -> nameType.ptr()
+                // we really should not need these:
+                consumeIf(" **") -> nameType.ptr().ptr()
+                consumeIf(" ***") -> nameType.ptr().ptr().ptr()
+                consumeIf(" ****") -> nameType.ptr().ptr().ptr().ptr()
+                else -> break
+            }
         }
 
         val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
@@ -346,49 +408,55 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
     }
 
     fun readEnum() {
-        check(tokens.equals(i, TokenType.NAME)) {
-            "Expected enum type name at ${tokens.err(i)}"
+        val enumName = if (tokens.equals(i, TokenType.NAME)) {
+            consumeName(VSCodeType.ENUM, VSCodeModifier.DECLARATION.flag)
+        } else {
+            currPackage.generateName("enum", origin(i))
         }
-        val enumName = tokens.toString(i++)
         pushScope(enumName, ScopeType.ENUM_CLASS) { classScope ->
             classScope.setEmptyTypeParams()
 
             var ordinal = 0 // todo use value instead???
             pushBlock(classScope) {
                 while (i < tokens.size) {
-                    check(tokens.equals(i, TokenType.NAME)) {
-                        "Expected enum entry name at ${tokens.err(i)}"
-                    }
-                    val origin = origin(i)
-                    val valueName = tokens.toString(i++)
-                    val value = if (consumeIf("=")) {
-                        readExpression()
-                    } else null
-
-                    val keywords = packFlags()
-                    val entryScope = classScope.getOrPut(valueName, ScopeType.ENUM_ENTRY_CLASS)
-                    entryScope.setEmptyTypeParams()
-
-                    // todo avoid duplicates?
-                    val numberExpr = value ?: NumberExpression((ordinal++).toString(), classScope, origin)
-                    val extraValueParameters = listOf(
-                        NamedParameter(null, numberExpr),
-                        NamedParameter(null, StringExpression(valueName, classScope, origin)),
-                    )
-                    val initialValue = ConstructorExpression(
-                        classScope, emptyList(),
-                        extraValueParameters,
-                        null, classScope, origin
-                    )
-                    entryScope.objectField = classScope.addField(
-                        null, false, isMutable = false, null,
-                        valueName, classScope.typeWithArgs, initialValue, keywords, origin
-                    )
-
+                    ordinal = readEnumValue(classScope, ordinal)
                     readComma()
                 }
             }
         }
+    }
+
+    fun readEnumValue(classScope: Scope, ordinal: Int): Int {
+        var ordinal = ordinal
+        check(tokens.equals(i, TokenType.NAME)) {
+            "Expected enum entry name at ${tokens.err(i)}"
+        }
+        val origin = origin(i)
+        val valueName = tokens.toString(i++)
+        val value = if (consumeIf("=")) {
+            readExpression()
+        } else null
+
+        val keywords = packFlags()
+        val entryScope = classScope.getOrPut(valueName, ScopeType.ENUM_ENTRY_CLASS)
+        entryScope.setEmptyTypeParams()
+
+        // todo avoid duplicates?
+        val numberExpr = value ?: NumberExpression((ordinal++).toString(), classScope, origin)
+        val extraValueParameters = listOf(
+            NamedParameter(null, numberExpr),
+            NamedParameter(null, StringExpression(valueName, classScope, origin)),
+        )
+        val initialValue = ConstructorExpression(
+            classScope, emptyList(),
+            extraValueParameters,
+            null, classScope, origin
+        )
+        entryScope.objectField = classScope.addField(
+            null, false, isMutable = false, null,
+            valueName, classScope.typeWithArgs, initialValue, keywords, origin
+        )
+        return ordinal
     }
 
     fun readStructOrClass(isStruct: Boolean) {

@@ -3,6 +3,9 @@ package me.anno.support.cpp.preprocessor
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 
+// todo it would be nice to preserve line-numbers somehow
+//  -> make them explicit (?)
+
 class Preprocessor(
     val files: Map<String, TokenList>,
     val includeResolver: (currentFile: String, include: String) -> String?, // (currentFile, include) -> filename
@@ -16,7 +19,7 @@ class Preprocessor(
     private val pragmaOnceFiles = HashSet<String>()
 
     fun preprocess(fileName: String): TokenList {
-        val input = files[fileName] ?: error("File not found: $fileName")
+        val input = files[fileName] ?: error("File not found: '$fileName'")
         val output = TokenBuilder(fileName)
         preprocess(input, 0, input.size, output)
         return output.tokens
@@ -41,25 +44,33 @@ class Preprocessor(
 
     private fun handleDirective(tokens: TokenList, i0: Int, out: TokenBuilder): Int {
         var i = i0 + 1
-        check(tokens.equals(i, TokenType.NAME) || tokens.equals(i, TokenType.KEYWORD)) {
+        check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
             "Expected directive name, but got ${tokens.err(i)}"
         }
-        // println("Handling directive ${tokens.err(i)}")
-        when (tokens.toString(i++)) {
-            "define" -> i = handleDefine(tokens, i) - 1
-            "undef" -> macros.remove(tokens.toString(i))
-            "include" -> handleInclude(tokens, i, out)
-            "ifdef" -> i = handleIfDefined(tokens, i, true, out)
-            "ifndef" -> i = handleIfDefined(tokens, i, false, out)
-            "if" -> i = handleIfExpression(tokens, i, out)
-            "elif", "else", "endif" -> error("Unexpected directive ${tokens.err(i - 1)}")
+        return when (tokens.toString(i++)) {
+            "define" -> skipToLineEnd(tokens, handleDefine(tokens, i) - 1)
+            "undef" -> {
+                macros.remove(tokens.toString(i))
+                skipToLineEnd(tokens, i)
+            }
+            "include" -> {
+                handleInclude(tokens, i, out)
+                skipToLineEnd(tokens, i)
+            }
+            "ifdef" -> handleIfDefined(tokens, i, true, out)
+            "ifndef" -> handleIfDefined(tokens, i, false, out)
+            "if" -> handleIfExpression(tokens, i, out)
+            "elif", "else", "endif" -> {
+                error("Unexpected directive ${tokens.err(i - 1)}")
+            }
             "pragma" -> {
                 if (tokens.toString(i) == "once") {
                     pragmaOnceFiles += tokens.fileName
                 }
+                skipToLineEnd(tokens, i)
             }
+            else -> skipToLineEnd(tokens, i)
         }
-        return skipToLineEnd(tokens, i)
     }
 
     private fun handleDefine(tokens: TokenList, i0: Int): Int {
@@ -84,8 +95,15 @@ class Preprocessor(
     }
 
     private fun handleInclude(tokens: TokenList, i: Int, out: TokenBuilder) {
-        val raw = tokens.toString(i)
-        val path = raw.trim('"', '<', '>')
+        val path = if (tokens.equals(i, TokenType.STRING)) {
+            val raw = tokens.toString(i)
+            raw.trim('"', '<', '>')
+        } else {
+            check(tokens.equals(i, "<"))
+            val end = tokens.findBlockEnd(i, "<", ">")
+            tokens.toStringUnsafe(i + 1, end)
+        }
+
         val resolved = includeResolver(tokens.fileName, path)
             ?: error("Include not found: $path")
 
@@ -252,6 +270,7 @@ class Preprocessor(
         tokens: TokenList, i0: Int,
         positive: Boolean, out: TokenBuilder
     ): Int {
+        check(tokens.equals(i0, TokenType.NAME, TokenType.KEYWORD))
         val name = tokens.toString(i0)
         val cond = macros.containsKey(name) == positive
         return handleIfCommon(tokens, i0, out, cond)
@@ -267,51 +286,105 @@ class Preprocessor(
         return handleIfCommon(tokens, exprTokens.last, out, cond)
     }
 
+    private enum class ConditionalBoundaryType {
+        ELIF,
+        ELSE,
+        ENDIF,
+        EOF
+    }
+
+    private data class ConditionalBoundary(
+        val type: ConditionalBoundaryType,
+        val index: Int,
+        val directiveIndex: Int,
+        val directiveArgsStart: Int
+    )
+
+    private fun findConditionalBoundary(
+        tokens: TokenList,
+        i0: Int
+    ): ConditionalBoundary {
+
+        var i = i0
+        var depth = 0
+
+        while (i < tokens.size) {
+            if (isDirective(tokens, i)) {
+                val name = tokens.toString(i + 1)
+                when (name) {
+                    "if", "ifdef", "ifndef" -> depth++
+                    "endif" -> {
+                        if (depth == 0) {
+                            return ConditionalBoundary(
+                                ConditionalBoundaryType.ENDIF,
+                                i,
+                                i,
+                                i + 2
+                            )
+                        }
+                        depth--
+                    }
+                    "elif" -> if (depth == 0) {
+                        return ConditionalBoundary(ConditionalBoundaryType.ELIF, i, i, i + 2)
+                    }
+                    "else" -> if (depth == 0) {
+                        return ConditionalBoundary(ConditionalBoundaryType.ELSE, i, i, i + 2)
+                    }
+                }
+            }
+            i++
+        }
+
+        return ConditionalBoundary(
+            ConditionalBoundaryType.EOF,
+            tokens.size,
+            tokens.size,
+            tokens.size
+        )
+    }
+
     private fun handleIfCommon(
-        input: TokenList, i0: Int,
+        input: TokenList,
+        i0: Int,
         out: TokenBuilder,
         firstCond: Boolean
     ): Int {
 
-        var i: Int
-        var nextIsTrue = firstCond
-        var anyWasTrue = false
-        var blockStart = skipLine(input, i0)
+        var branchStart = skipLine(input, i0)
+        var currentCond = firstCond
+        var anyBranchTaken = false
 
-        loop@ while (true) {
-            var blockEnd = findNextDirective(input, blockStart)
-            while (input.equals(blockEnd, "#") &&
-                input.toString(blockEnd + 1) !in listOf("elif", "else", "endif")
-            ) {
-                val blockEnd0 = blockEnd
-                blockEnd = skipLine(input, blockEnd)
-                blockEnd = findNextDirective(input, blockEnd)
-                check(blockEnd > blockEnd0)
+        while (true) {
+
+            val next = findConditionalBoundary(input, branchStart)
+
+            if (currentCond && !anyBranchTaken) {
+                anyBranchTaken = true
+                preprocess(input, branchStart, next.index, out)
             }
 
-            if (nextIsTrue) {
-                anyWasTrue = true
-                preprocess(input, blockStart, blockEnd, out)
-            }
+            when (next.type) {
+                ConditionalBoundaryType.ELIF -> {
+                    val expr = collectLine(input, next.directiveArgsStart)
+                    currentCond =
+                        !anyBranchTaken &&
+                                evalIfExpression(input, expr)
 
-            i = blockEnd
-            if (!input.equals(i, "#")) {
-                return i
-            }
-            i++
-
-            when (input.toString(i++)) {
-                "elif" -> {
-                    val expr = collectLine(input, i)
-                    nextIsTrue = !anyWasTrue && evalIfExpression(input, expr)
-                    blockStart = skipLine(input, i + expr.last - expr.first)
+                    branchStart = skipLine(input, next.directiveIndex)
                 }
-                "else" -> {
-                    nextIsTrue = !anyWasTrue
-                    blockStart = skipLine(input, i - 1)
+
+                ConditionalBoundaryType.ELSE -> {
+                    currentCond = !anyBranchTaken
+                    branchStart = skipLine(input, next.directiveIndex)
                 }
-                "endif" -> return skipLine(input, i - 1)
-                else -> error("Invalid directive inside #if: ${input.err(i - 1)}")
+
+                ConditionalBoundaryType.ENDIF -> {
+                    return skipLine(input, next.directiveIndex)
+                }
+
+                ConditionalBoundaryType.EOF -> {
+                    error("Unterminated conditional block")
+                }
             }
         }
     }
@@ -435,7 +508,9 @@ class Preprocessor(
     private fun findNextDirective(tokens: TokenList, i0: Int): Int {
         var i = i0
         while (i < tokens.size) {
-            if (tokens.equals(i, "#") && !tokens.isSameLine(i - 1, i)) return i
+            if (isDirective(tokens, i)) {
+                return i
+            }
             i++
         }
         return tokens.size
