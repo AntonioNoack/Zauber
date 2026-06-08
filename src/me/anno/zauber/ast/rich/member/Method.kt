@@ -77,4 +77,8 @@ class Method(
                 (flags.hasFlag(Flags.OVERRIDE) && !flags.hasFlag(Flags.FINAL)) ||
                 ownerScope.isInterface()
     }
+
+    fun removeFlag(flag: Int) {
+        flags = flags and flag.inv()
+    }
 }

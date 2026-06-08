@@ -15,6 +15,8 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.interpreting.RuntimeCreate.createInt
+import me.anno.zauber.interpreting.RuntimeCreate.createLong
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -358,14 +360,14 @@ class Runtime {
                         val fieldClass = getClass(Types.Field)
                         val fields1 = fields0.mapArray { field ->
                             val instance = fieldClass.createInstance()
-                            instance.set("name", createString(field.name))
+                            instance["name"] = createString(field.name)
                             if (false) {
                                 val fieldType = field.resolveValueType(ResolutionContext.minimal)
-                                instance.set("type", getTypeInstance(fieldType))
+                                instance["type"] = getTypeInstance(fieldType)
                             }
                             instance
                         }
-                        instance.set("fields", fieldClass.createArray(fields1))
+                        instance["fields"] = fieldClass.createArray(fields1)
                     }
                     // todo set methods, child classes and more...
                 }

@@ -36,7 +36,7 @@ class TokenBuilder(fileName: String) {
 
     fun endLine() {
         // todo handle indentation depth...
-        if (source.endsWith(';') || source.endsWith('{')) {
+        if (source.endsWith(';') || source.endsWith('{') || source.endsWith('}')) {
             source.append('\n')
         }
     }

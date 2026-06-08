@@ -23,7 +23,7 @@ val cOperators = mapOf(
     ">>=" to Operator(">>=", 2, Associativity.RIGHT),
 
     // conditional
-    "?:" to Operator("?:", 3, Associativity.RIGHT),
+    "?" to Operator("?", 3, Associativity.RIGHT),
 
     // logical
     "||" to Operator("||", 4, Associativity.LEFT),

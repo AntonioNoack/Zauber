@@ -249,7 +249,7 @@ class Instance(
         return runtime.executeCall(this, null, methodSpec, emptyList())
     }
 
-    fun set(fieldName: String, value: Instance) {
+    operator fun set(fieldName: String, value: Instance) {
         val fieldIndex = clazz.fields.indexOfFirst { it.name == fieldName }
         if (fieldIndex < 0) return
         fields[fieldIndex] = value

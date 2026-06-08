@@ -1,5 +1,6 @@
 package me.anno.support.cpp.preprocessor
 
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 
@@ -19,7 +20,7 @@ class Preprocessor(
     private val pragmaOnceFiles = HashSet<String>()
 
     fun preprocess(fileName: String): TokenList {
-        val input = files[fileName] ?: error("File not found: '$fileName'")
+        val input = files[fileName] ?: error("File not found: \"$fileName\"")
         val output = TokenBuilder(fileName)
         preprocess(input, 0, input.size, output)
         return output.tokens
@@ -411,7 +412,7 @@ class Preprocessor(
                     i += 4
                 }
                 expanded.getType(i) == TokenType.NUMBER ->
-                    values += expanded.toString(i).toLong()
+                    values += NumberExpression.parseInt(expanded.toString(i), 10, false)
                 expanded.getType(i) == TokenType.NAME ->
                     values += 0L // undefined identifiers -> 0
                 else ->

@@ -155,4 +155,7 @@ class TypesImpl {
     val Test = getType("Test")
     val ParameterizedTest = getType("ParameterizedTest")
 
+    // C/C++ interop:
+    val Pointer = getType("Pointer", "T", NullableAny)
+
 }

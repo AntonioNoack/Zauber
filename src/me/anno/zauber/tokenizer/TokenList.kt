@@ -292,6 +292,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
             !(source[i0 - 1] == '!' && source[i0] in ":.") && // !!::, !!.
             !(source[i0 - 1] == '.' && source[i0] in "+-<") && // ..+3.0, ..-3.0
             !(source[i0 - 1] in "&|" && source[i0] == '!') && // &!, |!
+            !(source[i0 - 1] == ':' && source[i0] != ':') && // forbid anything but ::
             (source[i0 - 1] != '=' || source[i0] == '=')
         ) {
             // todo only accept a symbol if the previous is not =, or the current one is =, too

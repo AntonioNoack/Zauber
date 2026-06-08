@@ -122,7 +122,7 @@ class ZClass(val type: Type) {
         val rt = runtime
         val clazz = rt.getClass(Types.Array.withTypeParameter(type))
         val result = clazz.createInstance()
-        result.set("size", rt.createInt(items.size))
+        result["size"] = rt.createInt(items.size)
         result.rawValue = items
         return result
     }
@@ -142,4 +142,5 @@ class ZClass(val type: Type) {
         return "${bold("ZClass")}($type," +
                 "[${fields.joinToString(",") { field -> style("\"${field.name}\"", GREEN) }}])"
     }
+
 }

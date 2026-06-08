@@ -105,16 +105,28 @@ object RuntimeCreate {
     fun Runtime.createString(value: String): Instance {
         val type = getClass(Types.String)
         val instance = type.createInstance()
-        if (type.fields.isNotEmpty()) {
-            val arrayType = ClassType(Types.Array.clazz, listOf(Types.Byte), -1)
-            val content = getClass(arrayType).createInstance()
+        if (instance.hasProperty("content")) {
             val bytes = value.encodeToByteArray()
-            content.fields[0] = createInt(bytes.size)
-            content.rawValue = bytes
-            instance.fields[0] = content
-        } else {
-            instance.rawValue = value
+            instance["content"] = createByteArray(bytes)
         }
+        instance.rawValue = value
+        return instance
+    }
+
+
+    fun Runtime.createByteArray(content: ByteArray): Instance {
+        val clazz = getClass(Types.Array.withTypeParameter(Types.Byte))
+        val instance = clazz.createInstance()
+        instance.rawValue = content
+        instance["size"] = createInt(content.size)
+        return instance
+    }
+
+    fun Runtime.createPointer(type: ClassType, base: Instance, offset: Long = 0L): Instance {
+        val clazz = getClass(Types.Pointer.withTypeParameter(type))
+        val instance = clazz.createInstance()
+        instance["base"] = base
+        instance["offset"] = createLong(offset)
         return instance
     }
 
