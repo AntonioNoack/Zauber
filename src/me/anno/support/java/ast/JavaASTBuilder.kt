@@ -859,7 +859,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
     }
 
     open fun readExpressionImpl(minPrecedence: Int): Expression {
-        // println("reading expr at ${tokens.err(i)}")
+        println("Reading exprImpl at ${tokens.err(i)}")
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
 

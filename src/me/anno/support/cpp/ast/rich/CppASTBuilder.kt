@@ -682,6 +682,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             }
         }
 
+        println("Read expr at ${tokens.err(i - 1)}")
+
         return expr
     }
 
@@ -711,6 +713,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
 
     override fun readPrefix(): Expression {
         val origin = origin(i)
+
+        println("Read prefix at ${tokens.err(i)}")
 
         return when {
             tokens.equals(i, "(") && looksLikeCast() -> {

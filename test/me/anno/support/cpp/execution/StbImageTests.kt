@@ -85,7 +85,7 @@ class StbImageTests {
             val pp = Preprocessor(tokenized) { _, name -> name }
             val cTokens = pp.preprocess(header.name)
 
-            File("Preprocess.c")
+            if (false) File("Preprocess.c")
                 .writeText(cTokens.source.toString())
 
             CppASTBuilder(cTokens, scope, CppStandard.C11).readFileLevel()
