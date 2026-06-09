@@ -4,7 +4,6 @@ import me.anno.support.cpp.ast.rich.CppASTBuilder
 import me.anno.support.cpp.ast.rich.CppStandard
 import me.anno.support.cpp.preprocessor.Preprocessor
 import me.anno.support.cpp.tokenizer.CppTokenizer
-import me.anno.utils.assertEquals
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
@@ -12,6 +11,7 @@ import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createByteArray
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.interpreting.RuntimeCreate.createPointer
+import me.anno.zauber.interpreting.Stdlib
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.ZauberTokenizer
 import me.anno.zauber.types.Specialization
@@ -32,46 +32,70 @@ class StbImageTests {
      * */
     @Test
     fun testReadingImageInInterpreter() {
-        // load C/C++ code as Zauber
-        val files = mapOf(
-            header.name to """
+
+        val scope = root.getOrPut("stbi", ScopeType.PACKAGE)
+        fun loadZauber() {
+            val zauberTokens = ZauberTokenizer(
+                """
+            package zauber
+            class Pointer<T>(var base: T?, var offset: Long)
+            class ClassType<V> {
+                external fun sizeof(): Int
+            }
+            external class Int(val content: Int) {
+                external fun equals(other: Int): Boolean
+            }
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external fun set(index: Int, value: V)
+            }
+        """.trimIndent(), "Stdlib.zbr"
+            ).tokenize()
+            ZauberASTClassScanner.scanClasses(zauberTokens)
+        }
+
+        fun loadC() {
+            // load C/C++ code as Zauber
+            val files = mapOf(
+                header.name to """
                 #define STB_IMAGE_IMPLEMENTATION
             """.trimIndent() + header.readText(),
-            // needed for declaration:
-            "stdio.h" to "",
-            "stdlib.h" to """
+                // needed for declaration:
+                "stdio.h" to "",
+                "stdlib.h" to """
                 typedef struct {
                     char* fileName;
                 } FILE;
             """.trimIndent(),
-            // needed for implementation:
-            "stdarg.h" to "",
-            "stddef.h" to "",
-            "string.h" to "",
-            "limits.h" to "",
-            "math.h" to "",
-            "assert.h" to "",
-            "stdint.h" to "",
-            "emmintrin.h" to "",
-        )
+                // needed for implementation:
+                "stdarg.h" to "",
+                "stddef.h" to "",
+                "string.h" to "",
+                "limits.h" to "",
+                "math.h" to "",
+                "assert.h" to "",
+                "stdint.h" to "",
+                "emmintrin.h" to "",
+            )
 
-        val tokenized = files.mapValues { (fileName, source) ->
-            CppTokenizer(source, fileName, isCNotCxx = true).tokenize()
+            val tokenized = files.mapValues { (fileName, source) ->
+                CppTokenizer(source, fileName, isCNotCxx = true).tokenize()
+            }
+
+            val pp = Preprocessor(tokenized) { _, name -> name }
+            val cTokens = pp.preprocess(header.name)
+
+            File("Preprocess.c")
+                .writeText(cTokens.source.toString())
+
+            CppASTBuilder(cTokens, scope, CppStandard.C11).readFileLevel()
         }
 
-        val pp = Preprocessor(tokenized) { _, name -> name }
-        val cTokens = pp.preprocess(header.name)
-
-        val scope = root.getOrPut("stbi", ScopeType.PACKAGE)
-        CppASTBuilder(cTokens, scope, CppStandard.C11).readFileLevel()
-
-        val zauberTokens = ZauberTokenizer(
-            """
-            package zauber
-            class Pointer<T>(var base: T?, var offset: Long)
-        """.trimIndent(), "Stdlib.zbr"
-        ).tokenize()
-        ZauberASTClassScanner.scanClasses(zauberTokens)
+        Stdlib.registerAllMethods()
+        // zauber must be loaded first, s.t. sizeof() is available at compile-time
+        loadZauber()
+        // LogManager.enableAllLoggers()
+        loadC()
 
         val methodName = "stbi_load_from_memory"
         val method = scope.methods0.first { it.name == methodName }

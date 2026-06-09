@@ -3,6 +3,7 @@ package me.anno.support.cpp.ast.rich
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
+import me.anno.support.cpp.ast.rich.ArrayType.Companion.createArrayType
 import me.anno.support.cpp.ast.rich.PointerType.Companion.ptr
 import me.anno.support.java.ast.JavaASTBuilder
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
@@ -53,6 +54,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                     "unsigned short" to UShort,
                     "int" to Int,
                     "unsigned" to UInt,
+                    "unsigned int" to UInt,
                     "long" to Long,
                     "unsigned long" to ULong,
                     "float" to Float,
@@ -60,6 +62,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                     "long double" to Double,
                     "bool" to Boolean,
                     "void" to Unit,
+                    "size_t" to Long,
 
                     "int8_t" to Byte,
                     "int16_t" to Short,
@@ -126,7 +129,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                         end = skipCallBlock(end) // parameters
                         return end
                     }
-                    if (tokens.equals(end, ",", ";", "=", "(", "[", "{")) {
+                    if (tokens.equals(end, ",", ";", "=", "(", "[", ")", "]")) {
                         return end
                     }
                 }
@@ -174,9 +177,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                 consumeIf("* ") || consumeIf("*") -> type.ptr()
                 allowAllStars && consumeIf(" *") -> type.ptr()
                 tokens.equals(i, TokenType.OPEN_ARRAY) -> {
-                    // todo I think this order is incorrect for multi-dimensional arrays
                     val size = pushArray { readExpression() }
-                    ArrayType(type, size)
+                    createArrayType(type, size)
                 }
                 else -> break
             }
@@ -258,8 +260,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                     .map { param -> LambdaParameter(param.name, param.type, param.origin) }
             }
             var type: Type = LambdaType(null, parameters, returnType)
-            for (size in arraySizes.lastIndex downTo 0) { // I think this order is correct
-                type = ArrayType(type, arraySizes[size])
+            for (size in arraySizes) {
+                type = createArrayType(type, size)
             }
             return TypeName(type, type, name)
         }
@@ -330,9 +332,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         while (true) {
             nameType = when {
                 tokens.equals(i, TokenType.OPEN_ARRAY) -> {
-                    // todo multi-arrays are reversed, again
                     val size = pushArray { readExpression() }
-                    ArrayType(nameType, size)
+                    createArrayType(nameType, size)
                 }
                 else -> break
             }
@@ -452,7 +453,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         val (_, returnType, name) = typeAndName
 
         val uniqueName = generateMethodScopeName(name)
-        println("Found method $uniqueName")
+        // println("Found method $uniqueName")
 
         val methodScope = currPackage.getOrPut(uniqueName, ScopeType.METHOD)
         val keywords = packFlags()
@@ -574,9 +575,9 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             consume(structName)
         } else {
             var (_, type, name) = readTypeAndName1()
-            while (tokens.equals(i, TokenType.OPEN_ARRAY)) {// todo this is probably backwards...
+            while (tokens.equals(i, TokenType.OPEN_ARRAY)) {
                 val size = pushArray { readExpression() }
-                type = ArrayType(type, size)
+                type = createArrayType(type, size)
             }
 
             val alias = currPackage.getOrPut(name, ScopeType.TYPE_ALIAS)
@@ -591,8 +592,41 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
 
         while (i < tokens.size) {
 
+            var numSymbolTokens = 1
             val symbol = when (tokens.getType(i)) {
-                TokenType.SYMBOL -> tokens.toString(i)
+                TokenType.SYMBOL -> {
+                    when (val str = tokens.toString(i)) {
+                        "<", ">" -> when {
+                            tokens.equals(i + 1, str) -> when {
+                                tokens.equals(i + 2, "=") -> {
+                                    numSymbolTokens = 3
+                                    if (str == "<") "<<=" else ">>="
+                                }
+                                str == ">" && tokens.equals(i + 2, ">") -> {
+                                    if (tokens.equals(i + 3, "=")) {
+                                        numSymbolTokens = 4
+                                        ">>>="
+                                    } else {
+                                        numSymbolTokens = 3
+                                        ">>>"
+                                    }
+                                }
+                                else -> {
+                                    numSymbolTokens = 2
+                                    if (str == "<") "<<" else ">>"
+                                }
+                            }
+                            tokens.equals(i + 1, "=") -> when {
+                                else -> {
+                                    numSymbolTokens = 2
+                                    "$str="
+                                }
+                            }
+                            else -> str
+                        }
+                        else -> str
+                    }
+                }
                 TokenType.COMMA -> return expr // cannot be used
                 else -> {
                     expr = tryReadPostfix(expr) ?: break
@@ -608,7 +642,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             if (op.precedence < minPrecedence) break
 
             val origin = origin(i)
-            i++ // consume operator
+            i += numSymbolTokens // consume operator
 
             expr = when (symbol) {
 
@@ -655,16 +689,20 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         val i0 = i
         val isCast = looksLikeCastImpl()
         i = i0
+        if (false) println("Looks like a cast: $isCast, at ${tokens.err(i)}")
         return isCast
     }
 
     private fun looksLikeCastImpl(): Boolean {
         consume(TokenType.OPEN_CALL)
-        val end = findTypeNameEnd(true)
-        if (end == i) return false
+        val typeEnd = findTypeNameEnd(true)
+        if (typeEnd == i) return false
+
+        val bracketsEnd = tokens.findBlockEnd(i - 1, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
+        if (bracketsEnd != typeEnd) return false
 
         try {
-            readTypeUntil(end, allowAllStars = true)
+            readTypeUntil(typeEnd, allowAllStars = true)
             return true
         } catch (_: Exception) {
             return false
@@ -692,7 +730,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
             }
 
             consumeIf("sizeof") -> {
-                val value = if (tokens.equals(i, "(")) {
+                val value = if (tokens.equals(i, "(") && !tokens.equals(i + 1, "*")) {
                     pushCall {
                         // can be a type or an expression
                         val type = readType(null, true)
@@ -705,6 +743,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                 } else readPrefix()
                 NamedCallExpression(
                     value, "sizeof", shouldBeResolvable,
+                    emptyList(), emptyList(),
                     currPackage, origin
                 )
             }
@@ -873,6 +912,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                 consumeIf("if") -> result.add(readIfBranch())
                 consumeIf("while") -> result.add(readWhileLoop(null))
                 consumeIf("do") -> result.add(readDoWhileLoop(null))
+                consumeIf("for") -> result.add(readForLoop(null))
                 consumeIf("switch") -> result.add(readSwitch(null))
                 consumeIf("try") -> result.add(readTryCatch(null))
                 consumeIf("return") -> result.add(readReturn(null))
@@ -886,16 +926,14 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                     result.add(BreakExpression(label, currPackage, origin))
                 }
 
-                else -> {
+                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) -> {
                     // read declaration or assignment or method-call
                     //  -> all of those occurred already, and we could lookup based on the first token,
                     //  whether it is a type, method, or field
 
-                    check(tokens.equals(i, TokenType.NAME, TokenType.KEYWORD)) {
-                        "Expected type or name at ${tokens.err(i)}"
-                    }
-
-                    if (tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD)) {
+                    if (tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) ||
+                        tokens.equals(i + 1, "*", " *", "* ") // float* hdr
+                    ) {
                         consumeIf("struct") // optional in C++, mandatory in C -> skip it
                         // println("Reading field ${tokens.err(i)}")
                         val fields = readFields(canReadMultiple = true)
@@ -905,7 +943,14 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                     } else {
                         result.add(readExpression())
                     }
+
                     if (LOGGER.isDebugEnabled) LOGGER.debug("block += ${result.last()}")
+                }
+
+                else -> {
+                    // sample: *s->img_buffer = 0;
+                    // sample: (s->io.skip)(s->io_user_data, n-blen);
+                    result.add(readExpression())
                 }
             }
 

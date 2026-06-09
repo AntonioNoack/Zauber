@@ -1,6 +1,7 @@
 package me.anno.support.cpp.typeresolution
 
 import me.anno.support.cpp.ast.rich.ArrayType
+import me.anno.support.cpp.ast.rich.ArrayType.Companion.createArrayType
 import me.anno.support.cpp.ast.rich.CppASTBuilder
 import me.anno.support.cpp.ast.rich.CppParsingTest.Companion.testCppParsing
 import me.anno.support.cpp.ast.rich.CppStandard
@@ -11,6 +12,7 @@ import me.anno.utils.ResolutionUtils.getField
 import me.anno.utils.assertEquals
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.interpreting.FieldGetSetTest.Companion.assertThrowsContains
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -481,12 +483,31 @@ class CppTypeResolutionTest {
     }
 
     @Test
-    fun testArrayOfFunctionPointers() {
+    fun testArray() {
         val scope = testCppParsing(
             """
-        void (*handlers[4])(int);
+        int a[5];
+        int b[3][2];
     """.trimIndent()
         )
+
+        val expectedA = ArrayType(Types.Int, listOf(5))
+        assertEquals(expectedA, scope.resolveFieldType("a"))
+
+        val expectedB = ArrayType(Types.Int, listOf(3, 2))
+        assertEquals(expectedB, scope.resolveFieldType("b"))
+    }
+
+    @Test
+    fun testNegativeArraySize() {
+        assertThrowsContains<IllegalStateException>(listOf("Invalid size expression")) {
+            testCppParsing("int a[-1];")
+        }
+    }
+
+    @Test
+    fun testArrayOfFunctionPointers() {
+        val scope = testCppParsing("void (*handlers[4])(int);")
 
         val type = scope.resolveFieldType("handlers")
         val lambdaType = LambdaType(
@@ -494,7 +515,7 @@ class CppTypeResolutionTest {
                 LambdaParameter("__0", Types.Int, -1),
             ), Types.Unit
         )
-        assertEquals(ArrayType(lambdaType, NumberExpression("4", scope, -1)), type)
+        assertEquals(createArrayType(lambdaType, NumberExpression("4", scope, -1)), type)
     }
 
 }

@@ -1,11 +1,12 @@
 package me.anno.support.cpp.preprocessor
 
+import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 
-// todo it would be nice to preserve line-numbers somehow
-//  -> make them explicit (?)
+// todo it would be nice to preserve line-numbers and file-names somehow
+//  -> make them explicit
 
 class Preprocessor(
     val files: Map<String, TokenList>,
@@ -17,6 +18,7 @@ class Preprocessor(
     }
 
     private val macros = HashMap<String, Macro>()
+    private val disabledMacros = HashSet<String>()
     private val pragmaOnceFiles = HashSet<String>()
 
     fun preprocess(fileName: String): TokenList {
@@ -115,8 +117,8 @@ class Preprocessor(
             out.addRange(
                 included.getType(j),
                 included.getI0(j),
-                included.getI1(j),
-                included
+                included.getI1(j), included,
+                included.getLineNumber(j)
             )
         }
     }
@@ -126,9 +128,9 @@ class Preprocessor(
         out: TokenBuilder,
         depth: Int
     ): Int {
+
         if (depth > MAX_EXPANSION_DEPTH) {
-            out.addToken(tokens, i)
-            return i + 1
+            error("Reached max expansion depth")
         }
 
         if (tokens.equals(i, "defined")) {
@@ -143,8 +145,11 @@ class Preprocessor(
         if (tokens.getType(i) == TokenType.NAME) {
             val name = tokens.toString(i)
             val macro = macros[name]
-            if (macro != null) {
-                return expandMacro(tokens, i, macro, out, depth + 1)
+            if (macro != null && name !in disabledMacros) {
+                disabledMacros.add(name)
+                val result = expandMacro(tokens, i, macro, out, depth + 1)
+                disabledMacros.remove(name)
+                return result
             }
         }
 
@@ -153,73 +158,161 @@ class Preprocessor(
     }
 
     private fun expandMacro(
-        tokens: TokenList,
-        i0: Int,
-        macro: Macro,
-        out: TokenBuilder,
-        depth: Int
+        tokens: TokenList, i0: Int, macro: Macro,
+        out: TokenBuilder, depth: Int
     ): Int {
         return when (macro) {
-            is ObjectMacro -> {
-                val tokens = macro.tokens
-                for (index in macro.body) {
-                    expandOrCopy(tokens, index, out, depth)
-                }
-                i0 + 1
+            is ObjectMacro -> expandObjectMacro(i0, macro, out, depth)
+            is FunctionMacro -> expandFunctionMacro(tokens, i0, macro, out, depth)
+        }
+    }
+
+    private fun expandObjectMacro(
+        i0: Int, macro: ObjectMacro,
+        out: TokenBuilder, depth: Int
+    ): Int {
+        val tokens = macro.tokens
+        for (index in macro.body) {
+            expandOrCopy(tokens, index, out, depth)
+        }
+        return i0 + 1
+    }
+
+    private fun expandFunctionMacro(
+        input: TokenList, i0: Int, macro: FunctionMacro,
+        out: TokenBuilder, depth: Int
+    ): Int {
+
+        var i = i0 + 1
+
+        if (!input.equals(i, TokenType.OPEN_CALL)) {
+            out.addToken(input, i0)
+            return i0 + 1
+        }
+
+        val rawArgs = readMacroArgs(input, ++i)
+
+        i = input.findBlockEnd(
+            i - 1,
+            TokenType.OPEN_CALL,
+            TokenType.CLOSE_CALL
+        ) + 1
+
+        val expandedArgs = expandMacroArguments(input, rawArgs, depth)
+        val substituted = substituteMacroBody(input, macro, rawArgs, expandedArgs)
+        rescanTokens(substituted, out, depth)
+
+        return i
+    }
+
+    private fun expandMacroArguments(tokens: TokenList, args: List<List<Int>>, depth: Int): List<TokenList> {
+        return args.map { arg ->
+            val tmp = TokenBuilder(tokens.fileName)
+            var i = arg.first()
+            while (i <= arg.last()) {
+                i = expandOrCopy(tokens, i, tmp, depth)
             }
-            is FunctionMacro -> {
-                var i = i0 + 1
-                if (!tokens.equals(i, TokenType.OPEN_CALL)) {
-                    out.addToken(tokens, i0)
-                    return i0 + 1
-                }
+            tmp.tokens
+        }
+    }
 
-                val args = readMacroArgs(tokens, ++i)
-                i = tokens.findBlockEnd(i - 1, TokenType.OPEN_CALL, TokenType.CLOSE_CALL) + 1
-
-                fun insert(bodyIndex: Int) {
-                    val argumentIndex = args.indices.indexOfFirst { index ->
-                        macro.tokens.equals(bodyIndex, macro.params[index])
-                    }
-                    if (argumentIndex == -1) {
-                        expandOrCopy(macro.tokens, bodyIndex, out, depth)
-                    } else {
-                        val args = args[argumentIndex]
-                        var i = args.first()
-                        while (i <= args.last()) {
-                            i = expandOrCopy(tokens, i, out, depth)
-                        }
-                    }
+    private fun substituteMacroBody(
+        input: TokenList,
+        macro: FunctionMacro,
+        rawArgs: List<List<Int>>,
+        expandedArgs: List<TokenList>
+    ): TokenList {
+        val out = TokenBuilder(input.fileName)
+        var i = macro.body.first
+        while (i <= macro.body.last) {
+            when {
+                macro.tokens.equals(i, "#") -> {
+                    i = substituteStringify(out, input, macro, rawArgs, i)
                 }
-
-                var bodyIndex = macro.body.first
-                while (bodyIndex <= macro.body.last) {
-                    if (macro.tokens.equals(bodyIndex, "##")) {
-                        insert(bodyIndex + 1) // insert B
-                        out.tokens.joinLastTwoTokens(TokenType.NAME) // join A and B
-                        bodyIndex++ // skip B
-                    } else if (macro.tokens.equals(bodyIndex, "#")) {
-                        val param = macro.tokens.toString(bodyIndex + 1)
-                        val argIndex = macro.params.indexOf(param)
-                        if (argIndex >= 0) {
-                            stringifyArg(tokens, args[argIndex], out)
-                            bodyIndex++
-                        }
-                    } else {
-                        insert(bodyIndex)
+                macro.tokens.equals(i, "##") -> {
+                    val left = resolveConcatOperand(macro, expandedArgs, i - 1)
+                    val right = resolveConcatOperand(macro, expandedArgs, i + 1)
+                    val merged = left + right
+                    val tmp = CppTokenizer(merged, "tmp.c", true).tokenize()
+                    out.tokens.removeLast() // remove LHS
+                    for (i in 0 until tmp.size) {
+                        out.addToken(tmp, i)
                     }
-                    bodyIndex++
+                    i++ // skip ##
                 }
-                i
+                else -> substituteToken(out, macro, expandedArgs, i)
+            }
+            i++
+        }
+        return out.tokens
+    }
+
+    private fun resolveConcatOperand(
+        macro: FunctionMacro,
+        expandedArgs: List<TokenList>,
+        bodyIndex: Int
+    ): String {
+        val token = macro.tokens.toString(bodyIndex)
+        val paramIndex = macro.params.indexOf(token)
+        if (paramIndex >= 0) {
+            val arg = expandedArgs[paramIndex]
+            val sb = StringBuilder()
+            for (i in 0 until arg.size) {
+                sb.append(arg.toString(i))
+            }
+            return sb.toString()
+        }
+        return token
+    }
+
+    private fun substituteStringify(
+        out: TokenBuilder,
+        input: TokenList,
+        macro: FunctionMacro,
+        rawArgs: List<List<Int>>,
+        bodyIndex: Int
+    ): Int {
+
+        // next token after '#'
+        val paramToken = macro.tokens.toString(bodyIndex + 1)
+
+        val paramIndex = macro.params.indexOf(paramToken)
+        if (paramIndex < 0) {
+            error("Unknown macro parameter for stringification: $paramToken")
+        }
+
+        val arg = rawArgs[paramIndex]
+
+        // produce string literal from original tokens
+        stringifyArg(input, arg, out)
+
+        // skip '#' and parameter token
+        return bodyIndex + 1
+    }
+
+    private fun substituteToken(
+        out: TokenBuilder, macro: FunctionMacro,
+        expandedArgs: List<TokenList>, bodyIndex: Int
+    ) {
+        val paramIndex = macro.params.indexOfFirst {
+            macro.tokens.equals(bodyIndex, it)
+        }
+
+        if (paramIndex < 0) {
+            out.addToken(macro.tokens, bodyIndex)
+        } else {
+            val arg = expandedArgs[paramIndex]
+            for (i in 0 until arg.size) {
+                out.addToken(arg, i)
             }
         }
     }
 
-    private fun TokenList.joinLastTwoTokens(type: TokenType) {
-        val last = size - 1
-        setI1(last - 1, getI1(last))
-        setType(last - 1, type)
-        size = last
+    private fun rescanTokens(tokens: TokenList, out: TokenBuilder, depth: Int) {
+        var i = 0
+        while (i < tokens.size) {
+            i = expandOrCopy(tokens, i, out, depth)
+        }
     }
 
     private fun stringifyArg(
@@ -227,7 +320,10 @@ class Preprocessor(
     ) {
         val start = tokens.getI0(arg.first())
         val end = tokens.getI1(arg.last())
-        out.addRangePlusQuotes(TokenType.STRING, start, end, tokens)
+        out.addRangePlusQuotes(
+            TokenType.STRING, start, end,
+            tokens, tokens.getLineNumber(arg.first())
+        )
     }
 
     private fun readMacroArgs(tokens: TokenList, i0: Int): List<List<Int>> {
@@ -504,16 +600,5 @@ class Preprocessor(
         var j = i
         while (j < tokens.size && tokens.isSameLine(i, j)) j++
         return j
-    }
-
-    private fun findNextDirective(tokens: TokenList, i0: Int): Int {
-        var i = i0
-        while (i < tokens.size) {
-            if (isDirective(tokens, i)) {
-                return i
-            }
-            i++
-        }
-        return tokens.size
     }
 }

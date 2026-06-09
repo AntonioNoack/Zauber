@@ -14,6 +14,7 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase
 import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ConstExpr.evaluateExpression
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime
@@ -139,10 +140,8 @@ object Macro {
                 )
             return DynamicMacroExpression(self, macro, valueParameters1, imports, generics, scope, origin)
         } else {
-            val runtime = Runtime.runtime
-            val instance = runtime.getObjectInstance(getObjectScope(scope))
             val valueParameters = valueParameters.mapIndexed { index, parameter ->
-                instance.evaluateExpression(parameter.value, Flags.NONE, valueParameterTypes[index])
+                evaluateExpression(parameter.value, Flags.NONE, valueParameterTypes[index])
             }
             return evaluateMacroNow(namePath, i0, typeParameters, valueParameters, origin)
         }

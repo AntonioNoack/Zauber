@@ -88,7 +88,7 @@ class CppTokenizer(
                     i += if (spaceAfter) 2 else 1
                 }
 
-                // symbols (single-char ONLY)
+                // symbols
                 else -> tokens.add(TokenType.SYMBOL, i++, i)
             }
         }

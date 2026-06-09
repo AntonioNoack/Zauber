@@ -15,8 +15,6 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.interpreting.RuntimeCreate.createInt
-import me.anno.zauber.interpreting.RuntimeCreate.createLong
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -258,7 +256,7 @@ class Runtime {
 
     fun getObjectInstance(scope: Scope): Instance {
         check(scope.isObjectLike() || scope.scopeType == null) {
-            "Only objects have an object instance, not $scope"
+            "Only objects have an object instance, not $scope (${scope.scopeType})"
         }
         return getClass(scope.typeWithArgs2).getOrCreateObjectInstance()
     }

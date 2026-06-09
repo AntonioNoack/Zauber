@@ -57,14 +57,9 @@ private abstract class GetterSetter(val beforeChange: Expression) {
 }
 
 private fun splitGetterSetter(base: Expression): GetterSetter {
-    when (base) {
-        is FieldResolvable -> {
-            return object : GetterSetter(base) {
-                override fun createSetter(newValue: Expression): Expression {
-                    return AssignmentExpression(base, newValue)
-                }
-            }
+    return object : GetterSetter(base) {
+        override fun createSetter(newValue: Expression): Expression {
+            return AssignmentExpression(base, newValue)
         }
-        else -> TODO("Get base for ${base.javaClass.simpleName}, at ${resolveOrigin(base.origin)}")
     }
 }

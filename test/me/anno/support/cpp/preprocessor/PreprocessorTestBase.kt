@@ -1,8 +1,8 @@
 package me.anno.support.cpp.preprocessor
 
 import me.anno.support.cpp.tokenizer.CppTokenizer
+import me.anno.utils.assertEquals
 import me.anno.zauber.tokenizer.TokenList
-import org.junit.jupiter.api.Assertions
 
 abstract class PreprocessorTestBase {
 
@@ -24,12 +24,15 @@ abstract class PreprocessorTestBase {
 
     protected fun assertTokens(source: String, expected: String) {
         val tokens = preprocess(source, "test.c")
-        Assertions.assertEquals(
+        assertEquals(
             normalize(expected),
             normalize(tokens.toDebugString())
         )
     }
 
+    /**
+     * mainly to remove new-lines and indentation
+     * */
     private fun normalize(s: String): String =
         s.trim().replace(Regex("\\s+"), " ")
 

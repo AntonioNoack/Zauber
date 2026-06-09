@@ -11,6 +11,7 @@ import me.anno.zauber.ast.rich.controlflow.ReturnExpression
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.interpreting.ConstExpr.evaluateExpression
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.interpreting.ZClass.Companion.nativeTypes
@@ -223,30 +224,8 @@ class Instance(
         fields[fieldIndex] = evaluateExpression(value, field.flags, field.valueType)
     }
 
-    fun evaluateExpression(value: Expression, flags: Int, valueType: Type?): Instance {
-        val constValue = evaluateExpressionUnsafe(value, flags, valueType)
-        check(constValue.type == ReturnType.RETURN) { "Executing $value returned $constValue" }
-        return constValue.value
-    }
-
     private fun createStringContentArray(fieldIndex: Int) {
         TODO("Create string content array for $this")
-    }
-
-    fun evaluateExpressionUnsafe(value: Expression, flags: Int, valueType: Type?): BlockReturn {
-        val tmpMethodScope = value.scope.generate("exprUnsafe", ScopeType.METHOD) // needed? not really...
-        tmpMethodScope.setEmptyTypeParams()
-
-        val method = Method(
-            null, false, "<exprUnsafe>",
-            emptyList(), emptyList(), tmpMethodScope, valueType,
-            emptyList(), ReturnExpression(value, null, value.scope, value.origin),
-            flags, value.origin
-        )
-        tmpMethodScope.selfAsMethod = method
-
-        val methodSpec = Specialization(method.scope, emptyParameterList())
-        return runtime.executeCall(this, null, methodSpec, emptyList())
     }
 
     operator fun set(fieldName: String, value: Instance) {

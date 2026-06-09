@@ -53,7 +53,7 @@ fun ASTBuilderBase.iteratorToHasNext(iteratorFieldExpr: FieldExpression, scope: 
  *  and if variableField is an IntRange or LongRange,
  *  then extract the loop to avoid allocations(?)
  * */
-fun ASTBuilderBase.forLoop(
+fun ASTBuilderBase.createIteratorForLoop(
     variableField: Field, iterable: Expression,
     body: Expression, label: String?,
     elseBranch: Expression? = null

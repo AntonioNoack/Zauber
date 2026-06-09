@@ -606,7 +606,7 @@ class ZauberASTBuilder(
                 null, false, isMutable = true, false,
                 name, variableType, pseudoInitial, Flags.NONE, origin
             )
-            return forLoop(variableField, iterable, body, label)
+            return createIteratorForLoop(variableField, iterable, body, label)
         }
     }
 

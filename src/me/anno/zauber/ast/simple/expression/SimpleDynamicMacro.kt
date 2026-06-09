@@ -5,6 +5,7 @@ import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.expansion.Macro.evaluateMacroNow
 import me.anno.zauber.interpreting.BlockReturn
+import me.anno.zauber.interpreting.ConstExpr.evaluateExpressionUnsafe
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
 
@@ -43,16 +44,9 @@ class SimpleDynamicMacro(
     }
 
     override fun eval(): BlockReturn {
-        val runtime = runtime
-        val self = runtime[thisInstance]
-        if (runtime.isNull(self)) {
-            // this should never happen
-            error("Unexpected NPE: $this")
-        }
-
-        val expression =
-            evaluateMacroNow(method, valueParameters.map { runtime[it] }, imports, generics, original.scope, origin)
-        return self.evaluateExpressionUnsafe(expression, Flags.NONE, method.returnType)
+        val valueParameters = valueParameters.map { param -> runtime[param] }
+        val expression = evaluateMacroNow(method, valueParameters, imports, generics, original.scope, origin)
+        return evaluateExpressionUnsafe(expression, Flags.NONE, method.returnType)
     }
 
 }

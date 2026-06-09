@@ -428,7 +428,13 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val scopeName = currPackage.generateName("expr", origin)
         return pushScope(scopeName, ScopeType.METHOD_BODY) { scope ->
             scope.jumpLabel = label
-            readExpression()
+            val end = tokens.findToken(i, ";")
+            check(end >= 0) { "Missing semicolon after ${tokens.err(i)}" }
+            val expr = tokens.push(end + 1) {
+                readMethodBody()
+            }
+            i = end + 1 // after semicolon
+            expr
         }
     }
 
@@ -527,11 +533,15 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                             values, null,
                             currPackage, origin
                         )
-                        is ArrayType -> ConstructorExpression(
-                            Types.Array.clazz, listOf(type.type),
-                            listOf(NamedParameter(null, type.size)), null,
-                            currPackage, origin
-                        )
+                        is ArrayType if (type.sizes.size == 1) -> {
+                            val size = type.sizes.first()
+                            val sizeExpr = NumberExpression(size.toString(), currPackage, origin)
+                            ConstructorExpression(
+                                Types.Array.clazz, listOf(type.type),
+                                listOf(NamedParameter(null, sizeExpr)), null,
+                                currPackage, origin
+                            )
+                        }
                         else -> error("Cannot construct $type")
                     }
                 }
@@ -691,7 +701,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         }
     }
 
-    private fun readForLoop(label: String?): Expression {
+    fun readForLoop(label: String?): Expression {
         return pushScope(ScopeType.METHOD_BODY, "for") { scope ->
             lateinit var initial: Expression
             lateinit var condition: Expression
@@ -721,7 +731,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             }
             val body = readBodyOrExpression(label ?: "")
             if (isIterator) {
-                forLoop(field, initial, body, label)
+                createIteratorForLoop(field, initial, body, label)
             } else {
                 val body = ExpressionList(listOf(body, increment), currPackage, origin)
                 val result = ArrayList<Expression>()

@@ -125,7 +125,7 @@ class PreprocessorTests : PreprocessorTestBase() {
         const char* s = STR(hello + world);
         """,
             """
-        const char * s = "hello + world" ;
+        const char "* " s = "hello + world" ;
         """
         )
     }
@@ -139,7 +139,7 @@ class PreprocessorTests : PreprocessorTestBase() {
         const char* s = STR(A);
         """,
             """
-        const char * s = "A" ;
+        const char "* " s = "A" ;
         """
         )
     }

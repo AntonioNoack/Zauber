@@ -73,8 +73,8 @@ object Inheritance {
         insertMode: InsertMode,
         matchScore: MatchScore? = null,
     ): Boolean {
-        val actualType = actualType.resolvedName
-        val expectedType = expectedType.resolvedName
+        val actualType = actualType.resolve()
+        val expectedType = expectedType.resolve()
         if (actualType == expectedType) return true
 
         if (LOGGER.isInfoEnabled) {

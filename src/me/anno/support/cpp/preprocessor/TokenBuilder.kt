@@ -5,7 +5,12 @@ import me.anno.zauber.tokenizer.TokenType
 
 class TokenBuilder(fileName: String) {
 
-    fun addRange(type: TokenType, i0: Int, i1: Int, src: TokenList) {
+    var depth = 0
+
+    fun addRange(type: TokenType, i0: Int, i1: Int, src: TokenList, lineNumber: Int) {
+
+        // println("Adding $type, '${src.source.substring(i0, i1)}', #$lineNumber")
+
         if (i0 + 1 == i1 && (type == TokenType.COMMA || type == TokenType.CLOSE_CALL)) {
             source.append(src.source[i0])
             tokens.add(type, source.length - 1, source.length)
@@ -15,14 +20,21 @@ class TokenBuilder(fileName: String) {
             source.append(src.source, i0, i1)
             tokens.add(type, selfI0, selfI0 + i1 - i0)
         }
+        lineNumbers.add(src.fileName, lineNumber)
+
+        // todo dedent (safely) before }
+
+        if (type == TokenType.CLOSE_BLOCK) depth--
         endLine()
+        if (type == TokenType.OPEN_BLOCK) depth++
     }
 
-    fun addRangePlusQuotes(type: TokenType, i0: Int, i1: Int, src: TokenList) {
+    fun addRangePlusQuotes(type: TokenType, i0: Int, i1: Int, src: TokenList, lineNumber: Int) {
         beginLine()
         val selfI0 = source.length
         source.append('"').append(src.source, i0, i1).append('"')
         tokens.add(type, selfI0, source.length)
+        lineNumbers.add(src.fileName, lineNumber)
         endLine()
     }
 
@@ -34,17 +46,25 @@ class TokenBuilder(fileName: String) {
         }
     }
 
+    // todo handle indentation depth...
+
     fun endLine() {
-        // todo handle indentation depth...
-        if (source.endsWith(';') || source.endsWith('{') || source.endsWith('}')) {
+        if (source.last() in ";{}") {
             source.append('\n')
+            repeat(depth) { source.append("  ") }
         }
     }
 
     fun addToken(src: TokenList, tokenIndex: Int) {
-        addRange(src.getType(tokenIndex), src.getI0(tokenIndex), src.getI1(tokenIndex), src)
+        val lineNumber = src.getLineNumber(tokenIndex)
+        addRange(src.getType(tokenIndex), src.getI0(tokenIndex), src.getI1(tokenIndex), src, lineNumber)
     }
 
     val source = StringBuilder()
     val tokens = TokenList(source, fileName)
+    val lineNumbers = LineNumbers(true)
+
+    init {
+        tokens.lineNumbers = lineNumbers
+    }
 }

@@ -281,9 +281,9 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     AssignmentExpression(variableName, newValue)
                 } + body, scope, origin
             )
-            forLoop(fullVariable, iterable, newBody, label, elseBranch)
+            createIteratorForLoop(fullVariable, iterable, newBody, label, elseBranch)
         } else {
-            forLoop(fields[0], iterable, body, label, elseBranch)
+            createIteratorForLoop(fields[0], iterable, body, label, elseBranch)
         }
     }
 

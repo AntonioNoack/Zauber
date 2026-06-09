@@ -4,6 +4,7 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.support.cpp.ast.rich.ArrayType
+import me.anno.support.cpp.ast.rich.ArrayType.Companion.createArrayType
 import me.anno.support.csharp.ast.CSharpASTBuilder.Companion.nativeCSharpTypes
 import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
 import me.anno.support.java.ast.NamedCastExpression
@@ -526,7 +527,7 @@ abstract class ZauberASTBuilderBase(
                     } else {
                         i-- // go one back for pushArray
                         val size = pushArray { readExpression() }
-                        base = ArrayType(base, size)
+                        base = createArrayType(base, size)
                     }
                 }
             }

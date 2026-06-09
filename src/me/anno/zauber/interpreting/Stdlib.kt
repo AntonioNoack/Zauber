@@ -3,8 +3,10 @@ package me.anno.zauber.interpreting
 import me.anno.utils.Half
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.Maths.clamp
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createByte
 import me.anno.zauber.interpreting.RuntimeCreate.createChar
@@ -379,6 +381,14 @@ object Stdlib {
         rt.register(Types.TypeT.clazz, "isSubTypeOf", listOf(Types.TypeT)) { type, (otherType) ->
             rt.getBool(Inheritance.isSubTypeOf(expectedType = otherType.castToType(), actualType = type.castToType()))
         }
+        rt.register(Types.ClassType.clazz, "sizeof", emptyList()) { self, _ ->
+            val type = self.rawValue as ClassType
+            check(type in nativeNumbers) {
+                "Sizeof not yet implemented for non-numbers: $type"
+            }
+            val numBytes = type.getNumBits().shr(3)
+            rt.createInt(numBytes)
+        }
     }
 
     fun registerAllMethods() {
@@ -399,6 +409,8 @@ object Stdlib {
         registerHalfMethods()
         registerFloatMethods()
         registerDoubleMethods()
+
+        registerEqualsMethods()
 
         registerNumberConversions()
 
@@ -487,6 +499,19 @@ object Stdlib {
 
     fun Runtime.registerUnaryMethod(selfType: ClassType, name: String, calc: (self: Instance) -> Instance) {
         register(selfType.clazz, name, emptyList()) { self, _ -> calc(self) }
+    }
+
+    fun registerEqualsMethods() {
+        val rt = runtime
+        for (type in nativeNumbers) {
+            rt.registerBinaryMethod(type, "equals") { a, b ->
+                check(a.clazz.type == type)
+                check(b.clazz.type == type)
+                check(a.rawValue != null)
+                check(b.rawValue != null)
+                rt.getBool(a.rawValue == b.rawValue)
+            }
+        }
     }
 
 }

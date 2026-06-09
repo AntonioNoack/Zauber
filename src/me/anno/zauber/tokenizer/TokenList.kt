@@ -1,5 +1,6 @@
 package me.anno.zauber.tokenizer
 
+import me.anno.support.cpp.preprocessor.LineNumbers
 import me.anno.utils.Maths.clamp
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
@@ -21,6 +22,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     var semantic: SemanticTokenList? = null
+    var lineNumbers: LineNumbers? = null
 
     var size = 0
     var tliIndex = -1
@@ -148,12 +150,12 @@ class TokenList(val source: CharSequence, val fileName: String) {
         val endI = clamp(endI, 0, totalSize - 1)
 
         val ix = getI0(startI)
-        val lineNumber = countLines(0, ix)
+        val lineNumber = getLineNumber(startI)
         val lastLineBreak = source.lastIndexOf('\n', ix)
         val i0 = ix - lastLineBreak
         val i1 = getI1(endI) - lastLineBreak
         // show position in line, and surroundings with arrow ^^^^ for the respective token
-        return "${lineNumberStr(lineNumber)}, " +
+        return "${lineNumberStr(startI, lineNumber)}, " +
                 style("${i0}-${i1 - 1 /* i1 is exclusive */}", StringStyles.TEXT) +
                 if (startI == endI) {
                     val type = getTypeUnsafe(startI)
@@ -166,13 +168,11 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun errShort(i: Int): String {
-        val i = clamp(i, 0, size - 1)
-        val lineNumber = countLines(0, getI0(i))
-        return lineNumberStr(lineNumber)
+        return lineNumberStr(i, getLineNumber(i))
     }
 
-    fun lineNumberStr(lineNumber: Int): String {
-        return "${style(fileName, StringStyles.UNDERLINE + StringStyles.LIGHT_BLUE)}:$lineNumber"
+    fun lineNumberStr(i: Int, lineNumber: Int): String {
+        return "${style(getFileName(i), StringStyles.UNDERLINE + StringStyles.LIGHT_BLUE)}:$lineNumber"
     }
 
     @Suppress("SameParameterValue")
@@ -182,6 +182,40 @@ class TokenList(val source: CharSequence, val fileName: String) {
             if (source[i] == '\n') count++
         }
         return count
+    }
+
+    fun getFileName(i: Int): String {
+        val index = lineNumbers
+        if (index == null || index.fileNames == null) return fileName
+        return index.getFileName(index.findEntryIndex(i))
+    }
+
+    fun getLineNumbers(maxI: Int): LineNumbers {
+        val index = lineNumbers ?: LineNumbers(false)
+        this.lineNumbers = index
+
+        if (index.numTokens <= maxI) {
+            var lineNumber = if (index.numTokens == 0) 1 else index.lineNumbers.last()
+            var i0 = if (index.numTokens == 0) 0 else getI1(index.numTokens - 1)
+            for (tokenIndex in index.numTokens..maxI) {
+                val i1 = getI1(tokenIndex)
+                for (i in i0 until i1) {
+                    if (source[i] == '\n') lineNumber++
+                }
+                // println("Generated #$lineNumber for '${source.substring(i0,i1)}'")
+                i0 = max(i0, i1)
+                index.add(fileName, lineNumber)
+            }
+        }
+
+        check(index.numTokens > maxI)
+        return index
+    }
+
+    fun getLineNumber(i: Int): Int {
+        val i = clamp(i, 0, size - 1)
+        val lineNumbers = getLineNumbers(i)
+        return lineNumbers.getLineNumber(lineNumbers.findEntryIndex(i))
     }
 
     private fun CharSequence.isAllWhitespace(i0: Int, i1: Int): Boolean {
@@ -292,7 +326,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
             !(source[i0 - 1] == '!' && source[i0] in ":.") && // !!::, !!.
             !(source[i0 - 1] == '.' && source[i0] in "+-<") && // ..+3.0, ..-3.0
             !(source[i0 - 1] in "&|" && source[i0] == '!') && // &!, |!
-            !(source[i0 - 1] == ':' && source[i0] != ':') && // forbid anything but ::
+            !(source[i0 - 1] == ':' && source[i0] != ':') && // forbid anything but :: after :
+            !(source[i0 - 1] == '?' && source[i0] !in "?:") && // forbid anything but ?: or ?? after ?
             (source[i0 - 1] != '=' || source[i0] == '=')
         ) {
             // todo only accept a symbol if the previous is not =, or the current one is =, too
@@ -498,7 +533,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
     fun toDebugString(i0: Int, i1: Int): String =
         (i0 until i1).joinToString(" ") { index ->
             val str = toStringUnsafe(index)
-            if (str.any { it.isWhitespace() }) "\"$str\""
+            if (getTypeUnsafe(index) != TokenType.STRING && str.any { it.isWhitespace() }) "\"$str\""
             else str
         }
 

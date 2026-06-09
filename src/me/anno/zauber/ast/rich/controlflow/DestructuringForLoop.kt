@@ -43,5 +43,5 @@ fun ASTBuilderBase.destructuringForLoop(
                 AssignmentExpression(variableName, newValue)
             } + body, scope, origin
     )
-    return forLoop(fullVariable, iterable, newBody, label)
+    return createIteratorForLoop(fullVariable, iterable, newBody, label)
 }
