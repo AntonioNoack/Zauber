@@ -121,6 +121,11 @@ class WASMGenerationTests : CodeGenerationTests() {
     }
 
     @Test
+    fun testStringOps() {
+        testStringOpsImpl()
+    }
+
+    @Test
     fun testUseNativeLibrary() {
         TODO("Call into a native library")
     }

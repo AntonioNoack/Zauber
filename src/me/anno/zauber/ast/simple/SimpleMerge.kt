@@ -12,29 +12,22 @@ import me.anno.zauber.scope.Scope
  * */
 class SimpleMerge(
     val dst: SimpleField,
-    val ifField: SimpleField,
-    val elseField: SimpleField,
+    var ifField: SimpleField,
+    var elseField: SimpleField,
     scope: Scope, origin: Long
 ) : SimpleInstruction(scope, origin) {
 
     init {
-        // println("Merge: $this")
-        // if so, that's fine, at least from Interpreter perspective; from LLVM maybe not
-        val ifMergeInfo = ifField.mergeInfo
-        val elseMergeInfo = elseField.mergeInfo
-        if (ifMergeInfo != null) {
-            check(
-                ifMergeInfo.other(ifField) == elseField
-                        || ifMergeInfo.dst == elseField
-            ) {
-                "Weird merge#1: merge($ifField->${ifField.mergeInfo}, $elseField->${elseField.mergeInfo})"
-            }
+        while (true) {
+            val ifMergeInfo = ifField.mergeInfo ?: break
+            ifField = ifMergeInfo.dst
         }
-        check(elseMergeInfo == null || elseMergeInfo.other(elseField) == ifField) {
-            "Weird merge#2"
+
+        while (true) {
+            val elseMergeInfo = elseField.mergeInfo ?: break
+            elseField = elseMergeInfo.dst
         }
-        // check(ifField.mergeInfo == null) { "IfField is merged twice? $ifField -> ${ifField.mergeInfo} + $this" }
-        // check(elseField.mergeInfo == null) { "ElseField is merged twice? $elseField -> ${elseField.mergeInfo} + $this" }
+
         ifField.mergeInfo = this
         elseField.mergeInfo = this
     }

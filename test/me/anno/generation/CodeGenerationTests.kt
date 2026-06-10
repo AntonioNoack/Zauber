@@ -914,4 +914,84 @@ abstract class CodeGenerationTests {
             .testCompileMainAndRun(code, ::registerLib)
         assertEquals("2\n", printed)
     }
+
+    fun testStringOpsImpl() {
+        val code = """
+            fun main() {
+                println("Hello World!")
+                println("  a  ".trim())
+                println("".trim())
+            }
+            package zauber
+            class Any
+            external class Int(val content: Int) {
+                external fun plus(other: Int): Int
+                external fun minus(other: Int): Int
+                external fun compareTo(other: Int): Int
+                external fun equals(other: Int): Boolean
+                fun inc() = this + 1
+                fun dec() = this - 1
+            }
+            external class Char(val content: Char) {
+                fun isWhitespace() = this in " \t\r\n"
+                external fun equals(other: Char): Boolean
+            }
+            external class Byte(val content: Byte) {
+                external fun toChar(): Char
+            }
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external fun get(index: Int): V
+                external fun set(index: Int, v: V)
+                
+                fun copyOfRange(i0: Int, i1: Int): Array<V> {
+                    val clone = Array<V>(i1-i0)
+                    var i = i0
+                    while (i < i1) {
+                        clone[i - i0] = this[i]
+                        i++
+                    }
+                    return clone
+                }
+            }
+            typealias ByteArray = Array<Byte>
+            class String(val content: ByteArray) {
+                val length get() = content.size
+                
+                operator fun get(index: Int) = content[index].toChar()
+                
+                fun trim(): String {
+                    var i0 = 0
+                    var i1 = length-1
+                    if (i1 == -1) return ""
+                    while(this[i0].isWhitespace()) {
+                        if (i0 == i1) return ""
+                        i0++
+                    }
+                    while(this[i1].isWhitespace()) {
+                        i1--
+                    }
+                    return substring(i0,i1+1)
+                }
+                
+                fun substring(i0: Int, i1: Int): String {
+                    return String(content.copyOfRange(i0, i1))
+                }
+                
+                fun contains(char: Char): Boolean {
+                    var i = 0
+                    while (i < length) {
+                        if(this[i] == char) return true
+                        i++
+                    }
+                    return false
+                }
+            }
+            external fun println(arg0: String)
+        """.trimIndent()
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("Hello World\na\n\n", printed)
+    }
 }

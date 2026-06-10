@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple
 
+import glsl.exp
 import me.anno.utils.FullMap
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles.bold
@@ -131,21 +132,24 @@ object ASTSimplifier {
             val unitType = Types.Unit
             val instance = flow1v.block.field(unitType)
             flow1v.block.add(SimpleGetObject(instance, unitType.clazz, expr.scope, expr.origin))
-            addSimpleReturn(method0, instance, expr, flow1v.block)
+            addSimpleReturn(flow1v.block.graph, method0, instance, expr, flow1v.block)
         }
 
         val flow1r = flow1.returned
         if (flow1r != null) {
-            addSimpleReturn(method0, flow1r.value, expr, flow1r.block)
+            addSimpleReturn(flow1r.block.graph, method0, flow1r.value, expr, flow1r.block)
         }
 
         val flow1t = flow1.thrown
         flow1t?.block?.add(SimpleThrow(flow1t.value.use(), expr.scope, expr.origin))
     }
 
-    fun addSimpleReturn(method0: Specialization, value: SimpleField, expr: Expression, block: SimpleBlock) {
+    fun addSimpleReturn(
+        graph: SimpleGraph, method0: Specialization,
+        value: SimpleField, expr: Expression, block: SimpleBlock
+    ) {
 
-        val expectedReturnType = method0.method.resolveReturnType(method0)
+        val expectedReturnType = graph.expectedReturnType
         check(isSubTypeOf(expectedReturnType, value.type)) {
             "Expected return value in ${method0.method.ownerScope}.${method0.method} " +
                     "to match $expectedReturnType, got ${value.type}"
@@ -187,6 +191,15 @@ object ASTSimplifier {
             is ReturnExpression -> {
                 val field = simplifyImpl(context, expr.value, block0, flow0, true, expr)
                 val field1v = field.value ?: return field
+
+                val expectedReturnType = block0.graph.expectedReturnType
+                check(isSubTypeOf(expectedReturnType, field1v.value.type)) {
+                    val method = block0.graph.method
+                    "Expected return value in ${method.ownerScope}.$method " +
+                            "to match $expectedReturnType, got ${field1v.value.type}\n" +
+                            "  at ${resolveOrigin(expr.origin)}"
+                }
+
                 return field.joinReturnNoValue(field1v.value.use(), field1v.block)
             }
 

@@ -21,6 +21,7 @@ import me.anno.zauber.types.impl.ClassType
 class SimpleGraph(val method0: Specialization) {
 
     val method = method0.method
+    val expectedReturnType = method.resolveReturnType(method0)
 
     val blocks = ArrayList<SimpleBlock>()
     val startBlock = SimpleBlock(this)

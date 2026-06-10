@@ -158,12 +158,9 @@ class Runtime {
         method.scope[ScopeInitType.CODE_GENERATION] // load method
 
         if (method.isExternal()) {
-            val name = (method as Method).name
-            val parameterTypes = method.valueParameters.map { parameter ->
-                val type = parameter.type
-                (type as? UnresolvedType)?.resolvedName ?: type
-            }
-            val key = ExternalKey(method.scope.parent!!, name, parameterTypes)
+            val parameterTypes = method.valueParameters.map { it.type }
+            println("Method-params: ${method.ownerScope}.$method -> $parameterTypes")
+            val key = ExternalKey(method.scope.parent!!,  method.name, parameterTypes)
             val method = externalMethods[key]
                 ?: error("Missing external method ${key.str()}")
             val value = method.process(methodOwnerInstance, valueParameters)
