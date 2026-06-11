@@ -641,7 +641,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String) {
         val needsArrow = if (field.isOwnerThis(graph)) {
-            builder.append(if (forFieldAccess == "" && field.type in nativeNumbers) "this->content" else "this")
+            builder.append(if (meansContent(field, forFieldAccess)) "this->content" else "this")
             true
         } else if (field.isObjectLike()) {
             val objectType = (field.type as ClassType).clazz
@@ -774,7 +774,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         // mark block as jumpable
         if (block.inputBlocks.isNotEmpty()) {
             dedent()
-            builder.append("b").append(block.blockId).append(':')
+            builder.append("b").append(block.id).append(':')
             nextLine()
         }
 
@@ -789,10 +789,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             if (block.isBranch) {
                 builder.append("if (")
                 appendFieldName(graph, block.branchCondition!!)
-                builder.append(") goto b").append(block.ifBranch!!.blockId)
-                builder.append("; else goto b").append(block.elseBranch!!.blockId).append(';')
+                builder.append(") goto b").append(block.ifBranch!!.id)
+                builder.append("; else goto b").append(block.elseBranch!!.id).append(';')
             } else {
-                builder.append("goto b").append(block.nextBranch!!.blockId).append(';')
+                builder.append("goto b").append(block.nextBranch!!.id).append(';')
             }
             nextLine()
         }
@@ -815,7 +815,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 }
             }
             is SimpleTailCall -> {
-                builder.append("goto b").append(expr.toBeCalled.blockId).append(';')
+                builder.append("goto b").append(expr.toBeCalled.id).append(';')
                 nextLine()
             }
             is SimpleBoxCast -> {

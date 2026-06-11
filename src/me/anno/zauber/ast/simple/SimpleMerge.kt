@@ -40,4 +40,14 @@ class SimpleMerge(
     override fun execute(): BlockReturn? = null
 
     override fun toString(): String = "$dst = ${bold("Merge")}($ifField,$elseField)"
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleMerge(
+            src.cloned(this.dst, dst),
+            src.cloned(ifField, dst),
+            src.cloned(elseField, dst),
+            scope, origin
+        )
+    }
+
 }

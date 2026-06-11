@@ -2,9 +2,11 @@ package me.anno.zauber.ast.reverse
 
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
@@ -27,4 +29,13 @@ class SimpleLocalFieldEqualsInt(
     override fun toString(): String {
         return "$dst = $field == ${style("$expected", StringStyles.DARK_BLUE)}"
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleLocalFieldEqualsInt(
+            src.cloned(this.dst, dst),
+            src.cloned(field, dst), expected,
+            scope, origin
+        )
+    }
+
 }

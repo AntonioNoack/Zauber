@@ -570,8 +570,8 @@ class RustSourceGenerator : JavaSourceGenerator() {
                 val blocks = graph.blocks
                 for (i in blocks.indices) {
                     val block = blocks[i]
-                    if (i == 0 || targets[block.blockId]) {
-                        builder.append(block.blockId).append(" => ")
+                    if (i == 0 || targets[block.id]) {
+                        builder.append(block.id).append(" => ")
                         writeBlock {
                             appendSimpleBlock(graph, block)
                         }
@@ -690,7 +690,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                 }
             }
             is SimpleTailCall -> {
-                builder.append("nextBlockId = ").append(expr.toBeCalled.blockId).append(';')
+                builder.append("nextBlockId = ").append(expr.toBeCalled.id).append(';')
                 nextLine()
                 builder.append("continue 'blockTable;")
             }

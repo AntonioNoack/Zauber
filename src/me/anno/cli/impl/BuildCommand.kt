@@ -392,7 +392,7 @@ object BuildCommand : CommandImpl("build", "b") {
             Types.ParameterizedTest
         )
         return method.memberScope.annotations.any {
-            val annotationType = it.path.resolve() as ClassType
+            val annotationType = it.type.resolve() as ClassType
             annotationType in testTypes
         }
     }

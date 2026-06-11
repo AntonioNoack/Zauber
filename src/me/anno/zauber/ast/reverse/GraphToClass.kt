@@ -78,7 +78,7 @@ object GraphToClass {
         simpleFields: Map<SimpleField, Field>,
         localFields: Map<LocalField, Field>
     ): SimpleGraph {
-        val methodScope = newClass.getOrPut("b${block.blockId}", ScopeType.METHOD)
+        val methodScope = newClass.getOrPut("b${block.id}", ScopeType.METHOD)
         val origin = block.instructions.firstOrNull()?.origin ?: graph.method.origin
         val method = Method(
             null, false, methodScope.name,

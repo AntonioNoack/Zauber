@@ -1,7 +1,9 @@
 package me.anno.zauber.ast.simple.controlflow
 
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.scope.Scope
 
@@ -12,5 +14,15 @@ class SimpleYield(
     val continueBlock: SimpleBlock,
     scope: Scope, origin: Long,
 ) : SimpleExit(field, scope, origin) {
+
     override val returnType: ReturnType get() = ReturnType.YIELD
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleYield(
+            src.cloned(field, dst),
+            src.cloned(continueBlock, dst),
+            scope, origin
+        )
+    }
+
 }

@@ -1,6 +1,7 @@
 package me.anno.zauber.ast.simple.fields
 
 import me.anno.utils.StringStyles.bold
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -29,4 +30,12 @@ class SimpleGetObject(
         runtime[dst] = runtime.getObjectInstance(objectScope)
         return null
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleGetObject(
+            src.cloned(this.dst, dst),
+            objectScope, scope, origin
+        )
+    }
+
 }

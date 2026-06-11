@@ -3,9 +3,9 @@ package me.anno.zauber.ast.reverse
 import me.anno.utils.StringStyles.bold
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
-import me.anno.zauber.interpreting.BlockReturn
 
 class SimpleLoop private constructor(
     val condition: SimpleField?,
@@ -26,9 +26,7 @@ class SimpleLoop private constructor(
         }
     }
 
-    override fun execute(): BlockReturn? {
-        TODO("Not yet implemented")
-    }
+    override fun execute() = throw NotImplementedError("Not meant to be executed")
 
     override fun toString(): String {
         return if (condition != null) {
@@ -37,4 +35,13 @@ class SimpleLoop private constructor(
             "${bold("SimpleLoop")}(${body.str()})"
         }
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleLoop(
+            src.cloned1(condition, dst),
+            src.cloned1(conditionBlock, dst),
+            negate, src.cloned(body, dst),
+        )
+    }
+
 }

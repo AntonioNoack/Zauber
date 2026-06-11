@@ -108,7 +108,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
             val t0 = System.nanoTime()
             try {
                 testNumberConversionsImpl()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
             val t1 = System.nanoTime()
             println("Run $i, ${(t1 - t0) * 1e-6f } ms")
@@ -132,6 +132,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
 
     @Test
     fun testStringOps() {
+        // todo bug: zauber.Array.set(zauber.Int, zauber.Byte) is somehow missing; it should not even be available like that...
         testStringOpsImpl()
     }
 

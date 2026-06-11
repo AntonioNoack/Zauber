@@ -2,7 +2,9 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Instance
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -26,13 +28,24 @@ class SimpleConstructorCall(
     init {
         check(method is Constructor)
         check(method.valueParameters.size == valueParameters.size)
-        check(self.type is ClassType)
+        check(self.type is ClassType) {
+            "Cannot construct ${self.type} (${self.type.javaClass.simpleName})"
+        }
         check(self.type.clazz.isClassLike()) { "Cannot invoke constructor on self $self" }
     }
 
     override fun toString(): String {
         (0 until 1).reversed()
         return "${if (isThis) "this" else "super"}${valueParameters.joinToString(", ", "(", ")")}"
+    }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleConstructorCall(
+            src.cloned(this.dst, dst),
+            isThis, src.cloned(thisInstance, dst),
+            specialization, valueParameters.map { src.cloned(it, dst) },
+            scope, origin
+        )
     }
 
     override fun execute() = eval()

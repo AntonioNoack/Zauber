@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple.fields
 import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -27,4 +28,13 @@ class SimpleGetLocalField(
                 style("local#${field.id}", YELLOW) +
                 style("\"${field.name}\"", GREEN)
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleGetLocalField(
+            src.cloned(this.dst, dst),
+            src.cloned(field, dst),
+            scope, origin
+        )
+    }
+
 }

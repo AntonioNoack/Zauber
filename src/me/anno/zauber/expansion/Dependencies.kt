@@ -119,7 +119,7 @@ object Dependencies {
         check(method.isMethodLike())
         if (method.method.isExternal() || method.method.hasNoBody()) return
 
-        val simplified = ASTSimplifier.simplify(method)
+        val simplified = ASTSimplifier.simplify(method, readOnly = true)
         for (node in simplified.blocks) {
             for (instr in node.instructions) {
 

@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime
 import me.anno.zauber.scope.Scope
@@ -19,4 +21,13 @@ class SimpleGetTypeFromInstance(
         runtime[dst] = runtime.getTypeInstance(instance.clazz.type)
         return null
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleGetTypeFromInstance(
+            src.cloned(this.dst, dst),
+            src.cloned(value, dst),
+            scope, origin
+        )
+    }
+
 }

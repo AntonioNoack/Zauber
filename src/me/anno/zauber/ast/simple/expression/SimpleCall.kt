@@ -8,7 +8,9 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.MethodOverrides.sameParameters
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -201,7 +203,7 @@ class SimpleCall(
             .append(valueParameters.joinToString(", ", "(", ")"))
         val ot = onThrown
         if (ot != null) {
-            builder.append(" throws b").append(ot.block.blockId)
+            builder.append(" throws b").append(ot.block.id)
                 .append("(%").append(ot.value.id).append(')')
         }
         return builder.toString()
@@ -227,4 +229,17 @@ class SimpleCall(
         val method1 = specialization.withScope(method.memberScope)
         return runtime.executeCall(thisInstance, selfInstance, method1, valueParameters).retToVal()
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleCall(
+            src.cloned(this.dst, dst),
+            methodName, methods,
+            src.cloned(thisInstance, dst),
+            src.cloned1(selfInstance, dst),
+            specialization, valueParameters.map { src.cloned(it, dst) },
+            scopeBridgingParameters.map { src.cloned(it, dst) },
+            scope, origin
+        )
+    }
+
 }

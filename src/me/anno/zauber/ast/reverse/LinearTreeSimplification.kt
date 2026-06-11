@@ -41,8 +41,8 @@ object LinearTreeSimplification {
         var a = a
         var b = b
         while (a !== b) {
-            val da = depths[a.blockId]
-            val db = depths[b.blockId]
+            val da = depths[a.id]
+            val db = depths[b.id]
             check(da >= 0)
             check(db >= 0)
             val targetDepth = if (da == db) da - 1 else min(da, db)
@@ -58,7 +58,7 @@ object LinearTreeSimplification {
         targetDepth: Int,
     ): SimpleBlock {
         var node = node
-        var depth = depths[node.blockId]
+        var depth = depths[node.id]
         check(depth >= 0)
         check(targetDepth >= 0) { "Target-depth cannot be negative" }
         while (depth > targetDepth) {
@@ -66,11 +66,11 @@ object LinearTreeSimplification {
                 error("How can ${node.str()} be unreachable?")
             }
             node = node.inputBlocks.minBy {
-                val depth = depths[it.blockId]
+                val depth = depths[it.id]
                 check(depth >= 0)
                 depth
             }
-            depth = depths[node.blockId]
+            depth = depths[node.id]
             check(depth >= 0)
         }
         return node
@@ -98,8 +98,8 @@ object LinearTreeSimplification {
             val instr = if (node.isBranch) {
                 SimpleConditionalInt(
                     value, node.branchCondition!!,
-                    node.ifBranch!!.blockId,
-                    node.elseBranch!!.blockId,
+                    node.ifBranch!!.id,
+                    node.elseBranch!!.id,
                     scope, origin
                 )
             } else {
@@ -114,7 +114,7 @@ object LinearTreeSimplification {
             val node = nodes[i]
             val dst = findDominatorParent(node, depth).instructions
             val enterNode = graph.field(Types.Boolean)
-            dst.add(SimpleLocalFieldEqualsInt(enterNode, state, node.blockId, scope, origin))
+            dst.add(SimpleLocalFieldEqualsInt(enterNode, state, node.id, scope, origin))
             dst.add(SimpleBranch(enterNode, node, null))
         }
 
@@ -134,9 +134,9 @@ object LinearTreeSimplification {
     }
 
     private fun computeDepth(graph: SimpleGraph, nodes: List<SimpleBlock>): IntArray {
-        val depths = IntArray(nodes.maxOf { it.blockId } + 1)
+        val depths = IntArray(nodes.maxOf { it.id } + 1)
         depths.fill(-1)
-        depths[nodes.first().blockId] = 0 // start at depth 0
+        depths[nodes.first().id] = 0 // start at depth 0
 
         val end = nodes.last()
         for (i in 1 until nodes.size) {
@@ -146,14 +146,14 @@ object LinearTreeSimplification {
                 error("Node ${node.str()} has no inputs")
             }
             val depth = node.inputBlocks.maxOf { input ->
-                val depth = depths[input.blockId]
+                val depth = depths[input.id]
                 check(depth >= 0 || node === end) {
                     "Depth cannot be negative, because nodes are sortable, " +
                             "${nodes.map { it.short() }}, ${node.str()} by ${node.inputBlocks.map { it.str() }}"
                 }
                 depth
             } + 1
-            depths[node.blockId] = depth
+            depths[node.id] = depth
         }
         return depths
     }

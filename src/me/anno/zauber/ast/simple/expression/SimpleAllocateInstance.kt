@@ -3,7 +3,9 @@ package me.anno.zauber.ast.simple.expression
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.utils.assertEquals
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
@@ -32,4 +34,13 @@ class SimpleAllocateInstance(
         return "$dst = ${style("new", StringStyles.ORANGE)} " +
                 style(allocatedType.toString(), StringStyles.LIGHT_ORANGE)
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleAllocateInstance(
+            src.cloned(this.dst, dst), allocatedType,
+            paramsForLater.map { src.cloned(it, dst) },
+            specialization, scope, origin
+        )
+    }
+
 }

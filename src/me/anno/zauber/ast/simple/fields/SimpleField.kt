@@ -10,6 +10,7 @@ import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.unresolved.*
 
 /**
  * LLVM-style field, which is assigned exactly once. SimpleMergeInfo joins fields where necessary.
@@ -20,6 +21,21 @@ class SimpleField(
     // todo this should be converted to Instance, so we can use it at runtime (?)
     val constantRef: Expression?
 ) {
+
+    init {
+        when (type) {
+            is UnresolvedClassType,
+            is UnresolvedSubType,
+            is UnresolvedAndType,
+            is UnresolvedUnionType,
+            is UnresolvedNotType -> error("$this cannot be unresolved")
+            is ClassType -> {
+                if (type.clazz.isTypeAlias()) {
+                    error("$this cannot be unresolved (a type-alias)")
+                }
+            }
+        }
+    }
 
     var numReads = 0
     var mergeInfo: SimpleMerge? = null
@@ -58,4 +74,5 @@ class SimpleField(
             else -> "$idName[$type]"
         } + if (mergeInfo != null) "->${style("%${dst.id}", YELLOW)}" else ""
     }
+
 }

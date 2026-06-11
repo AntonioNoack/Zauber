@@ -717,7 +717,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         beginLoop("blockTable")
 
         val targets = findTailCallTargets(graph)
-        val options = graph.blocks.filterIndexed { index, block -> index == 0 || targets[block.blockId] }
+        val options = graph.blocks.filterIndexed { index, block -> index == 0 || targets[block.id] }
         blockTableOptions = options
 
         repeat(options.size + 1) { index ->
@@ -1255,7 +1255,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 endIfElse()
             }
             is SimpleLoop -> {
-                val name = "b${expr.body.blockId}"
+                val name = "b${expr.body.id}"
                 if (expr.condition == null) {
 
                     beginLoop(name)

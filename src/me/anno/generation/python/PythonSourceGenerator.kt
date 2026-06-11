@@ -18,7 +18,6 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -606,7 +605,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 }
             }
             is SimpleTailCall -> {
-                builder.append("nextBlockId = ").append(expr.toBeCalled.blockId)
+                builder.append("nextBlockId = ").append(expr.toBeCalled.id)
                 nextLine()
                 builder.append("raise StopIteration")
             }
@@ -722,8 +721,8 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                     val blocks = graph.blocks
                     for (i in blocks.indices) {
                         val block = blocks[i]
-                        if (i == 0 || targets[block.blockId]) {
-                            builder.append("case ").append(block.blockId)
+                        if (i == 0 || targets[block.id]) {
+                            builder.append("case ").append(block.id)
                             writeBlock {
                                 appendSimpleBlock(graph, block)
                             }
@@ -771,7 +770,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun appendFieldName(graph: SimpleGraph, field: SimpleField, forFieldAccess: String) {
         if (field.isOwnerThis(graph)) {
-            builder.append(if (forFieldAccess == "" && field.type in nativeNumbers) "self.content" else "self")
+            builder.append(if (meansContent(field, "")) "self.content" else "self")
         } else if (field.isObjectLike()) {
             val objectScope = (field.type as ClassType).clazz
             appendGetObjectInstance(objectScope, graph.method.scope)

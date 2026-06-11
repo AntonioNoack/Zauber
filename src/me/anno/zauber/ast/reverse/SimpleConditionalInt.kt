@@ -1,7 +1,9 @@
 package me.anno.zauber.ast.reverse
 
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
@@ -24,4 +26,13 @@ class SimpleConditionalInt(
     override fun toString(): String {
         return "$dst = $condition ? $ifTrue : $ifFalse"
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleConditionalInt(
+            src.cloned(this.dst, dst),
+            src.cloned(condition, dst),
+            ifTrue, ifFalse, scope, origin
+        )
+    }
+
 }

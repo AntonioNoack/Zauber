@@ -48,6 +48,14 @@ class SimpleBlock(val graph: SimpleGraph) {
             linkTo(value)
         }
 
+    val inputBlocks = ArrayList<SimpleBlock>(4)
+
+    var nextBranch: SimpleBlock?
+        get() = ifBranch
+        set(value) {
+            ifBranch = value
+        }
+
     val isBranch get() = branchCondition != null && ifBranch != elseBranch
 
     private fun linkTo(value: SimpleBlock?) {
@@ -59,14 +67,6 @@ class SimpleBlock(val graph: SimpleGraph) {
         value ?: return
         value.inputBlocks.remove(this)
     }
-
-    val inputBlocks = ArrayList<SimpleBlock>(4)
-
-    var nextBranch: SimpleBlock?
-        get() = ifBranch
-        set(value) {
-            ifBranch = value
-        }
 
 
     fun clear() {
@@ -91,8 +91,8 @@ class SimpleBlock(val graph: SimpleGraph) {
         return (ifBranch == output || ifBranch == null) && (elseBranch == output || elseBranch == null)
     }
 
-    val blockId: Int =
-        if (graph.blocks.isNotEmpty()) graph.blocks.last().blockId + 1
+    val id: Int =
+        if (graph.blocks.isNotEmpty()) graph.blocks.last().id + 1
         else 0
 
     val instructions = ArrayList<SimpleInstruction>()
@@ -116,7 +116,7 @@ class SimpleBlock(val graph: SimpleGraph) {
         thisScope[ScopeInitType.AFTER_DISCOVERY]
         if (thisScope.isObjectLike()) {
             // are objects comptime? yes
-            val dst = field(thisScope.typeWithArgs)
+            val dst = field(thisScope.typeWithArgs2)
             add(SimpleGetObject(dst, thisScope, scope, origin))
             return dst
         } else {
@@ -237,7 +237,7 @@ class SimpleBlock(val graph: SimpleGraph) {
         return builder.toString()
     }
 
-    fun str() = style("b$blockId", GREEN)
+    fun str() = style("b$id", GREEN)
 
     fun short(): StringBuilder {
         val builder = StringBuilder()
@@ -249,10 +249,10 @@ class SimpleBlock(val graph: SimpleGraph) {
             builder.append(StringStyles.style("end", StringStyles.RED))
         } else if (branchCondition != null) {
             builder.append(branchCondition).append(" ? ")
-                .append(style("b${ifBranch!!.blockId}", GREEN)).append(" : ")
-                .append(style("b${elseBranch!!.blockId}", GREEN))
+                .append(style("b${ifBranch!!.id}", GREEN)).append(" : ")
+                .append(style("b${elseBranch!!.id}", GREEN))
         } else {
-            builder.append(style("b${nextBranch!!.blockId}", GREEN))
+            builder.append(style("b${nextBranch!!.id}", GREEN))
         }
         builder.append(']')
         return builder

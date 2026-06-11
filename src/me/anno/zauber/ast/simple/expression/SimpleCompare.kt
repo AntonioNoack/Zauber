@@ -1,7 +1,9 @@
 package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.expression.CompareType
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
@@ -49,5 +51,14 @@ class SimpleCompare(
         val asBool = type.eval(asInt)
         runtime[dst] = runtime.getBool(asBool)
         return null
+    }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleCompare(
+            src.cloned(this.dst, dst),
+            src.cloned(left, dst),
+            src.cloned(right, dst),
+            type, numberType, scope, origin
+        )
     }
 }

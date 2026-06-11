@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple.fields
 
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.scope.Scope
 
@@ -14,4 +15,6 @@ abstract class SimpleInstruction(val scope: Scope, val origin: Long) {
     open fun replaceSimpleField(old: SimpleField, new: SimpleField) {
         TODO("Replace fields for ${javaClass.simpleName}")
     }
+
+    abstract fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction
 }

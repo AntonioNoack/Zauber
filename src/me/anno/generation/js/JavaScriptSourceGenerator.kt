@@ -829,8 +829,8 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                 val blocks = graph.blocks
                 for (i in blocks.indices) {
                     val block = blocks[i]
-                    if (i == 0 || targets[block.blockId]) {
-                        builder.append("case ").append(block.blockId).append(':')
+                    if (i == 0 || targets[block.id]) {
+                        builder.append("case ").append(block.id).append(':')
                         writeBlock {
                             appendSimpleBlock(graph, block)
                         }

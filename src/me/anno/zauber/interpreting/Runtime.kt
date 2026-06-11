@@ -8,7 +8,6 @@ import me.anno.utils.StringStyles.style
 import me.anno.utils.assertTrue
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
@@ -29,7 +28,6 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.impl.unresolved.UnresolvedType
 import javax.lang.model.type.UnionType
 
 class Runtime {
@@ -160,7 +158,7 @@ class Runtime {
         if (method.isExternal()) {
             val parameterTypes = method.valueParameters.map { it.type }
             println("Method-params: ${method.ownerScope}.$method -> $parameterTypes")
-            val key = ExternalKey(method.scope.parent!!,  method.name, parameterTypes)
+            val key = ExternalKey(method.scope.parent!!, method.name, parameterTypes)
             val method = externalMethods[key]
                 ?: error("Missing external method ${key.str()}")
             val value = method.process(methodOwnerInstance, valueParameters)
@@ -171,7 +169,7 @@ class Runtime {
             error("Missing body for ${method.ownerScope}.$method\n  at ${resolveOrigin(method.origin)}")
         }
 
-        val graph = ASTSimplifier.simplify(specialization)
+        val graph = ASTSimplifier.simplify(specialization, readOnly = true)
 
         val call = Call.create(method)
         prepareCall(graph, call, methodOwnerInstance, explicitSelfInstance, valueParameters)

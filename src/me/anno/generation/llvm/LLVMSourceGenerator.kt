@@ -471,8 +471,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     }
 
     private fun startNextBlock(block: SimpleBlock) {
-        if (block.blockId == 0) return // start block cannot be jumped to
-        currBranch = "b${block.blockId}"
+        if (block.id == 0) return // start block cannot be jumped to
+        currBranch = "b${block.id}"
         dedent()
         builder.append(currBranch).append(':')
         nextLine()
@@ -482,12 +482,12 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         if (block.isBranch) {
             val condition = getSimpleFieldReg(graph, block.branchCondition!!)
             builder.append("  br i1 ").append(condition)
-                .append(", label %b").append(block.ifBranch!!.blockId)
-                .append(", label %b").append(block.elseBranch!!.blockId)
+                .append(", label %b").append(block.ifBranch!!.id)
+                .append(", label %b").append(block.elseBranch!!.id)
         } else {
             val next = block.nextBranch
             if (next != null) {
-                builder.append("br label %b").append(next.blockId)
+                builder.append("br label %b").append(next.id)
             } else {
                 builder.append("unreachable")
             }

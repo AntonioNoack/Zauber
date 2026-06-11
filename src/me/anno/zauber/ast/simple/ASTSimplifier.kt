@@ -1,6 +1,5 @@
 package me.anno.zauber.ast.simple
 
-import glsl.exp
 import me.anno.utils.FullMap
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles.bold
@@ -88,32 +87,34 @@ object ASTSimplifier {
     // todo calculate what errors a function throws,
     //  and handle all possibilities after each call
 
-    fun simplify(method0: Specialization): SimpleGraph {
+    fun simplify(method0: Specialization, readOnly: Boolean = false): SimpleGraph {
         check(method0.isMethodLike())
-        return cache.getOrPut(method0) {
-            method0.use { // use scope
-                val context = ResolutionContext(null, method0, true, null)
-
-                if (LOGGER.isInfoEnabled) LOGGER.info(
-                    "${bold("Simplifying")} ${method0.scope}, ${method0.method}" +
-                            "\n  ${method0.method.body}"
-                )
-
-                val expr = method0.method.getSpecializedBody(method0)
-                    ?: error("Specialized body is null? For $method0")
-
-                val graph = SimpleGraph(method0)
-                graph.initializeSpecialFields(context)
-
-                val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
-                val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
-                graph.endFlow = flow1
-                finishFlows(flow1, method0, expr)
-
-                if (LOGGER.isInfoEnabled) LOGGER.info("\n${bold("Simplified")} $method0:\n  $flow1\n  to $graph\n")
-                graph
-            }
+        val graph = cache.getOrPut(method0) {
+            method0.use { /* use scope */ simplifyImpl(method0) }
         }
+        return if (readOnly) graph else graph.clone()
+    }
+
+    private fun simplifyImpl(method0: Specialization): SimpleGraph {
+        val context = ResolutionContext(null, method0, true, null)
+
+        if (LOGGER.isInfoEnabled) LOGGER.info(
+            "${bold("Simplifying")} ${method0.scope}, ${method0.method}" +
+                    "\n  ${method0.method.body}"
+        )
+
+        val expr = method0.method.getSpecializedBody(method0)
+            ?: error("Specialized body is null? For $method0")
+
+        val graph = SimpleGraph(method0)
+        graph.initializeSpecialFields(context)
+
+        val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
+        val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
+        finishFlows(flow1, method0, expr)
+
+        if (LOGGER.isInfoEnabled) LOGGER.info("\n${bold("Simplified")} $method0:\n  $flow1\n  to $graph\n")
+        return graph
     }
 
     private fun finishFlows(flow1: FlowResult, method0: Specialization, expr: Expression) {

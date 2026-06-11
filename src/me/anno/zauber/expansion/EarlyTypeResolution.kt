@@ -24,23 +24,25 @@ object EarlyTypeResolution {
     }
 
     private fun replaceUnresolvedTypes(scope: Scope) {
-        val selfScope = findSelfScope(scope)
+        val selfScope0 = findSelfScope(scope)
 
-        val isOpen = selfScope != null && selfScope.isOpen()
-        val selfScope1 = if (isOpen) null else selfScope
+        val isOpen = selfScope0 != null && selfScope0.isOpen()
+        val selfScope = if (isOpen) null else selfScope0
+
+        replaceAnnotationTypes(scope, selfScope)
 
         val asMethod = scope.selfAsMethod
-        if (asMethod != null) replaceUnresolvedTypesForMethod(asMethod, selfScope1)
+        if (asMethod != null) replaceUnresolvedTypesForMethod(asMethod, selfScope)
 
         val asConstructor = scope.selfAsConstructor
-        if (asConstructor != null) replaceUnresolvedTypesForConstructor(asConstructor, selfScope1)
+        if (asConstructor != null) replaceUnresolvedTypesForConstructor(asConstructor, selfScope)
 
         val asLambda = scope.selfAsLambda
-        if (asLambda != null) replaceUnresolvedTypesForLambda(asLambda, selfScope1)
+        if (asLambda != null) replaceUnresolvedTypesForLambda(asLambda, selfScope)
 
         val fields = scope.fields
         for (i in fields.indices) {
-            replaceUnresolvedTypesForField(fields[i], selfScope1)
+            replaceUnresolvedTypesForField(fields[i], selfScope)
         }
     }
 
@@ -103,6 +105,14 @@ object EarlyTypeResolution {
         while (true) {
             if (scope.isClassLike() || scope.isMethodLike()) return scope
             scope = scope.parentIfSameFile ?: return root
+        }
+    }
+
+    private fun replaceAnnotationTypes(scope: Scope, selfScope: Scope?) {
+        val annotations = scope.annotations
+        for (i in annotations.indices) {
+            val annotation = annotations[i]
+            annotation.type = annotation.type.resolve(selfScope)
         }
     }
 

@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
@@ -22,4 +24,14 @@ class SimpleCheckIdentical(
         runtime[dst] = runtime.getBool((left == right) xor negated)
         return null
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleCheckIdentical(
+            src.cloned(this.dst, dst),
+            src.cloned(left, dst),
+            src.cloned(right, dst),
+            negated, scope, origin
+        )
+    }
+
 }

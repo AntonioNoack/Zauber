@@ -960,7 +960,7 @@ open class JavaSourceGenerator : Generator() {
         for (block in graph.blocks) {
             for (instr in block.instructions) {
                 if (instr is SimpleTailCall) {
-                    targets.set(instr.toBeCalled.blockId)
+                    targets.set(instr.toBeCalled.id)
                 }
             }
         }
@@ -977,8 +977,8 @@ open class JavaSourceGenerator : Generator() {
                 val blocks = graph.blocks
                 for (i in blocks.indices) {
                     val block = blocks[i]
-                    if (i == 0 || targets[block.blockId]) {
-                        builder.append("case ").append(block.blockId).append(':')
+                    if (i == 0 || targets[block.id]) {
+                        builder.append("case ").append(block.id).append(':')
                         writeBlock {
                             appendSimpleBlock(graph, block)
                         }
@@ -1168,12 +1168,16 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun meansContent(field: SimpleField, forFieldAccess: String): Boolean {
+        return forFieldAccess == "" && field.type in nativeNumbers
+    }
+
     open fun appendFieldName(
         graph: SimpleGraph, field: SimpleField,
         forFieldAccess: String = ""
     ) {
         if (field.isOwnerThis(graph)) {
-            builder.append(if (forFieldAccess == "" && field.type in nativeNumbers) "this.content" else "this")
+            builder.append(if (meansContent(field, forFieldAccess)) "this.content" else "this")
         } else if (field.isObjectLike()) {
             val objectScope = (field.type as ClassType).clazz
             appendGetObjectInstance(objectScope, graph.method.scope)
@@ -1476,7 +1480,7 @@ open class JavaSourceGenerator : Generator() {
             is SimpleMerge -> { /* not usable in Java */
             }
             is SimpleTailCall -> {
-                builder.append("nextBlockId = ").append(expr.toBeCalled.blockId).append(';')
+                builder.append("nextBlockId = ").append(expr.toBeCalled.id).append(';')
                 nextLine()
                 builder.append("continue blockTable;")
             }

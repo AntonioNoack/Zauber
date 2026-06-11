@@ -13,7 +13,6 @@ import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution.catchFailures
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.typeresolution.ValueParameter
 import me.anno.zauber.types.Type
@@ -256,7 +255,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         val contextSelfScope = context.selfScope?.get(ScopeInitType.AFTER_OVERRIDES)
         val contextSelfType = context.selfType?.specialize(context)
 
-        val print = !catchFailures && LOGGER.isInfoEnabled
+        val print = LOGGER.isInfoEnabled
         if (print) LOGGER.info("ResolveInCodeScope($codeScope, ${contextSelfScope}, ${contextSelfType})")
 
         if (contextSelfScope != null && contextSelfType != null) {

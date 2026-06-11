@@ -1,6 +1,5 @@
 package me.anno.generation.c
 
-import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.InheritanceTable
@@ -8,7 +7,6 @@ import me.anno.generation.Specializations.specialization
 import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.Import2
 import me.anno.utils.FullMap
-import me.anno.utils.assertEquals
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
@@ -25,6 +23,7 @@ import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -34,7 +33,7 @@ import java.util.*
 /**
  * this is more custom than C++:
  * todo we need to implement inheritance explicitly
- * todo we also need to deduplicate methods with same name, but different parameters
+ * - deduplicate methods with same name, but different parameters
  * */
 open class CSourceGenerator : CppSourceGenerator() {
 
@@ -120,6 +119,22 @@ open class CSourceGenerator : CppSourceGenerator() {
         nextLine()
     }
 
+    override fun appendMethods(
+        classScope: Scope, className: String,
+        methods: Collection<Specialization>, headerOnly: Boolean
+    ) {
+        for (method0 in methods) {
+            val method = method0.method
+            if (method !is Method) continue
+            if (method.scope.parent != classScope || isCIncludeMethod(method)) {
+                // an inherited method -> skip, because it's already defined in the parent
+                continue
+            }
+
+            appendMethod(classScope, className, method0, headerOnly)
+        }
+    }
+
     override fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
         // nothing yet
     }
@@ -128,7 +143,25 @@ open class CSourceGenerator : CppSourceGenerator() {
         return false
     }
 
+    val CIncludeType = Types.getType("CInclude")
+
+    fun isCIncludeMethod(method: MethodLike): Boolean {
+        return method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+            .annotations.any { it.type == CIncludeType }
+    }
+
     override fun getMethodName(method0: Specialization): String {
+
+        // check CInclude annotations
+        val cInclude = method0.method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+            .annotations.firstOrNull { it.type == CIncludeType }
+
+        if (cInclude != null) {
+            val src = cInclude.params1[0].castToString()
+            nativeImports.add("#include $src")
+            return method0.method.name
+        }
+
         val ownerScope = method0.method.ownerScope
         val ownerSpec = method0.withScope(ownerScope)
         val clazzName = getClassName(ownerSpec.clazz, ownerSpec)
@@ -352,21 +385,23 @@ open class CSourceGenerator : CppSourceGenerator() {
     }
 
     private fun appendNonNativeCall(
-        graph: SimpleGraph, method: Specialization, expr: SimpleCall,
+        graph: SimpleGraph, method0: Specialization, expr: SimpleCall,
         withCast: Boolean
     ) {
-        val methodName = getMethodName(method)
+        val methodName = getMethodName(method0)
         builder.append(methodName).append('(')
 
         if (withCast) {
             builder.append('(')
-            val ownerType = inheritanceTable.getMethodOwnerType(method)
+            val ownerType = inheritanceTable.getMethodOwnerType(method0)
             appendType(ownerType, expr.scope, true)
             appendOwnershipSuffix(ownerType)
             builder.append(") ")
         }
 
-        appendFieldName(graph, expr.thisInstance, "")
+        if (!isCIncludeMethod(method0.method)) {
+            appendFieldName(graph, expr.thisInstance, "")
+        }
         appendValueParams(graph, expr.valueParameters, withBrackets = false)
         builder.append(')')
     }
@@ -474,12 +509,6 @@ open class CSourceGenerator : CppSourceGenerator() {
             }
             else -> super.appendInstrImpl(graph, expr)
         }
-    }
-
-    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
-        assertEquals(expr.methodName, "inc")
-        appendFieldName(graph, expr.thisInstance, "")
-        builder.append(" + 1")
     }
 
     override fun appendNumber(type: Type, expr: NumberExpression) {

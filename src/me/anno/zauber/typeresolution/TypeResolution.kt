@@ -1,6 +1,5 @@
 package me.anno.zauber.typeresolution
 
-import glsl.clamp
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.Zauber.STDLIB_NAME
 import me.anno.zauber.Zauber.root
@@ -11,11 +10,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.ComptimeValue
-import me.anno.zauber.types.impl.GenericType
-import me.anno.zauber.types.impl.LambdaType
-import me.anno.zauber.types.impl.NonObjectClassType
+import me.anno.zauber.types.impl.*
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NotType
 import me.anno.zauber.types.impl.arithmetic.NullType
@@ -29,18 +24,6 @@ import me.anno.zauber.types.impl.unresolved.UnresolvedType
 object TypeResolution {
 
     private val LOGGER = LogManager.getLogger(TypeResolution::class)
-
-    var catchFailures = false
-
-    fun doCatchFailures() {
-        catchFailures = true
-        LogManager.disable(
-            "TypeResolution,Inheritance," +
-                    "MemberResolver,ConstructorResolver,MethodResolver,FieldResolver," +
-                    "ResolvedField,ResolvedMethod,CallExpression,Field,ResolvedCallable," +
-                    "LambdaExpression,UnderdefinedValueParameter,FieldExpression"
-        )
-    }
 
     // todo make this depend on which language we currently parse?
     val langScope by threadLocal { root.getOrPut(STDLIB_NAME, null) }

@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.scope.Scope
@@ -20,4 +22,13 @@ class SimpleBoxCast(
         runtime[dst] = runtime[value]
         return null
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleBoxCast(
+            src.cloned(this.dst, dst),
+            src.cloned(value, dst),
+            scope, origin
+        )
+    }
+
 }

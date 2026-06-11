@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ReturnType
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
@@ -46,4 +48,14 @@ class SimpleCheckEquals(
             else -> throw NotImplementedError("$result in SimpleCheckEquals")
         }
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleCheckEquals(
+            src.cloned(this.dst, dst),
+            src.cloned(left, dst),
+            src.cloned(right, dst),
+            negated, method, scope, origin
+        )
+    }
+
 }

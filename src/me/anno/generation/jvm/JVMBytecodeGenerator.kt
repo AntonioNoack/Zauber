@@ -589,7 +589,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
     private fun appendGraph(code: JVMCodeBuilder, graph: SimpleGraph, locals: JVMLocals) {
         code.maxLocals = locals.maxLocals
 
-        val labels = graph.blocks.associateWith { "B${it.blockId}" }
+        val labels = graph.blocks.associateWith { "B${it.id}" }
         code.blockLabels = labels
 
         for (block in graph.blocks) {

@@ -6,7 +6,6 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
-import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.ast.simple.expression.SimpleBoxCast
 import me.anno.zauber.ast.simple.expression.SimpleCallable
@@ -39,10 +38,9 @@ class SimpleGraph(val method0: Specialization) {
 
     val capturedFields = HashMap<Capture, SimpleField>()
 
+    // todo these labels are only needed when building the graph, discard them later
     val continueLabels = HashMap<Scope, SimpleBlock>()
     val breakLabels = HashMap<Scope, SimpleBlock>()
-
-    lateinit var endFlow: FlowResult
 
     init {
         startBlock.isEntryPoint = true
@@ -221,7 +219,7 @@ class SimpleGraph(val method0: Specialization) {
         for (i in 1 until blocks.size) {
             val b0 = blocks[i - 1]
             val b1 = blocks[i]
-            check(b0.blockId < b1.blockId)
+            check(b0.id < b1.id)
         }
     }
 
@@ -315,6 +313,92 @@ class SimpleGraph(val method0: Specialization) {
                 i--
             }
         }
+    }
+
+    fun clone(): SimpleGraph {
+        check(blocks.withIndex().all { it.index == it.value.id })
+        check(localFields.withIndex().all { it.index == it.value.id })
+        check(simpleFields.withIndex().all { it.index == it.value.id })
+
+        val cloned = SimpleGraph(method0)
+        check(cloned.blocks.size == 1)
+        check(cloned.localFields.isEmpty())
+        check(cloned.simpleFields.isEmpty())
+
+        // ensure blocks
+        while (cloned.blocks.size < blocks.size) {
+            cloned.addBlock()
+        }
+
+        // ensure simple fields
+        while (cloned.simpleFields.size < simpleFields.size) {
+            val field = simpleFields[cloned.simpleFields.size]
+            cloned.field(field.type, field.constantRef)
+        }
+
+        // ensure local fields
+        while (cloned.localFields.size < localFields.size) {
+            val field = localFields[cloned.localFields.size]
+            cloned.createLocalField(field.field, field.name, field.type, field.isInsideMethod)
+        }
+
+        cloned.capturedFields.putAll(capturedFields.mapValues { cloned(it.value, cloned) })
+        cloned.breakLabels.putAll(breakLabels.mapValues { cloned(it.value, cloned) })
+        cloned.continueLabels.putAll(continueLabels.mapValues { cloned(it.value, cloned) })
+
+        for (block in blocks) {
+            val clonedBlock = cloned.blocks[block.id]
+            clonedBlock.instructions.ensureCapacity(block.instructions.size)
+            for (instr in block.instructions) {
+                clonedBlock.instructions.add(instr.clone(this, cloned))
+            }
+
+            clonedBlock.isEntryPoint = block.isEntryPoint
+            clonedBlock.branchCondition = block.branchCondition
+            clonedBlock.ifBranch = cloned1(block.ifBranch, cloned)
+            clonedBlock.elseBranch = cloned1(block.elseBranch, cloned)
+        }
+
+        cloned.unitField = cloned1(unitField, cloned)
+        cloned.thisField = cloned1(thisField, cloned)
+        cloned.selfField = cloned1(selfField, cloned)
+        cloned.parameterFields = parameterFields.map { cloned(it, cloned) }
+
+        for (i in cloned.simpleFields.indices) {
+            val src = simpleFields[i]
+            val dst = cloned.simpleFields[i]
+            dst.numReads = src.numReads
+            dst.fromLocalField = cloned1(src.fromLocalField, cloned)
+        }
+
+        return cloned
+    }
+
+    fun cloned(field: SimpleField, cloned: SimpleGraph): SimpleField {
+        return cloned.simpleFields[field.id]
+    }
+
+    fun cloned1(field: SimpleField?, cloned: SimpleGraph): SimpleField? {
+        if (field == null) return null
+        return cloned.simpleFields[field.id]
+    }
+
+    fun cloned(field: LocalField, cloned: SimpleGraph): LocalField {
+        return cloned.localFields[field.id]
+    }
+
+    fun cloned1(field: LocalField?, cloned: SimpleGraph): LocalField? {
+        if (field == null) return null
+        return cloned.localFields[field.id]
+    }
+
+    fun cloned(block: SimpleBlock, cloned: SimpleGraph): SimpleBlock {
+        return cloned.blocks[block.id]
+    }
+
+    fun cloned1(block: SimpleBlock?, cloned: SimpleGraph): SimpleBlock? {
+        if (block == null) return null
+        return cloned.blocks[block.id]
     }
 
 }

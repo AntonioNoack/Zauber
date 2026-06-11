@@ -1,6 +1,7 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCCompiler
+import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 
 /**
@@ -116,6 +117,44 @@ class CGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testUseNativeLibrary() {
-        TODO("Call into a native library")
+        val code = """
+            
+            @CInclude("<ctype.h>")
+            external fun isdigit(c: Char): Int
+            
+            fun main() {
+                println(if(isdigit('A')) 2 else 1)
+            }
+            
+            package zauber
+            class Any
+            external class Int(val content: Int)
+            external class Char(val content: Char)
+            
+            enum class Boolean { TRUE, FALSE }
+            class Array<V>(val size: Int) {
+                external fun get(index: Int): V
+                external fun set(index: Int, v: V)
+                
+                fun copyOfRange(i0: Int, i1: Int): Array<V> {
+                    val clone = Array<V>(i1-i0)
+                    var i = i0
+                    while (i < i1) {
+                        clone[i - i0] = this[i]
+                        i++
+                    }
+                    return clone
+                }
+            }
+            
+            class String
+            annotation class CInclude(val source: String)
+            
+            external fun println(arg0: Int)
+        """.trimIndent()
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+        assertEquals("2\n", printed)
     }
 }

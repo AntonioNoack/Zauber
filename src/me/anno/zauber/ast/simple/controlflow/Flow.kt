@@ -10,7 +10,7 @@ import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 data class Flow(val value: SimpleField, val block: SimpleBlock) {
     override fun toString(): String {
-        return "${style("b${block.blockId}", StringStyles.GREEN)}: $value"
+        return "${style("b${block.id}", StringStyles.GREEN)}: $value"
     }
 
     private fun joinFields(other: Flow, joinedBlock: SimpleBlock): SimpleField {

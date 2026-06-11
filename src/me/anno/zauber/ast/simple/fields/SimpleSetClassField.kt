@@ -3,6 +3,7 @@ package me.anno.zauber.ast.simple.fields
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
@@ -51,4 +52,13 @@ class SimpleSetClassField(
         runtime[selfInstance, field] = value.cloneIfValue()
         return null
     }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleSetClassField(
+            src.cloned(this.self, dst), field,
+            src.cloned(value, dst),
+            specialization, scope, origin
+        )
+    }
+
 }

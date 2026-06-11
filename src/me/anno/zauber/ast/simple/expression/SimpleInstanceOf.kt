@@ -2,8 +2,10 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.logging.LogManager
@@ -30,6 +32,14 @@ class SimpleInstanceOf private constructor(
         val expectedType = runtime.getClass(type)
         runtime[dst] = runtime.getBool(givenType.isSubTypeOf(expectedType))
         return null
+    }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleInstanceOf(
+            src.cloned(this.dst, dst),
+            src.cloned(value, dst),
+            type, scope, origin
+        )
     }
 
     companion object {

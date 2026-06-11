@@ -2,7 +2,9 @@ package me.anno.zauber.ast.simple.expression
 
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.DynamicMacroExpression
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.Macro.evaluateMacroNow
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.ConstExpr.evaluateExpressionUnsafe
@@ -37,7 +39,7 @@ class SimpleDynamicMacro(
             .append(valueParameters.joinToString(", ", "(", ")"))
         val ot = onThrown
         if (ot != null) {
-            builder.append(" throws b").append(ot.block.blockId)
+            builder.append(" throws b").append(ot.block.id)
                 .append("(%").append(ot.value.id).append(')')
         }
         return builder.toString()
@@ -47,6 +49,15 @@ class SimpleDynamicMacro(
         val valueParameters = valueParameters.map { param -> runtime[param] }
         val expression = evaluateMacroNow(method, valueParameters, imports, generics, original.scope, origin)
         return evaluateExpressionUnsafe(expression, Flags.NONE, method.returnType)
+    }
+
+    override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
+        return SimpleDynamicMacro(
+            src.cloned(this.dst, dst), original,
+            src.cloned(thisInstance, dst),
+            valueParameters.map { src.cloned(it, dst) },
+            scope, origin
+        )
     }
 
 }
