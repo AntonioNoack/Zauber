@@ -161,7 +161,7 @@ class SimpleBlock(val graph: SimpleGraph) {
 
             // println("Creating simple-this: $thisScope, $isExplicitSelf, type: $type")
             val localField = if (isExplicitSelf) graph.selfField!! else graph.thisField!!
-            val dst = field(type)
+            val dst = field(type.resolve())
 
             // todo 'this' from the Lambda gets incorrectly passed here...
             //  it should be defined in the ResolutionContext somehow...

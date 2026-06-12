@@ -45,6 +45,7 @@ class JumpToLabelTests {
         
         object Unit
         external fun println(arg0: Int)
+        fun error(message: String) = throw IllegalStateException(message)
     """.trimIndent()
 
     @Test

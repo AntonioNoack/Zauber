@@ -20,16 +20,16 @@ class ConstTests {
         val value = testExecute(
             """
             object A {
-                const v2: Int = B.v1 + 2
-                const v0: Int = 17
-                const v1: Int = B.v0 + 1
+                const val v2: Int = B.v1 + 2
+                const val v0: Int = 17
+                const val v1: Int = B.v0 + 1
             }
             object B {
-                const v1: Int = A.v1 + 4
-                const v0: Int = A.v0 + 3
-                const v2: Int = A.v2 + 5
+                const val v1: Int = A.v1 + 4
+                const val v0: Int = A.v0 + 3
+                const val v2: Int = A.v2 + 5
             }
-            const tested = B.v2
+            const val tested = B.v2
             
             package zauber
             class Any
@@ -72,14 +72,14 @@ class ConstTests {
             testExecute(
                 """
             value class Vector(val x: Int, val y: Int)
-            const vec = Vector(1,3)
+            const val vec = Vector(1,3)
             
             fun calculate(): Int {
                 vec.x = 0
                 return vec.x + vec.y
             }
             
-            const tested = calculate()
+            const val tested = calculate()
             
             package zauber
             class Any
@@ -96,8 +96,8 @@ class ConstTests {
         assertThrowsContains<IllegalStateException>(listOf("Const field ", ".v0 must have initial value")) {
             testExecute(
                 """
-            const v0: Int
-            const tested = 0
+            const val v0: Int
+            const val tested = 0
         """.trimIndent()
             )
         }
@@ -112,9 +112,9 @@ class ConstTests {
             testExecute(
                 """
             class A {
-                const x = 0
+                const val x = 0
             }
-            const tested = A.x
+            const val tested = A.x
         """.trimIndent()
             )
         }

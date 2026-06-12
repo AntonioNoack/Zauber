@@ -1,8 +1,10 @@
 package me.anno.zauber.interpreting
 
+import me.anno.generation.InheritanceTable.Companion.inheritanceCode
+import me.anno.utils.StringStyles
+import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
-import me.anno.utils.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 
@@ -30,9 +32,9 @@ class FieldGetSetTest {
                 run()
             } catch (e: Throwable) {
                 check(e is V) { "Incorrect exception type was thrown: $e" }
-                val message = e.message ?: ""
+                val message = StringStyles.removeStyles(e.message ?: "")
                 for (part in listOf) {
-                    if (part !in message) throw e
+                    if (!message.contains(part, ignoreCase = true)) throw e
                 }
                 return
             }
@@ -160,7 +162,7 @@ class FieldGetSetTest {
             fun throwNJI(msg: String): Nothing {
                 throw Exception(msg)
             }
-            """.trimIndent()
+            """.trimIndent() + inheritanceCode
         )
         assertEquals(8, actual.castToInt())
     }

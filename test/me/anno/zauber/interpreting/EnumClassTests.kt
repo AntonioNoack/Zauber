@@ -1,5 +1,6 @@
 package me.anno.zauber.interpreting
 
+import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.utils.MultiTest
 import me.anno.utils.assertEquals
 import me.anno.zauber.types.Types
@@ -29,7 +30,7 @@ external fun println(arg0: Boolean)
 external fun println(arg0: Int)
 external fun println(arg0: String)
 class String
-    """.trimIndent()
+    """.trimIndent() + inheritanceCode
 
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "wasm"])

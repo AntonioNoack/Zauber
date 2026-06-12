@@ -16,6 +16,7 @@ import me.anno.zauber.ast.simple.expression.SimpleGetTypeInstance
 import me.anno.zauber.ast.simple.fields.SimpleGetClassField
 import me.anno.zauber.ast.simple.fields.SimpleGetObject
 import me.anno.zauber.ast.simple.fields.SimpleSetClassField
+import me.anno.zauber.expansion.Dependencies.addClass
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
@@ -37,6 +38,9 @@ object Dependencies {
 
     private val reached by threadLocal { DependencyData() }
 
+    private val ByteArrayType by threadLocal { Types.Array.withTypeParameter(Types.Byte) }
+    private val ByteReferenceType by threadLocal { Types.Ref.withTypeParameter(Types.Byte) }
+
     fun addClass(type: ClassType, markDefaultConstructor: Boolean = false) {
         addClass(Specialization(type), markDefaultConstructor)
     }
@@ -48,9 +52,8 @@ object Dependencies {
         }
 
         if (markDefaultConstructor) {
-            val ownerConstructor = type.clazz
-                .getOrCreatePrimaryConstructorScope()
-            addMethod(Specialization(ownerConstructor, emptyParameterList()))
+            val ownerConstructor = type.clazz.getOrCreatePrimaryConstructorScope()
+            addMethod(type.withScope(ownerConstructor))
         }
     }
 
@@ -148,7 +151,11 @@ object Dependencies {
                 when (instr) {
                     is SimpleCallable -> addMethod(instr.specialization)
                     is SimpleAllocateInstance -> addClass(instr.allocatedType)
-                    is SimpleString -> addClass(Types.String, true)
+                    is SimpleString -> {
+                        addClass(Types.String, true)
+                        addClass(ByteArrayType, true)
+                        addClass(ByteReferenceType, true) // todo only for C/C++/LLVM
+                    }
                     is SimpleNumber -> {
                         // println("found number $instr, marking ${instr.dst.type} reachable")
                         addClass(instr.dst.type as ClassType, true)

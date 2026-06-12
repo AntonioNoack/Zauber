@@ -68,6 +68,7 @@ abstract class Type {
             is CollectionType -> types.all { it.isResolved() }
             is ComptimeValue -> true // is it though?
             is ModifierType -> type.isResolved()
+            is NonObjectClassType -> type.isResolved()
             else -> throw NotImplementedError("Is $this (${javaClass.simpleName}) resolved?")
         }
     }

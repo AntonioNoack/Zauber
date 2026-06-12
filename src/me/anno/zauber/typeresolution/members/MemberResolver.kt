@@ -353,8 +353,8 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         // println("Outer class depth: $outerClassDepth")
         while (true) {
             if (isScopeAvailable(scope, outerClassDepth)) {
-                val selfType = resolveTypeFromScoping(scope, context).specialize(context)
-                callback(scope, selfType)
+                val selfType = resolveTypeFromScoping(scope, context)?.specialize(context)
+                if (selfType != null) callback(scope, selfType)
 
                 val selfType0 = scope.typeWithArgs
                 if (selfType0 != selfType) {
@@ -368,7 +368,7 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
         callback(root, root.typeWithArgs)
     }
 
-    private fun resolveTypeFromScoping(candidateScope: Scope, context: ResolutionContext): Type {
+    private fun resolveTypeFromScoping(candidateScope: Scope, context: ResolutionContext): Type? {
         var candidateScope: Scope = candidateScope
         while (candidateScope.isInsideExpression()) {
             if (candidateScope.scopeType == ScopeType.LAMBDA) {
@@ -394,6 +394,8 @@ abstract class MemberResolver<Resource : Member, Resolved : ResolvedMember<Resou
                 return selfType
             }
         }
+
+        if (!candidateScope.isClassLike()) return null
 
         return candidateScope.typeWithArgs
     }

@@ -17,7 +17,7 @@ class Any {
 external class Int {
     external operator fun plus(other: Int): Int
     external operator fun compareTo(other: Int): Int
-    operator fun inc(): Int = this + other
+    operator fun inc(): Int = this + 1
     fun equals(other: Int): Boolean = this >= other && this <= other
 }
 
@@ -29,6 +29,7 @@ enum class Boolean {
 
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)
+    external operator fun get(index: Int): V
     
     fun contains(value: V) = indexOf(value) >= 0
     fun indexOf(value: V): Int {

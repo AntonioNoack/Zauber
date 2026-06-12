@@ -3,6 +3,7 @@ package me.anno.other
 import me.anno.generation.CGenerationTests
 import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.zauber.interpreting.Stdlib
+import me.anno.zauber.logging.LogManager
 
 fun main() {
 
@@ -167,7 +168,7 @@ fun compile_shader(type: GLenum, src: String): UInt {
     glShaderSource(s, 1, src.toCString(), null)
     glCompileShader(s)
 
-    val ok = Ref(0u);
+    val ok = Ref<UInt>(0u);
     glGetShaderiv(s, GL_COMPILE_STATUS, ok)
 
     if (ok.value == 0u) {
@@ -208,7 +209,7 @@ fun main() {
          0.5f, -0.5f
     );
 
-    val vbo = Ref(0u)
+    val vbo = Ref<UInt>(0u)
     glGenBuffers(1, vbo)
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo.value);
@@ -245,9 +246,8 @@ class Ref<V>(var value: V) {
     fun equals(other: Ref<*>?): Boolean = this === other
 }
 
-typealias Pointer<V> = Ref<V>
-typealias CString = Pointer<Byte>
-typealias NativePointer = Pointer<Nothing?>
+typealias CString = Ref<Byte>
+typealias NativePointer = Ref<Nothing?>
 
 class Any {
     open fun equals(other: Any?): Boolean = (this === other)
@@ -266,6 +266,7 @@ enum class Boolean {
     TRUE, FALSE;
     external fun not(): Boolean
 }
+
 class Array<V>(val size: Int) {
     external fun get(index: Int): V
     external fun set(index: Int, v: V)
@@ -304,10 +305,14 @@ annotation class CInclude(val source: String)
 
     """.trimIndent() + inheritanceCode
 
+    // todo bug: why can Ref(0u) not be resolved???
+
     // todo Ref is an issue: the data would be read at ~classIndex, but we want it at ~value
     //  -> shall we move all pointers over classIndex? would be a possibility...
 
-    // todo bug: why is Ref_zauberByte.h not generated??? -> not found as a class somehow, maybe not seen as constructable??
+    // todo put __createString in String.h
+
+    LogManager.enableAllLoggers()
 
     CGenerationTests().apply {
         val gen = generator()

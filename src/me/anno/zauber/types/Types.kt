@@ -157,5 +157,6 @@ class TypesImpl {
 
     // C/C++ interop:
     val Pointer = getType("Pointer", "T", NullableAny)
+    val Ref = getType("Ref", "T", NullableAny)
 
 }

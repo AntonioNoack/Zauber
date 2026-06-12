@@ -19,7 +19,7 @@ class SimpleGetLocalField(
         // cannot crash at runtime (if ASTSimplified correctly) -> past-path
         val runtime = runtime
         runtime[dst] = runtime.getCall().localFields[field.id]
-            ?: error("Missing local field #${field.id}")
+            ?: error("Local field $field was read before being assigned")
         return null
     }
 

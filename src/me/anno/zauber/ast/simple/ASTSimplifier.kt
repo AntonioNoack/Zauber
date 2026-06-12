@@ -505,7 +505,7 @@ object ASTSimplifier {
         val field = expr.field.resolved
 
         if (field.isObjectInstance()) {
-            val dst = block0.field(field.ownerScope.typeWithArgs)
+            val dst = block0.field(field.ownerScope.typeWithArgs2)
             val value = SimpleGetObject(dst, field.ownerScope, expr.scope, expr.origin)
             block0.add(value)
             return flow0.withValue(dst)
