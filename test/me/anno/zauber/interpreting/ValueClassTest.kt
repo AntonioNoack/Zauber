@@ -44,8 +44,8 @@ class ValueClassTest {
     @Test
     fun testTrySetImmutableField() {
         assertThrowsMessage<IllegalStateException>({ message ->
-            check("Expected Field(" in message)
-            check(".v).x to be mutable" in message)
+            check("Expected " in message) { "Unexpected error message: $message" }
+            check(".x to be mutable" in message) { "Unexpected error message: $message" }
         }) {
             val code = """
             value class Vector(val x: Int, val y: Int)

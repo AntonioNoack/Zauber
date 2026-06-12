@@ -46,6 +46,9 @@ abstract class Type {
             is LambdaType -> parameters.any { it.type.containsGenerics() } || returnType.containsGenerics()
             is UnresolvedType -> resolvedName.containsGenerics()
             is UnresolvedClassType -> resolvedName.typeParameters!!.isNotEmpty()
+            is TypeOfField -> field
+                .resolveValueType(ResolutionContext.minimal)
+                .containsGenerics()
             else -> throw NotImplementedError("Does $this contain generics?")
         }
     }

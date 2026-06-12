@@ -61,11 +61,17 @@ class TypeInferenceByValuesTests {
                 val size: Int
             }
             class Array<V>(override val size: Int): List<V> {
-                external override operator fun set(index: Int, value: V)
+                external fun set(index: Int, value: V)
             }
             fun <V> listOf(vararg vs: V): List<V> = vs
             fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
+
+        // todo bug:
+        //  java.lang.IllegalStateException: Expected return value in zauber.$listOf_o41ki35sgw.fun <V> listOf(vs: zauber.Array<(ro)zauber.Int>): zauber.List<(ro)zauber.Int> to match zauber.List<(ro)zauber.Int>, got zauber.Array<(ro)zauber.Int>
+        //    at Test.zbr:9, 39-39, SYMBOL, '='
+        //  }
+        //  -> why is Array<Int> not a List<Int>??? It clearly says so...
 
         MultiTest(code)
             .type { Types.List.withTypeParameter(Types.Int) }

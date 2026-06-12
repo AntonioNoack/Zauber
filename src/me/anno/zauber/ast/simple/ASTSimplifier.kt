@@ -194,10 +194,12 @@ object ASTSimplifier {
                 val field1v = field.value ?: return field
 
                 val expectedReturnType = block0.graph.expectedReturnType
-                check(isSubTypeOf(expectedReturnType, field1v.value.type)) {
+                val actualReturnType = field1v.value.type.specialize(block0.graph.method0)
+                check(isSubTypeOf(expectedReturnType, actualReturnType)) {
                     val method = block0.graph.method
                     "Expected return value in $method " +
-                            "to match $expectedReturnType, got ${field1v.value.type}\n" +
+                            "to match $expectedReturnType, got $actualReturnType\n" +
+                            "  spec: ${block0.graph.method}\n" +
                             "  at ${resolveOrigin(expr.origin)}"
                 }
 

@@ -21,7 +21,7 @@ class FieldGetSetTest {
                 run()
             } catch (e: Throwable) {
                 check(e is V) { "Incorrect exception type was thrown: $e" }
-                validateMessage(e.message ?: "")
+                validateMessage(StringStyles.removeStyles(e.message ?: ""))
                 return
             }
             fail { "Expected an exception to be thrown" }

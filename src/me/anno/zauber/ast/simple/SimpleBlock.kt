@@ -199,7 +199,7 @@ class SimpleBlock(val graph: SimpleGraph) {
         while (innerScopeI != outerScope) {
             val outerScopeI = innerScopeI.parent!!
 
-            val dst = field(outerScopeI.typeWithArgs) // todo specialize
+            val dst = field(outerScopeI.typeWithArgs2) // todo specialize
             val field1 = innerScopeI.fields.first { it.name == OUTER_FIELD_NAME }
 
             println("Step: ${innerScopeI}.$field1 -> $dst, calling on $currField")
