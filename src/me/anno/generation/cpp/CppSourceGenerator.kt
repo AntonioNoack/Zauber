@@ -13,10 +13,14 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.reverse.SimpleTailCall
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
@@ -35,6 +39,7 @@ import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
@@ -91,6 +96,33 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override val keywords: Set<String> get() = CppTokenizer.cppKeywords
 
     val cppFiles = HashSet<File>()
+
+    val CIncludeType = Types.getType("CInclude")
+
+    fun isCIncludeMethod(method: MethodLike): Boolean {
+        return method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+            .annotations.any { it.type == CIncludeType }
+    }
+
+    fun getCIncludeMethodName(method0: Specialization, cInclude: me.anno.zauber.ast.rich.Annotation): String {
+        val src = cInclude.params1[0].castToString()
+        nativeImports.add("#include $src")
+        return method0.method.name
+    }
+
+    fun getCIncludeAnnotations(method0: Specialization): Annotation? {
+        // check CInclude annotations
+        return method0.method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
+            .annotations.firstOrNull { it.type == CIncludeType }
+    }
+
+    override fun getMethodName(method0: Specialization): String {
+
+        val cInclude = getCIncludeAnnotations(method0)
+        if (cInclude != null) return getCIncludeMethodName(method0, cInclude)
+
+        return super.getMethodName(method0)
+    }
 
     open fun needsHeaders() = true
 
@@ -651,6 +683,18 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
+                is StringExpression -> {
+                    val l0 = builder.length
+                    appendType(Types.String, graph.method.scope, true)
+                    builder.setLength(l0)
+                    builder.append("__createString(")
+                    appendString(expr.value)
+                    builder.append(')')
+                }
+                is SpecialValueExpression -> {
+                    check(expr.type == SpecialValue.NULL)
+                    builder.append("nullptr")
+                }
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     val localField = field.fromLocalField
@@ -661,7 +705,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                         usedFields.add(field)
                     }
                 }
-                else -> throw NotImplementedError("Append constant field $expr")
+                else -> throw NotImplementedError("Append constant field $expr (${expr.javaClass.simpleName})")
             }
             !(field.type in nativeNumbers || field.type.isValue())
         }

@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.utils.assertEquals
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.simple.controlflow.Flow
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.scope.Scope
@@ -17,12 +19,17 @@ abstract class SimpleCallable(
 
     init {
         // works or crashes
-        check(specialization.scope == sample.scope)
+        assertEquals(sample.scope, specialization.scope) {
+            "Scope mismatch for $sample at ${resolveOrigin(origin)}"
+        }
+        assertEquals(sample.valueParameters.size, valueParameters.size) {
+            "Argument mismatch for $sample at ${resolveOrigin(origin)}"
+        }
     }
 
     fun setValueParameter(i: Int, newField: SimpleField) {
         val valueParameters = valueParameters
-        if (valueParameters is MutableList<SimpleField>) {
+        if (valueParameters is ArrayList<SimpleField>) {
             valueParameters[i] = newField
         } else {
             val newValueParameters = ArrayList<SimpleField>(valueParameters)

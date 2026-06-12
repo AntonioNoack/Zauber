@@ -134,7 +134,7 @@ abstract class Type {
             is UnionType, is AndType -> withTypes(types.map { it.resolve(selfScope) })
             is UnresolvedType -> {
                 val baseType = resolveTypeByName(findSelfType(scope), className, scope, imports)
-                    ?: error("Could not resolve $this in '$scope'")
+                    ?: error("Could not resolve type $this in '$scope'")
                 if (!typeParameters.isNullOrEmpty()) {
                     baseType as ClassType
                     val expectedTypeParameters = baseType.clazz.typeParameters

@@ -259,7 +259,7 @@ object Stdlib {
     }
 
     fun registerNumberConversions() {
-        val types = ASTSimplifier.nativeNumbers
+        val types = nativeNumbers
         val rt = runtime
         for (i in types.indices) {
             for (j in types.indices) {

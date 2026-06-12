@@ -35,7 +35,24 @@ open class MinimalCCompiler :
         }
 
         File(projectFolder, "CMakeLists.txt")
-            .writeText(minimalCMakeListsForC.replace("FILES_LIST", filesList))
+            .writeText(
+                minimalCMakeListsForC
+                    .replace("FILES_LIST", filesList)
+                    .replace(
+                        "FIND_PACKAGES",
+                        libraries.entries.joinToString("\n") { (name, _) ->
+                            "find_package($name REQUIRED)"
+                        })
+                    .replace(
+                        "LINK_WITH_LIBRARIES",
+                        if (libraries.isNotEmpty()) {
+                            "target_link_libraries(Zauber private${
+                                libraries.values.flatMap { it.linkNames }.distinct()
+                                    .joinToString("") { name -> "\n$name" }
+                            })"
+                        } else ""
+                    )
+            )
 
         File(srcFolder, "CStandardLib.h")
             .writeBytes(cStandardLib)
@@ -45,6 +62,14 @@ open class MinimalCCompiler :
 
         runProcess(buildFolder, "cmake", "..")
         runProcess(buildFolder, "cmake", "--build", ".")
+    }
+
+    private val libraries = LinkedHashMap<String, Library>()
+
+    private class Library(val name: String, val linkNames: List<String>)
+
+    fun addCMakeLibrary(name: String, vararg libraryNames: String) {
+        libraries[name] = Library(name, libraryNames.asList())
     }
 
     override fun execute(projectFolder: File): String {

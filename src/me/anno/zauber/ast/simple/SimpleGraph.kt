@@ -1,7 +1,10 @@
 package me.anno.zauber.ast.simple
 
 import me.anno.utils.StringStyles.bold
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.reverse.SimpleTailCall
+import me.anno.zauber.ast.rich.Flags
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.MethodLike
@@ -86,7 +89,8 @@ class SimpleGraph(val method0: Specialization) {
         }
         parameterFields = method.valueParameters.map { parameter ->
             val type = parameter.type.specialize(context)
-            createLocalField(parameter.field!!, parameter.name, type, false)
+            val field = parameter.getOrCreateField(null, Flags.NONE)
+            createLocalField(field, parameter.name, type, false)
         }
     }
 
@@ -293,6 +297,10 @@ class SimpleGraph(val method0: Specialization) {
                     // todo calls and constructors can require casts, too
                     // todo for this, self, and parameters
                     is SimpleCallable -> {
+                        assertEquals(instr.valueParameters.size, instr.sample.valueParameters.size) {
+                            "Value-Params/Callable mismatch for ${instr.sample}\n" +
+                                    "  at ${resolveOrigin(instr.origin)}"
+                        }
                         for (i in instr.valueParameters.indices) {
                             val parameter = instr.valueParameters[i]
                             val expectedType = instr.sample.valueParameters[i].type

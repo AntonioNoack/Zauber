@@ -152,7 +152,7 @@ object ASTSimplifier {
 
         val expectedReturnType = graph.expectedReturnType
         check(isSubTypeOf(expectedReturnType, value.type)) {
-            "Expected return value in ${method0.method.ownerScope}.${method0.method} " +
+            "Expected return value in ${method0.method} " +
                     "to match $expectedReturnType, got ${value.type}"
         }
 
@@ -196,7 +196,7 @@ object ASTSimplifier {
                 val expectedReturnType = block0.graph.expectedReturnType
                 check(isSubTypeOf(expectedReturnType, field1v.value.type)) {
                     val method = block0.graph.method
-                    "Expected return value in ${method.ownerScope}.$method " +
+                    "Expected return value in $method " +
                             "to match $expectedReturnType, got ${field1v.value.type}\n" +
                             "  at ${resolveOrigin(expr.origin)}"
                 }
@@ -357,22 +357,20 @@ object ASTSimplifier {
                 }
                 ?: error("Missing Array(size: Int).set(index,value) method")
 
+            val setMethodSpec = specialization.withScope(setMethod.memberScope)
+
             // execute all assignments
             for (i in values.indices) {
                 val indexExpr = NumberExpression("$i", scope, origin) // could be cached
                 val index = blockI.field(Types.Int, indexExpr)
                 blockI.add(SimpleNumber(index, indexExpr))
                 val valueParameters = listOf(index.use(), values[i].use())
+
                 blockI.add(
                     SimpleCall(
-                        unit,
-                        setMethod,
-                        array.use(),
-                        null,
-                        specialization,
-                        valueParameters,
-                        scope,
-                        origin
+                        unit, setMethod, array.use(),
+                        null, setMethodSpec, valueParameters,
+                        scope, origin
                     )
                 )
             }

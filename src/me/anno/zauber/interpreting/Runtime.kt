@@ -157,7 +157,7 @@ class Runtime {
 
         if (method.isExternal()) {
             val parameterTypes = method.valueParameters.map { it.type }
-            println("Method-params: ${method.ownerScope}.$method -> $parameterTypes")
+            println("Method-params: $method -> $parameterTypes")
             val key = ExternalKey(method.scope.parent!!, method.name, parameterTypes)
             val method = externalMethods[key]
                 ?: error("Missing external method ${key.str()}")
@@ -166,7 +166,7 @@ class Runtime {
         }
 
         if (method.body == null) {
-            error("Missing body for ${method.ownerScope}.$method\n  at ${resolveOrigin(method.origin)}")
+            error("Missing body for $method\n  at ${resolveOrigin(method.origin)}")
         }
 
         val graph = ASTSimplifier.simplify(specialization, readOnly = true)

@@ -15,7 +15,7 @@ object UnitTestResults {
             .sortedBy { it.first.memberScope.pathStr }
             .map { (method, result) ->
                 val result = result.value
-                LOGGER.info("[${method.ownerScope}.$method]: $result")
+                LOGGER.info("$method: $result")
                 result.type
             }
 

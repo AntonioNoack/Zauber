@@ -20,6 +20,7 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.CollectionType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
+import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
@@ -76,6 +77,14 @@ object MethodOverrides {
             }
             NullType -> true
             is GenericType -> a == b
+            is CollectionType -> {
+                b as CollectionType
+                a.types.all { ai ->
+                    b.types.any { bi -> equalsIgnoreUnknowns(ai, bi) }
+                } && b.types.none { bi ->
+                    a.types.none { ai -> equalsIgnoreUnknowns(ai, bi) }
+                }
+            }
             else -> TODO("Check equals ${a.javaClass.simpleName}")
         }
     }

@@ -1,3 +1,7 @@
+package zauber
+
+annotation class Static
+
 package zauber.inheritance
 
 @Static

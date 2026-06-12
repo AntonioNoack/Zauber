@@ -8,6 +8,7 @@ import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.Import2
 import me.anno.utils.FullMap
 import me.anno.zauber.ast.reverse.CodeReconstruction
+import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -143,24 +144,10 @@ open class CSourceGenerator : CppSourceGenerator() {
         return false
     }
 
-    val CIncludeType = Types.getType("CInclude")
-
-    fun isCIncludeMethod(method: MethodLike): Boolean {
-        return method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
-            .annotations.any { it.type == CIncludeType }
-    }
-
     override fun getMethodName(method0: Specialization): String {
 
-        // check CInclude annotations
-        val cInclude = method0.method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
-            .annotations.firstOrNull { it.type == CIncludeType }
-
-        if (cInclude != null) {
-            val src = cInclude.params1[0].castToString()
-            nativeImports.add("#include $src")
-            return method0.method.name
-        }
+        val cInclude = getCIncludeAnnotations(method0)
+        if (cInclude != null) return getCIncludeMethodName(method0, cInclude)
 
         val ownerScope = method0.method.ownerScope
         val ownerSpec = method0.withScope(ownerScope)
