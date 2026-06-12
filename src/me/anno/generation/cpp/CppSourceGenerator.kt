@@ -104,9 +104,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             .annotations.any { it.type == CIncludeType }
     }
 
-    fun getCIncludeMethodName(method0: Specialization, cInclude: me.anno.zauber.ast.rich.Annotation): String {
-        val src = cInclude.params1[0].castToString()
-        nativeImports.add("#include $src")
+    fun getCIncludeMethodName(method0: Specialization, cInclude: Annotation): String {
+        include(cInclude)
         return method0.method.name
     }
 
@@ -664,11 +663,16 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 !checkHasIncludeAnnotations(field)
     }
 
+    private fun include(annotation: Annotation) {
+        val path = annotation.params1[0].castToString()
+        nativeImports.add("#include $path")
+    }
+
     private fun checkHasIncludeAnnotations(field: Field): Boolean {
         var hasAnnotations = false
         for (annotation in field.annotations) {
             if (annotation.type == CIncludeType) {
-                nativeImports.add(annotation.params1[0].castToString())
+                include(annotation)
                 hasAnnotations = true
             }
         }

@@ -307,6 +307,8 @@ annotation class CInclude(val source: String)
     // todo Ref is an issue: the data would be read at ~classIndex, but we want it at ~value
     //  -> shall we move all pointers over classIndex? would be a possibility...
 
+    // todo bug: why is Ref_zauberByte.h not generated??? -> not found as a class somehow, maybe not seen as constructable??
+
     CGenerationTests().apply {
         val gen = generator()
         gen.addCMakeLibrary("glfw3", "glfw", "GL")
