@@ -9,24 +9,24 @@ import me.anno.zauber.scope.Scope
 
 class SimpleBoxCast(
     dst: SimpleField,
-    val value: SimpleField,
+    val src: SimpleField,
     scope: Scope, origin: Long
 ) : SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
-        return "$dst = (from ${value.type}) $value"
+        return "$dst = (from ${src.type}) $src"
     }
 
     override fun execute(): BlockReturn? {
         val runtime = runtime
-        runtime[dst] = runtime[value]
+        runtime[dst] = runtime[src]
         return null
     }
 
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleBoxCast(
             src.cloned(this.dst, dst),
-            src.cloned(value, dst),
+            src.cloned(this@SimpleBoxCast.src, dst),
             scope, origin
         )
     }

@@ -382,7 +382,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val elementType = specialization.typeParameters[0]
         appendVisibility(isPrivate = true)
         appendType(elementType, classScope, false)
-        appendOwnershipSuffix(elementType)
+        appendOwnershipSuffix(elementType, false)
         builder.append("* content;")
         nextLine()
     }
@@ -447,10 +447,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val elementType = specialization.typeParameters[0]
         builder.append("this->content = (")
         appendType(elementType, constructor.scope, false)
-        appendOwnershipSuffix(elementType)
+        appendOwnershipSuffix(elementType, false)
         builder.append("*) calloc(size, sizeof(")
         appendType(elementType, constructor.scope, false)
-        appendOwnershipSuffix(elementType)
+        appendOwnershipSuffix(elementType, false)
         builder.append("));")
         nextLine()
     }
@@ -497,7 +497,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         for (param in valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendType(param.type, scope, false)
-            appendOwnershipSuffix(param.type)
+            appendOwnershipSuffix(param.type, false)
             builder.append(' ')
             appendFieldName(param)
         }
@@ -577,6 +577,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
+    override fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
+        // skipped
+    }
+
     override fun appendMethodHeader(
         classScope: Scope, className: String,
         method0: Specialization, headerOnly: Boolean
@@ -588,7 +592,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
         val returnType = resolveType(method.resolveReturnType(method0))
         appendType(returnType, classScope, false)
-        appendOwnershipSuffix(returnType)
+        appendOwnershipSuffix(returnType, false)
 
         builder.append(' ')
         if (!headerOnly) {
@@ -642,15 +646,33 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
         // without final
         appendType(dst.type, scope, false)
-        appendOwnershipSuffix(dst.type)
+        appendOwnershipSuffix(dst.type, false)
         builder.append(' ')
         appendFieldName(graph, dst)
         if (withEquals) builder.append(" = ")
     }
 
     override fun appendObjectInstance(field: Field, exprScope: Scope, forFieldAccess: String) {
-        appendGetObjectInstance(field.ownerScope, exprScope)
-        builder.append(if (forFieldAccess == ".") "->" else "")
+        if (!checkHasIncludeAnnotations(field)) {
+            appendGetObjectInstance(field.ownerScope, exprScope)
+            builder.append(if (forFieldAccess == ".") "->" else "")
+        } // else is included -> all fine as long as it's not shadowed
+    }
+
+    override fun isStoredField(field: Field): Boolean {
+        return super.isStoredField(field) &&
+                !checkHasIncludeAnnotations(field)
+    }
+
+    private fun checkHasIncludeAnnotations(field: Field): Boolean {
+        var hasAnnotations = false
+        for (annotation in field.annotations) {
+            if (annotation.type == CIncludeType) {
+                nativeImports.add(annotation.params1[0].castToString())
+                hasAnnotations = true
+            }
+        }
+        return hasAnnotations
     }
 
     // add "virtual" fun getClassId() (?)
@@ -658,9 +680,9 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     // check if is object type -> reference
     // check if is nullable -> pointer
 
-    fun appendOwnershipSuffix(type: Type) {
+    fun appendOwnershipSuffix(type: Type, needsBoxedType: Boolean) {
         val type = resolveType(type)
-        val symbol = if (type.isValue()) "" else "*"
+        val symbol = if (!needsBoxedType && type.isValue()) "" else "*"
         builder.append(symbol)
     }
 
@@ -724,7 +746,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     override fun declareLocalField(graph: SimpleGraph, field: LocalField) {
         val type = field.type
         appendType(type, graph.method.memberScope, false)
-        appendOwnershipSuffix(type)
+        appendOwnershipSuffix(type, false)
         builder.append(' ')
         appendFieldName(field)
         builder.append(" = ")
@@ -864,7 +886,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             }
             is SimpleBoxCast -> {
                 // todo use static_cast (num->num) or dynamic_cast (ref->ref) where possible
-                val srcType = expr.value.type
+                val srcType = expr.src.type
                 val dstType = expr.dst.type
                 val srcNum = srcType in nativeNumbers
                 val dstNum = dstType in nativeNumbers
@@ -877,26 +899,25 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                         builder.append("static_cast<")
                         appendType(dstType, expr.scope, false)
                         builder.append(">(")
-                        appendFieldName(graph, expr.value)
+                        appendFieldName(graph, expr.src)
                         builder.append(')')
                     }
                     srcRef && dstRef -> {
                         builder.append("dynamic_cast<")
                         appendType(dstType, expr.scope, true)
-                        appendOwnershipSuffix(expr.dst.type)
+                        appendOwnershipSuffix(expr.dst.type, true)
                         builder.append(">(")
-                        appendFieldName(graph, expr.value)
+                        appendFieldName(graph, expr.src)
                         builder.append(')')
                     }
                     else -> {
                         builder.append('(')
                         appendType(dstType, expr.scope, true)
-                        appendOwnershipSuffix(expr.dst.type)
+                        appendOwnershipSuffix(expr.dst.type, true)
                         builder.append(") ")
-                        appendFieldName(graph, expr.value)
+                        appendFieldName(graph, expr.src)
                     }
                 }
-
             }
             else -> super.appendInstrImpl(graph, expr)
         }

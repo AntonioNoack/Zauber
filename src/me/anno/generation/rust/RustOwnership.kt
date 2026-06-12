@@ -1,16 +1,16 @@
 package me.anno.generation.rust
 
-import me.anno.generation.java.JavaSourceGenerator.Companion.isStoredField
+import me.anno.generation.java.JavaSourceGenerator.Companion.isStoredField0
 import me.anno.generation.rust.RustSourceGenerator.Companion.nativeRustTypes
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.expansion.GraphColoring
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.AndType
 import me.anno.zauber.types.impl.arithmetic.NullType
 import me.anno.zauber.types.impl.arithmetic.UnionType
-import me.anno.zauber.types.Specialization
 
 object RustOwnership : GraphColoring<Type, RustOwnershipType>() {
 
@@ -20,7 +20,7 @@ object RustOwnership : GraphColoring<Type, RustOwnershipType>() {
             is ClassType -> {
                 val spec = Specialization(key)
                 key.clazz.fields
-                    .filter { field -> isStoredField(field) }
+                    .filter { field -> isStoredField0(field) }
                     .map { field ->
                         check(field.name != OBJECT_FIELD_NAME)
                         field.valueType!!.specialize(spec)

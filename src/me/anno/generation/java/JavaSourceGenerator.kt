@@ -148,7 +148,7 @@ open class JavaSourceGenerator : Generator() {
             return type
         }
 
-        fun isStoredField(field: Field): Boolean {
+        fun isStoredField0(field: Field): Boolean {
             return if (field.isObjectInstance()) false
             else needsFieldByParameter(field.byParameter) && needsBackingField(field)
         }
@@ -255,6 +255,10 @@ open class JavaSourceGenerator : Generator() {
             scope[ScopeInitType.CODE_GENERATION]
             generateClassForScope(scope, dst, writer, classSpec, methods, fields)
         }
+    }
+
+    open fun isStoredField(field: Field): Boolean {
+        return isStoredField0(field)
     }
 
     fun isArrayGetter(method0: Specialization): Boolean {
@@ -531,7 +535,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendFields(
+    open fun appendFields(
         classScope: Scope, fields: Collection<Specialization>, allowFinal: Boolean,
         headerOnly: Boolean
     ) {
@@ -1342,12 +1346,6 @@ open class JavaSourceGenerator : Generator() {
                 if (expr.field.id == 0 && expr.field.type in nativeNumbers) builder.append("this.content")
                 else builder.append(expr.field.newName)
             }
-            is SimpleGetClassField -> {
-                if (expr.dst.dst.id >= 0) {
-                    appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
-                    appendFieldName(expr.field)
-                } // else skip
-            }
             is SimpleSetLocalField -> {
                 builder.append(expr.field.newName)
                 builder.append(" = ")
@@ -1356,6 +1354,12 @@ open class JavaSourceGenerator : Generator() {
 
                 val needsCopy = expr.value.type.needsCopy()
                 if (needsCopy) appendCopy(graph, expr.value.type)
+            }
+            is SimpleGetClassField -> {
+                if (expr.dst.dst.id >= 0) {
+                    appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)
+                    appendFieldName(expr.field)
+                } // else skip
             }
             is SimpleSetClassField -> {
                 appendSelfForFieldAccess(graph, expr.self, expr.field, expr.scope)

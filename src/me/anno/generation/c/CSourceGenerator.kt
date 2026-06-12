@@ -8,7 +8,6 @@ import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.Import2
 import me.anno.utils.FullMap
 import me.anno.zauber.ast.reverse.CodeReconstruction
-import me.anno.zauber.ast.rich.Annotation
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -24,10 +23,10 @@ import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.ClassType
 import java.io.File
 import java.util.*
 
@@ -290,7 +289,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         for (param in valueParameters) {
             builder.append(", ")
             appendType(param.type, scope, false)
-            appendOwnershipSuffix(param.type)
+            appendOwnershipSuffix(param.type, false)
             builder.append(' ')
             appendFieldName(param)
         }
@@ -382,7 +381,7 @@ open class CSourceGenerator : CppSourceGenerator() {
             builder.append('(')
             val ownerType = inheritanceTable.getMethodOwnerType(method0)
             appendType(ownerType, expr.scope, true)
-            appendOwnershipSuffix(ownerType)
+            appendOwnershipSuffix(ownerType, true)
             builder.append(") ")
         }
 
@@ -465,7 +464,7 @@ open class CSourceGenerator : CppSourceGenerator() {
                     // call GC-aware alloc instead
                     builder.append('(')
                     appendType(expr.allocatedType, expr.scope, true)
-                    appendOwnershipSuffix(expr.allocatedType)
+                    appendOwnershipSuffix(expr.allocatedType, true)
                     builder.append(") ")
 
                     builder.append("gcNew(sizeof(")
@@ -485,14 +484,43 @@ open class CSourceGenerator : CppSourceGenerator() {
                 builder.append(");")
             }
             is SimpleBoxCast -> {
-                if (expr.dst.type.isValue() || expr.value.type.isValue()) {
-                    TODO("Convert instances for $expr")
+                val dst = expr.dst
+                val src = expr.src
+                val dstValue = dst.type.isValue()
+                val srcValue = src.type.isValue()
+                when {
+                    dstValue && srcValue -> error("Cannot convert $src to $dst implicitly")
+                    srcValue -> {
+
+                        builder.append('(')
+                        appendType(dst.type, expr.scope, true)
+                        appendOwnershipSuffix(dst.type, true)
+                        builder.append(") ")
+
+                        builder.append("gcNew(sizeof(")
+                        appendType(dst.type, expr.scope, true)
+                        val spec = Specialization(src.type as ClassType)
+                        builder.append("), ")
+                            .append(inheritanceTable.getClassIndex(spec))
+                            .append(");"); nextLine()
+
+                        if (src.type in nativeNumbers) {
+                            appendFieldName(graph, dst)
+                            builder.append("->content = ")
+                            appendFieldName(graph, src)
+                        } else {
+                            TODO("Copy over all fields into new instance for $expr")
+                        }
+                    }
+                    dstValue -> TODO("Unboxing $src to $dst")
+                    else -> {
+                        builder.append('(')
+                        appendType(expr.dst.type, expr.scope, true)
+                        appendOwnershipSuffix(expr.dst.type, true)
+                        builder.append(") ")
+                        appendFieldName(graph, expr.src)
+                    }
                 }
-                builder.append('(')
-                appendType(expr.dst.type, expr.scope, true)
-                appendOwnershipSuffix(expr.dst.type)
-                builder.append(") ")
-                appendFieldName(graph, expr.value)
             }
             else -> super.appendInstrImpl(graph, expr)
         }

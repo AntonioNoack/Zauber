@@ -260,13 +260,14 @@ class SimpleGraph(val method0: Specialization) {
                 when (val instr = instructions[i]) {
                     // getters are always fine
                     is SimpleSetClassField -> {
-                        val fieldType = instr.field.resolveValueType(context)
+                        val contextI = context.withSpec(instr.specialization)
+                        val fieldType = instr.field.resolveValueType(contextI)
                             .specialize()
                         val valueType = instr.value.type
                         if (fieldType != valueType &&
                             (findAllCasts || fieldType.isValue() || valueType.isValue())
                         ) {
-                            TODO("Create cast for $instr")
+                            TODO("Create cast for $instr, $fieldType != $valueType")
                         }
                     }
                     is SimpleSetLocalField -> {
