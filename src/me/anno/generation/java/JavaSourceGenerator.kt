@@ -919,28 +919,14 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun prepareGraph(graph: SimpleGraph) {
-
-        val print = graph.method.name == "test"
-        if (print) println("Input graph: $graph")
-
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-
-        if (print) println("Removal: $graph")
-
         graph.giveLocalFieldsUniqueNames()
         graph.removeSimpleGetObject()
-
-        if (print) println("Removal/2: $graph")
-
         graph.removeMergeInfoInstructions()
-
-        if (print) println("Removal/3: $graph")
-
         graph.renumberFields()
-
-        if (print) println("After renumber: $graph")
+        graph.markSimpleReadImmediatelyAfterAssignment()
 
         CodeReconstruction.createCodeFromGraph(graph)
         graph.renumberFields() // necessary
@@ -1210,8 +1196,11 @@ open class JavaSourceGenerator : Generator() {
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     val localField = field.fromLocalField
+                    val immediateValue = field.immediateValue
                     if (localField != null) {
                         builder.append(localField.newName)
+                    } else if (immediateValue != null) {
+                        appendInstrImpl(graph, immediateValue)
                     } else {
                         builder.append("tmp").append(field.id)
                         usedFields.add(field)

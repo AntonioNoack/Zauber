@@ -533,8 +533,12 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     }
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
-        appendType(objectScope.typeWithArgs, objectScope, false)
-        builder.append(STATIC_INSTANCE_SUFFIX)
+        if (objectScope == outsideClassLike(exprScope)) {
+            builder.append("self")
+        } else {
+            appendType(objectScope.typeWithArgs, objectScope, false)
+            builder.append(STATIC_INSTANCE_SUFFIX)
+        }
     }
 
     override fun appendDeclare(graph: SimpleGraph, dst: SimpleField, scope: Scope, withEquals: Boolean) {
@@ -786,8 +790,11 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
                     val localField = field.fromLocalField
+                    val immediateValue = field.immediateValue
                     if (localField != null) {
                         builder.append(localField.name)
+                    } else if (immediateValue != null) {
+                        appendInstrImpl(graph, immediateValue)
                     } else {
                         builder.append("tmp").append(field.id)
                         usedFields.add(field)

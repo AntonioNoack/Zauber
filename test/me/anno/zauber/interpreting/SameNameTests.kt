@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource
  * */
 class SameNameTests {
     @ParameterizedTest
-    @ValueSource(strings = ["runtime", "js", "java", "c++", "wasm"])
+    @ValueSource(strings = ["runtime", "js", "java", "c++", "c", "wasm", "llvm", "python"])
     fun testSameFieldNameInMethod(type: String) {
         val code = """
             fun test(i: Int): Int {

@@ -826,21 +826,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                 }
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
-                    val localField = field.fromLocalField
-                    if (localField != null) {
-                        if (!localField.isInsideMethod) {
-                            localField.name
-                        } else {
-                            val tmp = nextReg()
-                            builder.append(tmp).append(" = load ")
-                                .append(getLLVMType(field.type).ir).append(", ptr ")
-                                .append(localField.name)
-                            nextLine()
-                            tmp
-                        }
-                    } else {
-                        renames[field] ?: "%tmp${field.id}"
-                    }
+                    renames[field] ?: "%tmp${field.id}"
                 }
                 else -> throw NotImplementedError("Append constant field $expr")
             }

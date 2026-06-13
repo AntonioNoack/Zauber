@@ -253,20 +253,29 @@ class SimpleGraph(val method0: Specialization) {
      *
      * todo use this for nicer-looking code gen (no functional change)
      * */
-    fun markDirectlyAssignedSimpleFields() {
+    fun markSimpleReadImmediatelyAfterAssignment() {
         for (block in blocks) {
             val instructions = block.instructions
             var i = 0
-            while (++i < instructions.size) {
+            while (++i <= instructions.size) {
                 val decl = instructions[i - 1]
                 if (decl !is SimpleAssignment) continue
                 if (decl.dst.mergeInfo != null || decl.dst.numReads != 1) continue
 
-                val use = instructions[i]
-                if (use.hasInput(decl.dst)) {
-                    instructions.removeAt(i - 1)
-                    decl.dst.immediateValue = decl
-                    i--
+                if (i == instructions.size) {
+                    val use = block.branchCondition
+                    if (use == decl.dst) {
+                        instructions.removeAt(i - 1)
+                        decl.dst.immediateValue = decl
+                        // done
+                    }
+                } else {
+                    val use = instructions[i]
+                    if (use.hasInput(decl.dst)) {
+                        instructions.removeAt(i - 1)
+                        decl.dst.immediateValue = decl
+                        i--
+                    }
                 }
             }
         }

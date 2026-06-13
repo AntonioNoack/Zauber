@@ -706,6 +706,21 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         else appendSimpleBlock(graph, graph.startBlock)
     }
 
+    override fun prepareGraph(graph: SimpleGraph) {
+        graph.removeWriteOnlyFields()
+        graph.removeObjectFields()
+        graph.removeConstantFields()
+        graph.giveLocalFieldsUniqueNames()
+        graph.removeSimpleGetObject()
+        graph.removeMergeInfoInstructions()
+        graph.renumberFields()
+        // not this one, because WASM is optimized after
+        // graph.markSimpleReadImmediatelyAfterAssignment()
+
+        CodeReconstruction.createCodeFromGraph(graph)
+        graph.renumberFields() // necessary
+    }
+
     override fun appendTailCallCode(graph: SimpleGraph) {
         builder.append("(local \$nextBlockId i32)"); nextLine()
 
