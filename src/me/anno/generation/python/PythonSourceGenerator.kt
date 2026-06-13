@@ -73,6 +73,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                     ULong to BoxedType("Long", "int"),
 
                     Char to BoxedType("Char", "int"), // string, but math is difficult...
+                    Half to BoxedType("Half", "float"),
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "float"),
                 )
@@ -822,7 +823,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         val symbol = getBinarySymbol(type, methodName)
             ?: return false
 
-        val needsCast = type != Types.String
+        val needsCast = type != Types.String && !type.isFloat()
         if (needsCast) {
             // cast to the corresponding type
             appendType(type, expr.scope, true)
@@ -868,12 +869,31 @@ class PythonSourceGenerator : JavaSourceGenerator() {
             builder.append("not ")
             appendFieldName(graph, expr.thisInstance)
             return true
-        } else if (methodName == "inv" && thisType in nativeNumbers) {
-            appendType(thisType, expr.scope, true)
-            builder.append(".castTo(~")
-            appendFieldName(graph, expr.thisInstance)
-            builder.append(')')
-            return true
+        } else if (thisType in nativeNumbers) {
+            when (methodName) {
+                "inv" -> {
+                    appendType(thisType, expr.scope, true)
+                    builder.append(".castTo(~")
+                    appendFieldName(graph, expr.thisInstance)
+                    builder.append(')')
+                    return true
+                }
+                "unaryPlus" -> {
+                    appendFieldName(graph, expr.thisInstance)
+                    return true
+                }
+                "unaryMinus" -> {
+                    val needsCast = !thisType.isFloat()
+                    if (needsCast) {
+                        appendType(thisType, expr.scope, true)
+                        builder.append(".castTo(-")
+                    } else builder.append('-')
+                    appendFieldName(graph, expr.thisInstance)
+                    if (needsCast) builder.append(')')
+                    return true
+                }
+                else -> return super.appendBinaryOperator(graph, expr, methodName)
+            }
         }
 
         return super.appendUnaryOperator(graph, expr, methodName)

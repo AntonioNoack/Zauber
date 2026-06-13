@@ -97,12 +97,13 @@ open class JavaSourceGenerator : Generator() {
                     Int to BoxedType("Integer", "int"),
                     Long to BoxedType("Long", "long"),
 
-                    UByte to BoxedType("UByte", "byte"),
-                    UShort to BoxedType("UShort", "short"),
-                    UInt to BoxedType("UInt", "int"),
-                    ULong to BoxedType("ULong", "long"),
+                    UByte to BoxedType("UByte", "byte"), // mangled
+                    UShort to BoxedType("UShort", "short"), // mangled
+                    UInt to BoxedType("UInt", "int"), // mangled
+                    ULong to BoxedType("ULong", "long"), // mangled
 
                     Char to BoxedType("Character", "char"),
+                    Half to BoxedType("zauber.Half", "float"), // mangled
                     Float to BoxedType("Float", "float"),
                     Double to BoxedType("Double", "double"),
                     Any to BoxedType("Object", "Object"),
@@ -195,6 +196,7 @@ open class JavaSourceGenerator : Generator() {
                 "toUInt" -> Types.UInt
                 "toLong" -> Types.Long
                 "toULong" -> Types.ULong
+                "toHalf" -> Types.Half
                 "toFloat" -> Types.Float
                 "toDouble" -> Types.Double
                 else -> null
@@ -740,13 +742,13 @@ open class JavaSourceGenerator : Generator() {
         var j = 0
         for (i in params.indices) {
             val type = params[i].type
-            if (type.isUnsigned()) {
+            if (type.isUnsigned() || type == Types.Half) {
                 check(j < 64) {
                     "Only parameters<64 may be unsigned (causes mangling issues)"
                 }
                 flags = flags or (1L shl j)
                 j++
-            } else if (type.isSigned()) j++
+            } else if (type.isSigned() || type == Types.Float) j++
         }
         return if (flags == 0L) ""
         else "_U${flags.toString(manglingBasis)}"
@@ -1520,6 +1522,16 @@ open class JavaSourceGenerator : Generator() {
                     builder.append(if (methodName == "inc") " + 1" else " - 1")
                     if (needsCast) builder.append(')')
                     return true
+                }
+                "unaryPlus" -> {}
+                "unaryMinus" -> {
+                    if (needsCast) {
+                        builder.append('(')
+                        appendType(expr.dst.type, expr.scope, false)
+                        builder.append(") -")
+                    } else {
+                        builder.append('-')
+                    }
                 }
                 else -> return false
             }

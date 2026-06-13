@@ -60,6 +60,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
                     ULong to BoxedType("Long", "u64"),
 
                     Char to BoxedType("Char", "char"),
+                    Half to BoxedType("Half", "f32"), // f16 is unstable
                     Float to BoxedType("Float", "f32"),
                     Double to BoxedType("Double", "f64"),
                 )

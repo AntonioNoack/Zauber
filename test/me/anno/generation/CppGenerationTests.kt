@@ -39,7 +39,7 @@ class CppGenerationTests : CodeGenerationTests() {
                     "printf(\"%lu\\n\",arg0);"
         )
 
-        for (type in listOf(Types.Float, Types.Double)) {
+        for (type in listOf(Types.Half, Types.Float, Types.Double)) {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +

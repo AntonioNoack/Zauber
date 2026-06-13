@@ -14,7 +14,10 @@ import org.junit.jupiter.api.Test
 class JavaGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
-        for (type in listOf(Types.Byte, Types.Short, Types.Int, Types.Long, Types.Float, Types.Double)) {
+        for (type in listOf(
+            Types.Byte, Types.Short, Types.Int, Types.Long,
+            Types.Half, Types.Float, Types.Double
+        )) {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "System.out.println(arg0);"

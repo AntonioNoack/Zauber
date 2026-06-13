@@ -1164,11 +1164,11 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         if (type !in nativeNumbers) return false
 
         val symbol = when (methodName) {
-            "plus" -> "add"
-            "minus" -> "sub"
-            "times" -> "mul"
-            "div" -> if (isNumberSigned(type)) "sdiv" else "udiv"
-            "rem" -> if (isNumberSigned(type)) "smod" else "umod"
+            "plus" -> if (type.isFloat()) "fadd" else "add"
+            "minus" -> if (type.isFloat()) "fsub" else "sub"
+            "times" -> if (type.isFloat()) "fmul" else "mul"
+            "div" -> if (type.isFloat()) "fdiv" else if (type.isUnsigned()) "udiv" else "sdiv"
+            "rem" -> if (type.isFloat()) "fmod" /* todo does this exist? */ else if (type.isUnsigned()) "umod" else "smod"
             "and" -> "and"
             "or" -> "or"
             "xor" -> "xor"

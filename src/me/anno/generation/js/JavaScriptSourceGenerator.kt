@@ -67,6 +67,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                     Long to BoxedType("Long", "BigInt"),
                     ULong to BoxedType("ULong", "BigInt"),
                     Char to BoxedType("Char", "String"), // ?
+                    Half to BoxedType("Half", "Number"),
                     Float to BoxedType("Float", "Number"),
                     Double to BoxedType("Double", "Number"),
                 )
@@ -750,6 +751,21 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
                         builder.append(".castTo(")
                     }
                     builder.append('~')
+                    appendFieldName(graph, expr.thisInstance)
+                    if (needsCast) builder.append(')')
+                    true
+                }
+                "unaryPlus" -> {
+                    appendFieldName(graph, expr.thisInstance)
+                    true
+                }
+                "unaryMinus" -> {
+                    if (needsCast) {
+                        // cast to the corresponding type
+                        appendType(thisType, expr.scope, true)
+                        builder.append(".castTo(")
+                    }
+                    builder.append('-')
                     appendFieldName(graph, expr.thisInstance)
                     if (needsCast) builder.append(')')
                     true

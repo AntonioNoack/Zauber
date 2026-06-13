@@ -250,8 +250,6 @@ class SimpleGraph(val method0: Specialization) {
     /**
      * find simple fields, which are only used once,
      * and where the only read is immediately next to the assignment
-     *
-     * todo use this for nicer-looking code gen (no functional change)
      * */
     fun markSimpleReadImmediatelyAfterAssignment() {
         for (block in blocks) {
