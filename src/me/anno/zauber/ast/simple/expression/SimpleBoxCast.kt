@@ -23,6 +23,8 @@ class SimpleBoxCast(
         return null
     }
 
+    override fun hasInput(field: SimpleField): Boolean = src == field
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleBoxCast(
             src.cloned(this.dst, dst),

@@ -25,6 +25,10 @@ class SimpleSetLocalField(
                 " = $value"
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return value == field
+    }
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleSetLocalField(
             src.cloned(field, dst),

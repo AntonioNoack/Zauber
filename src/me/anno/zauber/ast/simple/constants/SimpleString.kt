@@ -24,6 +24,8 @@ class SimpleString(dst: SimpleField, val base: StringExpression) :
         return null
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleString(src.cloned(this.dst, dst), base)
     }

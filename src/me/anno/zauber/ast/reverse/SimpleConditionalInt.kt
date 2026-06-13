@@ -27,6 +27,10 @@ class SimpleConditionalInt(
         return "$dst = $condition ? $ifTrue : $ifFalse"
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return condition == field
+    }
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleConditionalInt(
             src.cloned(this.dst, dst),

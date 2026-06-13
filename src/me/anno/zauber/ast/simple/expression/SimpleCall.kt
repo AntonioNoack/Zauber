@@ -242,4 +242,9 @@ class SimpleCall(
         )
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return thisInstance == field || selfInstance == field ||
+                field in valueParameters
+    }
+
 }

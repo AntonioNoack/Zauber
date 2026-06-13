@@ -16,6 +16,10 @@ abstract class SimpleExit(val field: SimpleField, scope: Scope, origin: Long) : 
         return "${StringStyles.style(returnType.symbol, StringStyles.ORANGE)} $field"
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return this.field == field
+    }
+
     override fun execute(): BlockReturn {
         val value = runtime[field]
         return BlockReturn(returnType, value)

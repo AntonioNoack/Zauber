@@ -49,6 +49,10 @@ class SimpleCheckEquals(
         }
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return left == field || right == field
+    }
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleCheckEquals(
             src.cloned(this.dst, dst),

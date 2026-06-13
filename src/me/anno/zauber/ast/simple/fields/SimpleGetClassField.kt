@@ -46,6 +46,10 @@ class SimpleGetClassField(
                 style(field.name, StringStyles.GREEN)
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return self == field
+    }
+
     override fun withField(field: Field): SimpleInstruction {
         val spec = Specialization(field.fieldScope, specialization.typeParameters)
         return SimpleGetClassField(dst, self, field, spec, scope, origin)

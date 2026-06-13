@@ -39,6 +39,8 @@ class SimpleMerge(
 
     override fun execute(): BlockReturn? = null
 
+    override fun hasInput(field: SimpleField): Boolean = ifField == field || elseField == field
+
     override fun toString(): String = "$dst = ${bold("Merge")}($ifField,$elseField)"
 
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {

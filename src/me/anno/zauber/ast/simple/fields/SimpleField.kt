@@ -8,6 +8,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.simple.SimpleMerge
+import me.anno.zauber.ast.simple.expression.SimpleAssignment
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.unresolved.*
@@ -39,6 +40,12 @@ class SimpleField(
 
     var numReads = 0
     var mergeInfo: SimpleMerge? = null
+
+    /**
+     * flag for nicer code generation:
+     * if this is set, we can inline the value
+     * */
+    var immediateValue: SimpleAssignment? = null
 
     /**
      * todo use this, 0 = this, 1 = self, 2 = unit, 3+x = parameters

@@ -22,6 +22,8 @@ class SimpleGetTypeInstance(
         return null
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleGetTypeInstance(
             src.cloned(this.dst, dst),

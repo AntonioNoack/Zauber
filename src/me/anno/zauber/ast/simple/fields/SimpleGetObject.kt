@@ -25,6 +25,8 @@ class SimpleGetObject(
         return "$dst = ${bold("Object")}[$objectScope]"
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun execute(): BlockReturn? {
         val runtime = runtime
         runtime[dst] = runtime.getObjectInstance(objectScope)

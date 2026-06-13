@@ -39,6 +39,10 @@ class SimpleConstructorCall(
         return "${if (isThis) "this" else "super"}${valueParameters.joinToString(", ", "(", ")")}"
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return thisInstance == field || field in valueParameters
+    }
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleConstructorCall(
             src.cloned(this.dst, dst),

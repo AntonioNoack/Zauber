@@ -24,6 +24,8 @@ class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
         return null
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleNumber(src.cloned(this.dst, dst), base)
     }

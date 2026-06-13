@@ -34,6 +34,10 @@ class SimpleSetClassField(
         }
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return self == field || value == field
+    }
+
     override fun toString(): String {
         return "$self?[${field.selfType}]." +
                 "${style(field.name, StringStyles.GREEN)} = $value"

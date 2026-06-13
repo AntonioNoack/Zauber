@@ -28,6 +28,10 @@ class SimpleLoop private constructor(
 
     override fun execute() = throw NotImplementedError("Not meant to be executed")
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return field == condition
+    }
+
     override fun toString(): String {
         return if (condition != null) {
             "${bold("SimpleLoop")}(${conditionBlock!!.str()}|$condition, negate=$negate ? ${body.str()})"

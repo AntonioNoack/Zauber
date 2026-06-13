@@ -20,6 +20,10 @@ class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFa
         }
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return field == condition
+    }
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleBranch(
             src.cloned(condition, dst),

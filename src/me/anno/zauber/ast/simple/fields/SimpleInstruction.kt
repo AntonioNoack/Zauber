@@ -17,4 +17,5 @@ abstract class SimpleInstruction(val scope: Scope, val origin: Long) {
     }
 
     abstract fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction
+    abstract fun hasInput(field: SimpleField): Boolean
 }

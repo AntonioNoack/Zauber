@@ -29,6 +29,8 @@ class SimpleGetLocalField(
                 style("\"${field.name}\"", GREEN)
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleGetLocalField(
             src.cloned(this.dst, dst),

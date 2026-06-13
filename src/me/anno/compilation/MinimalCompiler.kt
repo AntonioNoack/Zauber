@@ -82,7 +82,7 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
             else "Desktop/${preserveFolderName}"
         )
 
-        if (preserveFolderName == null) projectFolder.deleteChildrenRecursively()
+        if (preserveFolderName == null) projectFolder.makeCleanFolder()
         projectFolder.mkdirs()
 
         val srcFolder = File(projectFolder, "src")
@@ -97,9 +97,15 @@ abstract class MinimalCompiler(val preserveFolderName: String? = null) {
         return execute(projectFolder)
     }
 
-    fun File.deleteChildrenRecursively() {
-        for (child in listFiles() ?: return) {
-            child.deleteRecursively()
+    fun File.makeCleanFolder() {
+        // avoid deleting folders, because some terminals (VSCode) stick to their ID, not their path
+        if (exists() && isDirectory) {
+            for (child in listFiles() ?: return) {
+                child.deleteRecursively()
+            }
+        } else {
+            if (exists()) delete()
+            mkdirs()
         }
     }
 

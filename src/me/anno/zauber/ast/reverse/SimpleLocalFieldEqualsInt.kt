@@ -30,6 +30,8 @@ class SimpleLocalFieldEqualsInt(
         return "$dst = $field == ${style("$expected", StringStyles.DARK_BLUE)}"
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleLocalFieldEqualsInt(
             src.cloned(this.dst, dst),

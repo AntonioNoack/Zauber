@@ -45,6 +45,10 @@ class SimpleDynamicMacro(
         return builder.toString()
     }
 
+    override fun hasInput(field: SimpleField): Boolean {
+        return thisInstance == field || field in valueParameters
+    }
+
     override fun eval(): BlockReturn {
         val valueParameters = valueParameters.map { param -> runtime[param] }
         val expression = evaluateMacroNow(method, valueParameters, imports, generics, original.scope, origin)

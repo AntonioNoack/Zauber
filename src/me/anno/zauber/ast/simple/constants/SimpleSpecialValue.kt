@@ -27,6 +27,8 @@ class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope,
         return null
     }
 
+    override fun hasInput(field: SimpleField): Boolean = false
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleSpecialValue(
             src.cloned(this.dst, dst),

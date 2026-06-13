@@ -920,15 +920,27 @@ open class JavaSourceGenerator : Generator() {
 
     open fun prepareGraph(graph: SimpleGraph) {
 
-        // println("input graph: $graph")
+        val print = graph.method.name == "test"
+        if (print) println("Input graph: $graph")
 
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
+
+        if (print) println("Removal: $graph")
+
         graph.giveLocalFieldsUniqueNames()
         graph.removeSimpleGetObject()
+
+        if (print) println("Removal/2: $graph")
+
         graph.removeMergeInfoInstructions()
+
+        if (print) println("Removal/3: $graph")
+
         graph.renumberFields()
+
+        if (print) println("After renumber: $graph")
 
         CodeReconstruction.createCodeFromGraph(graph)
         graph.renumberFields() // necessary

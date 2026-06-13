@@ -35,6 +35,8 @@ class SimpleAllocateInstance(
                 style(allocatedType.toString(), StringStyles.LIGHT_ORANGE)
     }
 
+    override fun hasInput(field: SimpleField): Boolean = field in paramsForLater
+
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleAllocateInstance(
             src.cloned(this.dst, dst), allocatedType,

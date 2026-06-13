@@ -23,7 +23,8 @@ class MinimalJavaBuildCompiler : MinimalCompiler() {
             .generateCode(srcFolder, dependencies, mainMethod)
 
         val classFolder = File(projectFolder, "target")
-        classFolder.delete()
+        classFolder.makeCleanFolder()
+
         compileJava(srcFolder, classFolder)
         createJar(File(projectFolder, "Zauber.jar"), classFolder)
     }

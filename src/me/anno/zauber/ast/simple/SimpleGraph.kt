@@ -247,10 +247,39 @@ class SimpleGraph(val method0: Specialization) {
         }
     }
 
+    /**
+     * find simple fields, which are only used once,
+     * and where the only read is immediately next to the assignment
+     *
+     * todo use this for nicer-looking code gen (no functional change)
+     * */
+    fun markDirectlyAssignedSimpleFields() {
+        for (block in blocks) {
+            val instructions = block.instructions
+            var i = 0
+            while (++i < instructions.size) {
+                val decl = instructions[i - 1]
+                if (decl !is SimpleAssignment) continue
+                if (decl.dst.mergeInfo != null || decl.dst.numReads != 1) continue
+
+                val use = instructions[i]
+                if (use.hasInput(decl.dst)) {
+                    instructions.removeAt(i - 1)
+                    decl.dst.immediateValue = decl
+                    i--
+                }
+            }
+        }
+    }
+
+    // todo also find LocalFields, which are assigned on one level only,
+    //  s.t. we can declare them locally (nicer looking code)
+
+    /**
+     * detect type transitions (type1 -> type2),
+     * and add explicit casts
+     * */
     fun findBoxingAndUnboxing(findAllCasts: Boolean = false) {
-        // todo for SimpleGraph, add a processing step,
-        //  where type transitions are detected (value -> reference | reference -> value),
-        //  and add explicit casts || [SimpleG/Set(Local)Field]
 
         val context = ResolutionContext.minimal // todo we do need our specialization
         for (block in blocks) {
@@ -325,6 +354,7 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun clone(): SimpleGraph {
+
         check(blocks.withIndex().all { it.index == it.value.id })
         check(localFields.withIndex().all { it.index == it.value.id })
         check(simpleFields.withIndex().all { it.index == it.value.id })
@@ -363,7 +393,7 @@ class SimpleGraph(val method0: Specialization) {
             }
 
             clonedBlock.isEntryPoint = block.isEntryPoint
-            clonedBlock.branchCondition = block.branchCondition
+            clonedBlock.branchCondition = cloned1(block.branchCondition, cloned)
             clonedBlock.ifBranch = cloned1(block.ifBranch, cloned)
             clonedBlock.elseBranch = cloned1(block.elseBranch, cloned)
         }
@@ -378,6 +408,8 @@ class SimpleGraph(val method0: Specialization) {
             val dst = cloned.simpleFields[i]
             dst.numReads = src.numReads
             dst.fromLocalField = cloned1(src.fromLocalField, cloned)
+            assertEquals((dst.mergeInfo != null), (src.mergeInfo != null))
+            assertEquals(dst.dst.id, src.dst.id)
         }
 
         return cloned
