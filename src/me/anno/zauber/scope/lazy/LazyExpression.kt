@@ -1,9 +1,11 @@
 package me.anno.zauber.scope.lazy
 
-import me.anno.zauber.Zauber.root
 import me.anno.support.Language
-import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -61,6 +63,16 @@ class LazyExpression(
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
         value.forEachExpression(callback)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        return value.simplify(context, block0, flow0, needsValue)
     }
 
 }

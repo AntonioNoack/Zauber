@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.rich.expression.resolved
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.ASTSimplifier.simplifySetField
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedField
@@ -33,5 +36,15 @@ class ResolvedSetFieldExpression(
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(self)
         callback(value)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        return simplifySetField(context, this, block0, flow0)
     }
 }

@@ -23,7 +23,7 @@ class LazyJVMExpression(
 
     override fun needsBackingField(methodScope: Scope): Boolean = value.needsBackingField(methodScope)
     override fun splitsScope(): Boolean = value.splitsScope()
-    override fun isResolved(): Boolean = value.isResolved()
+    override fun isResolved(): Boolean = false
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
         value.forEachExpression(callback)

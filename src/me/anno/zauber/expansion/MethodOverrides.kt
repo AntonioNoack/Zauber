@@ -3,6 +3,8 @@ package me.anno.zauber.expansion
 import me.anno.support.jvm.FirstJVMClassReader
 import me.anno.utils.CollectionUtils.groupByMutable
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Field
@@ -20,7 +22,6 @@ import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.CollectionType
 import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.NullType
-import me.anno.zauber.types.impl.arithmetic.UnionType
 import me.anno.zauber.types.impl.arithmetic.UnknownType
 import me.anno.zauber.types.impl.unresolved.UnresolvedType
 
@@ -276,6 +277,11 @@ object MethodOverrides {
                         val superCall = childClass.superCalls.firstOrNull { it.type.clazz == superClass }
                             ?: error("Expected to find $superClass in superCalls of $childClass")
                         val paramIndex = superClass.typeParameters.indexOfFirst { it.name == name }
+                        if (paramIndex < 0) {
+                            LOGGER.warn("Unknown typeParameter ${style(name, GREEN)} in $superClass, known: ${superClass.typeParameters}")
+                            return UnknownType
+                        }
+
                         val typeParams = superCall.type.typeParameters
                         if (typeParams == null) {
                             LOGGER.warn("Missing $superCall-typeParameters for $this, child: $childClass")

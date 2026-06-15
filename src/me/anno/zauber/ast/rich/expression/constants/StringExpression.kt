@@ -2,6 +2,9 @@ package me.anno.zauber.ast.rich.expression.constants
 
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.constants.SimpleString
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -28,5 +31,17 @@ class StringExpression(val value: String, scope: Scope, origin: Long) : Expressi
     override fun forEachExpression(callback: (Expression) -> Unit) {}
 
     override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>) = this
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val dst = block0.field(Types.String, this)
+        block0.add(SimpleString(dst, this))
+        return flow0.withValue(dst, block0)
+    }
 
 }

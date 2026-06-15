@@ -1,7 +1,11 @@
 package me.anno.zauber.ast.rich.controlflow
 
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -25,5 +29,29 @@ class ReturnExpression(value: Expression, label: String?, scope: Scope, origin: 
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(value)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+
+        val field = value.simplify(context, block0, flow0, true, this)
+        val field1v = field.value ?: return field
+
+        val expectedReturnType = block0.graph.expectedReturnType
+        val actualReturnType = field1v.value.type.specialize(block0.graph.method0)
+        check(isSubTypeOf(expectedReturnType, actualReturnType)) {
+            val method = block0.graph.method
+            "Expected return value in $method " +
+                    "to match $expectedReturnType, got $actualReturnType\n" +
+                    "  spec: ${block0.graph.method}\n" +
+                    "  at ${resolveOrigin(origin)}"
+        }
+
+        return field.joinReturnNoValue(field1v.value.use(), field1v.block)
     }
 }

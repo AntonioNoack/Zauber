@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.rich.member
 
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.FlagSet
 import me.anno.zauber.ast.rich.Annotation
@@ -184,17 +186,17 @@ class Field(
     }
 
     fun toString(depth: Int): String {
-        val self = selfType ?: ownerScope.pathStr
+        val self = selfType ?: ownerScope
         return if (initialValue == null || depth < 0) {
             toStringWithoutDefault()
         } else {
-            "Field($self.$name=${initialValue.toString(depth - 1)})"
+            "Field($self.${style(name, GREEN)}=${initialValue.toString(depth - 1)})"
         }
     }
 
     fun toStringWithoutDefault(): String {
-        val self = selfType ?: ownerScope.pathStr
-        return "Field($self.$name)"
+        val self = selfType ?: ownerScope
+        return "Field($self.${style(name, GREEN)})"
     }
 
     override val ownerScope get() = scope

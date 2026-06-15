@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -52,6 +55,50 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
         callback(condition)
         callback(body)
         if (elseBranch != null) callback(elseBranch)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+
+        val graph = block0.graph
+        val conditionBlock = block0.nextOrSelfIfEmpty()
+        val bodyBlock = graph.addBlock()
+        val afterBlock = graph.addBlock()
+        val elseBlock = if (elseBranch != null) graph.addBlock() else null
+
+        val labelScope = body.scope
+        graph.breakLabels[labelScope] = afterBlock
+        graph.continueLabels[labelScope] = conditionBlock
+
+        val unit = unitInstance(graph, this)
+        val beforeFlow0 = flow0.withValue(unit, conditionBlock)
+        // add condition and jump to insideBlock
+        // (condition, beforeBlock1)
+        val beforeBlock1 = condition.simplify(context, conditionBlock, beforeFlow0, true)
+        val beforeBlock1v = beforeBlock1.value ?: return beforeBlock1
+        val condition = beforeBlock1v.value
+        beforeBlock1v.block.branchCondition = condition.use()
+        beforeBlock1v.block.ifBranch = bodyBlock
+        beforeBlock1v.block.elseBranch = elseBlock ?: afterBlock
+
+        if (elseBlock != null) {
+            // todo test this
+            val elseBlock1 = elseBranch!!.simplify(context, elseBlock, beforeBlock1, false)
+            elseBlock1.value?.block?.nextBranch = afterBlock
+        }
+
+        // add body to insideBlock
+        val insideFlow0 = beforeBlock1.withValue(unit, bodyBlock)
+        val insideBlock1 = body.simplify(context, bodyBlock, insideFlow0, false)
+        // continue, if possible
+        insideBlock1.value?.block?.nextBranch = conditionBlock
+
+        return beforeBlock1.withValue(unit, afterBlock)
     }
 
 }

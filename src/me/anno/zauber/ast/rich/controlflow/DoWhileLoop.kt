@@ -1,6 +1,9 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -44,5 +47,48 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(body)
         callback(condition)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val graph = block0.graph
+        val bodyBlock = block0.nextOrSelfIfEmpty()
+        val conditionBlock = graph.addBlock()
+        val afterBlock = graph.addBlock()
+
+        val labelScope = body.scope
+        graph.breakLabels[labelScope] = afterBlock
+        graph.continueLabels[labelScope] = conditionBlock
+
+        val unit = unitInstance(graph, this)
+        val insideFlow0 = flow0.withValue(unit, bodyBlock)
+        val insideBlock1 = body.simplify(context, bodyBlock, insideFlow0, false)
+        var flow1 = insideFlow0.joinError(insideBlock1)
+        if (insideBlock1.value != null ||
+            afterBlock.inputBlocks.isNotEmpty() || // there is a @break
+            conditionBlock.inputBlocks.isNotEmpty() // there is a @continue
+        ) {
+            insideBlock1.value?.block?.nextBranch = conditionBlock
+
+            // add condition and jump to insideBlock
+            val flow1d = flow1.withValue(unit, conditionBlock)
+            val decideBlock1i = condition.simplify(context, conditionBlock, flow1d, true)
+
+            if (decideBlock1i.value != null) {
+                val decideBlock1 = decideBlock1i.value.block
+                decideBlock1.branchCondition = decideBlock1i.value.value.use()
+                decideBlock1.ifBranch = bodyBlock
+                decideBlock1.elseBranch = afterBlock
+            }
+            flow1 = flow1.joinError(decideBlock1i)
+        }
+
+        // Unit, because no return value is supported
+        return flow1.withValue(unit, afterBlock)
     }
 }

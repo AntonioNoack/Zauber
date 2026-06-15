@@ -11,4 +11,5 @@ class JVMSimpleMultiArray(
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing
+    override fun toStringImpl(depth: Int): String = "$dst = $totalType[$dimensions]"
 }

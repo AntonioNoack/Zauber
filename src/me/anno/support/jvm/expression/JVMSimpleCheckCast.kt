@@ -12,4 +12,5 @@ class JVMSimpleCheckCast(
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveValueType(context: ResolutionContext): Type = Types.Boolean
+    override fun toStringImpl(depth: Int): String = "Check $value is $type"
 }

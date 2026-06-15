@@ -1,8 +1,12 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.controlflow.SimpleYield
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
 /**
@@ -37,7 +41,23 @@ class YieldExpression(value: Expression, scope: Scope, origin: Long) :
     override fun splitsScope(): Boolean = true // yes, this even stops execution
     override fun resolveImpl(context: ResolutionContext): Expression =
         YieldExpression(value.resolve(context), scope, origin)
+
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(value)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val field = value.simplify(context, block0, flow0, true)
+        val field1v = field.value ?: return field
+        val continueBlock = block0.graph.addBlock()
+        field1v.block.add(SimpleYield(field1v.value.use(), continueBlock, scope, origin))
+        continueBlock.isEntryPoint = true
+        return field.withValue(unitInstance(block0.graph, this), continueBlock)
     }
 }

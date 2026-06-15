@@ -1,5 +1,8 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.expression.SimpleGetTypeInstance
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -33,4 +36,15 @@ class GetClassFromTypeExpression(val type: Type, scope: Scope, origin: Long) : E
 
     override fun forEachExpression(callback: (Expression) -> Unit) {}
 
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val dst = block0.field(resolveValueType(context))
+        block0.add(SimpleGetTypeInstance(dst, type, scope, origin))
+        return flow0.withValue(dst, block0)
+    }
 }

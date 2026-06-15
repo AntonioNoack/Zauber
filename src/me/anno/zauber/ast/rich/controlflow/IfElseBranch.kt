@@ -3,6 +3,9 @@ package me.anno.zauber.ast.rich.controlflow
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
+import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -114,6 +117,44 @@ class IfElseBranch(
             "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} }"
         } else {
             "if(${condition.toString(depth)}) { ${ifBranch.toString(depth)} } else { ${elseBranch.toString(depth)} }"
+        }
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val block1 = condition.simplify(context, block0, flow0, true)
+        val block1v = block1.value ?: return block1
+        val condition = block1v.value
+
+        // todo when the condition to a branch is a simple boolean, skip evaluating the other branch!
+
+        val graph = block0.graph
+        val ifBlock = graph.addBlock()
+        val elseBlock = graph.addBlock()
+
+        block1v.block.branchCondition = condition.use()
+        block1v.block.ifBranch = ifBlock
+        block1v.block.elseBranch = elseBlock
+
+        val unit = unitInstance(graph, this)
+        val ifFlow = block1.withValue(unit, ifBlock)
+        val elseFlow = block1.withValue(unit, elseBlock)
+
+        if (elseBranch == null) {
+            val ifValue = ifBranch.simplify(context, ifBlock, ifFlow, needsValue)
+            ifValue.value?.block?.nextBranch = elseBlock
+
+            return elseFlow.joinError(ifValue)
+                .withValue(unit, elseBlock)
+        } else {
+            val ifValue = ifBranch.simplify(context, ifBlock, ifFlow, needsValue)
+            val elseValue = elseBranch.simplify(context, elseBlock, elseFlow, needsValue)
+            return ifValue.joinWith(elseValue)
         }
     }
 }

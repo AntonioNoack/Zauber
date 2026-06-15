@@ -1,5 +1,9 @@
 package me.anno.zauber.ast.rich.expression
 
+import me.anno.zauber.ast.simple.ASTSimplifier.handleThrown
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.expression.SimpleDynamicMacro
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMethod
@@ -57,5 +61,37 @@ class DynamicMacroExpression(
         for (param in valueParameters) {
             callback(param)
         }
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+
+        // (base, block1)
+        val block1 = self.simplify(context, block0, flow0, true)
+        val base = block1.value ?: return block1
+
+        // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
+        var blockI = block1
+        val valueParameters = valueParameters.map { param ->
+            blockI = param.simplify(context, blockI.value!!.block, blockI, false)
+            blockI.value?.value ?: return blockI
+        }
+
+        valueParameters.forEach { it.use() }
+
+        val method0 = method
+        val method = method0.resolved
+        val block0 = blockI.value!!.block
+        val selfExpr = base.value.use()
+        // then execute it
+        val dst = block0.field(method0.resolveValueType())
+        val specialization = method0.specialization
+        val call = SimpleDynamicMacro(dst, this, selfExpr.use(), valueParameters, scope, origin)
+        return handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
     }
 }

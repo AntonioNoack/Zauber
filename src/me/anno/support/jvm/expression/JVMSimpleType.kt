@@ -11,6 +11,6 @@ class JVMSimpleType(
     val value: ClassType,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
-    override fun resolveValueType(context: ResolutionContext): Type =
-        Types.ClassType.withTypeParameter(value)
+    override fun resolveValueType(context: ResolutionContext): Type = Types.ClassType.withTypeParameter(value)
+    override fun toStringImpl(depth: Int): String = "$dst = Type[$value]"
 }

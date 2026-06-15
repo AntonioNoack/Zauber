@@ -1,7 +1,10 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -39,4 +42,19 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(value)
     }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val block1 = value.simplify(context, block0, flow0, true)
+        val block1v = block1.value ?: return block1
+        val dst = block1v.block.field(Types.Boolean)
+        block1v.block.add(createSimpleInstanceOf(dst, block1v.value.use(), type, scope, origin))
+        return block1.withValue(dst, block1v.block)
+    }
+
 }

@@ -13,4 +13,5 @@ class JVMSimpleCompare(
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveValueType(context: ResolutionContext): Type = dst.type
+    override fun toStringImpl(depth: Int): String = "$dst = $p0 $type $p1"
 }

@@ -5,15 +5,12 @@ import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.assertEquals
 import me.anno.zauber.SpecialFieldNames.OUTER_FIELD_NAME
-import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
-import me.anno.zauber.ast.rich.controlflow.*
-import me.anno.zauber.ast.rich.expression.*
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
-import me.anno.zauber.ast.rich.expression.constants.StringExpression
-import me.anno.zauber.ast.rich.expression.resolved.*
+import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
+import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
+import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.FieldGetterSetter.finishGetter
@@ -21,24 +18,23 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.parameter.Parameter
-import me.anno.zauber.ast.simple.constants.SimpleNumber
-import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
-import me.anno.zauber.ast.simple.constants.SimpleString
-import me.anno.zauber.ast.simple.controlflow.*
-import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
+import me.anno.zauber.ast.simple.controlflow.Flow
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
+import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleCallable
+import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
-import me.anno.zauber.scope.lazy.LazyExpression
 import me.anno.zauber.typeresolution.CallWithNames.resolveNamedParameters
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedField
 import me.anno.zauber.typeresolution.members.ResolvedMember
@@ -47,7 +43,6 @@ import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
-import me.anno.zauber.types.impl.arithmetic.NullType
 
 object ASTSimplifier {
 
@@ -110,7 +105,7 @@ object ASTSimplifier {
         graph.initializeSpecialFields(context)
 
         val flow0 = FlowResult(Flow(unitInstance(graph, expr), graph.startBlock), null, null)
-        val flow1 = simplifyImpl(context, expr, graph.startBlock, flow0, false)
+        val flow1 = expr.simplify(context, graph.startBlock, flow0, false)
         finishFlows(flow1, method0, expr)
 
         if (LOGGER.isInfoEnabled) LOGGER.info("\n${bold("Simplified")} $method0:\n  $flow1\n  to $graph\n")
@@ -165,240 +160,11 @@ object ASTSimplifier {
         return parameter.isVal || parameter.isVar
     }
 
-    private fun simplifyImpl(
-        context: ResolutionContext, expr: Expression,
-        flow0: FlowResult, needsValue: Boolean
-    ): FlowResult {
-        val block0 = flow0.value ?: return flow0
-        return simplifyImpl(context, expr, block0.block, flow0, needsValue)
-    }
-
-    private fun simplifyImpl(
-        context: ResolutionContext, expr: Expression,
-        block0: SimpleBlock, flow0: FlowResult, needsValue: Boolean,
-        contextExpr: Expression? = null // for ThisExpression
-    ): FlowResult {
-        when (expr) {
-            is ExpressionList -> return simplifyList(context, expr, flow0, needsValue)
-            is YieldExpression -> {
-                val field = simplifyImpl(context, expr.value, block0, flow0, true)
-                val field1v = field.value ?: return field
-                val continueBlock = block0.graph.addBlock()
-                field1v.block.add(SimpleYield(field1v.value.use(), continueBlock, expr.scope, expr.origin))
-                continueBlock.isEntryPoint = true
-                return field.withValue(unitInstance(block0.graph, expr), continueBlock)
-            }
-
-            is ReturnExpression -> {
-                val field = simplifyImpl(context, expr.value, block0, flow0, true, expr)
-                val field1v = field.value ?: return field
-
-                val expectedReturnType = block0.graph.expectedReturnType
-                val actualReturnType = field1v.value.type.specialize(block0.graph.method0)
-                check(isSubTypeOf(expectedReturnType, actualReturnType)) {
-                    val method = block0.graph.method
-                    "Expected return value in $method " +
-                            "to match $expectedReturnType, got $actualReturnType\n" +
-                            "  spec: ${block0.graph.method}\n" +
-                            "  at ${resolveOrigin(expr.origin)}"
-                }
-
-                return field.joinReturnNoValue(field1v.value.use(), field1v.block)
-            }
-
-            is ThrowExpression -> {
-                val field = simplifyImpl(context, expr.value, block0, flow0, true)
-                val field1v = field.value ?: return field
-                return field.joinThrownNoValue(field1v.value.use(), field1v.block)
-            }
-
-            is ResolvedCompareOp -> return simplifyCompareOp(context, expr, block0, flow0)
-            is ResolvedCallExpression -> return simplifyCall(context, expr, block0, flow0)
-            is DynamicMacroExpression -> return simplifyDynamicMacro(context, expr, block0, flow0)
-
-            is SpecialValueExpression -> {
-                val type = when (expr.type) {
-                    SpecialValue.NULL -> NullType
-                    SpecialValue.TRUE, SpecialValue.FALSE -> Types.Boolean
-                }
-                val dst = block0.field(type, expr)
-                block0.add(SimpleSpecialValue(dst, expr.type, expr.scope, expr.origin))
-                return flow0.withValue(dst, block0)
-            }
-
-            is ThisExpression -> {
-                val type = expr.label.typeWithArgs.specialize(context)
-                val dst = block0.thisField(
-                    type, expr.label, expr.scope, expr.origin,
-                    context.specialization, contextExpr
-                )
-                return flow0.withValue(dst, block0)
-            }
-            is SuperExpression -> {
-                val type = expr.label.typeWithArgs.specialize(context)
-                val dst = block0.thisField(
-                    type, expr.label, expr.scope, expr.origin,
-                    context.specialization, contextExpr
-                )
-                return flow0.withValue(dst, block0)
-            }
-
-            is ResolvedGetFieldExpression -> return simplifyGetField(context, expr, block0, flow0)
-            is ResolvedSetFieldExpression -> return simplifySetField(context, expr, block0, flow0)
-
-            is NumberExpression -> {
-                // println("resolving number, $expr, ${expr.resolvedType0}, ${context.targetType}")
-                val type = TypeResolution.resolveType(context, expr)
-                val dst = block0.field(type, expr)
-                block0.add(SimpleNumber(dst, expr))
-                return flow0.withValue(dst, block0)
-            }
-
-            is StringExpression -> {
-                val dst = block0.field(Types.String, expr)
-                block0.add(SimpleString(dst, expr))
-                return flow0.withValue(dst, block0)
-            }
-
-            is IsInstanceOfExpr -> {
-                val block1 = simplifyImpl(context, expr.value, block0, flow0, true)
-                val block1v = block1.value ?: return block1
-                val dst = block1v.block.field(Types.Boolean)
-                block1v.block.add(createSimpleInstanceOf(dst, block1v.value.use(), expr.type, expr.scope, expr.origin))
-                return block1.withValue(dst, block1v.block)
-            }
-
-            is GetClassFromTypeExpression -> {
-                val dst = block0.field(expr.resolveValueType(context))
-                block0.add(SimpleGetTypeInstance(dst, expr.type, expr.scope, expr.origin))
-                return flow0.withValue(dst, block0)
-            }
-
-            is GetClassFromValueExpression -> {
-                val block1 = simplifyImpl(context, expr.value, block0, flow0, true)
-                val block1v = block1.value ?: return block1
-                val dst = block0.field(expr.resolveValueType(context))
-                block0.add(SimpleGetTypeFromInstance(dst, block1v.value.use(), expr.scope, expr.origin))
-                return flow0.withValue(dst, block0)
-            }
-
-            is IfElseBranch -> return simplifyBranch(context, expr, block0, flow0, needsValue)
-            is WhileLoop -> return simplifyWhile(context, expr, block0, flow0)
-            is DoWhileLoop -> return simplifyDoWhile(context, expr, block0, flow0)
-            is TryCatchBlock -> return simplifyTryCatch(context, expr, block0, flow0, needsValue)
-            is CheckEqualsOp -> return simplifyCheckEqualsOp(context, expr, block0, flow0)
-            is LazyExpression -> return simplifyImpl(context, expr.value, block0, flow0, needsValue)
-
-            is BreakExpression -> return simplifyJump(expr, flow0, block0.graph.breakLabels[expr.label])
-            is ContinueExpression -> return simplifyJump(expr, flow0, block0.graph.continueLabels[expr.label])
-
-            is ArrayOfExpr -> return simplifyArrayOf(context, expr, block0, flow0)
-
-            else -> {
-                if (!expr.isResolved()) error("${expr.javaClass.simpleName} was not resolved")
-                throw NotImplementedError("Simplify value ${expr.javaClass.simpleName}: $expr")
-            }
-        }
-    }
-
-    private fun simplifyArrayOf(
-        context: ResolutionContext,
-        expr: ArrayOfExpr,
-        block0: SimpleBlock,
-        flow0: FlowResult
-    ): FlowResult {
-
-        var flowI = flow0
-        var blockI = block0
-
-        val arrayType = expr.resolveValueType(context)
-        val instanceType = (arrayType as ClassType).typeParameters!![0]
-
-        val subContext = context
-            .withAllowTypeless(false)
-            .withTargetType(instanceType)
-
-        val values: List<SimpleField> = expr.values.map { value ->
-            flowI = simplifyImpl(subContext, value, blockI, flowI, true)
-            val blockIv = flowI.value ?: return flowI
-            blockI = blockIv.block
-            blockIv.value
-        }
-
-        val array = blockI.field(arrayType)
-        val scope = expr.scope
-        val origin = expr.origin
-        val size = blockI.field(Types.Int)
-        blockI.add(SimpleNumber(size, NumberExpression("${expr.values.size}", scope, origin)))
-        val allocateParams = listOf(size.use())
-        blockI.add(
-            SimpleAllocateInstance(
-                array, arrayType, allocateParams,
-                Specialization(arrayType), scope, origin
-            )
-        )
-        // handle error?
-
-        // find constructor method
-        val unit = unitInstance(blockI.graph, scope, origin)
-        val constructor = Types.Array.clazz.constructors0
-            .firstOrNull { it.valueParameters.size == 1 && it.valueParameters[0].type == Types.Int }
-            ?: error("Missing Array(size: Int) constructor")
-        val specParams = ParameterList(Types.Array.clazz.typeParameters, listOf(instanceType))
-        val specialization = Specialization(constructor.memberScope, specParams)
-        val constr = SimpleConstructorCall(unit, true, array.use(), specialization, allocateParams, scope, origin)
-        blockI.add(constr)
-        // todo handle OOM error
-
-        if (expr.values.isNotEmpty()) {
-            // find assignment method
-            val setMethod = Types.Array.clazz
-                .methods0.firstOrNull {
-                    it.name == "set" && it.valueParameters.size == 2 &&
-                            it.valueParameters[0].type == Types.Int
-                }
-                ?: error("Missing Array(size: Int).set(index,value) method")
-
-            val setMethodSpec = specialization.withScope(setMethod.memberScope)
-
-            // execute all assignments
-            for (i in values.indices) {
-                val indexExpr = NumberExpression("$i", scope, origin) // could be cached
-                val index = blockI.field(Types.Int, indexExpr)
-                blockI.add(SimpleNumber(index, indexExpr))
-                val valueParameters = listOf(index.use(), values[i].use())
-
-                blockI.add(
-                    SimpleCall(
-                        unit, setMethod, array.use(),
-                        null, setMethodSpec, valueParameters,
-                        scope, origin
-                    )
-                )
-            }
-        }
-
-        return flowI.withValue(array, blockI)
-
-    }
-
-    private fun simplifyJump(expr: Expression, flow0: FlowResult, target: SimpleBlock?): FlowResult {
+    fun simplifyJump(expr: Expression, flow0: FlowResult, target: SimpleBlock?): FlowResult {
         val block0 = flow0.value ?: return flow0
         check(target != null) { "Failed to resolve jump target to $expr" }
         block0.block.nextBranch = target
         return flow0.withoutValue() // our flow ends here, nothing can come after
-    }
-
-    private fun simplifyList(
-        context: ResolutionContext, expr: ExpressionList,
-        flow0: FlowResult, needsValue: Boolean
-    ): FlowResult {
-        var blockI = flow0
-        for (expr in expr.list) {
-            val blockIv = blockI.value ?: return blockI
-            blockI = simplifyImpl(context, expr, blockIv.block, blockI, needsValue)
-        }
-        return blockI
     }
 
     private fun fieldHasSensibleType(context: ResolutionContext, field: Field): Boolean {
@@ -407,71 +173,6 @@ object ASTSimplifier {
         // println("Resolving type of $field in $context")
         val type0 = field.resolveValueType(context)
         return type0 !is ClassType || !type0.clazz.isObjectLike()
-    }
-
-    private fun simplifyDynamicMacro(
-        context: ResolutionContext,
-        expr: DynamicMacroExpression,
-        block0: SimpleBlock,
-        flow0: FlowResult
-    ): FlowResult {
-        // (base, block1)
-        val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
-        val base = block1.value ?: return block1
-
-        // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
-        var blockI = block1
-        val valueParameters = expr.valueParameters.map { param ->
-            blockI = simplifyImpl(context, param, blockI.value!!.block, blockI, false)
-            blockI.value?.value ?: return blockI
-        }
-
-        valueParameters.forEach { it.use() }
-
-        val method0 = expr.method
-        val method = method0.resolved
-        val block0 = blockI.value!!.block
-        val selfExpr = base.value.use()
-        // then execute it
-        val dst = block0.field(method0.resolveValueType())
-        val specialization = method0.specialization
-        val call = SimpleDynamicMacro(dst, expr, selfExpr.use(), valueParameters, expr.scope, expr.origin)
-        return handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
-    }
-
-    private fun simplifyCall(
-        context: ResolutionContext,
-        expr: ResolvedCallExpression,
-        block0: SimpleBlock,
-        flow0: FlowResult
-    ): FlowResult {
-
-        // (base, block1)
-        val block1 = if (expr.selfExpr != null) {
-            simplifyImpl(context, expr.selfExpr, block0, flow0, true, contextExpr = expr)
-        } else flow0
-        val base = block1.value ?: return block1
-
-        // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
-        var blockI = block1
-        val valueParameters = expr.valueParameters.map { param ->
-            blockI = simplifyImpl(context, param, blockI.value!!.block, blockI, false)
-            blockI.value?.value ?: return blockI
-        }
-
-        val thisExpr = if (expr.thisExpr != null) {
-            blockI = simplifyImpl(context, expr.thisExpr, blockI.value!!.block, blockI, false)
-            blockI.value?.value ?: return blockI
-        } else null
-
-        val method = expr.callable
-        val selfExpr = if (expr.selfExpr != null) base.value.use() else null
-        val selfIfInsideConstructor = (expr.selfExpr as? SuperExpression)?.isThis
-        return simplifyCall(
-            blockI.value!!.block, blockI, selfExpr, expr.selfExpr, thisExpr,
-            valueParameters, method, selfIfInsideConstructor,
-            expr.scope, expr.origin
-        )
     }
 
     private fun isLocalField(graph: SimpleGraph, field: Field): Boolean {
@@ -484,7 +185,7 @@ object ASTSimplifier {
         return graph.method.memberScope == fieldScope
     }
 
-    private fun simplifyGetField(
+    fun simplifyGetField(
         context: ResolutionContext,
         expr: ResolvedGetFieldExpression,
         block0: SimpleBlock,
@@ -505,7 +206,6 @@ object ASTSimplifier {
         }
 
         val field = expr.field.resolved
-
         if (field.isObjectInstance()) {
             val dst = block0.field(field.ownerScope.typeWithArgs2)
             val value = SimpleGetObject(dst, field.ownerScope, expr.scope, expr.origin)
@@ -513,7 +213,7 @@ object ASTSimplifier {
             return flow0.withValue(dst)
         }
 
-        val selfType = expr.self.resolveValueType(context.withTargetType(field.valueType))
+        val selfType = expr.self.resolveValueType(context.withTargetType(/*field.valueType*/ null))
         val contextI = context.withSelfType(selfType)
         if (!fieldHasSensibleType(contextI, field)) {
             LOGGER.info("Skipping non-sense getter for ${field.ownerScope}.${field.name} at ${resolveOrigin(expr.origin)}")
@@ -531,7 +231,7 @@ object ASTSimplifier {
             return flow0.withValue(dst)
         }
 
-        val block1 = simplifyImpl(contextI, expr.self, block0, flow0, true, expr)
+        val block1 = expr.self.simplify(contextI, block0, flow0, true, expr)
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
@@ -560,12 +260,13 @@ object ASTSimplifier {
 
             if (field.getter == null) finishGetter(field.ownerScope, field)
 
-            val ownerTypes = (self.type as? ClassType)?.typeParameters ?: ParameterList.emptyParameterList()
+            val ownerTypes = (self.type as? ClassType)?.typeParameters ?: emptyParameterList()
             val getter = field.getter ?: error("Missing getter for $field")
             val newContext = contextI.withSpec(Specialization(getter.scope, ownerTypes))
             val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
+            val dst = block0.field(resolvedGetter.resolveValueType())
             return simplifyCall(
-                block1v.block, block1, self, expr.self, null,
+                dst, block1v.block, block1, self, expr.self, null,
                 emptyList(), resolvedGetter,
                 null, expr.scope, expr.origin
             )
@@ -600,7 +301,7 @@ object ASTSimplifier {
         }
     }
 
-    private fun simplifySetField(
+    fun simplifySetField(
         context: ResolutionContext,
         expr: ResolvedSetFieldExpression,
         block0: SimpleBlock,
@@ -625,7 +326,8 @@ object ASTSimplifier {
 
         if (isLocalField(graph, field)) {
             val localField = graph.getOrPutLocalField(field, context)
-            val block2 = simplifyImpl(context.withTargetType(localField.type), expr.value, flow0, true)
+            val contextI = context.withTargetType(localField.type)
+            val block2 = expr.value.simplify(contextI, block0, flow0, true)
             val block2v = block2.value ?: return block2
             val value = block2v.value
 
@@ -633,12 +335,13 @@ object ASTSimplifier {
             return block2.withValue(unitInstance(graph, expr))
         }
 
-        val block1 = simplifyImpl(context, expr.self, block0, flow0, true)
+        val block1 = expr.self.simplify(context, block0, flow0, true)
         val block1v = block1.value ?: return block1
         val self = block1v.value
 
         val expectedValueType = field.resolveValueType(context)
-        val block2 = simplifyImpl(context.withTargetType(expectedValueType), expr.value, block1, true)
+        val contextI = context.withTargetType(expectedValueType)
+        val block2 = expr.value.simplify(contextI, block1v.block, block1, true)
         val block2v = block2.value ?: return block2
         val value = block2v.value
 
@@ -682,8 +385,9 @@ object ASTSimplifier {
             val setter = field.setter ?: error("Missing setter for $field")
             val newContext = context.withSpec(Specialization(setter.scope, ownerTypes))
             val resolvedSetter = ResolvedMethod(setter, newContext, expr.scope, MatchScore.zero)
+            val dst = block0.field(Types.Unit)
             return simplifyCall(
-                block2v.block, block2, self, expr.self, null,
+                dst, block2v.block, block2, self, expr.self, null,
                 listOf(value), resolvedSetter,
                 null, expr.scope, expr.origin
             )
@@ -729,341 +433,8 @@ object ASTSimplifier {
                 !field.ownerScope.isObjectLike()
     }
 
-    private fun simplifyCompareOp(
-        context: ResolutionContext,
-        expr: ResolvedCompareOp,
-        block0: SimpleBlock,
-        flow0: FlowResult
-    ): FlowResult {
-
-        val block1 = simplifyImpl(context, expr.left, block0, flow0, true)
-        val block1v = block1.value ?: return block1
-        val left = block1v.value
-
-        val block2 = simplifyImpl(context, expr.right, block1, false)
-        val block2v = block2.value ?: return block2
-        val right = block2v.value
-
-        if (left.type in nativeNumbers && left.type == right.type) {
-
-            val dst = block2v.block.field(Types.Boolean)
-            val instr = SimpleCompare(
-                dst, left.use(), right.use(), expr.type,
-                left.type, expr.scope, expr.origin
-            )
-            block2v.block.add(instr)
-            return block2.withValue(dst)
-
-        } else {
-
-            // Simplify call, then compare with zero
-            val block3 = simplifyCall(
-                block2v.block, block2, left, expr.left, null, listOf(right),
-                expr.callable, null, expr.scope, expr.origin
-            )
-            val block3v = block3.value ?: return block3
-
-            val zeroExpr = NumberExpression("0", expr.scope, expr.origin)
-            val zero = block0.field(Types.Int, zeroExpr)
-            block3v.block.add(SimpleNumber(zero, zeroExpr))
-
-            val dst = block3v.block.field(Types.Boolean)
-            val instr = SimpleCompare(
-                dst, block3v.value.use(), zero.use(), expr.type,
-                Types.Int, expr.scope, expr.origin
-            )
-            block3v.block.add(instr)
-            return block3.withValue(dst)
-        }
-    }
-
-    private fun simplifyCheckEqualsOp(
-        context: ResolutionContext,
-        expr: CheckEqualsOp,
-        block0: SimpleBlock,
-        flow0: FlowResult,
-    ): FlowResult {
-        val block1 = simplifyImpl(context, expr.left, block0, flow0, true)
-        val block1v = block1.value ?: return block1
-
-        val block2 = simplifyImpl(context, expr.right, block1, true)
-        val block2v = block2.value ?: return block2
-
-        val dst = block2v.block.field(Types.Boolean)
-        val left = block1v.value
-        val right = block2v.value
-        val call = if (expr.byPointer) {
-            SimpleCheckIdentical(
-                dst, left.use(), right.use(),
-                expr.negated, expr.scope, expr.origin
-            )
-        } else {
-            // a == null ? b == null : b != null ? a.equals(b) : false
-            // todo inline this call if both sides are non-nullable??
-            /*if(left.type.mayBeNull() || right.type.mayBeNull()) {
-
-            }*/
-            SimpleCheckEquals(
-                dst, left.use(), right.use(),
-                expr.negated, expr.resolved!!.callable as ResolvedMethod,
-                expr.scope, expr.origin
-            )
-            // todo handle error
-        }
-        block2v.block.add(call)
-        return flow0
-            .joinError(block1)
-            .joinError(block2)
-            .withValue(dst, block2v.block)
-    }
-
-    private fun simplifyTryCatch(
-        context: ResolutionContext,
-        expr: TryCatchBlock,
-        block0: SimpleBlock,
-        flow0: FlowResult,
-        needsValue: Boolean
-    ): FlowResult {
-        check(block0 == flow0.value?.block)
-        val body = simplifyImpl(context, expr.tryBody, flow0, false)
-        val allCaught = simplifyCatches(context, expr, body, needsValue)
-        return simplifyFinally(context, expr, allCaught)
-    }
-
-    private fun simplifyCatches(
-        context: ResolutionContext,
-        expr: TryCatchBlock,
-        flow0: FlowResult,
-        needsValue: Boolean
-    ): FlowResult {
-        var blockI = flow0
-        for (catch in expr.catches) {
-            blockI = simplifyCatch(context, expr, catch, blockI, needsValue)
-        }
-        return blockI
-    }
-
-    private fun simplifyCatch(
-        context: ResolutionContext,
-        expr: TryCatchBlock,
-        catch: Catch,
-        flow0: FlowResult,
-        needsValue: Boolean
-    ): FlowResult {
-
-        val block0 = flow0.thrown ?: return flow0
-        val block0b = block0.block
-
-        val thrownType = catch.parameter.type
-        val instanceOfField = block0b.field(Types.Boolean)
-        val instanceCheck = createSimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
-
-        val alwaysHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.TRUE
-        val neverHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.FALSE
-        println("Catch handling($instanceCheck by ${block0.value} is $thrownType), body: ${catch.body}")
-
-        return when {
-            alwaysHandled -> simplifyCatchHandleBranch(context, expr, catch, needsValue, block0, block0b)
-            neverHandled -> simplifyCatchContinueBranch(flow0, block0, block0b)
-            else -> {
-                block0b.add(instanceCheck)
-
-                val graph = block0b.graph
-                val ifBlock = graph.addBlock()
-                val elseBlock = graph.addBlock()
-                block0b.branchCondition = instanceOfField.use()
-                block0b.ifBranch = ifBlock
-                block0b.elseBranch = elseBlock
-
-                val ifFlow = simplifyCatchHandleBranch(context, expr, catch, needsValue, block0, ifBlock)
-                val elseFlow = simplifyCatchContinueBranch(flow0, block0, elseBlock)
-                ifFlow.joinWith(elseFlow)
-            }
-        }
-    }
-
-    private fun simplifyCatchHandleBranch(
-        context: ResolutionContext,
-        expr: TryCatchBlock,
-        catch: Catch,
-        needsValue: Boolean,
-        block0: Flow,
-        ifBlock: SimpleBlock,
-    ): FlowResult {
-        val ifFlow = FlowResult(Flow(unitInstance(ifBlock.graph, expr), ifBlock), null, null)
-        val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
-        val thrownLocalField = block0.block.graph.getOrPutLocalField(thrownField, context)
-        ifBlock.add(SimpleSetLocalField(thrownLocalField, block0.value, expr.scope, expr.origin))
-        return simplifyImpl(context, catch.body, ifBlock, ifFlow, needsValue)
-    }
-
-    private fun simplifyCatchContinueBranch(
-        flow0: FlowResult,
-        block0: Flow,
-        elseBlock: SimpleBlock,
-    ): FlowResult {
-        return flow0.withThrown(block0.value, elseBlock)
-    }
-
-    private fun simplifyFinally(
-        context: ResolutionContext,
-        expr: TryCatchBlock,
-        flow0: FlowResult
-    ): FlowResult {
-
-        val finally = expr.finally ?: return flow0
-
-        // apply finally-block to normal execution flow
-        val value = if (flow0.value != null) {
-            simplifyImpl(context, finally, flow0, false)
-                .withValue(flow0.value.value)
-        } else voidResult
-
-        // apply finally-block to returned values
-        val returned = if (flow0.returned != null) {
-            val returnFlow = flow0.returnToValue()
-            simplifyImpl(context, finally, returnFlow, false)
-                .valueToReturn(flow0.returned)
-        } else null
-
-        // apply finally-block to thrown values
-        val thrown = if (flow0.thrown != null) {
-            val throwFlow = flow0.thrownToValue()
-            simplifyImpl(context, finally, throwFlow, false)
-                .valueToThrown(flow0.thrown)
-        } else null
-
-        return value
-            .joinError(returned)
-            .joinError(thrown)
-    }
-
-    private fun simplifyWhile(
-        context: ResolutionContext,
-        expr: WhileLoop,
-        block0: SimpleBlock,
-        flow0: FlowResult,
-    ): FlowResult {
-
-        val graph = block0.graph
-        val conditionBlock = block0.nextOrSelfIfEmpty()
-        val bodyBlock = graph.addBlock()
-        val afterBlock = graph.addBlock()
-        val elseBlock = if (expr.elseBranch != null) graph.addBlock() else null
-
-        val labelScope = expr.body.scope
-        graph.breakLabels[labelScope] = afterBlock
-        graph.continueLabels[labelScope] = conditionBlock
-
-        val unit = unitInstance(graph, expr)
-        val beforeFlow0 = flow0.withValue(unit, conditionBlock)
-        // add condition and jump to insideBlock
-        // (condition, beforeBlock1)
-        val beforeBlock1 = simplifyImpl(context, expr.condition, conditionBlock, beforeFlow0, true)
-        val beforeBlock1v = beforeBlock1.value ?: return beforeBlock1
-        val condition = beforeBlock1v.value
-        beforeBlock1v.block.branchCondition = condition.use()
-        beforeBlock1v.block.ifBranch = bodyBlock
-        beforeBlock1v.block.elseBranch = elseBlock ?: afterBlock
-
-        if (elseBlock != null) {
-            // todo test this
-            val elseBlock1 = simplifyImpl(context, expr.elseBranch!!, elseBlock, beforeBlock1, false)
-            elseBlock1.value?.block?.nextBranch = afterBlock
-        }
-
-        // add body to insideBlock
-        val insideFlow0 = beforeBlock1.withValue(unit, bodyBlock)
-        val insideBlock1 = simplifyImpl(context, expr.body, bodyBlock, insideFlow0, false)
-        // continue, if possible
-        insideBlock1.value?.block?.nextBranch = conditionBlock
-
-        return beforeBlock1.withValue(unit, afterBlock)
-    }
-
-    private fun simplifyDoWhile(
-        context: ResolutionContext,
-        expr: DoWhileLoop,
-        block0: SimpleBlock,
-        flow0: FlowResult,
-    ): FlowResult {
-
-        val graph = block0.graph
-        val bodyBlock = block0.nextOrSelfIfEmpty()
-        val conditionBlock = graph.addBlock()
-        val afterBlock = graph.addBlock()
-
-        val labelScope = expr.body.scope
-        graph.breakLabels[labelScope] = afterBlock
-        graph.continueLabels[labelScope] = conditionBlock
-
-        val unit = unitInstance(graph, expr)
-        val insideFlow0 = flow0.withValue(unit, bodyBlock)
-        val insideBlock1 = simplifyImpl(context, expr.body, bodyBlock, insideFlow0, false)
-        var flow1 = insideFlow0.joinError(insideBlock1)
-        if (insideBlock1.value != null ||
-            afterBlock.inputBlocks.isNotEmpty() || // there is a @break
-            conditionBlock.inputBlocks.isNotEmpty() // there is a @continue
-        ) {
-            insideBlock1.value?.block?.nextBranch = conditionBlock
-
-            // add condition and jump to insideBlock
-            val flow1d = flow1.withValue(unit, conditionBlock)
-            val decideBlock1i = simplifyImpl(context, expr.condition, conditionBlock, flow1d, true)
-
-            if (decideBlock1i.value != null) {
-                val decideBlock1 = decideBlock1i.value.block
-                decideBlock1.branchCondition = decideBlock1i.value.value.use()
-                decideBlock1.ifBranch = bodyBlock
-                decideBlock1.elseBranch = afterBlock
-            }
-            flow1 = flow1.joinError(decideBlock1i)
-        }
-
-        // Unit, because no return value is supported
-        return flow1.withValue(unit, afterBlock)
-    }
-
-    private fun simplifyBranch(
-        context: ResolutionContext,
-        expr: IfElseBranch,
-        block0: SimpleBlock,
-        flow0: FlowResult,
-        needsValue: Boolean,
-    ): FlowResult {
-
-        val block1 = simplifyImpl(context, expr.condition, block0, flow0, true)
-        val block1v = block1.value ?: return block1
-        val condition = block1v.value
-
-        // todo when the condition to a branch is a simple boolean, skip evaluating the other branch!
-
-        val graph = block0.graph
-        val ifBlock = graph.addBlock()
-        val elseBlock = graph.addBlock()
-
-        block1v.block.branchCondition = condition.use()
-        block1v.block.ifBranch = ifBlock
-        block1v.block.elseBranch = elseBlock
-
-        val unit = unitInstance(graph, expr)
-        val ifFlow = block1.withValue(unit, ifBlock)
-        val elseFlow = block1.withValue(unit, elseBlock)
-
-        if (expr.elseBranch == null) {
-            val ifValue = simplifyImpl(context, expr.ifBranch, ifBlock, ifFlow, needsValue)
-            ifValue.value?.block?.nextBranch = elseBlock
-
-            return elseFlow.joinError(ifValue)
-                .withValue(unit, elseBlock)
-        } else {
-            val ifValue = simplifyImpl(context, expr.ifBranch, ifBlock, ifFlow, needsValue)
-            val elseValue = simplifyImpl(context, expr.elseBranch, elseBlock, elseFlow, needsValue)
-            return ifValue.joinWith(elseValue)
-        }
-    }
-
-    private fun simplifyCall(
+    fun simplifyCall(
+        dst: SimpleField,
         block0: SimpleBlock,
         flow0: FlowResult,
 
@@ -1084,7 +455,6 @@ object ASTSimplifier {
         return when (val method = method0.resolved) {
             is Method -> {
                 // then execute it
-                val dst = block0.field(method0.resolveValueType())
                 val specialization = method0.specialization
                 val selfField = selfField!!.use()
                 assertEquals(method.hasExplicitSelfType, thisField != null) {
@@ -1105,7 +475,7 @@ object ASTSimplifier {
                 handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
             }
             is Constructor -> createConstructorInvocation(
-                block0, flow0, method, valueParameters,
+                dst, block0, flow0, method, valueParameters,
                 method0, selfIfInsideConstructor, scope, origin
             )
             else -> throw NotImplementedError("Simplify call $method at ${resolveOrigin(origin)}")
@@ -1113,6 +483,7 @@ object ASTSimplifier {
     }
 
     private fun createConstructorInvocation(
+        dst: SimpleField,
         block0: SimpleBlock,
         flow0: FlowResult,
 
@@ -1126,7 +497,6 @@ object ASTSimplifier {
         origin: Long
     ): FlowResult {
         val graph = block0.graph
-        val unit = unitInstance(graph, scope, origin)
         return if (selfIfInsideConstructor != null) {
 
             val selfScope = (graph.method as Constructor).classScope
@@ -1134,16 +504,15 @@ object ASTSimplifier {
             val self = block0.thisField(selfType, selfScope, scope, origin, method0.specialization, null)
 
             val constructor = SimpleConstructorCall(
-                unit, selfIfInsideConstructor,
+                dst, selfIfInsideConstructor,
                 self.use(), method0.specialization, valueParameters, scope, origin
             )
 
             handleThrown(
-                block0, flow0, unit, constructor,
+                block0, flow0, dst, constructor,
                 method.getThrownType(method0.specialization)
             )
         } else {
-            val dst = block0.field(method0.resolveValueType())
             var selfType = method.selfTypeI.specialize(method0.specialization) as ClassType
             if (selfType.typeParameters == null) {
                 selfType = selfType.clazz.typeWithArgs.specialize(method0.specialization) as ClassType
@@ -1158,7 +527,7 @@ object ASTSimplifier {
             )
             val specialization = method0.specialization
             val call = SimpleConstructorCall(
-                unit, true, dst.use(),
+                dst, true, dst.use(),
                 specialization, valueParameters, scope, origin
             )
             LOGGER.info("Finding throw type for $method0")

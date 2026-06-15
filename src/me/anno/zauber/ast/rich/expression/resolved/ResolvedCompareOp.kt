@@ -2,6 +2,13 @@ package me.anno.zauber.ast.rich.expression.resolved
 
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
+import me.anno.zauber.ast.simple.ASTSimplifier.simplifyCall
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.constants.SimpleNumber
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.expression.SimpleCompare
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedMethod
@@ -36,5 +43,55 @@ class ResolvedCompareOp(
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(left)
         callback(right)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+
+        val block1 = left.simplify(context, block0, flow0, true)
+        val block1v = block1.value ?: return block1
+        val left = block1v.value
+
+        val block2 = right.simplify(context, block1v.block, block1, false)
+        val block2v = block2.value ?: return block2
+        val right = block2v.value
+
+        if (left.type in nativeNumbers && left.type == right.type) {
+
+            val dst = block2v.block.field(Types.Boolean)
+            val instr = SimpleCompare(
+                dst, left.use(), right.use(), type,
+                left.type, scope, origin
+            )
+            block2v.block.add(instr)
+            return block2.withValue(dst)
+
+        } else {
+
+            // Simplify call, then compare with zero
+            val tmpInt = block0.field(Types.Int)
+            val block3 = simplifyCall(
+                tmpInt, block2v.block, block2, left, this.left, null, listOf(right),
+                callable, null, scope, origin
+            )
+            val block3v = block3.value ?: return block3
+
+            val zeroExpr = NumberExpression("0", scope, origin)
+            val zero = block0.field(Types.Int, zeroExpr)
+            block3v.block.add(SimpleNumber(zero, zeroExpr))
+
+            val dst = block3v.block.field(Types.Boolean)
+            val instr = SimpleCompare(
+                dst, block3v.value.use(), zero.use(), type,
+                Types.Int, scope, origin
+            )
+            block3v.block.add(instr)
+            return block3.withValue(dst)
+        }
     }
 }

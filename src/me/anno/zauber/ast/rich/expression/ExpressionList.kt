@@ -1,12 +1,13 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.LambdaType
 
 class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : Expression(scope, origin) {
 
@@ -60,5 +61,20 @@ class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : E
 
     override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
         return ExpressionList(list.map { it.replaceLambdaFieldsWithClassFields(oldFields, newFields) }, scope, origin)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        var blockI = flow0
+        for (expr in list) {
+            val blockIv = blockI.value ?: return blockI
+            blockI = expr.simplify(context, blockIv.block, blockI, needsValue)
+        }
+        return blockI
     }
 }

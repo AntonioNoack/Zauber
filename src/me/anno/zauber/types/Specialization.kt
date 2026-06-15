@@ -30,8 +30,8 @@ import me.anno.zauber.types.impl.arithmetic.UnknownType
 
 class Specialization(val scope: Scope?, typeParameters: ParameterList) {
 
-    @Deprecated("This is incomplete for inner classes, where the outer class is generic")
-    constructor(classType: ClassType) : this(classType.clazz, classType.createTypeParameterList())
+    constructor(classType: ClassType) :
+            this(classType.clazz, classType.createTypeParameterList())
 
     inline fun <R> use(runnable: () -> R): R {
         return try {

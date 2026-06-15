@@ -1,6 +1,16 @@
 package me.anno.zauber.ast.rich.controlflow
 
+import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.rich.expression.constants.SpecialValue
+import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
+import me.anno.zauber.ast.simple.ASTSimplifier.voidResult
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
+import me.anno.zauber.ast.simple.controlflow.Flow
+import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
+import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution
@@ -90,6 +100,132 @@ class TryCatchBlock(
             callback(catch.body)
         }
         if (finally != null) callback(finally)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        check(block0 == flow0.value?.block)
+        val body = simplifyImpl(context, tryBody, flow0)
+        val allCaught = simplifyCatches(context, this, body, needsValue)
+        return simplifyFinally(context, this, allCaught)
+    }
+
+    private fun simplifyCatches(
+        context: ResolutionContext,
+        expr: TryCatchBlock,
+        flow0: FlowResult,
+        needsValue: Boolean
+    ): FlowResult {
+        var blockI = flow0
+        for (catch in expr.catches) {
+            blockI = simplifyCatch(context, expr, catch, blockI, needsValue)
+        }
+        return blockI
+    }
+
+    private fun simplifyCatch(
+        context: ResolutionContext,
+        expr: TryCatchBlock,
+        catch: Catch,
+        flow0: FlowResult,
+        needsValue: Boolean
+    ): FlowResult {
+
+        val block0 = flow0.thrown ?: return flow0
+        val block0b = block0.block
+
+        val thrownType = catch.parameter.type
+        val instanceOfField = block0b.field(Types.Boolean)
+        val instanceCheck = createSimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
+
+        val alwaysHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.TRUE
+        val neverHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.FALSE
+        println("Catch handling($instanceCheck by ${block0.value} is $thrownType), body: ${catch.body}")
+
+        return when {
+            alwaysHandled -> simplifyCatchHandleBranch(context, expr, catch, needsValue, block0, block0b)
+            neverHandled -> simplifyCatchContinueBranch(flow0, block0, block0b)
+            else -> {
+                block0b.add(instanceCheck)
+
+                val graph = block0b.graph
+                val ifBlock = graph.addBlock()
+                val elseBlock = graph.addBlock()
+                block0b.branchCondition = instanceOfField.use()
+                block0b.ifBranch = ifBlock
+                block0b.elseBranch = elseBlock
+
+                val ifFlow = simplifyCatchHandleBranch(context, expr, catch, needsValue, block0, ifBlock)
+                val elseFlow = simplifyCatchContinueBranch(flow0, block0, elseBlock)
+                ifFlow.joinWith(elseFlow)
+            }
+        }
+    }
+
+    private fun simplifyCatchHandleBranch(
+        context: ResolutionContext,
+        expr: TryCatchBlock,
+        catch: Catch,
+        needsValue: Boolean,
+        block0: Flow,
+        ifBlock: SimpleBlock,
+    ): FlowResult {
+        val ifFlow = FlowResult(Flow(unitInstance(ifBlock.graph, expr), ifBlock), null, null)
+        val thrownField = catch.parameter.getOrCreateField(null, Flags.NONE)
+        val thrownLocalField = block0.block.graph.getOrPutLocalField(thrownField, context)
+        ifBlock.add(SimpleSetLocalField(thrownLocalField, block0.value, expr.scope, expr.origin))
+        return catch.body.simplify(context, ifBlock, ifFlow, needsValue)
+    }
+
+    private fun simplifyCatchContinueBranch(
+        flow0: FlowResult,
+        block0: Flow,
+        elseBlock: SimpleBlock,
+    ): FlowResult {
+        return flow0.withThrown(block0.value, elseBlock)
+    }
+
+    private fun simplifyFinally(
+        context: ResolutionContext,
+        expr: TryCatchBlock,
+        flow0: FlowResult
+    ): FlowResult {
+
+        val finally = expr.finally ?: return flow0
+
+        // apply finally-block to normal execution flow
+        val value = if (flow0.value != null) {
+            simplifyImpl(context, finally, flow0)
+                .withValue(flow0.value.value)
+        } else voidResult
+
+        // apply finally-block to returned values
+        val returned = if (flow0.returned != null) {
+            val returnFlow = flow0.returnToValue()
+            simplifyImpl(context, finally, returnFlow)
+                .valueToReturn(flow0.returned)
+        } else null
+
+        // apply finally-block to thrown values
+        val thrown = if (flow0.thrown != null) {
+            val throwFlow = flow0.thrownToValue()
+            simplifyImpl(context, finally, throwFlow)
+                .valueToThrown(flow0.thrown)
+        } else null
+
+        return value
+            .joinError(returned)
+            .joinError(thrown)
+    }
+
+    private fun simplifyImpl(context: ResolutionContext, expr: Expression, flow0: FlowResult): FlowResult {
+        val block0 = flow0.value ?: return flow0
+        return expr.simplify(context, block0.block, flow0, needsValue = false)
     }
 
 }

@@ -1,6 +1,5 @@
 package me.anno.support.jvm
 
-import me.anno.generation.Specializations
 import me.anno.libraries.Library
 import me.anno.support.Language
 import me.anno.support.jvm.expression.LazyJVMExpression
@@ -213,7 +212,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
             }
         }
 
-        println("superCalls[$classScope]: ${classScope.superCalls}")
+        // println("superCalls[$classScope]: ${classScope.superCalls}")
     }
 
     override fun visitInnerClass(name: String, outerName: String?, innerName: String?, access: Int) {
@@ -270,15 +269,21 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         // todo should we lazy-read methods??? check performance...
         //  individually, or all at once?
 
+        // clinit = static init = primary and only constructor for companion objects
+        val isConstructor = name == "<init>" || name == "<clinit>"
+
         val origin = -1L
         val signature = signature ?: descriptor
+
         val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
-        val methodScope = classScope.generate(name, ScopeType.METHOD)
+        val methodScope =
+            if (access.isStatic() && isConstructor) classScope.getOrCreatePrimaryConstructorScope()
+            else classScope.generate(name, if (isConstructor) ScopeType.CONSTRUCTOR else ScopeType.METHOD)
+
         val (typeParameters, valueParameters, returnType) = parseMethodSignature(methodScope, signature, true)
 
         val flags = convertMethodFlags(access)
-        if (name == "<init>" || name == "<clinit>") {
-            // clinit is not really a constructor, but we have nothing better at the moment
+        if (isConstructor) {
             methodScope.selfAsConstructor = Constructor(valueParameters, methodScope, null, null, flags, origin)
         } else {
             methodScope.selfAsMethod = Method(

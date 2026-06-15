@@ -1,13 +1,18 @@
 package me.anno.support.jvm.expression
 
+import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
 // todo we somehow need a mix of SimpleInstr and Expression...
 
-class JVMBlockExpression(val graph: JVMGraph, scope: Scope, origin: Long) : Expression(scope, origin) {
+class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin: Long) : Expression(scope, origin) {
 
     var ifBranch: JVMBlockExpression? = null
     var elseBranch: JVMBlockExpression? = null
@@ -36,28 +41,66 @@ class JVMBlockExpression(val graph: JVMGraph, scope: Scope, origin: Long) : Expr
         TODO("Not yet implemented")
     }
 
+    fun str() = style("b$id", GREEN)
+    val isEntryPoint get() = id == 0
+
+    fun short(): StringBuilder {
+        val builder = StringBuilder()
+        builder.append(str()).append('[')
+
+        if (isEntryPoint) builder.append("->|")
+
+        if (nextBranch == null) {
+            builder.append(StringStyles.style("end", StringStyles.RED))
+        } else if (branchCondition != null) {
+            builder.append(branchCondition).append(" ? ")
+                .append(style("b${ifBranch!!.id}", GREEN)).append(" : ")
+                .append(style("b${elseBranch!!.id}", GREEN))
+        } else {
+            builder.append(style("b${nextBranch!!.id}", GREEN))
+        }
+        builder.append(']')
+        return builder
+    }
+
+
     override fun toStringImpl(depth: Int): String {
-        TODO("Not yet implemented")
+        val builder = short()
+        /*val or = onReturn
+        if (or != null) builder.append('r').append(or.blockId)
+        val ot = onThrow
+        if (ot != null) builder.append('t').append(ot.handler.blockId)*/
+        builder.append(':')
+        for (instr in instructions) {
+            builder.append("\n  ").append(instr)
+        }
+        return builder.toString()
     }
 
-    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun needsBackingField(methodScope: Scope): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun splitsScope(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isResolved(): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
+    override fun needsBackingField(methodScope: Scope): Boolean = throw NotImplementedError()
+    override fun splitsScope(): Boolean = false
+    override fun isResolved(): Boolean = true
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
-        TODO("Not yet implemented")
+        for (instr in instructions) {
+            callback(instr)
+        }
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        var blockI = flow0
+        for (expr in instructions) {
+            val blockIv = blockI.value ?: return blockI
+            blockI = expr.simplify(context, blockIv.block, blockI, needsValue)
+        }
+        return blockI
     }
 
 }

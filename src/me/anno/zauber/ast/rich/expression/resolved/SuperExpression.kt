@@ -1,13 +1,16 @@
 package me.anno.zauber.ast.rich.expression.resolved
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveThisType
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-class SuperExpression(val label: Scope, val isThis: Boolean, scope: Scope, origin: Long) : Expression(scope, origin) {
+class SuperExpression(val label: Scope, val isThis: Boolean, scope: Scope, origin: Long) :
+    Expression(scope, origin) {
 
     override fun toStringImpl(depth: Int): String = "super@$label"
     override fun resolveValueType(context: ResolutionContext): Type {
@@ -23,4 +26,19 @@ class SuperExpression(val label: Scope, val isThis: Boolean, scope: Scope, origi
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
     override fun forEachExpression(callback: (Expression) -> Unit) {}
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val type = label.typeWithArgs.specialize(context)
+        val dst = block0.thisField(
+            type, label, scope, origin,
+            context.specialization, contextExpr
+        )
+        return flow0.withValue(dst, block0)
+    }
 }

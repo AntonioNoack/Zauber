@@ -4,9 +4,13 @@ import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.constants.SimpleNumber
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -412,4 +416,18 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
     override fun forEachExpression(callback: (Expression) -> Unit) {}
 
     override fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>) = this
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        // println("resolving number, $expr, ${expr.resolvedType0}, ${context.targetType}")
+        val type = TypeResolution.resolveType(context, this)
+        val dst = block0.field(type, this)
+        block0.add(SimpleNumber(dst, this))
+        return flow0.withValue(dst, block0)
+    }
 }

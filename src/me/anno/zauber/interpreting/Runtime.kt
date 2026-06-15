@@ -4,6 +4,7 @@ import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.CollectionUtils.mapArray
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.utils.assertTrue
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
@@ -66,8 +67,11 @@ class Runtime {
             ?: run {
                 println(call.graph)
                 error(
-                    "Missing simple field $field, " +
-                            "fields: ${call.simpleFields.withIndex().joinToString("") { (k, v) -> "\n  %$k=$v" }}"
+                    "Missing simple field $field, fields: ${
+                        call.simpleFields.withIndex().joinToString("") { (k, v) ->
+                            "\n  ${style("%$k", YELLOW)}=$v"
+                        }
+                    }"
                 )
             }
     }

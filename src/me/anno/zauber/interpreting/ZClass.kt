@@ -82,14 +82,18 @@ class ZClass(val type: Type) {
         var objectInstance = objectInstance
         if (objectInstance != null) return objectInstance
 
-        // println("-- creating object instance for $this --")
+        println("-- creating object instance for $this --")
 
         objectInstance = createInstance()
         this.objectInstance = objectInstance
 
-        val scope = (type as? ClassType)?.clazz
-        val primaryConstructor = scope?.primaryConstructorScope?.selfAsConstructor
+        val scope = (type as ClassType).clazz[ScopeInitType.AFTER_DISCOVERY]
+        val primaryConstructor = scope.primaryConstructorScope?.selfAsConstructor
+
+        println("Primary constructor for $scope: $primaryConstructor")
+
         if (primaryConstructor != null) {
+
             when (scope.scopeType) {
                 null, ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {} // ok
                 else -> error("Cannot create object instance for $scope")

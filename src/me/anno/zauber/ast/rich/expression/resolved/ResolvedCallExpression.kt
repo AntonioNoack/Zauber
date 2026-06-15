@@ -5,6 +5,9 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.simple.ASTSimplifier.simplifyCall
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.members.ResolvedConstructor
@@ -61,7 +64,7 @@ class ResolvedCallExpression(
     override fun resolveValueType(context: ResolutionContext): Type = callable.resolveValueType()
     override fun resolveThrownType(context: ResolutionContext): Type = callable.resolveThrownType()
     override fun resolveYieldedType(context: ResolutionContext): Type = callable.resolveYieldedType()
-    
+
     override fun splitsScope(): Boolean = false
     override fun hasLambdaOrUnknownGenericsType(context: ResolutionContext): Boolean = false
     override fun isResolved(): Boolean = true
@@ -87,6 +90,41 @@ class ResolvedCallExpression(
     override fun forEachExpression(callback: (Expression) -> Unit) {
         if (this.selfExpr != null) callback(this.selfExpr)
         for (param in valueParameters) callback(param)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+
+        // (base, block1)
+        val block1 = selfExpr?.simplify(context, block0, flow0, true, contextExpr = this) ?: flow0
+        val base = block1.value ?: return block1
+
+        // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
+        var blockI = block1
+        val valueParameters = valueParameters.map { param ->
+            blockI = param.simplify(context, blockI.value!!.block, blockI, false)
+            blockI.value?.value ?: return blockI
+        }
+
+        val thisExpr = if (thisExpr != null) {
+            blockI = thisExpr.simplify(context, blockI.value!!.block, blockI, false)
+            blockI.value?.value ?: return blockI
+        } else null
+
+        val method = callable
+        val selfExpr = if (selfExpr != null) base.value.use() else null
+        val selfIfInsideConstructor = (this.selfExpr as? SuperExpression)?.isThis
+        val dst = block0.field(method.resolveValueType())
+        return simplifyCall(
+            dst, blockI.value!!.block, blockI, selfExpr, this.selfExpr, thisExpr,
+            valueParameters, method, selfIfInsideConstructor,
+            scope, origin
+        )
     }
 
 }

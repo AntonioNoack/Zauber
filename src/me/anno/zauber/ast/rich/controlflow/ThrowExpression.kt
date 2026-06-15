@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -29,5 +31,17 @@ class ThrowExpression(value: Expression, scope: Scope, origin: Long) :
 
     override fun forEachExpression(callback: (Expression) -> Unit) {
         callback(value)
+    }
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val field = value.simplify(context, block0, flow0, true)
+        val field1v = field.value ?: return field
+        return field.joinThrownNoValue(field1v.value.use(), field1v.block)
     }
 }

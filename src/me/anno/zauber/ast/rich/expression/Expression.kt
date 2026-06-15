@@ -2,6 +2,8 @@ package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -104,6 +106,15 @@ abstract class Expression(val scope: Scope, val origin: Long) {
     open fun replaceLambdaFieldsWithClassFields(oldFields: List<Field>, newFields: List<Field>): Expression {
         if (oldFields.isEmpty()) return this
         throw NotImplementedError("Replace fieldExpressions in (${javaClass.simpleName}) $this from $oldFields to $newFields")
+    }
+
+    open fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock, flow0: FlowResult, needsValue: Boolean,
+        contextExpr: Expression? = null// for ThisExpression
+    ): FlowResult {
+        if (!isResolved()) error("${javaClass.simpleName} was not resolved")
+        throw NotImplementedError("Simplify value ${javaClass.simpleName}: $this")
     }
 
     companion object {

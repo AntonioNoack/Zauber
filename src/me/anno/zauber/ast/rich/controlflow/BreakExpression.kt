@@ -1,8 +1,11 @@
 package me.anno.zauber.ast.rich.controlflow
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.typeresolution.ResolutionContext
+import me.anno.zauber.ast.simple.ASTSimplifier.simplifyJump
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
@@ -23,4 +26,14 @@ class BreakExpression(val label: Scope, scope: Scope, origin: Long) : Expression
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
     override fun forEachExpression(callback: (Expression) -> Unit) {}
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        return simplifyJump(this, flow0, block0.graph.breakLabels[label])
+    }
 }

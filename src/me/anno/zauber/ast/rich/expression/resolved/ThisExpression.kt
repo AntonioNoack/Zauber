@@ -1,6 +1,8 @@
 package me.anno.zauber.ast.rich.expression.resolved
 
 import me.anno.zauber.ast.rich.expression.Expression
+import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.resolveThisType
@@ -23,4 +25,19 @@ class ThisExpression(val label: Scope, scope: Scope, origin: Long) : Expression(
     override fun splitsScope(): Boolean = false
     override fun isResolved(): Boolean = true
     override fun forEachExpression(callback: (Expression) -> Unit) {}
+
+    override fun simplify(
+        context: ResolutionContext,
+        block0: SimpleBlock,
+        flow0: FlowResult,
+        needsValue: Boolean,
+        contextExpr: Expression?
+    ): FlowResult {
+        val type = label.typeWithArgs.specialize(context)
+        val dst = block0.thisField(
+            type, label, scope, origin,
+            context.specialization, contextExpr
+        )
+        return flow0.withValue(dst, block0)
+    }
 }
