@@ -7,7 +7,7 @@ import me.anno.zauber.expansion.MethodOverrides.debuggedMethodName
 
 
 // todo next step:
-//   ArrayList.size is never initialized: zero/null initialize all fields
+//   getClass() -> ClassType -> Java calls getClassLoader() -> we need to define our own classLoader...
 
 
 // todo read a complex class like HashMap,

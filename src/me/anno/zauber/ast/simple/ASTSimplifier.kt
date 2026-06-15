@@ -27,6 +27,7 @@ import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.*
+import me.anno.zauber.expansion.MethodOverrides.isJavaClass
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -146,7 +147,14 @@ object ASTSimplifier {
     ) {
 
         val expectedReturnType = graph.expectedReturnType
-        check(isSubTypeOf(expectedReturnType, value.type)) {
+        check(
+            isSubTypeOf(expectedReturnType, value.type) ||
+                    // Java needs some exceptions..., e.g. java.lang.Class.getClassLoader() only has spotty types for local fields
+                    isJavaClass(graph.method.ownerScope)
+        ) {
+
+            println(graph)
+
             "Expected return value in ${method0.method} " +
                     "to match $expectedReturnType, got ${value.type}"
         }

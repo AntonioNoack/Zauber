@@ -92,7 +92,11 @@ object MethodOverrides {
     }
 
     fun isJavaClass(a: ClassType): Boolean {
-        val sourceLanguage = a.clazz.sourceLibrary?.language
+        return isJavaClass(a.clazz)
+    }
+
+    fun isJavaClass(a: Scope): Boolean {
+        val sourceLanguage = a.sourceLibrary?.language
         return sourceLanguage == Language.JAVA
     }
 

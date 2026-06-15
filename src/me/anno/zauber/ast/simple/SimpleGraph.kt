@@ -127,6 +127,7 @@ class SimpleGraph(val method0: Specialization) {
                 "${bold("self:")} $selfField\n" +
                 "${bold("unit:")} $unitField\n" +
                 "${bold("params:")} $parameterFields\n" +
+                "${bold("locals:")} $localFields\n" +
                 blocks.joinToString("\n") { it.toString() }
     }
 
