@@ -98,7 +98,7 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
         var blockI = flow0
         for (instr in instructions) {
             val blockIv = blockI.value ?: return blockI
-            println("// Simplifying $instr")
+            // println("// Simplifying $instr")
             blockI = instr.simplify(context, blockIv.block, blockI, needsValue)
         }
         return blockI

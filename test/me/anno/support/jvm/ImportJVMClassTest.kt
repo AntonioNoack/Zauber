@@ -37,6 +37,7 @@ class Int {
     external operator fun minus(other: Int): Int
     external operator fun times(other: Int): Int
     external operator fun div(other: Int): Int
+    external operator fun rem(other: Int): Int
     external operator fun compareTo(other: Int): Int
     operator fun unaryMinus(): Int = 0 - this
     external fun equals(other: Int): Boolean
@@ -48,7 +49,10 @@ class Int {
     external operator fun ushr(other: Int): Int
     external operator fun toChar(): Char
     external operator fun toByte(): Byte
+    external operator fun toShort(): Short
     external operator fun toLong(): Long
+    external operator fun toFloat(): Float
+    external operator fun toDouble(): Double
     fun toBoolean() = this != 0
 }
 class Char {}
@@ -58,6 +62,7 @@ class Long {
     external operator fun minus(other: Long): Long
     external operator fun times(other: Long): Long
     external operator fun div(other: Long): Long
+    external operator fun rem(other: Long): Long
     external operator fun compareTo(other: Long): Int
     operator fun unaryMinus(): Long = 0L - this
     external fun equals(other: Long): Boolean
@@ -68,6 +73,24 @@ class Long {
     external operator fun shr(other: Int): Long
     external operator fun ushr(other: Int): Long
     external operator fun toInt(): Int
+}
+class Float {
+    external operator fun plus(other: Float): Float
+    external operator fun minus(other: Float): Float
+    external operator fun times(other: Float): Float
+    external operator fun div(other: Float): Float
+    external operator fun rem(other: Float): Float
+    external operator fun compareTo(other: Float): Int
+    external fun toInt(): Int
+}
+class Double {
+    external operator fun plus(other: Double): Double
+    external operator fun minus(other: Double): Double
+    external operator fun times(other: Double): Double
+    external operator fun div(other: Double): Double
+    external operator fun rem(other: Double): Double
+    external operator fun compareTo(other: Double): Int
+    external fun toInt(): Int
 }
 class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: V)

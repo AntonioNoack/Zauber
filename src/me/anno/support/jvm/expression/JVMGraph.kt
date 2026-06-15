@@ -11,7 +11,6 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.Flow
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
@@ -19,10 +18,6 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
 class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(scope, origin) {
-
-    companion object {
-        private val LOGGER = LogManager.getLogger(JVMGraph::class)
-    }
 
     init {
         check(scope.isMethodLike())
@@ -112,7 +107,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
         // todo lazy-discover them, so we know what is thrown-blocks(?)
         // todo how do we get the exception/return context? :/
 
-        println("Converting graph: $this")
+        // println("Converting graph: $this")
 
         val graph = block0.graph
         val unit = unitInstance(graph, this)
@@ -125,7 +120,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
         var finalFlow: FlowResult? = null
         for (i in blocks.indices) {
             val src = blocks[i]
-            val (entry, result) = simpleBlocks[i]
+            val result = simpleBlocks[i].second
             val resultI = result.value?.block
             if (resultI != null) {
                 if (src.branchCondition != null) {
@@ -141,7 +136,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
             }
         }
 
-        println("Converted graph: $graph")
+        // println("Converted graph: $graph")
 
         return finalFlow ?: ASTSimplifier.voidResult
     }

@@ -163,6 +163,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
     private val methodSignatures = HashMap<JVMMethodSignature, Scope>()
 
+    var hasFinished = false
+
     fun descToType(desc: String): Type {
         return SignatureReader(desc, classScope).readType()
     }
@@ -172,7 +174,9 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         return SignatureReader(desc, classScope).readClassType()
     }
 
-    override fun visitEnd() {}
+    override fun visitEnd() {
+        hasFinished = true
+    }
 
     override fun visit(
         version: Int,
@@ -298,6 +302,10 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         val hasBody = !access.hasAnyFlag(ACC_ABSTRACT or ACC_NATIVE)
         if (hasBody) {
             val lazy = RunOnceLazy {
+                check(hasFinished) {
+                    "$classScope has not been finished yet, cannot read methods"
+                }
+
                 Specialization.noSpecialization.use {
                     val method = methodScope.selfAsMethod ?: methodScope.selfAsConstructor!!
                     ClassReader(path).accept(
@@ -324,8 +332,10 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         signature: String?,
         value: Any?
     ): FieldVisitor? {
+
         // todo visit fields and annotations...
         // println("Visiting field ${classScope.name}.$name, descriptor: $descriptor, signature: $signature, value: $value, access: $access")
+
         val valueType = descToType(signature ?: descriptor)
         val origin = -1L
         val initialValueForConst = when (value) {
@@ -340,7 +350,7 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
         val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
         classScope.addField(
-            null, false, true, null, name, valueType,
+            null, false, isMutable = !access.isFinal(), null, name, valueType,
             initialValueForConst, Flags.NONE, origin
         )
 

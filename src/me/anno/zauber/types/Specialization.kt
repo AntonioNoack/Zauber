@@ -345,13 +345,18 @@ class Specialization(val scope: Scope?, typeParameters: ParameterList) {
             return Specialization(scope, parameters)
         }
 
+        fun withScopeUnknownIfMissing(scope: Scope, typeParameters: ParameterList): Specialization {
+            val expected = collectGenerics(scope)
+            return Specialization(scope, typeParameters.filterByGenericsUnknownIfMissing(expected))
+        }
+
         val noSpecialization by ResetThreadLocal.threadLocal {
-            Specialization(Zauber.root, ParameterList.emptyParameterList())
+            Specialization(Zauber.root, emptyParameterList())
         }
 
         fun ClassType.createTypeParameterList(): ParameterList {
             val generics = clazz.typeParameters
-            val provided = (typeParameters ?: emptyList()).ifEmpty {  generics.map { it.type } }
+            val provided = (typeParameters ?: emptyList()).ifEmpty { generics.map { it.type } }
             assertEquals(generics.size, provided.size) {
                 "Generics-size mismatch: $generics vs $this"
             }
