@@ -16,7 +16,7 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
 
     var ifBranch: JVMBlockExpression? = null
     var elseBranch: JVMBlockExpression? = null
-    var branchCondition: SimpleFieldExpr? = null
+    var branchCondition: JVMSimpleField? = null
 
     var nextBranch: JVMBlockExpression?
         get() = ifBranch
@@ -24,7 +24,7 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
             ifBranch = value
         }
 
-    var endStack: List<SimpleFieldExpr>? = null
+    var endStack: List<JVMSimpleField>? = null
 
     val instructions = ArrayList<JVMSimpleExpr>()
     fun add(expr: JVMSimpleExpr) {
@@ -96,9 +96,10 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
         contextExpr: Expression?
     ): FlowResult {
         var blockI = flow0
-        for (expr in instructions) {
+        for (instr in instructions) {
             val blockIv = blockI.value ?: return blockI
-            blockI = expr.simplify(context, blockIv.block, blockI, needsValue)
+            println("// Simplifying $instr")
+            blockI = instr.simplify(context, blockIv.block, blockI, needsValue)
         }
         return blockI
     }

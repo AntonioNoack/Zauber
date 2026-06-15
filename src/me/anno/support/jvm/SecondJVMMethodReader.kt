@@ -114,13 +114,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     val origin = -1L
     val graph = JVMGraph(methodScope, isStatic, origin)
-    val stack = ArrayList<SimpleFieldExpr>()
+    val stack = ArrayList<JVMSimpleField>()
     var block = graph.startBlock
 
     init {
         val offset = if (isStatic) 0 else 1
         for (i in parameters.indices) {
-            graph.getOrPutLocalField(i + offset, parameters[i].type)
+            graph.getOrPutLocalField(i + offset, parameters[i].name, parameters[i].type)
         }
     }
 
@@ -528,11 +528,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             else -> error("Unsupported opcode ${OpCode[opcode]}")
         }
 
-        val localField = graph.getOrPutLocalField(varIndex, valueType)
+        val localField = graph.getOrPutLocalField(varIndex, null, valueType)
         when (opcode) {
             ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
-                val dst = graph.field(localField.valueType!!)
-                block.add(JVMSimpleGetLocalField(dst, graph, localField, methodScope, origin))
+                val dst = graph.field(localField.type)
+                block.add(JVMSimpleGetLocalField(dst, localField, methodScope, origin))
                 stack.add(dst)
             }
             ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
@@ -738,25 +738,23 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             // todo check this...
             val lambdaFields = valueArgs.map { param ->
                 lambdaScope.addField(
-                    null, false, false, param, param.name, param.type,
+                    null, false, isMutable = false,
+                    param, param.name, param.type,
                     null, Flags.SYNTHETIC, origin
                 )
             }
 
             if (valueArgs.isNotEmpty()) {
-                val lambdaConstrFields = valueArgs.map { param ->
-                    constructorScope.addField(
-                        null, false, false, param, param.name, param.type,
-                        null, Flags.SYNTHETIC, origin
-                    )
+                val lambdaConstrFields = valueArgs.mapIndexed { index, param ->
+                    constructorGraph.getOrPutLocalField(index, param.name, param.type)
                 }
 
                 val instanceSelf0 = constructorGraph.thisField!!
-                val instanceSelf = constructorGraph.field(instanceSelf0.valueType!!)
+                val instanceSelf = constructorGraph.field(instanceSelf0.type)
                 val constrBlock = constructorGraph.startBlock
                 constrBlock.add(
                     JVMSimpleGetLocalField(
-                        instanceSelf, constructorGraph,
+                        instanceSelf,
                         instanceSelf0, constructorScope, origin
                     )
                 )
@@ -766,7 +764,6 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     constrBlock.add(
                         JVMSimpleGetLocalField(
                             dst,
-                            graph,
                             lambdaConstrFields[i],
                             constructorScope,
                             origin
@@ -869,7 +866,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             .asReversed()
 
         // resolve method
-        val self: SimpleFieldExpr
+        val self: JVMSimpleField
         val method: ResolvedMember<*>
 
         when (opcode) {
@@ -1154,7 +1151,42 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
     }
 
+    fun setAllFieldsToNull() {
+        val fields = method.ownerScope.fields
+        if (fields.isNotEmpty()) {
+            val nulls = HashMap<Type, JVMSimpleField>()
+            val block = graph.startBlock
+
+            val self = if(isStatic) {
+                val selfScope = method.ownerScope
+                val self = block.field(selfScope.typeWithArgs)
+                block.add(JVMSimpleGetObject(self, selfScope, methodScope, origin))
+                self
+            } else {
+                val self0 = graph.thisField!!
+                val self = block.field(self0.type)
+                block.add(JVMSimpleGetLocalField(self, self0, methodScope, origin))
+                self
+            }
+
+            for (field in fields) {
+                val fieldType = field.resolveValueType(ResolutionContext.minimal)
+                val value = nulls.getOrPut(fieldType) {
+                    val tmp = block.field(fieldType)
+                    block.add(JVMSimpleNull(tmp, methodScope, origin))
+                    tmp
+                }
+                block.add(JVMSimpleSetClassField(self, field, value, methodScope, origin))
+            }
+        }
+    }
+
     override fun visitEnd() {
+
+        if (method is Constructor) {
+            setAllFieldsToNull()
+        }
+
         method.body = graph
     }
 }

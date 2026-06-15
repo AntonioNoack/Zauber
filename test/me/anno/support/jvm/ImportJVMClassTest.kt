@@ -4,10 +4,10 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import me.anno.utils.assertEquals
 
+
 // todo next step:
-//   ClassType must include types from outer-classes ->
-//     this will solve quite a lot of issues,
-//     and also allow our code gen to continue on "Incomplete generics for java.util.HashMap.KeySet"
+//   ArrayList.size is never initialized: zero/null initialize all fields
+
 
 // todo read a complex class like HashMap,
 //  and decode it fully into simple instructions...
@@ -49,6 +49,7 @@ class Int {
     external operator fun toChar(): Char
     external operator fun toByte(): Byte
     external operator fun toLong(): Long
+    fun toBoolean() = this != 0
 }
 class Char {}
 class Byte {}
@@ -73,6 +74,7 @@ class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: Any)
     external operator fun get(index: Int): V
 }
+enum class Boolean { TRUE, FALSE }
     """.trimIndent()
     )
 

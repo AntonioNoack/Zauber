@@ -3,24 +3,26 @@ package me.anno.support.jvm.expression
 import me.anno.utils.StringStyles.ORANGE
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
-import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.Flow
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
-import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
-// todo: SimpleGraph has progressed somewhat... do we want to keep this as-is?
 class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(scope, origin) {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(JVMGraph::class)
+    }
 
     init {
         check(scope.isMethodLike())
@@ -29,28 +31,37 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
     val blocks = ArrayList<JVMBlockExpression>()
     val startBlock = addNode()
 
-    val localFieldScope = scope.generate("local", ScopeType.METHOD_BODY)
-    val localFields = ArrayList<Field?>() // only contains 'this' in non-static methods
-    val thisField = if (isStatic) null else getOrPutLocalField(0, scope.parent!!.typeWithArgs)
+    val localFields = ArrayList<JVMLocalField?>() // only contains 'this' in non-static methods
+    val thisField = if (isStatic) null else getOrPutLocalField(0, "this", scope.parent!!.typeWithArgs)
 
-    val fieldMappings = HashMap<Specialization, HashMap<SimpleFieldExpr, SimpleField>>()
+    val fieldMappings = HashMap<Specialization, HashMap<JVMSimpleField, SimpleField>>()
 
-    fun getOrPutLocalField(index: Int, type: Type): Field {
-        while (localFields.size <= index) localFields.add(null)
+    fun getOrPutLocalField(index: Int, name: String?, type: Type): JVMLocalField {
+        repeat(index + 1 - localFields.size) {
+            localFields.add(null)
+        }
+
         var field = localFields[index]
-        if (field != null) return field
-        field = localFieldScope.addField(
-            null, false, isMutable = true,
-            null, "#$index", type, null, Flags.NONE, -1
-        )
+        if (field != null) {
+            if (field.type != type) {
+                if (type == Types.Any && (field.type !in nativeNumbers && field.type != Types.Boolean)) {
+                    // fine
+                } else {
+                    println("Incorrect type for field '${field.name}/$name' $index: $type != ${field.type}")
+                }
+            }
+            return field
+        }
+
+        field = JVMLocalField(index, name ?: "#$index", type)
         localFields[index] = field
         return field
     }
 
     private var numFields = 0
 
-    fun field(type: Type): SimpleFieldExpr {
-        return SimpleFieldExpr(this, type, numFields++, scope, origin)
+    fun field(type: Type): JVMSimpleField {
+        return JVMSimpleField(this, type, numFields++, scope, origin)
     }
 
     fun addNode(): JVMBlockExpression {
@@ -87,6 +98,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
 
     override fun toStringImpl(depth: Int): String = "${bold("JVMGraph")}[$scope]:\n" +
             "  ${style("this", ORANGE)}: $thisField\n" +
+            "  local: $localFields\n" +
             blocks.joinToString("") { block -> "$block\n" }
 
     override fun simplify(
@@ -128,6 +140,8 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
                 finalFlow = finalFlow?.joinWith(result) ?: result
             }
         }
+
+        println("Converted graph: $graph")
 
         return finalFlow ?: ASTSimplifier.voidResult
     }

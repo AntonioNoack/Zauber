@@ -7,7 +7,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class JVMSimpleMultiArray(
-    val dst: SimpleFieldExpr, val totalType: ClassType, val dimensions: List<SimpleFieldExpr>,
+    val dst: JVMSimpleField, val totalType: ClassType, val dimensions: List<JVMSimpleField>,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveValueType(context: ResolutionContext): Type = Types.Nothing

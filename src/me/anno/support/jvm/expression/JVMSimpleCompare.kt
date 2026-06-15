@@ -6,10 +6,10 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
 class JVMSimpleCompare(
-    val dst: SimpleFieldExpr,
-    val p0: SimpleFieldExpr?, val p1: SimpleFieldExpr?,
+    val dst: JVMSimpleField,
+    val p0: JVMSimpleField?, val p1: JVMSimpleField?,
     val type: CompareType,
-    val tmp: SimpleFieldExpr,
+    val tmp: JVMSimpleField,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
     override fun resolveValueType(context: ResolutionContext): Type = dst.type

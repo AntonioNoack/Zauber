@@ -13,7 +13,7 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 
 class JVMSimpleString(
-    val dst: SimpleFieldExpr,
+    val dst: JVMSimpleField,
     val value: String,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {

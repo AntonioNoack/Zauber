@@ -1,5 +1,6 @@
 package me.anno.zauber.ast.simple
 
+import me.anno.support.jvm.expression.JVMLocalField
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.reverse.SimpleTailCall
@@ -69,6 +70,16 @@ class SimpleGraph(val method0: Specialization) {
             val type = field.resolveValueType(context)
             localField = createLocalField(field, field.newName, type, true)
         }
+        return localField
+    }
+
+    fun getOrPutLocalField(field: JVMLocalField): LocalField {
+        var localField = localFields.firstOrNull { it.name == field.name }
+        if (localField == null) {
+            val type = field.type
+            localField = createLocalField(null, field.name, type, true)
+        }
+        println("localField[$field] -> $localField")
         return localField
     }
 

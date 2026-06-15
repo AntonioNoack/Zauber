@@ -6,7 +6,6 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.fields.SimpleField
-import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
@@ -14,7 +13,7 @@ import me.anno.zauber.types.Type
 /**
  * represents a stack element in JVM bytecode
  * */
-class SimpleFieldExpr(
+class JVMSimpleField(
     val graph: JVMGraph, val type: Type, val id: Int,
     scope: Scope, origin: Long
 ) : Expression(scope, origin) {
@@ -30,27 +29,11 @@ class SimpleFieldExpr(
     override fun isResolved(): Boolean = true
 
     fun toSimple(block: SimpleBlock): SimpleField {
-
-        val dst = block.graph
-        if (!graph.isStatic && id == 0) {
-            val thisField = dst.thisField!!
-            val tmp = block.field(thisField.type)
-            block.add(SimpleGetLocalField(tmp, thisField, scope, origin))
-            return tmp
-        }
-
-        val parameterIndex = id - if (graph.isStatic) 0 else 1
-        if (parameterIndex < dst.parameterFields.size) {
-            val parameter = dst.parameterFields[parameterIndex]
-            val tmp = block.field(parameter.type)
-            block.add(SimpleGetLocalField(tmp, parameter, scope, origin))
-            return tmp
-        }
-
+        val graph0 = block.graph
         val fieldMapping = graph.fieldMappings
-            .getOrPut(dst.method0, ::HashMap)
+            .getOrPut(graph0.method0, ::HashMap)
         return fieldMapping.getOrPut(this) {
-            dst.field(type.specialize(dst.method0))
+            graph0.field(type.specialize(graph0.method0))
         }
     }
 

@@ -11,7 +11,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
 class JVMSimpleGetClassField(
-    val dst: SimpleFieldExpr, val self: SimpleFieldExpr, val field: Field,
+    val dst: JVMSimpleField, val self: JVMSimpleField, val field: Field,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
 

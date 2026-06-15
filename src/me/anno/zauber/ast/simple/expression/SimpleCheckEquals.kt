@@ -35,6 +35,7 @@ class SimpleCheckEquals(
         if (vaNull != vbNull) return BlockReturn(ReturnType.VALUE, runtime.getBool(negated))
 
         // todo handle yield from this...
+        // todo this can involve dynamic dispatch
         val method1 = method.specialization
         val result = runtime.executeCall(va, null, method1, listOf(right))
         if (!negated) return result.retToVal()

@@ -17,11 +17,11 @@ import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 
 class JVMSimpleCall(
-    val dst: SimpleFieldExpr,
+    val dst: JVMSimpleField,
     val method: MethodLike,
-    val self: SimpleFieldExpr,
+    val self: JVMSimpleField,
     val specialization: Specialization,
-    val valueParameters: List<SimpleFieldExpr>,
+    val valueParameters: List<JVMSimpleField>,
 
     scope: Scope, origin: Long,
 ) : JVMSimpleExpr(scope, origin) {
@@ -47,11 +47,11 @@ class JVMSimpleCall(
             param.toSimple(block0)
         }
 
-        val selfIfInsideConstructor = if (method is Constructor) {
+        val selfIfInsideConstructor = /*if (method is Constructor) {
             val calledScope = method.memberScope.parent
             val ownerScope = block0.graph.method0.scope!!.parent
             calledScope == ownerScope
-        } else null
+        } else*/ null
 
         val dst = dst.toSimple(block0)
         return simplifyCall(

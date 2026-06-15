@@ -7,7 +7,7 @@ import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class JVMSimpleType(
-    val dst: SimpleFieldExpr,
+    val dst: JVMSimpleField,
     val value: ClassType,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {

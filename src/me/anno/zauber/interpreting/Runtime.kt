@@ -149,7 +149,7 @@ class Runtime {
         valueParameters: List<Instance>
     ): BlockReturn {
 
-        // println("Calling $methodSpec on $self with $valueParameters")
+        println("Calling $specialization on $methodOwnerInstance with $valueParameters")
         check(specialization.isMethodLike())
 
         if (isNull(methodOwnerInstance)) {

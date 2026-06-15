@@ -10,7 +10,7 @@ import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
 
 class JVMSimpleNumber(
-    val dst: SimpleFieldExpr,
+    val dst: JVMSimpleField,
     val value: NumberExpression,
     scope: Scope, origin: Long
 ) : JVMSimpleExpr(scope, origin) {
