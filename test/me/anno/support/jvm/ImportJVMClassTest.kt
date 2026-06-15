@@ -3,6 +3,7 @@ package me.anno.support.jvm
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import me.anno.utils.assertEquals
+import me.anno.zauber.expansion.MethodOverrides.debuggedMethodName
 
 
 // todo next step:
@@ -100,6 +101,8 @@ class Array<V>(val size: Int) {
 enum class Boolean { TRUE, FALSE }
     """.trimIndent()
     )
+
+    debuggedMethodName = "getAnnotation"
 
     registerJavaClass("java.util.ArrayList")
 

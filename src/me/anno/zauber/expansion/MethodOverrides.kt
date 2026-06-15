@@ -1,5 +1,6 @@
 package me.anno.zauber.expansion
 
+import me.anno.support.Language
 import me.anno.support.jvm.FirstJVMClassReader
 import me.anno.utils.CollectionUtils.groupByMutable
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
@@ -73,8 +74,8 @@ object MethodOverrides {
                 val tpe = a.typeParameters ?: emptyList()
                 val tpa = b.typeParameters ?: emptyList()
                 a.clazz == b.clazz &&
-                        tpe.size == tpa.size &&
-                        tpe.indices.all { equalsIgnoreUnknowns(tpe[it], tpa[it]) }
+                        (isJavaClass(a) || isJavaClass(b) || // Java doesn't care about type-parameters
+                                tpe.size == tpa.size && tpe.indices.all { equalsIgnoreUnknowns(tpe[it], tpa[it]) })
             }
             NullType -> true
             is GenericType -> a == b
@@ -88,6 +89,11 @@ object MethodOverrides {
             }
             else -> TODO("Check equals ${a.javaClass.simpleName}")
         }
+    }
+
+    fun isJavaClass(a: ClassType): Boolean {
+        val sourceLanguage = a.clazz.sourceLibrary?.language
+        return sourceLanguage == Language.JAVA
     }
 
     private fun resolveOverrides(scope: Scope) {
@@ -278,7 +284,14 @@ object MethodOverrides {
                             ?: error("Expected to find $superClass in superCalls of $childClass")
                         val paramIndex = superClass.typeParameters.indexOfFirst { it.name == name }
                         if (paramIndex < 0) {
-                            LOGGER.warn("Unknown typeParameter ${style(name, GREEN)} in $superClass, known: ${superClass.typeParameters}")
+                            LOGGER.warn(
+                                "Unknown typeParameter ${
+                                    style(
+                                        name,
+                                        GREEN
+                                    )
+                                } in $superClass, known: ${superClass.typeParameters}"
+                            )
                             return UnknownType
                         }
 

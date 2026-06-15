@@ -27,7 +27,7 @@ class JVMSimpleGetLocalField(
         val dst = dst.toSimple(block0)
         val localField = block0.graph.getOrPutLocalField(field)
 
-        println("JVMSimpleGetLocalField this.dst: ${this.dst}, dst: $dst, field: $localField")
+        // println("JVMSimpleGetLocalField this.dst: ${this.dst}, dst: $dst, field: $localField")
 
         block0.add(SimpleGetLocalField(dst, localField, scope, origin))
         return flow0.withValue(dst)
