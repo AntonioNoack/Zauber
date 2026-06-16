@@ -122,7 +122,8 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     override fun toString(): String {
-        return "${bold("Graph")}[${blocks.size} nodes, ${simpleFields.size} simple fields, ${localFields.size} local fields]\n" +
+        return "${bold("SimpleGraph")}[$method]\n" +
+                "[${blocks.size} nodes, ${simpleFields.size} simple fields, ${localFields.size} local fields]\n" +
                 "${bold("this:")} $thisField\n" +
                 (if (selfField != null) "${bold("self:")} $selfField\n" else "") +
                 "${bold("unit:")} $unitField\n" +

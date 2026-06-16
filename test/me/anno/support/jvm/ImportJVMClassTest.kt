@@ -137,7 +137,8 @@ class ClassCastException(): Exception("Cast failed")
     LogManager.enableDebug(
         "Runtime," +
                 "SimpleGetClassField,SimpleSetClassField," +
-                "SimpleGetLocalField,SimpleSetLocalField"
+                "SimpleGetLocalField,SimpleSetLocalField," +
+                "SecondJVMMethodReader"
     )
 
     registerJavaClass("java.util.ArrayList")

@@ -4,6 +4,7 @@ import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
+import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.scope.Scope
@@ -29,7 +30,10 @@ class JVMSimpleField(
     override fun isResolved(): Boolean = true
 
     fun toSimple(block: SimpleBlock): SimpleField {
-        val graph0 = block.graph
+        return toSimple(block.graph)
+    }
+
+    fun toSimple(graph0: SimpleGraph): SimpleField {
         val fieldMapping = graph.fieldMappings
             .getOrPut(graph0.method0, ::HashMap)
         return fieldMapping.getOrPut(this) {

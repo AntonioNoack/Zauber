@@ -339,7 +339,7 @@ class Runtime {
             } else {
                 if (LOGGER.isInfoEnabled) LOGGER.info("Finished $block, next: ${block.nextBranch?.idStr()}")
                 block.nextBranch
-            } ?: error("Exited without return from ${block0.graph.method}")
+            } ?: error("Exited without return from ${block0.graph} at ${block.idStr()}")
         }
     }
 

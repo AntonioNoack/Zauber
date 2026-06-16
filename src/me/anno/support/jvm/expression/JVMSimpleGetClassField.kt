@@ -34,7 +34,7 @@ class JVMSimpleGetClassField(
         }
 
         val self = self.toSimple(block0)
-        val specialization = context.specialization.withScope(field.fieldScope)
+        val specialization = context.specialization.withScopeUnknownIfMissing(field.fieldScope)
         val getter = SimpleGetClassField(
             dst, self.use(), field,
             specialization, scope, origin

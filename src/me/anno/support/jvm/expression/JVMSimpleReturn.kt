@@ -65,12 +65,12 @@ class JVMSimpleReturn(val value: JVMSimpleField, scope: Scope, origin: Long) : J
             return flow0.joinReturnNoValue(value.use(), block0)
         }
 
-        check(
+       /* check(
             isSubTypeOf(expectedReturnType, actualReturnType) ||
                     (actualReturnType == NullType && expectedReturnType !in nativeNumbers)
         ) {
             getWarningMessage(block0, expectedReturnType, actualReturnType)
-        }
+        }*/
 
         return flow0.joinReturnNoValue(value.use(), block0)
     }

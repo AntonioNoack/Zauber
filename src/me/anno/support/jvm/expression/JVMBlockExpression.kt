@@ -10,7 +10,6 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
-import kotlin.system.exitProcess
 
 // todo we somehow need a mix of SimpleInstr and Expression...
 
@@ -21,7 +20,19 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
     }
 
     var ifBranch: JVMBlockExpression? = null
+        set(value) {
+            if (field != null) inputs.remove(field)
+            if (value != null) inputs.add(value)
+            field = value
+        }
+
     var elseBranch: JVMBlockExpression? = null
+        set(value) {
+            if (field != null) inputs.remove(field)
+            if (value != null) inputs.add(value)
+            field = value
+        }
+
     var branchCondition: JVMSimpleField? = null
         set(value) {
             field = value
@@ -37,7 +48,10 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
             ifBranch = value
         }
 
-    var endStack: List<JVMSimpleField>? = null
+    val inputs = ArrayList<JVMBlockExpression>()
+
+    val startStacks = ArrayList<List<JVMSimpleField>>()
+    var newStartStack: List<JVMSimpleField>? = null
 
     val instructions = ArrayList<JVMSimpleExpr>()
     fun add(expr: JVMSimpleExpr) {
@@ -54,12 +68,13 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
         TODO("Not yet implemented")
     }
 
-    fun str() = style("b$id", GREEN)
+    fun idStr() = style("b$id", GREEN)
+
     val isEntryPoint get() = id == 0
 
     fun short(): StringBuilder {
         val builder = StringBuilder()
-        builder.append(str()).append('[')
+        builder.append(idStr()).append('[')
 
         if (isEntryPoint) builder.append("->|")
 
