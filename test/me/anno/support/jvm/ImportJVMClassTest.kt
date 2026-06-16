@@ -4,6 +4,7 @@ import me.anno.utils.assertEquals
 import me.anno.zauber.expansion.MethodOverrides.debuggedMethodName
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.interpreting.RuntimeCreate.createInt
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.getScope0
 
@@ -131,13 +132,12 @@ class ClassCastException(): Exception("Cast failed")
     """.trimIndent()
     )
 
-    debuggedMethodName = "getAnnotation"
+    debuggedMethodName = "hashCode"
 
     LogManager.enableDebug(
         "Runtime," +
                 "SimpleGetClassField,SimpleSetClassField," +
-                "SimpleGetLocalField,SimpleSetLocalField," +
-                "MethodOverrides"
+                "SimpleGetLocalField,SimpleSetLocalField"
     )
 
     registerJavaClass("java.util.ArrayList")
@@ -146,6 +146,9 @@ class ClassCastException(): Exception("Cast failed")
     }
     runtime.register(getScope0("java.lang.System.Companion"), "registerNatives", emptyList()) { _, _ ->
         runtime.getUnit()
+    }
+    runtime.register(getScope0("zauber.ClassType"), "hashCode", emptyList()) { self, _ ->
+        runtime.createInt(System.identityHashCode(self))
     }
 
     val value = testExecute(

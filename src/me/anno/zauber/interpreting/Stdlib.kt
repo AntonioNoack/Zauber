@@ -27,6 +27,9 @@ import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.GenericType
+import kotlin.experimental.and
+import kotlin.experimental.or
+import kotlin.experimental.xor
 
 /**
  * Standard library implementation for interpreter / compile-time execution
@@ -138,6 +141,9 @@ object Stdlib {
         rt.registerBinaryByteMethod("times", Byte::times)
         rt.registerBinaryByteMethod("div", Byte::div)
         rt.registerBinaryByteMethod("rem", Byte::rem)
+        rt.registerBinaryByteMethod2("and", Byte::and)
+        rt.registerBinaryByteMethod2("or", Byte::or)
+        rt.registerBinaryByteMethod2("xor", Byte::xor)
         rt.registerBinaryByteMethod("compareTo", Byte::compareTo)
     }
 
@@ -148,6 +154,9 @@ object Stdlib {
         rt.registerBinaryUByteMethod("times", UByte::times)
         rt.registerBinaryUByteMethod("div", UByte::div)
         rt.registerBinaryUByteMethod("rem", UByte::rem)
+        rt.registerBinaryUByteMethod2("and", UByte::and)
+        rt.registerBinaryUByteMethod2("or", UByte::or)
+        rt.registerBinaryUByteMethod2("xor", UByte::xor)
         rt.registerBinaryMethod(Types.UByte, "compareTo") { a, b ->
             rt.createInt(a.castToUByte().compareTo(b.castToUByte()))
         }
@@ -160,6 +169,9 @@ object Stdlib {
         rt.registerBinaryShortMethod("times", Short::times)
         rt.registerBinaryShortMethod("div", Short::div)
         rt.registerBinaryShortMethod("rem", Short::rem)
+        rt.registerBinaryShortMethod2("and", Short::and)
+        rt.registerBinaryShortMethod2("or", Short::or)
+        rt.registerBinaryShortMethod2("xor", Short::xor)
         rt.registerBinaryShortMethod("compareTo", Short::compareTo)
     }
 
@@ -170,6 +182,9 @@ object Stdlib {
         rt.registerBinaryUShortMethod("times", UShort::times)
         rt.registerBinaryUShortMethod("div", UShort::div)
         rt.registerBinaryUShortMethod("rem", UShort::rem)
+        rt.registerBinaryUShortMethod2("and", UShort::and)
+        rt.registerBinaryUShortMethod2("or", UShort::or)
+        rt.registerBinaryUShortMethod2("xor", UShort::xor)
         rt.registerBinaryMethod(Types.UShort, "compareTo") { a, b ->
             rt.createInt(a.castToUShort().compareTo(b.castToUShort()))
         }
@@ -186,6 +201,9 @@ object Stdlib {
         rt.registerBinaryIntMethod("shr", Int::shr)
         rt.registerBinaryIntMethod("ushr", Int::ushr)
         rt.registerBinaryIntMethod("compareTo", Int::compareTo)
+        rt.registerBinaryIntMethod("and", Int::and)
+        rt.registerBinaryIntMethod("or", Int::or)
+        rt.registerBinaryIntMethod("xor", Int::xor)
     }
 
     fun registerUIntMethods() {
@@ -195,6 +213,9 @@ object Stdlib {
         rt.registerBinaryUIntMethod("times", UInt::times)
         rt.registerBinaryUIntMethod("div", UInt::div)
         rt.registerBinaryUIntMethod("rem", UInt::rem)
+        rt.registerBinaryUIntMethod("and", UInt::and)
+        rt.registerBinaryUIntMethod("or", UInt::or)
+        rt.registerBinaryUIntMethod("xor", UInt::xor)
         rt.registerBinaryMethod(Types.UInt, "compareTo") { a, b ->
             rt.createInt(a.castToUInt().compareTo(b.castToUInt()))
         }
@@ -207,6 +228,9 @@ object Stdlib {
         rt.registerBinaryLongMethod("times", Long::times)
         rt.registerBinaryLongMethod("div", Long::div)
         rt.registerBinaryLongMethod("rem", Long::rem)
+        rt.registerBinaryLongMethod("and", Long::and)
+        rt.registerBinaryLongMethod("or", Long::or)
+        rt.registerBinaryLongMethod("xor", Long::xor)
         rt.registerBinaryMethod(Types.Long, "compareTo") { a, b ->
             rt.createInt(a.castToLong().compareTo(b.castToLong()))
         }
@@ -219,6 +243,9 @@ object Stdlib {
         rt.registerBinaryULongMethod("times", ULong::times)
         rt.registerBinaryULongMethod("div", ULong::div)
         rt.registerBinaryULongMethod("rem", ULong::rem)
+        rt.registerBinaryULongMethod("and", ULong::and)
+        rt.registerBinaryULongMethod("or", ULong::or)
+        rt.registerBinaryULongMethod("xor", ULong::xor)
         rt.registerBinaryMethod(Types.ULong, "compareTo") { a, b ->
             rt.createInt(a.castToULong().compareTo(b.castToULong()))
         }
@@ -429,10 +456,24 @@ object Stdlib {
         }
     }
 
+    fun Runtime.registerBinaryByteMethod2(name: String, calc: (a: Byte, b: Byte) -> Byte) {
+        registerBinaryMethod(Types.Byte, name) { a, b ->
+            val result = calc(a.castToByte(), b.castToByte())
+            createByte(result)
+        }
+    }
+
     fun Runtime.registerBinaryUByteMethod(name: String, calc: (a: UByte, b: UByte) -> UInt) {
         registerBinaryMethod(Types.UByte, name) { a, b ->
             val result = calc(a.castToUByte(), b.castToUByte())
             createUInt(result)
+        }
+    }
+
+    fun Runtime.registerBinaryUByteMethod2(name: String, calc: (a: UByte, b: UByte) -> UByte) {
+        registerBinaryMethod(Types.UByte, name) { a, b ->
+            val result = calc(a.castToUByte(), b.castToUByte())
+            createUByte(result)
         }
     }
 
@@ -443,10 +484,24 @@ object Stdlib {
         }
     }
 
+    fun Runtime.registerBinaryShortMethod2(name: String, calc: (a: Short, b: Short) -> Short) {
+        registerBinaryMethod(Types.Short, name) { a, b ->
+            val result = calc(a.castToShort(), b.castToShort())
+            createShort(result)
+        }
+    }
+
     fun Runtime.registerBinaryUShortMethod(name: String, calc: (a: UShort, b: UShort) -> UInt) {
         registerBinaryMethod(Types.UShort, name) { a, b ->
             val result = calc(a.castToUShort(), b.castToUShort())
             createUInt(result)
+        }
+    }
+
+    fun Runtime.registerBinaryUShortMethod2(name: String, calc: (a: UShort, b: UShort) -> UShort) {
+        registerBinaryMethod(Types.UShort, name) { a, b ->
+            val result = calc(a.castToUShort(), b.castToUShort())
+            createUShort(result)
         }
     }
 

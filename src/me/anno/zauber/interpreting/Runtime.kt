@@ -65,9 +65,9 @@ class Runtime {
         // LOGGER.info("Getting SimpleField $field")
         return call.simpleFields[field.id]
             ?: run {
-                println(call.graph)
+                println("Broken Graph: ${call.graph}")
                 error(
-                    "Missing simple field $field, fields: ${
+                    "$field is uninitialized, fields: ${
                         call.simpleFields.withIndex().joinToString("") { (k, v) ->
                             "\n  ${style("%$k", YELLOW)}=$v"
                         }

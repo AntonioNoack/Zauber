@@ -35,7 +35,7 @@ object MethodOverrides {
 
     private val LOGGER = LogManager.getLogger(MethodOverrides::class)
     private val processedScopes by threadLocal { HashSet<Scope>() }
-    var debuggedMethodName = "getExactSizeIfKnown"
+    var debuggedMethodName = ""
 
     val methodOverrideCreator = ScopeInit(ScopeInitType.ADD_OVERRIDES) { scope: Scope ->
         resolveOverrides(scope)
@@ -47,7 +47,9 @@ object MethodOverrides {
         options: List<Parameter>, expected: List<Type>
     ): Boolean {
         if (expected.size != options.size) {
-            if (false) println("size mismatch: ${expected.size} != ${options.size}")
+            if (LOGGER.isInfoEnabled && superMethod.selfAsMethod!!.name == debuggedMethodName) {
+                LOGGER.info("size mismatch: ${expected.size} != ${options.size}")
+            }
             return false
         }
         for (index in options.indices) {
@@ -150,7 +152,7 @@ object MethodOverrides {
             val superMethod = superMethod0.selfAsMethod
             if (superMethod == null || superMethod.isPrivate()) continue
 
-            // if (LOGGER.isInfoEnabled) LOGGER.info("Check: $superMethod for $superScope -> $scope")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Check: $superMethod for $superScope -> $scope")
 
             // find match
             val selfType = superMethod.selfType ?: scope.typeWithArgs
@@ -332,7 +334,7 @@ object MethodOverrides {
             typeParameters.map { it.withType(it.type.adjustTo(superClass, childClass, superMethod, childMethod)) },
             valueParameters.map { it.withType(it.type.adjustTo(superClass, childClass, superMethod, childMethod)) },
             childMethod, returnType?.adjustTo(superClass, childClass, superMethod, childMethod),
-            extraConditions, body, flags, origin
+            extraConditions, body, flags or Flags.OVERRIDE, origin
         )
     }
 
