@@ -4,6 +4,7 @@ import me.anno.generation.Specializations
 import me.anno.support.jvm.FirstJVMClassReader.Companion.API_LEVEL
 import me.anno.support.jvm.FirstJVMClassReader.Companion.parseMethodSignature
 import me.anno.support.jvm.expression.*
+import me.anno.utils.NumberUtils.toInt
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
@@ -128,18 +129,6 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         LOGGER.debug(OpCode[opcode])
         when (opcode) {
 
-            // duplications
-            // no .use() required, because we haven't read them yet
-            POP -> stack.removeLast()
-            DUP -> stack.add(stack.last())
-            DUP_X1 -> {
-                val v0 = stack.removeLast()
-                val v1 = stack.removeLast()
-                stack.add(v0)
-                stack.add(v1)
-                stack.add(v0)
-            }
-
             // constants
             ICONST_0 -> pushConst(Constants.i0)
             ICONST_1 -> pushConst(Constants.i1)
@@ -255,8 +244,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     CALOAD -> Types.Char
                     else -> error("Unreachable")
                 }
-                val index = stack.removeLast().use()
-                val array = stack.removeLast().use()
+                val index = pop().use()
+                val array = pop().use()
                 val dst = block.field(baseType)
                 val method = findMethod(Types.Array.clazz, "get", Types.Int)
                 val typeParams = ParameterList(Types.Array.clazz.typeParameters, listOf(baseType))
@@ -268,7 +257,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                         false, methodScope, origin
                     )
                 )
-                stack.add(dst)
+                push(dst)
                 convertToInt(baseType)
             }
 
@@ -288,9 +277,9 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     else -> error("Unreachable")
                 }
                 convertFromInt(baseType)
-                val value = stack.removeLast().use()
-                val index = stack.removeLast().use()
-                val array = stack.removeLast().use()
+                val value = pop().use()
+                val index = pop().use()
+                val array = pop().use()
                 val dst = block.field(Types.Unit)
                 val method = findMethod(
                     Types.Array.clazz, "set", Types.Int,
@@ -307,11 +296,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
 
             ARETURN, IRETURN, LRETURN, FRETURN, DRETURN -> {
-                block.add(JVMSimpleReturn(stack.removeLast().use(), methodScope, origin))
+                block.add(JVMSimpleReturn(pop().use(), methodScope, origin))
             }
 
             ATHROW -> {
-                val thrown = stack.removeLast().use()
+                val thrown = pop().use()
                 block.add(JVMSimpleThrow(thrown, methodScope, origin))
             }
 
@@ -324,29 +313,250 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             ARRAYLENGTH -> {
                 val dst = graph.field(Types.Int)
-                val array = stack.removeLast().use()
+                val array = pop().use()
                 val field = findField(Types.Array.clazz, "size")
                     ?: error("Missing field 'size' in zauber.Array")
                 val instr = JVMSimpleGetClassField(dst, array, field, methodScope, origin)
                 block.add(instr)
-                stack.add(dst)
+                push(dst)
             }
 
             MONITORENTER -> {
                 // todo add call...
-                stack.removeLast()
+                pop()
             }
             MONITOREXIT -> {
                 // todo add call...
-                stack.removeLast()
+                pop()
+            }
+
+            // duplications
+            // no .use() required, because we haven't read them yet
+            POP -> {
+                pop()
+            }
+
+            POP2 -> {
+                val v1 = pop()
+                if (!isType2(v1)) {
+                    pop()
+                }
+            }
+
+            DUP -> {
+                push(peek())
+            }
+
+            DUP_X1 -> {
+                // ..., value2, value1 ->
+                // ..., value1, value2, value1
+
+                val v1 = pop()
+                val v2 = pop()
+
+                push(v1)
+                push(v2)
+                push(v1)
+            }
+
+            DUP_X2 -> {
+
+                val v1 = pop()
+
+                if (isType2(v1)) {
+                    // ..., value2, value1 ->
+                    // ..., value1, value2, value1
+
+                    val v2 = pop()
+
+                    push(v1)
+                    push(v2)
+                    push(v1)
+
+                } else {
+
+                    val v2 = pop()
+
+                    if (isType2(v2)) {
+                        // ..., value2, value1 ->
+                        // ..., value1, value2, value1
+
+                        push(v1)
+                        push(v2)
+                        push(v1)
+
+                    } else {
+                        // ..., value3, value2, value1 ->
+                        // ..., value1, value3, value2, value1
+
+                        val v3 = pop()
+
+                        push(v1)
+                        push(v3)
+                        push(v2)
+                        push(v1)
+                    }
+                }
+            }
+
+            DUP2 -> {
+
+                val v1 = pop()
+
+                if (isType2(v1)) {
+                    // ..., value ->
+                    // ..., value, value
+
+                    push(v1)
+                    push(v1)
+
+                } else {
+
+                    val v2 = pop()
+
+                    // ..., value2, value1 ->
+                    // ..., value2, value1, value2, value1
+
+                    push(v2)
+                    push(v1)
+                    push(v2)
+                    push(v1)
+                }
+            }
+
+            DUP2_X1 -> {
+
+                val v1 = pop()
+
+                if (isType2(v1)) {
+
+                    // ..., value2, value1 ->
+                    // ..., value1, value2, value1
+
+                    val v2 = pop()
+
+                    push(v1)
+                    push(v2)
+                    push(v1)
+
+                } else {
+
+                    val v2 = pop()
+                    val v3 = pop()
+
+                    // ..., value3, value2, value1 ->
+                    // ..., value2, value1, value3, value2, value1
+
+                    push(v2)
+                    push(v1)
+                    push(v3)
+                    push(v2)
+                    push(v1)
+                }
+            }
+
+            DUP2_X2 -> {
+
+                val v1 = pop()
+
+                if (isType2(v1)) {
+
+                    val v2 = pop()
+
+                    if (isType2(v2)) {
+
+                        // ..., value2, value1 ->
+                        // ..., value1, value2, value1
+
+                        push(v1)
+                        push(v2)
+                        push(v1)
+
+                    } else {
+
+                        // ..., value3, value2, value1 ->
+                        // ..., value1, value3, value2, value1
+
+                        val v3 = pop()
+
+                        push(v1)
+                        push(v3)
+                        push(v2)
+                        push(v1)
+                    }
+
+                } else {
+
+                    val v2 = pop()
+
+                    if (isType2(v2)) {
+
+                        // ..., value2, value1_2, value1_1 ->
+                        // ..., value1_2, value1_1, value2, value1_2, value1_1
+
+                        push(v1)
+                        push(v2)
+                        push(v1)
+
+                    } else {
+
+                        val v3 = pop()
+
+                        if (isType2(v3)) {
+
+                            // ..., value3, value2, value1 ->
+                            // ..., value2, value1, value3, value2, value1
+
+                            push(v2)
+                            push(v1)
+                            push(v3)
+                            push(v2)
+                            push(v1)
+
+                        } else {
+
+                            // ..., value4, value3, value2, value1 ->
+                            // ..., value2, value1, value4, value3, value2, value1
+
+                            val v4 = pop()
+
+                            push(v2)
+                            push(v1)
+                            push(v4)
+                            push(v3)
+                            push(v2)
+                            push(v1)
+                        }
+                    }
+                }
+            }
+
+            SWAP -> {
+                val v1 = pop()
+                val v2 = pop()
+
+                push(v1)
+                push(v2)
             }
 
             else -> TODO("Handle ${OpCode[opcode]}")
         }
     }
 
+    
+    fun pop() = stack.removeLast()
+    fun peek() = stack.last()
+    fun push(v: JVMSimpleField) {
+        stack.add(v)
+    }
+
+    fun isType2(field: JVMSimpleField): Boolean {
+        val type = field.type
+        return type == Types.Long || type == Types.Double
+    }
+
     fun convertCall(fromType: ClassType, toType: ClassType, name: String) {
-        val p0 = stack.removeLast().use()
+        val p0 = pop().use()
         val dst = graph.field(toType)
         val method = findMethod(fromType.clazz, name)
         val spec = Specialization.fromSimple(method.memberScope)
@@ -355,7 +565,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             false, methodScope, origin
         )
         block.add(call)
-        stack.add(dst)
+        push(dst)
     }
 
     fun unaryCall(type: ClassType, name: String) {
@@ -375,8 +585,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun binaryCall(type: ClassType, name: String, argType: Type, retType: Type) {
-        val p1 = stack.removeLast().use()
-        val p0 = stack.removeLast().use()
+        val p1 = pop().use()
+        val p0 = pop().use()
         val dst = graph.field(retType)
         val method = findMethod(type.clazz, name, argType)
         block.add(
@@ -386,19 +596,18 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 false, methodScope, origin
             )
         )
-        stack.add(dst)
+        push(dst)
     }
 
-    fun equalsCall(type: ClassType, negated: Boolean) {
-        val p1 = stack.removeLast()
-        val p0 = stack.removeLast()
-        val dst = graph.field(Types.Boolean)
+    fun equalsCall(type: ClassType, negated: Boolean, dst: JVMSimpleField) {
+        val p1 = pop()
+        val p0 = pop()
         val method = findMethod(type.clazz, "equals", type) as Method
         val spec = Specialization.fromSimple(method.memberScope)
         val ctx = ResolutionContext.minimal.withSpec(spec)
         val method1 = ResolvedMethod(method, ctx, methodScope, MatchScore.zero)
         block.add(JVMSimpleCheckEquals(dst, p0, p1, negated, method1, methodScope, origin))
-        stack.add(dst)
+        push(dst)
     }
 
     fun equalsParams(expected: Array<out Type>, actual: List<Parameter>): Boolean {
@@ -423,13 +632,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     fun pushConst(ne: NumberExpression, type: Type = Types.Int) {
         val dst = graph.field(type)
         block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
-        stack.add(dst)
+        push(dst)
     }
 
     fun pushNull() {
         val dst = graph.field(NullType)
         block.add(JVMSimpleNull(dst, methodScope, origin))
-        stack.add(dst)
+        push(dst)
     }
 
     override fun visitIntInsn(opcode: Int, operand: Int) {
@@ -465,25 +674,25 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
     fun createArray(elementType: Type) {
         val arrayType = Types.Array.withTypeParameter(elementType)
-        val size = stack.removeLast().use()
+        val size = pop().use()
         val dst = block.field(arrayType)
         val tmp = block.field(Types.Unit)
         val allocation = JVMSimpleAllocateInstance(dst, arrayType, methodScope, origin)
         allocation.valueParameters = listOf(size)
         block.add(allocation)
-        dst.allocation = allocation
+        dst.allocation = allocation // not really needed
         val constr = resolveConstructor(
             arrayType.clazz, "(Int)",
             ParameterList(arrayType),
             listOf(Types.Int)
         )
-        block.add(
-            JVMSimpleCall(
-                tmp, constr.resolved, dst.use(), constr.specialization,
-                allocation.valueParameters, false, methodScope, origin
-            )
+        val initCall = JVMSimpleCall(
+            tmp, constr.resolved, dst.use(), constr.specialization,
+            allocation.valueParameters, false, methodScope, origin
         )
-        stack.add(dst)
+        block.add(initCall)
+        push(dst)
+        println("creating array of $elementType, size: $size, dst: $dst")
     }
 
     fun convertToInt(type: Type) {
@@ -530,23 +739,23 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     ?: error("Missing field '$name' in $ownerType, candidates: ${clazz.fields}, ${clazz.scopeInitType}")
                 val instr = JVMSimpleGetClassField(dst, self, field, methodScope, origin)
                 block.add(instr)
-                stack.add(dst)
+                push(dst)
                 convertToInt(fieldType)
             }
             GETFIELD -> {
                 // todo check non-null
                 val dst = graph.field(fieldType)
-                val self = stack.removeLast().use()
+                val self = pop().use()
                 val field = findField(ownerType.clazz, name)
                     ?: error("Missing field '$name' in $ownerType")
                 val instr = JVMSimpleGetClassField(dst, self, field, methodScope, origin)
                 block.add(instr)
-                stack.add(dst)
+                push(dst)
                 convertToInt(fieldType)
             }
             PUTSTATIC -> {
                 convertFromInt(fieldType)
-                val value = stack.removeLast().use()
+                val value = pop().use()
                 val self = graph.field(nameToType(owner))
                 block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
                 val field = findField(ownerType.clazz, name)
@@ -557,8 +766,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             PUTFIELD -> {
                 // todo check non-null
                 convertFromInt(fieldType)
-                val value = stack.removeLast().use()
-                val self = stack.removeLast().use()
+                val value = pop().use()
+                val self = pop().use()
                 LOGGER.debug("$self.$name = $value")
                 val field = findField(ownerType.clazz, name)
                     ?: error("Missing field '$name' in $ownerType")
@@ -589,10 +798,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
                 val dst = graph.field(localField.type)
                 block.add(JVMSimpleGetLocalField(dst, localField, methodScope, origin))
-                stack.add(dst)
+                push(dst)
             }
             ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
-                val value = stack.removeLast().use()
+                val value = pop().use()
                 block.add(JVMSimpleSetLocalField(localField, value, methodScope, origin))
             }
             else -> error("Unsupported opcode ${OpCode[opcode]}")
@@ -634,9 +843,9 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         LOGGER.debug("newMultiArray($descriptor, $numDimensions)")
         val arrayType = descToType(descriptor) as ClassType
         val dst = block.field(arrayType)
-        val dimensions = List(numDimensions) { stack.removeLast() }.asReversed()
+        val dimensions = List(numDimensions) { pop() }.asReversed()
         block.add(JVMSimpleMultiArray(dst, arrayType, dimensions, methodScope, origin))
-        stack.add(dst)
+        push(dst)
     }
 
     override fun visitLdcInsn(value: Any) {
@@ -648,14 +857,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             is String -> {
                 val dst = graph.field(Types.String)
                 block.add(JVMSimpleString(dst, value, methodScope, origin))
-                stack.add(dst)
+                push(dst)
                 return
             }
             is org.objectweb.asm.Type -> {
                 val type = nameToType(value.className) as ClassType
                 val dst = graph.field(Types.ClassType.withTypeParameter(type))
                 block.add(JVMSimpleType(dst, type, methodScope, origin))
-                stack.add(dst)
+                push(dst)
                 return
             }
             else -> throw NotImplementedError("Load constant ${value.javaClass}")
@@ -665,7 +874,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         ne.resolvedType = type
         val dst = graph.field(type)
         block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
-        stack.add(dst)
+        push(dst)
     }
 
     fun visitLdcInsnInt(value: Int) {
@@ -674,7 +883,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         ne.resolvedType = type
         val dst = graph.field(type)
         block.add(JVMSimpleNumber(dst, ne, methodScope, origin))
-        stack.add(dst)
+        push(dst)
     }
 
     val blocksByLabel = HashMap<Label, JVMBlockExpression>()
@@ -695,11 +904,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         when (opcode) {
             IFEQ, IFNE -> {
                 pushConst(Constants.i0)
-                equalsCall(Types.Int, negated = opcode == IFNE)
+                equalsCall(Types.Int, negated = opcode == IFNE, condition)
             }
             IFLT, IFGE, IFGT, IFLE -> {
                 // todo remember the compared values, so we can simplify 1f < 2f to not require a compareTo call
-                val tmp = stack.removeLast().use()
+                val tmp = pop().use()
                 val compareType = when (opcode) {
                     IFLT -> CompareType.LESS
                     IFGT -> CompareType.GREATER
@@ -710,11 +919,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 block.add(JVMSimpleCompare(condition, tmp, null, compareType, methodScope, origin))
             }
             IF_ICMPEQ, IF_ICMPNE -> {
-                equalsCall(Types.Int, negated = opcode == IF_ICMPNE)
+                equalsCall(Types.Int, negated = opcode == IF_ICMPNE, condition)
             }
             IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE -> {
-                val p1 = stack.removeLast().use()
-                val p0 = stack.removeLast().use()
+                val p1 = pop().use()
+                val p0 = pop().use()
                 val compareType = when (opcode) {
                     IF_ICMPLT -> CompareType.LESS
                     IF_ICMPGT -> CompareType.GREATER
@@ -725,16 +934,16 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 block.add(JVMSimpleCompare(condition, p0, p1, compareType, methodScope, origin))
             }
             IF_ACMPEQ, IF_ACMPNE -> {
-                val p1 = stack.removeLast().use()
-                val p0 = stack.removeLast().use()
+                val p1 = pop().use()
+                val p0 = pop().use()
                 val negate = opcode == IF_ACMPNE
                 block.add(JVMSimpleCheckIdentical(condition, p0, p1, negate, methodScope, origin))
             }
             IFNULL,
             IFNONNULL -> {
                 pushNull()
-                val p1 = stack.removeLast().use()
-                val p0 = stack.removeLast().use()
+                val p1 = pop().use()
+                val p0 = pop().use()
                 val negate = opcode == IFNONNULL
                 block.add(JVMSimpleCheckIdentical(condition, p0, p1, negate, methodScope, origin))
             }
@@ -780,7 +989,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                 else -> throw NotImplementedError("What type is $type0 (${type0.javaClass})?")
             }
-            stack.add(newBlock.field(type))
+            push(newBlock.field(type))
         }
     }
 
@@ -882,7 +1091,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             lambdaMethod.body = ReturnExpression(lambdaCallExpr, null, methodScope, origin)
 
             val valueArgs2 = valueArgs
-                .map { stack.removeLast().use() }
+                .map { pop().use() }
                 .asReversed()
 
             val dst = block.field(interfaceType)
@@ -897,7 +1106,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     false, methodScope, origin
                 )
             )
-            stack.add(dst)
+            push(dst)
 
         } else {
             throw NotImplementedError("Unknown lambda type: $method, ${args.toList()}")
@@ -933,7 +1142,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         )
 
         val valueParametersI = valueParameters
-            .map { stack.removeLast() }
+            .map { pop() }
             .asReversed()
 
         // resolve method
@@ -945,12 +1154,12 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 // constructor or super.xyz()
                 when (name) {
                     "<init>" -> {
-                        self = stack.removeLast().use()
+                        self = pop().use()
                         self.allocation?.valueParameters = valueParametersI
                         method = resolveConstructor(owner, descriptor, valueParameters)
                     }
                     else -> {
-                        self = stack.removeLast().use()
+                        self = pop().use()
                         val scope = FirstJVMClassReader.getScope(owner, null)
                         method = resolveMethod(scope, name, descriptor, typeParameters, valueParameters)
                     }
@@ -969,7 +1178,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             INVOKEINTERFACE,
             INVOKE_LAMBDA -> {
                 // interface call
-                self = stack.removeLast().use()
+                self = pop().use()
                 method = resolveDynamicMethod(owner, name, descriptor, typeParameters, valueParameters)
             }
             else -> error("Unexpected opcode ${OpCode[opcode]}")
@@ -988,7 +1197,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             )
         )
         if (returnType != Types.Unit) {
-            stack.add(dst)
+            push(dst)
         }
     }
 
@@ -1216,21 +1425,21 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val allocation = JVMSimpleAllocateInstance(dst, type1, methodScope, origin)
                 block.add(allocation)
                 dst.allocation = allocation
-                stack.add(dst)
+                push(dst)
             }
             ANEWARRAY -> {
                 createArray(type1)
             }
             CHECKCAST -> {
-                val value = stack.removeLast().use()
+                val value = pop().use()
                 block.add(JVMSimpleCheckCast(value, type1, methodScope, origin))
-                stack.add(value)
+                push(value)
             }
             INSTANCEOF -> {
-                val value = stack.removeLast().use()
+                val value = pop().use()
                 val dst = block.field(Types.Boolean)
                 block.add(JVMSimpleInstanceOf(dst, value, type1, methodScope, origin))
-                stack.add(dst)
+                push(dst)
                 convertBooleanToInt()
             }
         }

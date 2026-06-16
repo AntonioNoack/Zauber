@@ -163,9 +163,14 @@ class Runtime {
             val parameterTypes = method.valueParameters.map { it.type }
             if (LOGGER.isInfoEnabled) LOGGER.info("Method-params: $method -> $parameterTypes")
             val key = ExternalKey(method.scope.parent!!, method.name, parameterTypes)
-            val method = externalMethods[key]
+            val methodImpl = externalMethods[key]
                 ?: error("Missing external method ${key.str()}")
-            val value = method.process(methodOwnerInstance, valueParameters)
+            val value = try {
+                methodImpl.process(methodOwnerInstance, valueParameters)
+            } catch (e: Exception) {
+                LOGGER.warn("Issue in $method")
+                throw e
+            }
             return BlockReturn(ReturnType.RETURN, value)
         }
 

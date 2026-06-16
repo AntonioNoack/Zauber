@@ -1267,7 +1267,7 @@ open class JavaSourceGenerator : Generator() {
     open fun appendInstrSuffix(graph: SimpleGraph, expr: SimpleInstruction) {
         when (expr) {
             is SimpleConstructorCall, is SimpleMerge -> {}
-            is SimpleCall -> {
+            is SimpleMethodCall -> {
                 if (expr.sample !is Constructor) {
                     builder.append(";")
                 }// else we only placed a comment
@@ -1451,7 +1451,7 @@ open class JavaSourceGenerator : Generator() {
                     SpecialValue.NULL -> builder.append("null")
                 }
             }
-            is SimpleCall -> {
+            is SimpleMethodCall -> {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
@@ -1495,7 +1495,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    open fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val thisType = expr.thisInstance.type
         val castTargetType = getCastTargetType(methodName)
         if (castTargetType != null && thisType in nativeNumbers) {
@@ -1558,7 +1558,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun appendFirstParameter(graph: SimpleGraph, type: Type, expr: SimpleCall) {
+    fun appendFirstParameter(graph: SimpleGraph, type: Type, expr: SimpleMethodCall) {
         if (type != Types.String && expr.thisInstance.isOwnerThis(graph)) {
             check(type is ClassType && type.clazz.fields.any { it.name == "content" }) {
                 "$type is missing field 'content'"
@@ -1570,7 +1570,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    open fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val type = expr.thisInstance.type
         when (type) {
             Types.String, in nativeTypes -> {}
@@ -1608,7 +1608,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append(".copy()")
     }
 
-    open fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+    open fun appendCallImpl(graph: SimpleGraph, expr: SimpleMethodCall) {
         val needsCastForFirstValue = nativeTypes[expr.thisInstance.type]
         if (needsCastForFirstValue != null) {
             appendNativeCall(needsCastForFirstValue, expr, graph)
@@ -1617,7 +1617,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    open fun appendNonNativeCall(expr: SimpleCall, graph: SimpleGraph) {
+    open fun appendNonNativeCall(expr: SimpleMethodCall, graph: SimpleGraph) {
         appendFieldName(graph, expr.thisInstance, ".")
         val methodName = getMethodName(expr.specialization)
         builder.append(methodName)
@@ -1625,7 +1625,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendNativeCall(
-        needsCastForFirstValue: BoxedType, expr: SimpleCall,
+        needsCastForFirstValue: BoxedType, expr: SimpleMethodCall,
         graph: SimpleGraph,
     ) {
         var methodName = getMethodName(expr.specialization)

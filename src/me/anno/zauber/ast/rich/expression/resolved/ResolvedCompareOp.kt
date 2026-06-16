@@ -78,7 +78,7 @@ class ResolvedCompareOp(
             val block3 = simplifyCall(
                 tmpInt, block2v.block, block2, left,
                 true, null, listOf(right),
-                callable, null, scope, origin
+                callable, false, scope, origin
             )
             val block3v = block3.value ?: return block3
 

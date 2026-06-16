@@ -949,7 +949,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                     builder.append("alloca ").append(struct.typeName)
                 }
             }
-            is SimpleCall -> {
+            is SimpleMethodCall -> {
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
                     0 -> appendUnaryOperator(graph, expr, methodName)
@@ -1091,7 +1091,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val type = resolveType(expr.thisInstance.type)
         return if (isCast(methodName) && type in nativeNumbers) {
 
@@ -1159,7 +1159,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         } else false
     }
 
-    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val type = resolveType(expr.thisInstance.type)
         if (type !in nativeNumbers) return false
 
@@ -1247,7 +1247,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         nextLine()
     }
 
-    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleMethodCall) {
         val args = (listOf(expr.thisInstance) + expr.valueParameters).map {
             getSimpleFieldReg(graph, it)
         }
@@ -1271,7 +1271,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
     fun appendInheritedCallSwitch(
         graph: SimpleGraph,
-        expr: SimpleCall,
+        expr: SimpleMethodCall,
         options: List<Pair<Specialization, Specialization>>,
         args: List<String>
     ) {

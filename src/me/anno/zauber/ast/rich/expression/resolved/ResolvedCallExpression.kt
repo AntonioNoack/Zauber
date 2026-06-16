@@ -118,12 +118,11 @@ class ResolvedCallExpression(
 
         val method = callable
         val selfExpr = if (selfExpr != null) base.value.use() else null
-        val selfIfInsideConstructor = (this.selfExpr as? SuperExpression)?.isThis
         val dst = block0.field(method.resolveValueType())
         return simplifyCall(
             dst, blockI.value!!.block, blockI, selfExpr,
             this.selfExpr !is SuperExpression, thisExpr,
-            valueParameters, method, selfIfInsideConstructor,
+            valueParameters, method, method is ResolvedConstructor,
             scope, origin
         )
     }

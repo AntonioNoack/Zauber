@@ -21,7 +21,7 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
@@ -716,7 +716,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         // not necessary, this is done by the owner-ship types
     }
 
-    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
         val selfType = resolveType(expr.thisInstance.type) as ClassType
         val position = builder.length
@@ -733,7 +733,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
 
     fun Type.isObjectLike() = this is ClassType && clazz.isObjectLike()
 
-    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleMethodCall) {
         val needsCastForFirstValue = nativeTypes[expr.thisInstance.type]
         if (needsCastForFirstValue != null) {
             appendNativeCall(needsCastForFirstValue, expr, graph)
@@ -800,7 +800,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         } else null
     }
 
-    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val thisType = expr.thisInstance.type
         return if (methodName == "inv" && thisType in nativeNumbers) {
             builder.append('!')
@@ -809,7 +809,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         } else super.appendUnaryOperator(graph, expr, methodName)
     }
 
-    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val type = expr.thisInstance.type
         when (type) {
             Types.String, in nativeTypes -> {}

@@ -5,7 +5,7 @@ import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.scope.Scope
@@ -56,7 +56,7 @@ class JVMSimpleCheckCast(
             .constructors0.firstOrNull { it.valueParameters.isEmpty() }
             ?: error("Missing ClassCastException-constructor without value parameters")
         val constrSpec = spec.withScope(constr.memberScope)
-        ifFalse.add(SimpleCall(unit, constr, thrown, null, constrSpec, params, scope, origin))
+        ifFalse.add(SimpleConstructorCall(unit, thrown, constrSpec, params, scope, origin))
 
         block0.ifBranch = ifTrue
         block0.elseBranch = ifFalse

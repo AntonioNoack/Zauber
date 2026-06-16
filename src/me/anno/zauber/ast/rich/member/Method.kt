@@ -59,10 +59,10 @@ class Method(
 
     override fun toString(): String {
         val builder = flags()
-        builder.append(memberScope.toString()).append('.')
         builder.append(style("fun ", ORANGE))
         appendTypeParams(builder)
         appendSelfType(builder)
+        builder.append(ownerScope).append('.')
         builder.append(style(name, GREEN))
         appendValueParams(builder)
         val returnType = returnType

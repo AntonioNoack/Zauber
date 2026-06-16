@@ -18,7 +18,7 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleBoxCast
-import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
@@ -324,7 +324,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         builder.append(path.joinToString("_"))
     }
 
-    override fun appendNonNativeCall(expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNonNativeCall(expr: SimpleMethodCall, graph: SimpleGraph) {
 
         if (expr.methods !is FullMap) {
             val options = inheritanceTable.createSwitchList(expr.specialization)
@@ -371,7 +371,7 @@ open class CSourceGenerator : CppSourceGenerator() {
     }
 
     private fun appendNonNativeCall(
-        graph: SimpleGraph, method0: Specialization, expr: SimpleCall,
+        graph: SimpleGraph, method0: Specialization, expr: SimpleMethodCall,
         withCast: Boolean
     ) {
         val methodName = getMethodName(method0)

@@ -680,7 +680,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 val desc = ctorDescriptorOf(instr.method as Constructor, (instr.method as Constructor).ownerScope)
                 code.invokespecial(ownerInternal, "<init>", desc)
             }
-            is SimpleCall -> {
+            is SimpleMethodCall -> {
                 val methodName = instr.methodName
                 val thisType = resolveType(instr.thisInstance.type)
                 val thisIsNumber = thisType in nativeNumbers

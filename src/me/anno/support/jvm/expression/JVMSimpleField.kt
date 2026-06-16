@@ -33,7 +33,9 @@ class JVMSimpleField(
         val fieldMapping = graph.fieldMappings
             .getOrPut(graph0.method0, ::HashMap)
         return fieldMapping.getOrPut(this) {
-            graph0.field(type.specialize(graph0.method0))
+            graph0.field(type.specialize(graph0.method0)).apply {
+                println("mapping ${this@JVMSimpleField} to $this")
+            }
         }
     }
 

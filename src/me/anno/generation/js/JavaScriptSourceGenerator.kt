@@ -28,7 +28,7 @@ import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
@@ -546,7 +546,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         appendTypeImpl(type, scope, needsBoxedType)
     }
 
-    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleCall, graph: SimpleGraph) {
+    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
         val selfType = expr.thisInstance.type
         val position = builder.length
@@ -583,11 +583,11 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         return this == Types.Long || this == Types.ULong || this == Types.UInt
     }
 
-    private fun appendSourceValue(graph: SimpleGraph, expr: SimpleCall) {
+    private fun appendSourceValue(graph: SimpleGraph, expr: SimpleMethodCall) {
         appendFieldName(graph, expr.thisInstance)
     }
 
-    private fun appendFloatClamp(graph: SimpleGraph, expr: SimpleCall, targetType: Type) {
+    private fun appendFloatClamp(graph: SimpleGraph, expr: SimpleMethodCall, targetType: Type) {
         val minValue = getMinIntValue(targetType).toDouble()
         val maxValue = getMaxIntValue(targetType).toDouble()
         builder.append("Math.trunc(Math.min(")
@@ -599,7 +599,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         builder.append(")))")
     }
 
-    private fun appendIntegerCast(graph: SimpleGraph, expr: SimpleCall, sourceType: Type, targetType: Type) {
+    private fun appendIntegerCast(graph: SimpleGraph, expr: SimpleMethodCall, sourceType: Type, targetType: Type) {
         when {
             sourceType.isFloat() -> {
                 when (targetType) {
@@ -708,7 +708,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    private fun appendNumericCast(graph: SimpleGraph, expr: SimpleCall, targetType: Type): Boolean {
+    private fun appendNumericCast(graph: SimpleGraph, expr: SimpleMethodCall, targetType: Type): Boolean {
         val sourceType = resolveType(expr.thisInstance.type)
         when (targetType) {
             Types.Half -> {
@@ -735,7 +735,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         return true
     }
 
-    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val thisType = expr.thisInstance.type
         val targetType = getCastTargetType(methodName)
         return if (targetType != null && thisType in nativeNumbers) {
@@ -787,7 +787,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         } else super.appendUnaryOperator(graph, expr, methodName)
     }
 
-    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val type = expr.thisInstance.type
         when (type) {
             Types.String, in nativeTypes -> {}

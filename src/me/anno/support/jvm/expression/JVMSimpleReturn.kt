@@ -7,7 +7,7 @@ import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.FlowResult
-import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -53,7 +53,7 @@ class JVMSimpleReturn(val value: JVMSimpleField, scope: Scope, origin: Long) : J
                     ?: error("Missing method $methodName in ${Types.Int}")
                 val spec = Specialization.fromSimple(method.memberScope)
                 val dst = block0.field(expectedReturnType)
-                val call = SimpleCall(dst, method, value, null, spec, emptyList(), scope, origin)
+                val call = SimpleMethodCall(dst, method, value, null, spec, emptyList(), scope, origin)
                 block0.add(call)
                 actualReturnType = expectedReturnType
                 value = dst

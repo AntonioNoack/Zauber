@@ -22,9 +22,9 @@ import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleCall
 import me.anno.zauber.ast.simple.expression.SimpleCallable
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.expansion.MethodOverrides.isJavaClass
 import me.anno.zauber.interpreting.ZClass.Companion.needsToBeStored
@@ -273,9 +273,9 @@ object ASTSimplifier {
             val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
             val dst = block0.field(resolvedGetter.resolveValueType())
             return simplifyCall(
-                dst, block1v.block, block1, self, true,null,
+                dst, block1v.block, block1, self, true, null,
                 emptyList(), resolvedGetter,
-                null, expr.scope, expr.origin
+                false, expr.scope, expr.origin
             )
         } else {
 
@@ -396,7 +396,7 @@ object ASTSimplifier {
             return simplifyCall(
                 dst, block2v.block, block2, self, true, null,
                 listOf(value), resolvedSetter,
-                null, expr.scope, expr.origin
+                false, expr.scope, expr.origin
             )
         } else {
             block2v.block.add(
@@ -453,7 +453,7 @@ object ASTSimplifier {
         valueParameters: List<SimpleField>,
 
         method0: ResolvedMember<*>,
-        selfIfInsideConstructor: Boolean?,
+        allocateNewInstance: Boolean,
 
         scope: Scope,
         origin: Long
@@ -470,20 +470,29 @@ object ASTSimplifier {
                 val call = if (!needsResolution) {
                     // super.xzy()
                     val methodMap = FullMap<ClassType, MethodLike>(method)
-                    SimpleCall(dst, method, methodMap, selfField, null, specialization, valueParameters, scope, origin)
+                    SimpleMethodCall(
+                        dst, method, methodMap, selfField, null,
+                        specialization, valueParameters, scope, origin
+                    )
                 } else {
                     if (thisField != null) {
                         thisField.use()
-                        SimpleCall(dst, method, thisField, selfField, specialization, valueParameters, scope, origin)
+                        SimpleMethodCall(
+                            dst, method, thisField, selfField,
+                            specialization, valueParameters, scope, origin
+                        )
                     } else {
-                        SimpleCall(dst, method, selfField, null, specialization, valueParameters, scope, origin)
+                        SimpleMethodCall(
+                            dst, method, selfField, null,
+                            specialization, valueParameters, scope, origin
+                        )
                     }
                 }
                 handleThrown(block0, flow0, dst, call, method.getThrownType(specialization))
             }
             is Constructor -> createConstructorInvocation(
-                dst, block0, flow0, method, valueParameters,
-                method0, selfIfInsideConstructor, scope, origin
+                dst, block0, flow0, selfField, method, valueParameters,
+                method0, allocateNewInstance, scope, origin
             )
             else -> throw NotImplementedError("Simplify call $method at ${resolveOrigin(origin)}")
         }
@@ -494,27 +503,30 @@ object ASTSimplifier {
         block0: SimpleBlock,
         flow0: FlowResult,
 
+        selfExpr: SimpleField?,
+
         method: Constructor,
         valueParameters: List<SimpleField>,
 
         method0: ResolvedMember<*>,
-        selfIfInsideConstructor: Boolean?,
+        allocateNewInstance: Boolean,
 
         scope: Scope,
         origin: Long
     ): FlowResult {
         val graph = block0.graph
-        return if (selfIfInsideConstructor != null) {
+        return if (!allocateNewInstance) {
 
-            val selfScope = (graph.method as Constructor).classScope
-            val selfType = selfScope.typeWithArgs.specialize(method0.specialization)
-            val self = block0.thisField(selfType, selfScope, scope, origin, method0.specialization, null)
+            val self = selfExpr ?: run {
+                val selfScope = (graph.method as Constructor).classScope // we must be inside a constructor
+                val selfType = selfScope.typeWithArgs.specialize(method0.specialization)
+                block0.thisField(selfType, selfScope, scope, origin, method0.specialization, null)
+            }
 
             val constructor = SimpleConstructorCall(
-                dst, selfIfInsideConstructor,
-                self.use(), method0.specialization, valueParameters, scope, origin
+                dst, self.use(),
+                method0.specialization, valueParameters, scope, origin
             )
-
             handleThrown(
                 block0, flow0, dst, constructor,
                 method.getThrownType(method0.specialization)
@@ -534,7 +546,7 @@ object ASTSimplifier {
             )
             val specialization = method0.specialization
             val call = SimpleConstructorCall(
-                dst, true, dst.use(),
+                dst, dst.use(),
                 specialization, valueParameters, scope, origin
             )
             LOGGER.info("Finding throw type for $method0")

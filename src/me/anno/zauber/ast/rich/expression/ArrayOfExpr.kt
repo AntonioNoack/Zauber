@@ -6,7 +6,7 @@ import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.scope.Scope
@@ -93,7 +93,7 @@ class ArrayOfExpr(val values: List<Expression>, val type: Type, scope: Scope, or
             ?: error("Missing Array(size: Int) constructor")
         val specParams = ParameterList(Types.Array.clazz.typeParameters, listOf(instanceType))
         val specialization = Specialization(constructor.memberScope, specParams)
-        val constr = SimpleConstructorCall(unit, true, array.use(), specialization, allocateParams, scope, origin)
+        val constr = SimpleConstructorCall(unit, array.use(), specialization, allocateParams, scope, origin)
         blockI.add(constr)
         // todo handle OOM error
 
@@ -116,7 +116,7 @@ class ArrayOfExpr(val values: List<Expression>, val type: Type, scope: Scope, or
                 val valueParameters = listOf(index.use(), values[i].use())
 
                 blockI.add(
-                    SimpleCall(
+                    SimpleMethodCall(
                         unit, setMethod, array.use(),
                         null, setMethodSpec, valueParameters,
                         scope, origin

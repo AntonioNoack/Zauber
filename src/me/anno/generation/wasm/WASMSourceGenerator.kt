@@ -1345,7 +1345,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                     nextLine()
                 }
             }
-            is SimpleCall -> {
+            is SimpleMethodCall -> {
                 // Number.toX() needs to be converted to a cast
                 val methodName = expr.methodName
                 val done = when (expr.valueParameters.size) {
@@ -1491,7 +1491,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         val type = resolveType(expr.thisInstance.type)
         if (isCast(methodName) && type in nativeNumbers) {
             appendCast(graph, expr, type)
@@ -1534,7 +1534,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         return false
     }
 
-    private fun appendCast(graph: SimpleGraph, expr: SimpleCall, type: Type) {
+    private fun appendCast(graph: SimpleGraph, expr: SimpleMethodCall, type: Type) {
         appendGetField(graph, expr.thisInstance)
 
         val outType0 = expr.dst.type
@@ -1645,7 +1645,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleCall, methodName: String): Boolean {
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
         if (expr.thisInstance.type !in nativeNumbers) return false
         val symbol = when (methodName) {
             "plus" -> "add"
@@ -1886,7 +1886,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleCall) {
+    override fun appendCallImpl(graph: SimpleGraph, expr: SimpleMethodCall) {
         if (expr.methods !is FullMap) {
             val options = inheritanceTable.createSwitchList(expr.specialization)
             if (options.size < 2) {
@@ -1938,7 +1938,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
     }
 
     fun appendInheritedCallSwitch(
-        graph: SimpleGraph, expr: SimpleCall,
+        graph: SimpleGraph, expr: SimpleMethodCall,
         options: List<Pair<Specialization, Specialization>>,
     ) {
         val returnType = getWASMType(expr.dst.type)

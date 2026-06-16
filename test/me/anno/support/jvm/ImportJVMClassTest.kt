@@ -1,12 +1,10 @@
 package me.anno.support.jvm
 
-import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.logging.LogManager
 import me.anno.utils.assertEquals
 import me.anno.zauber.expansion.MethodOverrides.debuggedMethodName
-import me.anno.zauber.interpreting.ExternalMethod
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
-import me.anno.zauber.types.getScope
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.getScope0
 
 
@@ -37,6 +35,11 @@ fun main() {
 val tested = 0 // unused
 
 package zauber
+
+class Any {
+    open external fun hashCode(): Int
+}
+
 class Int {
     external operator fun plus(other: Int): Int
     external operator fun minus(other: Int): Int
@@ -133,7 +136,8 @@ class ClassCastException(): Exception("Cast failed")
     LogManager.enableDebug(
         "Runtime," +
                 "SimpleGetClassField,SimpleSetClassField," +
-                "SimpleGetLocalField,SimpleSetLocalField"
+                "SimpleGetLocalField,SimpleSetLocalField," +
+                "MethodOverrides"
     )
 
     registerJavaClass("java.util.ArrayList")

@@ -21,7 +21,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.impl.ClassType
 
-class SimpleCall(
+class SimpleMethodCall(
     dst: SimpleField,
     // for complex types, e.g. Float|String, we may need multiple methods, or some sort of instance-type->method mapping
     val methodName: String,
@@ -38,7 +38,7 @@ class SimpleCall(
 
     companion object {
 
-        private val LOGGER = LogManager.getLogger(SimpleCall::class)
+        private val LOGGER = LogManager.getLogger(SimpleMethodCall::class)
 
         fun selfTypeIsOpen(method: Method): Boolean {
             val selfType = method.ownerScope
@@ -174,6 +174,9 @@ class SimpleCall(
     )
 
     init {
+        check(sample is Method) {
+            "Sample $sample must be method, use SimpleConstructorCall for constructors"
+        }
         for (method in methods.values) {
             check(method.valueParameters.size == valueParameters.size)
         }
@@ -226,12 +229,12 @@ class SimpleCall(
         // println("Running $sample with $thisInstance/$selfInstance")
 
         val method = methods[thisInstance.clazz.type as ClassType] ?: sample
-        val method1 = specialization.withScope(method.memberScope)
+        val method1 = specialization.withScopeUnknownIfMissing(method.memberScope)
         return runtime.executeCall(thisInstance, selfInstance, method1, valueParameters).retToVal()
     }
 
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
-        return SimpleCall(
+        return SimpleMethodCall(
             src.cloned(this.dst, dst),
             methodName, methods,
             src.cloned(thisInstance, dst),

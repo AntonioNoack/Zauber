@@ -8,6 +8,7 @@ import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
+import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.Parameter
@@ -220,11 +221,12 @@ object MethodOverrides {
                     selfMethod.flags.hasFlag(Flags.OVERRIDE) ||
                             selfMethod.ownerScope.sourceLibrary == FirstJVMClassReader.jvmLibrary // <- doesn't know that flag
                 ) {
-                    "Expected $scope.$selfMethod to have override flag for $superScope.$superMethod"
+                    println("$selfMethod is from ${resolveOrigin(selfMethod.origin)}")
+                    "Expected $selfMethod to have override flag for $superScope.$superMethod"
                 }
 
                 check(!isOpen || !isExplicitlyClosed) {
-                    "$scope.$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)} (${selfMethod.flags}), " +
+                    "$selfMethod cannot both be open and closed, got ${Flags.toString(selfMethod.flags)} (${selfMethod.flags}), " +
                             "scopeType: ${scope.scopeType}, superCalls: ${scope.superCalls}"
                 }
             }

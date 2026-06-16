@@ -48,16 +48,10 @@ class JVMSimpleCall(
             param.toSimple(block0)
         }
 
-        val selfIfInsideConstructor = /*if (method is Constructor) {
-            val calledScope = method.memberScope.parent
-            val ownerScope = block0.graph.method0.scope!!.parent
-            calledScope == ownerScope
-        } else*/ null
-
         val dst = dst.toSimple(block0)
         return simplifyCall(
             dst, block0, flow0, selfExpr, needsResolution, null,
-            valueParameters, callable, selfIfInsideConstructor,
+            valueParameters, callable, false,
             scope, origin
         )
     }

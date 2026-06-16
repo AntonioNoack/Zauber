@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.simple.expression
 
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.SimpleGraph
@@ -16,7 +18,6 @@ import me.anno.zauber.types.impl.ClassType
 
 class SimpleConstructorCall(
     unusedDst: SimpleField,
-    val isThis: Boolean,
     self: SimpleField,
     specialization: Specialization,
     valueParameters: List<SimpleField>,
@@ -35,8 +36,8 @@ class SimpleConstructorCall(
     }
 
     override fun toString(): String {
-        (0 until 1).reversed()
-        return "${if (isThis) "this" else "super"}${valueParameters.joinToString(", ", "(", ")")}"
+        return "$thisInstance.${style("new", ORANGE)} ${method.ownerScope}" +
+                valueParameters.joinToString(", ", "(", ")")
     }
 
     override fun hasInput(field: SimpleField): Boolean {
@@ -46,7 +47,7 @@ class SimpleConstructorCall(
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleConstructorCall(
             src.cloned(this.dst, dst),
-            isThis, src.cloned(thisInstance, dst),
+            src.cloned(thisInstance, dst),
             specialization, valueParameters.map { src.cloned(it, dst) },
             scope, origin
         )
