@@ -14,9 +14,9 @@ class SimpleBranch(val condition: SimpleField, val ifTrue: SimpleBlock, val ifFa
 
     override fun toString(): String {
         return if (ifFalse != null) {
-            "${bold("SimpleBranch")}($condition ? ${ifTrue.str()} : ${ifFalse.str()})"
+            "${bold("SimpleBranch")}($condition ? ${ifTrue.idStr()} : ${ifFalse.idStr()})"
         } else {
-            "${bold("SimpleBranch")}($condition ? ${ifTrue.str()})"
+            "${bold("SimpleBranch")}($condition ? ${ifTrue.idStr()})"
         }
     }
 

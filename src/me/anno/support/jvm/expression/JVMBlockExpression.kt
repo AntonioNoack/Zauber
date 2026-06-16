@@ -6,17 +6,30 @@ import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Type
+import kotlin.system.exitProcess
 
 // todo we somehow need a mix of SimpleInstr and Expression...
 
 class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin: Long) : Expression(scope, origin) {
 
+    companion object {
+        private val LOGGER = LogManager.getLogger(JVMBlockExpression::class)
+    }
+
     var ifBranch: JVMBlockExpression? = null
     var elseBranch: JVMBlockExpression? = null
     var branchCondition: JVMSimpleField? = null
+        set(value) {
+            field = value
+            if (id == 1 && value != null && value.id == 3 && "initSystemClassLoader" in graph.scope.pathStr) {
+                LOGGER.warn("Condition", RuntimeException("Got condition $value in ${graph.scope} | $this"))
+                // exitProcess(-1)
+            }
+        }
 
     var nextBranch: JVMBlockExpression?
         get() = ifBranch

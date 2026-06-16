@@ -9,7 +9,6 @@ import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedGetFieldExpression
 import me.anno.zauber.ast.rich.expression.resolved.ResolvedSetFieldExpression
-import me.anno.zauber.ast.rich.expression.resolved.SuperExpression
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
@@ -274,7 +273,7 @@ object ASTSimplifier {
             val resolvedGetter = ResolvedMethod(getter, newContext, expr.scope, MatchScore.zero)
             val dst = block0.field(resolvedGetter.resolveValueType())
             return simplifyCall(
-                dst, block1v.block, block1, self, expr.self, null,
+                dst, block1v.block, block1, self, true,null,
                 emptyList(), resolvedGetter,
                 null, expr.scope, expr.origin
             )
@@ -395,7 +394,7 @@ object ASTSimplifier {
             val resolvedSetter = ResolvedMethod(setter, newContext, expr.scope, MatchScore.zero)
             val dst = block0.field(Types.Unit)
             return simplifyCall(
-                dst, block2v.block, block2, self, expr.self, null,
+                dst, block2v.block, block2, self, true, null,
                 listOf(value), resolvedSetter,
                 null, expr.scope, expr.origin
             )
@@ -447,7 +446,7 @@ object ASTSimplifier {
         flow0: FlowResult,
 
         selfField: SimpleField?,
-        selfExpr: Expression?,
+        needsResolution: Boolean,
 
         thisField: SimpleField?,
 
@@ -468,7 +467,7 @@ object ASTSimplifier {
                 assertEquals(method.hasExplicitSelfType, thisField != null) {
                     "Explicit this mismatch, $method vs $thisField"
                 }
-                val call = if (selfExpr is SuperExpression) {
+                val call = if (!needsResolution) {
                     // super.xzy()
                     val methodMap = FullMap<ClassType, MethodLike>(method)
                     SimpleCall(dst, method, methodMap, selfField, null, specialization, valueParameters, scope, origin)

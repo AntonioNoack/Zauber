@@ -149,7 +149,7 @@ class Runtime {
         valueParameters: List<Instance>
     ): BlockReturn {
 
-        println("Calling $specialization on $methodOwnerInstance with $valueParameters")
+        if (LOGGER.isInfoEnabled) LOGGER.info("Calling $specialization on $methodOwnerInstance with $valueParameters")
         check(specialization.isMethodLike())
 
         if (isNull(methodOwnerInstance)) {
@@ -161,7 +161,7 @@ class Runtime {
 
         if (method.isExternal()) {
             val parameterTypes = method.valueParameters.map { it.type }
-            println("Method-params: $method -> $parameterTypes")
+            if (LOGGER.isInfoEnabled) LOGGER.info("Method-params: $method -> $parameterTypes")
             val key = ExternalKey(method.scope.parent!!, method.name, parameterTypes)
             val method = externalMethods[key]
                 ?: error("Missing external method ${key.str()}")
@@ -178,7 +178,12 @@ class Runtime {
         val call = Call.create(method)
         prepareCall(graph, call, methodOwnerInstance, explicitSelfInstance, valueParameters)
 
-        val result = executeBlock(graph.startBlock)
+        val result = try {
+            executeBlock(graph.startBlock)
+        } catch (e: Exception) {
+            LOGGER.warn("Issue in $method")
+            throw e
+        }
 
         check(callStack.removeLast() === call)
         call.recycle()
@@ -211,7 +216,7 @@ class Runtime {
         val selfField = graph.selfField
         if (selfField != null) {
             check(selfInstance != null) {
-                "Method ${graph.method} meeds self, not just this"
+                "Method ${graph.method} needs self, not just this"
             }
             call.setLocal(selfField, selfInstance)
         }
@@ -323,11 +328,11 @@ class Runtime {
                 val conditionI = this[condition].castToBool()
                 if (LOGGER.isInfoEnabled) LOGGER.info(
                     "Finished $block, condition: ${style(conditionI.toString(), StringStyles.ORANGE)}" +
-                            " -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.str()}"
+                            " -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.idStr()}"
                 )
                 if (conditionI) block.ifBranch else block.elseBranch
             } else {
-                if (LOGGER.isInfoEnabled) LOGGER.info("Finished $block, next: ${block.nextBranch?.str()}")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Finished $block, next: ${block.nextBranch?.idStr()}")
                 block.nextBranch
             } ?: error("Exited without return from ${block0.graph.method}")
         }
@@ -344,6 +349,7 @@ class Runtime {
             }
             val clazz = getClass(clazz0)
             val instance = clazz.createInstance()
+            clazz.callPrimaryConstructor(instance)
             instance.rawValue = type
             instance
         }) { type, instance ->

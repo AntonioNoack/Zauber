@@ -51,15 +51,21 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
 
         fun splitPackage(name: String) = name.split('/', '$')
 
+        private val classOverrides by threadLocal {
+            mapOf(
+                // must be overridden, otherwise
+                // ArrayList<E>, E cannot be Int, because Int !is java.lang.Object
+                "java/lang/Object" to Types.Any.clazz,
+                // "java/lang/Class" to Types.ClassType.clazz
+            )
+        }
+
         private fun getScopeImpl(name: String, scopeType: ScopeType?): Scope {
             check(!name.endsWith(';')) { "Name must not end with ';', invalid: '$name'" }
             check(name[0] != '[') { "Name must not start with '[', invalid: '$name'" }
 
-            if (name == "java/lang/Object") {
-                // must be overridden, otherwise
-                // ArrayList<E>, E cannot be Int, because Int !is java.lang.Object
-                return Types.Any.clazz
-            }
+            val override = classOverrides[name]
+            if (override != null) return override
 
             val parts = splitPackage(name)
             var scope = root
@@ -280,6 +286,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         val signature = signature ?: descriptor
 
         val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
+        classScope.sourceLibrary = jvmLibrary
+
         val methodScope =
             if (access.isStatic() && isConstructor) classScope.getOrCreatePrimaryConstructorScope()
             else classScope.generate(name, if (isConstructor) ScopeType.CONSTRUCTOR else ScopeType.METHOD)
@@ -349,6 +357,8 @@ class FirstJVMClassReader(val path: String, val classScope: Scope) : ClassVisito
         }
 
         val classScope = if (access.isStatic()) classScope.getOrPutCompanion() else classScope
+        classScope.sourceLibrary = jvmLibrary
+
         classScope.addField(
             null, false, isMutable = !access.isFinal(), null, name, valueType,
             initialValueForConst, Flags.NONE, origin

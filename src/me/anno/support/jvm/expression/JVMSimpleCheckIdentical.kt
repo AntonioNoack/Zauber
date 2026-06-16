@@ -1,21 +1,12 @@
 package me.anno.support.jvm.expression
 
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.expression.constants.SpecialValue
-import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.ast.simple.SimpleBlock
-import me.anno.zauber.ast.simple.constants.SimpleSpecialValue
 import me.anno.zauber.ast.simple.controlflow.FlowResult
-import me.anno.zauber.ast.simple.expression.SimpleCheckEquals
 import me.anno.zauber.ast.simple.expression.SimpleCheckIdentical
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
-import me.anno.zauber.typeresolution.members.MatchScore
-import me.anno.zauber.typeresolution.members.ResolvedMethod
-import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
-import me.anno.zauber.types.Types
-import me.anno.zauber.types.impl.ClassType
 
 class JVMSimpleCheckIdentical(
     val dst: JVMSimpleField,

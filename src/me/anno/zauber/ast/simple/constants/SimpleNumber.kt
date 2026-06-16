@@ -9,6 +9,7 @@ import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createNumber
+import me.anno.zauber.types.impl.ClassType
 
 class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
     SimpleAssignment(dst, base.scope, base.origin) {
@@ -20,7 +21,7 @@ class SimpleNumber(dst: SimpleField, val base: NumberExpression) :
     override fun execute(): BlockReturn? {
         // fast-path, because it cannot crash
         val runtime = runtime
-        runtime[dst] = runtime.createNumber(base, dst.type)
+        runtime[dst] = runtime.createNumber(base, dst.type as ClassType)
         return null
     }
 

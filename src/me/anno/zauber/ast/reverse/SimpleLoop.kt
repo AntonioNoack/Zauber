@@ -34,9 +34,9 @@ class SimpleLoop private constructor(
 
     override fun toString(): String {
         return if (condition != null) {
-            "${bold("SimpleLoop")}(${conditionBlock!!.str()}|$condition, negate=$negate ? ${body.str()})"
+            "${bold("SimpleLoop")}(${conditionBlock!!.idStr()}|$condition, negate=$negate ? ${body.idStr()})"
         } else {
-            "${bold("SimpleLoop")}(${body.str()})"
+            "${bold("SimpleLoop")}(${body.idStr()})"
         }
     }
 

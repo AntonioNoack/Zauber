@@ -3,9 +3,9 @@ package me.anno.zauber.interpreting
 import me.anno.utils.Half
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.Maths.clamp
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
-import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createByte
@@ -43,7 +43,7 @@ object Stdlib {
         runtime.register(langScope, "println", listOf(Types.String)) { _, params ->
             runPrintln(params[0].castToString())
         }
-        for (type in ASTSimplifier.nativeNumbers) {
+        for (type in nativeNumbers) {
             runtime.register(langScope, "println", listOf(type)) { _, params ->
                 val value = params[0]
                 check(value.clazz.type == type)
@@ -60,14 +60,18 @@ object Stdlib {
         return rt.getUnit()
     }
 
+    private fun checkIsArray(self: Instance) {
+        assertEquals(Types.Array.clazz, (self.clazz.type as? ClassType)?.clazz) {
+            "ClassCastException: $self is not an array"
+        }
+    }
+
     fun registerArrayAccess() {
         runtime.register(
             Types.Array.clazz, "get",
             listOf(Types.Int)
         ) { self, (index0) ->
-            check((self.clazz.type as ClassType).clazz == Types.Array.clazz) {
-                "ClassCastException: $self is not an array"
-            }
+            checkIsArray(self)
             val index = index0.castToInt()
             val rt = runtime
             when (val content = self.rawValue) {
@@ -102,9 +106,7 @@ object Stdlib {
     }
 
     private fun arraySet(self: Instance, index: Instance, value: Instance) {
-        check((self.clazz.type as ClassType).clazz == Types.Array.clazz) {
-            "ClassCastException: $self is not an array"
-        }
+        checkIsArray(self)
         val index1 = index.castToInt()
         @Suppress("UNCHECKED_CAST")
         when (val content = self.rawValue) {

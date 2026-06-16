@@ -2,22 +2,16 @@ package me.anno.zauber.interpreting
 
 import me.anno.utils.Half
 import me.anno.utils.StringStyles.DARK_BLUE
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.RED
-import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
-import me.anno.zauber.ast.rich.controlflow.ReturnExpression
-import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
-import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.interpreting.ConstExpr.evaluateExpression
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createString
 import me.anno.zauber.interpreting.ZClass.Companion.nativeTypes
-import me.anno.zauber.scope.ScopeType
-import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
-import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -29,12 +23,22 @@ class Instance(
     val id: Int
 ) {
 
+    companion object {
+        private val uninitialized = style("undefined", RED)
+    }
+
     var rawValue: Any? = null
 
     override fun toString(): String {
-        return bold("Instance") +
-                style("@$id", DARK_BLUE) +
-                "($clazz,${fields.map { it?.toStringInner() }}${rawValueStr()})"
+        val rawValue = rawValueStr()
+        val glue = if (rawValue.isEmpty() || fields.isEmpty()) "" else ","
+        val fields = fields.indices.joinToString(",", "", glue) { index ->
+            val name = style(clazz.fields[index].name, GREEN)
+            val value = fields[index]?.toStringInner() ?: uninitialized
+            "$name=$value"
+        }
+        return style("@$id", DARK_BLUE) +
+                "[${clazz.type}]($fields$rawValue)"
     }
 
     fun toStringInner(): String {
@@ -48,22 +52,28 @@ class Instance(
     private fun rawValueStr(): String {
         return when (val rawValue = rawValue) {
             null -> ""
-            is Array<*> -> ",${rawValue.toList()}"
-            is IntArray -> ",I${rawValue.toList()}"
-            is LongArray -> ",J${rawValue.toList()}"
-            is FloatArray -> ",F${rawValue.toList()}"
-            is DoubleArray -> ",D${rawValue.toList()}"
-            is ByteArray -> ",B${rawValue.toList()}"
-            is ShortArray -> ",S${rawValue.toList()}"
-            is CharArray -> ",C${rawValue.joinToString()}"
-            is BooleanArray -> ",Z${rawValue.toList()}"
-            else -> ",$rawValue"
+            is Array<*> -> "${rawValue.toList()}"
+            is IntArray -> "I${rawValue.toList()}"
+            is LongArray -> "J${rawValue.toList()}"
+            is FloatArray -> "F${rawValue.toList()}"
+            is DoubleArray -> "D${rawValue.toList()}"
+            is ByteArray -> "B${rawValue.toList()}"
+            is ShortArray -> "S${rawValue.toList()}"
+            is CharArray -> "C${rawValue.joinToString()}"
+            is BooleanArray -> "Z${rawValue.toList()}"
+            is String -> style("\"$rawValue\"", GREEN)
+            is Byte, is UByte,
+            is Short, is UShort,
+            is Int, is UInt,
+            is Long, is ULong,
+            is Half, is Float, is Double -> style(rawValue.toString(), DARK_BLUE)
+            else -> "$rawValue"
         }
     }
 
-    fun checkType(type1: Type) {
-        check(clazz.type == type1) {
-            "Casting $this to $type1 failed, type mismatch, ${clazz.type}"
+    fun checkType(targetType: Type) {
+        check(clazz.type == targetType) {
+            "Type mismatch: Expected $targetType, but got $this"
         }
     }
 
@@ -194,13 +204,24 @@ class Instance(
     operator fun get(field: Field): Instance {
         val fieldIndex = clazz.fields.indexOf(field)
 
-        if (fieldIndex == -1 &&
-            field.scope == (clazz.type as ClassType).clazz &&
-            field.name == "content" &&
-            clazz.type in nativeTypes
-        ) return this
+        if (fieldIndex < 0) {
 
-        check(fieldIndex != -1) { "Instance $this does not have field $field (${field.scope})" }
+            if (field.scope == (clazz.type as? ClassType)?.clazz &&
+                field.name == "content" &&
+                clazz.type in nativeTypes
+            ) return this
+
+            if (field.scope.pathStr == "java.lang.Class" &&
+                field.name == "classLoader"
+            ) {
+                val field1 = Types.ClassType.clazz
+                    .fields.firstOrNull { it.name == field.name }
+                    ?: error("Missing $field in $clazz")
+                return get(field1)
+            }
+
+            error("Instance $this does not have field $field (${field.scope})")
+        }
 
         if (fieldIndex >= fields.size) {
             error("Outdated instance? $this")

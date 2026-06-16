@@ -177,14 +177,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             LMUL -> binaryCall(Types.Long, "times")
             LDIV -> binaryCall(Types.Long, "div")
             LREM -> binaryCall(Types.Long, "rem")
-            LSHL -> binaryCall(Types.Long, "shl", Types.Int)
-            LSHR -> binaryCall(Types.Long, "shr", Types.Int)
-            LUSHR -> binaryCall(Types.Long, "ushr", Types.Int)
+            LSHL -> binaryCallShift(Types.Long, "shl", Types.Int)
+            LSHR -> binaryCallShift(Types.Long, "shr", Types.Int)
+            LUSHR -> binaryCallShift(Types.Long, "ushr", Types.Int)
             LAND -> binaryCall(Types.Long, "and")
             LOR -> binaryCall(Types.Long, "or")
             LXOR -> binaryCall(Types.Long, "xor")
             LNEG -> unaryCall(Types.Long, "unaryMinus")
-            LCMP -> binaryCall(Types.Long, "compareTo")
+            LCMP -> compareToCall(Types.Long)
 
             FADD -> binaryCall(Types.Float, "plus")
             FSUB -> binaryCall(Types.Float, "minus")
@@ -193,7 +193,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             FREM -> binaryCall(Types.Float, "rem")
             FNEG -> unaryCall(Types.Float, "unaryMinus")
             // todo choose the correct variant...
-            FCMPL, FCMPG -> binaryCall(Types.Float, "compareTo")
+            FCMPL, FCMPG -> compareToCall(Types.Float)
 
             DADD -> binaryCall(Types.Double, "plus")
             DSUB -> binaryCall(Types.Double, "minus")
@@ -202,7 +202,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             DREM -> binaryCall(Types.Double, "rem")
             DNEG -> unaryCall(Types.Double, "unaryMinus")
             // todo choose the correct variant...
-            DCMPL, DCMPG -> binaryCall(Types.Double, "compareTo")
+            DCMPL, DCMPG -> compareToCall(Types.Double)
 
             // number conversions
             I2L -> convertCall(Types.Int, Types.Long, "toLong")
@@ -221,13 +221,29 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             D2L -> convertCall(Types.Double, Types.Long, "toLong")
             D2F -> convertCall(Types.Double, Types.Float, "toFloat")
 
-            I2B -> convertCall(Types.Int, Types.Byte, "toByte")
-            I2C -> convertCall(Types.Int, Types.Char, "toChar")
-            I2S -> convertCall(Types.Int, Types.Short, "toShort")
+            I2B -> {
+                visitLdcInsn(24)
+                visitInsn(ISHL)
+                visitLdcInsn(24)
+                visitInsn(ISHR)
+            }
+            I2C -> {
+                visitLdcInsn(16)
+                visitInsn(ISHL)
+                visitLdcInsn(16)
+                visitInsn(IUSHR)
+            }
+            I2S -> {
+                visitLdcInsn(16)
+                visitInsn(ISHL)
+                visitLdcInsn(16)
+                visitInsn(ISHR)
+            }
 
             AALOAD,
             IALOAD, LALOAD, FALOAD, DALOAD,
             BALOAD, SALOAD, CALOAD -> {
+                // todo BooleanArray is encoded as BALOAD, too
                 val baseType = when (opcode) {
                     AALOAD -> Types.Any
                     IALOAD -> Types.Int
@@ -249,15 +265,17 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     JVMSimpleCall(
                         dst, method, array, spec,
                         listOf(index),
-                        methodScope, origin
+                        false, methodScope, origin
                     )
                 )
                 stack.add(dst)
+                convertToInt(baseType)
             }
 
             AASTORE,
             IASTORE, LASTORE, FASTORE, DASTORE,
             BASTORE, SASTORE, CASTORE -> {
+                // todo BooleanArray is encoded as BALOAD, too
                 val baseType = when (opcode) {
                     AASTORE -> Types.Any
                     IASTORE -> Types.Int
@@ -269,6 +287,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     CASTORE -> Types.Char
                     else -> error("Unreachable")
                 }
+                convertFromInt(baseType)
                 val value = stack.removeLast().use()
                 val index = stack.removeLast().use()
                 val array = stack.removeLast().use()
@@ -282,7 +301,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val call = JVMSimpleCall(
                     dst, method, array, spec,
                     listOf(index, value),
-                    methodScope, origin
+                    false, methodScope, origin
                 )
                 block.add(call)
             }
@@ -333,7 +352,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val spec = Specialization.fromSimple(method.memberScope)
         val call = JVMSimpleCall(
             dst, method, p0, spec, emptyList(),
-            methodScope, origin
+            false, methodScope, origin
         )
         block.add(call)
         stack.add(dst)
@@ -344,20 +363,27 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun binaryCall(type: ClassType, name: String) {
-        return binaryCall(type, name, type)
+        return binaryCall(type, name, type, type)
     }
 
-    fun binaryCall(type: ClassType, name: String, argType: Type) {
-        // todo check order
+    fun compareToCall(type: ClassType) {
+        return binaryCall(type, "compareTo", type, Types.Int)
+    }
+
+    fun binaryCallShift(type: ClassType, name: String, argType: Type) {
+        return binaryCall(type, name, argType, type)
+    }
+
+    fun binaryCall(type: ClassType, name: String, argType: Type, retType: Type) {
         val p1 = stack.removeLast().use()
         val p0 = stack.removeLast().use()
-        val dst = graph.field(type)
+        val dst = graph.field(retType)
         val method = findMethod(type.clazz, name, argType)
         block.add(
             JVMSimpleCall(
                 dst, method, p0, Specialization.fromSimple(method.memberScope),
                 listOf(p1),
-                methodScope, origin
+                false, methodScope, origin
             )
         )
         stack.add(dst)
@@ -411,13 +437,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         when (opcode) {
             BIPUSH -> {
                 val ne = NumberExpression(operand.toString(), methodScope, origin)
-                    .apply { resolvedType = Types.Byte }
-                pushConst(ne, Types.Byte)
+                    .apply { resolvedType = Types.Int }
+                pushConst(ne, Types.Int)
             }
             SIPUSH -> {
                 val ne = NumberExpression(operand.toString(), methodScope, origin)
-                    .apply { resolvedType = Types.Short }
-                pushConst(ne, Types.Short)
+                    .apply { resolvedType = Types.Int }
+                pushConst(ne, Types.Int)
             }
             NEWARRAY -> {
                 val elementType = when (operand) {
@@ -443,8 +469,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         val dst = block.field(arrayType)
         val tmp = block.field(Types.Unit)
         val allocation = JVMSimpleAllocateInstance(dst, arrayType, methodScope, origin)
-        block.add(allocation)
         allocation.valueParameters = listOf(size)
+        block.add(allocation)
         dst.allocation = allocation
         val constr = resolveConstructor(
             arrayType.clazz, "(Int)",
@@ -454,10 +480,36 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         block.add(
             JVMSimpleCall(
                 tmp, constr.resolved, dst.use(), constr.specialization,
-                listOf(size), methodScope, origin
+                allocation.valueParameters, false, methodScope, origin
             )
         )
         stack.add(dst)
+    }
+
+    fun convertToInt(type: Type) {
+        when (type) {
+            Types.Boolean -> convertBooleanToInt()
+            Types.Byte -> convertCall(Types.Byte, Types.Int, "toInt")
+            Types.Short -> convertCall(Types.Short, Types.Int, "toInt")
+            Types.Char -> convertCall(Types.Char, Types.Int, "toInt")
+        }
+    }
+
+    fun convertBooleanToInt() {
+        convertCall(Types.Boolean, Types.Int, "toInt")
+    }
+
+    fun convertFromInt(type: Type) {
+        when (type) {
+            Types.Boolean -> convertIntToBoolean()
+            Types.Byte -> convertCall(Types.Int, Types.Byte, "toByte")
+            Types.Short -> convertCall(Types.Int, Types.Short, "toShort")
+            Types.Char -> convertCall(Types.Int, Types.Char, "toChar")
+        }
+    }
+
+    fun convertIntToBoolean() {
+        convertCall(Types.Int, Types.Boolean, "toBoolean")
     }
 
     override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
@@ -479,6 +531,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val instr = JVMSimpleGetClassField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
+                convertToInt(fieldType)
             }
             GETFIELD -> {
                 // todo check non-null
@@ -489,8 +542,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val instr = JVMSimpleGetClassField(dst, self, field, methodScope, origin)
                 block.add(instr)
                 stack.add(dst)
+                convertToInt(fieldType)
             }
             PUTSTATIC -> {
+                convertFromInt(fieldType)
                 val value = stack.removeLast().use()
                 val self = graph.field(nameToType(owner))
                 block.add(JVMSimpleGetObject(self, ownerType.clazz, methodScope, origin))
@@ -501,7 +556,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
             PUTFIELD -> {
                 // todo check non-null
-                // todo check order
+                convertFromInt(fieldType)
                 val value = stack.removeLast().use()
                 val self = stack.removeLast().use()
                 LOGGER.debug("$self.$name = $value")
@@ -643,6 +698,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 equalsCall(Types.Int, negated = opcode == IFNE)
             }
             IFLT, IFGE, IFGT, IFLE -> {
+                // todo remember the compared values, so we can simplify 1f < 2f to not require a compareTo call
                 val tmp = stack.removeLast().use()
                 val compareType = when (opcode) {
                     IFLT -> CompareType.LESS
@@ -651,16 +707,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     IFGE -> CompareType.GREATER_EQUALS
                     else -> error("Unreachable")
                 }
-                block.add(JVMSimpleCompare(condition, null, null, compareType, tmp, methodScope, origin))
+                block.add(JVMSimpleCompare(condition, tmp, null, compareType, methodScope, origin))
             }
             IF_ICMPEQ, IF_ICMPNE -> {
                 equalsCall(Types.Int, negated = opcode == IF_ICMPNE)
             }
             IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE -> {
-                val p1 = stack[stack.size - 1]
-                val p0 = stack[stack.size - 2]
-                binaryCall(Types.Int, "compareTo")
-                val tmp = stack.removeLast().use()
+                val p1 = stack.removeLast().use()
+                val p0 = stack.removeLast().use()
                 val compareType = when (opcode) {
                     IF_ICMPLT -> CompareType.LESS
                     IF_ICMPGT -> CompareType.GREATER
@@ -668,7 +722,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     IF_ICMPGE -> CompareType.GREATER_EQUALS
                     else -> error("Unreachable")
                 }
-                block.add(JVMSimpleCompare(condition, p0, p1, compareType, tmp, methodScope, origin))
+                block.add(JVMSimpleCompare(condition, p0, p1, compareType, methodScope, origin))
             }
             IF_ACMPEQ, IF_ACMPNE -> {
                 val p1 = stack.removeLast().use()
@@ -687,7 +741,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             else -> error("Unexpected opcode ${OpCode[opcode]}")
         }
 
-        block.branchCondition = condition
+        if (method.name == "initSystemClassLoader") {
+            println("$method: Setting condition to $condition from ${OpCode[opcode]}")
+        }
+
+        block.branchCondition = condition.use()
         block.ifBranch = getBlockByLabel(label)
         block.elseBranch = nextBlock
         block = nextBlock
@@ -829,11 +887,14 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             val dst = block.field(interfaceType)
             val unit = block.field(Types.Unit)
-            block.add(JVMSimpleAllocateInstance(dst, lambdaScope.typeWithArgs2, methodScope, origin))
+            val allocation = JVMSimpleAllocateInstance(dst, lambdaScope.typeWithArgs2, methodScope, origin)
+            allocation.valueParameters = valueArgs2
+            block.add(allocation)
             block.add(
                 JVMSimpleCall(
                     unit, constructorScope.selfAsConstructor!!, dst,
-                    Specialization.fromSimple(constructorScope), valueArgs2, methodScope, origin
+                    Specialization.fromSimple(constructorScope), valueArgs2,
+                    false, methodScope, origin
                 )
             )
             stack.add(dst)
@@ -881,10 +942,11 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
         when (opcode) {
             INVOKESPECIAL -> {
-                // constructor or super
+                // constructor or super.xyz()
                 when (name) {
                     "<init>" -> {
                         self = stack.removeLast().use()
+                        self.allocation?.valueParameters = valueParametersI
                         method = resolveConstructor(owner, descriptor, valueParameters)
                     }
                     else -> {
@@ -913,11 +975,16 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             else -> error("Unexpected opcode ${OpCode[opcode]}")
         }
 
+        val needsResolution = when (opcode) {
+            INVOKE_LAMBDA, INVOKEVIRTUAL, INVOKEINTERFACE -> true
+            else -> false
+        }
+
         val dst = block.field(returnType)
         block.add(
             JVMSimpleCall(
                 dst, method.resolved, self, method.specialization,
-                valueParametersI, methodScope, origin
+                valueParametersI, needsResolution, methodScope, origin
             )
         )
         if (returnType != Types.Unit) {
@@ -1164,6 +1231,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 val dst = block.field(Types.Boolean)
                 block.add(JVMSimpleInstanceOf(dst, value, type1, methodScope, origin))
                 stack.add(dst)
+                convertBooleanToInt()
             }
         }
     }

@@ -12,6 +12,7 @@ import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
 import me.anno.zauber.types.Type
+import me.anno.zauber.types.impl.ClassType
 import me.anno.zauber.types.impl.TypeUtils.canInstanceBeBoth
 
 class SimpleInstanceOf private constructor(
@@ -29,6 +30,7 @@ class SimpleInstanceOf private constructor(
         val runtime = runtime
         val instance = runtime[value]
         val givenType = instance.clazz
+        if (type !is ClassType) TODO("Support instance-of with non-class type")
         val expectedType = runtime.getClass(type)
         runtime[dst] = runtime.getBool(givenType.isSubTypeOf(expectedType))
         return null

@@ -225,7 +225,7 @@ class SimpleBlock(val graph: SimpleGraph) {
     }
 
     override fun toString(): String {
-        val builder = short()
+        val builder = headerStr()
         /*val or = onReturn
         if (or != null) builder.append('r').append(or.blockId)
         val ot = onThrow
@@ -237,11 +237,11 @@ class SimpleBlock(val graph: SimpleGraph) {
         return builder.toString()
     }
 
-    fun str() = style("b$id", GREEN)
+    fun idStr() = style("b$id", GREEN)
 
-    fun short(): StringBuilder {
+    fun headerStr(): StringBuilder {
         val builder = StringBuilder()
-        builder.append(str()).append('[')
+        builder.append(idStr()).append('[')
 
         if (isEntryPoint) builder.append("->|")
 

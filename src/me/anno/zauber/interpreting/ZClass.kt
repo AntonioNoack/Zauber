@@ -10,7 +10,6 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
 import me.anno.zauber.interpreting.RuntimeCreate.createInt
-import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.Inheritance
@@ -27,8 +26,6 @@ class ZClass(val type: Type) {
 
     companion object {
 
-        private val LOGGER = LogManager.getLogger(ZClass::class)
-
         // types, which may contain the 'content' field
         // to differentiate instance and native field
         val nativeTypes by threadLocal {
@@ -41,11 +38,7 @@ class ZClass(val type: Type) {
             )
         }
 
-        fun collectFields(type: Type): List<Field> {
-            if (type !is ClassType) {
-                if (type != NullType) LOGGER.warn("type $type is not a ClassType")
-                return emptyList()
-            }
+        fun collectFields(type: ClassType): List<Field> {
             if (type in nativeTypes) {
                 return emptyList()
             }
@@ -70,7 +63,7 @@ class ZClass(val type: Type) {
         }
     }
 
-    val fields = collectFields(type)
+    val fields = if (type is ClassType) collectFields(type) else emptyList()
 
     private var objectInstance: Instance? = null
 
@@ -79,37 +72,29 @@ class ZClass(val type: Type) {
     //  we would have only one instance
 
     fun getOrCreateObjectInstance(): Instance {
-        var objectInstance = objectInstance
-        if (objectInstance != null) return objectInstance
+        var instance = objectInstance
+        if (instance != null) return instance
 
-        println("-- creating object instance for $this --")
-
-        objectInstance = createInstance()
-        this.objectInstance = objectInstance
-
-        val scope = (type as ClassType).clazz[ScopeInitType.AFTER_DISCOVERY]
-        val primaryConstructor = scope.primaryConstructorScope?.selfAsConstructor
-
-        println("Primary constructor for $scope: $primaryConstructor")
-
-        if (primaryConstructor != null) {
-
-            when (scope.scopeType) {
-                null, ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {} // ok
-                else -> error("Cannot create object instance for $scope")
-            }
-
-            check(primaryConstructor.valueParameters.isEmpty()) {
-                "Object/package must not have valueParameters, found some in $scope"
-            }
-
-            val spec = Specialization(primaryConstructor.memberScope, emptyParameterList())
-            runtime.executeCall(objectInstance, null, spec, emptyList())
+        if (type !is ClassType) {
+            error("Cannot create object instance for $type")
         }
 
-        // println("-- created object instance for $this: $objectInstance --")
+        val scope = type.clazz[ScopeInitType.AFTER_DISCOVERY]
+        when (scope.scopeType) {
+            ScopeType.PACKAGE, ScopeType.OBJECT, ScopeType.COMPANION_OBJECT -> {} // ok
+            else -> error("Cannot create object instance for $scope (${scope.scopeType})")
+        }
 
-        return objectInstance
+        instance = createInstance()
+
+        // first must be assigned, then we can initialize it,
+        // otherwise we would run into recursive issues, because
+        // our runtime does not "simplify" SimpleGetObject to "this"
+        objectInstance = instance
+
+        callPrimaryConstructor(instance)
+
+        return instance
     }
 
     fun createInstance(): Instance {
@@ -120,6 +105,19 @@ class ZClass(val type: Type) {
             error("Type to create must be concrete and fully specified ($type)")
         }
         return Instance(this, arrayOfNulls(fields.size), runtime.nextInstanceId())
+    }
+
+    fun callPrimaryConstructor(instance: Instance) {
+        val scope = (type as ClassType).clazz[ScopeInitType.AFTER_DISCOVERY]
+        val primaryConstructor = scope.primaryConstructorScope?.selfAsConstructor ?: return
+
+        check(primaryConstructor.valueParameters.isEmpty()) {
+            "$scope must not have valueParameters"
+        }
+
+        val spec = Specialization(type)
+            .withScope(primaryConstructor.memberScope)
+        runtime.executeCall(instance, null, spec, emptyList())
     }
 
     fun createArray(items: Array<Instance>): Instance {

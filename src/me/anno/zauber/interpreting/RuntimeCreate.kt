@@ -9,7 +9,7 @@ import me.anno.zauber.types.impl.ClassType
 
 object RuntimeCreate {
 
-    fun Runtime.createNumber(base: NumberExpression, type: Type): Instance {
+    fun Runtime.createNumber(base: NumberExpression, type: ClassType): Instance {
         val rawValue = when (type) {
             Types.Byte -> base.asInt.toByte()
             Types.UByte -> base.asInt.toUByte()

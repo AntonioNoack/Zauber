@@ -22,6 +22,7 @@ class JVMSimpleCall(
     val self: JVMSimpleField,
     val specialization: Specialization,
     val valueParameters: List<JVMSimpleField>,
+    val needsResolution: Boolean,
 
     scope: Scope, origin: Long,
 ) : JVMSimpleExpr(scope, origin) {
@@ -55,7 +56,7 @@ class JVMSimpleCall(
 
         val dst = dst.toSimple(block0)
         return simplifyCall(
-            dst, block0, flow0, selfExpr, self, null,
+            dst, block0, flow0, selfExpr, needsResolution, null,
             valueParameters, callable, selfIfInsideConstructor,
             scope, origin
         )

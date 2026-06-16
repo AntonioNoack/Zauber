@@ -60,7 +60,7 @@ object CodeReconstruction {
             ) {
 
                 if (curr === next) {
-                    if (LOGGER.isInfoEnabled) LOGGER.info("Simple loop in ${curr.str()}")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Simple loop in ${curr.idStr()}")
                     // simple infinite loop
                     val newNode = graph.addBlock()
                     newNode.instructions.addAll(curr.instructions)
@@ -69,7 +69,7 @@ object CodeReconstruction {
                     curr.ifBranch = null
                     curr.elseBranch = null
                 } else {
-                    if (LOGGER.isInfoEnabled) LOGGER.info("Concat ${curr.str()} and ${next.str()}")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Concat ${curr.idStr()} and ${next.idStr()}")
                     // concat-join
                     curr.instructions.addAll(next.instructions)
                     curr.ifBranch = next.ifBranch
@@ -101,7 +101,7 @@ object CodeReconstruction {
                 after?.isEntryPoint != true
             ) {
 
-                if (LOGGER.isInfoEnabled) LOGGER.info("Diamond in ${curr.str()} -> ${nextT.str()} | ${nextF.str()} -> ${after?.str()}")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Diamond in ${curr.idStr()} -> ${nextT.idStr()} | ${nextF.idStr()} -> ${after?.idStr()}")
 
                 curr.instructions.add(SimpleBranch(curr.branchCondition!!, nextT, nextF))
                 nextT.removeLinks()
@@ -161,7 +161,7 @@ object CodeReconstruction {
     ) {
         val condition = curr.branchCondition!!
 
-        if (LOGGER.isInfoEnabled) LOGGER.info("Loop in ${curr.str()} -> while $condition != $negate { ${body.str()} } -> ${after?.str()}")
+        if (LOGGER.isInfoEnabled) LOGGER.info("Loop in ${curr.idStr()} -> while $condition != $negate { ${body.idStr()} } -> ${after?.idStr()}")
 
         val conditionBlock = graph.addBlock()
         conditionBlock.instructions.addAll(curr.instructions)
@@ -192,15 +192,15 @@ object CodeReconstruction {
         for (inputNode in inputNodes) {
             if (inputNode.isBranch) {
                 if (inputNode.ifBranch == bestBlock) {
-                    if (LOGGER.isInfoEnabled) LOGGER.info("Breaking branch/if in ${inputNode.str()}")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Breaking branch/if in ${inputNode.idStr()}")
                     inputNode.ifBranch = graph.createTailCall(bestBlock)
                 } else {
-                    if (LOGGER.isInfoEnabled) LOGGER.info("Breaking branch/else in ${inputNode.str()}")
+                    if (LOGGER.isInfoEnabled) LOGGER.info("Breaking branch/else in ${inputNode.idStr()}")
                     check(inputNode.elseBranch == bestBlock) { "Expected elseBranch to be bestNode" }
                     inputNode.elseBranch = graph.createTailCall(bestBlock)
                 }
             } else {
-                if (LOGGER.isInfoEnabled) LOGGER.info("Breaking sequence in ${inputNode.str()}")
+                if (LOGGER.isInfoEnabled) LOGGER.info("Breaking sequence in ${inputNode.idStr()}")
                 check(inputNode.nextBranch == bestBlock)
                 inputNode.ifBranch = null
                 inputNode.elseBranch = null

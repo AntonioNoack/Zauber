@@ -16,7 +16,7 @@ import me.anno.zauber.types.impl.arithmetic.UnknownType
 
 val Types by threadLocal { TypesImpl() }
 
-private fun getScope0(i: String): Scope {
+fun getScope0(i: String): Scope {
     if ('.' !in i) {
         return langScope.getOrPut(i, null)
     }
@@ -46,19 +46,19 @@ private fun getScope0(i: String, scopeType: ScopeType): Scope {
     return scope
 }
 
-fun getScope(i: String, genericNames: String, nat: Type): Scope {
+fun getScope(i: String, genericNames: String, genericSuperType: Type): Scope {
     val scope = getScope0(i)
-    ensureTypeParameters(scope, genericNames, nat)
+    ensureTypeParameters(scope, genericNames, genericSuperType)
     return scope
 }
 
-fun getScope(i: String, genericNames: String, nat: Type, scopeType: ScopeType): Scope {
+fun getScope(i: String, genericNames: String, genericSuperType: Type, scopeType: ScopeType): Scope {
     val scope = getScope0(i, scopeType)
-    ensureTypeParameters(scope, genericNames, nat)
+    ensureTypeParameters(scope, genericNames, genericSuperType)
     return scope
 }
 
-private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) {
+private fun ensureTypeParameters(scope: Scope, genericNames: String, genericSuperType: Type) {
     val numGenerics = genericNames.length
     if (scope.hasTypeParameters) {
         check(scope.declaredTypeParameters.size == numGenerics) {
@@ -72,7 +72,7 @@ private fun ensureTypeParameters(scope: Scope, genericNames: String, nat: Type) 
                 Parameter(
                     index, name, ParameterType.TYPE_PARAMETER,
                     ParameterMutability.DEFAULT,
-                    nat, scope, -1
+                    genericSuperType, scope, -1
                 )
             }
         scope.setTypeParams(typeParams)
@@ -92,8 +92,19 @@ class TypesImpl {
         return ClassType(scope, emptyList(), -1, true)
     }
 
-    private fun getType(name: String, genericNames: String, nat: Type): ClassType {
-        val scope = getScope(name, genericNames, nat)
+    private fun getType(name: String, genericNames: String, genericSuperType: Type): ClassType {
+        val scope = getScope(name, genericNames, genericSuperType)
+        return ClassType(
+            scope,
+            genericNames.indices.map {
+                val param = scope.typeParameters[it]
+                GenericType(scope, param.name)
+            }, -1, true
+        )
+    }
+
+    private fun getType(name: String, genericNames: String, genericSuperType: Type, scopeType: ScopeType): ClassType {
+        val scope = getScope(name, genericNames, genericSuperType, scopeType)
         return ClassType(
             scope,
             genericNames.indices.map {
@@ -137,6 +148,7 @@ class TypesImpl {
     // control-flow:
     val Throwable = getType("Throwable", ScopeType.NORMAL_CLASS)
     val NullPointerException = getType("NullPointerException")
+    val ClassCastException = getType("ClassCastException")
     val Yielded = getType("Yielded", "RTY", NullableAny)
     val Yieldable = getType("Yieldable", "RTY", NullableAny)
     val Nothing = getType("Nothing", ScopeType.ENUM_CLASS)
@@ -147,7 +159,7 @@ class TypesImpl {
     // reflections:
     val TypeT = getType("Type")
     val UnionType = getType("UnionType")
-    val ClassType = getType("ClassType", "V", NullableAny)
+    val ClassType = getType("ClassType", "V", NullableAny, ScopeType.NORMAL_CLASS)
     val GenericType = getType("GenericType")
     val Field = getType("Field")
 

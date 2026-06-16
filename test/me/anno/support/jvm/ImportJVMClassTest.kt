@@ -4,6 +4,10 @@ import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.zauber.logging.LogManager
 import me.anno.utils.assertEquals
 import me.anno.zauber.expansion.MethodOverrides.debuggedMethodName
+import me.anno.zauber.interpreting.ExternalMethod
+import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.types.getScope
+import me.anno.zauber.types.getScope0
 
 
 // todo next step:
@@ -56,8 +60,15 @@ class Int {
     external operator fun toDouble(): Double
     fun toBoolean() = this != 0
 }
-class Char {}
-class Byte {}
+class Byte {
+    external fun toInt(): Int
+}
+class Short {
+    external fun toInt(): Int
+}
+class Char {
+    external fun toInt(): Int
+}
 class Long {
     external operator fun plus(other: Long): Long
     external operator fun minus(other: Long): Long
@@ -98,13 +109,40 @@ class Array<V>(val size: Int) {
     external operator fun set(index: Int, value: Any)
     external operator fun get(index: Int): V
 }
-enum class Boolean { TRUE, FALSE }
+enum class Boolean {
+    TRUE, FALSE;
+    
+    fun toInt(): Int = if (this) 1 else 0
+}
+
+import java.lang.ClassLoader
+object ZauberClassLoader: ClassLoader() {
+    
+}
+class ClassType<V> {
+    var classLoader: ClassLoader = ZauberClassLoader
+}
+open class Throwable(val message: String)
+open class Exception(msg: String): Throwable(msg)
+class ClassCastException(): Exception("Cast failed")
     """.trimIndent()
     )
 
     debuggedMethodName = "getAnnotation"
 
+    LogManager.enableDebug(
+        "Runtime," +
+                "SimpleGetClassField,SimpleSetClassField," +
+                "SimpleGetLocalField,SimpleSetLocalField"
+    )
+
     registerJavaClass("java.util.ArrayList")
+    runtime.register(getScope0("java.lang.ClassLoader.Companion"), "registerNatives", emptyList()) { _, _ ->
+        runtime.getUnit()
+    }
+    runtime.register(getScope0("java.lang.System.Companion"), "registerNatives", emptyList()) { _, _ ->
+        runtime.getUnit()
+    }
 
     val value = testExecute(
         """

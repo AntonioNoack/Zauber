@@ -63,7 +63,7 @@ object LinearTreeSimplification {
         check(targetDepth >= 0) { "Target-depth cannot be negative" }
         while (depth > targetDepth) {
             if (node.inputBlocks.isEmpty()) {
-                error("How can ${node.str()} be unreachable?")
+                error("How can ${node.idStr()} be unreachable?")
             }
             node = node.inputBlocks.minBy {
                 val depth = depths[it.id]
@@ -143,13 +143,13 @@ object LinearTreeSimplification {
             val node = nodes[i]
             if (node.inputBlocks.isEmpty()) {
                 println(graph)
-                error("Node ${node.str()} has no inputs")
+                error("Node ${node.idStr()} has no inputs")
             }
             val depth = node.inputBlocks.maxOf { input ->
                 val depth = depths[input.id]
                 check(depth >= 0 || node === end) {
                     "Depth cannot be negative, because nodes are sortable, " +
-                            "${nodes.map { it.short() }}, ${node.str()} by ${node.inputBlocks.map { it.str() }}"
+                            "${nodes.map { it.headerStr() }}, ${node.idStr()} by ${node.inputBlocks.map { it.idStr() }}"
                 }
                 depth
             } + 1
@@ -207,7 +207,7 @@ object LinearTreeSimplification {
             if (node === start || node === end) continue
             for (input in node.inputBlocks) {
                 check(input in visited) {
-                    "Expected ${input.short()} to be in ${start.short()} .. ${end.short()}"
+                    "Expected ${input.headerStr()} to be in ${start.headerStr()} .. ${end.headerStr()}"
                 }
             }
         }

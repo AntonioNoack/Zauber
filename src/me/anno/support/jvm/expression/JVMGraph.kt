@@ -107,12 +107,17 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
         // todo lazy-discover them, so we know what is thrown-blocks(?)
         // todo how do we get the exception/return context? :/
 
-        // println("Converting graph: $this")
+        println("Converting graph: $this")
 
         val graph = block0.graph
         val unit = unitInstance(graph, this)
+
+        val startBlocks = List(blocks.size) { index ->
+            if (index == 0) block0 else graph.addBlock()
+        }
+
         val simpleBlocks = blocks.mapIndexed { index, block ->
-            val newBlock = if (index == 0) block0 else graph.addBlock()
+            val newBlock = startBlocks[index]
             val newFlow = FlowResult(Flow(unit, newBlock), null, null)
             newBlock to block.simplify(context, newBlock, newFlow, needsValue, contextExpr)
         }
@@ -136,7 +141,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
             }
         }
 
-        // println("Converted graph: $graph")
+        println("Converted graph: $graph")
 
         return finalFlow ?: ASTSimplifier.voidResult
     }

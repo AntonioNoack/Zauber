@@ -16,7 +16,7 @@ class SimpleTailCall(val toBeCalled: SimpleBlock) :
     override fun execute() = throw NotImplementedError("Not meant to be executed")
 
     override fun toString(): String {
-        return "${bold("SimpleTailCall")}[${toBeCalled.str()}]"
+        return "${bold("SimpleTailCall")}[${toBeCalled.idStr()}]"
     }
 
     override fun hasInput(field: SimpleField): Boolean = false

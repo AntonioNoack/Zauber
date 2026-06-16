@@ -1,5 +1,7 @@
 package me.anno.zauber.ast.simple.constants
 
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
@@ -13,7 +15,7 @@ class SimpleSpecialValue(dst: SimpleField, val type: SpecialValue, scope: Scope,
     SimpleAssignment(dst, scope, origin) {
 
     override fun toString(): String {
-        return "$dst = $type"
+        return "$dst = ${style(type.symbol, ORANGE)}"
     }
 
     override fun execute(): BlockReturn? {
