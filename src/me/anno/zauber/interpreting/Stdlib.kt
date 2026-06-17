@@ -562,8 +562,8 @@ object Stdlib {
         val rt = runtime
         for (type in nativeNumbers) {
             rt.registerBinaryMethod(type, "equals") { a, b ->
-                check(a.clazz.type == type)
-                check(b.clazz.type == type)
+                assertEquals(type, a.clazz.type)
+                assertEquals(type, b.clazz.type)
                 check(a.rawValue != null)
                 check(b.rawValue != null)
                 rt.getBool(a.rawValue == b.rawValue)

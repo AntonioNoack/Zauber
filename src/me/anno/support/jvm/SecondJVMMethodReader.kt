@@ -1175,6 +1175,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
         val currBlock = block
         val newBlock = getBlockByLabel(label)
+        graph.blockOrder.add(newBlock) // needed for try-catch-blocks
         if (currBlock == newBlock) return // how can this happen??? e.g. after a GOTO
 
         val stack = ArrayList(stack)
@@ -1270,6 +1271,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         )
         if (returnType != Types.Unit) {
             push(dst)
+            convertToInt(dst.type)
         }
     }
 
@@ -1503,9 +1505,38 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 createArray(type1)
             }
             CHECKCAST -> {
-                val value = pop().use()
-                block.add(JVMSimpleCheckCast(value, type1, methodScope, origin))
-                push(value)
+                val currBlock = block
+                val value = peek().use()
+                val condition = currBlock.field(Types.Boolean)
+                currBlock.add(JVMSimpleInstanceOf(condition, value, type1, methodScope, origin))
+
+                val ifBlock = graph.addNode()
+                val elseBlock = graph.addNode()
+                currBlock.ifBranch = ifBlock
+                currBlock.elseBranch = elseBlock
+                currBlock.branchCondition = condition.use()
+
+                val thrownType = Types.ClassCastException
+                val thrown = currBlock.field(thrownType)
+                val allocation = JVMSimpleAllocateInstance(thrown, thrownType, methodScope, origin)
+                allocation.valueParameters = emptyList()
+                elseBlock.add(allocation)
+
+                val constr = thrownType.clazz[ScopeInitType.AFTER_DISCOVERY]
+                    .constructors0.firstOrNull { it.valueParameters.isEmpty() }
+                    ?: error("Missing constructor for $thrownType without type-args")
+
+                val constrSpec = Specialization.fromSimple(constr.memberScope)
+
+                val unit = block.field(Types.Unit)
+                val constrCall = JVMSimpleCall(
+                    unit, constr, thrown, constrSpec,
+                    emptyList(), false, methodScope, origin
+                )
+                elseBlock.add(constrCall)
+                elseBlock.add(JVMSimpleThrow(thrown, methodScope, origin))
+
+                block = ifBlock
             }
             INSTANCEOF -> {
                 val value = pop().use()
@@ -1517,15 +1548,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
     }
 
-    // todo use these:
-    //  all errors thrown between start and end (excl.)
-    //  must be collected, instance-of-checked,
-    //  and if need be, redirected to the handler
-    //  else thrown
-    val tryCatchBlocks = ArrayList<JVMTryCatchBlock>()
-
     override fun visitTryCatchBlock(start: Label, end: Label, handler: Label, type: String?) {
-        tryCatchBlocks.add(
+        graph.tryCatchBlocks.add(
             JVMTryCatchBlock(
                 getBlockByLabel(start),
                 getBlockByLabel(end),

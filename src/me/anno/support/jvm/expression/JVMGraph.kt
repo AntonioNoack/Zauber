@@ -1,8 +1,10 @@
 package me.anno.support.jvm.expression
 
+import me.anno.support.jvm.JVMTryCatchBlock
 import me.anno.utils.StringStyles.ORANGE
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
@@ -13,6 +15,7 @@ import me.anno.zauber.ast.simple.controlflow.Flow
 import me.anno.zauber.ast.simple.controlflow.FlowResult
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
 import me.anno.zauber.ast.simple.expression.SimpleRename
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
@@ -36,6 +39,15 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
     val fieldMappings = HashMap<Specialization, HashMap<JVMSimpleField, SimpleField>>()
 
     val thisField = if (isStatic) null else field(scope.parent!!.typeWithArgs)
+
+    // todo use these:
+    //  all errors thrown between start and end (excl.)
+    //  must be collected, instance-of-checked,
+    //  and if need be, redirected to the handler
+    //  else thrown
+    val tryCatchBlocks = ArrayList<JVMTryCatchBlock>()
+
+    val blockOrder = ArrayList<JVMBlockExpression>()
 
     private var numFields = 0
 
@@ -77,6 +89,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
 
     override fun toStringImpl(depth: Int): String = "${bold("JVMGraph")}[$scope]:\n" +
             "  ${style("this", ORANGE)}: $thisField\n" +
+            tryCatchBlocks.joinToString("") { "  $it\n" } +
             blocks.joinToString("") { block -> "$block\n" }
 
     override fun simplify(
@@ -137,7 +150,10 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
             when (lastInstr) {
                 is JVMSimpleReturn,
                 is JVMSimpleThrow -> Unit
-                else -> error("$block cannot be an end-block")
+                else -> {
+                    println("Broken Graph: $this")
+                    error("$block cannot be an end-block")
+                }
             }
         }
     }
@@ -246,12 +262,65 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
         }
     }
 
+    fun distributeTryCatchBlocks() {
+        val orderById = blockOrder.withIndex()
+            .associate { it.value to it.index }
+        for (tryCatchBlock in tryCatchBlocks) {
+            val startId = orderById[tryCatchBlock.start]!!
+            val endId = orderById[tryCatchBlock.end]!!
+            check(endId > startId)
+
+            for (i in startId until endId) {
+                blockOrder[i].tryCatchBlocks.add(tryCatchBlock)
+                // todo if true/false branch don't occur in blockOrder, they must be handled, too
+            }
+        }
+    }
+
     fun linkBlocks(graph: SimpleGraph, simpleBlocks: List<Pair<SimpleBlock, FlowResult>>): FlowResult {
+
+        distributeTryCatchBlocks()
 
         var finalFlow: FlowResult? = null
         for (i in blocks.indices) {
             val src = blocks[i]
-            val result = simpleBlocks[i].second
+            var result = simpleBlocks[i].second
+
+
+            // todo we can do this later, if all following blocks
+            //  have the same handlers...
+            for (handler in src.tryCatchBlocks) {
+
+                // todo handle exception as far as possible,
+                //  and then modify result with the remainder
+                val thrown = result.thrown ?: break
+                val thrownValue = thrown.value
+
+                // check stack contains exactly one element
+                assertEquals(1, handler.handler.newStartStack!!.size) {
+                    "Expected handler to have exactly one stack element"
+                }
+
+                val checkBlock = graph.addBlock()
+                thrown.block.nextBranch = checkBlock
+
+                val isInstance = graph.field(Types.Boolean)
+                checkBlock.add(createSimpleInstanceOf(isInstance, thrownValue, handler.type, scope, origin))
+
+                val ifBranch = graph.addBlock()
+                val elseBranch = graph.addBlock()
+
+                checkBlock.ifBranch = ifBranch
+                checkBlock.elseBranch = elseBranch
+
+                // todo we need explicit SimpleMerge(), if multiple blocks lead to the handler...
+                val handlerField = handler.handler.newStartStack!![0].toSimple(graph)
+                ifBranch.add(SimpleRename(handlerField, thrown.value, scope, origin))
+                ifBranch.nextBranch = simpleBlocks[handler.handler.id].first
+
+                result = result.withThrown(thrownValue, elseBranch)
+            }
+
             val resultI = result.value?.block
             if (resultI != null) {
                 if (src.branchCondition != null) {
@@ -262,7 +331,6 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
                     resultI.nextBranch = simpleBlocks[src.nextBranch!!.id].first
                 } else error("We have a value but no next block?")
             } else {
-                check(result.value == null)
                 finalFlow = finalFlow?.joinWith(result) ?: result
             }
         }

@@ -1,5 +1,6 @@
 package me.anno.support.jvm.expression
 
+import me.anno.support.jvm.JVMTryCatchBlock
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
@@ -63,6 +64,8 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
     }
 
     fun field(type: Type) = graph.field(type)
+
+    val tryCatchBlocks = ArrayList<JVMTryCatchBlock>()
 
     override fun resolveValueType(context: ResolutionContext): Type {
         TODO("Not yet implemented")

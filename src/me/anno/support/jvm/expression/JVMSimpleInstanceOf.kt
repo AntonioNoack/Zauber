@@ -1,5 +1,7 @@
 package me.anno.support.jvm.expression
 
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.FlowResult
@@ -19,7 +21,7 @@ class JVMSimpleInstanceOf(
 ) : JVMSimpleExpr(scope, origin) {
 
     override fun resolveValueType(context: ResolutionContext): Type = Types.Boolean
-    override fun toStringImpl(depth: Int): String = "$dst = $value instanceof $type"
+    override fun toStringImpl(depth: Int): String = "$dst = $value ${style("instanceof", ORANGE)} $type"
 
     override fun simplify(
         context: ResolutionContext,
