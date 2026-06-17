@@ -60,7 +60,7 @@ class JVMSimpleCheckCast(
 
         block0.ifBranch = ifTrue
         block0.elseBranch = ifFalse
-        block0.branchCondition = condition
+        block0.branchCondition = condition.use()
 
         return flow0
             .withValue(unit, ifTrue)

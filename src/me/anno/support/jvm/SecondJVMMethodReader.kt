@@ -52,6 +52,10 @@ import org.objectweb.asm.Opcodes.*
 /**
  * This just reads the commands and structures.
  * No specialization is applied yet.
+ *
+ * todo Chatchy suggests that we can replace all local fields with SimpleFields, too
+ *  and it is kind of right... that would simplify lots of other code, too...
+ *  -> but our fields can only be used in one place, and that would be violated...
  * */
 class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, parameters: List<Parameter>) :
     MethodVisitor(API_LEVEL) {
@@ -114,15 +118,27 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     val classScope = methodScope.parent!!
 
     val origin = -1L
-    val graph = JVMGraph(method.valueParameters.size, methodScope, isStatic, origin)
+    val graph = JVMGraph(methodScope, isStatic, origin)
+
+    val locals = HashMap<Int, JVMSimpleField>()
     val stack = ArrayList<JVMSimpleField>()
+
     var block = graph.startBlock
 
     init {
-        val offset = if (isStatic) 0 else 1
-        for (i in parameters.indices) {
-            graph.addLocalField(i + offset, parameters[i].name, parameters[i].type)
+        var writePos = 0
+        if (!graph.isStatic) {
+            locals[0] = graph.thisField!!
+            writePos = 1
         }
+
+        for (i in parameters.indices) {
+            val type = parameters[i].type
+            locals[writePos] = graph.field(type)
+            writePos += if (isType2(type)) 2 else 1
+        }
+
+        block.newStartLocals = HashMap(locals)
     }
 
     override fun visitInsn(opcode: Int) {
@@ -543,7 +559,6 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
     }
 
-
     fun pop() = stack.removeLast()
     fun peek() = stack.last()
     fun push(v: JVMSimpleField) {
@@ -551,7 +566,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
     }
 
     fun isType2(field: JVMSimpleField): Boolean {
-        val type = field.type
+        return isType2(field.type)
+    }
+
+    fun isType2(type: Type): Boolean {
         return type == Types.Long || type == Types.Double
     }
 
@@ -784,44 +802,17 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         //  first N indices are the parameters incl. self if not static
         LOGGER.debug("visitVarInsn: ${OpCode[opcode]}, $varIndex")
 
-        val isGetter = when (opcode) {
-            ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> true
-            ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> false
+        when (opcode) {
+            ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
+                val local = locals[varIndex]
+                    ?: error("Missing local $varIndex in ${OpCode[opcode]} for $method")
+                push(local)
+            }
+            ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
+                val value = pop().use()
+                locals[varIndex] = value
+            }
             else -> error("Unsupported opcode ${OpCode[opcode]}")
-        }
-
-        var valueType: Type = when (opcode) {
-            ILOAD, ISTORE -> Types.Int
-            LLOAD, LSTORE -> Types.Long
-            FLOAD, FSTORE -> Types.Float
-            DLOAD, DSTORE -> Types.Double
-            ALOAD, ASTORE -> Types.Any
-            else -> error("Unsupported opcode ${OpCode[opcode]}")
-        }
-
-        val localField = if (varIndex < graph.numReservedLocals) {
-            graph.localFields[varIndex]!!
-        } else {
-            /*if (valueType == Types.Any) {
-                valueType = localVariableTypes.getOrNull(varIndex - graph.numReservedLocals)
-                    ?: (if (!isGetter) peek().type else null)
-                            ?: valueType
-            }*/
-            graph.getOrPutLocalField(varIndex, valueType)
-        }
-
-        if (isGetter) {
-
-            val dst = graph.field(localField.type)
-            block.add(JVMSimpleGetLocalField(dst, localField, methodScope, origin))
-            push(dst)
-
-            if (opcode == ILOAD) convertToInt(localField.type)
-        } else {
-            if (opcode == ISTORE) convertFromInt(localField.type)
-
-            val value = pop().use()
-            block.add(JVMSimpleSetLocalField(localField, value, methodScope, origin))
         }
     }
 
@@ -917,8 +908,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         if (opcode == GOTO) {
             check(currBlock.nextBranch == null)
 
-            val stack = ArrayList(stack)
-            nextBlock.startStacks.add(stack)
+            nextBlock.startStacks.add(ArrayList(stack))
+            nextBlock.startLocals.add(HashMap(locals))
             currBlock.nextBranch = nextBlock
             return
         }
@@ -985,14 +976,18 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         check(currBlock.elseBranch == null)
 
         val stack = ArrayList(stack)
+        val locals = HashMap(locals)
         val elseBlock = graph.addNode()
         currBlock.branchCondition = condition.use()
         currBlock.ifBranch = nextBlock
         currBlock.elseBranch = elseBlock
 
         nextBlock.startStacks.add(stack)
+        nextBlock.startLocals.add(locals)
         elseBlock.startStacks.add(stack)
+        elseBlock.startLocals.add(locals)
         elseBlock.newStartStack = stack
+        elseBlock.newStartLocals = locals
         block = elseBlock
     }
 
@@ -1005,8 +1000,6 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             else -> true
         }
     }
-
-    val localVariableTypes = ArrayList<Type>()
 
     fun frameTypeToType(type0: Any?): Type {
         return when (type0) {
@@ -1027,19 +1020,17 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
     }
 
-    override fun visitFrame(type: Int, numLocal: Int, local: Array<out Any?>, numStack: Int, stack1: Array<out Any?>) {
+    override fun visitFrame(type: Int, numLocal: Int, local1: Array<out Any?>, numStack: Int, stack1: Array<out Any?>) {
         check(type == F_NEW)
 
         val currBlock = block
         check(currBlock.instructions.isEmpty())
 
-        localVariableTypes.clear()
-        repeat(numLocal) { index ->
-            localVariableTypes.add(frameTypeToType(local[index]))
-        }
-
         // check prev-stack, whether this is needed
-        if (lastStackContinued) currBlock.startStacks.add(ArrayList(stack))
+        if (lastStackContinued) {
+            currBlock.startStacks.add(ArrayList(stack))
+            currBlock.startLocals.add(HashMap(locals))
+        }
         stack.clear()
 
         val newStack = List(numStack) { j ->
@@ -1048,16 +1039,23 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             graph.field(type)
         }
 
+        val newLocals = List(numLocal) { j ->
+            val i = numLocal - 1 - j
+            val type = frameTypeToType(local1[i])
+            j to graph.field(type)
+        }.toMap()
+
         if (LOGGER.isDebugEnabled) {
             LOGGER.debug(
                 "visitFrame($type, " +
-                        "[$numLocal, ${local.asList()}] -> $localVariableTypes, " +
+                        "[$numLocal, ${local1.asList()}] -> $newLocals, " +
                         "[$numStack, ${stack1.asList()}] -> $newStack, ${currBlock.idStr()})"
             )
         }
 
         stack.addAll(newStack)
         currBlock.newStartStack = newStack
+        currBlock.newStartLocals = newLocals
     }
 
     override fun visitInvokeDynamicInsn(name: String, descriptor: String, method: Handle, vararg args: Any?) {
@@ -1076,7 +1074,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             val constructorScope = lambdaScope.getOrCreatePrimaryConstructorScope()
 
-            val constructorGraph = JVMGraph(valueArgs.size, constructorScope, false, origin)
+            val constructorGraph = JVMGraph(constructorScope, false, origin)
             val setters = ArrayList<Expression>()
 
             // todo check this...
@@ -1089,35 +1087,20 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
 
             if (valueArgs.isNotEmpty()) {
-                val lambdaConstrFields = valueArgs.mapIndexed { index, param ->
-                    constructorGraph.addLocalField(index, param.name, param.type)
+                val lambdaConstrFields = valueArgs.map { param ->
+                    constructorGraph.field(param.type)
                 }
 
                 val instanceSelf0 = constructorGraph.thisField!!
                 val instanceSelf = constructorGraph.field(instanceSelf0.type)
                 val constrBlock = constructorGraph.startBlock
-                constrBlock.add(
-                    JVMSimpleGetLocalField(
-                        instanceSelf,
-                        instanceSelf0, constructorScope, origin
-                    )
-                )
 
                 for (i in lambdaFields.indices) {
-                    val dst = constructorGraph.field(valueArgs[i].type)
-                    constrBlock.add(
-                        JVMSimpleGetLocalField(
-                            dst,
-                            lambdaConstrFields[i],
-                            constructorScope,
-                            origin
-                        )
-                    )
                     constrBlock.add(
                         JVMSimpleSetClassField(
                             instanceSelf,
                             lambdaFields[i],
-                            dst,
+                            lambdaConstrFields[i],
                             constructorScope,
                             origin
                         )
@@ -1195,6 +1178,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         if (currBlock == newBlock) return // how can this happen??? e.g. after a GOTO
 
         val stack = ArrayList(stack)
+        val locals = HashMap(locals)
         if (needsLink(currBlock)) {
             lastStackContinued = true
 
@@ -1202,6 +1186,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
             currBlock.nextBranch = newBlock
             newBlock.startStacks.add(stack)
+            newBlock.startLocals.add(locals)
 
         } else {
             lastStackContinued = false
@@ -1209,6 +1194,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
 
         newBlock.newStartStack = stack
+        newBlock.newStartLocals = locals
         block = newBlock
     }
 
@@ -1531,6 +1517,24 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         }
     }
 
+    // todo use these:
+    //  all errors thrown between start and end (excl.)
+    //  must be collected, instance-of-checked,
+    //  and if need be, redirected to the handler
+    //  else thrown
+    val tryCatchBlocks = ArrayList<JVMTryCatchBlock>()
+
+    override fun visitTryCatchBlock(start: Label, end: Label, handler: Label, type: String?) {
+        tryCatchBlocks.add(
+            JVMTryCatchBlock(
+                getBlockByLabel(start),
+                getBlockByLabel(end),
+                getBlockByLabel(handler),
+                nameToType(type ?: "java/lang/Throwable")
+            )
+        )
+    }
+
     fun setAllFieldsToNull() {
         val fields = method.ownerScope.fields
         if (fields.isNotEmpty()) {
@@ -1543,10 +1547,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 block.add(JVMSimpleGetObject(self, selfScope, methodScope, origin))
                 self
             } else {
-                val self0 = graph.thisField!!
-                val self = block.field(self0.type)
-                block.add(JVMSimpleGetLocalField(self, self0, methodScope, origin))
-                self
+                graph.thisField!!
             }
 
             for (field in fields) {

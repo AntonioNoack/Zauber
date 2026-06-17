@@ -50,6 +50,10 @@ class JVMBlockExpression(val graph: JVMGraph, val id: Int, scope: Scope, origin:
 
     val inputs = ArrayList<JVMBlockExpression>()
 
+    val startLocals = ArrayList<Map<Int, JVMSimpleField>>()
+
+    var newStartLocals: Map<Int, JVMSimpleField>? = null
+
     val startStacks = ArrayList<List<JVMSimpleField>>()
     var newStartStack: List<JVMSimpleField>? = null
 

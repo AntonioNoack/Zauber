@@ -105,6 +105,10 @@ class SimpleBlock(val graph: SimpleGraph) {
         instructions.add(0, expr)
     }
 
+    fun add0(expr: List<SimpleInstruction>) {
+        instructions.addAll(0, expr)
+    }
+
     fun field(type: Type, constantRef: Expression? = null): SimpleField =
         graph.field(type, constantRef)
 

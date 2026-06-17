@@ -4,8 +4,6 @@ import me.anno.utils.StringStyles.ORANGE
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
-import me.anno.zauber.ast.rich.member.Method
-import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.ASTSimplifier.unitInstance
 import me.anno.zauber.ast.simple.SimpleBlock
@@ -13,14 +11,20 @@ import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.SimpleMerge
 import me.anno.zauber.ast.simple.controlflow.Flow
 import me.anno.zauber.ast.simple.controlflow.FlowResult
+import me.anno.zauber.ast.simple.controlflow.SimpleReturn
+import me.anno.zauber.ast.simple.controlflow.SimpleThrow
+import me.anno.zauber.ast.simple.expression.SimpleRename
 import me.anno.zauber.ast.simple.fields.SimpleField
+import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
+import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
-class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin: Long) : Expression(scope, origin) {
+class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(scope, origin) {
 
     init {
         check(scope.isMethodLike())
@@ -31,28 +35,7 @@ class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin:
 
     val fieldMappings = HashMap<Specialization, HashMap<JVMSimpleField, SimpleField>>()
 
-    val numReservedLocals = (if (isStatic) 0 else 1) + numValueParams
-
-    val localFields = ArrayList<JVMLocalField?>() // only contains 'this' in non-static methods
-    val thisField = if (isStatic) null else addLocalField(0, "this", scope.parent!!.typeWithArgs)
-
-    fun addLocalField(index: Int, name: String, type: Type): JVMLocalField {
-        check(index == localFields.size)
-        check(index < numReservedLocals)
-        val field = JVMLocalField(index, name, type)
-        localFields.add(field)
-        return field
-    }
-
-    private val localFieldsMap = HashMap<Pair<Int,Type>, JVMLocalField>()
-
-    fun getOrPutLocalField(index: Int, type: Type): JVMLocalField {
-        return localFieldsMap.getOrPut(index to type) {
-            val field = JVMLocalField(localFields.size, "#$index", type)
-            localFields.add(field)
-            field
-        }
-    }
+    val thisField = if (isStatic) null else field(scope.parent!!.typeWithArgs)
 
     private var numFields = 0
 
@@ -94,7 +77,6 @@ class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin:
 
     override fun toStringImpl(depth: Int): String = "${bold("JVMGraph")}[$scope]:\n" +
             "  ${style("this", ORANGE)}: $thisField\n" +
-            "  local: $localFields\n" +
             blocks.joinToString("") { block -> "$block\n" }
 
     override fun simplify(
@@ -105,6 +87,8 @@ class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin:
         contextExpr: Expression?
     ): FlowResult {
 
+        validateJVMBlocks()
+
         // todo lazy-discover them, so we know what is thrown-blocks(?)
         // todo how do we get the exception/return context? :/
 
@@ -113,9 +97,27 @@ class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin:
         val graph = block0.graph
         val unit = unitInstance(graph, this)
 
-        val startBlocks = List(blocks.size) { index ->
-            if (index == 0) block0 else graph.addBlock()
+        val block0i = blocks.first()
+
+        // assign this and parameters
+        var offset = 0
+        if (!isStatic) {
+            val dst = block0i.newStartLocals!![0]!!.toSimple(graph)
+            val field = graph.thisField!!
+            block0.add(SimpleGetLocalField(dst, field, scope, origin))
+            offset = 1
         }
+        for (i in graph.method.valueParameters.indices) {
+            val local = block0i.newStartLocals!![offset]!!
+            // todo convert byte/short/char to int, where needed
+            val dst = local.toSimple(graph)
+            val field = graph.parameterFields[i]
+            block0.add(SimpleGetLocalField(dst, field, scope, origin))
+            offset += if (local.type == Types.Long || local.type == Types.Double) 2 else 1
+        }
+
+        val startBlocks = List(blocks.size) { graph.addBlock() }
+        graph.startBlock.nextBranch = startBlocks[0]
 
         val simpleBlocks = blocks.mapIndexed { index, block ->
             val newBlock = startBlocks[index]
@@ -128,34 +130,119 @@ class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin:
         return linkBlocks(graph, simpleBlocks)
     }
 
+    fun validateJVMBlocks() {
+        for (block in blocks) {
+            if (block.nextBranch != null) continue // all fine
+            val lastInstr = block.instructions.lastOrNull()
+            when (lastInstr) {
+                is JVMSimpleReturn,
+                is JVMSimpleThrow -> Unit
+                else -> error("$block cannot be an end-block")
+            }
+        }
+    }
+
+    fun validateSimpleBlocks(graph: SimpleGraph, finalFlow: FlowResult?) {
+        val returned = finalFlow?.returned?.block
+        val thrown = finalFlow?.thrown?.block
+        for (block in graph.blocks) {
+            if (block.nextBranch != null) continue // all fine
+            if (block == returned || block == thrown) continue // all fine
+            val lastInstr = block.instructions.lastOrNull()
+            when (lastInstr) {
+                is SimpleReturn,
+                is SimpleThrow -> Unit
+                else -> {
+                    println("Broken Graph: $graph")
+                    error("$block cannot be an end-block")
+                }
+            }
+        }
+    }
+
     fun createMergeInstructions(graph: SimpleGraph, simpleBlocks: List<Pair<SimpleBlock, FlowResult>>) {
         for (i in blocks.indices) {
             val block = blocks[i]
             if (block.startStacks.isNotEmpty()) {
-                val targetStack = block.newStartStack!!
-                check(block.startStacks.all { it.size >= targetStack.size }) {
-                    println("Mismatch for $this")
-                    "Stack-size mismatch, expected $targetStack for ${block.idStr()}, but got ${block.startStacks}"
-                }
-                for (i in targetStack.indices) {
-                    val dst = targetStack[i].toSimple(graph)
-                    val candidates = block.startStacks
-                        .map { stack -> stack[stack.size - targetStack.size + i].toSimple(graph) }
-                        .filter { it != dst }
-                        .distinct() // probably not needed
-
-                    val si = simpleBlocks[i].first
-                    if (candidates.isEmpty()) continue
-                    val ci = candidates.first()
-                    if (candidates.size == 1) {
-                        si.add0(SimpleMerge(dst, ci, ci, scope, origin))
-                    } else {
-                        for (i in 1 until candidates.size) {
-                            si.add0(SimpleMerge(dst, ci, candidates[i], scope, origin))
-                        }
-                    }
-                }
+                mergeStacks(graph, simpleBlocks[i].first, block)
             }
+            if (block.startLocals.isNotEmpty()) {
+                mergeLocals(graph, simpleBlocks[i].first, block)
+            }
+        }
+    }
+
+    fun mergeStacks(
+        graph: SimpleGraph, simpleBlock: SimpleBlock,
+        block: JVMBlockExpression
+    ) {
+        val targetStack = block.newStartStack!!
+        check(block.startStacks.all { it.size >= targetStack.size }) {
+            println("Mismatch for $this")
+            "Stack-size mismatch, expected $targetStack for ${block.idStr()}, but got ${block.startStacks}"
+        }
+        for (i in targetStack.indices) {
+            val dst = targetStack[i].toSimple(graph)
+            val candidates = block.startStacks
+                .map { stack -> stack[stack.size - targetStack.size + i] }
+            mergeFields(simpleBlock, dst, graph, candidates)
+        }
+    }
+
+    fun mergeLocals(
+        graph: SimpleGraph, simpleBlock: SimpleBlock,
+        block: JVMBlockExpression
+    ) {
+        val targetStack = block.newStartLocals!!
+        for ((i, ti) in targetStack) {
+            val dst = ti.toSimple(graph)
+            val candidates = block.startLocals
+                .map { stack -> stack[i] }
+
+            if (null in candidates) continue // incomplete fields cannot be merged
+            @Suppress("UNCHECKED_CAST")
+            mergeFields(simpleBlock, dst, graph, candidates as List<JVMSimpleField>)
+        }
+    }
+
+    fun mergeFields(
+        simpleBlock: SimpleBlock,
+        dst: SimpleField,
+        graph: SimpleGraph,
+        candidates: List<JVMSimpleField>,
+    ) {
+        val candidatesI = candidates
+            .map { stack -> stack.toSimple(graph) }
+            .distinct() // probably not needed
+
+        mergeFields(simpleBlock, dst, candidatesI)
+    }
+
+    fun mergeFields(
+        simpleBlock: SimpleBlock,
+        dst: SimpleField,
+        candidates: List<SimpleField>,
+    ) {
+        if (candidates.isEmpty()) return
+
+        if (candidates.size == 1) {
+            val ci = candidates.first()
+            if (ci == dst) return
+            simpleBlock.add0(SimpleRename(dst, ci, scope, origin))
+        } else {
+            val created = ArrayList<SimpleInstruction>(candidates.size)
+            val joinedType = unionTypes(candidates.map { it.type })
+
+            var lhs = candidates.first()
+            for (i in 1 until candidates.size) {
+                val rhs = candidates[i]
+                val tmp = simpleBlock.field(joinedType)
+                created.add(SimpleMerge(tmp, lhs, rhs, scope, origin))
+                lhs = tmp
+            }
+
+            created.add(SimpleRename(dst, lhs, scope, origin))
+            simpleBlock.add0(created)
         }
     }
 
@@ -181,6 +268,8 @@ class JVMGraph(numValueParams: Int, scope: Scope, val isStatic: Boolean, origin:
         }
 
         println("Converted graph: $graph")
+
+        validateSimpleBlocks(graph, finalFlow)
 
         return finalFlow ?: ASTSimplifier.voidResult
     }
