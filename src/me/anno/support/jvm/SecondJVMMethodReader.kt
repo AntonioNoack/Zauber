@@ -360,7 +360,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
 
             DUP -> {
-                push(peek())
+                push(peek().copy())
             }
 
             DUP_X1 -> {
@@ -372,7 +372,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                 push(v1)
                 push(v2)
-                push(v1)
+                push(v1.copy())
             }
 
             DUP_X2 -> {
@@ -387,7 +387,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                     push(v1)
                     push(v2)
-                    push(v1)
+                    push(v1.copy())
 
                 } else {
 
@@ -399,7 +399,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                         push(v1)
                         push(v2)
-                        push(v1)
+                        push(v1.copy())
 
                     } else {
                         // ..., value3, value2, value1 ->
@@ -410,7 +410,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                         push(v1)
                         push(v3)
                         push(v2)
-                        push(v1)
+                        push(v1.copy())
                     }
                 }
             }
@@ -424,7 +424,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     // ..., value, value
 
                     push(v1)
-                    push(v1)
+                    push(v1.copy())
 
                 } else {
 
@@ -435,8 +435,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                     push(v2)
                     push(v1)
-                    push(v2)
-                    push(v1)
+                    push(v2.copy())
+                    push(v1.copy())
                 }
             }
 
@@ -453,7 +453,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                     push(v1)
                     push(v2)
-                    push(v1)
+                    push(v1.copy())
 
                 } else {
 
@@ -466,8 +466,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     push(v2)
                     push(v1)
                     push(v3)
-                    push(v2)
-                    push(v1)
+                    push(v2.copy())
+                    push(v1.copy())
                 }
             }
 
@@ -486,7 +486,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                         push(v1)
                         push(v2)
-                        push(v1)
+                        push(v1.copy())
 
                     } else {
 
@@ -498,7 +498,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                         push(v1)
                         push(v3)
                         push(v2)
-                        push(v1)
+                        push(v1.copy())
                     }
 
                 } else {
@@ -512,7 +512,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
 
                         push(v1)
                         push(v2)
-                        push(v1)
+                        push(v1.copy())
 
                     } else {
 
@@ -526,8 +526,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                             push(v2)
                             push(v1)
                             push(v3)
-                            push(v2)
-                            push(v1)
+                            push(v2.copy())
+                            push(v1.copy())
 
                         } else {
 
@@ -540,8 +540,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                             push(v1)
                             push(v4)
                             push(v3)
-                            push(v2)
-                            push(v1)
+                            push(v2.copy())
+                            push(v1.copy())
                         }
                     }
                 }
@@ -806,7 +806,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
                 val local = locals[varIndex]
                     ?: error("Missing local $varIndex in ${OpCode[opcode]} for $method")
-                push(local)
+                push(local.copy()) // copy to avoid creating multiple unrelated merged
             }
             ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
                 val value = pop().use()
@@ -814,6 +814,13 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
             }
             else -> error("Unsupported opcode ${OpCode[opcode]}")
         }
+    }
+
+    fun JVMSimpleField.copy(): JVMSimpleField {
+        val dst = block.field(type)
+        block.add(JVMSimpleRename(dst, this, scope, origin))
+        dst.allocation = allocation
+        return dst
     }
 
     fun findField(scope: Scope, name: String): Field? {
@@ -1062,6 +1069,8 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         if (method.owner == "java/lang/invoke/LambdaMetafactory" && (method.name == "metafactory" || method.name == "altMetafactory") && args.size >= 3) {
             LOGGER.info("visitInvokeDynamicInsn: $name, $descriptor, $method, ${args.asList()}")
 
+            if (true) TODO()
+
             val (typeArgs, valueArgs, interfaceType) = parseMethodSignature(methodScope, descriptor, false)
             val interfaceMethod = findLambdaMethod((interfaceType as ClassType).clazz)
             assertEquals(name, interfaceMethod.name)
@@ -1228,6 +1237,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                 when (name) {
                     "<init>" -> {
                         self = pop().use()
+                        if (self.allocation == null) {
+                            println("calling constructor $owner, $descriptor, $valueParameters, " +
+                                    "allocation is null :/, $self")
+                        }
                         self.allocation?.valueParameters = valueParametersI
                         method = resolveConstructor(owner, descriptor, valueParameters)
                     }

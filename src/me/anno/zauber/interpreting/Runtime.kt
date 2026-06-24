@@ -4,6 +4,7 @@ import me.anno.utils.CollectionUtils.getOrPutRecursive
 import me.anno.utils.CollectionUtils.mapArray
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
 import me.anno.utils.assertTrue
@@ -68,9 +69,11 @@ class Runtime {
                 println("Broken Graph: ${call.graph}")
                 error(
                     "$field is uninitialized, fields: ${
-                        call.simpleFields.withIndex().joinToString("") { (k, v) ->
-                            "\n  ${style("%$k", YELLOW)}=$v"
-                        }
+                        call.simpleFields.withIndex()
+                            .filter { it.value != null }
+                            .joinToString("") { (k, v) ->
+                                "\n  ${style("%$k", YELLOW)}=$v"
+                            }
                     }"
                 )
             }
@@ -276,9 +279,18 @@ class Runtime {
 
             val instructions = block.instructions
 
-            if (LOGGER.isDebugEnabled) for (i in instructions.indices) {
-                val instr = instructions[i]
-                LOGGER.debug("Block[$i] $instr")
+            if (LOGGER.isInfoEnabled) {
+                LOGGER.info(
+                    "Starting ${block.idStr()} " +
+                            "in ${style(block0.graph.method.name, GREEN)}"
+                )
+            }
+
+            if (LOGGER.isDebugEnabled) {
+                for (i in instructions.indices) {
+                    val instr = instructions[i]
+                    LOGGER.debug("Block[$i] $instr")
+                }
             }
 
             var lastValue: BlockReturn?
@@ -331,13 +343,23 @@ class Runtime {
             val condition = block.branchCondition
             block = if (condition != null) {
                 val conditionI = this[condition].castToBool()
-                if (LOGGER.isInfoEnabled) LOGGER.info(
-                    "Finished $block, condition: ${style(conditionI.toString(), StringStyles.ORANGE)}" +
-                            " -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.idStr()}"
-                )
+                if (LOGGER.isInfoEnabled) {
+                    LOGGER.info(
+                        "Finished ${block.idStr()} " +
+                                "in ${style(block0.graph.method.name, GREEN)}, " +
+                                "condition: ${style(conditionI.toString(), StringStyles.ORANGE)}" +
+                                " -> ${(if (conditionI) block.ifBranch else block.elseBranch)?.idStr()}"
+                    )
+                }
                 if (conditionI) block.ifBranch else block.elseBranch
             } else {
-                if (LOGGER.isInfoEnabled) LOGGER.info("Finished $block, next: ${block.nextBranch?.idStr()}")
+                if (LOGGER.isInfoEnabled) {
+                    LOGGER.info(
+                        "Finished ${block.idStr()} " +
+                                "in ${style(block0.graph.method.name, GREEN)}, " +
+                                "next: ${block.nextBranch?.idStr()}"
+                    )
+                }
                 block.nextBranch
             } ?: error("Exited without return from ${block0.graph} at ${block.idStr()}")
         }

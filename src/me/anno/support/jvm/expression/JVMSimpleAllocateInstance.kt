@@ -31,8 +31,13 @@ class JVMSimpleAllocateInstance(
         contextExpr: Expression?
     ): FlowResult {
         val dst = dst.toSimple(block0)
-        val valueParameters = valueParameters
-            .map { param -> param.toSimple(block0) }
+        val valueParameters = try {
+            valueParameters
+                .map { param -> param.toSimple(block0) }
+        } catch (e: UninitializedPropertyAccessException) {
+            println("Missing valueParams for constructor for $this in ${block0.graph.method}, $context")
+            throw e
+        }
         block0.add(
             SimpleAllocateInstance(
                 dst, allocatedType, valueParameters,
