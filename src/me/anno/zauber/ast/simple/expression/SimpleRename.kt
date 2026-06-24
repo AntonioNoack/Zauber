@@ -28,7 +28,7 @@ class SimpleRename(
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleRename(
             src.cloned(this.dst, dst),
-            src.cloned(this@SimpleRename.src, dst),
+            src.cloned(this.src, dst),
             scope, origin
         )
     }

@@ -249,9 +249,11 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
             val created = ArrayList<SimpleInstruction>(candidates.size)
             val joinedType = unionTypes(candidates.map { it.type })
 
-            var lhs = candidates.first()
+            var lhs = candidates.first().dst
             for (i in 1 until candidates.size) {
-                val rhs = candidates[i]
+                val rhs = candidates[i].dst
+                if (lhs == rhs) continue // done
+
                 val tmp = simpleBlock.field(joinedType)
                 created.add(SimpleMerge(tmp, lhs, rhs, scope, origin))
                 lhs = tmp

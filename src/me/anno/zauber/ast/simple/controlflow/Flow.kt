@@ -18,8 +18,8 @@ data class Flow(val value: SimpleField, val block: SimpleBlock) {
 
         val joinedType = unionTypes(value.type, other.value.type)
         val joinedField = joinedBlock.field(joinedType)
-        val ifField = value.use()
-        val elseField = other.value.use()
+        val ifField = value.use().dst
+        val elseField = other.value.use().dst
         joinedBlock.add(SimpleMerge(joinedField, ifField, elseField, root, -1))
         return joinedField
     }

@@ -31,10 +31,15 @@ class Call private constructor(var method: MethodLike) {
 
     fun setLocal(field: LocalField, instance: Instance) {
         localFields[field.id] = instance
+        println("${method.name}/$field = $instance")
     }
 
     fun setSimple(field: SimpleField, instance: Instance) {
+        // todo we use SimpleField for input variables and renaming:
+        //  when we do that, we must mark it as non-mergeable, because each field can be merged only once
+        check(field.dst == field)
         simpleFields[field.dst.id] = instance
+        println("${method.name}/$field = $instance")
     }
 
     lateinit var graph: SimpleGraph

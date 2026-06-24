@@ -12,21 +12,16 @@ import me.anno.zauber.scope.Scope
  * */
 class SimpleMerge(
     val dst: SimpleField,
-    var ifField: SimpleField,
-    var elseField: SimpleField,
+    val ifField: SimpleField,
+    val elseField: SimpleField,
     scope: Scope, origin: Long
 ) : SimpleInstruction(scope, origin) {
 
     init {
-        while (true) {
-            val ifMergeInfo = ifField.mergeInfo ?: break
-            ifField = ifMergeInfo.dst
-        }
 
-        while (true) {
-            val elseMergeInfo = elseField.mergeInfo ?: break
-            elseField = elseMergeInfo.dst
-        }
+        check(ifField != elseField) { "$ifField must not be the same as $elseField" }
+        check(ifField.mergeInfo == null) { "Use ifField.dst, not ifField, if valid" }
+        check(elseField.mergeInfo == null) { "Use ifField.dst, not ifField, if valid" }
 
         ifField.mergeInfo = this
         elseField.mergeInfo = this
