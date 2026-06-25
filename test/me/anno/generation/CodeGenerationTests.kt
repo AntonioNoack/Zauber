@@ -834,7 +834,7 @@ abstract class CodeGenerationTests {
         // todo also test negation for all number types, not just integers
 
         val intTypes = nativeJavaNumbers.keys.filter { it != Types.Char && !it.isFloat() }
-        val expectedResponse = StringBuilder()
+        val expected = ArrayList<String>()
         val runnableCode = intTypes.withIndex().joinToString("") { (ctr, type) ->
 
             val numBits = type.getNumBits()
@@ -860,29 +860,29 @@ abstract class CodeGenerationTests {
             val rotrExpected = (seqA.drop(numBits - shift) + seqA.substring(0, numBits - shift)).toULong(2).toLong()
 
             if (type.isUnsigned()) {
-                expectedResponse.append(andExpected.toULong()).append('\n')
-                expectedResponse.append(orExpected.toULong()).append('\n')
-                expectedResponse.append(xorExpected.toULong()).append('\n')
-                expectedResponse.append(invExpected.toULong()).append('\n')
+                expected.add(andExpected.toULong().toString())
+                expected.add(orExpected.toULong().toString())
+                expected.add(xorExpected.toULong().toString())
+                expected.add(invExpected.toULong().toString())
 
-                expectedResponse.append(shlExpected.toULong()).append('\n')
-                expectedResponse.append(shrExpected.toULong()).append('\n')
-                expectedResponse.append(ushrExpected.toULong()).append('\n')
-                expectedResponse.append(rotlExpected.toULong()).append('\n')
-                expectedResponse.append(rotrExpected.toULong()).append('\n')
+                expected.add(shlExpected.toULong().toString())
+                expected.add(shrExpected.toULong().toString())
+                expected.add(ushrExpected.toULong().toString())
+                expected.add(rotlExpected.toULong().toString())
+                expected.add(rotrExpected.toULong().toString())
             } else {
-                expectedResponse.append(andExpected).append('\n')
-                expectedResponse.append(orExpected).append('\n')
-                expectedResponse.append(xorExpected).append('\n')
+                expected.add(andExpected.toString())
+                expected.add(orExpected.toString())
+                expected.add(xorExpected.toString())
                 val extraBits = 64 - numBits
                 val invExtended = invExpected.shl(extraBits).shr(extraBits)
-                expectedResponse.append(invExtended).append('\n')
+                expected.add(invExtended.toString())
 
-                expectedResponse.append(shlExpected).append('\n')
-                expectedResponse.append(shrExpected).append('\n')
-                expectedResponse.append(ushrExpected).append('\n')
-                expectedResponse.append(rotlExpected).append('\n')
-                expectedResponse.append(rotrExpected).append('\n')
+                expected.add(shlExpected.toString())
+                expected.add(shrExpected.toString())
+                expected.add(ushrExpected.toString())
+                expected.add(rotlExpected.toString())
+                expected.add(rotrExpected.toString())
             }
 
             val typeName = type.clazz.name
@@ -925,7 +925,7 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals(expectedResponse.toString(), printed)
+        assertEqualsNumbers(expected, printed)
     }
 
     fun testInstanceOfImpl() {

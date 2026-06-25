@@ -11,7 +11,8 @@ object LoggerUtils {
                     "SimpleGetField,SimpleSetField,SimpleGetClassField,SimpleSetClassField,SimpleCall," +
                     "LambdaExpression,DataClassGenerator," +
                     "UnderdefinedValueParameter," +
-                    "Runtime,BuildCommand,CodeReconstruction"
+                    "Runtime,BuildCommand,CodeReconstruction," +
+                    "SimpleMethodCall"
         )
     }
 }

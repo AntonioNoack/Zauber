@@ -1,7 +1,12 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCppCompiler
+import me.anno.generation.cpp.CppSourceGenerator.Companion.nativeCppTypes
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.toUnsigned
+import me.anno.zauber.ast.simple.ASTSimplifier.nativeInts
+import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
@@ -47,6 +52,33 @@ class CppGenerationTests : CodeGenerationTests() {
                         "if (isinf(arg0)) printf(arg0 > 0.0 ? \"Infinity\\n\" : \"-Infinity\\n\");\n" +
                         "else if((double)(int64_t) arg0 == arg0) printf(\"%d.0\\n\",(int64_t) arg0);\n" +
                         "else printf(\"%g\\n\",arg0);\n"
+            )
+        }
+
+        // todo this should be part of CppSourceGenerator, I think...
+        for (type in nativeNumbers) {
+            JavaSourceGenerator.register(
+                type.clazz, "compareTo", listOf(type),
+                "return (content > other ? 1 : 0) - (content < other ? 1 : 0);"
+            )
+        }
+        for (type in nativeInts) {
+            val numBits =  type.getNumBits()
+            val unsignedType = type.toUnsigned()
+            val unsigned = nativeCppTypes[unsignedType]!!.native
+            // cast to unsigned is necessary to apply the correct shift
+            // could be a static-cast, too
+            JavaSourceGenerator.register(
+                type.clazz, "rotateLeft", listOf(Types.Int),
+                "" +
+                        "shift = shift & ${numBits - 1};\n" +
+                        "return (content << shift) | (($unsigned) content >> ($numBits - shift));\n"
+            )
+            JavaSourceGenerator.register(
+                type.clazz, "rotateRight", listOf(Types.Int),
+                "" +
+                        "shift = shift & ${numBits - 1};\n" +
+                        "return (content >> shift) | (($unsigned) content << ($numBits - shift));\n"
             )
         }
     }

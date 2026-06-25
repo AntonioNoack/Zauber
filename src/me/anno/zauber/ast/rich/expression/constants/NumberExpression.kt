@@ -218,6 +218,16 @@ class NumberExpression(val value: String, scope: Scope, origin: Long) : Expressi
                 Types.Short, Types.UShort, Types.Char, Types.Half -> 16
                 Types.Int, Types.UInt, Types.Float -> 32
                 Types.Long, Types.ULong, Types.Double -> 64
+                else -> error("Not a native number: $this")
+            }
+        }
+
+        fun Type.toUnsigned(): ClassType {
+            return when (this) {
+                Types.Byte, Types.UByte -> Types.UByte
+                Types.Short, Types.UShort, Types.Char -> Types.UShort
+                Types.Int, Types.UInt -> Types.UInt
+                Types.Long, Types.ULong -> Types.ULong
                 else -> error("Not an integer type: $this")
             }
         }

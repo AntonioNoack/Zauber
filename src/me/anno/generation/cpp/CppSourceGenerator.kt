@@ -19,6 +19,7 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -513,6 +514,14 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             builder.append(className) // is this supported? yes
         } else {
             appendType(superType, constructor.scope, false)
+        }
+    }
+
+    override fun getBinarySymbol(type: Type, methodName: String): String? {
+        return when (methodName) {
+            // todo signed int ushr needs casts
+            "shr", "ushr" -> ">>"
+            else -> super.getBinarySymbol(type, methodName)
         }
     }
 

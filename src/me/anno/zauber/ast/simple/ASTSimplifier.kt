@@ -51,16 +51,24 @@ object ASTSimplifier {
     val voidResult = FlowResult(null, null, null)
 
     private val cache by threadLocal { HashMap</*Method*/Specialization, SimpleGraph>() }
-    val nativeNumbers by threadLocal {
+
+    val nativeInts by threadLocal {
         Types.run {
             listOf(
                 Types.Byte, Types.UByte,
                 Types.UShort, Types.Short, Types.Char,
                 Types.UInt, Types.Int,
                 Types.Long, Types.ULong,
-                Types.Half, Types.Float, Types.Double
             )
         }
+    }
+
+    val nativeFloats by threadLocal {
+        Types.run { listOf(Types.Half, Types.Float, Types.Double) }
+    }
+
+    val nativeNumbers by threadLocal {
+        nativeInts + nativeFloats
     }
 
     fun unitInstance(graph: SimpleGraph, scope: Scope, origin: Long): SimpleField {
@@ -524,7 +532,7 @@ object ASTSimplifier {
             }
 
             val constructor = SimpleConstructorCall(
-                dst, self.use(),
+                dst, false, self.use(),
                 method0.specialization, valueParameters, scope, origin
             )
             handleThrown(
@@ -546,7 +554,7 @@ object ASTSimplifier {
             )
             val specialization = method0.specialization
             val call = SimpleConstructorCall(
-                dst, dst.use(),
+                dst, true, dst.use(),
                 specialization, valueParameters, scope, origin
             )
             LOGGER.info("Finding throw type for $method0")

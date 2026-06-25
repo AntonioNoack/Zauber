@@ -18,6 +18,7 @@ import me.anno.zauber.types.impl.ClassType
 
 class SimpleConstructorCall(
     unusedDst: SimpleField,
+    val forAllocation: Boolean,
     self: SimpleField,
     specialization: Specialization,
     valueParameters: List<SimpleField>,
@@ -46,7 +47,7 @@ class SimpleConstructorCall(
 
     override fun clone(src: SimpleGraph, dst: SimpleGraph): SimpleInstruction {
         return SimpleConstructorCall(
-            src.cloned(this.dst, dst),
+            src.cloned(this.dst, dst), forAllocation,
             src.cloned(thisInstance, dst),
             specialization, valueParameters.map { src.cloned(it, dst) },
             scope, origin

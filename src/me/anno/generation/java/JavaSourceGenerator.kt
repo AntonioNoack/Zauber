@@ -703,7 +703,6 @@ open class JavaSourceGenerator : Generator() {
         writeBlock {
             val i0 = builder.length
             builder.append(nativeImpl)
-            builder.append(";")
             nextLine()
             appendReturnIfMissing(method, i0)
         }
@@ -1301,6 +1300,7 @@ open class JavaSourceGenerator : Generator() {
     open fun canSkipInstruction(expr: SimpleInstruction): Boolean {
         if (expr is SimpleGetObject) return true
         if (expr is SimpleGetLocalField && expr.dst.dst.fromLocalField == expr.field) return true
+        if (expr is SimpleConstructorCall && expr.forAllocation) return true
         return false
     }
 
@@ -1536,14 +1536,35 @@ open class JavaSourceGenerator : Generator() {
                     if (needsCast) builder.append(')')
                     return true
                 }
-                "unaryPlus" -> {}
+                "unaryPlus" -> {
+                    // UByte and UShort need to be properly cast to Int
+                    when (thisType) {
+                        Types.UByte -> builder.append("255 & ")
+                        Types.UShort -> builder.append("65535 & ")
+                    }
+                }
                 "unaryMinus" -> {
-                    if (needsCast) {
-                        builder.append('(')
-                        appendType(expr.dst.type, expr.scope, false)
-                        builder.append(") -")
-                    } else {
-                        builder.append('-')
+                    when {
+                        thisType == Types.UByte -> {
+                            builder.append("-(255 & ")
+                            appendFieldName(graph, expr.thisInstance)
+                            builder.append(')')
+                            return true
+                        }
+                        thisType == Types.UShort -> {
+                            builder.append("-(65535 & ")
+                            appendFieldName(graph, expr.thisInstance)
+                            builder.append(')')
+                            return true
+                        }
+                        needsCast -> {
+                            builder.append('(')
+                            appendType(expr.dst.type, expr.scope, false)
+                            builder.append(") -")
+                        }
+                        else -> {
+                            builder.append('-')
+                        }
                     }
                 }
                 else -> return false
