@@ -1149,6 +1149,19 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun appendFloat(asFloat: Double, suffix: String) {
+        if (asFloat.isFinite()) builder.append(asFloat).append(suffix)
+        else appendInfinite(asFloat, suffix)
+    }
+
+    fun appendInfinite(asFloat: Double, suffix: String) {
+        if (asFloat.isNaN()) builder.append("0 / 0.0")
+        else if (asFloat.isFinite()) builder.append(asFloat)
+        else if (asFloat > 0f) builder.append("1 / 0.0") else builder.append("(-1) / 0.0")
+
+        builder.append(suffix)
+    }
+
     open fun appendNumber(type: Type, expr: NumberExpression) {
         when (type) {
             // todo how do we want to handle U-ints? ideally as ints, but whenever we call or so...
@@ -1157,8 +1170,8 @@ open class JavaSourceGenerator : Generator() {
             Types.Short, Types.UShort -> builder.append(expr.asInt.toShort())
             Types.Int, Types.UInt -> builder.append(expr.asInt.toInt())
             Types.Long, Types.ULong -> builder.append(expr.asInt).append('L')
-            Types.Float, Types.Half -> builder.append(expr.asFloat.toFloat()).append('f')
-            Types.Double -> builder.append(expr.asFloat)
+            Types.Float, Types.Half -> appendFloat(expr.asFloat, "f")
+            Types.Double -> appendFloat(expr.asFloat, "d")
             Types.Char -> {
                 builder.append('\'')
                 when (val value = expr.asInt.toInt().toChar()) {

@@ -10,14 +10,20 @@ import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
+import java.math.BigInteger
 
 /**
  * execution time: 2s,
  * main cost is loading Node via NVM, I think
  * */
 abstract class CodeGenerationTests {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(CodeGenerationTests::class)
+    }
 
     abstract fun registerLib()
     abstract fun generator(): MinimalCompiler
@@ -491,7 +497,7 @@ abstract class CodeGenerationTests {
             64992f, -64992f,
             1e38f, -1e38f,
             1e308, -1e308,
-        )
+        ).map { it.toString() }
         val runnableCode = numberTypes.joinToString("") { type ->
             val max = getBigValueForTesting(type)
             val type = type.clazz.name
@@ -546,13 +552,13 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals(expected.joinToString("") { "$it\n" }, printed)
+        assertEqualsNumbers(expected, printed)
     }
 
     fun testNumberConversionsImpl() {
         val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
         val builder = StringBuilder()
-        val expected = StringBuilder()
+        val expected = ArrayList<String>()
 
         var ctr = 0
         for (i in numberTypes.indices) {
@@ -641,17 +647,17 @@ abstract class CodeGenerationTests {
                     }
                     else -> throw NotImplementedError("Add $fromType -> $toType")
                 }
-                expected.append(expected0).append('\n')
+                expected.add(expected0)
 
                 if (fromType.isFloat()) {
                     builder.append("val v$ctr: ${fromType.clazz.name} = 1e1000\n")
                     builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
-                    expected.append(getMaxValueForTesting(toType)).append('\n')
+                    expected.add(getMaxValueForTesting(toType))
                     ctr++
 
                     builder.append("val v$ctr: ${fromType.clazz.name} = -1e1000\n")
                     builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
-                    expected.append(getMinValueForTesting(toType)).append('\n')
+                    expected.add(getMinValueForTesting(toType))
                     ctr++
                 }
             }
@@ -678,7 +684,33 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEquals(expected, printed)
+        assertEqualsNumbers(expected, printed)
+    }
+
+    fun assertEqualsNumbers(expected: List<String>, printed: String) {
+        val actual = printed.lines()
+            .filter { it.isNotEmpty() }
+        assertEquals(expected.size, actual.size)
+        var mismatches = 0
+        for (i in expected.indices) {
+            try {
+                assertEqualsNumber(expected[i], actual[i])
+            } catch (e: Throwable) {
+                LOGGER.error("Mismatch[$i] at ${e.message}")
+                mismatches++
+            }
+        }
+        assertEquals(0, mismatches) { "Must have zero mismatches" }
+    }
+
+    fun assertEqualsNumber(expected: String, actual: String) {
+        if ('I' in expected || 'N' in expected) {
+            assertEquals(expected, actual)
+        } else if ('.' in expected) {
+            assertEquals(expected.toDouble(), actual.toDouble())
+        } else {
+            assertEquals(BigInteger(expected), BigInteger(actual))
+        }
     }
 
     fun getMaxValueForTesting(type: Type): String {

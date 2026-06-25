@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
+import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -694,6 +695,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         if (headerOnly) {
             // remove self-include
             imports.remove(name)
+        }
+    }
+
+    override fun appendNumber(type: Type, expr: NumberExpression) {
+        when {
+            type.isFloat() -> appendFloat(expr.asFloat, "")
+            else -> super.appendNumber(type, expr)
         }
     }
 

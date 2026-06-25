@@ -43,7 +43,10 @@ class CppGenerationTests : CodeGenerationTests() {
             JavaSourceGenerator.register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
-                        "printf(\"%g\\n\",arg0);"
+                        "#include <math.h>\n" +
+                        "if (isinf(arg0)) printf(arg0 > 0.0 ? \"Infinity\\n\" : \"-Infinity\\n\");\n" +
+                        "else if((double)(int64_t) arg0 == arg0) printf(\"%d.0\\n\",(int64_t) arg0);\n" +
+                        "else printf(\"%g\\n\",arg0);\n"
             )
         }
     }
