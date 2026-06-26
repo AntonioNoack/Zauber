@@ -15,7 +15,7 @@ class PythonTokenizer(val source: String, fileName: String) {
         )
     }
 
-    private var n = source.length
+    private var size = source.length
     private var i = 0
 
     private val tokens = TokenList(source, fileName)
@@ -25,11 +25,11 @@ class PythonTokenizer(val source: String, fileName: String) {
 
     var bracketDepth = 0
 
-    fun tokenizeImpl(){
-        while (i < n) {
+    fun tokenizeImpl() {
+        while (i < size) {
 
             if (atLineStart) handleIndentation()
-            if (i >= n) break
+            if (i >= size) break
 
             val c = source[i]
             when {
@@ -71,7 +71,7 @@ class PythonTokenizer(val source: String, fileName: String) {
                     i++
                 }
                 c == '.' -> {
-                    if (i + 1 < n && source[i + 1].isDigit()) readNumber()
+                    if (i + 1 < size && source[i + 1].isDigit()) readNumber()
                     else tokens.add(TokenType.SYMBOL, i++, i)
                 }
                 else -> tokens.add(TokenType.SYMBOL, i++, i)
@@ -99,7 +99,7 @@ class PythonTokenizer(val source: String, fileName: String) {
         var j = i
         var spaces = 0
 
-        while (j < n) {
+        while (j < size) {
             when (source[j]) {
                 ' ' -> spaces++
                 '\t' -> spaces += 8 // CPython rule (tab = 8)
@@ -108,7 +108,7 @@ class PythonTokenizer(val source: String, fileName: String) {
             j++
         }
 
-        if (j < n && source[j] == '\n') {
+        if (j < size && source[j] == '\n') {
             i = j
             return
         }
@@ -133,32 +133,32 @@ class PythonTokenizer(val source: String, fileName: String) {
 
     private fun readIdentifier() {
         val start = i++
-        while (i < n && (source[i].isLetterOrDigit() || source[i] == '_')) i++
+        while (i < size && (source[i].isLetterOrDigit() || source[i] == '_')) i++
         tokens.add(TokenType.NAME, start, i)
     }
 
     private fun skipComment() {
         val start = i
-        while (i < n && source[i] != '\n') i++
+        while (i < size && source[i] != '\n') i++
         tokens.addComment(start, i)
     }
 
     private fun readNumber() {
         val start = i
 
-        if (source[i] == '0' && i + 1 < n) {
+        if (source[i] == '0' && i + 1 < size) {
             when (source[i + 1]) {
                 'x', 'X' -> {
                     i += 2
-                    while (i < n && (source[i].isDigit() || source[i] in "abcdefABCDEF_")) i++
+                    while (i < size && (source[i].isDigit() || source[i] in "abcdefABCDEF_")) i++
                 }
                 'b', 'B' -> {
                     i += 2
-                    while (i < n && source[i] in "01_") i++
+                    while (i < size && source[i] in "01_") i++
                 }
                 'o', 'O' -> {
                     i += 2
-                    while (i < n && source[i] in "01234567_") i++
+                    while (i < size && source[i] in "01234567_") i++
                 }
                 else -> readDecimal()
             }
@@ -168,23 +168,23 @@ class PythonTokenizer(val source: String, fileName: String) {
     }
 
     private fun readDecimal() {
-        while (i < n && (source[i].isDigit() || source[i] == '_')) i++
-        if (i < n && source[i] == '.') {
+        while (i < size && (source[i].isDigit() || source[i] == '_')) i++
+        if (i < size && source[i] == '.') {
             i++
-            while (i < n && (source[i].isDigit() || source[i] == '_')) i++
+            while (i < size && (source[i].isDigit() || source[i] == '_')) i++
         }
-        if (i < n && source[i] in "eE") {
+        if (i < size && source[i] in "eE") {
             i++
-            if (i < n && source[i] in "+-") i++
-            while (i < n && (source[i].isDigit() || source[i] == '_')) i++
+            if (i < size && source[i] in "+-") i++
+            while (i < size && (source[i].isDigit() || source[i] == '_')) i++
         }
     }
 
     // Strings and F-Strings
     private fun isStringStart(pos: Int): Boolean {
         var j = pos
-        while (j < n && source[j].lowercaseChar() in "rfbu") j++
-        return j < n && (source[j] == '"' || source[j] == '\'')
+        while (j < size && source[j].lowercaseChar() in "rfbu") j++
+        return j < size && (source[j] == '"' || source[j] == '\'')
     }
 
     private fun readString() {
@@ -192,13 +192,13 @@ class PythonTokenizer(val source: String, fileName: String) {
 
         var isF = false
 
-        while (i < n && source[i].lowercaseChar() in "rfbu") {
+        while (i < size && source[i].lowercaseChar() in "rfbu") {
             if (source[i].lowercaseChar() == 'f') isF = true
             i++
         }
 
         val quote = source[i]
-        val triple = i + 2 < n && source[i + 1] == quote && source[i + 2] == quote
+        val triple = i + 2 < size && source[i + 1] == quote && source[i + 2] == quote
         i += if (triple) 3 else 1
 
         if (isF) {
@@ -209,7 +209,7 @@ class PythonTokenizer(val source: String, fileName: String) {
     }
 
     private fun readPlainString(start: Int, quote: Char, triple: Boolean) {
-        while (i < n) {
+        while (i < size) {
             val c = source[i]
             if (c == '\\') {
                 i += 2
@@ -244,11 +244,11 @@ class PythonTokenizer(val source: String, fileName: String) {
                 tokens.add(TokenType.STRING, chunkStart, end)
         }
 
-        while (i < n) {
+        while (i < size) {
             when (source[i]) {
                 '\\' -> i += 2
                 '{' -> {
-                    if (i + 1 < n && source[i + 1] == '{') {
+                    if (i + 1 < size && source[i + 1] == '{') {
                         i += 2 // escaped {{
                         continue
                     }
@@ -258,22 +258,23 @@ class PythonTokenizer(val source: String, fileName: String) {
                     tokens.add(TokenType.APPEND_STRING, i, i + 1)
                     tokens.add(TokenType.OPEN_CALL, i, i)
 
-                    i++
-                    val exprStart = i
+                    val exprStart = ++i
                     val exprEnd = findFExprEnd()
 
-                    val oldI = i
-                    val oldN = n
+                    // val oldI = i
+                    val oldSize = size
                     i = exprStart
-                    n = exprEnd
+                    size = exprEnd
 
                     // recursive tokenize expression
                     bracketDepth++
                     tokenizeImpl()
                     bracketDepth--
 
-                    i = oldI
-                    n = oldN
+                    // i = oldI
+                    check(i == exprEnd)
+                    i = exprEnd + 1
+                    size = oldSize
 
                     tokens.add(TokenType.CLOSE_CALL, i, i)
                     tokens.add(TokenType.APPEND_STRING, i, i)
@@ -281,7 +282,7 @@ class PythonTokenizer(val source: String, fileName: String) {
                     chunkStart = i
                 }
                 '}' -> {
-                    if (i + 1 < n && source[i + 1] == '}') {
+                    if (i + 1 < size && source[i + 1] == '}') {
                         i += 2
                         continue
                     } else i++
@@ -312,22 +313,24 @@ class PythonTokenizer(val source: String, fileName: String) {
         var depth = 0
         var j = i
 
-        while (j < n) {
-            when (source[j]) {
-                '{' -> depth++
-                '}' -> {
+        while (j < size) {
+            when (val start = source[j]) {
+                in "([{" -> depth++
+                in ")]}" -> {
                     if (depth == 0) return j
                     depth--
                 }
-                '"', '\'' -> {
-                    val start = j
+                in "'\"" -> {
                     j++
-                    while (j < n && source[j] != source[start]) j++
+                    while (j < size && source[j] != start) {
+                        j += if (source[j] == '\\') 2 // skip
+                        else 1
+                    }
                 }
             }
             j++
         }
-        return n
+        return size
     }
 
     private fun convertKeywords() {

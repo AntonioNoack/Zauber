@@ -258,6 +258,15 @@ class PythonTokenizerTests {
     }
 
     @Test
+    fun testProblematicFString() {
+        val src = "with group(f\"Test {'XCframework' if host in {'all', 'hosts'} else host}\"):"
+        assertEquals(
+            "with group ( f ( Test  { ( 'XCframework' if host in { 'all' , 'hosts' } else host ) APPEND_STRING ) ) :",
+            tokenize(src).toDebugString()
+        )
+    }
+
+    @Test
     fun testLargeInput() {
         val src = buildString {
             repeat(1000) {

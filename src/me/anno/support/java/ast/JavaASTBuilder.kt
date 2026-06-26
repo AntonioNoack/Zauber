@@ -36,6 +36,7 @@ import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.typeresolution.CallWithNames.createArrayOfExpr
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.TypeResolution.langScope
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
@@ -507,7 +508,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             consumeIf("*") -> {
                 ArrayToVarargsStar(readExpression())
             }
-            consumeIf("::") -> {
+            (isKotlinLike() || language == Language.JAVA) && consumeIf("::") -> {
                 val name = consumeName(VSCodeType.METHOD, 0)
                 // :: means a function of the current class, or 'new' for constructors
                 DoubleColonLambda(currPackage, name, currPackage, origin)
@@ -620,6 +621,13 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 tokens.printTokensInBlocks(max(i - 5, 0))
                 throw NotImplementedError("Unknown expression part at ${tokens.err(i)}")
             }
+        }
+    }
+
+    private fun isKotlinLike(): Boolean {
+        return when (language) {
+            Language.ZAUBER, Language.KOTLIN -> true
+            else -> false
         }
     }
 
@@ -872,7 +880,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
     }
 
     open fun readExpressionImpl(minPrecedence: Int): Expression {
-        println("Reading exprImpl at ${tokens.err(i)}")
+        // println("Reading exprImpl at ${tokens.err(i)}")
         var expr = readPrefix()
         if (LOGGER.isDebugEnabled) LOGGER.debug("prefix: $expr")
 
@@ -890,17 +898,6 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 }
 
             if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
-
-            if (language == Language.PYTHON) {
-                if (symbol == "is" && tokens.equals(i + opLength, "not")) {
-                    symbol = "!is"
-                    opLength++
-                }
-                if (symbol == "not" && tokens.equals(i + opLength, "in")) {
-                    symbol = "!in"
-                    opLength++
-                }
-            }
 
             val op = getOperator(symbol)
             if (op == null) {
@@ -920,62 +917,79 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
                 val scope = currPackage
                 // println("binary[$symbol], $opLength, next: ${tokens.err(i)}")
-                expr = when (symbol) {
-                    language.instanceOfName -> {
-                        val type = readTypeNotNull(null, true)
-                        val base = IsInstanceOfExpr(expr, type, scope, origin)
-                        if (tokens.equals(i, TokenType.NAME)) {
-                            // assign to temporary field to avoid double-invocation
-                            val tmpField = currPackage.createImmutableField(base.value)
-                            val tmpExpr = FieldExpression(tmpField, currPackage, origin)
-                            val baseWithTmp = base.withValue(tmpExpr)
-                            NamedCastExpression(baseWithTmp, tokens.toString(i++))
-                        } else base
-                    }
-                    // todo validate that this is sufficient for elvis expressions
-                    "?" -> createBranchExpression(
-                        expr, scope, origin,
-                        { fieldExpr -> fieldExpr },
-                        { _, scope ->
-                            pushScope(scope) { readExpression() }
-                        },
-                        { scope ->
-                            consume(":")
-                            pushScope(scope) { readExpression() }
-                        },
-                    )
-                    "." -> {
-                        if (consumeIf("class")) {
-                            val type = when (expr) {
-                                is TypeExpression -> expr.type
-                                is UnresolvedFieldExpression -> nativeJavaTypes[expr.name]
-                                    ?: currPackage.resolveType(expr.name, imports)
-                                else -> error("$expr (${expr.javaClass.simpleName}) is a type...")
-                            }
-                            GetClassFromTypeExpression(type, scope, origin)
-                        } else {
-                            handleDotOperator(expr)
-                        }
-                    }
-                    "&&", "||" -> handleShortcutOperator(expr, symbol, op, scope, origin)
-                    "::" -> {
-                        val rhs = if (consumeIf("new")) {
-                            UnresolvedFieldExpression("new", emptyList(), scope, origin)
-                        } else {
-                            readRHS(op)
-                        }
-                        binaryOp(currPackage, expr, op.symbol, rhs)
-                    }
-                    else -> {
-                        // println("Reading RHS, symbol: $symbol")
-                        val rhs = readRHS(op)
-                        binaryOp(currPackage, expr, op.symbol, rhs)
-                    }
-                }
+                expr = handleBinaryOperator(expr, symbol, op, scope, origin)
             }
         }
 
         return expr
+    }
+
+    open fun createInstanceOfExpr(
+        expr: Expression, scope: Scope, origin: Long,
+        negated: Boolean
+    ): Expression {
+        val type = readTypeNotNull(null, true)
+        val base = IsInstanceOfExpr(expr, type, scope, origin)
+        val value = if (tokens.equals(i, TokenType.NAME)) {
+            // assign to temporary field to avoid double-invocation
+            val tmpField = currPackage.createImmutableField(base.value)
+            val tmpExpr = FieldExpression(tmpField, currPackage, origin)
+            val baseWithTmp = base.withValue(tmpExpr)
+            NamedCastExpression(baseWithTmp, tokens.toString(i++))
+        } else base
+        return if (negated) value.not() else value
+    }
+
+    open fun handleBinaryOperator(
+        expr: Expression,
+        symbol: String,
+        op: Operator,
+        scope: Scope,
+        origin: Long
+    ): Expression {
+        return when (symbol) {
+            language.instanceOfName -> createInstanceOfExpr(expr, scope, origin, false)
+            language.notInstanceOfName -> createInstanceOfExpr(expr, scope, origin, true)
+            // todo validate that this is sufficient for elvis expressions
+            "?" -> createBranchExpression(
+                expr, scope, origin,
+                { fieldExpr -> fieldExpr },
+                { _, scope ->
+                    pushScope(scope) { readExpression() }
+                },
+                { scope ->
+                    consume(":")
+                    pushScope(scope) { readExpression() }
+                },
+            )
+            "." -> {
+                if (consumeIf("class")) {
+                    val type = when (expr) {
+                        is TypeExpression -> expr.type
+                        is UnresolvedFieldExpression -> nativeJavaTypes[expr.name]
+                            ?: currPackage.resolveType(expr.name, imports)
+                        else -> error("$expr (${expr.javaClass.simpleName}) is a type...")
+                    }
+                    GetClassFromTypeExpression(type, scope, origin)
+                } else {
+                    handleDotOperator(expr)
+                }
+            }
+            "&&", "||" -> handleShortcutOperator(expr, symbol, op, scope, origin)
+            "::" -> {
+                val rhs = if (consumeIf("new")) {
+                    UnresolvedFieldExpression("new", emptyList(), scope, origin)
+                } else {
+                    readRHS(op)
+                }
+                binaryOp(currPackage, expr, op.symbol, rhs)
+            }
+            else -> {
+                // println("Reading RHS, symbol: $symbol")
+                val rhs = readRHS(op)
+                binaryOp(currPackage, expr, op.symbol, rhs)
+            }
+        }
     }
 
     open fun tryReadPostfix(expr: Expression): Expression? {

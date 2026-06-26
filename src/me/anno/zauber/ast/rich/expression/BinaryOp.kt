@@ -1,13 +1,13 @@
 package me.anno.zauber.ast.rich.expression
 
 import me.anno.zauber.ast.rich.TokenListIndex.mergeOrigins
-import me.anno.zauber.ast.rich.parser.ASTBuilderBase
-import me.anno.zauber.ast.rich.parameter.NamedParameter
 import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.resolved.ThisExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusAssignName
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
+import me.anno.zauber.ast.rich.parameter.NamedParameter
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.types.BooleanUtils.not
@@ -20,6 +20,14 @@ fun ASTBuilderBase.binaryOp(
     scope: Scope, left: Expression, symbol: String, right: Expression,
     origin: Long = mergeOrigins(left.origin, right.origin)
 ): Expression {
+
+    check(
+        symbol != "is" && symbol != "!is" &&
+                symbol != "as" && symbol != "!as"
+    ) {
+        "'$symbol' expects a type, it must be handled earlier than this"
+    }
+
     return when (symbol) {
         "<=" -> CompareOp(left, right, CompareType.LESS_EQUALS, scope, origin)
         "<" -> CompareOp(left, right, CompareType.LESS, scope, origin)
@@ -141,6 +149,7 @@ fun lookupBinaryOp(symbol: String, origin: Long): String {
         "-" -> "minus"
         "*" -> "times"
         "/" -> "div"
+        "//" -> "intDiv"
         "%" -> "rem"
         ".." -> "rangeTo"
         "..<" -> "until"
@@ -151,6 +160,7 @@ fun lookupBinaryOp(symbol: String, origin: Long): String {
         "&", "and" -> "and"
         "^" -> "xor"
         "|", "or" -> "or"
+        "**" -> "pow"
         else -> {
             LOGGER.warn("Unknown binary op: $symbol at ${resolveOrigin(origin)}")
             symbol

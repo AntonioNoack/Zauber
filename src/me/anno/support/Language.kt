@@ -27,6 +27,12 @@ enum class Language {
             else -> null
         }
 
+    val notInstanceOfName: String?
+        get() = when (this) {
+            PYTHON, ZAUBER, KOTLIN -> "!is"
+            else -> null
+        }
+
     companion object {
         fun byFileName(fileName: String): Language {
             return when {

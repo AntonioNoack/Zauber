@@ -29,7 +29,9 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     private var tokenTypes = ByteArray(16)
     private var offsets = IntArray(32)
-    val totalSize get() = tokenTypes.size
+
+    var totalSize = 0
+        private set
 
     var comments = i0
     var numComments = 0
@@ -335,11 +337,16 @@ class TokenList(val source: CharSequence, val fileName: String) {
             // extend symbol
             offsets[size * 2 - 1] = i1
         } else {
-            tokenTypes[size] = type.ordinal.toByte()
-            offsets[size * 2] = i0
-            offsets[size * 2 + 1] = i1
-            size++
+            addUnsafe(type, i0, i1)
         }
+    }
+
+    fun addUnsafe(type: TokenType, i0: Int, i1: Int) {
+        tokenTypes[size] = type.ordinal.toByte()
+        offsets[size * 2] = i0
+        offsets[size * 2 + 1] = i1
+        size++
+        totalSize = size
     }
 
     fun equals(i: Int, type: TokenType): Boolean {
@@ -534,8 +541,16 @@ class TokenList(val source: CharSequence, val fileName: String) {
     fun toDebugString(i0: Int, i1: Int): String =
         (i0 until i1).joinToString(" ") { index ->
             val str = toStringUnsafe(index)
-            if (getTypeUnsafe(index) != TokenType.STRING && str.any { it.isWhitespace() }) "\"$str\""
-            else str
+            val type = getTypeUnsafe(index)
+            when {
+                type == TokenType.OPEN_CALL -> "("
+                type == TokenType.CLOSE_CALL -> ")"
+                type == TokenType.INDENT -> "//"
+                type == TokenType.DEDENT -> "\\\\"
+                str.isEmpty() -> type.name
+                type != TokenType.STRING && str.any { it.isWhitespace() } -> "\"$str\""
+                else -> str
+            }
         }
 
     fun extractString(i0x: Int, i1x: Int): String {

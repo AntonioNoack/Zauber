@@ -11,17 +11,20 @@ class PythonASTTest {
     fun testReadingPython() {
         val source = File("/mnt/LinuxGames/Code/cpython")
         TokenizerBench.execute(source, "py") { src, fileName ->
-
-            println("Reading $fileName")
-
             val tokens = PythonTokenizer(src, fileName)
                 .tokenize()
 
             tokens.validateBlocks()
 
-            PythonASTBuilder(tokens, root)
-                .readFileLevel()
+            if (fileName.endsWith("_xxtestfuzz/fuzz_pycompile_corpus/input2.py")) {
+                // ignored, intentional compiler error
+            } else {
 
+                println("Reading $fileName")
+                PythonASTBuilder(tokens, root)
+                    .readFileLevel()
+
+            }
             tokens.size
         }
     }

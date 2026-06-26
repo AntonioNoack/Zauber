@@ -4,6 +4,7 @@ import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
 import me.anno.support.java.ast.JavaASTBuilder
+import me.anno.support.python.EitherOr
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.controlflow.*
@@ -28,6 +29,7 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 
 class PythonASTBuilder(tokens: TokenList, root: Scope) :
     JavaASTBuilder(tokens, root, true, Language.PYTHON) {
@@ -38,10 +40,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
         val extraOperators = mapOf(
             ":=" to Operator(":=", 1, Associativity.RIGHT),
-            "is" to Operator("is", 10, Associativity.LEFT),
-            "!is" to Operator("!is", 10, Associativity.LEFT),
+
             "in" to Operator("in", 10, Associativity.LEFT),
             "!in" to Operator("!in", 10, Associativity.LEFT),
+
+            "//" to Operator("//", 20, Associativity.LEFT),
+            "**" to Operator("**", 25, Associativity.LEFT),
         )
     }
 
@@ -86,6 +90,17 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     pushExpression(BreakExpression(label, currPackage, origin(i - 1)))
                 }
 
+                consumeIf("if") -> pushExpression(readIfBranch())
+                consumeIf("while") -> pushExpression(readWhileLoop(null))
+                consumeIf("with") -> pushExpression(readWith())
+                consumeIf("try") -> pushExpression(readTryCatch())
+                consumeIf("match") -> pushExpression(readMatch())
+                consumeIf("pass") -> {} // end of block
+                consumeIf("@") -> annotations.add(readAnnotation())
+                consumeIf("global") -> readGlobalVariables()
+                consumeIf("nonlocal") -> readNonLocalVariables()
+                consumeIf("assert") -> readAssert()
+
                 tokens.equals(i, "async") && tokens.equals(i + 1, "def") -> {
                     // todo async flag? does it make a difference in python for our execution model?
                     consume("async")
@@ -107,7 +122,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                             do {
                                 list.add(readExpression())
                             } while (consumeIf(","))
-                            namedCall1("tupleOf", list.map { NamedParameter(it) }, origin)
+                            namedCall("tupleOf", list, origin)
                         } else {
                             expr
                         }
@@ -117,7 +132,10 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
                 consumeIf("raise") -> {
                     val origin = origin(i - 1)
-                    pushExpression(ThrowExpression(readExpression(), currPackage, origin))
+                    val body = if (tokens.isSameLine(i - 1, i)) {
+                        readExpression()
+                    } else unitInstance // todo we're inside a catch-block, use its field, (even if unnamed)
+                    pushExpression(ThrowExpression(body, currPackage, origin))
                     if (consumeIf("from")) {
                         consume("None")
                         // todo this somehow suppresses "exception chaining":
@@ -125,12 +143,6 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                         //  but in this case, no 'e' shall be passed
                     }
                 }
-
-                consumeIf("if") -> pushExpression(readIfBranch())
-                consumeIf("while") -> pushExpression(readWhileLoop(null))
-                consumeIf("with") -> pushExpression(readWith())
-                consumeIf("try") -> pushExpression(readTryCatch())
-                consumeIf("match") -> pushExpression(readMatch())
 
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                         tokens.equals(i + 1, "=", ",", "+=", "-=", "*=", "/=") -> readAssignment(false)
@@ -141,8 +153,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                         tokens.equals(i + 1, "[") -> pushExpression(readExpression())
 
-                tokens.equals(i, "await") -> {
-                    i++
+                consumeIf("await") -> {
                     // todo wait for it??
                     pushExpression(readExpression())
                 }
@@ -165,16 +176,44 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     pushExpression(readWith())
                 }
 
-                consumeIf("pass") -> {} // end of block
-                consumeIf("@") -> annotations.add(readAnnotation())
-                consumeIf("global") -> readGlobalVariables()
-                consumeIf("nonlocal") -> readNonLocalVariables()
-
                 tokens.equals(i, TokenType.STRING) && !tokens.isSameLine(i, i + 1) -> i++ // skip documentation
 
                 else -> throw NotImplementedError("Unexpected token at ${tokens.err(i)}")
             }
         }
+    }
+
+    override fun readOperatorSymbol(): Pair<String, Int>? {
+
+        if (tokens.equals(i, "is")) {
+            return if (tokens.equals(i + 1, "not")) "!is" to 2
+            else "is" to 1
+        }
+
+        if (tokens.equals(i, "not") && tokens.equals(i + 1, "in")) {
+            return "!in" to 2
+        }
+
+        if (tokens.equals(i, "in")) {
+            return "in" to 1
+        }
+
+        if (tokens.equals(i, "as")) {
+            return null
+        }
+
+        return super.readOperatorSymbol()
+    }
+
+    fun readAssert() {
+        val origin = origin(i - 1)
+        val condition = readExpression()
+        val message = if (consumeIf(",")) {
+            readExpression()
+        } else {
+            StringExpression("Assertion failed", currPackage, origin)
+        }
+        pushExpression(namedCall("assert", listOf(condition, message), origin))
     }
 
     override fun readAndApplyImport() {
@@ -259,6 +298,11 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         i = nextI
 
         consume("import")
+        if (consumeIf("*")) {
+            val childImport = Import(parentImport.path, allChildren = true, parentImport.name)
+            return applyImport(childImport)
+        }
+
         do {
             val childName = consumeName(VSCodeType.VARIABLE, 0)
             val importName = if (consumeIf("as")) {
@@ -356,12 +400,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 }
                 val value0 = readExpression()
                 val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                val value1 = namedCall1(
-                    symbol, listOf(
-                        NamedParameter(nameExpr),
-                        NamedParameter(value0)
-                    ), origin
-                )
+                val value1 = namedCall(symbol, listOf(nameExpr, value0), origin)
                 pushExpression(AssignmentExpression(nameExpr, value1))
             }
         }
@@ -516,12 +555,15 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             }
 
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
-                // array
+                // dict or set
                 val origin = origin(i)
-                val elements = pushScope(ScopeType.METHOD_BODY, "dict") {
-                    pushBlock { readValueParametersBody() }
+                val eitherOr = pushScope(ScopeType.METHOD_BODY, "dict") {
+                    pushBlock { readDictOrSet() }
                 }
-                namedCall1("createDict", elements, origin)
+                eitherOr.map({ pair ->
+                    val (elements, isDict) = pair
+                    namedCall(if (isDict) "createDict" else "createSet", elements, origin)
+                }, { expr -> expr })
             }
 
             isFString(i) -> readFString()
@@ -547,7 +589,54 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 tokens.equals(i + 1, TokenType.OPEN_CALL)
     }
 
-    fun readForMappingExpression(inner: Expression): Expression {
+    fun readDictOrSet(): EitherOr<Pair<List<Expression>, Boolean>, Expression> {
+        if (i >= tokens.size) return EitherOr(emptyList<Expression>() to true) /* default is dict */
+
+        var isDict = false
+        val properties = ArrayList<Expression>()
+        while (i < tokens.size) {
+            skipIndentsAndDedents()
+
+            val key = readExpression()
+            if (tokens.equals(i, "for")) {
+                check(properties.isEmpty())
+                val value = readForLoopForSet(key)
+                skipIndentsAndDedents()
+                return EitherOr(value, Unit)
+            }
+
+            if (consumeIf(":")) {
+                val value = readExpression()
+                check(properties.isEmpty() || isDict)
+
+                if (tokens.equals(i, "for")) {
+                    TODO("Read for-loop for dict: ${tokens.err(i - 1)}")
+                }
+
+                properties.add(key)
+                properties.add(value)
+                isDict = true
+            } else {
+                check(properties.isEmpty() || !isDict)
+                properties.add(key)
+                isDict = false
+            }
+            skipIndentsAndDedents()
+            readComma()
+            skipIndentsAndDedents()
+        }
+        return EitherOr(properties to isDict)
+    }
+
+    fun readForLoopForArray(inner: Expression): Expression {
+        return readForLoopForAnyCollection(inner, "ArrayList")
+    }
+
+    fun readForLoopForSet(inner: Expression): Expression {
+        return readForLoopForAnyCollection(inner, "HashSet")
+    }
+
+    fun readForLoopForAnyCollection(inner: Expression, typeName: String): Expression {
         val innerScope = currPackage
         val outerScope = innerScope.parent!!
 
@@ -572,7 +661,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }
         return ExpressionList(
             outerScope, origin,
-            AssignmentExpression(resultFieldExpr, namedCall("ArrayList", emptyList(), origin)),
+            AssignmentExpression(resultFieldExpr, namedCall(typeName, emptyList(), origin)),
             createForLoop(variableNames, hasComma, fields, iterable, body1, null, origin)
         )
     }
@@ -593,7 +682,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             while (tokens.equals(i, "for")) {
                 check(elements.isEmpty())
                 mustBeLast = true
-                expr = readForMappingExpression(expr)
+                expr = readForLoopForArray(expr)
             }
             if (isVarDictStar) expr = ArrayToVarDictStar(expr)
 
@@ -629,19 +718,29 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                         var format = ""
                         val expr = pushCall {
                             val expr = readExpression()
-                            if (consumeIf("!")) {
-                                while (i < tokens.size) {
-                                    format += tokens.toString(i++)
+                            // println("fString-Expr: $expr")
+                            when {
+                                consumeIf("!") -> {
+                                    format = "!"
+                                    while (i < tokens.size) {
+                                        format += tokens.toString(i++)
+                                    }
+                                }
+                                consumeIf(":") -> {
+                                    format = ":"
+                                    while (i < tokens.size) {
+                                        format += tokens.toString(i++)
+                                    }
                                 }
                             }
                             expr
                         }
-                        val call = namedCall1(
+                        val call = namedCall(
                             "strFormat", if (format == "") {
-                                listOf(NamedParameter(expr))
+                                listOf(expr)
                             } else {
                                 val formatExpr = StringExpression(format, currPackage, origin)
-                                listOf(NamedParameter(expr), NamedParameter(formatExpr))
+                                listOf(expr, formatExpr)
                             }, origin
                         )
                         parts.add(call)
@@ -675,12 +774,14 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 val other = readExpression()
                 namedCall("strConcat", listOf(expr, other), origin)
             }
-            tokens.equals(i, ":") && !tokens.equals(i + 1, TokenType.INDENT) -> {
+            false && tokens.equals(i, ":") && !tokens.equals(i + 1, TokenType.INDENT) -> {
                 consume(":")
                 // todo use the proper names...
                 // todo it can start with a colon, too, I believe...
                 val origin = origin(i)
-                if (tokens.equals(i, ",", "]", ")", "}")) {
+                if (tokens.equals(i, TokenType.COMMA, TokenType.CLOSE_BLOCK) ||
+                    tokens.equals(i, TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY)
+                ) {
                     return namedCall("rangeToUndef", expr, origin)
                 }
                 val other = readExpression()
@@ -699,12 +800,38 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     }
                     IfElseBranch(condition, expr, other)
                 } else {
+                    // println("Rejecting inline if-else at ${tokens.err(i0)}")
                     // not an inline-if -> skip
                     i = i0
                     super.tryReadPostfix(expr)
                 }
             }
+            tokens.equals(i, TokenType.OPEN_ARRAY) -> readArrayAccess(expr)
             else -> super.tryReadPostfix(expr)
+        }
+    }
+
+    fun readArrayAccess(expr: Expression): Expression {
+        return pushArray {
+            val origin = origin(i - 1)
+            // start:stop:step
+            if (consumeIf("::")) {
+                val step = readExpression()
+                namedCall("arrayStep", listOf(expr, step), origin)
+            } else if (consumeIf(":")) {
+                val stop = readExpression()
+                namedCall("arrayUntilStop", listOf(expr, stop), origin)
+            } else {
+                val index = readExpression()
+                if (consumeIf(":")) {
+                    val stop = readExpression()
+                    consume(":")
+                    val step = readExpression()
+                    namedCall("arraySub", listOf(expr, index, stop, step), origin)
+                } else {
+                    namedCall("arrayGet", listOf(expr, index), origin)
+                }
+            }
         }
     }
 
@@ -892,7 +1019,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 val end0 = tokens.findToken(i, ":")
                 val end1 = if (tokens.equals(end0 - 2, "as")) end0 - 2 else end0
                 push(end1) {
-                    readTypeNotNull(null, true)
+                    readThrownType()
                 }.apply { i-- }
             } else pythonInstanceType
             val variableName = if (consumeIf("as")) {
@@ -947,6 +1074,22 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
         } else {
             TryCatchBlock(tryBody, catches, finally, currPackage, origin)
+        }
+    }
+
+    fun readThrownType(): Type {
+        return if (tokens.equals(i, TokenType.OPEN_CALL)) {
+            pushCall {
+                val types = ArrayList<Type>()
+                while (i < tokens.size) {
+                    val typeI = readTypeNotNull(null, true)
+                    types.add(typeI)
+                    readComma()
+                }
+                unionTypes(types)
+            }
+        } else {
+            readTypeNotNull(null, true)
         }
     }
 

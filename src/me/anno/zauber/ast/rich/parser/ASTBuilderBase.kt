@@ -11,6 +11,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
 import me.anno.zauber.types.Import
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.GenericType
 
 open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: Language) {
@@ -239,7 +240,12 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
             // todo this should be smarter w.r.t. when we access a child member,
             //  and we have multiple candidates (class and interfaces or multiple interfaces)
             //  we can at least check whether the member exists in the super class, and prefer that one
-            if (parents.isEmpty()) error("Cannot access super in $scope")
+            if (parents.isEmpty()) {
+                LOGGER.warn("Cannot access super in $scope, because no parent is known")
+                check(scope != Types.Any.clazz)
+                return Types.Any.clazz
+            }
+
             if (parents.size == 1) return parents[0].type.clazz
 
             val uniqueScopes = parents.map { it.type.clazz }

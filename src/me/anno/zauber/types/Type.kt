@@ -105,7 +105,7 @@ abstract class Type {
         error("Failed to resolve $self, too complicated, maybe a recursive type?")
     }
 
-    fun resolveImpl(selfScope: Scope?): Type {
+    open fun resolveImpl(selfScope: Scope?): Type {
         return when (this) {
             is LambdaType -> {
                 LambdaType(selfType?.resolve(selfScope), parameters.map {
