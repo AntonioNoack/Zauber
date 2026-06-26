@@ -596,7 +596,7 @@ abstract class ZauberASTBuilderBase(
             return UnknownType
         }
 
-        if (tokens.equals(i, TokenType.OPEN_CALL)) {
+        if (tokens.equals(i, TokenType.OPEN_CALL) && (language == Language.ZAUBER || language == Language.KOTLIN)) {
             val endI = tokens.findBlockEnd(i, TokenType.OPEN_CALL, TokenType.CLOSE_CALL)
             val lambdaSymbolForTypes = when {
                 this is TypeScriptClassScanner -> "=>"
@@ -675,7 +675,7 @@ abstract class ZauberASTBuilderBase(
         return baseType
     }
 
-    fun readTypeParameters(selfType: Type?): List<Type>? {
+    open fun readTypeParameters(selfType: Type?): List<Type>? {
         if (i < tokens.size) {
             if (LOGGER.isDebugEnabled) LOGGER.debug(
                 "checking for type-args, ${tokens.err(i)}, ${
@@ -1040,7 +1040,7 @@ abstract class ZauberASTBuilderBase(
         i = nextI
     }
 
-    fun readAndApplyImport() {
+    open fun readAndApplyImport() {
         val (import, nextI) = tokens.readImport(i)
         markNamespace(nextI)
         i = nextI

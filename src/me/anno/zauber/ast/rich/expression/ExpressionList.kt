@@ -11,6 +11,8 @@ import me.anno.zauber.types.Types
 
 class ExpressionList(val list: List<Expression>, scope: Scope, origin: Long) : Expression(scope, origin) {
 
+    constructor(scope: Scope, origin: Long, vararg expr: Expression) : this(expr.asList(), scope, origin)
+
     override fun toStringImpl(depth: Int): String {
         return if (list.size <= 1) "[${list.joinToString("; ") { it.toString(depth) }}]"
         else "[${list.joinToString(";") { "\n  " + it.toString(depth) }}]"

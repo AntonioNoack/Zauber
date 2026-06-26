@@ -116,6 +116,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         var depth = 1
         var j = i + 1
         while (depth > 0) {
+            if (j >= size) error("Could not find '$close' after ${err(i)}")
             if (equals(j, open)) depth++
             else if (equals(j, close)) depth--
             else when (getType(j)) {

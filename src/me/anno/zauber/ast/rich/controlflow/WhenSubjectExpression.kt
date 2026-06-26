@@ -91,5 +91,5 @@ fun ASTBuilderBase.whenSubjectToIfElseChain(
     }
 
     val whenExpression = whenBranchToIfElseChain(cases, subject.scope, origin)
-    return ExpressionList(listOf(assignment, whenExpression), subject.scope, origin)
+    return ExpressionList(subject.scope, origin, assignment, whenExpression)
 }

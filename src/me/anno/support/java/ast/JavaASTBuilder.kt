@@ -547,7 +547,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                             val sizeExpr = NumberExpression(size.toString(), currPackage, origin)
                             ConstructorExpression(
                                 Types.Array.clazz, listOf(type.type),
-                                listOf(NamedParameter( sizeExpr)), null,
+                                listOf(NamedParameter(sizeExpr)), null,
                                 currPackage, origin
                             )
                         }
@@ -702,7 +702,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val rhs = readExpression()
         return createCastExpression(rhs, currPackage, origin, type) { ifFalseScope ->
             val debugInfoExpr = StringExpression(rhs.toString(), ifFalseScope, origin)
-            val debugInfoParam = NamedParameter( debugInfoExpr)
+            val debugInfoParam = NamedParameter(debugInfoExpr)
             CallExpression(
                 UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                 emptyList(), listOf(debugInfoParam), origin
@@ -879,7 +879,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         // main elements
         loop@ while (i < tokens.size) {
             // println("next token: ${tokens.err(i)}")
-            val (symbol, opLength) = readOperatorSymbol()
+            var (symbol, opLength) = readOperatorSymbol()
                 ?: when (tokens.getType(i)) {
                     TokenType.NAME -> break@loop
                     else -> {
@@ -890,6 +890,17 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 }
 
             if (LOGGER.isDebugEnabled) LOGGER.debug("symbol $symbol, valid? ${symbol in operators}")
+
+            if (language == Language.PYTHON) {
+                if (symbol == "is" && tokens.equals(i + opLength, "not")) {
+                    symbol = "!is"
+                    opLength++
+                }
+                if (symbol == "not" && tokens.equals(i + opLength, "in")) {
+                    symbol = "!in"
+                    opLength++
+                }
+            }
 
             val op = getOperator(symbol)
             if (op == null) {
@@ -1096,10 +1107,10 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
                     val checkName = UnresolvedFieldExpression("check", emptyList(), currPackage, origin)
                     val params = if (message == null) {
-                        listOf(NamedParameter( expr))
+                        listOf(NamedParameter(expr))
                     } else {
                         val lambda = LambdaExpression(emptyList(), currPackage, message)
-                        listOf(NamedParameter( expr), NamedParameter( lambda))
+                        listOf(NamedParameter(expr), NamedParameter(lambda))
                     }
                     result += CallExpression(checkName, emptyList(), params, origin)
                 }

@@ -36,9 +36,8 @@ fun createBranchExpression(
     val ifTrueExpr = ifTrueExpr(FieldExpression(tmpField, ifTrueScope, origin), ifTrueScope)
     val ifFalseExpr = ifFalseExpr(ifFalseScope)
     return ExpressionList(
-        listOf(
-            AssignmentExpression(fieldExpr, expr),
-            IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
-        ), scope, origin
+        scope, origin,
+        AssignmentExpression(fieldExpr, expr),
+        IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
     )
 }

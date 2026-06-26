@@ -39,12 +39,35 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         val extraOperators = mapOf(
             ":=" to Operator(":=", 1, Associativity.RIGHT),
             "is" to Operator("is", 10, Associativity.LEFT),
+            "!is" to Operator("!is", 10, Associativity.LEFT),
+            "in" to Operator("in", 10, Associativity.LEFT),
+            "!in" to Operator("!in", 10, Associativity.LEFT),
         )
     }
 
     override fun readTypePath(selfType: Type?): Type? {
         return if (consumeIf("None")) noneType
         else super.readTypePath(selfType)
+    }
+
+    override fun readTypeParameters(selfType: Type?): List<Type>? {
+        if (tokens.equals(i, TokenType.OPEN_ARRAY)) {
+            val params = ArrayList<Type>()
+            var isValid = true // only if contents are plausible...
+            pushArray {
+                while (i < tokens.size) {
+                    val type = readType(selfType, true)
+                    if (type != null) params.add(type)
+                    else {
+                        isValid = false
+                        i = tokens.size
+                        break
+                    }
+                }
+            }
+            return if (isValid) params else null
+        }
+        return null
     }
 
     override fun readFileLevel() {
@@ -95,10 +118,25 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 consumeIf("raise") -> {
                     val origin = origin(i - 1)
                     pushExpression(ThrowExpression(readExpression(), currPackage, origin))
+                    if (consumeIf("from")) {
+                        consume("None")
+                        // todo this somehow suppresses "exception chaining":
+                        //  looks like by default, Python adds 'e' to new exceptions in catch-blocks,
+                        //  but in this case, no 'e' shall be passed
+                    }
                 }
 
+                consumeIf("if") -> pushExpression(readIfBranch())
+                consumeIf("while") -> pushExpression(readWhileLoop(null))
+                consumeIf("with") -> pushExpression(readWith())
+                consumeIf("try") -> pushExpression(readTryCatch())
+                consumeIf("match") -> pushExpression(readMatch())
+
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
-                        tokens.equals(i + 1, "=", ",", "+=", "-=", "*=", "/=") -> readAssignment()
+                        tokens.equals(i + 1, "=", ",", "+=", "-=", "*=", "/=") -> readAssignment(false)
+
+                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
+                        tokens.equals(i + 1, ":") -> readAssignment(true)
 
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                         tokens.equals(i + 1, "[") -> pushExpression(readExpression())
@@ -121,11 +159,6 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 tokens.equals(i, "def") &&
                         tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> readMethod()
 
-                consumeIf("if") -> pushExpression(readIfBranch())
-                consumeIf("while") -> pushExpression(readWhileLoop(null))
-                consumeIf("with") -> pushExpression(readWith())
-                consumeIf("try") -> pushExpression(readTryCatch())
-
                 tokens.equals(i, "async") && tokens.equals(i + 1, "with") -> {
                     // todo handle this correctly somehow...
                     i += 2
@@ -133,15 +166,37 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 }
 
                 consumeIf("pass") -> {} // end of block
-
                 consumeIf("@") -> annotations.add(readAnnotation())
-
                 consumeIf("global") -> readGlobalVariables()
+                consumeIf("nonlocal") -> readNonLocalVariables()
 
                 tokens.equals(i, TokenType.STRING) && !tokens.isSameLine(i, i + 1) -> i++ // skip documentation
 
                 else -> throw NotImplementedError("Unexpected token at ${tokens.err(i)}")
             }
+        }
+    }
+
+    override fun readAndApplyImport() {
+        do {
+            super.readAndApplyImport()
+        } while (consumeIf(","))
+    }
+
+    fun readLambda(): Expression {
+        return pushScope(ScopeType.LAMBDA, "lambda") { lambdaScope ->
+            // first read method parameters until :,
+            val selfType = currPackage.typeWithArgs
+            val end = tokens.findToken(i, ":")
+            val valueParams = push(end) {
+                readParameterDeclarations(selfType, emptyList(), ParameterType.VALUE_PARAMETER)
+            }
+            // then read the body immediately after (not indented as usual)
+            val body = readExpression()
+            val variables = valueParams.map { param ->
+                LambdaVariable(param.type, param.getOrCreateField(null, Flags.NONE), param.origin)
+            }
+            LambdaExpression(variables, lambdaScope, body)
         }
     }
 
@@ -154,8 +209,34 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return scope
     }
 
+    fun findMethodScope(scope0: Scope): Scope {
+        var scope = scope0
+        while (!scope.isMethod()) {
+            scope = scope.parent!!
+        }
+        return scope
+    }
+
+
+    fun getNonLocalScope(): Scope {
+        val method = findMethodScope(currPackage)
+        return findMethodScope(method.parent!!)
+    }
+
     fun readGlobalVariables() {
         val scope = getGlobalScope()
+        do {
+            val origin = origin(i)
+            val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
+            scope.addField(
+                null, false, isMutable = true, null,
+                name, pythonInstanceType, null, Flags.NONE, origin
+            )
+        } while (consumeIf(","))
+    }
+
+    fun readNonLocalVariables() {
+        val scope = getNonLocalScope()
         do {
             val origin = origin(i)
             val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
@@ -179,8 +260,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
         consume("import")
         do {
-            val name = consumeName(VSCodeType.VARIABLE, 0)
-            val childImport = Import(parentImport.path.getOrPut(name, null), allChildren = false, name)
+            val childName = consumeName(VSCodeType.VARIABLE, 0)
+            val importName = if (consumeIf("as")) {
+                consumeName(VSCodeType.VARIABLE, 0)
+            } else childName
+            val scope = parentImport.path.getOrPut(childName, null)
+            val childImport = Import(scope, allChildren = false, importName)
             applyImport(childImport)
         } while (consumeIf(","))
     }
@@ -245,8 +330,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }
     }
 
-    fun readAssignment() {
+    fun readAssignment(withType: Boolean) {
         val name = consumeName(VSCodeType.VARIABLE, 0)
+        val type = if (withType) { // todo use that type somehow...
+            consume(":")
+            readTypeNotNull(null, true)
+        } else null
         when {
             tokens.equals(i, ",") -> readMultiAssignment(name)
             consumeIf("=") -> {
@@ -297,10 +386,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }, TokenType.INDENT, TokenType.DEDENT)
     }
 
-    fun readForLoop(): Expression {
-        val origin = origin(i)
-        consume("for")
-
+    fun readForNames(): Pair<List<String>, Boolean> {
         val variableNames = ArrayList<String>()
         var hasComma = false
         while (variableNames.isEmpty() || !tokens.equals(i, "in")) {
@@ -309,22 +395,32 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             if (consumeIf(",")) hasComma = true
             else break
         }
+        return variableNames to hasComma
+    }
 
+    fun readForLoop(): Expression {
+        val origin = origin(i)
+        consume("for")
+        val (variableNames, hasComma) = readForNames()
         consume("in")
-        val iterable = readExpression()
+
+        var iterable = readExpression()
+        if (consumeIf(",")) {
+            // Python allows tuples without parentheses in many places
+            val elements = ArrayList<Expression>()
+            elements.add(iterable)
+            do {
+                elements.add(readExpression())
+            } while (consumeIf(","))
+            iterable = namedCall("tupleOf", elements, origin)
+        }
+
         consume(":")
 
         lateinit var fields: List<Field>
         val body = pushPythonBlock(ScopeType.METHOD_BODY, "for") { scope ->
             scope.jumpLabel = ""
-
-            fields = variableNames.map { name ->
-                scope.addField(
-                    null, false, false, null,
-                    name, pythonInstanceType, null, 0, origin(i)
-                )
-            }
-
+            fields = createForLoopFields(variableNames, scope)
             readMethodBody()
         }
 
@@ -335,6 +431,25 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             }
         } else null
 
+        return createForLoop(
+            variableNames, hasComma, fields,
+            iterable, body, elseBranch, origin
+        )
+    }
+
+    fun createForLoopFields(variableNames: List<String>, scope: Scope): List<Field> {
+        return variableNames.map { name ->
+            scope.addField(
+                null, false, false, null,
+                name, pythonInstanceType, null, 0, origin(i)
+            )
+        }
+    }
+
+    fun createForLoop(
+        variableNames: List<String>, hasComma: Boolean, fields: List<Field>,
+        iterable: Expression, body: Expression, elseBranch: Expression?, origin: Long,
+    ): Expression {
         val label = null
         return if (hasComma) {
             val scope = currPackage
@@ -394,14 +509,18 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             tokens.equals(i, TokenType.OPEN_ARRAY) -> {
                 // array
                 val origin = origin(i)
-                val elements = pushArray { readValueParametersBody() }
+                val elements = pushScope(ScopeType.METHOD_BODY, "array") {
+                    pushArray { readValueParametersBody() }
+                }
                 namedCall1("createArray", elements, origin)
             }
 
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 // array
                 val origin = origin(i)
-                val elements = pushBlock { readValueParametersBody() }
+                val elements = pushScope(ScopeType.METHOD_BODY, "dict") {
+                    pushBlock { readValueParametersBody() }
+                }
                 namedCall1("createDict", elements, origin)
             }
 
@@ -411,11 +530,13 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             consumeIf("False") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin(i - 1))
             consumeIf("None") -> SpecialValueExpression(SpecialValue.NULL, currPackage, origin(i - 1))
 
-            tokens.equals(i, "and", "or", "not") -> {
-                val origin = origin(i)
-                val name = tokens.toString(i++)
-                namedCall(name, readExpression(), origin)
+            consumeIf("not") -> {
+                val origin = origin(i - 1)
+                namedCall("not", readExpression(), origin)
             }
+
+            consumeIf("lambda") -> readLambda()
+            consumeIf("with") -> readWith()
 
             else -> super.readPrefix()
         }
@@ -424,6 +545,36 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
     fun isFString(i: Int): Boolean {
         return tokens.equals(i, "f") && tokens.equals(i, TokenType.KEYWORD) &&
                 tokens.equals(i + 1, TokenType.OPEN_CALL)
+    }
+
+    fun readForMappingExpression(inner: Expression): Expression {
+        val innerScope = currPackage
+        val outerScope = innerScope.parent!!
+
+        val origin = origin(i)
+        consume("for")
+        val (variableNames, hasComma) = readForNames()
+        val fields = createForLoopFields(variableNames, outerScope)
+        consume("in")
+        val iterable = readExpression()
+        val condition = if (consumeIf("if")) {
+            readExpression()
+        } else null
+
+        val resultField = outerScope.addField(
+            null, false, isMutable = false, null,
+            "__for_${origin.toString(36)}", pythonInstanceType, null, Flags.NONE, origin
+        )
+        val resultFieldExpr = FieldExpression(resultField, outerScope, origin)
+        val body0 = NamedCallExpression(resultFieldExpr, "add", inner, outerScope, origin)
+        val body1 = if (condition == null) body0 else {
+            IfElseBranch(condition, body0, null)
+        }
+        return ExpressionList(
+            outerScope, origin,
+            AssignmentExpression(resultFieldExpr, namedCall("ArrayList", emptyList(), origin)),
+            createForLoop(variableNames, hasComma, fields, iterable, body1, null, origin)
+        )
     }
 
     override fun readValueParametersBody(): ArrayList<NamedParameter> {
@@ -438,11 +589,18 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             // println("reading param at ${tokens.err(i)}")
 
             var expr = readExpression()
+            var mustBeLast = false
+            while (tokens.equals(i, "for")) {
+                check(elements.isEmpty())
+                mustBeLast = true
+                expr = readForMappingExpression(expr)
+            }
             if (isVarDictStar) expr = ArrayToVarDictStar(expr)
 
             elements.add(NamedParameter(expr))
             skipIndentsAndDedents()
 
+            if (mustBeLast) break
             readComma()
         }
         return elements
@@ -535,70 +693,16 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 val condition = pushScope(ScopeType.METHOD_BODY, "if") {
                     readExpression()
                 }
-                if (consumeIf(":")) {
+                if (consumeIf("else")) {
+                    val other = pushScope(ScopeType.METHOD_BODY, "else") {
+                        readExpression()
+                    }
+                    IfElseBranch(condition, expr, other)
+                } else {
                     // not an inline-if -> skip
                     i = i0
-                    return super.tryReadPostfix(expr)
+                    super.tryReadPostfix(expr)
                 }
-
-                consume("else")
-                val other = pushScope(ScopeType.METHOD_BODY, "else") {
-                    readExpression()
-                }
-                IfElseBranch(condition, expr, other)
-            }
-            tokens.equals(i, "for") &&
-                    tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) &&
-                    tokens.equals(i + 2, "in") -> {
-
-                val i0 = i
-                val origin = origin(i)
-                consume("for")
-
-                val nameOrigin = origin(i)
-                val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-                consume("in")
-
-                val iterable = readExpression()
-                if (consumeIf(":")) {
-                    // not an inline if -> reset
-                    i = i0
-                    return super.tryReadPostfix(expr)
-                }
-
-                val field = currPackage.addField(
-                    null, false, isMutable = false, null,
-                    name, pythonInstanceType, null, 0, nameOrigin
-                )
-
-                val fieldExpr = FieldExpression(field, field.scope, field.origin)
-
-                val iterator = iterableToIterator(iterable)
-                val iteratorField = currPackage.createImmutableField(iterator)
-                val iteratorFieldExpr = FieldExpression(iteratorField, currPackage, origin)
-
-                val arrayInit = namedCall("createArray", emptyList(), origin)
-                val arrayField = currPackage.createImmutableField(arrayInit)
-                val arrayFieldExpr = FieldExpression(arrayField, currPackage, origin)
-
-                val condition = iteratorToHasNext(iteratorFieldExpr, currPackage, origin)
-                val next = iteratorToNext(iteratorFieldExpr, currPackage, origin)
-                val body = ExpressionList(
-                    listOf(
-                        AssignmentExpression(fieldExpr, next),
-                        expr // todo field needs to be defined for expr, which comes first ...
-                    ),
-                    currPackage, origin,
-                )
-
-                ExpressionList(
-                    listOf(
-                        AssignmentExpression(arrayFieldExpr, arrayInit),
-                        AssignmentExpression(iteratorFieldExpr, iterator),
-                        WhileLoop(condition, body, null, null),
-                        arrayFieldExpr
-                    ), currPackage, origin
-                )
             }
             else -> super.tryReadPostfix(expr)
         }
@@ -701,25 +805,29 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
     fun readWith(): TryCatchBlock {
         val origin = origin(i - 1)
-        val end = tokens.findBlockEnd(i - 1, "with", "as")
-        val value = push(end) { readExpression() }
-        val name = consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        val value = readExpression()
+        val name = if (consumeIf("as")) {
+            consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+        } else null
         consume(":")
         lateinit var fieldExpr: FieldExpression
         val body = pushPythonBlock(ScopeType.METHOD_BODY, "with") { scope ->
-            val field = scope.addField(
-                null, false, false, null,
-                name, pythonInstanceType, value, 0, origin
-            )
-            fieldExpr = FieldExpression(field, scope, origin)
-            pushExpression(AssignmentExpression(fieldExpr, value))
+            if (name != null) {
+                val field = scope.addField(
+                    null, false, false, null,
+                    name, pythonInstanceType, value, 0, origin
+                )
+                fieldExpr = FieldExpression(field, scope, origin)
+                pushExpression(AssignmentExpression(fieldExpr, value))
+            } else {
+                pushExpression(value)
+            }
             readMethodBody()
         }
-        return TryCatchBlock(
-            body, emptyList(),
-            NamedCallExpression(fieldExpr, "close", currPackage, origin),
-            currPackage, origin
-        )
+        val finally = if (name != null) {
+            NamedCallExpression(fieldExpr, "close", currPackage, origin)
+        } else null
+        return TryCatchBlock(body, emptyList(), finally, currPackage, origin)
     }
 
     override fun readIfBranch(): IfElseBranch {
@@ -776,6 +884,10 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         val catches = ArrayList<Catch>()
         while (consumeIf("except")) {
             val origin = origin(i - 1)
+            if (consumeIf("*")) {
+                // todo parent is an exception group, and we must scan the members
+                //  whether any of those is such a type
+            }
             val typeName = if (!tokens.equals(i, ":")) {
                 val end0 = tokens.findToken(i, ":")
                 val end1 = if (tokens.equals(end0 - 2, "as")) end0 - 2 else end0
@@ -835,6 +947,27 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
         } else {
             TryCatchBlock(tryBody, catches, finally, currPackage, origin)
+        }
+    }
+
+    fun readMatch(): Expression {
+        val origin = origin(i - 1)
+        val value = readExpression()
+        consume(":")
+        return pushPythonBlock(ScopeType.METHOD_BODY, "match") {
+            val cases = ArrayList<WhenCase>()
+            while (i < tokens.size) {
+                consume("case")
+                pushScope(ScopeType.METHOD_BODY, "caseI") {
+                    val condition = namedCall("equals", listOf(value, readExpression()), origin)
+                    consume(":")
+                    val body = pushPythonBlock(ScopeType.METHOD_BODY, "case") {
+                        readMethodBody()
+                    }
+                    cases.add(WhenCase(condition, body))
+                }
+            }
+            whenBranchToIfElseChain(cases, currPackage, origin)
         }
     }
 
