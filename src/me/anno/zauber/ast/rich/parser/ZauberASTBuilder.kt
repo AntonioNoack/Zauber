@@ -503,7 +503,7 @@ class ZauberASTBuilder(
                     val nameExpr = nameExpression(namePath, i0, origin, currPackage)
                     CallExpression(
                         nameExpr, typeParameters,
-                        listOf(NamedParameter(null, lambda)), origin
+                        listOf(NamedParameter(lambda)), origin
                     )
                 } else {
                     check(typeParameters == null) { "Unexpected typeArgs at ${tokens.err(i)}" }
@@ -830,7 +830,7 @@ class ZauberASTBuilder(
                         readTypeNotNull(null, true)
                     ) { ifFalseScope ->
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
-                        val debugInfoParam = NamedParameter(null, debugInfoExpr)
+                        val debugInfoParam = NamedParameter( debugInfoExpr)
                         CallExpression(
                             UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                             emptyList(), listOf(debugInfoParam), origin
@@ -889,7 +889,7 @@ class ZauberASTBuilder(
                         // println("Reading RHS, symbol: $symbol")
                         val rhs = readRHS(op)
                         if (isInfix) {
-                            val param = NamedParameter(null, rhs)
+                            val param = NamedParameter(rhs)
                             NamedCallExpression(
                                 expr, op.symbol, nameAsImport(op.symbol), null,
                                 listOf(param), expr.scope,
@@ -914,7 +914,7 @@ class ZauberASTBuilder(
                 val origin = origin(i)
                 val params = readValueParameters()
                 if (tokens.equals(i, TokenType.OPEN_BLOCK)) {
-                    params += NamedParameter(null, readLambdaBlock(null))
+                    params += NamedParameter(readLambdaBlock(null))
                 }
                 CallExpression(expr, null, params, origin)
             }
@@ -927,7 +927,7 @@ class ZauberASTBuilder(
                 val origin = origin(i)
                 val params = pushArray { readValueParametersBody() }
                 if (consumeIf("=")) {
-                    val value = NamedParameter(null, readExpression())
+                    val value = NamedParameter(readExpression())
                     NamedCallExpression(
                         expr, "set", nameAsImport("set"),
                         null, params + value, expr.scope, origin
@@ -957,7 +957,7 @@ class ZauberASTBuilder(
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 val origin = origin(i)
-                val lambdaParam = NamedParameter(null, readLambdaBlock(null))
+                val lambdaParam = NamedParameter( readLambdaBlock(null))
                 CallExpression(expr, null, listOf(lambdaParam), origin)
             }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))

@@ -242,14 +242,14 @@ class TokenList(val source: CharSequence, val fileName: String) {
             }
 
             return "${buildStyledSubString(tokenIndex0, start, end)}\n" +
-                    " ".repeat(i0 - 1) +
+                    " ".repeat(max(i0 - 1, 0)) +
                     style("^".repeat(tokenLength), StringStyles.YELLOW)
         }
 
         // todo nicely formatted line numbers before it
         // todo trim the lines
         return "${buildStyledSubString(tokenIndex0, start, end)}\n" +
-                " ".repeat(i0 - 1) +
+                " ".repeat(max(i0 - 1, 0)) +
                 style("^".repeat(tokenLength), StringStyles.YELLOW)
     }
 

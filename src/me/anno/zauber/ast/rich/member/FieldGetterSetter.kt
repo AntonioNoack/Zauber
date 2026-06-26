@@ -136,7 +136,7 @@ object FieldGetterSetter {
         val debugInfoParam = StringExpression(field.name, ifScope, origin)
         val throwExpr = CallExpression(
             UnresolvedFieldExpression("throwNJI", shouldBeResolvable, ifScope, origin),
-            emptyList(), listOf(NamedParameter(null, debugInfoParam)), origin
+            emptyList(), listOf(NamedParameter(debugInfoParam)), origin
         )
         return IfElseBranch(condition, throwExpr, backingFieldExpr.clone(elseScope))
     }
@@ -151,7 +151,7 @@ object FieldGetterSetter {
     ): Expression {
         return NamedCallExpression(
             backingFieldExpr, "setValue", emptyList(),
-            emptyList(), listOf(NamedParameter(null, valueExpr)), setterScope, origin
+            emptyList(), listOf(NamedParameter(valueExpr)), setterScope, origin
         )
     }
 

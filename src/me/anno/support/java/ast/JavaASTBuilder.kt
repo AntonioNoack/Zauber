@@ -459,8 +459,17 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             consumeIf("false") -> SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
             consumeIf("super") -> SuperExpression(resolveSuperLabel(readLabelMaybe()), false, currPackage, origin)
             consumeIf("this") -> ThisExpression(resolveThisLabel(readLabelMaybe()), currPackage, origin)
-            tokens.equals(i, TokenType.NUMBER) -> NumberExpression(tokens.toString(i++), currPackage, origin)
-            tokens.equals(i, TokenType.STRING) -> StringExpression(tokens.toString(i++), currPackage, origin)
+            tokens.equals(i, TokenType.NUMBER) -> {
+                var value = tokens.toString(i++)
+                when {
+                    value.startsWith("0o") -> value = value.substring(2).toLong(8).toString()
+                    value.startsWith("-0o") -> value = "-" + value.substring(3).toLong(8).toString()
+                }
+                NumberExpression(value, currPackage, origin)
+            }
+            tokens.equals(i, TokenType.STRING) -> {
+                StringExpression(tokens.toString(i++), currPackage, origin)
+            }
             consumeIf("return") -> readReturn(null)
             consumeIf("throw") -> ThrowExpression(readExpression(), currPackage, origin)
             consumeIf("break") -> BreakExpression(readJumpLabel(), currPackage, origin)
@@ -538,7 +547,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                             val sizeExpr = NumberExpression(size.toString(), currPackage, origin)
                             ConstructorExpression(
                                 Types.Array.clazz, listOf(type.type),
-                                listOf(NamedParameter(null, sizeExpr)), null,
+                                listOf(NamedParameter( sizeExpr)), null,
                                 currPackage, origin
                             )
                         }
@@ -693,7 +702,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val rhs = readExpression()
         return createCastExpression(rhs, currPackage, origin, type) { ifFalseScope ->
             val debugInfoExpr = StringExpression(rhs.toString(), ifFalseScope, origin)
-            val debugInfoParam = NamedParameter(null, debugInfoExpr)
+            val debugInfoParam = NamedParameter( debugInfoExpr)
             CallExpression(
                 UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                 emptyList(), listOf(debugInfoParam), origin
@@ -815,6 +824,10 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             TokenType.SYMBOL, TokenType.KEYWORD -> {
                 // support for <<, >>, >>>, <<=, >>=, >>>=
                 when {
+                    tokens.equals(i, ":") && tokens.equals(i + 1, "=") -> {
+                        opLength++
+                        ":="
+                    }
                     tokens.equals(i, "<") && tokens.equals(i + 1, "<=") -> {
                         opLength++
                         "<<="
@@ -966,7 +979,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 val origin = origin(i)
                 val params = pushArray { readValueParametersBody() }
                 if (consumeIf("=")) {
-                    val value = NamedParameter(null, readExpression())
+                    val value = NamedParameter(readExpression())
                     NamedCallExpression(
                         expr, "set", nameAsImport("set"),
                         null, params + value, expr.scope, origin
@@ -1024,7 +1037,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val lockMember = UnresolvedFieldExpression("lock", emptyList(), scope, origin)
         val unlockMember = UnresolvedFieldExpression("unlock", emptyList(), scope, origin)
         val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
-        val tmpFieldParam = listOf(NamedParameter(null, tmpFieldExpr))
+        val tmpFieldParam = listOf(NamedParameter(tmpFieldExpr))
         val lockExpr = CallExpression(lockMember, emptyList(), tmpFieldParam, origin)
         val unlockExpr = CallExpression(unlockMember, emptyList(), tmpFieldParam, origin)
         val assignmentExpr = AssignmentExpression(tmpFieldExpr, lock)
@@ -1083,10 +1096,10 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
                     val checkName = UnresolvedFieldExpression("check", emptyList(), currPackage, origin)
                     val params = if (message == null) {
-                        listOf(NamedParameter(null, expr))
+                        listOf(NamedParameter( expr))
                     } else {
                         val lambda = LambdaExpression(emptyList(), currPackage, message)
-                        listOf(NamedParameter(null, expr), NamedParameter(null, lambda))
+                        listOf(NamedParameter( expr), NamedParameter( lambda))
                     }
                     result += CallExpression(checkName, emptyList(), params, origin)
                 }

@@ -19,6 +19,7 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.ast.rich.parser.Associativity
 import me.anno.zauber.ast.rich.parser.Operator
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
@@ -52,9 +53,14 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 consumeIf("import") -> readAndApplyImport()
                 consumeIf("from") -> readFromImport()
                 consumeIf("class") -> readClass(ScopeType.NORMAL_CLASS)
+
+                consumeIf("continue") -> {
+                    val label = resolveJumpLabel(null)
+                    pushExpression(ContinueExpression(label, currPackage, origin(i - 1)))
+                }
                 consumeIf("break") -> {
-                    val expr = BreakExpression(resolveJumpLabel(null), currPackage, origin(i - 1))
-                    pushExpression(expr)
+                    val label = resolveJumpLabel(null)
+                    pushExpression(BreakExpression(label, currPackage, origin(i - 1)))
                 }
 
                 tokens.equals(i, "async") && tokens.equals(i + 1, "def") -> {
@@ -68,14 +74,31 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     pushExpression(readExpression())
                 }
 
-                tokens.equals(i, "return") -> pushExpression(readExpression())
+                consumeIf("return") -> {
+                    val origin = origin(i - 1)
+                    val value = if (tokens.isSameLine(i - 1, i)) {
+                        val expr = readExpression()
+                        if (consumeIf(",")) {
+                            val list = ArrayList<Expression>()
+                            list.add(expr)
+                            do {
+                                list.add(readExpression())
+                            } while (consumeIf(","))
+                            namedCall1("tupleOf", list.map { NamedParameter(it) }, origin)
+                        } else {
+                            expr
+                        }
+                    } else unitInstance
+                    pushExpression(ReturnExpression(value, null, currPackage, origin))
+                }
+
                 consumeIf("raise") -> {
                     val origin = origin(i - 1)
                     pushExpression(ThrowExpression(readExpression(), currPackage, origin))
                 }
 
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
-                        tokens.equals(i + 1, "=", ",") -> readAssignment()
+                        tokens.equals(i + 1, "=", ",", "+=", "-=", "*=", "/=") -> readAssignment()
 
                 tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
                         tokens.equals(i + 1, "[") -> pushExpression(readExpression())
@@ -99,6 +122,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                         tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> readMethod()
 
                 consumeIf("if") -> pushExpression(readIfBranch())
+                consumeIf("while") -> pushExpression(readWhileLoop(null))
                 consumeIf("with") -> pushExpression(readWith())
                 consumeIf("try") -> pushExpression(readTryCatch())
 
@@ -112,11 +136,34 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
                 consumeIf("@") -> annotations.add(readAnnotation())
 
+                consumeIf("global") -> readGlobalVariables()
+
                 tokens.equals(i, TokenType.STRING) && !tokens.isSameLine(i, i + 1) -> i++ // skip documentation
 
                 else -> throw NotImplementedError("Unexpected token at ${tokens.err(i)}")
             }
         }
+    }
+
+    fun getGlobalScope(): Scope {
+        var scope = currPackage
+        while (!scope.isPackage()) {
+            scope = scope.parent
+                ?: return root
+        }
+        return scope
+    }
+
+    fun readGlobalVariables() {
+        val scope = getGlobalScope()
+        do {
+            val origin = origin(i)
+            val name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
+            scope.addField(
+                null, false, isMutable = true, null,
+                name, pythonInstanceType, null, Flags.NONE, origin
+            )
+        } while (consumeIf(","))
     }
 
     override fun readExpression(minPrecedence: Int): Expression {
@@ -138,69 +185,96 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         } while (consumeIf(","))
     }
 
+    fun readMultiAssignment(name: String) {
+        // todo we could support this in Zauber :3
+        //  like this, we don't even need an extra keyword
+
+        val names = ArrayList<String>()
+        names.add(name)
+
+        var lastIsMulti = false
+        while (consumeIf(",")) {
+            if (consumeIf("*")) lastIsMulti = true
+            val name = consumeName(VSCodeType.VARIABLE, 0)
+            names.add(name)
+            if (lastIsMulti) break
+        }
+
+        // todo check that a swap works like this...
+
+        val origin = origin(i)
+        consume("=")
+        val values = ArrayList<Expression>()
+        var hasValueComma = false
+        for (j in names.indices) {
+            if (j > 0) {
+                if (consumeIf(",")) hasValueComma = true
+                else break
+            }
+
+            values.add(readExpression())
+        }
+
+        if (hasValueComma) {
+            check(values.size == names.size) {
+                "Expected same number of names and values, " +
+                        "got ${values.size} values " +
+                        "for ${names.size} names " +
+                        "at ${tokens.err(i)}"
+            }
+            for (j in names.indices) {
+                val name = names[j]
+                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
+                pushExpression(AssignmentExpression(nameExpr, values[j]))
+            }
+        } else {
+
+            // use componentI instead...
+            check(values.size == 1)
+
+            val tmpField = currPackage.createImmutableField(values[0])
+            val tmpFieldExpr = FieldExpression(tmpField, currPackage, origin)
+
+            for (i in names.indices) {
+                val name = names[i]
+                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
+                val methodName = if (i == names.lastIndex && lastIsMulti) "allAfter$i" else componentNames[i]
+                val valueI = NamedCallExpression(tmpFieldExpr, methodName, currPackage, origin)
+                pushExpression(AssignmentExpression(nameExpr, valueI))
+            }
+        }
+    }
+
     fun readAssignment() {
         val name = consumeName(VSCodeType.VARIABLE, 0)
-        if (tokens.equals(i, ",")) {
-
-            // todo we could support this in Zauber :3
-            //  like this, we don't even need an extra keyword
-
-            val names = ArrayList<String>()
-            names.add(name)
-            while (consumeIf(",")) {
-                val name = consumeName(VSCodeType.VARIABLE, 0)
-                names.add(name)
+        when {
+            tokens.equals(i, ",") -> readMultiAssignment(name)
+            consumeIf("=") -> {
+                val origin = origin(i - 1)
+                val value = readExpression()
+                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
+                pushExpression(AssignmentExpression(nameExpr, value))
             }
-
-            // todo check that a swap works like this...
-
-            val origin = origin(i)
-            consume("=")
-            val values = ArrayList<Expression>()
-            var hasValueComma = false
-            for (j in names.indices) {
-                if (j > 0) {
-                    if (consumeIf(",")) hasValueComma = true
-                    else break
+            else -> {
+                val origin = origin(i)
+                val symbol = when (tokens.toString(i++)) {
+                    "+=" -> "plusAssign"
+                    "-=" -> "minusAssign"
+                    "*=" -> "timesAssign"
+                    "/=" -> "divAssign"
+                    "%=" -> "remAssign"
+                    else -> throw NotImplementedError("Implement ${tokens.err(i - 1)}")
                 }
-
-                values.add(readExpression())
+                val value0 = readExpression()
+                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
+                val value1 = namedCall1(
+                    symbol, listOf(
+                        NamedParameter(nameExpr),
+                        NamedParameter(value0)
+                    ), origin
+                )
+                pushExpression(AssignmentExpression(nameExpr, value1))
             }
-
-            if (hasValueComma) {
-                check(values.size == names.size) {
-                    "Expected same number of names and values, " +
-                            "got ${values.size} values " +
-                            "for ${names.size} names " +
-                            "at ${tokens.err(i)}"
-                }
-                for (j in names.indices) {
-                    val name = names[j]
-                    val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                    pushExpression(AssignmentExpression(nameExpr, values[j]))
-                }
-            } else {
-
-                // use componentI instead...
-                check(values.size == 1)
-
-                val tmpField = currPackage.createImmutableField(values[0])
-                val tmpFieldExpr = FieldExpression(tmpField, currPackage, origin)
-
-                for (i in names.indices) {
-                    val name = names[i]
-                    val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                    val valueI = NamedCallExpression(tmpFieldExpr, componentNames[i], currPackage, origin)
-                    pushExpression(AssignmentExpression(nameExpr, valueI))
-                }
-            }
-
-        } else {
-            val origin = origin(i)
-            consume("=")
-            val value = readExpression()
-            val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-            pushExpression(AssignmentExpression(nameExpr, value))
         }
     }
 
@@ -277,7 +351,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                         fullExpr, componentNames[index], emptyList(),
                         scope, origin
                     )
-                    val variableName = FieldExpression(fields[index], scope, origin)
+                    val field = fields[index]
+                    val variableName = FieldExpression(field, field.ownerScope, origin)
                     AssignmentExpression(variableName, newValue)
                 } + body, scope, origin
             )
@@ -365,7 +440,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             var expr = readExpression()
             if (isVarDictStar) expr = ArrayToVarDictStar(expr)
 
-            elements.add(NamedParameter(null, expr))
+            elements.add(NamedParameter(expr))
             skipIndentsAndDedents()
 
             readComma()
@@ -393,8 +468,25 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     }
                     consumeIf(TokenType.APPEND_STRING) -> {}
                     tokens.equals(i, TokenType.OPEN_CALL) -> {
-                        val expr = pushCall { readExpression() }
-                        parts.add(expr)
+                        var format = ""
+                        val expr = pushCall {
+                            val expr = readExpression()
+                            if (consumeIf("!")) {
+                                while (i < tokens.size) {
+                                    format += tokens.toString(i++)
+                                }
+                            }
+                            expr
+                        }
+                        val call = namedCall1(
+                            "strFormat", if (format == "") {
+                                listOf(NamedParameter(expr))
+                            } else {
+                                val formatExpr = StringExpression(format, currPackage, origin)
+                                listOf(NamedParameter(expr), NamedParameter(formatExpr))
+                            }, origin
+                        )
+                        parts.add(call)
                     }
                     else -> throw NotImplementedError("Unexpected token in f-string at ${tokens.err(i)}")
                 }
@@ -639,14 +731,37 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         val elseBranch = when {
             consumeIf("else") -> {
                 consume(":")
-                pushPythonBlock(ScopeType.METHOD_BODY, "if") {
+                pushPythonBlock(ScopeType.METHOD_BODY, "else") {
                     readMethodBody()
                 }
             }
-            consumeIf("elif") -> readIfBranch()
+            consumeIf("elif") -> {
+                pushScope(ScopeType.METHOD_BODY, "elif") {
+                    readIfBranch()
+                }
+            }
             else -> null
         }
         return IfElseBranch(condition, body, elseBranch)
+    }
+
+    override fun readWhileLoop(label: String?): WhileLoop {
+        val condition = readExpression()
+        consume(":")
+        val body = pushPythonBlock(ScopeType.METHOD_BODY, "while") { bodyScope ->
+            bodyScope.jumpLabel = label ?: ""
+            readMethodBody()
+        }
+        val elseBranch = when {
+            consumeIf("else") -> {
+                consume(":")
+                pushPythonBlock(ScopeType.METHOD_BODY, "else") {
+                    readMethodBody()
+                }
+            }
+            else -> null
+        }
+        return WhileLoop(condition, body, null, elseBranch)
     }
 
     override fun readTryCatch(finallyOverride: Expression?): Expression {
@@ -662,11 +777,16 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         while (consumeIf("except")) {
             val origin = origin(i - 1)
             val typeName = if (!tokens.equals(i, ":")) {
-                push(i + 1) {
+                val end0 = tokens.findToken(i, ":")
+                val end1 = if (tokens.equals(end0 - 2, "as")) end0 - 2 else end0
+                push(end1) {
                     readTypeNotNull(null, true)
                 }.apply { i-- }
             } else pythonInstanceType
-            val parameter = Parameter(0, "?", ParameterType.VALUE_PARAMETER, typeName, currPackage, origin)
+            val variableName = if (consumeIf("as")) {
+                consumeName(VSCodeType.PARAMETER, VSCodeModifier.DECLARATION.flag)
+            } else "?"
+            val parameter = Parameter(0, variableName, ParameterType.VALUE_PARAMETER, typeName, currPackage, origin)
             consume(":")
             pushPythonBlock(ScopeType.METHOD_BODY, "catch") {
                 val handler = readMethodBody()
@@ -674,13 +794,20 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             }
         }
 
-        if (consumeIf("else")) {
+        val elseBlockI = if (consumeIf("else")) {
+            // this executes when no error was thrown, so after the body, but outside try-catch
             consume(":")
+            val initial = SpecialValueExpression(SpecialValue.FALSE, currPackage, origin)
+            val noErrorField = currPackage.addField(
+                null, false, isMutable = true, null,
+                "__noError_${origin.toString(36)}", Types.Boolean,
+                initial, Flags.NONE, origin
+            )
             val elseBlock = pushPythonBlock(ScopeType.METHOD_BODY, "else") {
                 readMethodBody()
             }
-            TODO("Implement try-catch-else at ${tokens.err(i)}")
-        }
+            Pair(elseBlock, noErrorField)
+        } else null
 
         val finally = finallyOverride
             ?: if (consumeIf("finally")) {
@@ -689,7 +816,26 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     readMethodBody()
                 }
             } else null
-        return TryCatchBlock(tryBody, catches, finally, currPackage, origin)
+
+        return if (elseBlockI != null) {
+            val (elseBlock, noErrorField) = elseBlockI
+            val fieldExpr = FieldExpression(noErrorField, currPackage, origin)
+            val trueExpr = SpecialValueExpression(SpecialValue.TRUE, currPackage, origin)
+            val tryBody2 = ExpressionList(
+                listOf(tryBody, AssignmentExpression(fieldExpr, trueExpr)),
+                currPackage, origin
+            )
+            ExpressionList(
+                listOf(
+                    AssignmentExpression(fieldExpr, noErrorField.initialValue!!),
+                    TryCatchBlock(tryBody2, catches, finally, currPackage, origin),
+                    IfElseBranch(fieldExpr, elseBlock, null)
+                ), currPackage, origin
+            )
+
+        } else {
+            TryCatchBlock(tryBody, catches, finally, currPackage, origin)
+        }
     }
 
     override fun readClass(scopeType: ScopeType) {

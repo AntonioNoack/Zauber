@@ -95,7 +95,7 @@ fun ASTBuilderBase.binaryOp(
             // save left as temporary, then put into right side
             val leftTmp = currPackage.createImmutableField(left)
             val methodName = lookupBinaryOp("in", origin)
-            val param = NamedParameter(null, FieldExpression(leftTmp, scope, origin))
+            val param = NamedParameter(FieldExpression(leftTmp, scope, origin))
             val expr = NamedCallExpression(
                 right, methodName, nameAsImport(methodName),
                 emptyList(), listOf(param),
@@ -116,7 +116,7 @@ fun ASTBuilderBase.binaryOp(
                 )
             } else if (symbol.startsWith("!")) {
                 val methodName = lookupBinaryOp(symbol.substring(1), origin)
-                val param = NamedParameter(null, right)
+                val param = NamedParameter(right)
                 NamedCallExpression(
                     left, methodName, nameAsImport(methodName),
                     null, listOf(param),
@@ -124,7 +124,7 @@ fun ASTBuilderBase.binaryOp(
                 ).not()
             } else {
                 val methodName = lookupBinaryOp(symbol, origin)
-                val param = NamedParameter(null, right)
+                val param = NamedParameter(right)
                 NamedCallExpression(
                     left, methodName, nameAsImport(methodName),
                     null, listOf(param),

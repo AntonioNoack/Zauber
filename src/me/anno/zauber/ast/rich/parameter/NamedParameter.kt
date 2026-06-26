@@ -9,6 +9,8 @@ import me.anno.zauber.scope.Scope
  * */
 class NamedParameter(val name: String?, val value: Expression) {
 
+    constructor(value: Expression) : this(null, value)
+
     override fun toString(): String {
         return if (name != null) "$name=$value" else "$value"
     }

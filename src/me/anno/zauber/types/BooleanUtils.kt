@@ -29,7 +29,7 @@ object BooleanUtils {
         other.resolvedType = Types.Boolean
         return NamedCallExpression(
             this, "and", emptyList(), emptyList(),
-            listOf(NamedParameter(null, other)),
+            listOf(NamedParameter( other)),
             scope, origin
         ).apply {
             resolvedType = Types.Boolean

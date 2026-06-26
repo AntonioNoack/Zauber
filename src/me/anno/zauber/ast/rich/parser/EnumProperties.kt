@@ -56,8 +56,8 @@ fun ZauberASTBuilderBase.readEnumBody(): Int {
 
             // todo add name and id as parameters
             val extraValueParameters = listOf(
-                NamedParameter(null, integerValue ?: NumberExpression(ordinal.toString(), companionScope, origin)),
-                NamedParameter(null, StringExpression(name, companionScope, origin)),
+                NamedParameter(integerValue ?: NumberExpression(ordinal.toString(), companionScope, origin)),
+                NamedParameter(StringExpression(name, companionScope, origin)),
             )
 
             val initialValue = ConstructorExpression(

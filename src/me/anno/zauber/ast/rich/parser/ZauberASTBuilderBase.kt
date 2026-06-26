@@ -3,7 +3,6 @@ package me.anno.zauber.ast.rich.parser
 import me.anno.langserver.VSCodeModifier
 import me.anno.langserver.VSCodeType
 import me.anno.support.Language
-import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.ArrayType.Companion.createArrayType
 import me.anno.support.csharp.ast.CSharpASTBuilder.Companion.nativeCSharpTypes
 import me.anno.support.java.ast.JavaASTBuilder.Companion.nativeJavaTypes
@@ -373,7 +372,7 @@ abstract class ZauberASTBuilderBase(
         return IfElseBranch(condition, ifTrue, ifFalse)
     }
 
-    fun readWhileLoop(label: String?): WhileLoop {
+    open fun readWhileLoop(label: String?): WhileLoop {
         val condition = readExpressionCondition()
         val body = readBodyOrExpression(label ?: "")
         return WhileLoop(condition, body, label, null)
@@ -799,13 +798,13 @@ abstract class ZauberASTBuilderBase(
                 // or as array notation, e.g. Object[]
                 language == Language.JAVA || language == Language.CSHARP
             }
-            tokens.equals(i, TokenType.OPEN_BLOCK) ||
-                    tokens.equals(i, TokenType.CLOSE_BLOCK) ||
-                    tokens.equals(i, TokenType.SYMBOL) ||
-                    tokens.equals(i, TokenType.APPEND_STRING) ||
+            tokens.equals(i, TokenType.OPEN_BLOCK, TokenType.CLOSE_BLOCK) ||
+                    tokens.equals(i, TokenType.SYMBOL, TokenType.APPEND_STRING) ||
+                    tokens.equals(i, TokenType.INDENT, TokenType.DEDENT) ||
                     tokens.equals(i, "val", "var") ||
                     tokens.equals(i, "else", "fun", "override") ||
                     tokens.equals(i, "this") -> return false
+            tokens.equals(i, TokenType.KEYWORD) && tokens.equals(i, "and", "or") -> return false
             else -> throw NotImplementedError("Can ${tokens.err(i)} appear inside a type?")
         }
         return true

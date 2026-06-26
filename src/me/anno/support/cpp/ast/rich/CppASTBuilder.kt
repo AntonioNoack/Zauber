@@ -525,8 +525,8 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
         // todo avoid duplicates?
         val numberExpr = value ?: NumberExpression((ordinal++).toString(), classScope, origin)
         val extraValueParameters = listOf(
-            NamedParameter(null, numberExpr),
-            NamedParameter(null, StringExpression(valueName, classScope, origin)),
+            NamedParameter(numberExpr),
+            NamedParameter(StringExpression(valueName, classScope, origin)),
         )
         val initialValue = ConstructorExpression(
             classScope, emptyList(),
@@ -725,7 +725,7 @@ class CppASTBuilder(tokens: TokenList, root: Scope, val standard: CppStandard) :
                 val expr = readPrefix()
                 createCastExpression(expr, currPackage, origin, type) { ifFalseScope ->
                     val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
-                    val debugInfoParam = NamedParameter(null, debugInfoExpr)
+                    val debugInfoParam = NamedParameter(debugInfoExpr)
                     CallExpression(
                         UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                         emptyList(), listOf(debugInfoParam), origin
