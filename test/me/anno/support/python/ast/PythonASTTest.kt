@@ -3,6 +3,7 @@ package me.anno.support.python.ast
 import me.anno.support.TokenizerBench
 import me.anno.support.python.tokenizer.PythonTokenizer
 import me.anno.zauber.Zauber.root
+import me.anno.zauber.scope.ScopeType
 import org.junit.jupiter.api.Test
 import java.io.File
 
@@ -10,6 +11,10 @@ class PythonASTTest {
     @Test
     fun testReadingPython() {
         val source = File("/mnt/LinuxGames/Code/cpython")
+
+        root.getOrPut("object", ScopeType.NORMAL_CLASS).setEmptyTypeParams()
+        root.getOrPut("list", ScopeType.NORMAL_CLASS).setEmptyTypeParams()
+
         TokenizerBench.execute(source, "py") { src, fileName ->
             val tokens = PythonTokenizer(src, fileName)
                 .tokenize()

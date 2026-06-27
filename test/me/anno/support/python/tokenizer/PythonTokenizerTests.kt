@@ -267,6 +267,15 @@ class PythonTokenizerTests {
     }
 
     @Test
+    fun testEscapedLineBreak() {
+        val src = "if a or \\\nb:"
+        assertEquals(
+            "if a or b :",
+            tokenize(src).toDebugString()
+        )
+    }
+
+    @Test
     fun testLargeInput() {
         val src = buildString {
             repeat(1000) {

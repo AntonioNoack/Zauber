@@ -74,6 +74,10 @@ class PythonTokenizer(val source: String, fileName: String) {
                     if (i + 1 < size && source[i + 1].isDigit()) readNumber()
                     else tokens.add(TokenType.SYMBOL, i++, i)
                 }
+                c == '\\' && i + 1 < source.length && source[i + 1].isWhitespace() -> {
+                    i += 2 // just skip it
+                    while (source[i].isWhitespace()) i++ // skip all whitespace after, too
+                }
                 else -> tokens.add(TokenType.SYMBOL, i++, i)
             }
         }

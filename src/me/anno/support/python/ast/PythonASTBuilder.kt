@@ -10,6 +10,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
+import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
 import me.anno.zauber.ast.rich.expression.componentNames
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
@@ -25,6 +26,7 @@ import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
 import me.anno.zauber.tokenizer.TokenType
+import me.anno.zauber.types.BooleanUtils.not
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -107,25 +109,10 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     readMethod()
                 }
 
-                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
-                        (tokens.equals(i + 1, TokenType.OPEN_CALL) || tokens.equals(i + 1, ".")) -> {
-                    pushExpression(readExpression())
-                }
-
                 consumeIf("return") -> {
                     val origin = origin(i - 1)
                     val value = if (tokens.isSameLine(i - 1, i)) {
-                        val expr = readExpression()
-                        if (consumeIf(",")) {
-                            val list = ArrayList<Expression>()
-                            list.add(expr)
-                            do {
-                                list.add(readExpression())
-                            } while (consumeIf(","))
-                            namedCall("tupleOf", list, origin)
-                        } else {
-                            expr
-                        }
+                        readExpressionOrTuple()
                     } else unitInstance
                     pushExpression(ReturnExpression(value, null, currPackage, origin))
                 }
@@ -144,23 +131,14 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     }
                 }
 
-                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
-                        tokens.equals(i + 1, "=", ",", "+=", "-=", "*=", "/=") -> readAssignment(false)
-
-                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
-                        tokens.equals(i + 1, ":") -> readAssignment(true)
-
-                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
-                        tokens.equals(i + 1, "[") -> pushExpression(readExpression())
-
                 consumeIf("await") -> {
                     // todo wait for it??
-                    pushExpression(readExpression())
+                    pushExpression(readExpressionOrTuple())
                 }
 
                 consumeIf("yield") -> {
                     val origin = origin(i - 1)
-                    val value = readExpression()
+                    val value = readExpressionOrTuple()
                     pushExpression(YieldExpression(value, currPackage, origin))
                 }
 
@@ -178,7 +156,13 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
                 tokens.equals(i, TokenType.STRING) && !tokens.isSameLine(i, i + 1) -> i++ // skip documentation
 
-                else -> throw NotImplementedError("Unexpected token at ${tokens.err(i)}")
+                tokens.equals(i, TokenType.NAME, TokenType.KEYWORD) &&
+                        (tokens.equals(i + 1, "[", ":", "=", ",", "+=", "-=", "*=", "/=", ".") ||
+                                tokens.equals(i + 1, TokenType.OPEN_CALL)) -> {
+                    pushExpression(readExpressionWithCommaMaybe())
+                }
+
+                else -> error("Unknown token ${tokens.err(i)}")
             }
         }
     }
@@ -291,6 +275,53 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return readExpressionImpl(minPrecedence)
     }
 
+    fun readExpressionWithCommaMaybe(): Expression {
+        val expr = readExpressionOrTuple()
+        if (consumeIf(":")) {
+            // todo use that type somehow?
+            // expr should be a simple unresolved field...
+            readTypeNotNull(null, true)
+        }
+        if (!tokens.isSameLine(i - 1, i) || !tokens.equals(i, TokenType.SYMBOL)) return expr
+
+        when (val symbol = tokens.toString(i++)) {
+            "=" -> {
+                val value = readExpressionOrTuple()
+                if (isTuple(expr)) TODO("Implement multi-assignment")
+                return AssignmentExpression(value, expr)
+            }
+            else -> throw NotImplementedError("Handle assignment @$symbol, ${tokens.err(i)}")
+        }
+    }
+
+    override fun createInstanceOfExpr(expr: Expression, scope: Scope, origin: Long, negated: Boolean): Expression {
+        when {
+            consumeIf("True") -> {
+                val trueExpr = SpecialValueExpression(SpecialValue.TRUE, scope, origin)
+                return namedCall("equals", listOf(expr, trueExpr), origin)
+            }
+            consumeIf("False") -> {
+                val falseExpr = SpecialValueExpression(SpecialValue.FALSE, scope, origin)
+                return namedCall("equals", listOf(expr, falseExpr), origin)
+            }
+            consumeIf("None") -> {
+                val falseExpr = SpecialValueExpression(SpecialValue.NULL, scope, origin)
+                return namedCall("equals", listOf(expr, falseExpr), origin)
+            }
+            else -> {
+                val type = readTypeNotNull(null, true)
+                val base = IsInstanceOfExpr(expr, type, scope, origin)
+                return if (negated) base.not() else base
+            }
+        }
+    }
+
+    fun isTuple(expr: Expression): Boolean {
+        return expr is CallExpression &&
+                expr.self is UnresolvedFieldExpression &&
+                expr.self.name == "tupleOf"
+    }
+
     fun readFromImport() {
         // from a.b.c import x
         val (parentImport, nextI) = tokens.readImport(i)
@@ -314,104 +345,25 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         } while (consumeIf(","))
     }
 
-    fun readMultiAssignment(name: String) {
-        // todo we could support this in Zauber :3
-        //  like this, we don't even need an extra keyword
-
-        val names = ArrayList<String>()
-        names.add(name)
-
-        var lastIsMulti = false
-        while (consumeIf(",")) {
-            if (consumeIf("*")) lastIsMulti = true
-            val name = consumeName(VSCodeType.VARIABLE, 0)
-            names.add(name)
-            if (lastIsMulti) break
-        }
-
-        // todo check that a swap works like this...
-
-        val origin = origin(i)
-        consume("=")
-        val values = ArrayList<Expression>()
-        var hasValueComma = false
-        for (j in names.indices) {
-            if (j > 0) {
-                if (consumeIf(",")) hasValueComma = true
-                else break
-            }
-
-            values.add(readExpression())
-        }
-
-        if (hasValueComma) {
-            check(values.size == names.size) {
-                "Expected same number of names and values, " +
-                        "got ${values.size} values " +
-                        "for ${names.size} names " +
-                        "at ${tokens.err(i)}"
-            }
-            for (j in names.indices) {
-                val name = names[j]
-                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                pushExpression(AssignmentExpression(nameExpr, values[j]))
-            }
-        } else {
-
-            // use componentI instead...
-            check(values.size == 1)
-
-            val tmpField = currPackage.createImmutableField(values[0])
-            val tmpFieldExpr = FieldExpression(tmpField, currPackage, origin)
-
-            for (i in names.indices) {
-                val name = names[i]
-                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                val methodName = if (i == names.lastIndex && lastIsMulti) "allAfter$i" else componentNames[i]
-                val valueI = NamedCallExpression(tmpFieldExpr, methodName, currPackage, origin)
-                pushExpression(AssignmentExpression(nameExpr, valueI))
-            }
-        }
-    }
-
-    fun readAssignment(withType: Boolean) {
-        val name = consumeName(VSCodeType.VARIABLE, 0)
-        val type = if (withType) { // todo use that type somehow...
-            consume(":")
-            readTypeNotNull(null, true)
-        } else null
-        when {
-            tokens.equals(i, ",") -> readMultiAssignment(name)
-            consumeIf("=") -> {
-                val origin = origin(i - 1)
-                val value = readExpression()
-                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                pushExpression(AssignmentExpression(nameExpr, value))
-            }
-            else -> {
-                val origin = origin(i)
-                val symbol = when (tokens.toString(i++)) {
-                    "+=" -> "plusAssign"
-                    "-=" -> "minusAssign"
-                    "*=" -> "timesAssign"
-                    "/=" -> "divAssign"
-                    "%=" -> "remAssign"
-                    else -> throw NotImplementedError("Implement ${tokens.err(i - 1)}")
-                }
-                val value0 = readExpression()
-                val nameExpr = UnresolvedFieldExpression(name, nameAsImport(name), currPackage, origin)
-                val value1 = namedCall(symbol, listOf(nameExpr, value0), origin)
-                pushExpression(AssignmentExpression(nameExpr, value1))
-            }
-        }
-    }
-
     fun pushExpression(expr: Expression) {
         currPackage.getOrCreatePrimaryConstructorScope()
             .code.add(expr)
     }
 
+    fun findEndOfLine(): Int {
+        var i = i
+        while (i < tokens.size && tokens.isSameLine(i, i + 1)) i++
+        return i + 1
+    }
+
     fun <R> pushPythonBlock(scopeType: ScopeType, prefix: String, readImpl: (Scope) -> R): R {
+        if (tokens.isSameLine(i - 1, i)) {
+            return pushScope(scopeType, prefix) { scope ->
+                tokens.push(findEndOfLine()) {
+                    readImpl(scope)
+                }
+            }
+        }
         return pushBlockLike({
             if (tokens.equals(i, TokenType.INDENT)) {
                 // recursive, any depth
@@ -437,23 +389,27 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return variableNames to hasComma
     }
 
+    fun readExpressionOrTuple(): Expression {
+        val origin = origin(i)
+        var expr = readExpression()
+        if (consumeIf(",")) {
+            // Python allows tuples without parentheses in many places
+            val elements = ArrayList<Expression>()
+            elements.add(expr)
+            do {
+                elements.add(readExpression())
+            } while (consumeIf(","))
+            expr = namedCall("tupleOf", elements, origin)
+        }
+        return expr
+    }
+
     fun readForLoop(): Expression {
         val origin = origin(i)
         consume("for")
         val (variableNames, hasComma) = readForNames()
         consume("in")
-
-        var iterable = readExpression()
-        if (consumeIf(",")) {
-            // Python allows tuples without parentheses in many places
-            val elements = ArrayList<Expression>()
-            elements.add(iterable)
-            do {
-                elements.add(readExpression())
-            } while (consumeIf(","))
-            iterable = namedCall("tupleOf", elements, origin)
-        }
-
+        val iterable = readExpressionOrTuple()
         consume(":")
 
         lateinit var fields: List<Field>
@@ -528,7 +484,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                         skipIndentsAndDedents()
                         if (i >= tokens.size) break
 
-                        elements.add(readExpression())
+                        var expr = readExpression()
+                        if (tokens.equals(i, "for")) {
+                            expr = readForLoopForArray(expr)
+                        }
+                        elements.add(expr)
+
                         skipIndentsAndDedents()
 
                         if (consumeIf(",")) hadComma = true
@@ -579,6 +540,16 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
             consumeIf("lambda") -> readLambda()
             consumeIf("with") -> readWith()
+
+            tokens.equals(i, TokenType.NUMBER) -> {
+                val origin = origin(i)
+                var value = tokens.toString(i++)
+                when {
+                    value.startsWith("0o") -> value = value.substring(2).toLong(8).toString()
+                    value.startsWith("-0o") -> value = "-" + value.substring(3).toLong(8).toString()
+                }
+                PyNumberExpression(value, currPackage, origin)
+            }
 
             else -> super.readPrefix()
         }
@@ -684,6 +655,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 mustBeLast = true
                 expr = readForLoopForArray(expr)
             }
+
             if (isVarDictStar) expr = ArrayToVarDictStar(expr)
 
             elements.add(NamedParameter(expr))
@@ -774,22 +746,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 val other = readExpression()
                 namedCall("strConcat", listOf(expr, other), origin)
             }
-            false && tokens.equals(i, ":") && !tokens.equals(i + 1, TokenType.INDENT) -> {
-                consume(":")
-                // todo use the proper names...
-                // todo it can start with a colon, too, I believe...
-                val origin = origin(i)
-                if (tokens.equals(i, TokenType.COMMA, TokenType.CLOSE_BLOCK) ||
-                    tokens.equals(i, TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY)
-                ) {
-                    return namedCall("rangeToUndef", expr, origin)
-                }
-                val other = readExpression()
-                namedCall("rangeTo", listOf(expr, other), origin)
-            }
-            tokens.equals(i, "if") -> {
-                val i0 = i
-                consume("if")
+            consumeIf("if") -> {
+                val i0 = i - 1
                 // todo we would need to read the if in an inner scope, not the condition...
                 val condition = pushScope(ScopeType.METHOD_BODY, "if") {
                     readExpression()
@@ -806,6 +764,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     super.tryReadPostfix(expr)
                 }
             }
+            // tokens.equals(i, "for") -> readForLoopForArray(expr)
             tokens.equals(i, TokenType.OPEN_ARRAY) -> readArrayAccess(expr)
             else -> super.tryReadPostfix(expr)
         }
@@ -825,8 +784,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 val index = readExpression()
                 if (consumeIf(":")) {
                     val stop = readExpression()
-                    consume(":")
-                    val step = readExpression()
+                    val step = if (consumeIf(":")) readExpression()
+                    else PyNumberExpression("1", currPackage, origin)
                     namedCall("arraySub", listOf(expr, index, stop, step), origin)
                 } else {
                     namedCall("arrayGet", listOf(expr, index), origin)
