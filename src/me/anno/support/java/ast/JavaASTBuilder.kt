@@ -748,7 +748,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             }
             val body = readBodyOrExpression(label ?: "")
             if (isIterator) {
-                createIteratorForLoop(field, initial, body, label)
+                createIteratorForLoop( initial, body, label, emptyList(), null){field}
             } else {
                 val body = ExpressionList(listOf(body, increment), currPackage, origin)
                 val result = ArrayList<Expression>()

@@ -22,10 +22,10 @@ import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.binaryOp
+import me.anno.zauber.ast.rich.expression.componentNames
 import me.anno.zauber.ast.rich.expression.unresolved.*
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
-import me.anno.zauber.ast.rich.member.Constructor
-import me.anno.zauber.ast.rich.member.createAssignmentInstructionsForPrimaryConstructor
+import me.anno.zauber.ast.rich.member.*
 import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.ast.rich.parser.DataClassGenerator.finishDataClass
 import me.anno.zauber.expansion.Macro.evaluateMacro
@@ -1083,6 +1083,73 @@ abstract class ZauberASTBuilderBase(
             //  e.g. mypackage.macro!() doesn't work
             return evaluateMacro(namePath, i0, typeParameters, origin)
         }
+    }
+
+    fun readForNames(): FieldDeclarationI {
+        val variableNames = ArrayList<FieldDeclarationI>()
+        var hasComma = false
+        while (i < tokens.size && !tokens.equals(i, "in")) {
+            variableNames += if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                pushCall { readForNames() }
+            } else {
+                val origin = origin(i)
+                val name = consumeName(VSCodeType.FUNCTION, 0)
+                val type = if (consumeIf(":")) readTypeNotNull(null, true) else null
+                FieldDeclaration(name, type, origin)
+            }
+            if (consumeIf(",")) hasComma = true
+            else break
+        }
+        return if (hasComma || variableNames.isEmpty()) {
+            FieldDestructuring(variableNames, origin(i - 1))
+        } else {
+            check(variableNames.size == 1)
+            variableNames[0]
+        }
+    }
+
+    fun createDestructuringAssignments(
+        names: FieldDeclarationI, isMutable: Boolean,
+        assignments: ArrayList<Expression>, initialValue: Expression,
+    ): Field {
+        when (names) {
+            is FieldDeclaration -> {
+                return currPackage.addField(
+                    null, false, isMutable, null,
+                    names.name, null, initialValue, Flags.NONE, names.origin
+                )
+            }
+            is FieldDestructuring -> {
+                val name = currPackage.generateName("destruct", names.origin)
+                val field = currPackage.addField(
+                    null, false, isMutable, null,
+                    name, null, initialValue, Flags.NONE, names.origin
+                )
+                val fieldExpr = FieldExpression(field, currPackage, names.origin)
+                for (i in names.items.indices) {
+                    val k = assignments.size
+                    val compValue = NamedCallExpression(fieldExpr, componentNames[i], currPackage, names.origin)
+                    val fieldI = createDestructuringAssignments(names.items[i], isMutable, assignments, compValue)
+                    val fieldExprI = FieldExpression(fieldI, currPackage, names.origin)
+                    assignments.add(k, AssignmentExpression(fieldExprI, compValue))
+                }
+                return field
+            }
+        }
+    }
+
+
+    fun namedCall(name: String, expr: Expression, origin: Long): Expression {
+        return namedCall(name, listOf(expr), origin)
+    }
+
+    fun namedCall(name: String, expr: List<Expression>, origin: Long): Expression {
+        return namedCall1(name, expr.map { NamedParameter(null, it) }, origin)
+    }
+
+    fun namedCall1(name: String, expr: List<NamedParameter>, origin: Long): Expression {
+        val nameExpr = UnresolvedFieldExpression(name, emptyList(), currPackage, origin)
+        return CallExpression(nameExpr, emptyList(), expr, origin)
     }
 
     fun addAnySuperCallIfNoneIsProvided(classScope: Scope, readBody: Boolean) {

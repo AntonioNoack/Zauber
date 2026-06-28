@@ -22,6 +22,7 @@ import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Compani
 import me.anno.zauber.ast.rich.expression.unresolved.AssignIfMutableExpr.Companion.plusName
 import me.anno.zauber.ast.rich.expression.unresolved.MemberNameExpression.Companion.nameExpression
 import me.anno.zauber.ast.rich.member.FieldDeclaration
+import me.anno.zauber.ast.rich.member.FieldDeclarationI
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.expansion.Macro.evaluateMacro
@@ -575,38 +576,19 @@ class ZauberASTBuilder(
         return SuperCall(type, valueParams, delegate, origin)
     }
 
-    private fun readForLoop(label: String?): Expression {
+    fun readForLoop(label: String?): Expression {
+        lateinit var names: FieldDeclarationI
         lateinit var iterable: Expression
-        if (tokens.equals(i + 1, TokenType.OPEN_CALL)) {
-            // destructuring expression
-            lateinit var names: List<FieldDeclaration>
-            pushCall {
-                check(tokens.equals(i, TokenType.OPEN_CALL))
-                names = readDestructuringFields()
-                consume("in")
-                iterable = readExpression()
-                check(i == tokens.size)
-            }
-            val body = readBodyOrExpression(label ?: "")
-            return destructuringForLoop(currPackage, names, iterable, body, label)
-        } else {
-            lateinit var name: String
-            var variableType: Type? = null
-            val origin = origin(i)
-            pushCall {
-                name = consumeName(VSCodeType.VARIABLE, VSCodeModifier.DECLARATION.flag)
-                variableType = readTypeOrNull(null)
-                consume("in")
-                iterable = readExpression()
-                check(i == tokens.size)
-            }
-            val body = readBodyOrExpression(label ?: "")
-            val pseudoInitial = iterableToNextExpr(iterable)
-            val variableField = body.scope.addField(
-                null, false, isMutable = true, false,
-                name, variableType, pseudoInitial, Flags.NONE, origin
-            )
-            return createIteratorForLoop(variableField, iterable, body, label)
+        pushCall {
+            names = readForNames()
+            consume("in")
+            iterable = readExpression()
+            check(i == tokens.size)
+        }
+        val body = readBodyOrExpression(label ?: "")
+        val extra = ArrayList<Expression>()
+        return createIteratorForLoop(iterable, body, label, extra, null) { initial ->
+            createDestructuringAssignments(names, false, extra, initial)
         }
     }
 
@@ -830,7 +812,7 @@ class ZauberASTBuilder(
                         readTypeNotNull(null, true)
                     ) { ifFalseScope ->
                         val debugInfoExpr = StringExpression(expr.toString(), ifFalseScope, origin)
-                        val debugInfoParam = NamedParameter( debugInfoExpr)
+                        val debugInfoParam = NamedParameter(debugInfoExpr)
                         CallExpression(
                             UnresolvedFieldExpression("throwNPE", shouldBeResolvable, ifFalseScope, origin),
                             emptyList(), listOf(debugInfoParam), origin
@@ -957,7 +939,7 @@ class ZauberASTBuilder(
             }
             tokens.equals(i, TokenType.OPEN_BLOCK) -> {
                 val origin = origin(i)
-                val lambdaParam = NamedParameter( readLambdaBlock(null))
+                val lambdaParam = NamedParameter(readLambdaBlock(null))
                 CallExpression(expr, null, listOf(lambdaParam), origin)
             }
             consumeIf("++") -> createPostfixExpression(expr, InplaceModifyType.INCREMENT, origin(i - 1))
@@ -1153,13 +1135,15 @@ class ZauberASTBuilder(
         }
     }
 
+    @Deprecated("Support nested parameters using readForNames()")
     private fun readDestructuringFields(): List<FieldDeclaration> {
         val names = ArrayList<FieldDeclaration>()
         pushCall {
             while (i < tokens.size) {
+                val origin = origin(i)
                 val name = consumeName(VSCodeType.VARIABLE, 0)
                 val type = readTypeOrNull(null)
-                names.add(FieldDeclaration(name, type))
+                names.add(FieldDeclaration(name, type, origin))
                 readComma()
             }
         }
@@ -1167,11 +1151,14 @@ class ZauberASTBuilder(
     }
 
     private fun readDestructuring(isMutable: Boolean, fieldScope: Scope): Expression {
-        val names = readDestructuringFields()
-        val value = if (consumeIf("=")) {
-            readExpression()
-        } else error("Expected value for destructuring at ${tokens.err(i)}")
-        return createDestructuringAssignment(names, value, isMutable, fieldScope)
+        val names = readForNames()
+        val origin = origin(i)
+        consume("=")
+        val value = readExpression()
+        val assignments = ArrayList<Expression>()
+        val dstField = createDestructuringAssignments(names, isMutable, assignments, value)
+        assignments.add(0, AssignmentExpression(FieldExpression(dstField, fieldScope, origin), value))
+        return ExpressionList(assignments, fieldScope, origin)
     }
 
     private fun readFieldInMethod(

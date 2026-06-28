@@ -12,7 +12,7 @@ fun createDeclarationExpression(
 ): Expression {
     val origin = field.origin
     return if (initialValue != null) {
-        val variableName = FieldExpression(field, scope, origin)
+        val variableName = FieldExpression(field, field.scope, origin)
         AssignmentExpression(variableName, initialValue)
     } else {
         ExpressionList(emptyList(), scope, origin)

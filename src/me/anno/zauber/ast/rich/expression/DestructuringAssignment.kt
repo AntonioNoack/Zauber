@@ -13,7 +13,7 @@ val componentNames = GrowingList {
     "component${it + 1}"
 }
 
-fun ASTBuilderBase.createDestructuringAssignment(
+fun ASTBuilderBase.createDestructuringAssignments(
     names: List<FieldDeclaration>, initialValue: Expression,
     isMutable: Boolean, fieldScope: Scope
 ): Expression {

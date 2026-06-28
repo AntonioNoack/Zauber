@@ -11,12 +11,11 @@ import me.anno.zauber.ast.rich.controlflow.*
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.ExpressionList
 import me.anno.zauber.ast.rich.expression.IsInstanceOfExpr
-import me.anno.zauber.ast.rich.expression.componentNames
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
 import me.anno.zauber.ast.rich.expression.unresolved.*
-import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.ast.rich.member.FieldDeclarationI
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.ast.rich.parser.Associativity
@@ -377,18 +376,6 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }, TokenType.INDENT, TokenType.DEDENT)
     }
 
-    fun readForNames(): Pair<List<String>, Boolean> {
-        val variableNames = ArrayList<String>()
-        var hasComma = false
-        while (variableNames.isEmpty() || !tokens.equals(i, "in")) {
-            val name = consumeName(VSCodeType.FUNCTION, 0)
-            variableNames.add(name)
-            if (consumeIf(",")) hasComma = true
-            else break
-        }
-        return variableNames to hasComma
-    }
-
     fun readExpressionOrTuple(): Expression {
         val origin = origin(i)
         var expr = readExpression()
@@ -405,70 +392,49 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
     }
 
     fun readForLoop(): Expression {
-        val origin = origin(i)
-        consume("for")
-        val (variableNames, hasComma) = readForNames()
-        consume("in")
-        val iterable = readExpressionOrTuple()
-        consume(":")
-
-        lateinit var fields: List<Field>
-        val body = pushPythonBlock(ScopeType.METHOD_BODY, "for") { scope ->
-            scope.jumpLabel = ""
-            fields = createForLoopFields(variableNames, scope)
-            readMethodBody()
-        }
-
-        val elseBranch = if (consumeIf("else")) {
+        return pushScope(ScopeType.METHOD_BODY, "for") {
+            consume("for")
+            val names = readForNames()
+            consume("in")
+            val iterable = readExpressionOrTuple()
             consume(":")
-            pushPythonBlock(ScopeType.METHOD_BODY, "else") {
+
+            val body = pushPythonBlock(ScopeType.METHOD_BODY, "body") { scope ->
+                scope.jumpLabel = ""
                 readMethodBody()
             }
-        } else null
 
-        return createForLoop(
-            variableNames, hasComma, fields,
-            iterable, body, elseBranch, origin
-        )
+            val elseBranch = if (consumeIf("else")) {
+                consume(":")
+                pushPythonBlock(ScopeType.METHOD_BODY, "else") {
+                    readMethodBody()
+                }
+            } else null
+
+            createForLoop(names, iterable, body, elseBranch)
+        }
     }
 
-    fun createForLoopFields(variableNames: List<String>, scope: Scope): List<Field> {
-        return variableNames.map { name ->
-            scope.addField(
-                null, false, false, null,
-                name, pythonInstanceType, null, 0, origin(i)
-            )
+    fun createForLoopFields(variableNames: List<Any?>, scope: Scope): List<Any> {
+        return variableNames.map { item ->
+            when (item) {
+                is String -> scope.addField(
+                    null, false, false, null,
+                    item, pythonInstanceType, null, 0, origin(i)
+                )
+                is List<*> -> createForLoopFields(item, scope)
+                else -> error("Expected name or list")
+            }
         }
     }
 
     fun createForLoop(
-        variableNames: List<String>, hasComma: Boolean, fields: List<Field>,
-        iterable: Expression, body: Expression, elseBranch: Expression?, origin: Long,
+        names: FieldDeclarationI, iterable: Expression, body: Expression,
+        elseBranch: Expression?,
     ): Expression {
-        val label = null
-        return if (hasComma) {
-            val scope = currPackage
-            val fullName = scope.generateName("destruct", origin)
-            val fullVariable = scope.addField(
-                null, false, isMutable = false, null,
-                fullName, null, null,
-                Flags.NONE, origin
-            )
-            val fullExpr = FieldExpression(fullVariable, scope, origin)
-            val newBody = ExpressionList(
-                List(variableNames.size) { index ->
-                    val newValue = NamedCallExpression(
-                        fullExpr, componentNames[index], emptyList(),
-                        scope, origin
-                    )
-                    val field = fields[index]
-                    val variableName = FieldExpression(field, field.ownerScope, origin)
-                    AssignmentExpression(variableName, newValue)
-                } + body, scope, origin
-            )
-            createIteratorForLoop(fullVariable, iterable, newBody, label, elseBranch)
-        } else {
-            createIteratorForLoop(fields[0], iterable, body, label, elseBranch)
+        val extra = ArrayList<Expression>()
+        return createIteratorForLoop(iterable, body, label = null, extra, elseBranch) { initial ->
+            createDestructuringAssignments(names, false, extra, initial)
         }
     }
 
@@ -613,8 +579,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
         val origin = origin(i)
         consume("for")
-        val (variableNames, hasComma) = readForNames()
-        val fields = createForLoopFields(variableNames, outerScope)
+        val names = readForNames()
         consume("in")
         val iterable = readExpression()
         val condition = if (consumeIf("if")) {
@@ -633,7 +598,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return ExpressionList(
             outerScope, origin,
             AssignmentExpression(resultFieldExpr, namedCall(typeName, emptyList(), origin)),
-            createForLoop(variableNames, hasComma, fields, iterable, body1, null, origin)
+            createForLoop(names, iterable, body1, null)
         )
     }
 
@@ -792,19 +757,6 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 }
             }
         }
-    }
-
-    private fun namedCall(name: String, expr: Expression, origin: Long): Expression {
-        return namedCall(name, listOf(expr), origin)
-    }
-
-    private fun namedCall(name: String, expr: List<Expression>, origin: Long): Expression {
-        return namedCall1(name, expr.map { NamedParameter(null, it) }, origin)
-    }
-
-    private fun namedCall1(name: String, expr: List<NamedParameter>, origin: Long): Expression {
-        val nameExpr = UnresolvedFieldExpression(name, emptyList(), currPackage, origin)
-        return CallExpression(nameExpr, emptyList(), expr, origin)
     }
 
     fun readMethod() {

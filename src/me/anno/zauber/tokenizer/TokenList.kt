@@ -505,7 +505,9 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     fun readPath(i: Int, scopeType: ScopeType?): Pair<Scope, Int> {
         var j = i
-        check(equals(j, TokenType.NAME, TokenType.KEYWORD))
+        check(equals(j, TokenType.NAME, TokenType.KEYWORD)) {
+            "Expected name or keyword for path at ${err(j)}"
+        }
         var path = root.getOrPut(toString(j++), scopeType)
         if (scopeType == ScopeType.PACKAGE) {
             path.setEmptyTypeParams()
