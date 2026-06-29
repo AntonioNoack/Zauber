@@ -92,7 +92,7 @@ object EarlyTypeResolution {
             val specForSelfScope = Specialization.allUnknown(getMethodOrClassScope(field))
 
             val ctx = ResolutionContext(
-                selfType = null, specForSelfScope,
+                field.scope, selfType = null, specForSelfScope,
                 false, null, emptyMap(), emptyList()
             )
             if (field.initialValue == null && field.byParameter is LambdaVariable) null

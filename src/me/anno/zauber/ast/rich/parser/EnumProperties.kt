@@ -96,7 +96,7 @@ fun createEnumProperties(companionScope: Scope, enumScope: Scope, origin: Long) 
         val field = entryScope.objectField!!
         FieldExpression(field, constructorScope, origin)
     }
-    val context = ResolutionContext(null, false, null)
+    val context = ResolutionContext(enumScope, null, false, null)
     val initialValue = createArrayOfExpr(context, enumScope.typeWithArgs, entryValues, constructorScope, origin)
 
     val entriesField = constructorScope.addField(

@@ -102,7 +102,7 @@ class IfElseBranch(
         return IfElseBranch(
             condition.resolve(context),
             ifBranch.resolve(context),
-            elseBranch?.resolve(context)
+            elseBranch?.resolve(context),
         )
     }
 

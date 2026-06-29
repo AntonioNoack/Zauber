@@ -637,7 +637,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
 
     private fun readArrayContents(): Expression {
         val name = currPackage.generateName("array", origin(i))
-        return pushBlock(ScopeType.METHOD_BODY, name) {
+        return pushBlock(ScopeType.METHOD_BODY, name) { scope ->
             val origin = origin(i)
             val values = ArrayList<Expression>()
             while (i < tokens.size) {
@@ -646,8 +646,8 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                     else readExpression()
                 readComma()
             }
-            val context = ResolutionContext(null, false, null)
-            createArrayOfExpr(context, null, values, it, origin)
+            val context = ResolutionContext(scope, null, false, null)
+            createArrayOfExpr(context, null, values, scope, origin)
         }
     }
 

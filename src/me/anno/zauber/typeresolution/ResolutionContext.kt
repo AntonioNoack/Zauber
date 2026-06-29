@@ -1,13 +1,19 @@
 package me.anno.zauber.typeresolution
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.member.Field
+import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.TypeResolution.typeToScope
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 
 data class ResolutionContext(
+    /**
+     * where the code is located, e.g. for resolving fields, or applying conditional type refinement
+     * */
+    val codeScope: Scope,
     /**
      * this must be set exactly iff we look for a field/method on a specific base type;
      * if this is specified, we MUST match it
@@ -38,62 +44,77 @@ data class ResolutionContext(
 ) {
 
     constructor(
-        selfType: Type?, allowTypeless: Boolean, targetType: Type?,
+        codeScope: Scope, selfType: Type?, allowTypeless: Boolean, targetType: Type?,
         knownLambdas: Map<Field, Expression> = emptyMap(),
         extensionThis: List<ExtensionThis> = emptyList(),
     ) : this(
-        selfType, Specialization.noSpecialization, allowTypeless,
+        codeScope, selfType, Specialization.noSpecialization, allowTypeless,
         targetType, knownLambdas, extensionThis
     )
 
-    constructor(selfType: Type?, specialization: Specialization, allowTypeless: Boolean, targetType: Type?) :
-            this(selfType, specialization, allowTypeless, targetType, emptyMap(), emptyList())
+    constructor(
+        codeScope: Scope,
+        selfType: Type?,
+        specialization: Specialization,
+        allowTypeless: Boolean,
+        targetType: Type?
+    ) :
+            this(codeScope, selfType, specialization, allowTypeless, targetType, emptyMap(), emptyList())
 
     val selfScope = typeToScope(selfType)
 
     fun withTargetType(newTargetType: Type?): ResolutionContext {
         if (newTargetType == targetType) return this
-        return ResolutionContext(selfType, specialization, allowTypeless, newTargetType, knownLambdas, extensionThis)
+        return ResolutionContext(
+            codeScope, selfType, specialization, allowTypeless,
+            newTargetType, knownLambdas, extensionThis
+        )
     }
 
     fun withSelfType(newSelfType: Type?): ResolutionContext {
         if (newSelfType == selfType) return this
         return ResolutionContext(
-            newSelfType?.specialize(specialization),
-            specialization,
-            allowTypeless,
-            targetType,
-            knownLambdas,
-            extensionThis
+            codeScope, newSelfType?.specialize(specialization), specialization, allowTypeless,
+            targetType, knownLambdas, extensionThis
         )
     }
 
     fun withAllowTypeless(newAllowTypeless: Boolean): ResolutionContext {
         if (allowTypeless == newAllowTypeless) return this
-        return ResolutionContext(selfType, specialization, newAllowTypeless, targetType, knownLambdas, extensionThis)
+        return ResolutionContext(
+            codeScope, selfType, specialization, newAllowTypeless,
+            targetType, knownLambdas, extensionThis
+        )
     }
 
     fun withKnownLambdas(newKnownLambdas: Map<Field, Expression>): ResolutionContext {
         if (knownLambdas == newKnownLambdas) return this
-        return ResolutionContext(selfType, specialization, allowTypeless, targetType, newKnownLambdas, extensionThis)
+        return ResolutionContext(
+            codeScope, selfType, specialization, allowTypeless,
+            targetType, newKnownLambdas, extensionThis
+        )
     }
 
     fun withSpec(specialization: Specialization): ResolutionContext {
         if (this.specialization == specialization) return this
         return ResolutionContext(
-            selfType?.specialize(specialization),
-            specialization,
-            allowTypeless,
-            targetType,
-            knownLambdas,
-            extensionThis
+            codeScope, selfType?.specialize(specialization), specialization, allowTypeless,
+            targetType, knownLambdas, extensionThis
         )
     }
 
-    fun withExtensionThis(extensionThis: ExtensionThis): ResolutionContext {
+    fun withScope(newCodeScope: Scope): ResolutionContext {
+        if (this.codeScope == newCodeScope) return this
         return ResolutionContext(
-            selfType, specialization, allowTypeless, targetType, knownLambdas,
-            this.extensionThis + extensionThis
+            newCodeScope, selfType, specialization, allowTypeless,
+            targetType, knownLambdas, extensionThis
+        )
+    }
+
+    fun addExtensionThis(newExtensionThis: ExtensionThis): ResolutionContext {
+        return ResolutionContext(
+            codeScope, selfType, specialization, allowTypeless,
+            targetType, knownLambdas, extensionThis + newExtensionThis
         )
     }
 
@@ -109,7 +130,7 @@ data class ResolutionContext(
     companion object {
         val minimal by threadLocal {
             // stores Specialization -> must be ThreadLocal
-            ResolutionContext(null, false, null)
+            ResolutionContext(root, null, false, null)
         }
     }
 }

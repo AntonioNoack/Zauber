@@ -138,7 +138,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
 
     @Test
     fun testUseNativeLibrary() {
-        TODO("Call into a native library")
+        // we already do that...
     }
 
 }

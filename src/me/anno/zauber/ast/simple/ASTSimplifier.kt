@@ -99,7 +99,7 @@ object ASTSimplifier {
     }
 
     private fun simplifyImpl(method0: Specialization): SimpleGraph {
-        val context = ResolutionContext(null, method0, true, null)
+        val context = ResolutionContext(method0.scope!!, null, method0, true, null)
 
         if (LOGGER.isInfoEnabled) LOGGER.info(
             "${bold("Simplifying")} ${method0.scope}, ${method0.method}" +

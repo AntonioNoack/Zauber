@@ -1,8 +1,8 @@
 package me.anno.zauber.expansion
 
-import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldResolvable
+import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.typeresolution.ResolutionContext
 
@@ -33,7 +33,7 @@ object CapturedFields : MethodOrClassColoring<Set<Field>>() {
     }
 
     private fun collectFields(body: Expression, moc: MethodOrClassSpecialization, capturedFields: HashSet<Field>) {
-        val context = ResolutionContext(moc.method?.selfType, false, null)
+        val context = ResolutionContext(body.scope, moc.method?.selfType, false, null)
         // todo we only need to check the first element of each getter-chain, I think...
         body.forEachExpressionRecursively { expr ->
             if (expr is FieldResolvable) {

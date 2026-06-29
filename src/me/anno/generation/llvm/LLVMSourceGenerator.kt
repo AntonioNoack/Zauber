@@ -275,7 +275,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
                             }
 
                             val body = method.body!!
-                            val context = ResolutionContext(method.selfType, method0, true, null)
+                            val context = ResolutionContext(method.scope, method.selfType, method0, true, null)
                             appendCode(context, method0, body, false)
                         }
                     }

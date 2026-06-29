@@ -700,7 +700,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         block.add(allocation)
         dst.allocation = allocation // not really needed
         val constr = resolveConstructor(
-            arrayType.clazz, "(Int)",
+           arrayType.clazz, "(Int)",
             ParameterList(arrayType),
             listOf(Types.Int)
         )
@@ -1238,8 +1238,10 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     "<init>" -> {
                         self = pop().use()
                         if (self.allocation == null) {
-                            println("calling constructor $owner, $descriptor, $valueParameters, " +
-                                    "allocation is null :/, $self")
+                            println(
+                                "calling constructor $owner, $descriptor, $valueParameters, " +
+                                        "allocation is null :/, $self"
+                            )
                         }
                         self.allocation?.valueParameters = valueParametersI
                         method = resolveConstructor(owner, descriptor, valueParameters)
@@ -1347,9 +1349,9 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
                     }"
         )
         val spec = Specialization(ClassType(scope, ownerTypes))
-            .withScope(method.memberScope)
+            .withScope(methodScope)
         val ctx = ResolutionContext(
-            null, spec, true, null,
+            methodScope, null, spec, true, null,
             emptyMap(), emptyList()
         )
         return ResolvedConstructor(method, ctx, methodScope, MatchScore.zero)
@@ -1409,7 +1411,7 @@ class SecondJVMMethodReader(val method: MethodLike, val isStatic: Boolean, param
         )
         val spec = Specialization.withScopeUnknownIfMissing(method.memberScope, typeParams)
         val ctx = ResolutionContext(
-            null, spec, true, null,
+            methodScope, null, spec, true, null,
             emptyMap(), emptyList()
         )
         return ResolvedMethod(method, ctx, methodScope, MatchScore.zero)

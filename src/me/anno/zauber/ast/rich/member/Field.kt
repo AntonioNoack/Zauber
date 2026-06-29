@@ -151,7 +151,7 @@ class Field(
                 val sam = scope.selfAsMethod!!
                 val owner = scope.parent!!
                 val matchingField = owner.fields.first { it.setter == sam || it.getter == sam }
-                return TypeOfField(matchingField)
+                return TypeOfField(matchingField, scope)
             }
         }
 

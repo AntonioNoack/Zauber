@@ -542,7 +542,10 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                     isArraySetter(method0) -> appendArraySetter(method0)
                     else -> {
                         val body = method.body!!
-                        val context = ResolutionContext(method.selfType, method0, true, null)
+                        val context = ResolutionContext(
+                            method.scope, method.selfType,
+                            method0, true, null
+                        )
                         appendCode(context, method0, body, false)
                     }
                 }

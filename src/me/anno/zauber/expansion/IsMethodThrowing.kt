@@ -13,7 +13,7 @@ object IsMethodThrowing : MethodColoring<Type>() {
     override fun getSelfColor(key: Specialization): Type {
         val body = key.method.getSpecializedBody(key) ?: return Types.Nothing
         val thrownTypes = ArrayList<Type>()
-        val context = ResolutionContext(key.method.selfType, key, false, null)
+        val context = ResolutionContext(key.scope!!, key.method.selfType, key, false, null)
         body.forEachExpressionRecursively { expr ->
             if (expr is ThrowExpression) {
                 val type = TypeResolution.resolveType(context, expr.value)

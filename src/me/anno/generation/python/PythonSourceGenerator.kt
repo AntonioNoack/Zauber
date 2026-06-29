@@ -33,8 +33,8 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleAssignment
-import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
+import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
@@ -232,7 +232,10 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         constructor: Constructor, headerOnly: Boolean
     ) {
         val body = constructor.body
-        val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+        val context = ResolutionContext(
+            constructor.scope, constructor.selfType,
+            true, null, emptyMap()
+        )
 
         writeBlock {
 
@@ -313,9 +316,12 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                 superType as ClassType, superCall
             )
 
+            val context = ResolutionContext(
+                classScope, null, specialization,
+                true, null
+            )
             if (!classScope.isObjectLike()) {
                 // find out hash of super-call...
-                val context = ResolutionContext(null, specialization, true, null)
                 val valueParams = superCall.valueParameters.map {
                     val type = it.value.resolveValueType(context)
                     ValueParameterImpl(it.name, type, false)
@@ -329,7 +335,6 @@ class PythonSourceGenerator : JavaSourceGenerator() {
                     .append(hashMethodParameters(foundConstructor.specialization))
             }
 
-            val context = ResolutionContext(null, specialization, true, null)
             appendSuperCallParams(context, superCall)
         } else {
             comment { builder.append("superCall is null") }
@@ -392,7 +397,10 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         val i0 = builder.length
         when {
             body != null -> {
-                val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
+                val context = ResolutionContext(
+                    methodSpec.scope!!, methodSpec.method.selfType,
+                    methodSpec, true, null
+                )
                 appendCode(context, methodSpec, body, false)
             }
             nativeImpl != null -> {

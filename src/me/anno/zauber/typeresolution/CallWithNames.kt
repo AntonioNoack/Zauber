@@ -175,7 +175,7 @@ object CallWithNames {
                     }
                     // collect all varargs
                     val values = actualParameters.subList(j, actualParameters.size).filter { it.name == null }
-                    val context = ResolutionContext(null, false, ev.type)
+                    val context = ResolutionContext(scope, null, false, ev.type)
                     result[index++] = createArrayOfExpr(context, ev, values, scope, origin)
                     break
                 }
@@ -190,7 +190,7 @@ object CallWithNames {
                     return null
                 }
 
-                val context = ResolutionContext(null, false, ev.type)
+                val context = ResolutionContext(scope, null, false, ev.type)
                 result[index] = createArrayOfExpr(context, ev, emptyList(), scope, origin)
             }
 

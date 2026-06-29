@@ -388,7 +388,10 @@ class RustSourceGenerator : JavaSourceGenerator() {
                 nextLine()
             }
             body != null -> {
-                val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+                val context = ResolutionContext(
+                    classScope, constructor.selfType,
+                    true, null, emptyMap()
+                )
                 writeBlock {
                     if (classScope == Types.Array.clazz) {
                         appendArrayContentInitialization(constructor)

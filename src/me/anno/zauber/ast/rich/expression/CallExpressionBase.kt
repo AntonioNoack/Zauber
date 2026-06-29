@@ -163,7 +163,7 @@ abstract class CallExpressionBase(
                         valueType = selfType
                     }
                     val selfScope = typeToScope(selfType)
-                    subContext = subContext.withExtensionThis(ExtensionThis(selfType, selfScope, baseField))
+                    subContext = subContext.addExtensionThis(ExtensionThis(selfType, selfScope, baseField))
                     val baseFieldExpr = FieldExpression(baseField, baseField.ownerScope, origin)
                     body.add(AssignmentExpression(baseFieldExpr, self))
                 }

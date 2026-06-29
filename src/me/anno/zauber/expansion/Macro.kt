@@ -61,8 +61,8 @@ object Macro {
         return evaluateMacroNow(namePath, i0, typeParameters, valueParameters, origin)
     }
 
-    private fun createContext(): ResolutionContext {
-        return ResolutionContext(null, Specializations.specialization, true, null)
+    private fun createContext(codeScope: Scope): ResolutionContext {
+        return ResolutionContext(codeScope, null, Specializations.specialization, true, null)
     }
 
     private fun ZauberASTBuilderBase.resolveMacroByName(
@@ -70,7 +70,7 @@ object Macro {
         valueParameterTypes: List<Type>, origin: Long
     ): ResolvedMethod {
         val scope = currPackage
-        val context = createContext()
+        val context = createContext(scope)
 
         val valueParameters1 = valueParameterTypes.map { type ->
             ValueParameterImpl(null, type, false)
@@ -124,7 +124,7 @@ object Macro {
         namePath: String, i0: Int, typeParameters: List<Type>?,
         valueParameters: List<NamedParameter>, scope: Scope, origin: Long
     ): Expression {
-        val context = createContext()
+        val context = createContext(currPackage)
         val valueParameterTypes = valueParameters.map { it.value.resolveValueType(context) }
         if (codeIsInsideAMacro(scope)) {
             val macro = resolveMacroByName(namePath, i0, typeParameters, valueParameterTypes, origin)

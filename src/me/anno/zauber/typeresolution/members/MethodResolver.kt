@@ -76,7 +76,7 @@ object MethodResolver : MemberResolver<Method, ResolvedMethod>() {
         if (method.returnType == null) {
             val selfType = method.selfType?.resolvedName ?: scopeSelfType
             if (LOGGER.isInfoEnabled) LOGGER.info("Resolving ${method.scope}.type by ${method.body}, selfType: $selfType")
-            val context = ResolutionContext(selfType, false, null, emptyMap())
+            val context = ResolutionContext(method.body!!.scope, selfType, false, null, emptyMap())
             method.returnType = method.resolveReturnType(context)
         }
         return method.returnType

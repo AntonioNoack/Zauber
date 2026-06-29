@@ -115,7 +115,7 @@ object FindMemberMatch {
 
         val selfType1 = explicitSelfType ?: memberSelfType
         val specialization = Specialization(member.memberScope, generics)
-        val context = ResolutionContext(selfType1, specialization, false, hintedReturnType)
+        val context = ResolutionContext(codeScope, selfType1, specialization, false, hintedReturnType)
         return when (member) {
             is Method -> ResolvedMethod(member, context, codeScope, matchScore)
             is Field -> ResolvedField(member, context, codeScope, matchScore)

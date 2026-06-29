@@ -665,7 +665,10 @@ open class JavaSourceGenerator : Generator() {
 
         when {
             body != null -> {
-                val context = ResolutionContext(methodSpec.method.selfType, methodSpec, true, null)
+                val context = ResolutionContext(
+                    methodSpec.scope!!, methodSpec.method.selfType,
+                    methodSpec, true, null
+                )
                 appendCode(context, methodSpec, body, false)
             }
             nativeImpl != null -> {
@@ -823,7 +826,10 @@ open class JavaSourceGenerator : Generator() {
                 superType, superCall
             )
 
-            val context = ResolutionContext(null, specialization, true, null)
+            val context = ResolutionContext(
+                constructor.scope, null, specialization,
+                true, null
+            )
             appendSuperCallParams(context, superCall)
         } else {
             comment { builder.append("superCall is null") }
@@ -843,7 +849,10 @@ open class JavaSourceGenerator : Generator() {
         constructor: Constructor, headerOnly: Boolean
     ) {
         val body = constructor.body
-        val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+        val context = ResolutionContext(
+            constructor.scope, constructor.selfType,
+            true, null, emptyMap()
+        )
 
         writeBlock {
             val superCall = constructor.superCall

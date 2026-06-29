@@ -83,7 +83,7 @@ open class MethodLike(
 
     fun createContext(specialization: Specialization): ResolutionContext {
         val specialization = specialization.withScope(scope)
-        return ResolutionContext(null, specialization, true, null)
+        return ResolutionContext(scope, null, specialization, true, null)
     }
 
     fun resolveReturnType(specialization: Specialization): Type {

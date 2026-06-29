@@ -131,7 +131,7 @@ abstract class Type {
             }
             is TypeOfField -> {
                 val spec = specialization.withScopeUnknownIfMissing(field.scope)
-                val context = ResolutionContext(null, spec, false, null)
+                val context = ResolutionContext(field.scope, null, spec, false, null)
                 field.resolveValueType(context)
             }
             // is ClassType -> !clazz.isTypeAlias() && (typeParameters?.all { it.containsGenerics() } ?: true)
@@ -208,7 +208,10 @@ abstract class Type {
                 if (valueType != null) {
                     valueType.resolveGenerics(selfType, genericNames, genericValues)
                 } else {
-                    val context = ResolutionContext(field.selfType, false, null, emptyMap())
+                    val context = ResolutionContext(
+                        scope, field.selfType,
+                        false, null, emptyMap()
+                    )
                     field.resolveValueType(context)
                 }
             }
@@ -271,8 +274,6 @@ abstract class Type {
                     parameters.all { it.type.isFullySpecialized() } &&
                     returnType.isFullySpecialized()
             is NonObjectClassType -> type.isFullySpecialized()
-            is PointerType -> type.isFullySpecialized()
-            is ArrayType -> type.isFullySpecialized()
             else -> error("Is ${javaClass.simpleName} fully specialized?")
         }
     }

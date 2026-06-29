@@ -19,7 +19,6 @@ import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
-import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isUnsigned
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.expression.constants.StringExpression
@@ -430,7 +429,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 nextLine()
             }
             body != null -> {
-                val context = ResolutionContext(constructor.selfType, true, null, emptyMap())
+                val context = ResolutionContext(
+                    constructor.memberScope, constructor.selfType,
+                    true, null, emptyMap()
+                )
                 writeBlock {
                     if (classScope == Types.Array.clazz) {
                         appendArrayContentInitialization(constructor)

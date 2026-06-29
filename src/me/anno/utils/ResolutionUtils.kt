@@ -129,36 +129,8 @@ object ResolutionUtils {
 
     fun testTypeResolution(code: String, reset: Boolean = false): Type {
         val field = testTypeResolutionGetField(code, reset)
-        val context = ResolutionContext(null, false, null)
+        val context = ResolutionContext(field.scope, null, false, null)
         return field.resolveValueType(context)
-    }
-
-    fun testMethodBodyResolution(code: String): List<Type> {
-        val testScope = testTypeResolution0(code, reset = true)
-        val method = testScope.methods0.first { it.name == "tested" }
-        val types = ArrayList<Type>()
-        fun scan(expr: Expression) {
-            when (expr) {
-                is LazyExpression -> scan(expr.value)
-                is ExpressionList -> {
-                    for (exprI in expr.list) {
-                        scan(exprI)
-                    }
-                }
-                else -> {
-                    val context = ResolutionContext(
-                        method.selfType,
-                        true,
-                        null,
-                        emptyMap()
-                    )
-                    val type = TypeResolution.resolveType(context, expr)
-                    types.add(type)
-                }
-            }
-        }
-        scan(method.body!!)
-        return types
     }
 
     fun printDependencies(data: DependencyData) {

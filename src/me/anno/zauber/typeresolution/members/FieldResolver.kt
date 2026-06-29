@@ -20,7 +20,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         scope: Scope?, origin: Long, name: String,
         typeParameters: List<Type>?,
         valueParameters: List<ValueParameter>,
-        context: ResolutionContext
+        context: ResolutionContext,
     ): ResolvedField? {
         scope ?: return null
 
@@ -36,12 +36,12 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             if (field.typeParameters.isNotEmpty()) {
                 LOGGER.info("Given $field on $selfType, with target $returnType, can we deduct any generics from that?")
             }
-            val valueType = getFieldReturnType(scopeSelfType, field, returnType)
+            val valueType = getFieldReturnType(context.codeScope, scopeSelfType, field, returnType)
             val match = FindMemberMatch.findMemberMatch(
                 field, valueType,
                 returnType, selfType,
                 typeParameters, valueParameters,
-                context.specialization, scope, origin
+                context.specialization, context.codeScope, origin
             ) as? ResolvedField
             bestMatch = joinMatches(bestMatch, match)
         }
@@ -50,7 +50,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         if (companion != null) {
             if (scope.name == name) {
                 val field = companion.getOrCreateObjectField(-1)
-                val valueType = getFieldReturnType(scopeSelfType, field, returnType)
+                val valueType = getFieldReturnType(context.codeScope, scopeSelfType, field, returnType)
                 val match = FindMemberMatch.findMemberMatch(
                     field, valueType,
                     returnType, selfType,
@@ -72,7 +72,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
             child[ScopeInitType.AFTER_DISCOVERY]
 
             val field = child.getOrCreateObjectField(-1)
-            val valueType = getFieldReturnType(scopeSelfType, field, returnType)
+            val valueType = getFieldReturnType(context.codeScope, scopeSelfType, field, returnType)
             val match = FindMemberMatch.findMemberMatch(
                 field, valueType,
                 returnType, selfType,
@@ -89,19 +89,19 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         else bestMatch
     }
 
-    fun getFieldReturnType(scopeSelfType: Type?, field: Field, returnType: Type?): Type? {
+    fun getFieldReturnType(codeScope: Scope, scopeSelfType: Type?, field: Field, returnType: Type?): Type? {
         return if (returnType != null) {
-            getFieldReturnType(scopeSelfType, field)
+            getFieldReturnType(codeScope, scopeSelfType, field)
         } else field.valueType // no resolution invoked (fast-path)
     }
 
-    private fun getFieldReturnType(scopeSelfType: Type?, field: Field): Type? {
+    private fun getFieldReturnType(codeScope: Scope, scopeSelfType: Type?, field: Field): Type? {
         if (field.valueType == null) {
             var expr = (field.initialValue ?: field.getterExpr)!!
             while (expr is ReturnExpression) expr = expr.value
             LOGGER.info("Resolving valueType($field), initial/getter: $expr")
             val contextSelfType = field.selfType ?: scopeSelfType
-            val context = ResolutionContext(contextSelfType, false, null, emptyMap())
+            val context = ResolutionContext(codeScope, contextSelfType, false, null, emptyMap())
             field.valueType = resolveType(context, expr)
         }
         return field.valueType
@@ -184,7 +184,7 @@ object FieldResolver : MemberResolver<Field, ResolvedField>() {
         val selfType = context.selfType
         LOGGER.info("TypeParams for field '$field': $typeParameters, selfType: $selfType")
 
-        val valueType = getFieldReturnType(context.selfType, field, context.targetType)
+        val valueType = getFieldReturnType(context.codeScope, context.selfType, field, context.targetType)
         return FindMemberMatch.findMemberMatch(
             field, valueType,
             context.targetType, selfType,

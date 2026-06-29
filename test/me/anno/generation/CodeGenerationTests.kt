@@ -980,6 +980,10 @@ abstract class CodeGenerationTests {
             class Any
             class Int {}
             external fun println(arg0: Int)
+            class Array<V>(val size: Int) {
+                external operator fun set(index: Int, value: V)
+            }
+            enum class Boolean { TRUE, FALSE }
         """.trimIndent() + inheritanceCode
 
         val printed = generator()

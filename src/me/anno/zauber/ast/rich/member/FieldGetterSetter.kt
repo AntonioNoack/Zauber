@@ -109,7 +109,7 @@ object FieldGetterSetter {
 
         val method = Method(
             null, false, getterName(field.name), emptyList(), emptyList(),
-            getterScope, field.valueType ?: TypeOfField(field), emptyList(),
+            getterScope, field.valueType ?: TypeOfField(field, field.scope), emptyList(),
             expr, field.flags, origin
         )
         method.backedField = field
@@ -186,7 +186,7 @@ object FieldGetterSetter {
 
         val parameter = Parameter(
             0, valueField.name, ParameterType.VALUE_PARAMETER, ParameterMutability.DEFAULT,
-            field.valueType ?: TypeOfField(field), setterScope, origin
+            field.valueType ?: TypeOfField(field, field.scope), setterScope, origin
         )
         val method = Method(
             field.selfType, false, setterName(field.name), emptyList(),
