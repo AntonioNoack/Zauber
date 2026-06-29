@@ -22,6 +22,7 @@ class PythonASTTest {
 
         root.getOrPut("object", ScopeType.NORMAL_CLASS).setEmptyTypeParams()
         root.getOrPut("list", ScopeType.NORMAL_CLASS).setEmptyTypeParams()
+        root.getOrPut("RuntimeError", ScopeType.NORMAL_CLASS).setEmptyTypeParams()
 
         val s0 = source.absolutePath.length + 1
         TokenizerBench.execute(source, "py") { src, fileName ->

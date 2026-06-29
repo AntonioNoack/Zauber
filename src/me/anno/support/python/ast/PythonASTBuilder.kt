@@ -20,7 +20,9 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.parameter.*
 import me.anno.zauber.ast.rich.parser.Associativity
 import me.anno.zauber.ast.rich.parser.Operator
+import me.anno.zauber.ast.rich.parser.ZauberASTBuilder
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilder.Companion.unitInstance
+import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.tokenizer.TokenList
@@ -30,7 +32,11 @@ import me.anno.zauber.types.Import
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import me.anno.zauber.types.impl.GenericType
 import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
+import me.anno.zauber.types.staticanalysis.ConditionType
+import me.anno.zauber.types.staticanalysis.ConditionedType
+import me.anno.zauber.types.staticanalysis.TypeCondition
 
 class PythonASTBuilder(tokens: TokenList, root: Scope) :
     JavaASTBuilder(tokens, root, true, Language.PYTHON) {
@@ -51,6 +57,15 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
     }
 
     override fun readTypePath(selfType: Type?): Type? {
+        if (tokens.equals(i, TokenType.STRING)) {
+            val value = tokens.toString(i++)
+            return ConditionedType(
+                Types.String, listOf(
+                    TypeCondition(ConditionType.EQUALS_CONSTANT, value)
+                )
+            )
+        }
+
         return if (consumeIf("None")) noneType
         else super.readTypePath(selfType)
     }
@@ -138,14 +153,18 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
                 consumeIf("yield") -> {
                     val origin = origin(i - 1)
-                    val value = readExpressionOrTuple()
+                    val value = if (tokens.isSameLine(i - 1, i)) {
+                        if (consumeIf("from")) {
+                            // pipe all members... I think we do that automatically...
+                        }
+                        readExpressionOrTuple()
+                    } else unitInstance
                     pushExpression(YieldExpression(value, currPackage, origin))
                 }
 
                 consumeIf("del") -> readDelete()
 
-                tokens.equals(i, "for") && tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) &&
-                        tokens.equals(i + 2, "in", ",") -> pushExpression(readForLoop())
+                tokens.equals(i, "for") -> pushExpression(readForLoop())
 
                 tokens.equals(i, "def") &&
                         tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) -> readMethod()
@@ -169,6 +188,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 }
 
                 consumeIf(";") -> {} // all is fine, just skip
+                consumeIf(TokenType.DEDENT) -> {}
+
+                // empty body
+                i + 1 == tokens.size && consumeIf("...") -> {}
+
+                consumeIf("type") -> readTypeAlias()
 
                 else -> error("Unknown token ${tokens.err(i)}")
             }
@@ -199,17 +224,56 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
     fun readDelete() {
         val origin = origin(i - 1)
+        val i0 = i
         val name = consumeName(VSCodeType.VARIABLE, 0)
-        if (tokens.equals(i, TokenType.OPEN_ARRAY)) {
-            val index = pushArray { readExpression() }
-            val field = UnresolvedFieldExpression(name, emptyList(), currPackage, origin)
-            pushExpression(NamedCallExpression(field, "remove", index, currPackage, origin))
+        if (tokens.equals(i, ".")) {
+            var end = tokens.findToken(i, "[")
+            val missingEnd = end == -1
+            if (missingEnd) {
+                end = i
+                while (tokens.isSameLine(end, end + 1) && !tokens.equals(end, ",")) end++
+                // todo delete field from known fields in sub-scope???
+                i = end + 1
+                return
+            }
+            val expr = tokens.push(end) {
+                i-- // undo reading name
+                readExpression()
+            }
+            return readDeleteIndex(expr, origin)
+        } else if (tokens.equals(i, TokenType.OPEN_ARRAY)) {
+            val field = getField(name, i0)
+            readDeleteIndex(field, origin)
         } else {
             // todo delete field from known fields in scope???
             while (consumeIf(",")) {
                 consumeName(VSCodeType.VARIABLE, 0)
             }
         }
+    }
+
+    fun readDeleteIndex(field: Expression, origin: Long) {
+        val index = pushArray {
+            if (consumeIf(":")) null
+            else {
+                val expr = readExpression()
+                if (consumeIf(":")) {
+                    val end = readExpression()
+                    namedCall("range", listOf(expr, end), origin)
+                } else expr
+            }
+        }
+        pushExpression(
+            if (index == null) {
+                NamedCallExpression(field, "clear", currPackage, origin)
+            } else {
+                NamedCallExpression(field, "remove", index, currPackage, origin)
+            }
+        )
+    }
+
+    fun getField(name: String, i: Int): Expression {
+        return UnresolvedFieldExpression(name, emptyList(), currPackage, origin(i))
     }
 
     fun readAssert() {
@@ -349,6 +413,9 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         val root = if (consumeIf(".")) {
             currPackage.parent ?: root // file -> folder
         } else root
+        if (tokens.equals(i, "import")) {
+            return Import(root, false, root.name)
+        }
         val (path, j0) = tokens.readPath(i, null, root)
         val (import, j1) = tokens.readImport(j0, path)
         markNamespace(j1)
@@ -558,6 +625,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 PyNumberExpression(value, currPackage, origin)
             }
 
+            tokens.equals(i, "self", "do") -> readNameOrCall()
+
             else -> super.readPrefix()
         }
     }
@@ -568,8 +637,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
     }
 
     fun readDictOrSet(): EitherOr<Pair<List<Expression>, Boolean>, Expression> {
+
         skipIndentsAndDedents()
-        if (i >= tokens.size) return EitherOr(emptyList<Expression>() to true) /* default is dict */
+        if (i >= tokens.size) {
+            /* default is dict */
+            return EitherOr(emptyList<Expression>() to true)
+        }
 
         var isDict = false
         val properties = ArrayList<Expression>()
@@ -633,7 +706,13 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         consume("in")
         val iterable = readExpression()
         val condition = if (consumeIf("if")) {
-            readExpression()
+            var condition = readExpression()
+            while (consumeIf("if")) { // there can be many ifs
+                val origin = origin(i - 1)
+                val extra = readExpression()
+                condition = shortcutExpression(condition, ShortcutOperator.AND, extra, currPackage, origin)
+            }
+            condition
         } else null
 
         val resultField = outerScope.addField(
@@ -823,10 +902,41 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }
     }
 
+    override fun readTypeParameterDeclarations(classScope: Scope, assignToScope: Boolean): List<Parameter> {
+        pushGenericParams()
+        if (!tokens.equals(i, "[")) {
+            if (assignToScope) classScope.setEmptyTypeParams()
+            return emptyList()
+        }
+
+        val parameters = ArrayList<Parameter>()
+        pushArray {
+            while (i < tokens.size) {
+                val origin = origin(i)
+                val name = consumeName(VSCodeType.TYPE_PARAM, 0)
+
+                // name might be needed for the type, so register it already here
+                genericParams.last()[name] = GenericType(classScope, name)
+
+                val type = Types.NullableAny
+                val param = Parameter(
+                    parameters.size, name,
+                    ParameterType.TYPE_PARAMETER, ParameterMutability.VAL,
+                    type, classScope, origin
+                )
+                parameters.add(param)
+                readComma()
+            }
+        }
+        if (assignToScope) classScope.setTypeParams(parameters)
+        return parameters
+    }
+
     fun readMethod() {
         val origin = origin(i)
         consume("def")
         val name = consumeName(VSCodeType.METHOD, 0)
+        val typeParameters = readTypeParameterDeclarations(currPackage, false)
         val valueParameters = pushCall {
             readParameterDeclarations(currPackage.typeWithArgs, emptyList(), ParameterType.VALUE_PARAMETER)
         }
@@ -837,10 +947,11 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         pushPythonBlock(ScopeType.METHOD, name) { methodScope ->
             val bodyExpr = readMethodBody()
             methodScope.selfAsMethod = Method(
-                null, false, name, emptyList(), valueParameters,
+                null, false, name, typeParameters, valueParameters,
                 methodScope, returnType, emptyList(), bodyExpr, 0, origin
             )
         }
+        popGenericParams()
     }
 
     override fun readMethodBody(): ExpressionList {

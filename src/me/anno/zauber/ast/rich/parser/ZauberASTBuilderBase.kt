@@ -211,7 +211,7 @@ abstract class ZauberASTBuilderBase(
         } else null
     }
 
-    fun readTypeParameterDeclarations(classScope: Scope, assignToScope: Boolean): List<Parameter> {
+    open fun readTypeParameterDeclarations(classScope: Scope, assignToScope: Boolean): List<Parameter> {
         pushGenericParams()
         if (!tokens.equals(i, "<")) {
             if (assignToScope) classScope.setEmptyTypeParams()
@@ -1089,13 +1089,19 @@ abstract class ZauberASTBuilderBase(
         val variableNames = ArrayList<FieldDeclarationI>()
         var hasComma = false
         while (i < tokens.size && !tokens.equals(i, "in")) {
-            variableNames += if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                pushCall { readForNames() }
-            } else {
-                val origin = origin(i)
-                val name = consumeName(VSCodeType.FUNCTION, 0)
-                val type = if (consumeIf(":")) readTypeNotNull(null, true) else null
-                FieldDeclaration(name, type, origin)
+            variableNames += when {
+                tokens.equals(i, TokenType.OPEN_CALL) -> {
+                    pushCall { readForNames() }
+                }
+                tokens.equals(i, TokenType.OPEN_ARRAY) && language == Language.PYTHON -> {
+                    return pushArray { readForNames() }
+                }
+                else -> {
+                    val origin = origin(i)
+                    val name = consumeName(VSCodeType.FUNCTION, 0)
+                    val type = if (consumeIf(":")) readTypeNotNull(null, true) else null
+                    FieldDeclaration(name, type, origin)
+                }
             }
             if (consumeIf(",")) hasComma = true
             else break

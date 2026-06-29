@@ -471,6 +471,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             tokens.equals(i, TokenType.STRING) -> {
                 StringExpression(tokens.toString(i++), currPackage, origin)
             }
+
             consumeIf("return") -> readReturn(null)
             consumeIf("throw") -> ThrowExpression(readExpression(), currPackage, origin)
             consumeIf("break") -> BreakExpression(readJumpLabel(), currPackage, origin)
@@ -480,6 +481,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             consumeIf("for") -> readForLoop(label)
             consumeIf("while") -> readWhileLoop(label)
             consumeIf("do") -> readDoWhileLoop(label)
+
             consumeIf("!") -> {
                 val base = readExpression()
                 NamedCallExpression(base, "not", currPackage, origin)
@@ -557,27 +559,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
                 }
             }
 
-            tokens.equals(i, TokenType.NAME) -> {
-                if (tokens.equals(i + 1, "->")) {
-                    readLambda(i)
-                } else {
-                    val origin = origin(i)
-                    val i0 = i
-                    val vsCodeType =
-                        if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
-                            VSCodeType.METHOD
-                        } else VSCodeType.VARIABLE
-                    val namePath = consumeName(vsCodeType, 0)
-                    val typeArgs = readTypeParameters(null)
-                    // println("reading a call, $namePath, $typeArgs")
-                    if (tokens.equals(i, TokenType.OPEN_CALL)) {
-                        // constructor or function call with type args
-                        readNamedCall(namePath, i0, typeArgs, origin)
-                    } else {
-                        nameExpression(namePath, i0, origin, currPackage)
-                    }
-                }
-            }
+            tokens.equals(i, TokenType.NAME) -> readNameOrCall()
             tokens.equals(i, TokenType.OPEN_CALL) -> {
                 // this could be a cast... it is, if (type) name
                 val i0 = i
@@ -624,7 +606,29 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         }
     }
 
-    private fun isKotlinLike(): Boolean {
+    fun readNameOrCall(): Expression {
+        if (tokens.equals(i + 1, "->")) {
+            return readLambda(i)
+        } else {
+            val origin = origin(i)
+            val i0 = i
+            val vsCodeType =
+                if (tokens.equals(i + 1, TokenType.OPEN_CALL, TokenType.OPEN_BLOCK)) {
+                    VSCodeType.METHOD
+                } else VSCodeType.VARIABLE
+            val namePath = consumeName(vsCodeType, 0)
+            val typeArgs = readTypeParameters(null)
+            // println("reading a call, $namePath, $typeArgs")
+            return if (tokens.equals(i, TokenType.OPEN_CALL)) {
+                // constructor or function call with type args
+                readNamedCall(namePath, i0, typeArgs, origin)
+            } else {
+                nameExpression(namePath, i0, origin, currPackage)
+            }
+        }
+    }
+
+    fun isKotlinLike(): Boolean {
         return when (language) {
             Language.ZAUBER, Language.KOTLIN -> true
             else -> false
@@ -748,7 +752,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
             }
             val body = readBodyOrExpression(label ?: "")
             if (isIterator) {
-                createIteratorForLoop( initial, body, label, emptyList(), null){field}
+                createIteratorForLoop(initial, body, label, emptyList(), null) { field }
             } else {
                 val body = ExpressionList(listOf(body, increment), currPackage, origin)
                 val result = ArrayList<Expression>()

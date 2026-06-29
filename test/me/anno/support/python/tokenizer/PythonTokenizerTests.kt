@@ -286,4 +286,12 @@ class PythonTokenizerTests {
             tokenize(src)
         }
     }
+
+    @Test
+    fun testDict(){
+        val src = "operator_table = {\n" +
+                "        '=': Equals, ',': Comma,    '?': Question, '|': Pipe,    '(': LParen,\n" +
+                "        ')': RParen, '*': Asterisk, '{': LBrace,   '}': RBrace}"
+        println(tokenize(src).toDebugString())
+    }
 }

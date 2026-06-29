@@ -78,19 +78,21 @@ class TokenList(val source: CharSequence, val fileName: String) {
         check(equals(i, open)) { "Expected $open, got ${err(i)}" }
         var depth = 1
         var j = i + 1
-        while (depth > 0) {
-            if (j >= size) {
-                printTokensInBlocks(i, open, close)
-                LOGGER.warn("Could not find block end for $open/$close at ${err(i)}, #${size - i}")
-                return size
-            }
-            when (getType(j++)) {
-                open, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK, TokenType.INDENT -> depth++
-                close, TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK, TokenType.DEDENT -> depth--
+        while (j < size) {
+            when (getType(j)) {
+                open, TokenType.OPEN_CALL, TokenType.OPEN_ARRAY, TokenType.OPEN_BLOCK -> depth++
+                close, TokenType.CLOSE_CALL, TokenType.CLOSE_ARRAY, TokenType.CLOSE_BLOCK -> {
+                    if (depth == 1) return j
+                    depth--
+                }
                 else -> {}
             }
+            j++
         }
-        return j - 1
+
+        printTokensInBlocks(i, open, close)
+        LOGGER.warn("Could not find block end for $open/$close at ${err(i)}, #${size - i}")
+        return size
     }
 
     fun printTokensInBlocks(i: Int) {
@@ -216,7 +218,8 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun getLineNumber(i: Int): Int {
-        val i = clamp(i, 0, size - 1)
+        if (totalSize <= 0) return 1
+        val i = clamp(i, 0, totalSize - 1)
         val lineNumbers = getLineNumbers(i)
         return lineNumbers.getLineNumber(lineNumbers.findEntryIndex(i))
     }
@@ -351,6 +354,10 @@ class TokenList(val source: CharSequence, val fileName: String) {
 
     fun equals(i: Int, type: TokenType): Boolean {
         return i in 0 until size && getType(i) == type
+    }
+
+    fun equalsOOB(i: Int, type: TokenType): Boolean {
+        return i in 0 until totalSize && getTypeUnsafe(i) == type
     }
 
     fun equals(i: Int, type: TokenType, type2: TokenType): Boolean {

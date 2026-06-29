@@ -73,6 +73,9 @@ open class ASTBuilderBase(val tokens: TokenList, val root: Scope, val language: 
     ): R {
         // val size0 = tokens.size
         val end = tokens.findBlockEnd(i, open, close)
+        check(tokens.equals(end, close)) {
+            "Expected $close at $end, but got ${tokens.err(end)}"
+        }
         consume(open)
         val result = tokens.push(end, readImpl)
         check(i == end) { "Missed reading tokens, $i != $end, ${tokens.err(i)}" }
