@@ -57,6 +57,10 @@ class Runtime {
         externalMethods[key] = method
     }
 
+    fun register(scope: ClassType, name: String, types: List<Type>, method: ExternalMethod) {
+        register(scope.clazz, name, types, method)
+    }
+
     operator fun get(field: SimpleField): Instance {
         return this[getCall(), field]
     }

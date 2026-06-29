@@ -498,6 +498,7 @@ abstract class CodeGenerationTests {
             1e38f, -1e38f,
             1e308, -1e308,
         ).map { it.toString() }
+        val names = numberTypes.map { it.toString() }
         val runnableCode = numberTypes.joinToString("") { type ->
             val max = getBigValueForTesting(type)
             val type = type.clazz.name
@@ -552,13 +553,14 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEqualsNumbers(expected, printed)
+        assertEqualsNumbers(expected, names, printed)
     }
 
     fun testNumberConversionsImpl() {
         val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
         val builder = StringBuilder()
         val expected = ArrayList<String>()
+        val names = ArrayList<String>()
 
         var ctr = 0
         for (i in numberTypes.indices) {
@@ -648,16 +650,19 @@ abstract class CodeGenerationTests {
                     else -> throw NotImplementedError("Add $fromType -> $toType")
                 }
                 expected.add(expected0)
+                names.add("$fromType->$toType")
 
                 if (fromType.isFloat()) {
                     builder.append("val v$ctr: ${fromType.clazz.name} = 1e1000\n")
                     builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
                     expected.add(getMaxValueForTesting(toType))
+                    names.add("$fromType->$toType/Inf")
                     ctr++
 
                     builder.append("val v$ctr: ${fromType.clazz.name} = -1e1000\n")
                     builder.append("println(v${ctr}.to${toType.clazz.name}())\n")
                     expected.add(getMinValueForTesting(toType))
+                    names.add("$fromType->$toType/-Inf")
                     ctr++
                 }
             }
@@ -684,10 +689,10 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEqualsNumbers(expected, printed)
+        assertEqualsNumbers(expected, names, printed)
     }
 
-    fun assertEqualsNumbers(expected: List<String>, printed: String) {
+    fun assertEqualsNumbers(expected: List<String>, names: List<String>, printed: String) {
         val actual = printed.lines()
             .filter { it.isNotEmpty() }
         assertEquals(expected.size, actual.size)
@@ -696,7 +701,7 @@ abstract class CodeGenerationTests {
             try {
                 assertEqualsNumber(expected[i], actual[i])
             } catch (e: Throwable) {
-                LOGGER.error("Mismatch[$i] at ${e.message}")
+                LOGGER.error("Mismatch: ${names[i]} at ${e.message}")
                 mismatches++
             }
         }
@@ -831,10 +836,10 @@ abstract class CodeGenerationTests {
      * */
     fun testLogicalOperatorsImpl() {
 
-        // todo also test negation for all number types, not just integers
-
         val intTypes = nativeJavaNumbers.keys.filter { it != Types.Char && !it.isFloat() }
         val expected = ArrayList<String>()
+        val names = ArrayList<String>()
+
         val runnableCode = intTypes.withIndex().joinToString("") { (ctr, type) ->
 
             val numBits = type.getNumBits()
@@ -852,37 +857,61 @@ abstract class CodeGenerationTests {
             val xorExpected = 0b0110.repeat4(repeats)
             val invExpected = 0b1010.repeat4(repeats)
 
-            val mask = (1L shl numBits) - 1
-            val shlExpected = seqAn.shl(shift).and(mask)
-            val shrExpected = invExpected.shr(shift)
-            val ushrExpected = invExpected.shl(64 - numBits).ushr(shift + (64 - numBits)).and(mask)
-            val rotlExpected = (seqA.drop(shift) + seqA.substring(0, shift)).toULong(2).toLong()
-            val rotrExpected = (seqA.drop(numBits - shift) + seqA.substring(0, numBits - shift)).toULong(2).toLong()
+            val mask =
+                if (numBits == 64) -1L // this op would do nothing, because only the last 6 bits of the shift are respected
+                else (1L shl numBits) - 1L
 
+            val sh = 64 - numBits
+
+            val shlExpected = seqAn.shl(shift).and(mask)
+            val signedInvExpected = invExpected.shxs(sh)
+            val shrExpected =
+                if (type.isUnsigned()) invExpected ushr shift
+                else signedInvExpected shr shift
+
+            val ushrExpected = invExpected.ushr(shift)
+            val rotlExpected = (seqAn.shl(shift) or seqAn.ushr(numBits - shift)).and(mask)
+            val rotrExpected = (seqAn.ushr(shift) or seqAn.shl(numBits - shift)).and(mask)
+
+            val tn = type.toString()
             if (type.isUnsigned()) {
                 expected.add(andExpected.toULong().toString())
                 expected.add(orExpected.toULong().toString())
                 expected.add(xorExpected.toULong().toString())
                 expected.add(invExpected.toULong().toString())
 
-                expected.add(shlExpected.toULong().toString())
-                expected.add(shrExpected.toULong().toString())
-                expected.add(ushrExpected.toULong().toString())
-                expected.add(rotlExpected.toULong().toString())
-                expected.add(rotrExpected.toULong().toString())
+                if (numBits > 16) {
+                    expected.add(shlExpected.toULong().toString())
+                    expected.add(shrExpected.toULong().toString())
+                    expected.add(ushrExpected.toULong().toString())
+                    expected.add(rotlExpected.toULong().toString())
+                    expected.add(rotrExpected.toULong().toString())
+                }
             } else {
                 expected.add(andExpected.toString())
                 expected.add(orExpected.toString())
                 expected.add(xorExpected.toString())
-                val extraBits = 64 - numBits
-                val invExtended = invExpected.shl(extraBits).shr(extraBits)
-                expected.add(invExtended.toString())
+                expected.add(signedInvExpected.toString())
 
-                expected.add(shlExpected.toString())
-                expected.add(shrExpected.toString())
-                expected.add(ushrExpected.toString())
-                expected.add(rotlExpected.toString())
-                expected.add(rotrExpected.toString())
+                if (numBits > 16) {
+                    expected.add(shlExpected.shxs(sh).toString())
+                    expected.add(shrExpected.shxs(sh).toString())
+                    expected.add(ushrExpected.shxu(sh).toString())
+                    expected.add(rotlExpected.shxs(sh).toString())
+                    expected.add(rotrExpected.shxs(sh).toString())
+                }
+            }
+
+            names.add("$tn.and")
+            names.add("$tn.or")
+            names.add("$tn.xor")
+            names.add("$tn.inv")
+            if (numBits > 16) {
+                names.add("$tn.shl")
+                names.add("$tn.shr")
+                names.add("$tn.ushr")
+                names.add("$tn.rotl")
+                names.add("$tn.rotr")
             }
 
             val typeName = type.clazz.name
@@ -893,13 +922,15 @@ abstract class CodeGenerationTests {
                     "println(a${ctr}  or b${ctr})\n" +
                     "println(a${ctr} xor b${ctr})\n" +
                     "println(a${ctr}.inv())\n" +
-                    "println(a${ctr} shl $shift)\n" +
-                    "println(a${ctr}.inv() shr $shift)\n" +
-                    "println(a${ctr}.inv() ushr $shift)\n" +
-                    "println(a${ctr}.rotateLeft($shift))\n" +
-                    "println(a${ctr}.rotateRight($shift))\n"
+                    if (numBits > 16) (
+                            "println(a${ctr} shl $shift)\n" +
+                                    "println(a${ctr}.inv() shr $shift)\n" +
+                                    "println(a${ctr}.inv() ushr $shift)\n" +
+                                    "println(a${ctr}.rotateLeft($shift))\n" +
+                                    "println(a${ctr}.rotateRight($shift))\n") else ""
         }
         val numberClasses = intTypes.joinToString("") { type ->
+            val numBits = type.getNumBits()
             val type = type.clazz.name
             "" +
                     "external class $type(val content: $type) {\n" +
@@ -907,11 +938,12 @@ abstract class CodeGenerationTests {
                     "   external fun or(other: $type): $type\n" +
                     "   external fun xor(other: $type): $type\n" +
                     "   external fun inv(): $type\n" +
-                    "   external fun shl(shift: Int): $type\n" +
-                    "   external fun shr(shift: Int): $type\n" +
-                    "   external fun ushr(shift: Int): $type\n" +
-                    "   external fun rotateLeft(shift: Int): $type\n" +
-                    "   external fun rotateRight(shift: Int): $type\n" +
+                    (if (numBits > 16) "" +
+                            "   external fun shl(shift: Int): $type\n" +
+                            "   external fun shr(shift: Int): $type\n" +
+                            "   external fun ushr(shift: Int): $type\n" +
+                            "   external fun rotateLeft(shift: Int): $type\n" +
+                            "   external fun rotateRight(shift: Int): $type\n" else "") +
                     "}\n" +
                     "external fun println(arg0: $type)"
         }
@@ -925,7 +957,15 @@ abstract class CodeGenerationTests {
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
-        assertEqualsNumbers(expected, printed)
+        assertEqualsNumbers(expected, names, printed)
+    }
+
+    private fun Long.shxs(sh: Int): Long {
+        return shl(sh).shr(sh)
+    }
+
+    private fun Long.shxu(sh: Int): Long {
+        return shl(sh).ushr(sh)
     }
 
     fun testInstanceOfImpl() {
