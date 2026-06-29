@@ -343,7 +343,7 @@ object Stdlib {
                         rt.createNumberFromFloat(fromValue, toType)
                     } else {
                         val fromValue = getIntValue(from, fromType)
-                        rt.createNumberFromInt(fromValue, toType)
+                        rt.createNumberFromInt(fromValue, fromType, toType)
                     }
                 }
             }
@@ -393,11 +393,14 @@ object Stdlib {
         }
     }
 
-    private fun Runtime.createNumberFromInt(from: Long, toType: Type): Instance {
+    private fun Runtime.createNumberFromInt(from: Long, fromType: Type, toType: Type): Instance {
         return when (toType) {
-            Types.Half -> createHalf(from.toFloat().toHalf())
-            Types.Float -> createFloat(from.toFloat())
-            Types.Double -> createDouble(from.toDouble())
+            Types.Half -> createHalf(
+                if (fromType == Types.ULong) from.toULong().toFloat().toHalf()
+                else from.toFloat().toHalf()
+            )
+            Types.Float -> createFloat(if (fromType == Types.ULong) from.toULong().toFloat() else from.toFloat())
+            Types.Double -> createDouble(if (fromType == Types.ULong) from.toULong().toDouble() else from.toDouble())
 
             Types.Char -> createChar(from.toInt().toChar())
             Types.Byte -> createByte(from.toByte())

@@ -16,10 +16,12 @@ data class Flow(val value: SimpleField, val block: SimpleBlock) {
     private fun joinFields(other: Flow, joinedBlock: SimpleBlock): SimpleField {
         if (value == other.value) return value
 
-        val joinedType = unionTypes(value.type, other.value.type)
-        val joinedField = joinedBlock.field(joinedType)
         val ifField = value.use().dst
         val elseField = other.value.use().dst
+        if (ifField == elseField) return ifField
+
+        val joinedType = unionTypes(value.type, other.value.type)
+        val joinedField = joinedBlock.field(joinedType)
         joinedBlock.add(SimpleMerge(joinedField, ifField, elseField, root, -1))
         return joinedField
     }
@@ -41,13 +43,20 @@ data class Flow(val value: SimpleField, val block: SimpleBlock) {
             if (this == null) return Flow(other, otherNode)
 
             val joinedBlock = block.graph.addBlock()
-            val joinedType = unionTypes(value.type, other.type)
-            val joinedField = joinedBlock.field(joinedType)
-            block.nextBranch = joinedBlock
-            otherNode.nextBranch = joinedBlock
-            val ifField = value.use()
-            val elseField = other.use()
-            joinedBlock.add(SimpleMerge(joinedField, ifField, elseField, root, -1))
+            val joinedField = if (value == other) value
+            else {
+                val ifField = value.use().dst
+                val elseField = other.use().dst
+                if (ifField == elseField) ifField
+                else {
+                    val joinedType = unionTypes(value.type, other.type)
+                    val joinedField = joinedBlock.field(joinedType)
+                    block.nextBranch = joinedBlock
+                    otherNode.nextBranch = joinedBlock
+                    joinedBlock.add(SimpleMerge(joinedField, ifField, elseField, root, -1))
+                    joinedField
+                }
+            }
             return Flow(joinedField, joinedBlock)
         }
     }

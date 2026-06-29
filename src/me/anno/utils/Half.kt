@@ -54,9 +54,9 @@ value class Half(val binary: Short) : Comparable<Half> {
                 exponent = 0x3fc00 // NaN/Inf
             } else if (exponent != 0) {// normalized value
                 exponent += 0x1c000 // exp - 15 + 127
-                if (mantissa == 0 && exponent > 0x1c400) {// smooth transition
+                /*if (mantissa == 0 && exponent > 0x1c400) {// smooth transition <- better general behavior at the cost of losing integer-ness
                     return Float.fromBits((bits and 0x8000).shl(16) or (exponent shl 13) or 0x3ff)
-                }
+                }*/
             } else if (mantissa != 0) {// && exp==0 -> subnormal
                 exponent = 0x1c400 // make it normal
                 do {

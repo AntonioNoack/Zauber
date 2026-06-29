@@ -1360,13 +1360,10 @@ open class JavaSourceGenerator : Generator() {
                 // done already
             }
             is SimpleString -> {
+                // todo escape unsupported/problematic characters
                 builder.append('"').append(expr.base.value).append('"')
             }
-            is SimpleNumber -> {
-                // todo remove suffixes, that are not supported by Java
-                //  and instead cast the value to the target
-                builder.append(expr.base.value)
-            }
+            is SimpleNumber -> appendNumber(expr.dst.type, expr.base)
             is SimpleGetLocalField -> {
                 if (expr.field.id == 0 && expr.field.type in nativeNumbers) builder.append("this.content")
                 else builder.append(expr.field.newName)

@@ -587,12 +587,14 @@ abstract class CodeGenerationTests {
                         else -> value
                     }
                     Types.Short -> when {
+                        toType == Types.Half -> "32768.0" // 7 is rounded to 8
                         toType.isFloat() -> "$value.0"
                         toType == Types.Byte -> "-1"
                         toType == Types.UByte -> "255"
                         else -> value
                     }
                     Types.UShort -> when {
+                        toType == Types.Half -> "65504.0"
                         toType.isFloat() -> "$value.0"
                         toType == Types.Byte || toType == Types.Short -> "-1"
                         toType == Types.UByte -> "255"
@@ -635,12 +637,13 @@ abstract class CodeGenerationTests {
                     Types.Half -> when (toType) {
                         Types.Half, Types.Float, Types.Double -> value
                         // all these types fit:
-                        Types.UShort, Types.Int, Types.UInt, Types.ULong, Types.Long -> "65000"
+                        Types.UShort, Types.Int, Types.UInt, Types.ULong, Types.Long -> "64992"
                         // Byte, UByte, Short are max-value
                         else -> getMaxValueForTesting(toType)
                     }
                     Types.Float -> when (toType) {
-                        Types.Float, Types.Double -> value
+                        Types.Float -> value
+                        Types.Double -> value.toFloat().toDouble().toString()
                         else -> getMaxValueForTesting(toType)
                     }
                     Types.Double -> when (toType) {
@@ -649,7 +652,7 @@ abstract class CodeGenerationTests {
                     }
                     else -> throw NotImplementedError("Add $fromType -> $toType")
                 }
-                expected.add(expected0)
+                expected.add(expected0.replace("h", ".0"))
                 names.add("$fromType->$toType")
 
                 if (fromType.isFloat()) {
@@ -701,7 +704,9 @@ abstract class CodeGenerationTests {
             try {
                 assertEqualsNumber(expected[i], actual[i])
             } catch (e: Throwable) {
-                LOGGER.error("Mismatch: ${names[i]} at ${e.message}")
+                var message = (e.message ?: "")
+                if (message.endsWith(": ")) message = message.dropLast(2)
+                LOGGER.error("${e.javaClass.simpleName}: $message for ${names[i]}")
                 mismatches++
             }
         }
@@ -1064,6 +1069,7 @@ abstract class CodeGenerationTests {
                 }
             }
             external fun println(arg0: String)
+            external class Ref<T>
         """.trimIndent()
 
         val printed = generator()

@@ -1,6 +1,7 @@
 package me.anno.generation
 
 import me.anno.compilation.RuntimeCompiler
+import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,7 +18,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
         LogManager.disable("Runtime,Stdlib")
     }
 
-    // todo complete test of all basic number methods (+,-,*,/,%,shl,shr,ushr,and,or,xor,inv)
+    // todo complete test of all basic number methods (+,-,*,/,%)
 
     override fun generator() = RuntimeCompiler()
 
@@ -111,7 +112,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
             } catch (_: Exception) {
             }
             val t1 = System.nanoTime()
-            println("Run $i, ${(t1 - t0) * 1e-6f } ms")
+            println("Run $i, ${(t1 - t0) * 1e-6f} ms")
         }
     }
 
@@ -132,7 +133,7 @@ class BaselineRuntimeTests : CodeGenerationTests() {
 
     @Test
     fun testStringOps() {
-        // todo bug: zauber.Array.set(zauber.Int, zauber.Byte) is somehow missing; it should not even be available like that...
+        // todo bug: zauber.Array.set(zauber.Int, zauber.Byte) is missing; it should not even be available like that...
         testStringOpsImpl()
     }
 
