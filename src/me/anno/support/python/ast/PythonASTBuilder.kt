@@ -123,7 +123,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     } else unitInstance // todo we're inside a catch-block, use its field, (even if unnamed)
                     pushExpression(ThrowExpression(body, currPackage, origin))
                     if (consumeIf("from")) {
-                        consume("None")
+                        consumeName(VSCodeType.VARIABLE, 0)
+                        // consume("None")
                         // todo this somehow suppresses "exception chaining":
                         //  looks like by default, Python adds 'e' to new exceptions in catch-blocks,
                         //  but in this case, no 'e' shall be passed
@@ -140,6 +141,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                     val value = readExpressionOrTuple()
                     pushExpression(YieldExpression(value, currPackage, origin))
                 }
+
+                consumeIf("del") -> readDelete()
 
                 tokens.equals(i, "for") && tokens.equals(i + 1, TokenType.NAME, TokenType.KEYWORD) &&
                         tokens.equals(i + 2, "in", ",") -> pushExpression(readForLoop())
@@ -160,6 +163,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                                 tokens.equals(i + 1, TokenType.OPEN_CALL)) -> {
                     pushExpression(readExpressionWithCommaMaybe())
                 }
+
+                tokens.equals(i, TokenType.OPEN_CALL) -> {
+                    pushExpression(readExpressionWithCommaMaybe())
+                }
+
+                consumeIf(";") -> {} // all is fine, just skip
 
                 else -> error("Unknown token ${tokens.err(i)}")
             }
@@ -186,6 +195,21 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         }
 
         return super.readOperatorSymbol()
+    }
+
+    fun readDelete() {
+        val origin = origin(i - 1)
+        val name = consumeName(VSCodeType.VARIABLE, 0)
+        if (tokens.equals(i, TokenType.OPEN_ARRAY)) {
+            val index = pushArray { readExpression() }
+            val field = UnresolvedFieldExpression(name, emptyList(), currPackage, origin)
+            pushExpression(NamedCallExpression(field, "remove", index, currPackage, origin))
+        } else {
+            // todo delete field from known fields in scope???
+            while (consumeIf(",")) {
+                consumeName(VSCodeType.VARIABLE, 0)
+            }
+        }
     }
 
     fun readAssert() {
@@ -321,19 +345,35 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 expr.self.name == "tupleOf"
     }
 
+    fun readImport(): Import {
+        val root = if (consumeIf(".")) {
+            currPackage.parent ?: root // file -> folder
+        } else root
+        val (path, j0) = tokens.readPath(i, null, root)
+        val (import, j1) = tokens.readImport(j0, path)
+        markNamespace(j1)
+        i = j1
+        return import
+    }
+
     fun readFromImport() {
         // from a.b.c import x
-        val (parentImport, nextI) = tokens.readImport(i)
-        markNamespace(nextI)
-        i = nextI
-
+        val parentImport = readImport()
         consume("import")
         if (consumeIf("*")) {
             val childImport = Import(parentImport.path, allChildren = true, parentImport.name)
             return applyImport(childImport)
         }
 
-        do {
+        if (tokens.equals(i, TokenType.OPEN_CALL)) {
+            pushCall { readFromImport(parentImport) }
+        } else {
+            readFromImport(parentImport)
+        }
+    }
+
+    fun readFromImport(parentImport: Import) {
+        while (i < tokens.size) {
             val childName = consumeName(VSCodeType.VARIABLE, 0)
             val importName = if (consumeIf("as")) {
                 consumeName(VSCodeType.VARIABLE, 0)
@@ -341,7 +381,8 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             val scope = parentImport.path.getOrPut(childName, null)
             val childImport = Import(scope, allChildren = false, importName)
             applyImport(childImport)
-        } while (consumeIf(","))
+            if (!consumeIf(",")) break
+        }
     }
 
     fun pushExpression(expr: Expression) {
@@ -527,12 +568,12 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
     }
 
     fun readDictOrSet(): EitherOr<Pair<List<Expression>, Boolean>, Expression> {
+        skipIndentsAndDedents()
         if (i >= tokens.size) return EitherOr(emptyList<Expression>() to true) /* default is dict */
 
         var isDict = false
         val properties = ArrayList<Expression>()
         while (i < tokens.size) {
-            skipIndentsAndDedents()
 
             val key = readExpression()
             if (tokens.equals(i, "for")) {
@@ -547,7 +588,10 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 check(properties.isEmpty() || isDict)
 
                 if (tokens.equals(i, "for")) {
-                    TODO("Read for-loop for dict: ${tokens.err(i - 1)}")
+                    check(properties.isEmpty())
+                    val value = readForLoopForDict(key, value)
+                    skipIndentsAndDedents()
+                    return EitherOr(value, Unit)
                 }
 
                 properties.add(key)
@@ -559,23 +603,29 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
                 isDict = false
             }
             skipIndentsAndDedents()
-            readComma()
-            skipIndentsAndDedents()
+            if (consumeIf(TokenType.COMMA)) {
+                skipIndentsAndDedents()
+            } else break
         }
+        check(i == tokens.size) { "Missed reading tokens at ${tokens.err(i)}" }
         return EitherOr(properties to isDict)
     }
 
     fun readForLoopForArray(inner: Expression): Expression {
-        return readForLoopForAnyCollection(inner, "ArrayList")
+        return readForLoopForAnyCollection(inner, null, "ArrayList")
     }
 
     fun readForLoopForSet(inner: Expression): Expression {
-        return readForLoopForAnyCollection(inner, "HashSet")
+        return readForLoopForAnyCollection(inner, null, "HashSet")
     }
 
-    fun readForLoopForAnyCollection(inner: Expression, typeName: String): Expression {
+    fun readForLoopForDict(key: Expression, value: Expression): Expression {
+        return readForLoopForAnyCollection(key, value, "HashMap")
+    }
+
+    fun readForLoopForAnyCollection(inner0: Expression, inner1: Expression?, typeName: String): Expression {
         val innerScope = currPackage
-        val outerScope = innerScope.parent!!
+        val outerScope = innerScope.parent ?: innerScope
 
         val origin = origin(i)
         consume("for")
@@ -591,7 +641,17 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
             "__for_${origin.toString(36)}", pythonInstanceType, null, Flags.NONE, origin
         )
         val resultFieldExpr = FieldExpression(resultField, outerScope, origin)
-        val body0 = NamedCallExpression(resultFieldExpr, "add", inner, outerScope, origin)
+        val body0 = if (inner1 == null) {
+            NamedCallExpression(resultFieldExpr, "add", inner0, outerScope, origin)
+        } else {
+            NamedCallExpression(
+                resultFieldExpr, "put", emptyList(),
+                emptyList(), listOf(
+                    NamedParameter(inner0),
+                    NamedParameter(inner1)
+                ), outerScope, origin
+            )
+        }
         val body1 = if (condition == null) body0 else {
             IfElseBranch(condition, body0, null)
         }
@@ -613,12 +673,16 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
 
             // println("reading param at ${tokens.err(i)}")
 
-            var expr = readExpression()
             var mustBeLast = false
-            while (tokens.equals(i, "for")) {
-                check(elements.isEmpty())
-                mustBeLast = true
-                expr = readForLoopForArray(expr)
+            // scope is needed for 'readForLoopForArray'
+            var expr = pushScope(ScopeType.METHOD_BODY, "param") {
+                var expr = readExpression()
+                while (tokens.equals(i, "for")) {
+                    check(elements.isEmpty())
+                    mustBeLast = true
+                    expr = readForLoopForArray(expr)
+                }
+                expr
             }
 
             if (isVarDictStar) expr = ArrayToVarDictStar(expr)
@@ -798,7 +862,7 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         loop@ while (i < tokens.size) {
 
             val isVarDict = consumeIf("*")
-            if (consumeIf(",")) {
+            if (consumeIf(",") || consumeIf("/")) {
                 mustBeNamed = true
                 continue
             }
@@ -841,31 +905,53 @@ class PythonASTBuilder(tokens: TokenList, root: Scope) :
         return parameters
     }
 
+    fun readWithExpressions(): List<Pair<Expression, String?>> {
+        val result = ArrayList<Pair<Expression, String?>>()
+        while (i < tokens.size) {
+            val value = readExpression()
+            val name = if (consumeIf("as")) {
+                consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
+            } else null
+            result.add(value to name)
+            if (!consumeIf(",")) break
+        }
+        return result
+    }
+
     fun readWith(): TryCatchBlock {
         val origin = origin(i - 1)
-        val value = readExpression()
-        val name = if (consumeIf("as")) {
-            consumeName(VSCodeType.PROPERTY, VSCodeModifier.DECLARATION.flag)
-        } else null
+        val values = readWithExpressions()
         consume(":")
-        lateinit var fieldExpr: FieldExpression
+        val fields = ArrayList<FieldExpression>()
         val body = pushPythonBlock(ScopeType.METHOD_BODY, "with") { scope ->
-            if (name != null) {
-                val field = scope.addField(
-                    null, false, false, null,
-                    name, pythonInstanceType, value, 0, origin
-                )
-                fieldExpr = FieldExpression(field, scope, origin)
-                pushExpression(AssignmentExpression(fieldExpr, value))
-            } else {
-                pushExpression(value)
+            for ((value, name) in values) {
+                if (name != null) {
+                    val field = scope.addField(
+                        null, false, false, null,
+                        name, pythonInstanceType, value, 0, origin
+                    )
+                    val fieldExpr = FieldExpression(field, scope, origin)
+                    pushExpression(AssignmentExpression(fieldExpr, value))
+                    fields.add(fieldExpr)
+                } else {
+                    pushExpression(value)
+                }
             }
             readMethodBody()
         }
-        val finally = if (name != null) {
+        val finally = fields.map { fieldExpr ->
             NamedCallExpression(fieldExpr, "close", currPackage, origin)
-        } else null
+        }.toExpressionOrNull(origin)
         return TryCatchBlock(body, emptyList(), finally, currPackage, origin)
+    }
+
+    fun List<Expression>.toExpression(origin: Long): Expression {
+        if (size == 1) return first()
+        return ExpressionList(this, currPackage, origin)
+    }
+
+    fun List<Expression>.toExpressionOrNull(origin: Long): Expression? {
+        return if (isEmpty()) null else toExpression(origin)
     }
 
     override fun readIfBranch(): IfElseBranch {

@@ -5,7 +5,7 @@ import me.anno.utils.Maths.clamp
 import me.anno.utils.StringStyles
 import me.anno.utils.StringStyles.style
 import me.anno.utils.Warning
-import me.anno.zauber.Zauber.root
+import me.anno.zauber.Zauber
 import me.anno.zauber.ast.rich.parser.SemanticTokenList
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -503,7 +503,7 @@ class TokenList(val source: CharSequence, val fileName: String) {
         return -1
     }
 
-    fun readPath(i: Int, scopeType: ScopeType?): Pair<Scope, Int> {
+    fun readPath(i: Int, scopeType: ScopeType?, root: Scope = Zauber.root): Pair<Scope, Int> {
         var j = i
         check(equals(j, TokenType.NAME, TokenType.KEYWORD)) {
             "Expected name or keyword for path at ${err(j)}"
@@ -525,7 +525,12 @@ class TokenList(val source: CharSequence, val fileName: String) {
     }
 
     fun readImport(i: Int): Pair<Import, Int> {
-        var (path, j) = readPath(i, null)
+        val (path, j) = readPath(i, null)
+        return readImport(j, path)
+    }
+
+    fun readImport(j0: Int, path: Scope): Pair<Import, Int> {
+        var j = j0
         val allChildren = equals(j, ".*")
         if (allChildren) j++
         val name = if (!allChildren &&
