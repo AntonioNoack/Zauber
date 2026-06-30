@@ -1401,7 +1401,6 @@ open class JavaSourceGenerator : Generator() {
                 appendFieldName(graph, expr.right)
             }
             is SimpleInstanceOf -> {
-                // todo if type is ClassType, this is easy, else we need to build an expression...
                 appendFieldName(graph, expr.value)
                 builder.append(" instanceof ")
                 appendType(expr.type, expr.scope, false)

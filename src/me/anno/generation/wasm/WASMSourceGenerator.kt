@@ -1526,21 +1526,12 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             }
             is SimpleMerge -> {}
             is SimpleInstanceOf -> {
-                when (val type = expr.type) {
-                    is ClassType -> {
-                        instanceToClass(graph, expr.value)
-                        i32Const(inheritanceTable.getClassIndex(Specialization(type))); nextLine()
-                        val method =
-                            if (type.clazz.isInterface()) inheritanceTable.instanceOfInterfaceCall
-                            else inheritanceTable.instanceOfClassCall
-                        callMethod(method)
-                    }
-                    else -> {
-                        // todo create/get type instance, and execute function on it?
-                        // todo or we just implement the expression, it must be a type expression after all
-                        throw NotImplementedError("Implement writing $expr with ${expr.type.javaClass.simpleName}")
-                    }
-                }
+                instanceToClass(graph, expr.value)
+                i32Const(inheritanceTable.getClassIndex(Specialization(expr.type))); nextLine()
+                val method =
+                    if (expr.type.clazz.isInterface()) inheritanceTable.instanceOfInterfaceCall
+                    else inheritanceTable.instanceOfClassCall
+                callMethod(method)
             }
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
         }

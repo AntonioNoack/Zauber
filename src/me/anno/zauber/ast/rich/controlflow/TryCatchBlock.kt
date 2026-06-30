@@ -141,7 +141,7 @@ class TryCatchBlock(
 
         val thrownType = catch.parameter.type
         val instanceOfField = block0b.field(Types.Boolean)
-        val instanceCheck = createSimpleInstanceOf(instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
+        val instanceCheck = createSimpleInstanceOf(block0b, instanceOfField, block0.value, thrownType, expr.scope, catch.origin)
 
         val alwaysHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.TRUE
         val neverHandled = instanceCheck is SimpleSpecialValue && instanceCheck.type == SpecialValue.FALSE
@@ -151,7 +151,7 @@ class TryCatchBlock(
             alwaysHandled -> simplifyCatchHandleBranch(context, expr, catch, needsValue, block0, block0b)
             neverHandled -> simplifyCatchContinueBranch(flow0, block0, block0b)
             else -> {
-                block0b.add(instanceCheck)
+                // instance-check was already added
 
                 val graph = block0b.graph
                 val ifBlock = graph.addBlock()

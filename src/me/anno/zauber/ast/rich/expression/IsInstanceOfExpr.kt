@@ -52,8 +52,9 @@ class IsInstanceOfExpr(val value: Expression, val type: Type, scope: Scope, orig
     ): FlowResult {
         val block1 = value.simplify(context, block0, flow0, true)
         val block1v = block1.value ?: return block1
-        val dst = block1v.block.field(Types.Boolean)
-        block1v.block.add(createSimpleInstanceOf(dst, block1v.value.use(), type, scope, origin))
+        val block1b = block1v.block
+        val dst = block1b.field(Types.Boolean)
+        createSimpleInstanceOf(block1b, dst, block1v.value.use(), type, scope, origin)
         return block1.withValue(dst, block1v.block)
     }
 

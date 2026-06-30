@@ -5,7 +5,6 @@ import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.expression.Expression
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.controlflow.FlowResult
-import me.anno.zauber.ast.simple.expression.SimpleInstanceOf
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf.Companion.createSimpleInstanceOf
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ResolutionContext
@@ -32,7 +31,7 @@ class JVMSimpleInstanceOf(
     ): FlowResult {
         val dst = dst.toSimple(block0)
         val value = value.toSimple(block0)
-        block0.add(createSimpleInstanceOf(dst, value, type, scope, origin))
+        createSimpleInstanceOf(block0, dst, value, type, scope, origin)
         return flow0.withValue(dst)
     }
 }

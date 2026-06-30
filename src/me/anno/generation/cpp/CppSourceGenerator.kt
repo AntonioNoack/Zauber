@@ -993,16 +993,11 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 }
             }
             is SimpleInstanceOf -> {
-                when (val type = expr.type) {
-                    is ClassType -> {
-                        builder.append("dynamic_cast<")
-                        appendType(expr.type, expr.scope, true)
-                        builder.append("*>(")
-                        appendFieldName(graph, expr.value)
-                        builder.append(") != nullptr")
-                    }
-                    else -> TODO("Implement complex instance-of: ${type.javaClass.simpleName}")
-                }
+                builder.append("dynamic_cast<")
+                appendType(expr.type, expr.scope, true)
+                builder.append("*>(")
+                appendFieldName(graph, expr.value)
+                builder.append(") != nullptr")
             }
             else -> super.appendInstrImpl(graph, expr)
         }

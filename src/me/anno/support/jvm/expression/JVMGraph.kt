@@ -307,7 +307,7 @@ class JVMGraph(scope: Scope, val isStatic: Boolean, origin: Long) : Expression(s
                 thrown.block.nextBranch = checkBlock
 
                 val isInstance = graph.field(Types.Boolean)
-                checkBlock.add(createSimpleInstanceOf(isInstance, thrownValue, handler.type, scope, origin))
+                createSimpleInstanceOf(checkBlock, isInstance, thrownValue, handler.type, scope, origin)
 
                 val ifBranch = graph.addBlock()
                 val elseBranch = graph.addBlock()
