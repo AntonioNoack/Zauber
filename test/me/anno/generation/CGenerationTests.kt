@@ -57,7 +57,6 @@ class CGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testIntArray() {
-        // todo this segfaults: returns error code 139
         testIntArrayImpl()
     }
 

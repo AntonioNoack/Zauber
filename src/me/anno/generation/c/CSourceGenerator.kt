@@ -16,10 +16,7 @@ import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
-import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
-import me.anno.zauber.ast.simple.expression.SimpleBoxCast
-import me.anno.zauber.ast.simple.expression.SimpleMethodCall
-import me.anno.zauber.ast.simple.expression.SimpleConstructorCall
+import me.anno.zauber.ast.simple.expression.*
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
@@ -159,6 +156,11 @@ open class CSourceGenerator : CppSourceGenerator() {
                 .replace('.', '_')
         }
         return "${packagePrefix}${clazzName}_${base}_${hashMethodParameters(method0)}"
+    }
+
+    override fun appendCopy(graph: SimpleGraph, valueType: Type) {
+        // done automatically
+        check(valueType.isValue())
     }
 
     override fun getExtension(headerOnly: Boolean): String {
@@ -386,6 +388,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         }
 
         if (!isCIncludeMethod(method0.method)) {
+            if (expr.thisInstance.type.isValue()) builder.append('&')
             appendFieldName(graph, expr.thisInstance, "")
         }
         appendValueParams(graph, expr.valueParameters, withBrackets = false)
@@ -443,6 +446,10 @@ open class CSourceGenerator : CppSourceGenerator() {
         }
     }
 
+    override fun needsAssignment(expr: SimpleAssignment): Boolean {
+        return super.needsAssignment(expr) && expr !is SimpleConstructorCall
+    }
+
     override fun prepareGraph(graph: SimpleGraph) {
         graph.findBoxingAndUnboxing(true)
         graph.removeWriteOnlyFields()
@@ -454,6 +461,11 @@ open class CSourceGenerator : CppSourceGenerator() {
 
         CodeReconstruction.createCodeFromGraph(graph, true)
         graph.renumberFields() // necessary
+    }
+
+    override fun canSkipInstruction(expr: SimpleInstruction): Boolean {
+        if (expr is SimpleConstructorCall && expr.forAllocation) return false
+        return super.canSkipInstruction(expr)
     }
 
     override fun appendInstrImpl(graph: SimpleGraph, expr: SimpleInstruction) {
@@ -479,6 +491,7 @@ open class CSourceGenerator : CppSourceGenerator() {
             is SimpleConstructorCall -> {
                 val methodName = getMethodName(expr.specialization)
                 builder.append(methodName).append('(')
+                if (expr.thisInstance.type.isValue()) builder.append('&')
                 appendFieldName(graph, expr.thisInstance, "")
                 appendValueParams(graph, expr.valueParameters, withBrackets = false)
                 builder.append(");")
@@ -534,7 +547,7 @@ open class CSourceGenerator : CppSourceGenerator() {
 
     override fun getNativeImplementation(method: MethodLike): String? {
         if (method.name == "readFromClassTable" || method.name == "readFromInterfaceTable") {
-            return "return 0" // temporary fallback for linker to continue
+            return "return 0;" // temporary fallback for linker to continue
         }
         return super.getNativeImplementation(method)
     }

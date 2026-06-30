@@ -1274,7 +1274,7 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
-    fun needsAssignment(expr: SimpleAssignment): Boolean {
+    open fun needsAssignment(expr: SimpleAssignment): Boolean {
         val dst = expr.dst.dst
         return dst.numReads > 0 && !dst.isObjectLike() && expr.dst.type != Types.Nothing
     }

@@ -158,6 +158,7 @@ class CppGenerationTests : CodeGenerationTests() {
     @Test
     fun testBinaryNumberOperations() {
         // todo bug: why is it using floats for the double calculation???
+        //  seemingly... maybe it just prints it with too few digits???
         testBinaryNumberOperationsImpl()
     }
 
