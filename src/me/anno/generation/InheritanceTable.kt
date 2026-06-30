@@ -18,6 +18,8 @@ import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
+import java.io.File
+import java.io.OutputStream
 
 class InheritanceTable(val data: DependencyData) {
 
@@ -233,14 +235,13 @@ class InheritanceTable(val data: DependencyData) {
 
     fun getClassIndex(clazz: Specialization): Int {
         return classIndices.getOrPut(clazz) {
+            classes.add(clazz)
             classIndices.size
         }
     }
 
     fun getClassIndex(type: ClassType): Int {
-        return classIndices.getOrPut(Specialization(type)) {
-            classIndices.size
-        }
+        return getClassIndex(Specialization(type))
     }
 
     fun getClassCallIndex(method0: Specialization): Int {
@@ -251,7 +252,7 @@ class InheritanceTable(val data: DependencyData) {
         return methodToInterfaceIndex[method0]!!
     }
 
-    fun buildClassTable(): IntArray {
+    fun buildClassCallTable(): IntArrayList {
         val builder = IntArrayList(classes.size * 3)
         repeat(classes.size) { builder.add(0) }
         for (i in classes.indices) {
@@ -260,18 +261,75 @@ class InheritanceTable(val data: DependencyData) {
 
             // todo collect all method indices
         }
-        return builder.toIntArray()
+        return builder
     }
 
-    fun buildInterfaceTable(): IntArray {
+    fun buildInterfaceCallTable(): IntArrayList {
         val builder = IntArrayList(classes.size * 3)
-        repeat(classes.size) { builder.add(0) }
+        repeat(classes.size + 1) { builder.add(0) }
         for (i in classes.indices) {
             builder[i] = builder.size
             val clazz = classes[i]
 
             // todo collect all interface indices
         }
-        return builder.toIntArray()
+        builder[classes.size] = builder.size
+        return builder
+    }
+
+    fun buildSuperClassTable(): IntArrayList {
+        val builder = IntArrayList(classes.size)
+        for (i in classes.indices) {
+            val superCall = classes[i].clazz.superCalls
+                .firstOrNull { it.isClassCall }
+            if (superCall != null) {
+                val superType = classes[i].getSuperType(superCall)
+                builder.add(getClassIndex(superType))
+            } else {
+                builder.add(-1)
+            }
+        }
+        check(builder.size == classes.size)
+        return builder
+    }
+
+    fun buildClassToInterfaceTable(): IntArrayList {
+        val builder = IntArrayList(classes.size)
+        repeat(classes.size + 1) { builder.add(0) }
+        for (i in classes.indices) {
+            builder[i] = builder.size
+
+            val clazz = classes[i]
+            for (call in clazz.clazz.superCalls) {
+                if (call.isClassCall) continue
+                val superType = classes[i].getSuperType(call)
+                builder.add(getClassIndex(superType))
+            }
+        }
+        builder[classes.size] = builder.size
+        return builder
+    }
+
+    fun generateFiles(dst: File) {
+        val folder = File(dst.parentFile, "data"); folder.mkdirs()
+        writeFile(File(folder, "classCallTable.bin"), buildClassCallTable())
+        writeFile(File(folder, "interfaceCallTable.bin"), buildInterfaceCallTable())
+        writeFile(File(folder, "superClassTable.bin"), buildSuperClassTable())
+        writeFile(File(folder, "classToInterfaceTable.bin"), buildClassToInterfaceTable())
+    }
+
+    private fun writeFile(dst: File, data: IntArrayList) {
+        dst.outputStream().buffered().use {
+            for (i in 0 until data.size) {
+                it.writeLE32(data[i])
+            }
+        }
+    }
+
+    private fun OutputStream.writeLE32(data: Int) {
+        write(data)
+        write(data shr 8)
+        write(data shr 16)
+        write(data shr 24)
     }
 }

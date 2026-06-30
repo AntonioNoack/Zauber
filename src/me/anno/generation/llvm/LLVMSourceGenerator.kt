@@ -119,6 +119,8 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
 
         dst.writeText(builder.toString())
         builder.clear()
+
+        inheritanceTable.generateFiles(dst.parentFile)
     }
 
     fun appendMainMethodCode(mainMethod: Method) {

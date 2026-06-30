@@ -24,13 +24,13 @@ class MinimalLLVMCompiler : MinimalCompiler() {
     }
 
     override fun compile(projectFolder: File, srcFolder: File, dependencies: DependencyData, mainMethod: Method) {
-        val srcFile = File(projectFolder, "Source.ll")
+        val srcFile = File(srcFolder, "Source.ll")
         val gen = LLVMSourceGenerator()
         gen.generateCode(srcFile, dependencies, mainMethod)
 
         // compile it to assembly
-        runProcess(projectFolder, "llc", srcFile.name)
-        val assemblyFile = srcFile.nameWithoutExtension + ".s"
+        runProcess(srcFolder, "llc", srcFile.name)
+        val assemblyFile = "src/${srcFile.nameWithoutExtension}.s"
 
         val allImports = HashSet<String>()
         val builder = StringBuilder()
@@ -87,15 +87,16 @@ class MinimalLLVMCompiler : MinimalCompiler() {
                     ""
         )
 
-        val cFile = "Zauber.c"
+        val cFile = "src/Zauber.c"
         File(projectFolder, cFile)
             .writeText(builder.toString())
 
-        copyCStandardLibTo(projectFolder)
+        copyCStandardLibTo(srcFolder)
 
         // compile and link it together
         val implFiles = cStandardLibList
             .filter { name -> name.endsWith(".c") }
+            .map { name -> "src/$name" }
         val params = listOf(
             "clang", assemblyFile, cFile
         ) + implFiles + listOf(

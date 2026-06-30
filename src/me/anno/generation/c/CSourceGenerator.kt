@@ -68,6 +68,7 @@ open class CSourceGenerator : CppSourceGenerator() {
     override fun generateCode(dst: File, data: DependencyData, mainMethod: Method) {
         inheritanceTable = InheritanceTable(data)
         super.generateCode(dst, data, mainMethod)
+        inheritanceTable.generateFiles(dst)
     }
 
     private fun getDefineName(packagePath: List<String>, file: File): String {

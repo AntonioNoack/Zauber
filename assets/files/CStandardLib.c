@@ -19,25 +19,25 @@ void* gcNew(size_t size, uint32_t classIndex) {
     return instance;
 }
 
-u32_file classTable;
-u32_file interfaceTable;
+u32_file classCallTable;
+u32_file interfaceCallTable;
 u32_file superClassTable;
 u32_file classToInterfaceTable;
 
-int32_t zauber_inheritance_readFromClassTable_2clr50n(void* self, int32_t index) {
-    if (index < 0 || index >= classTable.len) {
-        perror("Index into classTable out of bounds");
+int32_t zauber_inheritance_readFromClassCallTable_2clr50n(void* self, int32_t index) {
+    if (index < 0 || index >= classCallTable.len) {
+        perror("Index into classCallTable out of bounds");
         exit(1);
     }
-    return classTable.data[index];
+    return classCallTable.data[index];
 }
 
-int32_t zauber_inheritance_readFromInterfaceTable_2clr50n(void* self, int32_t index) {
-    if (index < 0 || index >= interfaceTable.len) {
+int32_t zauber_inheritance_readFromInterfaceCallTable_2clr50n(void* self, int32_t index) {
+    if (index < 0 || index >= interfaceCallTable.len) {
         perror("Index into interfaceTable out of bounds");
         exit(1);
     }
-    return interfaceTable.data[index];
+    return interfaceCallTable.data[index];
 }
 
 int32_t zauber_inheritance_readFromSuperClassTable_2clr50n(void* self, int32_t index) {
@@ -57,23 +57,23 @@ int32_t zauber_inheritance_readFromClassToInterfaceTable_2clr50n(void* self, int
 }
 
 int32_t stdlibMain() {
-    if (load_le_u32_file("classTable.bin", &classTable) != 0) {
-        perror("Failed loading classTable.bin");
+    if (load_le_u32_file("data/classCallTable.bin", &classCallTable) != 0) {
+        perror("Failed loading data/classCallTable.bin");
         return 1;
     }
 
-    if (load_le_u32_file("interfaceTable.bin", &interfaceTable) != 0) {
-        perror("Failed loading interfaceTable.bin");
+    if (load_le_u32_file("data/interfaceCallTable.bin", &interfaceCallTable) != 0) {
+        perror("Failed loading data/interfaceCallTable.bin");
         return 1;
     }
 
-    if (load_le_u32_file("superClassTable.bin", &superClassTable) != 0) {
-        perror("Failed loading superClassTable.bin");
+    if (load_le_u32_file("data/superClassTable.bin", &superClassTable) != 0) {
+        perror("Failed loading data/superClassTable.bin");
         return 1;
     }
 
-    if (load_le_u32_file("classToInterfaceTable.bin", &classToInterfaceTable) != 0) {
-        perror("Failed loading classToInterfaceTable.bin");
+    if (load_le_u32_file("data/classToInterfaceTable.bin", &classToInterfaceTable) != 0) {
+        perror("Failed loading data/classToInterfaceTable.bin");
         return 1;
     }
 

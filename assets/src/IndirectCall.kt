@@ -24,8 +24,8 @@ fun resolveClassCall(classIndex: Int, methodIndex: Int): Int {
 
 @Suppress("unused")
 fun resolveInterfaceCall(classIndex: Int, methodIndex: Int): Int {
-    var i0 = readFromInterfaceCallTable(classIndex * 2) * 2
-    val i1 = readFromInterfaceCallTable(classIndex * 2 + 1) * 2
+    var i0 = readFromInterfaceCallTable(classIndex) * 2
+    val i1 = readFromInterfaceCallTable(classIndex + 1) * 2
     while (i0 < i1) {
         val givenMethodIndex = readFromInterfaceCallTable(i0)
         if (givenMethodIndex == methodIndex) {
@@ -49,8 +49,8 @@ fun isInstanceOfClass(instanceClassIndex: Int, testClassIndex: Int): Boolean {
 
 @Suppress("unused")
 fun isInstanceOfInterface(instanceClassIndex: Int, testInterfaceIndex: Int): Boolean {
-    var i0 = readFromClassToInterfaceTable(instanceClassIndex * 2)
-    val i1 = readFromClassToInterfaceTable(instanceClassIndex * 2 + 1)
+    var i0 = readFromClassToInterfaceTable(instanceClassIndex)
+    val i1 = readFromClassToInterfaceTable(instanceClassIndex + 1)
     while (i0 < i1) {
         if (readFromClassToInterfaceTable(i0) == testInterfaceIndex) {
             return true
