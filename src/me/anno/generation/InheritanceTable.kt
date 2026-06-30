@@ -13,6 +13,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
 import me.anno.zauber.typeresolution.TypeResolution
 import me.anno.zauber.types.Specialization
+import me.anno.zauber.types.Types
 import me.anno.zauber.types.impl.ClassType
 
 class InheritanceTable(val data: DependencyData) {
@@ -32,6 +33,10 @@ class InheritanceTable(val data: DependencyData) {
 
     val interfaceCallSpec by lazy { funToSpec("resolveInterfaceCall") }
     val methodCallSpec by lazy { funToSpec("resolveClassCall") }
+
+    val instanceOfClassCall by lazy { funToSpec("isInstanceOfClass") }
+
+    val instanceOfInterfaceCall by lazy { funToSpec("isInstanceOfInterface") }
 
     // todo build class-call and interface-call table.
     //  class-call:
@@ -59,17 +64,30 @@ class InheritanceTable(val data: DependencyData) {
         if (methodToMethodIndex.isNotEmpty() || methodToInterfaceIndex.isNotEmpty()) {
             data.calledMethods += interfaceCallSpec
             data.calledMethods += methodCallSpec
-            data.calledMethods += funToSpec("readFromClassTable")
-            data.calledMethods += funToSpec("readFromInterfaceTable")
-
-            val helperConstr = helperScope.getOrCreatePrimaryConstructorScope()
-            data.createdClasses += Specialization(helperScope, emptyParameterList())
-            data.calledMethods += Specialization(helperConstr, emptyParameterList())
+            data.calledMethods += funToSpec("readFromClassCallTable")
+            data.calledMethods += funToSpec("readFromInterfaceCallTable")
         }
+
+        data.calledMethods += instanceOfClassCall
+        data.calledMethods += instanceOfInterfaceCall
+        data.calledMethods += funToSpec("readFromSuperClassTable")
+        data.calledMethods += funToSpec("readFromSuperClassTable")
+        data.calledMethods += funToSpec("readFromClassToInterfaceTable")
+        data.calledMethods += funToSpec(Types.Int, "inc")
+
+        val helperConstr = helperScope.getOrCreatePrimaryConstructorScope()
+        data.createdClasses += Specialization(helperScope, emptyParameterList())
+        data.calledMethods += Specialization(helperConstr, emptyParameterList())
     }
 
     fun funToSpec(name: String): Specialization {
         val method = helperScope.methods0.firstOrNull { it.name == name }
+            ?: error("Missing $name() in $helperScope")
+        return Specialization(method.memberScope, emptyParameterList())
+    }
+
+    fun funToSpec(type: ClassType, name: String): Specialization {
+        val method = type.clazz.methods0.firstOrNull { it.name == name }
             ?: error("Missing $name() in $helperScope")
         return Specialization(method.memberScope, emptyParameterList())
     }
@@ -213,6 +231,12 @@ class InheritanceTable(val data: DependencyData) {
 
     fun getClassIndex(clazz: Specialization): Int {
         return classIndices.getOrPut(clazz) {
+            classIndices.size
+        }
+    }
+
+    fun getClassIndex(type: ClassType): Int {
+        return classIndices.getOrPut(Specialization(type)) {
             classIndices.size
         }
     }

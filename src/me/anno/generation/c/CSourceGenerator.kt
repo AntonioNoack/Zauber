@@ -546,7 +546,7 @@ open class CSourceGenerator : CppSourceGenerator() {
     }
 
     override fun getNativeImplementation(method: MethodLike): String? {
-        if (method.name == "readFromClassTable" || method.name == "readFromInterfaceTable") {
+        if (method.name == "readFromClassCallTable" || method.name == "readFromInterfaceCallTable") {
             return "return 0;" // temporary fallback for linker to continue
         }
         return super.getNativeImplementation(method)

@@ -4,31 +4,61 @@ annotation class Static
 
 package zauber.inheritance
 
-@Static
-private external fun readFromClassTable(addr: Int): Int
+@Static // class -> offset, offset + method -> method-index to call
+private external fun readFromClassCallTable(addr: Int): Int
 
-@Static
-private external fun readFromInterfaceTable(addr: Int): Int
+@Static // class -> i0 + i1, i0 .. i1 |=| method -> method-index to call
+private external fun readFromInterfaceCallTable(addr: Int): Int
+
+@Static // class -> super-class or -1
+private external fun readFromSuperClassTable(addr: Int): Int
+
+@Static // class -> i0 + i1, i0 .. i1 |=| interface
+private external fun readFromClassToInterfaceTable(addr: Int): Int
 
 @Static
 @Suppress("unused")
 fun resolveClassCall(classIndex: Int, methodIndex: Int): Int {
-    val offset = readFromClassTable(classIndex)
-    return readFromClassTable(offset + methodIndex)
+    val offset = readFromClassCallTable(classIndex)
+    return readFromClassCallTable(offset + methodIndex)
 }
 
 @Static
 @Suppress("unused")
 fun resolveInterfaceCall(classIndex: Int, methodIndex: Int): Int {
-    var i0 = readFromInterfaceTable(classIndex) * 2
-    val i1 = readFromInterfaceTable(classIndex + 1) * 2
+    var i0 = readFromInterfaceCallTable(classIndex * 2) * 2
+    val i1 = readFromInterfaceCallTable(classIndex * 2 + 1) * 2
     while (i0 < i1) {
-        val givenMethodIndex = readFromInterfaceTable(i0)
+        val givenMethodIndex = readFromInterfaceCallTable(i0)
         if (givenMethodIndex == methodIndex) {
-            return readFromInterfaceTable(i0 + 1)
+            return readFromInterfaceCallTable(i0 + 1)
         }
         i0 += 2
     }
     // todo fail somehow
     return -1
+}
+
+@Static
+@Suppress("unused")
+fun isInstanceOfClass(instanceClassIndex: Int, testClassIndex: Int): Boolean {
+    while (instanceClassIndex >= 0) {
+        if (instanceClassIndex == testClassIndex) return true
+        instanceClassIndex = readFromSuperClassTable(testClassIndex)
+    }
+    return false
+}
+
+@Static
+@Suppress("unused")
+fun isInstanceOfInterface(instanceClassIndex: Int, testInterfaceIndex: Int): Boolean {
+    var i0 = readFromClassToInterfaceTable(instanceClassIndex * 2)
+    val i1 = readFromClassToInterfaceTable(instanceClassIndex * 2 + 1)
+    while (i0 < i1) {
+        if (readFromClassToInterfaceTable(i0) == testInterfaceIndex) {
+            return true
+        }
+        i0++
+    }
+    return false
 }

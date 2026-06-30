@@ -589,6 +589,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
+    override fun getNativeImplementation(method: MethodLike): String? {
+        if (method.name == "compareTo" && method.ownerScope.typeWithArgs2 in nativeNumbers.keys) {
+            return "return (content > other ? 1 : 0) - (content < other ? 1 : 0);"
+        }
+        return super.getNativeImplementation(method)
+    }
+
     override fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
         // skipped
     }

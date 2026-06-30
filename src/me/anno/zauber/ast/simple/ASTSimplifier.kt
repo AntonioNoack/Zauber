@@ -129,7 +129,8 @@ object ASTSimplifier {
             }
             // missing return -> we do it ourselves
             // validate method returns Unit
-            check(method0.method.returnType == Types.Unit) {
+            val methodReturnType = method0.method.returnType
+            assertEquals( Types.Unit,methodReturnType) {
                 "Expected $method0 to return Unit, because it's missing an explicit return"
             }
             // push object & return it

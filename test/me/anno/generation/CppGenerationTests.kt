@@ -55,13 +55,6 @@ class CppGenerationTests : CodeGenerationTests() {
             )
         }
 
-        // todo this should be part of CppSourceGenerator, I think...
-        for (type in nativeNumbers) {
-            JavaSourceGenerator.register(
-                type.clazz, "compareTo", listOf(type),
-                "return (content > other ? 1 : 0) - (content < other ? 1 : 0);"
-            )
-        }
         for (type in nativeInts) {
             val numBits = type.getNumBits()
             val unsignedType = type.toUnsigned()

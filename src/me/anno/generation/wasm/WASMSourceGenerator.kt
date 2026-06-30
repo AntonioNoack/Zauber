@@ -27,6 +27,7 @@ import me.anno.zauber.ast.rich.expression.constants.SpecialValue
 import me.anno.zauber.ast.rich.expression.constants.SpecialValueExpression
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
@@ -116,15 +117,12 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
     fun isInlinedMethod(method0: Specialization): Boolean {
         val method = method0.method
-        when (val ownerType = method.ownerScope.typeWithArgs2) {
+        when (method.ownerScope.typeWithArgs2) {
             in nativeNumbers -> {
                 if (method.valueParameters.size > 1) return false
-                if (method.valueParameters.size == 1 &&
-                    method.valueParameters[0].type != ownerType
-                ) return false
                 return when (val methodName = method.name) {
-                    "plus", "minus", "times", "div", "rem", "equals",
-                    "and", "or", "xor", "inv", "neg",
+                    "plus", "minus", "times", "div", "rem",
+                    "equals", "and", "or", "xor", "inv", "neg",
                     "shl", "shr", "ushr", "rotateLeft", "rotateRight" -> true
                     else -> isCast(methodName)
                 }
@@ -132,6 +130,24 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             // array getter and setter are not inlined
             else -> return false
         }
+    }
+
+    fun hasThis(method: MethodLike): Boolean {
+        // only where we need it. Objects don't need it, except for overridden methods
+        // todo and we'd need it, if we had runtime reflections (but we wanted to live without them)
+        if (method.isOverride()) return false
+        val owner = method.ownerScope
+        return !owner.isObjectLike()
+    }
+
+    fun hasSelf(method: MethodLike): Boolean {
+        return method.hasExplicitSelfType
+    }
+
+    fun hasReturn(method: MethodLike): Boolean {
+        // todo in theory, no Unit-method needs it,
+        //  but we may use that Unit... not really, I think -> fine
+        return method.returnType != Types.Unit
     }
 
     fun registerMethods(data: DependencyData, mainMethod: Method) {
@@ -422,19 +438,27 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             val method = method0.method
             method.scope[ScopeInitType.CODE_GENERATION]
 
-            val params = ArrayList<WASMType>(
-                1 + (if (method.hasExplicitSelfType) 1 else 0) +
-                        method.valueParameters.size
-            )
+            val hasThis = hasThis(method)
+            val hasReturn = hasReturn(method)
+
+            val sizeGuess = hasThis.toInt() +
+                    method.hasExplicitSelfType.toInt() +
+                    method.valueParameters.size
+
+            val params = ArrayList<WASMType>(sizeGuess)
+
+            // this:
+            if (hasThis) {
+                params.add(getWASMType(method.ownerScope.typeWithArgs))
+            }
 
             // self:
-            params.add(getWASMType(method.ownerScope.typeWithArgs))
-
             if (method.hasExplicitSelfType) {
                 val selfType = method.selfType!!
                 params.add(getWASMType(selfType))
             }
 
+            // params:
             for (param in method.valueParameters) {
                 params.add(getWASMType(param.type))
             }
@@ -442,8 +466,10 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             // todo throwing methods could return the value as an extra return value...
             //  or we finally use WASM exceptions :)
 
-            val returnType = method.resolveReturnType(method0)
-            val returnTypes = listOf(getWASMType(returnType))
+            val returnTypes = if (hasReturn) {
+                val returnType = method.resolveReturnType(method0)
+                listOf(getWASMType(returnType))
+            } else emptyList()
             val functionType = FunctionType(params, returnTypes)
             return getFunctionTypeIndex(functionType)
         }
@@ -477,12 +503,13 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         val method = method0.method
         val functionIndex = functionIndexMap[method0]!!
         appendMethodHeader(
-            typeIndex, methodName, functionIndex, method.hasExplicitSelfType,
+            method, typeIndex, methodName, functionIndex, method.hasExplicitSelfType,
             method.valueParameters, export
         )
     }
 
     fun appendMethodHeader(
+        method: MethodLike?,
         typeIndex: Int, methodName: String, functionIndex: Int,
         explicitSelfType: Boolean, valueParameters: List<Parameter>,
         isExportedFunction: Boolean
@@ -498,15 +525,14 @@ class WASMSourceGenerator : JavaSourceGenerator() {
 
         builder.append(" (type \$t").append(typeIndex).append(")")
         if (type.params.isNotEmpty()) {
-            appendParamWithName(type.params[0], "this")
-            var j = 1
-            if (explicitSelfType) {
-                appendParamWithName(type.params[1], "__self")
-                j++
-            }
+
+            val hasThis = method != null && hasThis(method)
+
+            var j = 0
+            if (hasThis) appendParamWithName(type.params[j++], "this")
+            if (explicitSelfType) appendParamWithName(type.params[j++], "__self")
             for (i in valueParameters.indices) {
-                val param = valueParameters[i]
-                appendParamWithName(type.params[j + i], param.newName)
+                appendParamWithName(type.params[j + i], valueParameters[i].newName)
             }
         } // else object getter
 
@@ -554,7 +580,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 declareFuncHasNoLocalFields()
             }
 
-            if (method is Constructor) {
+            if (method is Constructor && hasReturn(method)) {
                 val suffix = "return"
                 val i = findSuffixOffset(suffix)
                 if (!builder.startsWith(suffix, i)) {
@@ -655,7 +681,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         val type = getObjectGetterFunctionTypeIndex(objectScope)
         noSpecialization.use {
             appendMethodHeader(
-                type, getObjectGetterName(objectScope),
+                null, type, getObjectGetterName(objectScope),
                 getObjectGetterFunctionIndex(objectScope), false,
                 emptyList(), true
             )
@@ -877,8 +903,15 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         }
         if (expr is SimpleAssignment && expr.dst.type != Types.Nothing) {
             val needed = expr.dst.dst.id >= 0
-            if (needed) appendAssign(graph, expr)
-            else {
+            val available = when (expr) {
+                is SimpleConstructorCall -> hasReturn(expr.method)
+                is SimpleMethodCall -> hasReturn(expr.sample)
+                else -> true
+            }
+            if (needed) {
+                check(available)
+                appendAssign(graph, expr)
+            } else if (available) {
                 builder.append("drop ;; %").append(expr.dst.dst.id).append(" not needed")
                 binary.drop()
                 nextLine()
@@ -1301,7 +1334,9 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 }
             }
             is SimpleReturn -> {
-                appendGetField(graph, expr.field)
+                if (hasReturn(graph.method)) {
+                    appendGetField(graph, expr.field); nextLine()
+                }
                 ret()
             }
             is SimpleConstructorCall -> {
@@ -1490,7 +1525,43 @@ class WASMSourceGenerator : JavaSourceGenerator() {
                 }
             }
             is SimpleMerge -> {}
+            is SimpleInstanceOf -> {
+                when (val type = expr.type) {
+                    is ClassType -> {
+                        instanceToClass(graph, expr.value)
+                        i32Const(inheritanceTable.getClassIndex(Specialization(type))); nextLine()
+                        val method =
+                            if (type.clazz.isInterface()) inheritanceTable.instanceOfInterfaceCall
+                            else inheritanceTable.instanceOfClassCall
+                        callMethod(method)
+                    }
+                    else -> {
+                        // todo create/get type instance, and execute function on it?
+                        // todo or we just implement the expression, it must be a type expression after all
+                        throw NotImplementedError("Implement writing $expr with ${expr.type.javaClass.simpleName}")
+                    }
+                }
+            }
             else -> throw NotImplementedError("Implement writing $expr (${expr.javaClass.simpleName})")
+        }
+    }
+
+    fun instanceToClass(graph: SimpleGraph, self: SimpleField) {
+        val selfType = self.type as ClassType
+        if (selfType.clazz.isOpen()) {
+            // load field owner
+            appendGetField(graph, self)
+
+            val struct = getStruct(Specialization(selfType), isNullable = false)
+            val fieldIndex = 0
+            builder.append("struct.get $")
+                .append(struct.typeName).append(' ')
+                .append(fieldIndex)
+            binary.structGet(struct.typeIndex, fieldIndex)
+            nextLine()
+        } else {
+            // value can be hardcoded
+            i32Const(inheritanceTable.getClassIndex(selfType)); nextLine()
         }
     }
 
@@ -1932,7 +2003,8 @@ class WASMSourceGenerator : JavaSourceGenerator() {
             nextLine()
 
         } else {
-            appendGetField(graph, expr.thisInstance)
+            if (hasThis(expr.sample)) appendGetField(graph, expr.thisInstance)
+            if (hasSelf(expr.sample)) appendGetField(graph, expr.selfInstance!!)
             appendValueParams(graph, expr.valueParameters)
             // direct call
             callMethod(expr.specialization)

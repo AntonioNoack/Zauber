@@ -1060,8 +1060,15 @@ abstract class CodeGenerationTests {
             }
             package zauber
             class Any
-            class Int {}
+            external class Int {
+                external operator fun equals(other: Int): Boolean
+                external operator fun compareTo(other: Int): Int
+                external operator fun times(other: Int): Int
+                external operator fun plus(other: Int): Int
+                external operator fun inc(): Int = this + 1
+            }
             external fun println(arg0: Int)
+            external fun unreachable(): Nothing
             class Array<V>(val size: Int) {
                 external operator fun set(index: Int, value: V)
             }

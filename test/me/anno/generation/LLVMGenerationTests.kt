@@ -57,7 +57,6 @@ class LLVMGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testSimpleLoop() {
-        LogManager.enable("ASTSimplifier")
         testSimpleLoopImpl()
     }
 
