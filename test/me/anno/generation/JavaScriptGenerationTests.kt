@@ -36,8 +36,8 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
     override fun generator(): MinimalCompiler = MinimalJavaScriptCompiler()
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -103,6 +103,11 @@ class JavaScriptGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

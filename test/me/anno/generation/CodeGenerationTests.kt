@@ -6,6 +6,7 @@ import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.NumberUtils.getMaxIntValue
 import me.anno.utils.NumberUtils.getMinIntValue
+import me.anno.utils.StringUtils.iff
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
@@ -28,7 +29,7 @@ abstract class CodeGenerationTests {
     abstract fun registerLib()
     abstract fun generator(): MinimalCompiler
 
-    fun testSimpleMathImpl() {
+    fun testOperationOrderImpl() {
         val code = """
             val x = 5 + 12 / 4
             fun main() {
@@ -556,6 +557,82 @@ abstract class CodeGenerationTests {
         assertEqualsNumbers(expected, names, printed)
     }
 
+    fun testBinaryNumberOperationsImpl() {
+
+        val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
+
+        val builder = StringBuilder()
+        val expected = ArrayList<String>()
+        val names = ArrayList<String>()
+
+        var ctr = 0
+
+        for (type in numberTypes) {
+            val typeName = type.clazz.name
+            fun addCase(
+                lhs: String,
+                op: String,
+                rhs: String,
+                expectedValue: String
+            ) {
+                builder.append("val a$ctr: $typeName = $lhs\n")
+                builder.append("val b$ctr: $typeName = $rhs\n")
+                builder.append("println(a$ctr $op b$ctr)\n")
+
+                expected.add(expectedValue)
+                names.add("$type,$lhs$op$rhs")
+
+                ctr++
+            }
+
+            addCase("2", "+", "3", "5")
+            addCase("5", "-", "3", "2")
+            addCase("5", "*", "3", "15")
+            addCase(
+                "17", "/", "3", when (type) {
+                    Types.Half -> (17f / 3f).toHalf().toString()
+                    Types.Float -> (17f / 3f).toString()
+                    Types.Double -> (17.0 / 3.0).toString()
+                    else -> "5"
+                }
+            )
+            addCase("17", "%", "3", "2")
+        }
+
+        val numberClasses = numberTypes.joinToString("") { type ->
+            val typeName = type.clazz.name
+            val typeName2 = when (type) {
+                Types.Byte, Types.Short -> "Int"
+                Types.UByte, Types.UShort -> "UInt"
+                else -> typeName
+            }
+            "" +
+                    "external class $typeName(val content: $typeName) {\n" +
+                    "   external operator fun plus(other: $typeName): $typeName2\n" +
+                    "   external operator fun minus(other: $typeName): $typeName2\n" +
+                    "   external operator fun times(other: $typeName): $typeName2\n" +
+                    "   external operator fun div(other: $typeName): $typeName2\n" +
+                    "   external operator fun rem(other: $typeName): $typeName2\n" +
+                    "}\n" +
+                    "external fun println(arg0: $typeName)\n"
+                        .iff(typeName == typeName2)
+        }
+
+        val code = """
+        fun main() {
+            $builder
+        }
+
+        package zauber
+        $numberClasses
+    """.trimIndent()
+
+        val printed = generator()
+            .testCompileMainAndRun(code, ::registerLib)
+
+        assertEqualsNumbers(expected, names, printed)
+    }
+
     fun testNumberConversionsImpl() {
         val numberTypes = (nativeJavaNumbers.keys - Types.Char).toList()
         val builder = StringBuilder()
@@ -716,7 +793,7 @@ abstract class CodeGenerationTests {
     fun assertEqualsNumber(expected: String, actual: String) {
         if ('I' in expected || 'N' in expected) {
             assertEquals(expected, actual)
-        } else if ('.' in expected) {
+        } else if ('.' in expected || '.' in actual) {
             assertEquals(expected.toDouble(), actual.toDouble())
         } else {
             assertEquals(BigInteger(expected), BigInteger(actual))

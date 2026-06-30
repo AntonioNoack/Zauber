@@ -21,8 +21,8 @@ class LLVMGenerationTests : CodeGenerationTests() {
     override fun generator(): MinimalCompiler = MinimalLLVMCompiler()
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -89,6 +89,11 @@ class LLVMGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

@@ -24,8 +24,8 @@ class WASMGenerationTests : CodeGenerationTests() {
     override fun generator() = MinimalWASMCompiler()
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -93,6 +93,11 @@ class WASMGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

@@ -523,6 +523,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         return when (methodName) {
             // todo signed int ushr needs casts
             "shr", "ushr" -> ">>"
+            "rem" -> if (type.isFloat()) "#include <math.h>\nfmod" else "%"
             else -> super.getBinarySymbol(type, methodName)
         }
     }
@@ -956,9 +957,20 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val symbol = getBinarySymbol(type, methodName)
             ?: return false
 
-        appendFirstParameter(graph, type, expr)
-        builder.append(symbol)
-        appendFieldName(graph, expr.valueParameters[0])
+        if ('#' in symbol) {
+            val lines = symbol.lines()
+            check(lines.size == 2)
+            nativeImports.add(lines[0])
+            builder.append(lines[1]).append('(')
+            appendFirstParameter(graph, type, expr)
+            builder.append(", ")
+            appendFieldName(graph, expr.valueParameters[0])
+            builder.append(')')
+        } else {
+            appendFirstParameter(graph, type, expr)
+            builder.append(symbol)
+            appendFieldName(graph, expr.valueParameters[0])
+        }
 
         return true
     }

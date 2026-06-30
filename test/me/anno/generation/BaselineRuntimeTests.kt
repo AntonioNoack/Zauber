@@ -1,7 +1,6 @@
 package me.anno.generation
 
 import me.anno.compilation.RuntimeCompiler
-import me.anno.utils.Half.Companion.toHalf
 import me.anno.zauber.logging.LogManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -23,8 +22,8 @@ class BaselineRuntimeTests : CodeGenerationTests() {
     override fun generator() = RuntimeCompiler()
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -90,6 +89,11 @@ class BaselineRuntimeTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

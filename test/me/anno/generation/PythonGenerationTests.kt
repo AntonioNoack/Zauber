@@ -24,8 +24,8 @@ class PythonGenerationTests : CodeGenerationTests() {
     override fun generator(): MinimalCompiler = MinimalPythonCompiler()
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -91,6 +91,11 @@ class PythonGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

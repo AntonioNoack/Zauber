@@ -16,9 +16,9 @@ class JVMGenerationTests : CodeGenerationTests() {
     override fun generator() = MinimalJVMCompiler()
 
     @Test
-    fun testSimpleMath() {
+    fun testOperationOrder() {
         LogManager.enable("ASTSimplifier")
-        testSimpleMathImpl()
+        testOperationOrderImpl()
     }
 
     @Test
@@ -84,6 +84,11 @@ class JVMGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

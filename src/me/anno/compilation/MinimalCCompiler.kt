@@ -45,12 +45,10 @@ open class MinimalCCompiler :
                         })
                     .replace(
                         "LINK_WITH_LIBRARIES",
-                        if (libraries.isNotEmpty()) {
-                            "target_link_libraries(Zauber private${
-                                libraries.values.flatMap { it.linkNames }.distinct()
-                                    .joinToString("") { name -> "\n$name" }
-                            })"
-                        } else ""
+                        "target_link_libraries(Zauber PRIVATE $nativeLibraries${
+                            libraries.values.flatMap { it.linkNames }.distinct()
+                                .joinToString("") { name -> "\n$name" }
+                        })"
                     )
             )
 
@@ -65,6 +63,7 @@ open class MinimalCCompiler :
     }
 
     private val libraries = LinkedHashMap<String, Library>()
+    private var nativeLibraries = "m" // m = Math
 
     private class Library(val name: String, val linkNames: List<String>)
 

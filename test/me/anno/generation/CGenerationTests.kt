@@ -16,8 +16,8 @@ class CGenerationTests : CodeGenerationTests() {
     override fun generator() = MinimalCCompiler()
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -57,6 +57,7 @@ class CGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testIntArray() {
+        // todo this segfaults: returns error code 139
         testIntArrayImpl()
     }
 
@@ -83,6 +84,11 @@ class CGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        testBinaryNumberOperationsImpl()
     }
 
     @Test

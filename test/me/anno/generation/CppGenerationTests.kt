@@ -50,7 +50,7 @@ class CppGenerationTests : CodeGenerationTests() {
                 "#include <stdio.h>\n" +
                         "#include <math.h>\n" +
                         "if (isinf(arg0)) printf(arg0 > 0.0 ? \"Infinity\\n\" : \"-Infinity\\n\");\n" +
-                        "else if((double)(int64_t) arg0 == arg0) printf(\"%d.0\\n\",(int64_t) arg0);\n" +
+                        "else if((double)(int64_t) arg0 == arg0) printf(\"%ld.0\\n\",(int64_t) arg0);\n" +
                         "else printf(\"%g\\n\",arg0);\n"
             )
         }
@@ -63,7 +63,7 @@ class CppGenerationTests : CodeGenerationTests() {
             )
         }
         for (type in nativeInts) {
-            val numBits =  type.getNumBits()
+            val numBits = type.getNumBits()
             val unsignedType = type.toUnsigned()
             val unsigned = nativeCppTypes[unsignedType]!!.native
             // cast to unsigned is necessary to apply the correct shift
@@ -86,8 +86,8 @@ class CppGenerationTests : CodeGenerationTests() {
     override fun generator() = MinimalCppCompiler(true)
 
     @Test
-    fun testSimpleMath() {
-        testSimpleMathImpl()
+    fun testOperationOrder() {
+        testOperationOrderImpl()
     }
 
     @Test
@@ -153,6 +153,12 @@ class CppGenerationTests : CodeGenerationTests() {
     @Test
     fun testNumberNegation() {
         testNumberNegationImpl()
+    }
+
+    @Test
+    fun testBinaryNumberOperations() {
+        // todo bug: why is it using floats for the double calculation???
+        testBinaryNumberOperationsImpl()
     }
 
     @Test
