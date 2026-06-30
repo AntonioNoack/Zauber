@@ -24,7 +24,7 @@ u32_file interfaceCallTable;
 u32_file superClassTable;
 u32_file classToInterfaceTable;
 
-int32_t zauber_inheritance_readFromClassCallTable_2clr50n(void* self, int32_t index) {
+int32_t zauber_inheritance_readFromClassCallTable_2clr50n(int32_t index) {
     if (index < 0 || index >= classCallTable.len) {
         perror("Index into classCallTable out of bounds");
         exit(1);
@@ -32,7 +32,7 @@ int32_t zauber_inheritance_readFromClassCallTable_2clr50n(void* self, int32_t in
     return classCallTable.data[index];
 }
 
-int32_t zauber_inheritance_readFromInterfaceCallTable_2clr50n(void* self, int32_t index) {
+int32_t zauber_inheritance_readFromInterfaceCallTable_2clr50n(int32_t index) {
     if (index < 0 || index >= interfaceCallTable.len) {
         perror("Index into interfaceTable out of bounds");
         exit(1);
@@ -40,7 +40,7 @@ int32_t zauber_inheritance_readFromInterfaceCallTable_2clr50n(void* self, int32_
     return interfaceCallTable.data[index];
 }
 
-int32_t zauber_inheritance_readFromSuperClassTable_2clr50n(void* self, int32_t index) {
+int32_t zauber_inheritance_readFromSuperClassTable_2clr50n(int32_t index) {
     if (index < 0 || index >= superClassTable.len) {
         perror("Index into superClassTable out of bounds");
         exit(1);
@@ -48,7 +48,7 @@ int32_t zauber_inheritance_readFromSuperClassTable_2clr50n(void* self, int32_t i
     return superClassTable.data[index];
 }
 
-int32_t zauber_inheritance_readFromClassToInterfaceTable_2clr50n(void* self, int32_t index) {
+int32_t zauber_inheritance_readFromClassToInterfaceTable_2clr50n(int32_t index) {
     if (index < 0 || index >= classToInterfaceTable.len) {
         perror("Index into classToInterfaceTable out of bounds");
         exit(1);

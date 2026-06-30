@@ -320,7 +320,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 content.append(
                     """
                 int main(int argc, char** argv) {
-                    stdlibMain();
+                    int err = stdlibMain();
+                    if (err) return err;
                     $className->${mainMethod.name}(${if (needsArgs) "argv" else ""});
                     return 0;
                 }
@@ -504,23 +505,20 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         else {
             appendConstructorFlags(classScope, constructor, false)
             builder.append(className).append("::").append(className)
-            appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+            appendValueParameterDeclaration(constructor, classScope)
 
             appendSuperCall0(classScope, className, constructor)
         }
     }
 
-    override fun appendValueParameterDeclaration(
-        selfTypeIfNecessary: Type?,
-        valueParameters: List<Parameter>,
-        scope: Scope
-    ) {
+    override fun appendValueParameterDeclaration(method: MethodLike, scope: Scope) {
         builder.append('(')
+        val selfTypeIfNecessary = method.selfTypeIfNecessary
         if (selfTypeIfNecessary != null) {
             appendType(selfTypeIfNecessary, scope, false)
             builder.append(" __self")
         }
-        for (param in valueParameters) {
+        for (param in method.valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendType(param.type, scope, false)
             appendOwnershipSuffix(param.type, false)
@@ -632,9 +630,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         val method = method0.method as Method
         appendTypeParameterDeclaration(method.typeParameters, classScope)
 
-        val returnType = resolveType(method.resolveReturnType(method0))
-        appendType(returnType, classScope, false)
-        appendOwnershipSuffix(returnType, false)
+        if (hasReturn(method)) {
+            val returnType = resolveType(method.resolveReturnType(method0))
+            appendType(returnType, classScope, false)
+            appendOwnershipSuffix(returnType, false)
+        } else {
+            builder.append("void")
+        }
 
         builder.append(' ')
         if (!headerOnly) {
@@ -643,7 +645,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         builder.append(getMethodName(method0))
 
         assignSelfType(classScope, method)
-        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
+        appendValueParameterDeclaration(method, classScope)
         if (false && headerOnly && method.flags.hasFlag(Flags.OVERRIDE)) {
             // this flag is optional, and we must not declare it, if the super method wasn't defined
             // todo somehow check, whether the super method is available

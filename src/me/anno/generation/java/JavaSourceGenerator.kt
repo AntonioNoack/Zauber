@@ -232,7 +232,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun ensureImport(scope: Scope) {
-        imports.getOrPut(scope.pathStr){
+        imports.getOrPut(scope.pathStr) {
             Import2(
                 if (scope.isPackage()) scope.path + getPackageName(scope)
                 else scope.path, scope
@@ -270,6 +270,26 @@ open class JavaSourceGenerator : Generator() {
 
     open fun isStoredField(field: Field): Boolean {
         return isStoredField0(field)
+    }
+
+    fun hasThis(method: MethodLike): Boolean {
+        // only where we need it. Objects don't need it, except for overridden methods
+        // todo and we'd need it, if we had runtime reflections (but we wanted to live without them)
+        if (method.isOverride() || method.isOpen()) return true
+        if (method is Constructor) return true
+
+        val owner = method.ownerScope
+        return !owner.isObjectLike()
+    }
+
+    fun hasSelf(method: MethodLike): Boolean {
+        return method.hasExplicitSelfType
+    }
+
+    fun hasReturn(method: MethodLike): Boolean {
+        // todo in theory, no Unit-method needs it,
+        //  but we may use that Unit... not really, I think -> fine
+        return method.returnType != Types.Unit
     }
 
     fun isArrayGetter(method0: Specialization): Boolean {
@@ -665,7 +685,7 @@ open class JavaSourceGenerator : Generator() {
         builder.append(' ').append(getMethodName(method0))
 
         assignSelfType(classScope, method)
-        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
+        appendValueParameterDeclaration(method, classScope)
     }
 
     open fun appendMethodBody(methodSpec: Specialization, headerOnly: Boolean) {
@@ -721,7 +741,7 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendReturnIfMissing(method: MethodLike, i0: Int) {
-        if (builder.indexOf("return", i0) < 0) {
+        if (hasReturn(method) && builder.indexOf("return", i0) < 0) {
             builder.append("return ")
             appendGetObjectInstance(Types.Unit.clazz, method.scope)
             builder.append(";")
@@ -900,7 +920,7 @@ open class JavaSourceGenerator : Generator() {
     ) {
         appendConstructorFlags(classScope, constructor, headerOnly)
         builder.append(className)
-        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+        appendValueParameterDeclaration(constructor, classScope)
     }
 
     open fun appendTypeParameterDeclaration(valueParameters: List<Parameter>, scope: Scope) {
@@ -918,17 +938,14 @@ open class JavaSourceGenerator : Generator() {
         builder.append("> ")
     }
 
-    open fun appendValueParameterDeclaration(
-        selfTypeIfNecessary: Type?,
-        valueParameters: List<Parameter>,
-        scope: Scope
-    ) {
+    open fun appendValueParameterDeclaration(method: MethodLike, scope: Scope) {
         builder.append('(')
+        val selfTypeIfNecessary = method.selfTypeIfNecessary
         if (selfTypeIfNecessary != null) {
             appendType(selfTypeIfNecessary, scope, false)
             builder.append(" __self")
         }
-        for (param in valueParameters) {
+        for (param in method.valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendType(param.type, scope, false)
             builder.append(' ')
@@ -1497,12 +1514,10 @@ open class JavaSourceGenerator : Generator() {
                 appendValueParams(graph, expr.paramsForLater)
             }
             is SimpleReturn -> {
-                if (graph.method is Constructor) {
-                    // cannot return something
-                    builder.append("return")
-                } else {
+                builder.append("return")
+                if (hasReturn(graph.method)) {
                     // todo cast if necessary
-                    builder.append("return ")
+                    builder.append(' ')
                     appendFieldName(graph, expr.field)
                 }
             }

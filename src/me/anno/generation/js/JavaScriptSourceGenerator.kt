@@ -22,6 +22,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.i
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
 import me.anno.zauber.ast.rich.parameter.Parameter
@@ -287,7 +288,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         check(specialization.method === constructor)
         if (classScope.isObjectLike()) builder.append("constructor")
         else builder.append(getMethodName(specialization))
-        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+        appendValueParameterDeclaration(constructor, classScope)
     }
 
     override fun appendConstructor(
@@ -414,7 +415,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
         val method = method0.method as Method
         assignSelfType(classScope, method)
-        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
+        appendValueParameterDeclaration(method, classScope)
     }
 
     override fun appendMethodBody(methodSpec: Specialization, headerOnly: Boolean) {
@@ -509,15 +510,13 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         if (withEquals) builder.append(" = ")
     }
 
-    override fun appendValueParameterDeclaration(
-        selfTypeIfNecessary: Type?,
-        valueParameters: List<Parameter>, scope: Scope
-    ) {
+    override fun appendValueParameterDeclaration(method: MethodLike, scope: Scope) {
         builder.append('(')
+        val selfTypeIfNecessary = method.selfTypeIfNecessary
         if (selfTypeIfNecessary != null) {
             builder.append(" __self")
         }
-        for (param in valueParameters) {
+        for (param in method.valueParameters) {
             if (!builder.endsWith("(")) builder.append(", ")
             appendFieldName(param)
         }

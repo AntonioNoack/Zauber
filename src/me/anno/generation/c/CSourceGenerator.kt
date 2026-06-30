@@ -13,7 +13,6 @@ import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
-import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.*
@@ -147,17 +146,8 @@ open class CSourceGenerator : CppSourceGenerator() {
         val cInclude = getCIncludeAnnotations(method0)
         if (cInclude != null) return getCIncludeMethodName(method0, cInclude)
 
-        val ownerScope = method0.method.ownerScope
-        val ownerSpec = method0.withScope(ownerScope)
-        val clazzName = getClassName(ownerSpec.clazz, ownerSpec)
-        val packagePrefix = (ownerScope.parent?.path ?: emptyList())
-            .joinToString("") { name -> name + "_" }
-        val base = if (method0.method is Constructor) "_init_" else {
-            super.getMethodName0(method0)
-                .replace('-', '_')
-                .replace('.', '_')
-        }
-        return "${packagePrefix}${clazzName}_${base}_${hashMethodParameters(method0)}"
+        val base = if (method0.method is Constructor) "_init_" else super.getMethodName0(method0)
+        return "${method0.method.ownerScope.pathStr.replace('.', '_')}_${base}_${hashMethodParameters(method0)}"
     }
 
     override fun appendCopy(graph: SimpleGraph, valueType: Type) {
@@ -270,25 +260,23 @@ open class CSourceGenerator : CppSourceGenerator() {
     ) {
         appendType(Types.Unit, classScope, false)
         builder.append("* ").append(getMethodName(specialization))
-        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+        appendValueParameterDeclaration(constructor, classScope)
     }
 
-    override fun appendValueParameterDeclaration(
-        selfTypeIfNecessary: Type?,
-        valueParameters: List<Parameter>, scope: Scope
-    ) {
+    override fun appendValueParameterDeclaration(method: MethodLike, scope: Scope) {
         builder.append('(')
-        if (true) {
+        if (hasThis(method)) {
             appendType(scope.typeWithArgs.specialize(), scope, true)
             builder.append("* this")
         }
+        val selfTypeIfNecessary = method.selfTypeIfNecessary
         if (selfTypeIfNecessary != null) {
-            builder.append(", ")
+            if (!builder.endsWith('(')) builder.append(", ")
             appendType(selfTypeIfNecessary, scope, false)
             builder.append(" __self")
         }
-        for (param in valueParameters) {
-            builder.append(", ")
+        for (param in method.valueParameters) {
+            if (!builder.endsWith('(')) builder.append(", ")
             appendType(param.type, scope, false)
             appendOwnershipSuffix(param.type, false)
             builder.append(' ')
@@ -378,18 +366,21 @@ open class CSourceGenerator : CppSourceGenerator() {
         val methodName = getMethodName(method0)
         builder.append(methodName).append('(')
 
-        if (withCast) {
-            builder.append('(')
-            val ownerType = inheritanceTable.getMethodOwnerType(method0)
-            appendType(ownerType, expr.scope, true)
-            appendOwnershipSuffix(ownerType, true)
-            builder.append(") ")
+        if (hasThis(method0.method)) {
+            if (withCast) {
+                builder.append('(')
+                val ownerType = inheritanceTable.getMethodOwnerType(method0)
+                appendType(ownerType, expr.scope, true)
+                appendOwnershipSuffix(ownerType, true)
+                builder.append(") ")
+            }
+
+            if (!isCIncludeMethod(method0.method)) {
+                if (expr.thisInstance.type.isValue()) builder.append('&')
+                appendFieldName(graph, expr.thisInstance, "")
+            }
         }
 
-        if (!isCIncludeMethod(method0.method)) {
-            if (expr.thisInstance.type.isValue()) builder.append('&')
-            appendFieldName(graph, expr.thisInstance, "")
-        }
         appendValueParams(graph, expr.valueParameters, withBrackets = false)
         builder.append(')')
     }

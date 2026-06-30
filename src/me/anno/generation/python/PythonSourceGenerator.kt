@@ -213,7 +213,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         check(specialization.method === constructor)
         if (classScope.isObjectLike()) builder.append("__init__")
         else builder.append(getMethodName(specialization))
-        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+        appendValueParameterDeclaration(constructor, classScope)
     }
 
     override fun appendConstructor(
@@ -379,7 +379,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
         val method = method0.method as Method
         assignSelfType(classScope, method)
-        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
+        appendValueParameterDeclaration(method, classScope)
     }
 
     override fun appendMethod(classScope: Scope, className: String, method0: Specialization, headerOnly: Boolean) {
@@ -555,15 +555,13 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         if (withEquals) builder.append(" = ")
     }
 
-    override fun appendValueParameterDeclaration(
-        selfTypeIfNecessary: Type?,
-        valueParameters: List<Parameter>, scope: Scope
-    ) {
+    override fun appendValueParameterDeclaration(method: MethodLike, scope: Scope) {
         builder.append("(self")
+        val selfTypeIfNecessary = method.selfTypeIfNecessary
         if (selfTypeIfNecessary != null) {
             builder.append(", __self")
         }
-        for (param in valueParameters) {
+        for (param in method.valueParameters) {
             builder.append(", ")
             appendFieldName(param)
         }

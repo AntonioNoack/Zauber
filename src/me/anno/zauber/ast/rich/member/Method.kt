@@ -73,12 +73,6 @@ class Method(
         return style(builder.toString(), TEXT)
     }
 
-    fun isOpen(): Boolean {
-        return flags.hasFlag(Flags.OPEN) ||
-                (flags.hasFlag(Flags.OVERRIDE) && !flags.hasFlag(Flags.FINAL)) ||
-                ownerScope.isInterface()
-    }
-
     fun removeFlag(flag: Int) {
         flags = flags and flag.inv()
     }

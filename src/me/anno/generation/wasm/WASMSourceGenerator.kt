@@ -132,24 +132,6 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    fun hasThis(method: MethodLike): Boolean {
-        // only where we need it. Objects don't need it, except for overridden methods
-        // todo and we'd need it, if we had runtime reflections (but we wanted to live without them)
-        if (method.isOverride()) return false
-        val owner = method.ownerScope
-        return !owner.isObjectLike()
-    }
-
-    fun hasSelf(method: MethodLike): Boolean {
-        return method.hasExplicitSelfType
-    }
-
-    fun hasReturn(method: MethodLike): Boolean {
-        // todo in theory, no Unit-method needs it,
-        //  but we may use that Unit... not really, I think -> fine
-        return method.returnType != Types.Unit
-    }
-
     fun registerMethods(data: DependencyData, mainMethod: Method) {
         // imported methods first
         functionIndexList.addAll(data.calledMethods)

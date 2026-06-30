@@ -50,8 +50,7 @@ class MinimalWASMRuntimeCompiler : MinimalCompiler() {
                     else -> value
                 }
                 printed.append(value).append('\n')
-                val unit = runtime.call("obj_zauber_Unit", emptyList())
-                listOf(unit)
+                emptyList()
             }
 
             // todo register compareTo

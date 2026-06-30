@@ -63,12 +63,15 @@ abstract class CodeGenerationTests {
             package zauber
             class Any
             object Unit
-            external class Int {
+            external class Int(val content: Int) {
                 external operator fun plus(other: Int): Int
+                external operator fun compareTo(other: Int): Int
+                external operator fun equals(other: Int): Boolean
+                operator fun inc(): Int = this + 1
             }
             
             external fun println(arg0: Int)
-        """.trimIndent()
+        """.trimIndent() + inheritanceCode
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)

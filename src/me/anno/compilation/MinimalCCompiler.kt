@@ -61,7 +61,7 @@ open class MinimalCCompiler :
                     .replace(
                         "LINK_WITH_LIBRARIES",
                         "target_link_libraries(Zauber PRIVATE $nativeLibraries${
-                            libraries.values.flatMap { it.linkNames }.distinct()
+                            libraries.values.flatten().distinct()
                                 .joinToString("") { name -> "\n$name" }
                         })"
                     )
@@ -76,20 +76,17 @@ open class MinimalCCompiler :
         runProcess(buildFolder, "cmake", "--build", ".")
     }
 
-    private val libraries = LinkedHashMap<String, Library>()
+    private val libraries = LinkedHashMap<String, List<String>>()
     private var nativeLibraries = "m" // m = Math
 
-    private class Library(val name: String, val linkNames: List<String>)
-
     fun addCMakeLibrary(name: String, vararg libraryNames: String) {
-        libraries[name] = Library(name, libraryNames.asList())
+        libraries[name] = libraryNames.asList()
     }
 
     override fun execute(projectFolder: File): String {
-        val buildFolder = File(projectFolder, "build")
         val programName =
-            if (isLinux) "./Zauber"
-            else "./Debug/Zauber.exe"
-        return runProcessGetPrinted(buildFolder, programName)
+            if (isLinux) "./build/Zauber"
+            else "./build/Debug/Zauber.exe"
+        return runProcessGetPrinted(projectFolder, programName)
     }
 }

@@ -123,6 +123,10 @@ open class MethodLike(
     fun isFinal(): Boolean = flags.hasFlag(Flags.FINAL)
     fun isAbstract(): Boolean = flags.hasFlag(Flags.ABSTRACT) || (ownerScope.isInterface() && body == null)
 
+    fun isOpen(): Boolean = flags.hasFlag(Flags.OPEN) || flags.hasFlag(Flags.ABSTRACT) ||
+            (flags.hasFlag(Flags.OVERRIDE) && !flags.hasFlag(Flags.FINAL)) ||
+            ownerScope.isInterface()
+
     fun hasNoBody(): Boolean {
         scope[ScopeInitType.AFTER_DISCOVERY]
         return body == null

@@ -18,6 +18,7 @@ import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.i
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.rich.member.Field
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
@@ -347,7 +348,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         builder.append(getMethodName(method0))
 
         assignSelfType(classScope, method)
-        appendValueParameterDeclaration(method.selfTypeIfNecessary, method.valueParameters, classScope)
+        appendValueParameterDeclaration(method, classScope)
 
         builder.append(" -> ")
         val returnType = resolveType(method.resolveReturnType(method0))
@@ -458,7 +459,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
         nextLine()
 
         builder.append("fn __init__")
-        appendValueParameterDeclaration(null, constructor.valueParameters, classScope)
+        appendValueParameterDeclaration(constructor, classScope)
     }
 
     fun appendValueParameterDeclaration1(
@@ -474,11 +475,9 @@ class RustSourceGenerator : JavaSourceGenerator() {
         builder.append(')')
     }
 
-    override fun appendValueParameterDeclaration(
-        selfTypeIfNecessary: Type?,
-        valueParameters: List<Parameter>, scope: Scope
-    ) {
+    override fun appendValueParameterDeclaration(method: MethodLike, scope: Scope) {
         builder.append("(&mut self")
+        val selfTypeIfNecessary = method.selfTypeIfNecessary
         if (selfTypeIfNecessary != null) {
             builder.append(", ")
             builder.append(" __self: ")
@@ -487,7 +486,7 @@ class RustSourceGenerator : JavaSourceGenerator() {
             appendType(selfTypeIfNecessary, scope, false)
             builder.append(ownership.typeSuffix)
         }
-        for (param in valueParameters) {
+        for (param in method.valueParameters) {
             builder.append(", ")
             appendFieldName(param)
             builder.append(": ")
