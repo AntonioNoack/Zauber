@@ -7,16 +7,12 @@
 // for integers with precise size
 #include <stdint.h>
 
+#include "CStandardFileIO.h"
+
 void* gcNew(size_t size, uint32_t classIndex);
+int32_t zauber_inheritance_readFromClassTable_2clr50n(void* self, int32_t index);
+int32_t zauber_inheritance_readFromInterfaceTable_2clr50n(void* self, int32_t index);
+int32_t zauber_inheritance_readFromSuperClassTable_2clr50n(void* self, int32_t index);
+int32_t zauber_inheritance_readFromClassToInterfaceTable_2clr50n(void* self, int32_t index);
 
-int zauber_inheritance_resolveInterfaceCall_(int a, int b) {
-    return 0;
-}
-
-int zauber_inheritance_readFromInterfaceTable_2clr50n(void* self, int a) {
-    return 0;
-}
-
-int zauber_inheritance_readFromClassTable_2clr50n(void* self, int a) {
-    return 0;
-}
+int32_t stdlibMain();

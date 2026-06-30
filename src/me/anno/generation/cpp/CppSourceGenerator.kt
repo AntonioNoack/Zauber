@@ -320,6 +320,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 content.append(
                     """
                 int main(int argc, char** argv) {
+                    stdlibMain();
                     $className->${mainMethod.name}(${if (needsArgs) "argv" else ""});
                     return 0;
                 }

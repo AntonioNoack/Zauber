@@ -8,6 +8,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 FIND_PACKAGES
 
 add_executable(Zauber
+src/CStandardFileIO.c
+src/CStandardLib.c
 FILES_LIST
 )
 

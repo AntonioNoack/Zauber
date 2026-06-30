@@ -10,6 +10,7 @@ import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.interpreting.BlockReturn
 import me.anno.zauber.interpreting.Runtime.Companion.runtime
+import me.anno.zauber.interpreting.ZClass.Companion.nativeTypes
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.Inheritance.isSubTypeOf
@@ -33,6 +34,12 @@ class SimpleInstanceOf private constructor(
     init {
         check(!type.clazz.isTypeAlias()) {
             "$this is not a simple instance-of test (${type.javaClass.simpleName}); destructure it"
+        }
+        check(value.type !in nativeTypes) {
+            "$this can be resolved at compile time"
+        }
+        check(value.type !is ClassType || value.type.clazz.isOpen()) {
+            "${value.type} (ClassType) can be resolved at compile time, because it is final"
         }
     }
 

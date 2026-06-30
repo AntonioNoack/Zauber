@@ -84,6 +84,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         defineObjectGetters(data)
 
         comment { builder.append("method imports") }
+        builder.append("declare void @stdlibMain()"); nextLine()
         for (method in data.calledMethods) {
             if (hasImplementation(method)) continue
             appendMethodImport(method)
@@ -123,6 +124,17 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
     fun appendMainMethodCode(mainMethod: Method) {
         builder.append("define i32 @main(i32 %argc, i8** %argv) #0 {")
         indentation++
+        nextLine()
+
+        // call stdlibMain(), and handle errors
+        builder.append("%stdlibRes = call i32 @stdlibMain()"); nextLine()
+        builder.append("%stdlibIsOk = icmp eq i32 %stdlibRes, 0"); nextLine()
+        builder.append("br i1 %stdlibIsOk, label %stdlibOk, label %stdlibErr"); nextLine()
+
+        builder.append("stdlibErr:"); nextLine()
+        builder.append("ret i32 %stdlibRes"); nextLine()
+
+        builder.append("stdlibOk:")
         nextLine()
 
         val tmp = getObjectInstanceField(mainMethod.ownerScope)

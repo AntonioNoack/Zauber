@@ -15,10 +15,25 @@ open class MinimalCCompiler :
                 .readBytes().decodeToString()
         }
 
+        val cStandardLibList = (
+                "" +
+                        "CStandardLib.h,CStandardLib.c," +
+                        "CStandardFileIO.h,CStandardFileIO.c"
+                ).split(',')
+
         val cStandardLib by lazy {
-            MinimalCCompiler::class.java
-                .classLoader.getResourceAsStream("files/CStandardLib.h")!!
-                .readBytes()
+            cStandardLibList.associateWith { fileName ->
+                MinimalCCompiler::class.java
+                    .classLoader.getResourceAsStream("files/$fileName")!!
+                    .readBytes()
+            }
+        }
+
+        fun copyCStandardLibTo(srcFolder: File) {
+            for ((fileName, content) in cStandardLib) {
+                File(srcFolder, fileName)
+                    .writeBytes(content)
+            }
         }
     }
 
@@ -52,8 +67,7 @@ open class MinimalCCompiler :
                     )
             )
 
-        File(srcFolder, "CStandardLib.h")
-            .writeBytes(cStandardLib)
+        copyCStandardLibTo(srcFolder)
 
         val buildFolder = File(projectFolder, "build")
         buildFolder.mkdirs()

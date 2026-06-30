@@ -1,6 +1,9 @@
 package me.anno.generation
 
 import me.anno.utils.IntArrayList
+import me.anno.utils.StringStyles.ORANGE
+import me.anno.utils.StringStyles.YELLOW
+import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -71,7 +74,6 @@ class InheritanceTable(val data: DependencyData) {
         data.calledMethods += instanceOfClassCall
         data.calledMethods += instanceOfInterfaceCall
         data.calledMethods += funToSpec("readFromSuperClassTable")
-        data.calledMethods += funToSpec("readFromSuperClassTable")
         data.calledMethods += funToSpec("readFromClassToInterfaceTable")
         data.calledMethods += funToSpec(Types.Int, "inc")
 
@@ -82,13 +84,13 @@ class InheritanceTable(val data: DependencyData) {
 
     fun funToSpec(name: String): Specialization {
         val method = helperScope.methods0.firstOrNull { it.name == name }
-            ?: error("Missing $name() in $helperScope")
+            ?: error("Missing ${style("fun", ORANGE)} $helperScope.${style(name, YELLOW)}()")
         return Specialization(method.memberScope, emptyParameterList())
     }
 
     fun funToSpec(type: ClassType, name: String): Specialization {
         val method = type.clazz.methods0.firstOrNull { it.name == name }
-            ?: error("Missing $name() in $helperScope")
+            ?: error("Missing ${style("fun", ORANGE)} $type.${style(name, YELLOW)}()")
         return Specialization(method.memberScope, emptyParameterList())
     }
 

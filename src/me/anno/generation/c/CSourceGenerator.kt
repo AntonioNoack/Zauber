@@ -17,6 +17,7 @@ import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.*
+import me.anno.zauber.ast.simple.fields.SimpleField
 import me.anno.zauber.ast.simple.fields.SimpleInstruction
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
@@ -248,10 +249,7 @@ open class CSourceGenerator : CppSourceGenerator() {
 
     override fun appendGetObjectInstance(objectScope: Scope, exprScope: Scope) {
 
-        imports[objectScope.pathStr] = Import2(
-            if (objectScope.isPackage()) objectScope.path + getPackageName(objectScope)
-            else objectScope.path, objectScope
-        )
+        ensureImport(objectScope)
 
         val className = getClassName(objectScope, Specialization.fromSimple(objectScope))
         val packagePrefix = getPackagePrefix(objectScope)
@@ -417,16 +415,8 @@ open class CSourceGenerator : CppSourceGenerator() {
                 // todo convert argc/argv to String-array, if needed
                 content.append(
                     """
-                typedef struct {
-                    uint32_t classIndex;
-                } GCInstance;
-                void* gcNew(size_t size, uint32_t classIndex) {
-                    void* instance = calloc(1, size);
-                    ((GCInstance*) instance)->classIndex = classIndex;
-                    return instance;
-                }
-                
                 int main(int argc, char** argv) {
+                    stdlibMain();
                     $methodName($objInstance${if (needsArgs) ", argv" else ""});
                     return 0;
                 }
@@ -497,35 +487,60 @@ open class CSourceGenerator : CppSourceGenerator() {
                 builder.append(");")
             }
             is SimpleBoxCast -> {
-                val dst = expr.dst
+
                 val src = expr.src
-                val dstValue = dst.type.isValue()
-                val srcValue = src.type.isValue()
+                val dst = expr.dst
+
+                val srcType = src.type
+                val dstType = dst.type
+
+                val srcNum = srcType in nativeNumbers
+                val dstNum = dstType in nativeNumbers
+
+                val srcValue = srcType.isValue()
+                val dstValue = dstType.isValue()
+
+                val srcRef = !srcNum && !srcValue
+                val dstRef = !dstNum && !dstValue
+
                 when {
                     dstValue && srcValue -> error("Cannot convert $src to $dst implicitly")
                     srcValue -> {
 
                         builder.append('(')
                         appendType(dst.type, expr.scope, true)
-                        appendOwnershipSuffix(dst.type, true)
+                        appendOwnershipSuffix(src.type, true)
                         builder.append(") ")
 
                         builder.append("gcNew(sizeof(")
-                        appendType(dst.type, expr.scope, true)
+                        appendType(src.type, expr.scope, true)
                         val spec = Specialization(src.type as ClassType)
                         builder.append("), ")
                             .append(inheritanceTable.getClassIndex(spec))
                             .append(");"); nextLine()
 
                         if (src.type in nativeNumbers) {
+                            builder.append("((")
+                            appendType(src.type, expr.scope, true)
+                            appendOwnershipSuffix(src.type, true)
+                            builder.append(") ")
                             appendFieldName(graph, dst)
-                            builder.append("->content = ")
+                            builder.append(")->content = ")
                             appendFieldName(graph, src)
                         } else {
                             TODO("Copy over all fields into new instance for $expr")
                         }
                     }
-                    dstValue -> TODO("Unboxing $src to $dst")
+                    srcRef && dstNum -> {
+                        // unboxing
+                        builder.append("((")
+                        appendType(dst.type, expr.scope, true)
+                        appendOwnershipSuffix(dst.type, true)
+                        builder.append(") ")
+                        appendFieldName(graph, src)
+                        builder.append(")->content")
+                    }
+                    dstValue -> error("Unboxing $src to $dst")
                     else -> {
                         builder.append('(')
                         appendType(expr.dst.type, expr.scope, true)
@@ -535,8 +550,26 @@ open class CSourceGenerator : CppSourceGenerator() {
                     }
                 }
             }
+            is SimpleInstanceOf -> {
+                val type = expr.type
+                val call =
+                    if (type.clazz.isInterface()) inheritanceTable.instanceOfInterfaceCall
+                    else inheritanceTable.instanceOfClassCall
+                builder.append(getMethodName(call))
+                builder.append("(")
+                appendClassIndex(graph, expr.value)
+                builder
+                    .append(", ")
+                    .append(inheritanceTable.getClassIndex(type))
+                    .append(")")
+            }
             else -> super.appendInstrImpl(graph, expr)
         }
+    }
+
+    fun appendClassIndex(graph: SimpleGraph, value: SimpleField) {
+        appendFieldName(graph, value)
+        builder.append("->").append(CLASS_INDEX_NAME)
     }
 
     override fun appendNumber(type: Type, expr: NumberExpression) {

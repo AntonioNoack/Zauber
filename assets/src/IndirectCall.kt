@@ -39,6 +39,7 @@ fun resolveInterfaceCall(classIndex: Int, methodIndex: Int): Int {
 
 @Suppress("unused")
 fun isInstanceOfClass(instanceClassIndex: Int, testClassIndex: Int): Boolean {
+    var instanceClassIndex = instanceClassIndex
     while (instanceClassIndex >= 0) {
         if (instanceClassIndex == testClassIndex) return true
         instanceClassIndex = readFromSuperClassTable(testClassIndex)

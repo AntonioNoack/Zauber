@@ -1,5 +1,7 @@
 package me.anno.compilation
 
+import me.anno.compilation.MinimalCCompiler.Companion.cStandardLibList
+import me.anno.compilation.MinimalCCompiler.Companion.copyCStandardLibTo
 import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.llvm.LLVMSourceGenerator
@@ -78,20 +80,28 @@ class MinimalLLVMCompiler : MinimalCompiler() {
             builder.append("}\n")
         }
 
-        builder.append("\n" +
-                "int zauber_inheritance_readFromClassCallTable_28khp45(void* self, int addr) { return 0; }\n" +
-                "int zauber_inheritance_readFromInterfaceCallTable_28khp45(void* self, int addr) { return 0; }\n" +
-                "")
+        builder.append(
+            "\n" +
+                    "int zauber_inheritance_readFromClassCallTable_28khp45(void* self, int addr) { return 0; }\n" +
+                    "int zauber_inheritance_readFromInterfaceCallTable_28khp45(void* self, int addr) { return 0; }\n" +
+                    ""
+        )
 
         val cFile = "Zauber.c"
         File(projectFolder, cFile)
             .writeText(builder.toString())
 
-        File(projectFolder, "CStandardLib.h")
-            .writeBytes(MinimalCCompiler.cStandardLib)
+        copyCStandardLibTo(projectFolder)
 
         // compile and link it together
-        runProcess(projectFolder, "clang", assemblyFile, cFile, "-o", "Zauber.a")
+        val implFiles = cStandardLibList
+            .filter { name -> name.endsWith(".c") }
+        val params = listOf(
+            "clang", assemblyFile, cFile
+        ) + implFiles + listOf(
+            "-o", "Zauber.a"
+        )
+        runProcess(projectFolder, *params.toTypedArray())
 
     }
 

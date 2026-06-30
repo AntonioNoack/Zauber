@@ -231,6 +231,15 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun ensureImport(scope: Scope) {
+        imports.getOrPut(scope.pathStr){
+            Import2(
+                if (scope.isPackage()) scope.path + getPackageName(scope)
+                else scope.path, scope
+            )
+        }
+    }
+
     fun generateCodeImpl(dst: File, data: DependencyData, writer: FileWithImportsWriter) {
         val methodsByClass = data.calledMethods.groupBy { methodSpec ->
             val owner = methodSpec.method.ownerScope
