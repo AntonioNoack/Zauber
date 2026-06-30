@@ -1060,7 +1060,7 @@ abstract class CodeGenerationTests {
             }
             package zauber
             class Any
-            external class Int {
+            external class Int(val content: Int) {
                 external operator fun equals(other: Int): Boolean
                 external operator fun compareTo(other: Int): Int
                 external operator fun times(other: Int): Int

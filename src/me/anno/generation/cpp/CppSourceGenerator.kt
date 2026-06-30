@@ -35,6 +35,7 @@ import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleBoxCast
+import me.anno.zauber.ast.simple.expression.SimpleInstanceOf
 import me.anno.zauber.ast.simple.expression.SimpleMethodCall
 import me.anno.zauber.ast.simple.fields.LocalField
 import me.anno.zauber.ast.simple.fields.SimpleField
@@ -181,6 +182,21 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 appendMethods(classScope, className, methods, false)
             }
         }
+    }
+
+    override fun appendMethods(
+        classScope: Scope, className: String,
+        methods: Collection<Specialization>,
+        headerOnly: Boolean
+    ) {
+        if (headerOnly) markClassAsPolymorphic(className)
+        super.appendMethods(classScope, className, methods, headerOnly)
+    }
+
+    fun markClassAsPolymorphic(className: String) {
+        // needed in C++ to be marked as polymorphic (for dynamic_cast to work)
+        builder.append("virtual ~").append(className).append("() = default;")
+        nextLine()
     }
 
     override fun appendSuperTypes(scope: Scope) {
@@ -434,13 +450,19 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     true, null, emptyMap()
                 )
                 writeBlock {
-                    if (classScope == Types.Array.clazz) {
-                        appendArrayContentInitialization(constructor)
+                    when {
+                        classScope == Types.Array.clazz -> {
+                            appendArrayContentInitialization(constructor)
+                        }
+                        classScope.typeWithArgs2 in nativeNumbers -> {
+                            builder.append("this->content = content;"); nextLine()
+                        }
+                        else -> {
+                            val methodSpec = specialization
+                            check(methodSpec.method === constructor)
+                            appendCode(context, methodSpec, body, true)
+                        }
                     }
-
-                    val methodSpec = specialization
-                    check(methodSpec.method === constructor)
-                    appendCode(context, methodSpec, body, true)
                 }
             }
         }
@@ -745,8 +767,11 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     builder.append(')')
                 }
                 is SpecialValueExpression -> {
-                    check(expr.type == SpecialValue.NULL)
-                    builder.append("nullptr")
+                    when (expr.type) {
+                        SpecialValue.TRUE -> builder.append("true")
+                        SpecialValue.FALSE -> builder.append("false")
+                        SpecialValue.NULL -> builder.append("nullptr")
+                    }
                 }
                 null -> {
                     check(field.id >= 0) { "Invalid field $field in $graph" }
@@ -922,8 +947,8 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 val srcNum = srcType in nativeNumbers
                 val dstNum = dstType in nativeNumbers
 
-                val srcRef = !srcNum && srcType.isValue()
-                val dstRef = !dstNum && dstType.isValue()
+                val srcRef = !srcNum && !srcType.isValue()
+                val dstRef = !dstNum && !dstType.isValue()
 
                 when {
                     srcNum && dstNum -> {
@@ -932,6 +957,23 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                         builder.append(">(")
                         appendFieldName(graph, expr.src)
                         builder.append(')')
+                    }
+                    srcNum -> {
+                        check(dstRef) { "Expected $expr with srcNum to have dstRef" }
+                        builder.append("gcNew<")
+                        appendType(srcType, expr.scope, true)
+                        builder.append(">(")
+                        appendFieldName(graph, expr.src)
+                        builder.append(')')
+                    }
+                    dstNum -> {
+                        check(srcRef) { "Expected $expr with dstNum to have srcRef" }
+                        builder.append("dynamic_cast<")
+                        appendType(dstType, expr.scope, true)
+                        appendOwnershipSuffix(expr.dst.type, true)
+                        builder.append(">(")
+                        appendFieldName(graph, expr.src)
+                        builder.append(")->content")
                     }
                     srcRef && dstRef -> {
                         builder.append("dynamic_cast<")
@@ -948,6 +990,18 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                         builder.append(") ")
                         appendFieldName(graph, expr.src)
                     }
+                }
+            }
+            is SimpleInstanceOf -> {
+                when (val type = expr.type) {
+                    is ClassType -> {
+                        builder.append("dynamic_cast<")
+                        appendType(expr.type, expr.scope, true)
+                        builder.append("*>(")
+                        appendFieldName(graph, expr.value)
+                        builder.append(") != nullptr")
+                    }
+                    else -> TODO("Implement complex instance-of: ${type.javaClass.simpleName}")
                 }
             }
             else -> super.appendInstrImpl(graph, expr)

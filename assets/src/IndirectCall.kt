@@ -4,26 +4,24 @@ annotation class Static
 
 package zauber.inheritance
 
-@Static // class -> offset, offset + method -> method-index to call
+// class -> offset, offset + method -> method-index to call
 private external fun readFromClassCallTable(addr: Int): Int
 
-@Static // class -> i0 + i1, i0 .. i1 |=| method -> method-index to call
+// class -> i0 + i1, i0 .. i1 |=| method -> method-index to call
 private external fun readFromInterfaceCallTable(addr: Int): Int
 
-@Static // class -> super-class or -1
+// class -> super-class or -1
 private external fun readFromSuperClassTable(addr: Int): Int
 
-@Static // class -> i0 + i1, i0 .. i1 |=| interface
+// class -> i0 + i1, i0 .. i1 |=| interface
 private external fun readFromClassToInterfaceTable(addr: Int): Int
 
-@Static
 @Suppress("unused")
 fun resolveClassCall(classIndex: Int, methodIndex: Int): Int {
     val offset = readFromClassCallTable(classIndex)
     return readFromClassCallTable(offset + methodIndex)
 }
 
-@Static
 @Suppress("unused")
 fun resolveInterfaceCall(classIndex: Int, methodIndex: Int): Int {
     var i0 = readFromInterfaceCallTable(classIndex * 2) * 2
@@ -39,7 +37,6 @@ fun resolveInterfaceCall(classIndex: Int, methodIndex: Int): Int {
     return -1
 }
 
-@Static
 @Suppress("unused")
 fun isInstanceOfClass(instanceClassIndex: Int, testClassIndex: Int): Boolean {
     while (instanceClassIndex >= 0) {
@@ -49,7 +46,6 @@ fun isInstanceOfClass(instanceClassIndex: Int, testClassIndex: Int): Boolean {
     return false
 }
 
-@Static
 @Suppress("unused")
 fun isInstanceOfInterface(instanceClassIndex: Int, testInterfaceIndex: Int): Boolean {
     var i0 = readFromClassToInterfaceTable(instanceClassIndex * 2)
