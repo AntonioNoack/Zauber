@@ -243,26 +243,22 @@ open class JavaSourceGenerator : Generator() {
     fun generateCodeImpl(dst: File, data: DependencyData, writer: FileWithImportsWriter) {
         val methodsByClass = data.calledMethods.groupBy { methodSpec ->
             val owner = methodSpec.method.ownerScope
-            owner to methodSpec.typeParameters.filterByGenerics { it.scope == owner }
+            methodSpec.withScope(owner)
         }
 
         val fieldsByClass = (data.getFields + data.setFields).groupBy { fieldSpec ->
             val owner = fieldSpec.field.ownerScope
-            owner to fieldSpec.typeParameters.filterByGenerics { it.scope == owner }
+            fieldSpec.withScope(owner)
         }
 
-        val classes1 = data.createdClasses.map {
-            it.clazz to it.typeParameters
-        }
+        val createdClasses = data.createdClasses
+        val classes = (methodsByClass.keys + fieldsByClass.keys + createdClasses)
+            .filter { classSpec -> classSpec.scope!!.isClassLike() }
 
-        val classes = (methodsByClass.keys + fieldsByClass.keys + classes1)
-            .filter { it.first.isClassLike() }
-
-        for (clazz in classes) {
-            val methods = methodsByClass[clazz] ?: emptyList()
-            val fields = fieldsByClass[clazz] ?: emptyList()
-            val (scope, typeParameters) = clazz
-            val classSpec = Specialization(scope, typeParameters)
+        for (classSpec in classes) {
+            val methods = methodsByClass[classSpec] ?: emptyList()
+            val fields = fieldsByClass[classSpec] ?: emptyList()
+            val scope = classSpec.scope!!
             scope[ScopeInitType.CODE_GENERATION]
             generateClassForScope(scope, dst, writer, classSpec, methods, fields)
         }
@@ -393,7 +389,8 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun createFile(packageScope: Scope, name: String, dst: File, extension: String): File {
-        return File(dst, packageScope.path.joinToString("/") + "/$name.$extension")
+        val packageI = packageScope.path.joinToString("/").lowercase()
+        return File(dst, "$packageI/$name.$extension")
     }
 
     open fun getClassName(scope: Scope, specialization: Specialization): String {
@@ -501,13 +498,6 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendClassFlags(scope: Scope) {
         builder.append("public ")
-
-        if (scope.scopeType != ScopeType.INNER_CLASS &&
-            scope.scopeType != ScopeType.PACKAGE &&
-            scope.parent?.scopeType != ScopeType.PACKAGE
-        ) {
-            builder.append("static ")
-        }
 
         if (scope.flags.hasFlag(Flags.ABSTRACT)) builder.append("abstract ")
     }
@@ -680,7 +670,11 @@ open class JavaSourceGenerator : Generator() {
 
         val method = method0.method as Method
         appendTypeParameterDeclaration(method.typeParameters, classScope)
-        appendType(method.resolveReturnType(method0), classScope, false)
+        if (hasReturn(method)) {
+            appendType(method.resolveReturnType(method0), classScope, false)
+        } else {
+            builder.append("void")
+        }
 
         builder.append(' ').append(getMethodName(method0))
 
@@ -689,8 +683,9 @@ open class JavaSourceGenerator : Generator() {
     }
 
     open fun appendMethodBody(methodSpec: Specialization, headerOnly: Boolean) {
-        val nativeImpl = getNativeImplementation(methodSpec.method)
-        val body = methodSpec.method.body
+        val method = methodSpec.method
+        val nativeImpl = getNativeImplementation(method)
+        val body = method.body
 
         when {
             body != null -> {
@@ -724,10 +719,11 @@ open class JavaSourceGenerator : Generator() {
             builder.append("this.content[index] = value;")
             nextLine()
 
-            builder.append("return ")
-            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
-            builder.append(';')
-            nextLine()
+            if (hasReturn(method0.method)) {
+                builder.append("return ")
+                appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+                builder.append(';'); nextLine()
+            }
         }
     }
 
@@ -811,7 +807,8 @@ open class JavaSourceGenerator : Generator() {
         if (isNative &&
             nativeImpl == null &&
             !isArrayGetter(method0) &&
-            !isArraySetter(method0)
+            !isArraySetter(method0) &&
+            method.body == null
         ) builder.append("native ")
         if (isFinal) builder.append("final ")
         if (isDefault) builder.append("default ")
@@ -958,7 +955,7 @@ open class JavaSourceGenerator : Generator() {
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        graph.giveLocalFieldsUniqueNames()
+        graph.giveLocalFieldsUniqueNames(JavaTokenizer.KEYWORDS)
         graph.removeSimpleGetObject()
         graph.removeMergeInfoInstructions()
         graph.renumberFields()
@@ -1373,8 +1370,9 @@ open class JavaSourceGenerator : Generator() {
                     if (expr.condition != null) {
                         appendSimpleBlock(graph, expr.conditionBlock!!)
                         builder.append("if (")
-                        if (!expr.negate) builder.append('!')
+                        if (!expr.negate) builder.append("!(")
                         appendFieldName(graph, expr.condition)
+                        if (!expr.negate) builder.append(')')
                         builder.append(") break;")
                         nextLine()
                         nextLine()
@@ -1429,7 +1427,7 @@ open class JavaSourceGenerator : Generator() {
             is SimpleInstanceOf -> {
                 appendFieldName(graph, expr.value)
                 builder.append(" instanceof ")
-                appendType(expr.type, expr.scope, false)
+                appendType(expr.type, expr.scope, true)
             }
             is SimpleCheckEquals -> {
                 // todo this could be converted into a SimpleBranch + SimpleCall
@@ -1862,7 +1860,7 @@ open class JavaSourceGenerator : Generator() {
             builder.append(name)
         } else {
             // duplicate path -> full path needed
-            appendPath(path)
+            appendPathLc(path, true)
         }
     }
 
@@ -1911,7 +1909,7 @@ open class JavaSourceGenerator : Generator() {
 
     open fun appendPackageDeclaration(packagePath: List<String>, file: File) {
         builder.append("package ")
-        appendPath(packagePath)
+        appendPathLc(packagePath, false)
         builder.append(";\n\n")
     }
 
@@ -1946,9 +1944,18 @@ open class JavaSourceGenerator : Generator() {
         }
     }
 
+    fun appendPathLc(path: List<String>, lastUpper: Boolean) {
+        if (path.isEmpty()) builder.append("ROOT")
+        for (i in path.indices) {
+            if (i > 0) builder.append(".")
+            val pathI = path[i]
+            builder.append(if (i < path.lastIndex || !lastUpper) pathI.lowercase() else pathI)
+        }
+    }
+
     open fun appendImport(packagePath: List<String>, import: List<String>, importedScope: Scope?) {
         builder.append("import ")
-        appendPath(import)
+        appendPathLc(import, true)
         builder.append(";\n")
     }
 

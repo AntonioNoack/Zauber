@@ -38,6 +38,7 @@ class LoopTests {
     @Test
     fun testForWithoutBody() {
         // how can we test it progressed? global counter
+        // todo this no longer works like that
         // todo why does it have an issue with Unit???
         val code = """
             fun call(): Int {

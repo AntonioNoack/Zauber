@@ -107,12 +107,12 @@ class ResolvedCallExpression(
         // println("Simplified self to ${expr.self} (${expr.self.javaClass.simpleName})")
         var blockI = block1
         val valueParameters = valueParameters.map { param ->
-            blockI = param.simplify(context, blockI.value!!.block, blockI, false)
+            blockI = param.simplify(context, blockI.value!!.block, blockI, false, contextExpr = this)
             blockI.value?.value ?: return blockI
         }
 
         val thisExpr = if (thisExpr != null) {
-            blockI = thisExpr.simplify(context, blockI.value!!.block, blockI, false)
+            blockI = thisExpr.simplify(context, blockI.value!!.block, blockI, false, contextExpr = this)
             blockI.value?.value ?: return blockI
         } else null
 

@@ -24,9 +24,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer().Inner().call()
-                
-                package zauber
-                class Any
             """.trimIndent()
         )
         assertEquals(0f, value.castToFloat())
@@ -44,9 +41,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer().Inner().y
-                
-                package zauber
-                class Any
             """.trimIndent()
         )
         assertEquals(0f, value.castToFloat())
@@ -65,9 +59,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer().Inner().call()
-                
-                package zauber
-                class Any
             """.trimIndent()
         )
         assertEquals(0f, value.castToFloat())
@@ -84,9 +75,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer().Inner().call()
-                
-                package zauber
-                class Any
             """.trimIndent()
         )
         assertEquals(0f, type.castToFloat())
@@ -104,13 +92,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer(5).calc()
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc(): Int = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())
@@ -127,9 +108,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer(5).Inner().call()
-                
-                package zauber
-                class Any
             """.trimIndent()
         )
         assertEquals(5, type.castToInt())
@@ -151,13 +129,6 @@ class InnerClassTests {
                 }
                 
                 val tested = Outer(5).I1().I2().I3().call()
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc() = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())

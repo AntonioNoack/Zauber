@@ -16,15 +16,6 @@ class CaptureTests {
                 inc()
                 return x
             }
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
-            fun interface Function0<R> {
-                fun call(): R
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(3, value.castToInt())
@@ -37,15 +28,6 @@ class CaptureTests {
                 var x = 1
                 val inc = { x+1 }
                 return inc()
-            }
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
-            fun interface Function0<R> {
-                fun call(): R
             }
         """.trimIndent()
         val value = testExecute(code)
@@ -63,18 +45,6 @@ class CaptureTests {
                 return x
             }
             val tested = f()
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                operator fun inc(): Int = this + 1
-            }
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
        """.trimIndent()
         val value = testExecute(code)
         assertEquals(3, value.castToInt())

@@ -188,12 +188,14 @@ class SimpleGraph(val method0: Specialization) {
         }
     }
 
-    fun giveLocalFieldsUniqueNames() {
+    fun giveLocalFieldsUniqueNames(keywords: Collection<String>) {
         val foundNames = HashMap<String, LocalField?>()
 
         // protect these special names:
         foundNames["this"] = null
         foundNames["nextBlockId"] = null // for tail calls
+        for (name in keywords) foundNames[name] = null
+
         if (method.hasExplicitSelfType) foundNames["self"] = null
         for (param in method.valueParameters) foundNames[param.name] = null
 

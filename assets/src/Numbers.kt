@@ -1,7 +1,7 @@
 package zauber
 
 external class Byte(val content: Byte) {
-    external fun inv(): Byte
+    fun inv(): Byte = xor((-1).toByte())
     fun inc(): Byte = (this + 1).toByte()
     fun dec(): Byte = (this - 1).toByte()
     fun unaryPlus() = toInt()
@@ -31,6 +31,7 @@ external class Byte(val content: Byte) {
     external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
+    external fun toChar(): Char
 
     companion object {
         const val MIN_VALUE: Byte = -0x80
@@ -39,7 +40,7 @@ external class Byte(val content: Byte) {
 }
 
 external class UByte(val content: UByte) {
-    external fun inv(): UByte
+    fun inv(): UByte = xor(MAX_VALUE)
     fun inc(): UByte = (this + 1).toUByte()
     fun dec(): UByte = (this - 1).toUByte()
     fun unaryPlus() = toInt()
@@ -69,6 +70,7 @@ external class UByte(val content: UByte) {
     external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
+    external fun toChar(): Char
 
     companion object {
         const val MIN_VALUE: UByte = 0
@@ -77,7 +79,7 @@ external class UByte(val content: UByte) {
 }
 
 external class Short(val content: Short) {
-    external fun inv(): Short
+    fun inv(): Short = xor((-1).toShort())
     fun inc(): Short = (this + 1).toShort()
     fun dec(): Short = (this - 1).toShort()
     fun unaryPlus() = toInt()
@@ -107,6 +109,7 @@ external class Short(val content: Short) {
     external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
+    external fun toChar(): Char
 
     companion object {
         const val MIN_VALUE: Short = -0x8000
@@ -115,7 +118,7 @@ external class Short(val content: Short) {
 }
 
 external class UShort(val content: UShort) {
-    external fun inv(): UShort
+    fun inv(): UShort = xor(MAX_VALUE)
     fun inc(): UShort = (this + 1).toUShort()
     fun dec(): UShort = (this - 1).toUShort()
     fun unaryPlus() = toInt()
@@ -145,6 +148,7 @@ external class UShort(val content: UShort) {
     external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
+    external fun toChar(): Char
 
     companion object {
         const val MIN_VALUE: UShort = 0
@@ -153,7 +157,7 @@ external class UShort(val content: UShort) {
 }
 
 external class Int(val content: Int) {
-    external fun inv(): Int
+    fun inv(): Int = xor(-1)
     fun inc(): Int = this + 1
     fun dec(): Int = this - 1
     fun unaryPlus() = this
@@ -175,8 +179,8 @@ external class Int(val content: Int) {
     external fun shl(shift: Int): Int
     external fun shr(shift: Int): Int
     external fun ushr(shift: Int): Int
-    external fun rotateLeft(shift: Int): Int
-    external fun rotateRight(shift: Int): Int
+    external fun rotateLeft(shift: Int): Int = shl(shift) or ushr(32 - shift)
+    external fun rotateRight(shift: Int): Int = ushr(shift) or shl(32 - shift)
 
     external fun toByte(): Byte
     external fun toUByte(): UByte
@@ -189,6 +193,7 @@ external class Int(val content: Int) {
     external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
+    external fun toChar(): Char
 
     companion object {
         const val MIN_VALUE: Int = -0x8000_0000
@@ -197,7 +202,7 @@ external class Int(val content: Int) {
 }
 
 external class UInt(val content: UInt) {
-    external fun inv(): UInt
+    fun inv(): UInt = xor(MAX_VALUE)
     fun inc(): UInt = this + 1
     fun dec(): UInt = this - 1
     fun unaryPlus() = toInt()
@@ -218,9 +223,9 @@ external class UInt(val content: UInt) {
 
     external fun shl(shift: Int): UInt
     external fun shr(shift: Int): UInt
-    external fun ushr(shift: Int): UInt
-    external fun rotateLeft(shift: Int): UInt
-    external fun rotateRight(shift: Int): UInt
+    external fun ushr(shift: Int): UInt = shr(shift)
+    external fun rotateLeft(shift: Int): UInt = shl(shift) or ushr(32 - shift)
+    external fun rotateRight(shift: Int): UInt = shr(shift) or shl(32 - shift)
 
     external fun toByte(): Byte
     external fun toUByte(): UByte
@@ -233,6 +238,7 @@ external class UInt(val content: UInt) {
     external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
+    external fun toChar(): Char
 
     companion object {
         const val MIN_VALUE: UInt = 0
@@ -241,7 +247,7 @@ external class UInt(val content: UInt) {
 }
 
 external class Long(val content: Long) {
-    external fun inv(): Long
+    fun inv(): Long = xor(-1L)
     fun inc(): Long = this + 1
     fun dec(): Long = this - 1
     fun unaryPlus() = this
@@ -263,8 +269,8 @@ external class Long(val content: Long) {
     external fun shl(shift: Int): Long
     external fun shr(shift: Int): Long
     external fun ushr(shift: Int): Long
-    external fun rotateLeft(shift: Int): Long
-    external fun rotateRight(shift: Int): Long
+    external fun rotateLeft(shift: Int): Long = shl(shift) or ushr(64 - shift)
+    external fun rotateRight(shift: Int): Long = ushr(shift) or shl(32 - shift)
 
     external fun toByte(): Byte
     external fun toUByte(): UByte
@@ -285,7 +291,7 @@ external class Long(val content: Long) {
 }
 
 external class ULong(val content: ULong) {
-    external fun inv(): ULong
+    fun inv(): ULong = xor(MAX_VALUE)
     fun inc(): ULong = this + 1
     fun dec(): ULong = this - 1
     fun unaryPlus() = toLong()
@@ -307,8 +313,8 @@ external class ULong(val content: ULong) {
     external fun shl(shift: Int): ULong
     external fun shr(shift: Int): ULong
     external fun ushr(shift: Int): ULong
-    external fun rotateLeft(shift: Int): ULong
-    external fun rotateRight(shift: Int): ULong
+    external fun rotateLeft(shift: Int): ULong = shl(shift) or ushr(64 - shift)
+    external fun rotateRight(shift: Int): ULong = shr(shift) or shl(64 - shift)
 
     external fun toByte(): Byte
     external fun toUByte(): UByte

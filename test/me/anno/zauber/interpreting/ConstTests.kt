@@ -30,12 +30,6 @@ class ConstTests {
                 const val v2: Int = A.v2 + 5
             }
             const val tested = B.v2
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
         )
         assertEquals(17 + 1 + 2 + 3 + 4 + 5, value.castToInt())
@@ -55,12 +49,6 @@ class ConstTests {
             }
             
             val tested = calculate()
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
         )
         assertEquals(3, value.castToInt())
@@ -80,12 +68,6 @@ class ConstTests {
             }
             
             const val tested = calculate()
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
             )
         }

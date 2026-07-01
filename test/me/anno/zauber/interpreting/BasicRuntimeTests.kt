@@ -43,9 +43,6 @@ class BasicRuntimeTests {
                 println("Hello World!")
                 return 0
             }
-            package zauber
-            class String
-            external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Hello World!\n", runtime.printed.toString())
@@ -54,11 +51,9 @@ class BasicRuntimeTests {
 
     @Test
     fun testBoolean() {
-        val stdlib = """
-        """.trimIndent()
-        val valueT = testExecute("val tested = true\n$stdlib")
+        val valueT = testExecute("val tested = true")
         assertEquals(true, valueT.castToBool())
-        val valueF = testExecute("val tested = false\n$stdlib")
+        val valueF = testExecute("val tested = false")
         assertEquals(false, valueF.castToBool())
     }
 
@@ -67,9 +62,6 @@ class BasicRuntimeTests {
         val code = """
             class Test(val a: Int)
             val tested = Test(5)
-            
-            package zauber
-            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", (value.clazz.type as ClassType).clazz.name)

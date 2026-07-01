@@ -721,7 +721,7 @@ class WASMSourceGenerator : JavaSourceGenerator() {
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        graph.giveLocalFieldsUniqueNames()
+        graph.giveLocalFieldsUniqueNames(emptyList())
         graph.removeSimpleGetObject()
         graph.removeMergeInfoInstructions()
         graph.renumberFields()

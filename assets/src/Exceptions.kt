@@ -9,13 +9,11 @@ class IllegalArgumentException(message: String) : RuntimeException(message)
 /**
  * not yet initialized
  * */
-fun throwNJI(name: String): Nothing {
-    throw NullPointerException(name)
-}
+fun throwNJI(name: String) = throw NullPointerException(name)
 
 /**
  * null-pointer exception
  * */
-fun throwNPE(message: String): Nothing {
-    throw NullPointerException(message)
-}
+fun throwNPE(message: String) = throw NullPointerException(message)
+
+fun error(message: String) = throw IllegalStateException(message)

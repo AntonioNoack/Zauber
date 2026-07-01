@@ -15,13 +15,6 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class InheritanceClassTests {
 
-    private val stdlib = "\n" + """
-package zauber
-class Any
-external class Int
-external fun println(arg0: Int)
-    """.trimIndent()
-
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime",/* "js", "java",*/ "c++" /*"wasm"*/])
     fun testFieldInSuperClassIsAssigned(type: String) {
@@ -29,7 +22,7 @@ external fun println(arg0: Int)
             open class Parent(val y: Int)
             class Child(x: Int): Parent(x)
             val tested = Child(3).y
-        """.trimIndent() + stdlib
+        """.trimIndent() 
         MultiTest(code)
             .type { Types.Int }
             .runtime { value ->
@@ -51,7 +44,7 @@ external fun println(arg0: Int)
             }
             fun runTest(p: Parent): Int = p.x()
             val tested = runTest(Child())
-        """.trimIndent() + stdlib
+        """.trimIndent() 
         MultiTest(code)
             .type { Types.Int }
             .runtime { value ->
@@ -72,9 +65,6 @@ external fun println(arg0: Int)
             }
             fun runTest(p: Parent): Int = p.x
             val tested = runTest(Child())
-            
-            package zauber
-            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(1, value.castToInt())
@@ -91,9 +81,6 @@ external fun println(arg0: Int)
             }
             fun runTest(p: Parent): Int = p.x()
             val tested = runTest(Parent())
-            
-            package zauber
-            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(0, value.castToInt())
@@ -110,9 +97,6 @@ external fun println(arg0: Int)
             }
             fun runTest(p: Parent): Int = p.x
             val tested = runTest(Parent())
-            
-            package zauber
-            class Any
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(0, value.castToInt())

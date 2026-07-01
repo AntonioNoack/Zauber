@@ -10,8 +10,6 @@ class StringTests {
     val smallStdlib = "\n" + """
         package zauber
         
-        typealias ByteArray = Array<Byte>
-        
         class Byte {
             external fun toChar(): Char
         }
@@ -20,38 +18,7 @@ class StringTests {
             operator fun equals(other: Char): Boolean = this >= other && this <= other
         }
         
-        external class Int {
-            external operator fun plus(other: Int): Int
-            external operator fun minus(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun until(other: Int): IntRange = IntRange(this, other)
-            operator fun equals(other: Int): Boolean = this >= other && this <= other
-            operator fun unaryMinus(): Int = 0 - this
-            fun inc() = this+1
-            fun dec() = this-1
-        }
-        
         fun min(a: Int, b: Int): Int = if (a < b) a else b
-        
-        class IntRange(val from: Int, val to: Int) {
-            fun iterator() = IntRangeIterator(this)
-        }
-        
-        interface Iterator<V> {
-            fun next(): Int
-            fun hasNext(): Boolean
-        }
-        
-        class IntRangeIterator(val range: IntRange): Iterator<Int> {
-            var index = range.from
-            override fun hasNext(): Boolean = index < range.to
-            override fun next(): Int = index++
-        }
-        
-        object Unit
-        enum class Boolean {
-            TRUE, FALSE
-        }
         
         class String(private val content: ByteArray) {
             companion object {
@@ -105,11 +72,6 @@ class StringTests {
 
     @Test
     fun testStringConcatUsingArrays() {
-        LogManager.disable(
-            "Inheritance,Runtime,CallExpression,ConstructorResolver,MemberResolver," +
-                    "ResolvedField,FieldResolver,FieldExpression,AssignmentExpression," +
-                    "Stdlib,ASTSimplifier,ResolvedMethod"
-        )
         val code = """
             val tested = "Some " + "String"
         """.trimIndent() + smallStdlib
@@ -119,11 +81,6 @@ class StringTests {
 
     @Test
     fun testStringTrimUsingArrays() {
-        LogManager.disable(
-            "Inheritance,Runtime,CallExpression,ConstructorResolver," +
-                    "FieldExpression,AssignmentExpression,MethodResolver," +
-                    "Stdlib,ASTSimplifier,ResolvedMethod"
-        )
         val code = """
             val tested = " Hello  \r\n".trim()
         """.trimIndent() + smallStdlib + """

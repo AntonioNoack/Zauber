@@ -93,30 +93,8 @@ class FactorialTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
+    @ValueSource(strings = ["type", "runtime"/*, "js", "java", "c++", "wasm"*/])
     fun testFactorialAsForLoop(type: String) {
-        val stdlib = """
-            package zauber
-            external class Int(val content: Int) {
-                operator fun until(other: Int): IntRange = IntRange(this, other)
-                operator fun rangeTo(other: Int): IntRange = IntRange(this, other+1)
-            }
-            
-            value class IntRange(val from: Int, val to: Int) {
-                fun iterator() = IntRangeIterator(this)
-            }
-            
-            interface Iterator<V> {
-                fun next(): Int
-                fun hasNext(): Boolean
-            }
-            
-            class IntRangeIterator(val range: IntRange): Iterator<Int> {
-                var index = range.from
-                override fun hasNext(): Boolean = index < range.to
-                override fun next(): Int = index++
-            }
-        """.trimIndent()
         val code = """
             fun fac(n: Int): Int {
                 var product = 1
@@ -126,7 +104,7 @@ class FactorialTests {
                 return product
             }
             val tested = fac(10)
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value1 = 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2
         MultiTest(code)

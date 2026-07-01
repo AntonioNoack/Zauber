@@ -7,6 +7,7 @@ import me.anno.generation.InheritanceTable
 import me.anno.generation.Specializations.specialization
 import me.anno.generation.cpp.CppSourceGenerator
 import me.anno.generation.java.Import2
+import me.anno.support.cpp.tokenizer.CppTokenizer
 import me.anno.utils.FullMap
 import me.anno.zauber.ast.reverse.CodeReconstruction
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression
@@ -495,7 +496,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        graph.giveLocalFieldsUniqueNames()
+        graph.giveLocalFieldsUniqueNames(CppTokenizer.cKeywords)
         graph.removeMergeInfoInstructions()
         graph.renumberFields()
 

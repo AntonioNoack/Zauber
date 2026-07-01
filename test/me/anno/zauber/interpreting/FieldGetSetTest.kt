@@ -99,12 +99,6 @@ class FieldGetSetTest {
                 return v.x + v.y
             }
             val tested = calculate(Vector(3,4))
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
             testExecute(code)
         }
@@ -113,7 +107,6 @@ class FieldGetSetTest {
     @Test
     fun testGetterAndSetterWithDelegate() {
         // todo why does it crash?
-        LogManager.disable("MemberResolver,ResolvedField")
         val actual = testExecute(
             """
             var tmp: Int by LazyInit { 3 }
@@ -125,7 +118,6 @@ class FieldGetSetTest {
                 }
             
             package zauber
-            class Any
             class LazyInit<V>(val initialValue: () -> V) {
                 
                 var hasValue = false
@@ -141,25 +133,6 @@ class FieldGetSetTest {
                 external operator fun setValue(value: V) {
                     this.value = value
                 }
-            }
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
-            
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
-            
-            fun interface Function0<R> {
-                fun call(): R
-            }
-            
-            open class Throwable(val message: String)
-            class Exception(message: String) : Throwable(message)
-            fun throwNJI(msg: String): Nothing {
-                throw Exception(msg)
             }
             """.trimIndent()
         )

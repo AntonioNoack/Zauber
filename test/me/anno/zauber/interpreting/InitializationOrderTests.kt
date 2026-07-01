@@ -20,11 +20,6 @@ class InitializationOrderTests {
             val a = b + 1
             val b = 2
             val tested = a
-            
-            package zauber
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
             testExecute(code)
         }

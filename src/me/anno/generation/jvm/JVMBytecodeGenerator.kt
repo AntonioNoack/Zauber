@@ -4,6 +4,7 @@ import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.java.JavaSourceGenerator
 import me.anno.generation.jvm.VerificationTypeInfo.Companion.buildStackMapTable
+import me.anno.support.java.tokenizer.JavaTokenizer
 import me.anno.zauber.SpecialFieldNames.OBJECT_FIELD_NAME
 import me.anno.zauber.ast.rich.expression.CompareType
 import me.anno.zauber.ast.rich.expression.constants.SpecialValue
@@ -582,7 +583,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
     private fun prepareGraphForBytecode(graph: SimpleGraph) {
         // Unlike JavaSourceGenerator.prepareGraph(), we do NOT reconstruct to if/while nodes.
         // We also keep fields (no aggressive DCE) because stack optimization is out of scope for now.
-        graph.giveLocalFieldsUniqueNames()
+        graph.giveLocalFieldsUniqueNames(JavaTokenizer.KEYWORDS)
         graph.renumberFields()
     }
 

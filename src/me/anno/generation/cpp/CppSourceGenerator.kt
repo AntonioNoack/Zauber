@@ -861,7 +861,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        graph.giveLocalFieldsUniqueNames()
+        graph.giveLocalFieldsUniqueNames(CppTokenizer.cppKeywords)
         graph.removeMergeInfoInstructions()
         graph.renumberFields()
 

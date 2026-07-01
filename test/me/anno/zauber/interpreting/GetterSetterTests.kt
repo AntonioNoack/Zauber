@@ -23,14 +23,6 @@ class GetterSetterTests {
                 get() = field++
                 
             val tested get() = x * x
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                fun inc() = this + 1
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(12, value.castToInt())
@@ -48,14 +40,6 @@ class GetterSetterTests {
                 val w = Wrapper()
                 return w.x * w.x
             }
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                fun inc() = this + 1
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(12, value.castToInt())
@@ -72,15 +56,6 @@ class GetterSetterTests {
             val tested: Int get() {
                 return Wrapper.x * Wrapper.x
             }
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                fun inc() = this + 1
-            }
-            object Unit
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(12, value.castToInt())

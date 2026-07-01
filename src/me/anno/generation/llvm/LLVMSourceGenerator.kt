@@ -816,7 +816,7 @@ class LLVMSourceGenerator : JavaSourceGenerator() {
         graph.removeWriteOnlyFields()
         graph.removeObjectFields()
         graph.removeConstantFields()
-        graph.giveLocalFieldsUniqueNames()
+        graph.giveLocalFieldsUniqueNames(emptyList())
         graph.renumberFields()
     }
 

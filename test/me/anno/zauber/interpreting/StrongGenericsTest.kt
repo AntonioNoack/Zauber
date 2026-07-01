@@ -13,15 +13,6 @@ import org.junit.jupiter.api.Test
 class StrongGenericsTest {
     companion object {
         val stdlib = """
-            package zauber
-            class Type {
-                external fun isSubTypeOf(other: Type): Boolean
-            }
-            class ClassType<V>(val name: String): Type()
-            
-            class Throwable(message: String)
-            class NullPointerException(message: String): Throwable(message)
-            fun throwNPE(message: String) = throw NullPointerException(message)
         """.trimIndent()
     }
 

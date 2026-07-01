@@ -12,42 +12,6 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class JumpToLabelTests {
 
-    private val stdlib = "\n" + """
-        package zauber
-        class Any
-        external class Int {
-            external operator fun plus(other: Int): Int
-            external operator fun times(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun inc(): Int = this + 1
-            
-            operator fun until(other: Int): IntRange = IntRange(this, other)
-        }
-        
-        // small, mutable IntRange-iterator
-        class IntRange(var start: Int, val end: Int) {
-            fun iterator() = this
-            fun hasNext() = start < end
-            fun next(): Int {
-                val value = start
-                start = value + 1
-                return value
-            }
-        }
-        
-        class Throwable(val message: String)
-        class IllegalStateException(message: String): Throwable(message)
-            
-        enum class Boolean { TRUE, FALSE }
-        class Array<V>(val size: Int) {
-            external operator fun set(index: Int, value: V)
-        }
-        
-        object Unit
-        external fun println(arg0: Int)
-        fun error(message: String) = throw IllegalStateException(message)
-    """.trimIndent()
-
     @Test
     fun testBreakToNamed() {
         val code = """
@@ -63,7 +27,7 @@ class JumpToLabelTests {
             }
             
             val tested = call()
-        """.trimIndent() + stdlib
+        """.trimIndent()
         val value = testExecute(code)
         assertEquals(1, value.castToInt())
     }
@@ -82,7 +46,7 @@ class JumpToLabelTests {
             }
             
             val tested = call()
-        """.trimIndent() + stdlib
+        """.trimIndent()
         val value = testExecute(code, reset = false)
         assertEquals(16, value.castToInt())
     }
@@ -103,7 +67,7 @@ class JumpToLabelTests {
             }
             
             val tested = call()
-        """.trimIndent() + stdlib
+        """.trimIndent()
         val value = testExecute(code, reset = false)
         assertEquals(16, value.castToInt())
     }
@@ -126,7 +90,7 @@ class JumpToLabelTests {
             }
             
             val tested = call()
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         MultiTest(code)
             .type { Types.Int }

@@ -10,26 +10,13 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class DataClassTests {
 
-    private val stdlib = "\n" + """
-package zauber
-class Any
-enum class Boolean { TRUE, FALSE }
-class Array<V>(val size: Int) {
-    external operator fun set(index: Int, value: V)
-}
-external fun println(arg0: Boolean)
-external fun println(arg0: Int)
-external fun println(arg0: String)
-class String
-    """.trimIndent()
-
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "wasm"])
     fun testEqualsMethodAny(type: String) {
         val code = """
             data class Vector(val x: Int, val y: Int)
             val tested = Vector(1, 2) == Vector(1, 2)
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .type { Types.Boolean }
             .runtime { value -> assertEquals(true, value.castToBool()) }
@@ -43,7 +30,7 @@ class String
         val code = """
             data class Vector(val x: Int, val y: Int)
             val tested = Vector(1, 2).hashCode()
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .type { Types.Int }
             .runtime { value -> assertEquals(1 * 31 + 2, value.castToInt()) }
@@ -57,7 +44,7 @@ class String
         val code = """
             data class Vector(val x: Int, val y: Int)
             val tested = Vector(1, 2).toString()
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .type { Types.String }
             .runtime { value -> assertEquals("Vector(x=1, y=2)", value.castToString()) }
@@ -71,7 +58,7 @@ class String
         val code = """
             data class Vector(val x: Int, val y: Int)
             val tested = Vector(1, 2).copy(y=3).y
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .type { Types.Int }
             .runtime { value -> assertEquals(3, value.castToInt()) }
@@ -85,7 +72,7 @@ class String
         val code = """
             data class Vector(val x: Int, val y: Int)
             val tested = Vector(1, 2).copy(x=2,y=3).y
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .type { Types.Int }
             .runtime { value -> assertEquals(3, value.castToInt()) }
