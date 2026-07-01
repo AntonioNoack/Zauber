@@ -10,10 +10,6 @@ class DeferTests {
 
     @Test
     fun testDefer() {
-        LogManager.disable(
-            "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
-                    "MethodResolver,ResolvedMethod"
-        )
         val code = """
             fun run(): String {
                 defer println("World")
@@ -21,12 +17,6 @@ class DeferTests {
                 return "Test"
             }
             val tested = run()
-            
-            package zauber
-            class Any
-            object Unit
-            class String
-            external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
@@ -35,33 +25,17 @@ class DeferTests {
 
     @Test
     fun testErrDeferIsExecuted() {
-        LogManager.disable(
-            "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
-                    "MethodResolver,ResolvedMethod"
-        )
         val code = """
             fun run(): String {
                 try {
                     errdefer println("World")
                     println("Hello ")
-                    throw Exception()
+                    throw Exception("")
                 } catch (e: Exception) {
                     return "Test"
                 }
             }
             val tested = run()
-            
-            package zauber
-            class Any
-            class String
-            class Throwable()
-            class Exception(): Throwable()
-            external fun println(str: String)
-            enum class Boolean { TRUE, FALSE }
-            object Unit
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
@@ -70,11 +44,6 @@ class DeferTests {
 
     @Test
     fun testErrDeferIsNotExecutedWithoutThrow() {
-        LogManager.disable(
-            "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
-                    "MethodResolver,ResolvedMethod"
-        )
-        LogManager.enableDebug("Runtime")
         val code = """
             fun run(): String {
                 errdefer println("World")
@@ -82,12 +51,6 @@ class DeferTests {
                 return "Test"
             }
             val tested = run()
-            
-            package zauber
-            class String
-            class Throwable
-            class Exception: Throwable
-            external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())

@@ -24,18 +24,6 @@ class SameNameTests {
                 return i
             }
             val tested = test(5)
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-            }
-            class Array<V>(override val size: Int) {
-                external fun set(index: Int, value: V)
-            }
-            external fun println(arg0: Int)
-            enum class Boolean { TRUE, FALSE }
         """.trimIndent()
         MultiTest(code)
             .type { Types.Int }

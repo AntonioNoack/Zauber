@@ -273,59 +273,6 @@ object MethodOverrides {
         }
     }
 
-    private fun Type.adjustTo(
-        superClass: Scope, childClass: Scope,
-        superMethod: Scope, childMethod: Scope
-    ): Type {
-        if (!containsGenerics()) return this
-        return when (this) {
-            is ClassType -> {
-                val typeParams =
-                    typeParameters?.map { type -> type.adjustTo(superClass, childClass, superMethod, childMethod) }
-                ClassType(clazz, typeParams)
-            }
-            is CollectionType -> withTypes(types.map { it.adjustTo(superClass, childClass, superMethod, childMethod) })
-            is GenericType -> {
-                when (scope) {
-                    superClass -> {
-                        val superCall = childClass.superCalls.firstOrNull { it.type.clazz == superClass }
-                            ?: error("Expected to find $superClass in superCalls of $childClass")
-                        val paramIndex = superClass.typeParameters.indexOfFirst { it.name == name }
-                        if (paramIndex < 0) {
-                            LOGGER.warn(
-                                "Unknown typeParameter ${
-                                    style(
-                                        name,
-                                        GREEN
-                                    )
-                                } in $superClass, known: ${superClass.typeParameters}"
-                            )
-                            return UnknownType
-                        }
-
-                        val typeParams = superCall.type.typeParameters
-                        if (typeParams == null) {
-                            LOGGER.warn("Missing $superCall-typeParameters for $this, child: $childClass")
-                            return UnknownType
-                        }
-
-                        val value = typeParams[paramIndex]
-                        if (LOGGER.isInfoEnabled && superMethod.selfAsMethod!!.name == debuggedMethodName) {
-                            LOGGER.info("Find $this in [$superClass -> $childClass] -> $value")
-                        }
-
-                        value // do we need recursive replacements here?
-                    }
-                    superMethod -> GenericType(childMethod, name)
-                    childClass, childMethod -> this // how?
-                    else -> TODO("Deep-replace $this, $superMethod -> $childMethod")
-                }
-            }
-            is UnresolvedType -> resolvedName.adjustTo(superClass, childClass, superMethod, childMethod)
-            else -> TODO("Replace generics in $this (${javaClass.simpleName}), $superMethod -> $childMethod")
-        }
-    }
-
     private fun Method.adjustTo(superClass: Scope, childClass: Scope, childMethod: Scope): Method {
         val superMethod = memberScope
         return Method(

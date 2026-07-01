@@ -19,33 +19,12 @@ value class Yielded<R, T: Throwable, Y>(
 value class Thrown<T: Throwable>(val value: T) : Yieldable<Nothing, T, Nothing> {}
 value class Returned<R>(val value: R) : Yieldable<R, Nothing, Nothing> {}
 
-interface List<V>(val size: Int) {
-    operator fun set(index: Int, value: V)
-    operator fun get(index: Int): V
-}
-
 fun min(a: Int, b: Int): Int {
     return if (a < b) a else b
 }
 
 fun max(a: Int, b: Int): Int {
     return if (a > b) a else b
-}
-
-class Array<V>(override val size: Int): List<V> {
-    override external operator fun set(index: Int, value: V)
-    override external operator fun get(index: Int): V
-    
-    fun copyOf(newSize: Int): Array<V> {
-        var copy = Array<V>(newSize)
-        var i = 0
-        var minSize = min(size, newSize)
-        while (i < minSize) {
-            copy[i] = this[i]
-            i++
-        }
-        return copy
-    }
 }
 
 class ArrayList<V>(): List<V> {
@@ -76,13 +55,7 @@ interface Function0<R> {
 interface Function1<V0,R> {
     fun call(v0: V0): R
 }
-class Any {
-    open fun hashCode() = 0
-    open fun toString() = ""
-    open fun equals(other: Any?): Boolean = other === this
-}
 external fun currentTimeMillis(): Long
-fun <V> arrayOf(vararg vs: V): Array<V> = vs
 fun <V> arrayListOf(vararg vs: V): ArrayList<V> {
     val result = ArrayList<V>()
     var i = 0
@@ -91,13 +64,6 @@ fun <V> arrayListOf(vararg vs: V): ArrayList<V> {
         i++
     }
     return result
-}
-
-class Throwable(val message: String?)
-class Exception(message: String?): Throwable(message)
-class NullPointerException(message: String?) : Exception(message)
-fun throwNPE(message: String): Nothing {
-   throw NullPointerException(message)
 }
     """.trimIndent()
     }

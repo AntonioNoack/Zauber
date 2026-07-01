@@ -65,4 +65,14 @@ interface Iterable<V> {
         }
         return value
     }
+
+    fun contains(value: V) = indexOf(value) >= 0
+    fun indexOf(value: V): Int {
+        var i = 0
+        for (valueI in this) {
+            if (valueI == value) return i
+            i++
+        }
+        return -1
+    }
 }

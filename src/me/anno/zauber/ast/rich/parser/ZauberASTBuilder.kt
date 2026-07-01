@@ -585,10 +585,12 @@ class ZauberASTBuilder(
             iterable = readExpression()
             check(i == tokens.size)
         }
-        val body = readBodyOrExpression(label ?: "")
-        val extra = ArrayList<Expression>()
-        return createIteratorForLoop(iterable, body, label, extra, null) { initial ->
-            createDestructuringAssignments(names, false, extra, initial)
+        return pushScope(ScopeType.METHOD_BODY, "for") {
+            val body = readBodyOrExpression(label ?: "")
+            val extra = ArrayList<Expression>()
+            createIteratorForLoop(iterable, body, label, extra, null) { initial ->
+                createDestructuringAssignments(names, false, extra, initial)
+            }
         }
     }
 

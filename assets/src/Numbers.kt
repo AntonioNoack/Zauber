@@ -1,12 +1,5 @@
 package zauber
 
-enum class Boolean {
-    FALSE,
-    TRUE;
-
-    fun toInt() = ordinal
-}
-
 external class Byte(val content: Byte) {
     external fun inv(): Byte
     fun inc(): Byte = (this + 1).toByte()

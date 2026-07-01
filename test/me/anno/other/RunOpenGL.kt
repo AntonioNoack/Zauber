@@ -261,11 +261,6 @@ external class UInt(val content: UInt) {
 }
 external class Char(val content: Char)
 
-enum class Boolean { 
-    TRUE, FALSE;
-    external fun not(): Boolean
-}
-
 class Array<V>(val size: Int) {
     external fun get(index: Int): V
     external fun set(index: Int, v: V)

@@ -10,7 +10,6 @@ class RefAndValueTests {
         package zauber
         class Ref<V>(var value: V)
         value class Value<V>(val value: V)
-        class Any
     """.trimIndent()
 
     @Test

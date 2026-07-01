@@ -14,10 +14,6 @@ class TryCatchTests {
     @Test
     fun testTryCatchNormal() {
         val code = """
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            
             val tested = try {
                 1
             } catch(e: NullPointerException) {
@@ -32,21 +28,9 @@ class TryCatchTests {
     fun testTryCatchMismatch() {
         val code = """
             val tested get() = try {
-                throw IllegalArgumentException()
+                throw IllegalArgumentException("")
             } catch(e: NullPointerException) {
                 2
-            }
-            
-            package zauber
-            class Any
-            class Throwable
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            class IllegalArgumentException : RuntimeException()
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
             }
         """.trimIndent()
         val value = testExecuteCatch(code)
@@ -59,20 +43,9 @@ class TryCatchTests {
     fun testTryCatchCatching() {
         val code = """
             val tested = try {
-                throw NullPointerException()
+                throw NullPointerException("")
             } catch(e: NullPointerException) {
                 2   
-            }
-            
-            package zauber
-            class Any
-            class Throwable
-            class Exception: Throwable()
-            class RuntimeException : Exception()
-            class NullPointerException : RuntimeException()
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
             }
         """.trimIndent()
         val value = testExecute(code)
@@ -88,20 +61,6 @@ class TryCatchTests {
             } catch(e: NullPointerException) {
                 2
             }
-            
-            package zauber
-            class Any
-            class String
-            class Throwable(val message: String?)
-            class Exception(message: String?): Throwable(message)
-            class NullPointerException(message: String?) : Exception(message)
-            enum class Boolean { TRUE, FALSE }
-            fun throwNJI(name: String): Nothing {
-                throw NullPointerException(name)
-            }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(2, value.castToInt())
@@ -109,29 +68,12 @@ class TryCatchTests {
 
     @Test
     fun testNullPointerExceptionManual() {
-        LogManager.disable(
-            "ResolvedField,TypeResolution,Field,MemberResolver,Inheritance,ConstructorResolver," +
-                    "FieldExpression,FieldResolver,CallExpression,SimpleGetField,CallWithNames"
-        )
         val code = """
             val likeNull: Int? = null
             val tested = try {
                 likeNull ?: throw NullPointerException("Missing likeNull")
             } catch(e: NullPointerException) {
                 2
-            }
-            
-            package zauber
-            class Throwable(val message: String?)
-            class Exception(message: String?): Throwable(message)
-            class NullPointerException(message: String?) : Exception(message)
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
-            }
-            class Any
-            external class Int {
-               fun equals(other: Any?) = other is Int
             }
         """.trimIndent()
         val value = testExecute(code)
@@ -147,22 +89,6 @@ class TryCatchTests {
             } catch(e: NullPointerException) {
                 2
             }
-            
-            package zauber
-            class Throwable(val message: String?)
-            class Exception(message: String?): Throwable(message)
-            class NullPointerException(message: String?) : Exception(message)
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
-            }
-            fun throwNPE(message: String): Nothing {
-                throw NullPointerException(message)
-            }
-            class Any
-            external class Int {
-               fun equals(other: Any?) = other is Int
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(2, value.castToInt())
@@ -176,10 +102,6 @@ class TryCatchTests {
             } finally {
                 println("Hello World")
             }
-            
-            package zauber
-            class String
-            external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
@@ -188,10 +110,6 @@ class TryCatchTests {
 
     @Test
     fun testCascadedFinallyIsExecuted() {
-        LogManager.disable(
-            "MemberResolver,Inheritance,TypeResolution,CallExpression,ConstructorResolver," +
-                    "MethodResolver,ResolvedMethod"
-        )
         val code = """
             val tested = try {
                 try {
@@ -202,10 +120,6 @@ class TryCatchTests {
             } finally {
                 println("World")
             }
-            
-            package zauber
-            class String
-            external fun println(str: String)
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Test", value.castToString())
@@ -214,11 +128,6 @@ class TryCatchTests {
 
     @Test
     fun testLoopedFinallyIsExecuted() {
-        LogManager.disable(
-            "TypeResolution,MemberResolver,Inheritance,ResolvedMethod," +
-                    "MethodResolver,CallExpression,Field,ConstructorResolver,ResolvedField,FieldResolver," +
-                    "FieldExpression"
-        )
         val code = """
             val tested: String get() {
                 for (i in 0 until 4) {
@@ -227,41 +136,6 @@ class TryCatchTests {
                     }
                 }
                 return "Test"
-            }
-            
-            package zauber
-            class Any
-            external fun println(value: Int)
-            
-            // stdlib for for-loop:
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun minus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                operator fun until(other: Int): IntRange = IntRange(this, other)
-                fun inc() = this+1
-                fun dec() = this-1
-            }
-            
-            class IntRange(val from: Int, val to: Int) {
-                fun iterator() = IntRangeIterator(this)
-            }
-            
-            interface Iterator<V> {
-                fun next(): Int
-                fun hasNext(): Boolean
-            }
-            
-            class IntRangeIterator(val range: IntRange): Iterator<Int> {
-                var index = range.from
-                override fun hasNext(): Boolean = index < range.to
-                override fun next(): Int = index++
-            }
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun get(i: Int)
-                external operator fun set(i: Int, value: V)
             }
         """.trimIndent()
         val value = testExecute(code)
@@ -305,11 +179,6 @@ class TryCatchTests {
             }
         }
         val tested = test()
-        
-        package zauber
-        class Any
-        class String
-        external fun println(str: String)
         """.trimIndent()
 
         val value = testExecute(code)

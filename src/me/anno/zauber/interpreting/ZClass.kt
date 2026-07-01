@@ -112,7 +112,7 @@ class ZClass(val type: Type) {
         val primaryConstructor = scope.primaryConstructorScope?.selfAsConstructor ?: return
 
         check(primaryConstructor.valueParameters.isEmpty()) {
-            "$scope must not have valueParameters"
+            "Primary $scope constructur must not have valueParameters"
         }
 
         val spec = Specialization(type)

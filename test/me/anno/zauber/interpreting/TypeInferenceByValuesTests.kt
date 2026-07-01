@@ -21,16 +21,6 @@ class TypeInferenceByValuesTests {
             fun main() {
                 println(tested[1])
             }
-            
-            package zauber
-            class Any
-            external class Int
-            class Array<V>(override val size: Int) {
-                external fun set(index: Int, value: V)
-                external fun get(index: Int): V
-            }
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs
-            external fun println(arg0: Int)
         """.trimIndent()
 
         MultiTest(code)
@@ -54,17 +44,6 @@ class TypeInferenceByValuesTests {
     fun testListOf(type: String) {
         val code = """
             val tested = listOf(1, 2, 3)
-            
-            package zauber
-            class Any
-            interface List<V> {
-                val size: Int
-            }
-            class Array<V>(override val size: Int): List<V> {
-                external fun set(index: Int, value: V)
-            }
-            fun <V> listOf(vararg vs: V): List<V> = vs
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
 
         // todo bug:

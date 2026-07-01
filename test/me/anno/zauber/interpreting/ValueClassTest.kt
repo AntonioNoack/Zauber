@@ -27,12 +27,6 @@ class ValueClassTest {
                 return w.x + v.x
             }
             val tested = calculate(Vector(3,0))
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(4, value.castToInt())
@@ -54,12 +48,6 @@ class ValueClassTest {
                 return v.x + v.y
             }
             val tested = calculate(Vector(3,4))
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
         """.trimIndent()
             testExecute(code)
         }
@@ -71,9 +59,6 @@ class ValueClassTest {
             val code = """
                 value class Vector
                 val tested: Int = Vector()
-                
-                package zauber
-                class Any
             """.trimIndent()
             testExecute(code)
         }
@@ -85,9 +70,6 @@ class ValueClassTest {
             val code = """
                 value class Vector()
                 val tested: Int = Vector()
-                
-                package zauber
-                class Any
             """.trimIndent()
             testExecute(code)
         }
@@ -99,9 +81,6 @@ class ValueClassTest {
             val code = """
                 value class Vector(var x: Int)
                 val tested: Int = Vector(3)
-                
-                package zauber
-                class Any
             """.trimIndent()
             testExecute(code)
         }

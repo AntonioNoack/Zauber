@@ -15,13 +15,6 @@ class OverloadTests {
             fun f(x: Int) = 12
             fun f(x: Float) = 4
             val tested = f(1) / f(1f)
-            
-            package zauber
-            class Any
-            external class Int {
-                external fun div(other: Int): Int
-            }
-            external fun println(arg0: Int)
         """.trimIndent())
             .type { Types.Int }
             .runtime { value -> assertEquals(3, value.castToInt()) }

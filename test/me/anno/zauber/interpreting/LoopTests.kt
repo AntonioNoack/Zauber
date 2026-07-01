@@ -15,20 +15,6 @@ class LoopTests {
             }
             
             val tested = call()
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                operator fun inc() = this + 1
-            }
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(16, value.castToInt())
@@ -44,20 +30,6 @@ class LoopTests {
             }
             
             val tested = call()
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                operator fun inc() = this + 1
-            }
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(16, value.castToInt())
@@ -76,14 +48,6 @@ class LoopTests {
             val tested = call()
             
             package zauber
-            class Any
-            object Unit
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                operator fun until(other: Int) = IntRange(this, other)
-            }
-            
             object State {
                 var state = 0
             }
@@ -98,11 +62,6 @@ class LoopTests {
                     State.state = start
                     return value
                 }
-            }
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
             }
         """.trimIndent()
         val value = testExecute(code)

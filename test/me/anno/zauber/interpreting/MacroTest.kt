@@ -110,35 +110,6 @@ fun serialize(sample: Sample): String {
 val tested = serialize(Sample(1, 2f))
 
 package zauber
-
-class Any {
-    external open fun toString(): String
-}
-
-interface Iterator<V> {
-    fun hasNext(): Boolean
-    fun next(): V
-}
-
-interface Iterable<V> {
-    fun iterator(): Iterator<V>
-}
-
-interface List<V>: Iterable<V> {
-    val size: Int
-    operator fun get(index: Int): V
-    
-    operator fun component1(): V = get(0)
-    operator fun component2(): V = get(1)
-}
-
-class ArrayIterator<V>(val list: Array<V>): Iterator<V> {
-    var index = 0
-    override fun hasNext() = index < list.size
-    override fun next(): V = list[index++]
-}
-
-class Throwable(val message: String)
 object MacroContext: Throwable("") {
     lateinit var result: String
     external fun mark(i0: Int, i1: Int, type: String)
@@ -147,20 +118,6 @@ object MacroContext: Throwable("") {
         throw this
     }
 }
-
-fun <V> listOf(vararg v: V) = v
-class Array<V>(override val size: Int): List<V> {
-    external override operator fun get(index: Int): V
-    external operator fun set(index: Int, value: V)
-    override fun iterator() = ArrayIterator<V>(this)
-}
-
-external class Int {
-    external operator fun plus(other: Int): Int
-    external operator fun compareTo(other: Int): Int
-    operator fun inc() = this + 1
-}
-
 class String {
     external operator fun plus(other: String): String
     operator fun plus(other: Any?): String = this + (other?.toString() ?: "null")
@@ -170,9 +127,6 @@ class String {
 
 class Field(val name: String, val type: Type)
 class ClassType<V>(val fields: Array<Field>)
-
-enum class Boolean { TRUE, FALSE }
-object Unit
         """.trimIndent()
         val value = testExecute(sourceCode)
         val expectedResult = """

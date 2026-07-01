@@ -6,26 +6,16 @@ import org.junit.jupiter.api.Test
 
 class ShortcutTests {
 
-    private val stdlib = """
-package zauber
-class Any
-class Throwable()
-enum class Boolean { TRUE, FALSE }
-class Array<V>(val size: Int) {
-    external operator fun set(index: Int, value: V)
-}
-    """.trimIndent()
-
     @Test
     fun testShortcutAnd() {
-        val code = "val tested = false && throw Throwable()\n$stdlib"
+        val code = "val tested = false && throw Throwable(\"\")"
         val value = testExecute(code)
         assertEquals(false, value.castToBool())
     }
 
     @Test
     fun testShortcutOr() {
-        val code = "val tested = true || throw Throwable()\n$stdlib"
+        val code = "val tested = true || throw Throwable(\"\")"
         val value = testExecute(code)
         assertEquals(true, value.castToBool())
     }

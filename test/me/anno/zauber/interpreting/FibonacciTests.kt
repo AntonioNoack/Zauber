@@ -1,10 +1,9 @@
 package me.anno.zauber.interpreting
 
 import me.anno.utils.MultiTest
-import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
-import me.anno.zauber.logging.LogManager
-import me.anno.zauber.types.Types
 import me.anno.utils.assertEquals
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
+import me.anno.zauber.types.Types
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -14,48 +13,6 @@ import org.junit.jupiter.params.provider.ValueSource
  * 1, 1, 2, 3, 5, 8, 13, 21
  * */
 class FibonacciTests {
-
-    private val stdlib = "\n" + """
-        package zauber
-        object Unit
-        external class Int {
-            external operator fun plus(other: Int): Int
-            external operator fun minus(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun until(other: Int): IntRange = IntRange(this, other)
-            operator fun rangeTo(other: Int): IntRange = IntRange(this, other+1)
-            operator fun equals(other: Int): Boolean = this >= other && this <= other
-            fun inc() = this+1
-            fun dec() = this-1
-        }
-        
-        value class IntRange(val from: Int, val to: Int) {
-            fun iterator() = IntRangeIterator(this)
-        }
-        
-        interface Iterator<V> {
-            fun next(): Int
-            fun hasNext(): Boolean
-        }
-        
-        class IntRangeIterator(val range: IntRange): Iterator<Int> {
-            var index = range.from
-            override fun hasNext(): Boolean = index < range.to
-            override fun next(): Int = index++
-        }
-        
-        enum class Boolean { TRUE, FALSE }
-        class Array<V>(val size: Int) {
-            external operator fun get(i: Int): V
-            external operator fun set(i: Int, value: V)
-        }
-        
-        class Any {
-            open fun equals(other: Any?): Boolean = this === other
-        }
-        
-        external fun println(arg0: Int)
-        """.trimIndent()
 
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
@@ -72,7 +29,7 @@ class FibonacciTests {
             return b
         }
         val tested = fib(7)
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .type { Types.Int }
             .runtime { value -> assertEquals(21, value.castToInt()) }
@@ -98,7 +55,7 @@ class FibonacciTests {
             return b
         }
         val tested = fib(7)
-        """.trimIndent() + stdlib
+        """.trimIndent()
         // 1, 1, 2, 3, 5, 8, 13, 21
         val value = testExecute(code)
         assertEquals(21, value.castToInt())
@@ -112,7 +69,6 @@ class FibonacciTests {
             return fib(i-1) + fib(i-2)
         }
         val tested = fib(5)
-        $stdlib
         """.trimIndent()
         // 1, 1, 2, 3, 5, 8
         val value = testExecute(code)
@@ -127,7 +83,7 @@ class FibonacciTests {
             return fib(i - 1, b, a + b)
         }
         val tested = fib(5,1,1)
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -141,7 +97,7 @@ class FibonacciTests {
             return fib(i - 1, b, a + b)
         }
         val tested = fib(5)
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -155,7 +111,7 @@ class FibonacciTests {
             else -> fib(i - 1) + fib(i - 2)
         }
         val tested = fib(5)
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -172,7 +128,7 @@ class FibonacciTests {
             return go(i)
         }
         val tested = fib(5)
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -180,14 +136,6 @@ class FibonacciTests {
 
     @Test
     fun testMemoizedFibonacci() {
-        LogManager.disable(
-            "TypeResolution,CallExpression," +
-                    "ConstructorResolver,MemberResolver," +
-                    "FieldExpression,FieldResolver,ResolvedField,Field," +
-                    "MethodResolver,ResolvedMethod," +
-                    "Inheritance,ASTSimplifier,Runtime," +
-                    "SimpleGetField,SimpleSetField"
-        )
 
         // todo try to implement property capture on this sample...
 
@@ -205,7 +153,7 @@ class FibonacciTests {
         val tested = fib(5)
         package zauber
         typealias IntArray = Array<Int>
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())
@@ -222,7 +170,7 @@ class FibonacciTests {
                 }
         }
         val tested = Fib(5).value
-        """.trimIndent() + stdlib
+        """.trimIndent()
 
         val value = testExecute(code)
         assertEquals(8, value.castToInt())

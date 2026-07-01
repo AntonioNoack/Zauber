@@ -38,8 +38,8 @@ class SimpleInstanceOf private constructor(
         check(value.type !in nativeTypes) {
             "$this can be resolved at compile time"
         }
-        check(value.type !is ClassType || value.type.clazz.isOpen()) {
-            "${value.type} (ClassType) can be resolved at compile time, because it is final"
+        if (value.type is ClassType && !value.type.clazz.isOpen()) {
+            LOGGER.warn("${value.type} (ClassType) can be resolved at compile time, because it is final")
         }
     }
 

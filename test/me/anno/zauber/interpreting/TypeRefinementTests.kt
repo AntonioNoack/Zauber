@@ -21,16 +21,6 @@ class TypeRefinementTests {
                 }
                 return 0
             }
-            
-            package zauber
-            class Any
-            external class Int {
-                external operator fun plus(other: Int): Int
-            }
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
         """.trimIndent()
         assertEquals(2, testExecute(code).castToInt())
     }

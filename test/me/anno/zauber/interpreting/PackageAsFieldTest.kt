@@ -7,14 +7,6 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class PackageAsFieldTest {
 
-    private val stdlib = "\n" + """
-package zauber
-class Any
-external class Int
-object Unit
-external fun println(arg0: Int)
-    """.trimIndent()
-
     @ParameterizedTest
     @ValueSource(strings = ["runtime", "js", "java", "c++", "wasm", "rust"])
     fun testPackageAsField(type: String) {
@@ -28,7 +20,7 @@ external fun println(arg0: Int)
             
             package helper020
             var x = 5
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .runtime {
                 assertEquals(5, it.castToInt())
@@ -50,7 +42,7 @@ external fun println(arg0: Int)
             
             package helper020.sub
             var x = 5
-        """.trimIndent() + stdlib
+        """.trimIndent()
         MultiTest(code)
             .runtime {
                 assertEquals(5, it.castToInt())

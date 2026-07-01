@@ -44,6 +44,12 @@ object Zauber {
                 StdlibLoader.loadCode("src/Numbers.kt")
                 StdlibLoader.loadCode("src/Strings.kt")
                 StdlibLoader.loadCode("src/Println.kt")
+                StdlibLoader.loadCode("src/IO.kt")
+                StdlibLoader.loadCode("src/Collections.kt")
+                StdlibLoader.loadCode("src/Ranges.kt")
+                StdlibLoader.loadCode("src/Exceptions.kt")
+                StdlibLoader.loadCode("src/Reflection.kt")
+                StdlibLoader.loadCode("src/Lambdas.kt")
             }
         }
     }

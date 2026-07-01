@@ -1,49 +1,12 @@
 package me.anno.zauber.interpreting
 
-import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import me.anno.utils.assertEquals
+import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
 import org.junit.jupiter.api.Test
 
 class WhenTests {
 
     // todo these fail with root-mismatch... we must store some references somewhere...
-
-    private val stdlib = """
-package zauber
-
-class Any {
-    open fun equals(other: Any): Boolean = this === other
-}
-external class Int {
-    external operator fun plus(other: Int): Int
-    external operator fun compareTo(other: Int): Int
-    operator fun inc(): Int = this + 1
-    fun equals(other: Int): Boolean = this >= other && this <= other
-}
-
-enum class Boolean {
-    TRUE, FALSE;
-    
-    fun not(): Boolean = this == FALSE
-}
-
-class Array<V>(val size: Int) {
-    external operator fun set(index: Int, value: V)
-    external operator fun get(index: Int): V
-    
-    fun contains(value: V) = indexOf(value) >= 0
-    fun indexOf(value: V): Int {
-        var i = 0
-        while (i < size) {
-            if (this[i] == value) return i
-            i++
-        }
-        return -1
-    }
-}
-
-fun <V> arrayOf(vararg vs: V): Array<V> = vs
-    """.trimIndent()
 
     @Test
     fun testWhenWithDuplicateCases() {
@@ -55,7 +18,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 1 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(10, testExecute(code).castToInt())
     }
 
@@ -67,7 +30,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 2 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(20, testExecute(code).castToInt())
     }
 
@@ -79,7 +42,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 2 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(30, testExecute(code).castToInt())
     }
 
@@ -92,7 +55,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 2 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(10, testExecute(code).castToInt())
     }
 
@@ -104,7 +67,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 2 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(30, testExecute(code).castToInt())
     }
 
@@ -116,7 +79,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 2 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(10, testExecute(code).castToInt())
     }
 
@@ -128,7 +91,7 @@ fun <V> arrayOf(vararg vs: V): Array<V> = vs
                 2 -> 20
                 else -> 30
             }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         assertEquals(30, testExecute(code).castToInt())
     }
 

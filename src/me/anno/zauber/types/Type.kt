@@ -1,12 +1,14 @@
 package me.anno.zauber.types
 
 import me.anno.generation.Specializations.specialization
-import me.anno.support.cpp.ast.rich.ArrayType
 import me.anno.support.cpp.ast.rich.PointerType
 import me.anno.utils.StringStyles
+import me.anno.utils.StringStyles.GREEN
 import me.anno.utils.StringStyles.style
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parser.ZauberASTBuilderBase.Companion.resolveTypeByName
+import me.anno.zauber.expansion.MethodOverrides.debuggedMethodName
+import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.resolveGenerics
@@ -19,6 +21,10 @@ import me.anno.zauber.types.impl.arithmetic.UnionType.Companion.unionTypes
 import me.anno.zauber.types.impl.unresolved.*
 
 abstract class Type {
+
+    companion object {
+        private val LOGGER = LogManager.getLogger(Type::class)
+    }
 
     fun contains(type: GenericType): Boolean {
         if (this == type) return true
@@ -300,6 +306,64 @@ abstract class Type {
             is NonObjectClassType -> NonObjectClassType(type.specialize(spec) as ClassType)
             is PointerType -> PointerType(type.specialize(spec))
             else -> error("Specialize ${javaClass.simpleName}")
+        }
+    }
+
+    fun adjustTo(
+        superClass: Scope, childClass: Scope,
+        superMethod: Scope, childMethod: Scope
+    ): Type {
+        if (!containsGenerics()) return this
+        return when (this) {
+            is ClassType -> {
+                val typeParams =
+                    typeParameters?.map { type -> type.adjustTo(superClass, childClass, superMethod, childMethod) }
+                ClassType(clazz, typeParams)
+            }
+            is CollectionType -> withTypes(types.map { it.adjustTo(superClass, childClass, superMethod, childMethod) })
+            is GenericType -> {
+                when (scope) {
+                    superClass -> {
+                        val superCall = childClass.superCalls.firstOrNull { it.type.clazz == superClass }
+                            ?: error("Expected to find $superClass in superCalls of $childClass")
+                        val paramIndex = superClass.typeParameters.indexOfFirst { it.name == name }
+                        if (paramIndex < 0) {
+                            LOGGER.warn(
+                                "Unknown typeParameter ${
+                                    style(
+                                        name,
+                                        GREEN
+                                    )
+                                } in $superClass, known: ${superClass.typeParameters}"
+                            )
+                            return UnknownType
+                        }
+
+                        val typeParams = superCall.type.typeParameters
+                        if (typeParams == null) {
+                            LOGGER.warn("Missing $superCall-typeParameters for $this, child: $childClass")
+                            return UnknownType
+                        }
+
+                        val value = typeParams[paramIndex]
+                        if (LOGGER.isInfoEnabled && superMethod.selfAsMethod!!.name == debuggedMethodName) {
+                            LOGGER.info("Find $this in [$superClass -> $childClass] -> $value")
+                        }
+
+                        value // do we need recursive replacements here?
+                    }
+                    superMethod -> GenericType(childMethod, name)
+                    childClass, childMethod -> this // how?
+                    else -> TODO("Deep-replace $this, $superMethod -> $childMethod")
+                }
+            }
+            is UnresolvedType -> resolvedName.adjustTo(superClass, childClass, superMethod, childMethod)
+            is LambdaType -> LambdaType(
+                selfType?.adjustTo(superClass, childClass, superMethod, childMethod),
+                parameters.map { param -> param.withType(param.type.adjustTo(superClass, childClass, superMethod, childMethod)) },
+                returnType.adjustTo(superClass, childClass, superMethod, childMethod)
+            )
+            else -> TODO("Replace generics in $this (${javaClass.simpleName}), $superMethod -> $childMethod")
         }
     }
 

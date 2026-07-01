@@ -19,13 +19,6 @@ class SuperCallTests {
                 }
                 
                 val tested = Child().calc()
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc(): Int = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())
@@ -47,13 +40,6 @@ class SuperCallTests {
                 }
                 
                 val tested = Child().calc()
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc(): Int = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())
@@ -67,13 +53,6 @@ class SuperCallTests {
                 class Child(x: Int) : Parent(x+1)
                 
                 val tested = Child(5).x
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc(): Int = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())
@@ -89,13 +68,6 @@ class SuperCallTests {
                 }
                 
                 val tested = Child(5).x
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc(): Int = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())
@@ -111,13 +83,6 @@ class SuperCallTests {
                 }
                 
                 val tested = Child(2,3).x
-                
-                package zauber
-                class Any
-                external class Int {
-                    external operator fun plus(other: Int): Int
-                    operator fun inc(): Int = this + 1
-                }
             """.trimIndent()
         )
         assertEquals(6, type.castToInt())

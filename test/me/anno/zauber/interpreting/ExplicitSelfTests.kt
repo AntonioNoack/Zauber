@@ -13,9 +13,6 @@ class ExplicitSelfTests {
         // todo check after inlining, we have access to A, because S = A
         // -> S is resolved to Any-scope, why is it not specialized?
         // -> now S is proper, todo why is it not finding x() in A?
-        LogManager.disable("" +
-                "CallExpression,ConstructorResolver," +
-                "Inheritance,")
         val code = """
             class A(val y: Int) {
                 fun x() = y
@@ -23,10 +20,6 @@ class ExplicitSelfTests {
             val tested = A(2).run { x() }
             
             package zauber
-            class Any
-            external class Int {
-                external fun plus(other: Int): Int
-            }
             inline fun <S, R> S.run(runnable: S.() -> R): R {
                 return runnable()
             }
@@ -44,10 +37,6 @@ class ExplicitSelfTests {
             val tested = A(2).run { x() }
             
             package zauber
-            class Any
-            external class Int {
-                external fun plus(other: Int): Int
-            }
             fun <S, R> S.run(runnable: S.() -> R): R {
                 return runnable()
             }

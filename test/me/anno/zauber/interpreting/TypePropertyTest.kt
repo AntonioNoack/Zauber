@@ -20,9 +20,6 @@ class TypePropertyTest {
         LogManager.enableAllLoggers()
         val code = """
             val tested = Int::class.name
-            
-            package zauber
-            class ClassType<V>(val name: String)
         """.trimIndent()
         val value = testExecute(code)
         assertEquals("Int", value.castToString())

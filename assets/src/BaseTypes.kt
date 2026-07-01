@@ -12,26 +12,12 @@ open class Any {
 
 object Unit
 
-interface List<V> {
-    val size: Int
-    fun get(index: Int): V
-}
+enum class Nothing {}
 
-interface MutableList<V>: List<V> {
-    fun set(index: Int, value: V)
-}
+enum class Boolean {
+    FALSE,
+    TRUE;
 
-class Array<V>(val size: Int): MutableList<V> {
-    external override fun get(index: Int): V
-    external override fun set(index: Int, value: V)
-
-    fun copyOfRange(i0: Int, i1: Int): Array<V> {
-        val clone = Array<V>(i1-i0)
-        var i = i0
-        while (i < i1) {
-            clone[i - i0] = this[i]
-            i++
-        }
-        return clone
-    }
+    fun toInt() = ordinal
+    fun not(): Boolean = if (this) false else true
 }

@@ -55,16 +55,6 @@ class BasicRuntimeTests {
     @Test
     fun testBoolean() {
         val stdlib = """
-            package zauber
-            class Any
-            enum class Boolean {
-                TRUE, FALSE
-            }
-            
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
-            fun <V> arrayOf(vararg vs: V): Array<V> = vs
         """.trimIndent()
         val valueT = testExecute("val tested = true\n$stdlib")
         assertEquals(true, valueT.castToBool())

@@ -9,30 +9,6 @@ class StringTests {
 
     val smallStdlib = "\n" + """
         package zauber
-        class Any
-        class Array<V>(val size: Int) {
-            external operator fun get(index: Int): V
-            external operator fun set(index: Int, value: V)
-            
-            operator fun plus(other: Array<V>): Array<V> {
-                val result = copyOf(size + other.size)
-                other.copyInto(result, size, 0, other.size)
-                return result
-            }
-            
-            fun copyInto(result: Array<V>, destinationOffset: Int, startIndex: Int, endIndex: Int) {
-                val deltaIndex = destinationOffset - startIndex
-                for (i in startIndex until endIndex) {
-                    result[deltaIndex + i] = this[i]
-                }
-            }
-            
-            fun copyOf(newSize: Int): Array<V> {
-                val clone = Array<V>(newSize)
-                copyInto(clone, 0, 0, min(newSize, size))
-                return clone
-            }
-        }
         
         typealias ByteArray = Array<Byte>
         
