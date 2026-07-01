@@ -74,18 +74,8 @@ class MinimalLLVMCompiler : MinimalCompiler() {
                     builder.append("  ").append(line).append("\n")
                 }
             }
-            if ("return" !in impl) {
-                builder.append("  return NULL;\n")
-            }
             builder.append("}\n")
         }
-
-        builder.append(
-            "\n" +
-                    "int zauber_inheritance_readFromClassCallTable_28khp45(void* self, int addr) { return 0; }\n" +
-                    "int zauber_inheritance_readFromInterfaceCallTable_28khp45(void* self, int addr) { return 0; }\n" +
-                    ""
-        )
 
         val cFile = "src/Zauber.c"
         File(projectFolder, cFile)

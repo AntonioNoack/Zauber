@@ -720,11 +720,8 @@ class RustSourceGenerator : JavaSourceGenerator() {
 
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
-        val selfType = resolveType(expr.thisInstance.type) as ClassType
-        val position = builder.length
-        appendType(selfType, expr.scope, true)
-        imports[selfType.clazz.name] = Import2(selfType.clazz.path, selfType.clazz)
-        builder.setLength(position)
+        val selfType = expr.thisInstance.type as ClassType
+        ensureImport(selfType.clazz)
 
         builder.append(needsCastForFirstValue.boxed).append("::new(")
         appendFieldName(graph, expr.thisInstance)

@@ -1,5 +1,6 @@
 package me.anno.generation.c
 
+import me.anno.generation.BoxedType
 import me.anno.generation.FileEntry
 import me.anno.generation.FileWithImportsWriter
 import me.anno.generation.InheritanceTable
@@ -363,6 +364,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         graph: SimpleGraph, method0: Specialization, expr: SimpleMethodCall,
         withCast: Boolean
     ) {
+        appendAssign(graph, expr)
         val methodName = getMethodName(method0)
         builder.append(methodName).append('(')
 
@@ -382,6 +384,60 @@ open class CSourceGenerator : CppSourceGenerator() {
         }
 
         appendValueParams(graph, expr.valueParameters, withBrackets = false)
+        builder.append(')')
+    }
+
+    override fun appendUnaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
+        val pos0 = builder.length
+        return if (super.appendUnaryOperator(graph, expr, methodName)) {
+            val pos1 = builder.length
+            appendAssign(graph, expr)
+            swapSections(pos0, pos1)
+            true
+        } else false
+    }
+
+    override fun appendBinaryOperator(graph: SimpleGraph, expr: SimpleMethodCall, methodName: String): Boolean {
+        val pos0 = builder.length
+        return if (super.appendBinaryOperator(graph, expr, methodName)) {
+            val pos1 = builder.length
+            appendAssign(graph, expr)
+            swapSections(pos0, pos1)
+            true
+        } else false
+    }
+
+    override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
+
+        val selfType = expr.thisInstance.type as ClassType
+        ensureImport(selfType.clazz)
+
+        if (expr.methodName == "hashCode" && selfType == Types.Int) {
+            // optimization for Int.hashCode
+            appendAssign(graph, expr)
+            appendFieldName(graph, expr.thisInstance)
+            return
+        }
+
+        // create temporary instance on stack
+        val tmpName = "__tmp${builder.length}"
+        appendType(selfType, expr.scope, true)
+        builder.append(' ').append(tmpName).append(";"); nextLine()
+        // assign content
+        builder.append(tmpName).append(".content = ")
+        appendFieldName(graph, expr.thisInstance)
+        builder.append(';'); nextLine()
+        // assign class-index (probably not needed)
+        builder.append(tmpName).append('.')
+        builder.append(CLASS_INDEX_NAME).append(" = ")
+            .append(inheritanceTable.getClassIndex(selfType))
+        builder.append(';'); nextLine()
+
+        // call method
+        appendAssign(graph, expr)
+        builder.append(getMethodName(expr.specialization))
+        builder.append("(&").append(tmpName)
+        appendValueParams(graph, expr.valueParameters, false)
         builder.append(')')
     }
 
@@ -429,7 +485,9 @@ open class CSourceGenerator : CppSourceGenerator() {
     }
 
     override fun needsAssignment(expr: SimpleAssignment): Boolean {
-        return super.needsAssignment(expr) && expr !is SimpleConstructorCall
+        return super.needsAssignment(expr) &&
+                expr !is SimpleConstructorCall &&
+                expr !is SimpleMethodCall
     }
 
     override fun prepareGraph(graph: SimpleGraph) {
@@ -465,7 +523,7 @@ open class CSourceGenerator : CppSourceGenerator() {
                     appendType(expr.allocatedType, expr.scope, true)
                     builder.append("), ")
                         .append(inheritanceTable.getClassIndex(expr.specialization))
-                        .append(")")
+                        .append(')')
                 } else {
                     builder.append("{}")
                 }
@@ -569,12 +627,4 @@ open class CSourceGenerator : CppSourceGenerator() {
             builder.append("(uint16_t) ").append(expr.asInt.toUShort())
         } else super.appendNumber(type, expr)
     }
-
-    override fun getNativeImplementation(method: MethodLike): String? {
-        if (method.name == "readFromClassCallTable" || method.name == "readFromInterfaceCallTable") {
-            return "return 0;" // temporary fallback for linker to continue
-        }
-        return super.getNativeImplementation(method)
-    }
-
 }

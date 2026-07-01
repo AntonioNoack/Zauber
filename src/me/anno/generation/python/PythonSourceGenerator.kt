@@ -27,7 +27,6 @@ import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.ast.rich.member.MethodLike
 import me.anno.zauber.ast.rich.parameter.InnerSuperCall
 import me.anno.zauber.ast.rich.parameter.InnerSuperCallTarget
-import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleGraph
@@ -666,10 +665,8 @@ class PythonSourceGenerator : JavaSourceGenerator() {
 
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
-        val selfType = expr.thisInstance.type
-        val position = builder.length
-        appendType(selfType, expr.scope, true)
-        builder.setLength(position)
+        val selfType = expr.thisInstance.type as ClassType
+        ensureImport(selfType.clazz)
 
         builder.append(needsCastForFirstValue.boxed).append("(")
         appendFieldName(graph, expr.thisInstance)

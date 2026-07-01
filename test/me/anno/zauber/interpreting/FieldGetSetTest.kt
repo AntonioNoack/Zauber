@@ -1,6 +1,5 @@
 package me.anno.zauber.interpreting
 
-import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.utils.StringStyles
 import me.anno.utils.assertEquals
 import me.anno.zauber.interpreting.BasicRuntimeTests.Companion.testExecute
@@ -162,7 +161,7 @@ class FieldGetSetTest {
             fun throwNJI(msg: String): Nothing {
                 throw Exception(msg)
             }
-            """.trimIndent() + inheritanceCode
+            """.trimIndent()
         )
         assertEquals(8, actual.castToInt())
     }

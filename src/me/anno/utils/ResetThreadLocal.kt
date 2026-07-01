@@ -7,11 +7,7 @@ class ResetThreadLocal<V : Any>(val generator: () -> V) {
 
     private val values = WeakHashMap<Thread, V>()
 
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): V {
-        return synchronized(values) {
-            values.getOrPut(Thread.currentThread(), generator)
-        }
-    }
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): V = value
 
     init {
         synchronized(registered) {
@@ -24,6 +20,11 @@ class ResetThreadLocal<V : Any>(val generator: () -> V) {
             values.remove(thread)
         }
     }
+
+    val value: V
+        get() = synchronized(values) {
+            values.getOrPut(Thread.currentThread(), generator)
+        }
 
     companion object {
 

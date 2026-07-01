@@ -1,6 +1,7 @@
 package me.anno.generation
 
 import me.anno.utils.IntArrayList
+import me.anno.utils.StdlibLoader.loadLazyCode
 import me.anno.utils.StringStyles.ORANGE
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
@@ -8,6 +9,7 @@ import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Method
+import me.anno.zauber.ast.rich.parameter.SuperCall
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
@@ -26,11 +28,12 @@ class InheritanceTable(val data: DependencyData) {
     companion object {
         private val LOGGER = LogManager.getLogger(InheritanceTable::class)
 
-        val inheritanceCode by lazy {
-            InheritanceTable::class.java
-                .classLoader.getResourceAsStream("src/IndirectCall.kt")!!
-                .readBytes().decodeToString()
-        }
+        val loadInit = loadLazyCode("src/IndirectCall.kt")
+    }
+
+    init {
+        // we only need that code, if we enter this class
+        loadInit.value
     }
 
     val helperScope = TypeResolution.langScope
@@ -234,10 +237,22 @@ class InheritanceTable(val data: DependencyData) {
     val classIndices = HashMap<Specialization, Int>()
 
     fun getClassIndex(clazz: Specialization): Int {
+        check(clazz.isClassLike())
         return classIndices.getOrPut(clazz) {
+            val superCall = findSuperCall(clazz.scope!!)
+            if (superCall != null) {
+                val superType = clazz.getSuperType(superCall)
+                getClassIndex(superType)
+            }
+
             classes.add(clazz)
             classIndices.size
         }
+    }
+
+    private fun findSuperCall(scope: Scope): SuperCall? {
+        return scope.superCalls
+            .firstOrNull { it.isClassCall }
     }
 
     fun getClassIndex(type: ClassType): Int {
@@ -265,7 +280,7 @@ class InheritanceTable(val data: DependencyData) {
     }
 
     fun buildInterfaceCallTable(): IntArrayList {
-        val builder = IntArrayList(classes.size * 3)
+        val builder = IntArrayList(classes.size * 3 + 1)
         repeat(classes.size + 1) { builder.add(0) }
         for (i in classes.indices) {
             builder[i] = builder.size
@@ -280,11 +295,12 @@ class InheritanceTable(val data: DependencyData) {
     fun buildSuperClassTable(): IntArrayList {
         val builder = IntArrayList(classes.size)
         for (i in classes.indices) {
-            val superCall = classes[i].clazz.superCalls
-                .firstOrNull { it.isClassCall }
+            val superCall = findSuperCall(classes[i].clazz)
             if (superCall != null) {
                 val superType = classes[i].getSuperType(superCall)
-                builder.add(getClassIndex(superType))
+                val si = getClassIndex(superType)
+                check(si < i) { "Class indices must be sorted: super must be first" }
+                builder.add(si)
             } else {
                 builder.add(-1)
             }
@@ -294,7 +310,7 @@ class InheritanceTable(val data: DependencyData) {
     }
 
     fun buildClassToInterfaceTable(): IntArrayList {
-        val builder = IntArrayList(classes.size)
+        val builder = IntArrayList(classes.size * 3 + 1)
         repeat(classes.size + 1) { builder.add(0) }
         for (i in classes.indices) {
             builder[i] = builder.size

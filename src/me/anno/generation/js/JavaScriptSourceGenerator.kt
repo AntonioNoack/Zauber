@@ -559,10 +559,8 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
 
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
-        val selfType = expr.thisInstance.type
-        val position = builder.length
-        appendType(selfType, expr.scope, true)
-        builder.setLength(position)
+        val selfType = expr.thisInstance.type as ClassType
+        ensureImport(selfType.clazz)
         // todo bug: why is this not being imported???
 
         builder.append("Object.assign(new ")

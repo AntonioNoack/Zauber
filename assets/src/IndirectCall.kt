@@ -1,7 +1,3 @@
-package zauber
-
-annotation class Static
-
 package zauber.inheritance
 
 // class -> offset, offset + method -> method-index to call

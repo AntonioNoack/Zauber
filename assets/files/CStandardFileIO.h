@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct {
     uint32_t *data;
     size_t len;

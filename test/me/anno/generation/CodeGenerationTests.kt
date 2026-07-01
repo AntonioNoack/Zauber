@@ -1,12 +1,10 @@
 package me.anno.generation
 
 import me.anno.compilation.MinimalCompiler
-import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.generation.java.JavaSourceGenerator.Companion.nativeJavaNumbers
 import me.anno.utils.Half.Companion.toHalf
 import me.anno.utils.NumberUtils.getMaxIntValue
 import me.anno.utils.NumberUtils.getMinIntValue
-import me.anno.utils.StringUtils.iff
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.isFloat
@@ -37,13 +35,6 @@ abstract class CodeGenerationTests {
             }
             
             package zauber
-            class Any
-            object Unit
-            external class Int(val content: Int) {
-                external operator fun plus(other: Int): Int
-                external operator fun div(other: Int): Int
-            }
-            
             external fun println(arg0: Int)
         """.trimIndent()
 
@@ -59,19 +50,7 @@ abstract class CodeGenerationTests {
             fun main() {
                 println(calc(2))
             }
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int(val content: Int) {
-                external operator fun plus(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                external operator fun equals(other: Int): Boolean
-                operator fun inc(): Int = this + 1
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent() + inheritanceCode
+        """.trimIndent()
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -85,20 +64,7 @@ abstract class CodeGenerationTests {
             fun main() {
                 println(Vector(1, 2, 3).hashCode())
             }
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int(val content: Int) {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                external operator fun equals(other: Int): Boolean
-                fun hashCode(): Int = content
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent() + inheritanceCode
+        """.trimIndent()
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -112,20 +78,7 @@ abstract class CodeGenerationTests {
             fun main() {
                 println(Vector(1).x)
             }
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                external operator fun equals(other: Int): Boolean
-                operator fun inc(): Int = this + 1
-            }
-            
-            external fun println(arg0: Int)
-        """.trimIndent() + inheritanceCode
+        """.trimIndent()
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -141,16 +94,6 @@ abstract class CodeGenerationTests {
                 v.x += v.y * v.z
                 println(v.x)
             }
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
         """.trimIndent()
 
         val printed = generator()
@@ -172,16 +115,6 @@ abstract class CodeGenerationTests {
                 dontModify(v)
                 println(v.x)
             }
-            
-            package zauber
-            class Any
-            object Unit
-            external class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-            }
-            
-            external fun println(arg0: Int)
         """.trimIndent()
 
         val printed = generator()
@@ -197,19 +130,6 @@ abstract class CodeGenerationTests {
         }
         fun main() {
             println(fib(7))
-        }
-        package zauber
-        class Any
-        external class Int {
-            external operator fun plus(other: Int): Int
-            external operator fun minus(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun inc() = this + 1
-        }
-        external fun println(arg0: Int)
-        enum class Boolean { TRUE, FALSE }
-        class Array<V>(val size: Int) {
-            external operator fun set(i: Int, value: V)
         }
         """.trimIndent()
 
@@ -236,23 +156,7 @@ abstract class CodeGenerationTests {
         fun main() {
             println(fib(7))
         }
-        package zauber
-        class Any
-        external class Int(val content: Int) {
-            external operator fun plus(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun inc(): Int = this + 1
-        }
-        external fun println(arg0: Int)
-        enum class Boolean { TRUE, FALSE }
-        class Array<V>(val size: Int) {
-            external operator fun set(i: Int, value: V)
-        }
         """.trimIndent()
-
-        // todo bug: if we use
-        //  operator fun inc() = this + 1
-        //  without :Int, we somehow get nothing as the type??
 
         // 1, 1, 2, 3, 5, 8, 13, 21
         val printed = generator()
@@ -278,20 +182,6 @@ abstract class CodeGenerationTests {
         fun main() {
             println(fib(7))
         }
-        package zauber
-        class Any
-        external class Int(val content: Int) {
-            external operator fun plus(other: Int): Int
-            external operator fun minus(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun inc(): Int = this + 1
-        }
-        enum class Boolean { TRUE, FALSE }
-        class Array<V>(val size: Int) {
-            external operator fun get(index: Int): V
-            external operator fun set(index: Int, value: V)
-        }
-        external fun println(arg0: Int)
         """.trimIndent()
 
         // 1, 1, 2, 3, 5, 8, 13, 21
@@ -320,20 +210,6 @@ abstract class CodeGenerationTests {
         fun main() {
             println(fib(7))
         }
-        package zauber
-        class Any
-        external class Int(val content: Int) {
-            external operator fun plus(other: Int): Int
-            external operator fun minus(other: Int): Int
-            external operator fun compareTo(other: Int): Int
-            operator fun inc(): Int = this + 1
-        }
-        enum class Boolean { TRUE, FALSE }
-        class Array<V>(val size: Int) {
-            external operator fun get(index: Int): V
-            external operator fun set(index: Int, value: V)
-        }
-        external fun println(arg0: Int)
         """.trimIndent()
 
         // 1, 1, 2, 3, 5, 8, 13, 21
@@ -355,16 +231,7 @@ abstract class CodeGenerationTests {
                 var p: Parent = Child()
                 println(p.calc())
             }
-            package zauber
-            class Any
-            class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                external operator fun equals(other: Int): Boolean
-            }
-            external fun println(arg0: Int)
-        """.trimIndent() + inheritanceCode
+        """.trimIndent()
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -383,16 +250,7 @@ abstract class CodeGenerationTests {
                 var p: Parent = Child()
                 println(p.calc())
             }
-            package zauber
-            class Any
-            class Int {
-                external operator fun plus(other: Int): Int
-                external operator fun times(other: Int): Int
-                external operator fun compareTo(other: Int): Int
-                external operator fun equals(other: Int): Boolean
-            }
-            external fun println(arg0: Int)
-        """.trimIndent() + inheritanceCode
+        """.trimIndent()
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -429,34 +287,6 @@ abstract class CodeGenerationTests {
                 println(uint)
                 println(ulong)
             }
-            
-            package zauber
-            class Any
-            class Byte {
-                external operator fun plus(other: Byte): Int
-            }
-            class Short {
-                external operator fun plus(other: Short): Int
-            }
-            class Int {
-                external operator fun plus(other: Int): Int
-            }
-            class Long {
-                external operator fun plus(other: Long): Long
-            }
-            
-            class UByte
-            class UShort
-            class UInt
-            class ULong
-            
-            external fun println(arg0: Int)
-            external fun println(arg0: Long)
-            
-            external fun println(arg0: UByte)
-            external fun println(arg0: UShort)
-            external fun println(arg0: UInt)
-            external fun println(arg0: ULong)
         """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -573,6 +403,8 @@ abstract class CodeGenerationTests {
 
         var ctr = 0
 
+        builder.append("void main() {\n")
+
         for (type in numberTypes) {
             val typeName = type.clazz.name
             fun addCase(
@@ -605,36 +437,10 @@ abstract class CodeGenerationTests {
             addCase("17", "%", "3", "2")
         }
 
-        val numberClasses = numberTypes.joinToString("") { type ->
-            val typeName = type.clazz.name
-            val typeName2 = when (type) {
-                Types.Byte, Types.Short -> "Int"
-                Types.UByte, Types.UShort -> "UInt"
-                else -> typeName
-            }
-            "" +
-                    "external class $typeName(val content: $typeName) {\n" +
-                    "   external operator fun plus(other: $typeName): $typeName2\n" +
-                    "   external operator fun minus(other: $typeName): $typeName2\n" +
-                    "   external operator fun times(other: $typeName): $typeName2\n" +
-                    "   external operator fun div(other: $typeName): $typeName2\n" +
-                    "   external operator fun rem(other: $typeName): $typeName2\n" +
-                    "}\n" +
-                    "external fun println(arg0: $typeName)\n"
-                        .iff(typeName == typeName2)
-        }
-
-        val code = """
-        fun main() {
-            $builder
-        }
-
-        package zauber
-        $numberClasses
-    """.trimIndent()
+        builder.append("}")
 
         val printed = generator()
-            .testCompileMainAndRun(code, ::registerLib)
+            .testCompileMainAndRun(builder.toString(), ::registerLib)
 
         assertEqualsNumbers(expected, names, printed)
     }
@@ -891,17 +697,6 @@ abstract class CodeGenerationTests {
                 val condition = Vector(1, 2) > Vector(1, 3)
                 println(if(condition) 17 else 12)
             }
-            package zauber
-            class Any
-            class Int(val content: Int) {
-                external operator fun compareTo(other: Int): Int
-                external operator fun equals(other: Int): Boolean
-            }
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
-            external fun println(arg0: Int)
         """.trimIndent()
 
         val printed = generator()
@@ -1065,21 +860,8 @@ abstract class CodeGenerationTests {
                 println(getInt(2))
             }
             package zauber
-            open class Any
-            external class Int(val content: Int) {
-                external operator fun equals(other: Int): Boolean
-                external operator fun compareTo(other: Int): Int
-                external operator fun times(other: Int): Int
-                external operator fun plus(other: Int): Int
-                external operator fun inc(): Int = this + 1
-            }
-            external fun println(arg0: Int)
             external fun unreachable(): Nothing
-            class Array<V>(val size: Int) {
-                external operator fun set(index: Int, value: V)
-            }
-            enum class Boolean { TRUE, FALSE }
-        """.trimIndent() + inheritanceCode
+        """.trimIndent()
 
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
@@ -1094,36 +876,9 @@ abstract class CodeGenerationTests {
                 println("".trim())
             }
             package zauber
-            class Any
-            external class Int(val content: Int) {
-                external fun plus(other: Int): Int
-                external fun minus(other: Int): Int
-                external fun compareTo(other: Int): Int
-                external fun equals(other: Int): Boolean
-                fun inc() = this + 1
-                fun dec() = this - 1
-            }
             external class Char(val content: Char) {
                 fun isWhitespace() = this in " \t\r\n"
                 external fun equals(other: Char): Boolean
-            }
-            external class Byte(val content: Byte) {
-                external fun toChar(): Char
-            }
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun get(index: Int): V
-                external fun set(index: Int, v: V)
-                
-                fun copyOfRange(i0: Int, i1: Int): Array<V> {
-                    val clone = Array<V>(i1-i0)
-                    var i = i0
-                    while (i < i1) {
-                        clone[i - i0] = this[i]
-                        i++
-                    }
-                    return clone
-                }
             }
             typealias ByteArray = Array<Byte>
             class String(val content: ByteArray) {

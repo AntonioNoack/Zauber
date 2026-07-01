@@ -1,0 +1,387 @@
+package zauber
+
+enum class Boolean {
+    FALSE,
+    TRUE;
+
+    fun toInt() = ordinal
+}
+
+external class Byte(val content: Byte) {
+    external fun neg(): Byte
+    external fun inv(): Byte
+    fun inc(): Byte = (this + 1).toByte()
+    fun dec(): Byte = (this - 1).toByte()
+
+    external fun plus(other: Byte): Int
+    external fun minus(other: Byte): Int
+    external fun times(other: Byte): Int
+    external fun div(other: Byte): Int
+    external fun rem(other: Byte): Int
+
+    external fun compareTo(other: Byte): Int
+    external fun equals(other: Byte): Boolean
+    override fun hashCode(): Int = toInt()
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: Byte = -0x80
+        const val MAX_VALUE: Byte = +0x7f
+    }
+}
+
+external class UByte(val content: UByte) {
+    external fun neg(): UByte
+    external fun inv(): UByte
+    fun inc(): UByte = (this + 1).toUByte()
+    fun dec(): UByte = (this - 1).toUByte()
+
+    external fun plus(other: UByte): Int
+    external fun minus(other: UByte): Int
+    external fun times(other: UByte): Int
+    external fun div(other: UByte): Int
+    external fun rem(other: UByte): Int
+
+    external fun compareTo(other: UByte): Int
+    external fun equals(other: UByte): Boolean
+    override fun hashCode(): Int = toInt()
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: UByte = 0
+        const val MAX_VALUE: UByte = 0xff
+    }
+}
+
+external class Short(val content: Short) {
+    external fun neg(): Short
+    external fun inv(): Short
+    fun inc(): Short = (this + 1).toShort()
+    fun dec(): Short = (this - 1).toShort()
+
+    external fun plus(other: Short): Int
+    external fun minus(other: Short): Int
+    external fun times(other: Short): Int
+    external fun div(other: Short): Int
+    external fun rem(other: Short): Int
+
+    external fun compareTo(other: Short): Int
+    external fun equals(other: Short): Boolean
+    override fun hashCode(): Int = toInt()
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: Short = -0x8000
+        const val MAX_VALUE: Short = +0x7fff
+    }
+}
+
+external class UShort(val content: UShort) {
+    external fun neg(): UShort
+    external fun inv(): UShort
+    fun inc(): UShort = (this + 1).toUShort()
+    fun dec(): UShort = (this - 1).toUShort()
+
+    external fun plus(other: UShort): Int
+    external fun minus(other: UShort): Int
+    external fun times(other: UShort): Int
+    external fun div(other: UShort): Int
+    external fun rem(other: UShort): Int
+
+    external fun compareTo(other: UShort): Int
+    external fun equals(other: UShort): Boolean
+    override fun hashCode(): Int = toInt()
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: UShort = 0
+        const val MAX_VALUE: UShort = 0xffff
+    }
+}
+
+external class Int(val content: Int) {
+    external fun neg(): Int
+    external fun inv(): Int
+    fun inc(): Int = this + 1
+    fun dec(): Int = this - 1
+
+    external fun plus(other: Int): Int
+    external fun minus(other: Int): Int
+    external fun times(other: Int): Int
+    external fun div(other: Int): Int
+    external fun rem(other: Int): Int
+
+    external fun compareTo(other: Int): Int
+    external fun equals(other: Int): Boolean
+    override fun hashCode(): Int = this
+
+    external fun shl(shift: Int): Int
+    external fun shr(shift: Int): Int
+    external fun ushr(shift: Int): Int
+    external fun rotateLeft(shift: Int): Int
+    external fun rotateRight(shift: Int): Int
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: Int = -0x8000_0000
+        const val MAX_VALUE: Int = +0x7fff_ffff
+    }
+}
+
+external class UInt(val content: UInt) {
+    external fun neg(): UInt
+    external fun inv(): UInt
+    fun inc(): UInt = this + 1
+    fun dec(): UInt = this - 1
+
+    external fun plus(other: UInt): UInt
+    external fun minus(other: UInt): UInt
+    external fun times(other: UInt): UInt
+    external fun div(other: UInt): UInt
+    external fun rem(other: UInt): UInt
+
+    external fun compareTo(other: UInt): Int
+    external fun equals(other: UInt): Boolean
+    override fun hashCode(): Int = toInt()
+
+    external fun shl(shift: Int): UInt
+    external fun shr(shift: Int): UInt
+    external fun ushr(shift: Int): UInt
+    external fun rotateLeft(shift: Int): UInt
+    external fun rotateRight(shift: Int): UInt
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: UInt = 0
+        const val MAX_VALUE: UInt = 0xffff_ffff
+    }
+}
+
+external class Long(val content: Long) {
+    external fun neg(): Long
+    external fun inv(): Long
+    fun inc(): Long = this + 1
+    fun dec(): Long = this - 1
+
+    external fun plus(other: Long): Long
+    external fun minus(other: Long): Long
+    external fun times(other: Long): Long
+    external fun div(other: Long): Long
+    external fun rem(other: Long): Long
+
+    external fun compareTo(other: Long): Int
+    external fun equals(other: Long): Boolean
+    override fun hashCode(): Int = ushr(32).toInt() * 31 + toInt()
+
+    external fun shl(shift: Int): Long
+    external fun shr(shift: Int): Long
+    external fun ushr(shift: Int): Long
+    external fun rotateLeft(shift: Int): Long
+    external fun rotateRight(shift: Int): Long
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: Long = -0x8000_0000_0000_0000
+        const val MAX_VALUE: Long = +0x7fff_ffff_ffff_ffff
+    }
+}
+
+external class ULong(val content: ULong) {
+    external fun neg(): ULong
+    fun inc(): ULong = this + 1
+    fun dec(): ULong = this - 1
+
+    external fun plus(other: ULong): ULong
+    external fun minus(other: ULong): ULong
+    external fun times(other: ULong): ULong
+    external fun div(other: ULong): ULong
+    external fun rem(other: ULong): ULong
+
+    external fun compareTo(other: ULong): Int
+    external fun equals(other: ULong): Boolean
+    override fun hashCode(): Int = ushr(32).toInt() * 31 + toInt()
+
+    external fun shl(shift: Int): ULong
+    external fun shr(shift: Int): ULong
+    external fun ushr(shift: Int): ULong
+    external fun rotateLeft(shift: Int): ULong
+    external fun rotateRight(shift: Int): ULong
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+
+    companion object {
+        const val MIN_VALUE: ULong = 0
+        const val MAX_VALUE: ULong = 0xffff_ffff_ffff_ffff
+    }
+}
+
+external class Half(val content: Half) {
+    external fun neg(): Half
+    fun inc(): Half = this + 1h
+    fun dec(): Half = this - 1h
+
+    external fun plus(other: Half): Half
+    external fun minus(other: Half): Half
+    external fun times(other: Half): Half
+    external fun div(other: Half): Half
+    external fun rem(other: Half): Half
+
+    external fun compareTo(other: Half): Int
+    external fun equals(other: Half): Boolean
+    external fun hashCode(): Int
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toHalf(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+}
+
+external class Float(val content: Float) {
+    external fun neg(): Float
+    fun inc(): Float = this + 1f
+    fun dec(): Float = this - 1f
+
+    external fun plus(other: Float): Float
+    external fun minus(other: Float): Float
+    external fun times(other: Float): Float
+    external fun div(other: Float): Float
+    external fun rem(other: Float): Float
+
+    external fun compareTo(other: Float): Int
+    external fun equals(other: Float): Boolean
+    external fun hashCode(): Int
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toFloat(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+}
+
+external class Double(val content: Double) {
+    external fun neg(): Double
+    fun inc(): Double = this + 1.0
+    fun dec(): Double = this - 1.0
+
+    external fun plus(other: Double): Double
+    external fun minus(other: Double): Double
+    external fun times(other: Double): Double
+    external fun div(other: Double): Double
+    external fun rem(other: Double): Double
+
+    external fun compareTo(other: Double): Int
+    external fun equals(other: Double): Boolean
+    external fun hashCode(): Int
+
+    external fun toByte(): Byte
+    external fun toUByte(): UByte
+    external fun toShort(): Short
+    external fun toUShort(): UShort
+    external fun toInt(): Int
+    external fun toUInt(): UInt
+    external fun toLong(): Long
+    external fun toULong(): ULong
+    external fun toFloat(): Half
+    external fun toFloat(): Float
+    external fun toDouble(): Double
+}

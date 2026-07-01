@@ -50,7 +50,9 @@ object Stdlib {
         for (type in nativeNumbers) {
             runtime.register(langScope, "println", listOf(type)) { _, params ->
                 val value = params[0]
-                assertEquals(value.clazz.type, type)
+                assertEquals(value.clazz.type, type) {
+                    "Mismatch in printed vs expected type"
+                }
                 check(value.rawValue != null)
                 runPrintln(value.rawValue.toString())
             }

@@ -43,7 +43,7 @@ class MinimalWASMRuntimeCompiler : MinimalCompiler() {
             } ?: continue
             val printIntSpec = Specialization(printScope, emptyParameterList())
             runtime.register("zauber_println_${hashMethodParameters(printIntSpec)}") { args ->
-                var value = args[1]
+                var value = args.first()
                 value = when (type) {
                     Types.UInt -> (value as Int).toUInt()
                     Types.ULong -> (value as Long).toULong()

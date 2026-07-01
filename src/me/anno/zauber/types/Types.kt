@@ -1,11 +1,13 @@
 package me.anno.zauber.types
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StdlibLoader
 import me.anno.zauber.Zauber.root
 import me.anno.zauber.ast.rich.parameter.Parameter
 import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.impl.ClassType
@@ -170,5 +172,13 @@ class TypesImpl {
     // C/C++ interop:
     val Pointer = getType("Pointer", "T", NullableAny)
     val Ref = getType("Ref", "T", NullableAny)
+
+    init {
+        Any.clazz.addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
+            StdlibLoader.loadCode("src/BaseTypes.kt")
+            StdlibLoader.loadCode("src/Numbers.kt")
+            StdlibLoader.loadCode("src/Println.kt")
+        }
+    }
 
 }

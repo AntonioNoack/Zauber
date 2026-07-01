@@ -1,7 +1,9 @@
 package me.anno.utils
 
+import kotlin.math.max
+
 class IntArrayList(capacity: Int) {
-    var values = IntArray(capacity)
+    var values = IntArray(max(capacity, 4))
     var size = 0
 
     fun add(element: Int) {

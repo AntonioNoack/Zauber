@@ -1,7 +1,6 @@
 package me.anno.other
 
 import me.anno.generation.CGenerationTests
-import me.anno.generation.InheritanceTable.Companion.inheritanceCode
 import me.anno.zauber.interpreting.Stdlib
 import me.anno.zauber.logging.LogManager
 
@@ -303,7 +302,7 @@ fun exitProcess(exitCode: Int) {
 
 annotation class CInclude(val source: String)
 
-    """.trimIndent() + inheritanceCode
+    """.trimIndent()
 
     // todo bug: why can Ref(0u) not be resolved???
 
