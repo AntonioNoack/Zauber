@@ -9,14 +9,6 @@ class YieldTests {
         val stdlib = "\n" + """
 package zauber
 
-enum class Boolean { TRUE, FALSE }
-external class Int(val content: Int) {
-    external fun compareTo(other: Int): Int
-    external fun plus(other: Int): Int
-    external fun times(other: Int): Int
-    fun inc(): Int = this + 1
-}
-
 sealed interface Yieldable<R, T: Throwable, Y> {}
 
 value class Yielded<R, T: Throwable, Y>(

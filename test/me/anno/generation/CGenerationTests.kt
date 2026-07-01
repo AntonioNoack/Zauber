@@ -132,25 +132,7 @@ class CGenerationTests : CodeGenerationTests() {
             }
             
             package zauber
-            class Any
-            external class Int(val content: Int)
             external class Char(val content: Char)
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun get(index: Int): V
-                external fun set(index: Int, v: V)
-                
-                fun copyOfRange(i0: Int, i1: Int): Array<V> {
-                    val clone = Array<V>(i1-i0)
-                    var i = i0
-                    while (i < i1) {
-                        clone[i - i0] = this[i]
-                        i++
-                    }
-                    return clone
-                }
-            }
             
             class String
             annotation class CInclude(val source: String)

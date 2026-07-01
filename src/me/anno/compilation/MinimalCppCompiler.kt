@@ -1,6 +1,8 @@
 package me.anno.compilation
 
 import me.anno.generation.cpp.CppSourceGenerator
+import me.anno.utils.StdlibLoader.loadBytes
+import me.anno.utils.StdlibLoader.loadText
 import me.anno.zauber.ast.rich.member.Method
 import me.anno.zauber.expansion.DependencyData
 import java.io.File
@@ -13,12 +15,6 @@ open class MinimalCppCompiler(preserveFolder: Boolean = false) :
             MinimalCppCompiler::class.java
                 .classLoader.getResourceAsStream("files/CMakeLists.txt")!!
                 .readBytes().decodeToString()
-        }
-
-        val cppStandardLib by lazy {
-            MinimalCppCompiler::class.java
-                .classLoader.getResourceAsStream("files/CppStandardLib.hpp")!!
-                .readBytes()
         }
     }
 
@@ -35,10 +31,16 @@ open class MinimalCppCompiler(preserveFolder: Boolean = false) :
         }
 
         File(projectFolder, "CMakeLists.txt")
-            .writeText(minimalCMakeLists.replace("FILES_LIST", filesList))
+            .writeText(
+                loadText("files/CMakeLists.txt")
+                    .replace("FILES_LIST", filesList)
+            )
+
+        File(srcFolder, "CppStandardLib.cpp")
+            .writeBytes(loadBytes("files/CppStandardLib.cpp"))
 
         File(srcFolder, "CppStandardLib.hpp")
-            .writeBytes(cppStandardLib)
+            .writeBytes(loadBytes("files/CppStandardLib.hpp"))
 
         val buildFolder = File(projectFolder, "build")
         buildFolder.mkdirs()

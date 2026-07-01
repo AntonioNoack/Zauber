@@ -336,7 +336,7 @@ abstract class CodeGenerationTests {
             1e308, -1e308,
         ).map { it.toString() }
         val names = numberTypes.map { it.toString() }
-        val runnableCode = numberTypes.joinToString("") { type ->
+        val code = numberTypes.joinToString("", "fun main() {", "}") { type ->
             val max = getBigValueForTesting(type)
             val type = type.clazz.name
             "" +
@@ -344,50 +344,6 @@ abstract class CodeGenerationTests {
                     "println(+v$type)\n" +
                     "println(-v$type)\n"
         }
-        // unsigned types shouldn't get unaryMinus...
-        val numberClasses = numberTypes.joinToString("") { type ->
-            val typeName = type.clazz.name
-            val resultTypeName = if (!type.isFloat() && type.getNumBits() <= 16) {
-                (if (type.isUnsigned()) Types.UInt else Types.Int).clazz.name
-            } else typeName
-            val zero = if (type.isFloat()) {
-                when (type) {
-                    // todo all versions should work with 0.0... (baseline fails, because it creates a double)
-                    Types.Half -> "0h"
-                    Types.Float -> "0f"
-                    else -> "0.0"
-                }
-            } else {
-                if (type.getNumBits() == 64) {
-                    if (type.isUnsigned()) "0ul" else "0l"
-                } else {
-                    if (type.isUnsigned()) "0u" else "0"
-                }
-            }
-            "" +
-                    "external class $typeName(val content: $typeName) {\n" +
-                    "   external operator fun minus(other: $typeName): $typeName\n" +
-                    (if (resultTypeName != typeName) {
-                        "" +
-                                "fun unaryPlus(): $resultTypeName = to$resultTypeName()\n" +
-                                "fun unaryMinus(): $resultTypeName = $zero - to$resultTypeName()\n" +
-                                "external fun to$resultTypeName(): $resultTypeName\n"
-                    } else {
-                        "" +
-                                "fun unaryPlus(): $typeName = content\n" +
-                                "fun unaryMinus(): $typeName = $zero - content\n"
-                    }) +
-                    "}\n" +
-                    "external fun println(arg0: $typeName)"
-        }
-        val code: String = """
-            fun main() {
-                $runnableCode
-            }
-            
-            package zauber
-            $numberClasses
-        """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
         assertEqualsNumbers(expected, names, printed)
@@ -450,6 +406,8 @@ abstract class CodeGenerationTests {
         val builder = StringBuilder()
         val expected = ArrayList<String>()
         val names = ArrayList<String>()
+
+        builder.append("fun main() {\n")
 
         var ctr = 0
         for (i in numberTypes.indices) {
@@ -560,27 +518,10 @@ abstract class CodeGenerationTests {
             }
         }
 
-        val numberClasses = numberTypes.joinToString("") { type ->
-            val type = type.clazz.name
-            "" +
-                    "external class $type(val content: $type) {\n" +
-                    "   external fun compareTo(other: $type): Int\n" +
-                    numberTypes.joinToString("") {
-                        "   external fun to${it.clazz.name}(): ${it.clazz.name}"
-                    } +
-                    "}\n" +
-                    "external fun println(arg0: $type)"
-        }
-        val code: String = """
-            fun main() {
-                $builder
-            }
-            
-            package zauber
-            $numberClasses
-        """.trimIndent()
+        builder.append("}")
+
         val printed = generator()
-            .testCompileMainAndRun(code, ::registerLib)
+            .testCompileMainAndRun(builder.toString(), ::registerLib)
         assertEqualsNumbers(expected, names, printed)
     }
 
@@ -644,7 +585,7 @@ abstract class CodeGenerationTests {
         // UNSIGNED.MAX_VALUE is -1, and would give the wrong answer
         var ctr = 0
         val numberTypes = nativeJavaNumbers.keys
-        val runnableCode = numberTypes.joinToString("") { type ->
+        val code = numberTypes.joinToString("", "fun main() {", "}") { type ->
             val min = when (type) {
                 Types.Char -> "' '"
                 Types.Float -> "0f"
@@ -658,27 +599,6 @@ abstract class CodeGenerationTests {
                     "val v${ctr++}: $type = $max\n" +
                     "println(if(v${ctr - 2} < v${ctr - 1}) 1 else 0)\n"
         }
-        val numberClasses = numberTypes.joinToString("") { type ->
-            val type = type.clazz.name
-            "" +
-                    "external class $type(val content: $type) {\n" +
-                    "   external fun compareTo(other: $type): Int\n" +
-                    "}\n" +
-                    "external fun println(arg0: $type)"
-        }
-        val code: String = """
-            fun main() {
-                $runnableCode
-            }
-            
-            package zauber
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun set(i: Int, value: V)
-            }
-            
-            $numberClasses
-        """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
         assertEquals("1\n".repeat(numberTypes.size), printed)
@@ -723,7 +643,7 @@ abstract class CodeGenerationTests {
         val expected = ArrayList<String>()
         val names = ArrayList<String>()
 
-        val runnableCode = intTypes.withIndex().joinToString("") { (ctr, type) ->
+        val code = intTypes.withIndex().joinToString("", "fun main() {", "}") { (ctr, type) ->
 
             val numBits = type.getNumBits()
             val repeats = numBits.shr(2)
@@ -812,32 +732,6 @@ abstract class CodeGenerationTests {
                                     "println(a${ctr}.rotateLeft($shift))\n" +
                                     "println(a${ctr}.rotateRight($shift))\n") else ""
         }
-        val numberClasses = intTypes.joinToString("") { type ->
-            val numBits = type.getNumBits()
-            val type = type.clazz.name
-            "" +
-                    "external class $type(val content: $type) {\n" +
-                    "   external fun and(other: $type): $type\n" +
-                    "   external fun or(other: $type): $type\n" +
-                    "   external fun xor(other: $type): $type\n" +
-                    "   external fun inv(): $type\n" +
-                    (if (numBits > 16) "" +
-                            "   external fun shl(shift: Int): $type\n" +
-                            "   external fun shr(shift: Int): $type\n" +
-                            "   external fun ushr(shift: Int): $type\n" +
-                            "   external fun rotateLeft(shift: Int): $type\n" +
-                            "   external fun rotateRight(shift: Int): $type\n" else "") +
-                    "}\n" +
-                    "external fun println(arg0: $type)"
-        }
-        val code: String = """
-            fun main() {
-                $runnableCode
-            }
-            
-            package zauber
-            $numberClasses
-        """.trimIndent()
         val printed = generator()
             .testCompileMainAndRun(code, ::registerLib)
         assertEqualsNumbers(expected, names, printed)

@@ -97,17 +97,9 @@ class FactorialTests {
     fun testFactorialAsForLoop(type: String) {
         val stdlib = """
             package zauber
-            class Any
-            object Unit
             external class Int(val content: Int) {
-                external operator fun plus(other: Int): Int
-                external operator fun minus(other: Int): Int
-                external operator fun times(other: Int): Int
-                external operator fun compareTo(other: Int): Int
                 operator fun until(other: Int): IntRange = IntRange(this, other)
                 operator fun rangeTo(other: Int): IntRange = IntRange(this, other+1)
-                fun inc() = this+1
-                fun dec() = this-1
             }
             
             value class IntRange(val from: Int, val to: Int) {
@@ -124,13 +116,6 @@ class FactorialTests {
                 override fun hasNext(): Boolean = index < range.to
                 override fun next(): Int = index++
             }
-            
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external operator fun get(i: Int)
-                external operator fun set(i: Int, value: V)
-            }
-            external fun println(arg0: Int)
         """.trimIndent()
         val code = """
             fun fac(n: Int): Int {

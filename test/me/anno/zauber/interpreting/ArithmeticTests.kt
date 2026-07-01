@@ -10,22 +10,10 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class ArithmeticTests {
 
-    private val stdlib = "\n" + """
-        package zauber
-        external class Int(val content: Int) {
-            external fun plus(other: Int): Int
-            external fun times(other: Int): Int
-            fun inc(): Int = content + 1
-       }
-       class Any
-       object Unit
-       external fun println(arg0: Int)
-    """.trimIndent()
-
     @ParameterizedTest
     @ValueSource(strings = ["type", "runtime", "js", "java", "c++", "wasm"])
     fun testSimpleIntCalculation(type: String) {
-        MultiTest("val tested = 1+3*7$stdlib")
+        MultiTest("val tested = 1+3*7")
             .type { Types.Int }
             .runtime { value ->
                 assertEquals(22, value.castToInt())
@@ -44,7 +32,7 @@ class ArithmeticTests {
                     var tmp = 1 + 6
                     return tmp * 3
                 }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         )
             .type { Types.Int }
             .runtime { value ->
@@ -66,7 +54,7 @@ class ArithmeticTests {
                     tmp++
                     return tmp * 3
                 }
-        """.trimIndent() + stdlib
+        """.trimIndent()
         )
             .type { Types.Int }
             .runtime { value ->
@@ -85,13 +73,6 @@ class ArithmeticTests {
                     tmp += 1
                     return tmp * 3
                 }
-            
-            package zauber
-            external class Int {
-                external fun plus(other: Int): Int
-                external fun times(other: Int): Int
-                fun inc() = this+1
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(24, value.castToInt())
@@ -102,11 +83,6 @@ class ArithmeticTests {
         val code = """
             val tested = sq(5)
             fun sq(x: Int) = x*x
-            
-            package zauber
-            external class Int {
-                external fun times(other: Int): Int
-            }
         """.trimIndent()
         val value = testExecute(code)
         assertEquals(25, value.castToInt())

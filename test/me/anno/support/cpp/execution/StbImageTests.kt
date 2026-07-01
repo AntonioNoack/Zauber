@@ -42,13 +42,6 @@ class StbImageTests {
             class ClassType<V> {
                 external fun sizeof(): Int
             }
-            external class Int(val content: Int) {
-                external fun equals(other: Int): Boolean
-            }
-            enum class Boolean { TRUE, FALSE }
-            class Array<V>(val size: Int) {
-                external fun set(index: Int, value: V)
-            }
         """.trimIndent(), "Stdlib.zbr"
             ).tokenize()
             ZauberASTClassScanner.scanClasses(zauberTokens)

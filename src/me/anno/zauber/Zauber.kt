@@ -1,7 +1,9 @@
 package me.anno.zauber
 
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
+import me.anno.utils.StdlibLoader
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 
 // todo make variable capture by lambdas explicit:
@@ -35,6 +37,13 @@ object Zauber {
             // ensure zauber is a package
             getOrPut(STDLIB_NAME, ScopeType.PACKAGE).apply {
                 setEmptyTypeParams()
+            }
+
+            addInitPart(ScopeInitType.DISCOVER_MEMBERS) {
+                StdlibLoader.loadCode("src/BaseTypes.kt")
+                StdlibLoader.loadCode("src/Numbers.kt")
+                StdlibLoader.loadCode("src/Strings.kt")
+                StdlibLoader.loadCode("src/Println.kt")
             }
         }
     }

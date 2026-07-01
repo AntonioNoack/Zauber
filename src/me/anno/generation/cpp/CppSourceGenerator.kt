@@ -542,7 +542,6 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
 
     override fun getBinarySymbol(type: Type, methodName: String): String? {
         return when (methodName) {
-            // todo signed int ushr needs casts
             "shr", "ushr" -> ">>"
             "rem" -> if (type.isFloat()) "#include <math.h>\nfmod" else "%"
             else -> super.getBinarySymbol(type, methodName)
@@ -1011,6 +1010,27 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         when (type) {
             in nativeTypes -> {}
             else -> return false
+        }
+
+        if (methodName == "ushr") {
+            when (type) {
+                Types.Int -> {
+                    builder.append("(int32_t) ((uint32_t)")
+                    appendFirstParameter(graph, type, expr)
+                    builder.append(">>")
+                    appendFieldName(graph, expr.valueParameters[0])
+                    builder.append(")")
+                    return true
+                }
+                Types.Long -> {
+                    builder.append("(int64_t) ((uint64_t)")
+                    appendFirstParameter(graph, type, expr)
+                    builder.append(">>")
+                    appendFieldName(graph, expr.valueParameters[0])
+                    builder.append(")")
+                    return true
+                }
+            }
         }
 
         val symbol = getBinarySymbol(type, methodName)

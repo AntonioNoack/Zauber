@@ -6,10 +6,18 @@ import me.anno.zauber.ast.rich.parser.ZauberASTClassScanner
 import me.anno.zauber.tokenizer.ZauberTokenizer
 
 object StdlibLoader {
-    fun loadCode(fileName: String) {
-        val src = InheritanceTable::class.java
+    fun loadBytes(fileName: String): ByteArray {
+        return InheritanceTable::class.java
             .classLoader.getResourceAsStream(fileName)!!
-            .readBytes().decodeToString()
+            .readBytes()
+    }
+
+    fun loadText(fileName: String): String {
+        return loadBytes(fileName).decodeToString()
+    }
+
+    fun loadCode(fileName: String) {
+        val src = loadText(fileName)
         val tokens = ZauberTokenizer(src, fileName).tokenize()
         ZauberASTClassScanner.scanClasses(tokens)
     }

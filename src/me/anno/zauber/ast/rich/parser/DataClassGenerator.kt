@@ -25,10 +25,10 @@ import me.anno.zauber.ast.rich.parameter.ParameterMutability
 import me.anno.zauber.ast.rich.parameter.ParameterType
 import me.anno.zauber.logging.LogManager
 import me.anno.zauber.scope.Scope
+import me.anno.zauber.scope.ScopeInitType
 import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.ResolutionContext
 import me.anno.zauber.typeresolution.ValueParameter
-import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.MethodResolver
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
@@ -62,7 +62,13 @@ object DataClassGenerator {
         }
 
         fun shortcutAnd(getCondition: (Scope) -> Expression): Scope {
-            val expr = expr!!
+            val expr = expr
+            if (expr == null) {
+                val scope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.METHOD_BODY)
+                this.expr = getCondition(scope)
+                return scope
+            }
+
             expr.resolvedType = Types.Boolean
 
             val trueScope = scope.getOrPut(scope.generateName("shortcut"), ScopeType.METHOD_BODY)
@@ -93,57 +99,41 @@ object DataClassGenerator {
         val primaryFields = classScope.findPrimaryFields()
         val context = ResolutionContext.minimal /// todo better context?
 
-        ensureHashCodeMethod(classScope, primaryFields, context, origin)
-        ensureToStringMethod(classScope, primaryFields, context, origin)
-        ensureEqualsMethods(classScope, primaryFields, context, origin)
+        ensureHashCodeMethod(classScope, primaryFields, origin)
+        ensureToStringMethod(classScope, primaryFields, origin)
+        ensureEqualsMethods(classScope, primaryFields, origin)
         ensureCopyMethod(classScope, primaryFields, context, origin)
     }
 
-    private fun ensureHashCodeMethod(
-        classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Long
-    ) {
-        val hashCodeMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "hashCode", Types.Int, classScope.typeWithArgs,
-            emptyList(), emptyList(), context
-        )
+    private fun findMethod(classScope: Scope, name: String, typeParams: List<Type>): Method? {
+        return classScope[ScopeInitType.AFTER_DISCOVERY].methods0.firstOrNull { method ->
+            method.name == name && method.typeParameters.size == typeParams.size &&
+                    method.typeParameters.map { param -> param.type } == typeParams
+        }
+    }
+
+    private fun ensureHashCodeMethod(classScope: Scope, primaryFields: List<Field>, origin: Long) {
+        val hashCodeMethod = findMethod(classScope, "hashCode", emptyList())
         if (hashCodeMethod == null) {
             generateHashCodeMethod(classScope, primaryFields, origin)
         }
     }
 
-    private fun ensureToStringMethod(
-        classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Long
-    ) {
-        val toStringMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "toString", Types.String, classScope.typeWithArgs,
-            emptyList(), emptyList(), context
-        )
+    private fun ensureToStringMethod(classScope: Scope, primaryFields: List<Field>, origin: Long) {
+        val toStringMethod = findMethod(classScope, "toString", emptyList())
         if (toStringMethod == null) {
             generateToStringMethod(classScope, origin, primaryFields)
         }
     }
 
-    private fun ensureEqualsMethods(
-        classScope: Scope, primaryFields: List<Field>,
-        context: ResolutionContext, origin: Long
-    ) {
-        val equalsAnyMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "equals", Types.Boolean, classScope.typeWithArgs,
-            emptyList(), listOf(ValueParameterImpl(null, Types.NullableAny, false)),
-            context
-        )
+    private fun ensureEqualsMethods(classScope: Scope, primaryFields: List<Field>, origin: Long) {
+        val equalsAnyMethod = findMethod(classScope, "equals", listOf(Types.NullableAny))
         if (equalsAnyMethod == null) {
             generateEqualsAnyMethod(classScope, origin, primaryFields)
         }
 
         // this is an optimization:
-        val equalsSelfMethod = MethodResolver.findMemberInScope(
-            classScope, origin, "equals", Types.Boolean, classScope.typeWithArgs,
-            emptyList(), listOf(ValueParameterImpl(null, classScope.typeWithArgs, false)),
-            context
-        )
+        val equalsSelfMethod = findMethod(classScope, "equals", listOf(classScope.typeWithArgs))
         if (equalsSelfMethod == null) {
             // saves type-check and cast, and therefore should be much faster,
             //  and allow us to not runtime-allocate some instances

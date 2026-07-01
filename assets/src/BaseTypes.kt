@@ -6,6 +6,8 @@ open class Any {
     }
 
     open external fun hashCode(): Int
+
+    open fun equals(other: Any?): Boolean = (this === other)
 }
 
 object Unit

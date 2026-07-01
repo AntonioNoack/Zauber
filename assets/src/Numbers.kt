@@ -8,16 +8,20 @@ enum class Boolean {
 }
 
 external class Byte(val content: Byte) {
-    external fun neg(): Byte
     external fun inv(): Byte
     fun inc(): Byte = (this + 1).toByte()
     fun dec(): Byte = (this - 1).toByte()
+    fun unaryPlus() = toInt()
+    fun unaryMinus() = -toInt()
 
     external fun plus(other: Byte): Int
     external fun minus(other: Byte): Int
     external fun times(other: Byte): Int
     external fun div(other: Byte): Int
     external fun rem(other: Byte): Int
+    external fun and(other: Byte): Byte
+    external fun or(other: Byte): Byte
+    external fun xor(other: Byte): Byte
 
     external fun compareTo(other: Byte): Int
     external fun equals(other: Byte): Boolean
@@ -42,16 +46,20 @@ external class Byte(val content: Byte) {
 }
 
 external class UByte(val content: UByte) {
-    external fun neg(): UByte
     external fun inv(): UByte
     fun inc(): UByte = (this + 1).toUByte()
     fun dec(): UByte = (this - 1).toUByte()
+    fun unaryPlus() = toInt()
+    fun unaryMinus() = -toInt()
 
     external fun plus(other: UByte): Int
     external fun minus(other: UByte): Int
     external fun times(other: UByte): Int
     external fun div(other: UByte): Int
     external fun rem(other: UByte): Int
+    external fun and(other: UByte): UByte
+    external fun or(other: UByte): UByte
+    external fun xor(other: UByte): UByte
 
     external fun compareTo(other: UByte): Int
     external fun equals(other: UByte): Boolean
@@ -76,16 +84,20 @@ external class UByte(val content: UByte) {
 }
 
 external class Short(val content: Short) {
-    external fun neg(): Short
     external fun inv(): Short
     fun inc(): Short = (this + 1).toShort()
     fun dec(): Short = (this - 1).toShort()
+    fun unaryPlus() = toInt()
+    fun unaryMinus() = -toInt()
 
     external fun plus(other: Short): Int
     external fun minus(other: Short): Int
     external fun times(other: Short): Int
     external fun div(other: Short): Int
     external fun rem(other: Short): Int
+    external fun and(other: Short): Short
+    external fun or(other: Short): Short
+    external fun xor(other: Short): Short
 
     external fun compareTo(other: Short): Int
     external fun equals(other: Short): Boolean
@@ -110,16 +122,20 @@ external class Short(val content: Short) {
 }
 
 external class UShort(val content: UShort) {
-    external fun neg(): UShort
     external fun inv(): UShort
     fun inc(): UShort = (this + 1).toUShort()
     fun dec(): UShort = (this - 1).toUShort()
+    fun unaryPlus() = toInt()
+    fun unaryMinus() = -toInt()
 
     external fun plus(other: UShort): Int
     external fun minus(other: UShort): Int
     external fun times(other: UShort): Int
     external fun div(other: UShort): Int
     external fun rem(other: UShort): Int
+    external fun and(other: UShort): UShort
+    external fun or(other: UShort): UShort
+    external fun xor(other: UShort): UShort
 
     external fun compareTo(other: UShort): Int
     external fun equals(other: UShort): Boolean
@@ -144,16 +160,20 @@ external class UShort(val content: UShort) {
 }
 
 external class Int(val content: Int) {
-    external fun neg(): Int
     external fun inv(): Int
     fun inc(): Int = this + 1
     fun dec(): Int = this - 1
+    fun unaryPlus() = this
+    fun unaryMinus() = 0 - this
 
     external fun plus(other: Int): Int
     external fun minus(other: Int): Int
     external fun times(other: Int): Int
     external fun div(other: Int): Int
     external fun rem(other: Int): Int
+    external fun and(other: Int): Int
+    external fun or(other: Int): Int
+    external fun xor(other: Int): Int
 
     external fun compareTo(other: Int): Int
     external fun equals(other: Int): Boolean
@@ -184,16 +204,20 @@ external class Int(val content: Int) {
 }
 
 external class UInt(val content: UInt) {
-    external fun neg(): UInt
     external fun inv(): UInt
     fun inc(): UInt = this + 1
     fun dec(): UInt = this - 1
+    fun unaryPlus() = toInt()
+    fun unaryMinus() = -toInt()
 
     external fun plus(other: UInt): UInt
     external fun minus(other: UInt): UInt
     external fun times(other: UInt): UInt
     external fun div(other: UInt): UInt
     external fun rem(other: UInt): UInt
+    external fun and(other: UInt): UInt
+    external fun or(other: UInt): UInt
+    external fun xor(other: UInt): UInt
 
     external fun compareTo(other: UInt): Int
     external fun equals(other: UInt): Boolean
@@ -224,16 +248,20 @@ external class UInt(val content: UInt) {
 }
 
 external class Long(val content: Long) {
-    external fun neg(): Long
     external fun inv(): Long
     fun inc(): Long = this + 1
     fun dec(): Long = this - 1
+    fun unaryPlus() = this
+    fun unaryMinus() = 0L - this
 
     external fun plus(other: Long): Long
     external fun minus(other: Long): Long
     external fun times(other: Long): Long
     external fun div(other: Long): Long
     external fun rem(other: Long): Long
+    external fun and(other: Long): Long
+    external fun or(other: Long): Long
+    external fun xor(other: Long): Long
 
     external fun compareTo(other: Long): Int
     external fun equals(other: Long): Boolean
@@ -264,15 +292,20 @@ external class Long(val content: Long) {
 }
 
 external class ULong(val content: ULong) {
-    external fun neg(): ULong
+    external fun inv(): ULong
     fun inc(): ULong = this + 1
     fun dec(): ULong = this - 1
+    fun unaryPlus() = toLong()
+    fun unaryMinus() = -toLong()
 
     external fun plus(other: ULong): ULong
     external fun minus(other: ULong): ULong
     external fun times(other: ULong): ULong
     external fun div(other: ULong): ULong
     external fun rem(other: ULong): ULong
+    external fun and(other: ULong): ULong
+    external fun or(other: ULong): ULong
+    external fun xor(other: ULong): ULong
 
     external fun compareTo(other: ULong): Int
     external fun equals(other: ULong): Boolean
@@ -303,9 +336,10 @@ external class ULong(val content: ULong) {
 }
 
 external class Half(val content: Half) {
-    external fun neg(): Half
     fun inc(): Half = this + 1h
     fun dec(): Half = this - 1h
+    fun unaryPlus() = this
+    fun unaryMinus() = 0h - this
 
     external fun plus(other: Half): Half
     external fun minus(other: Half): Half
@@ -315,7 +349,7 @@ external class Half(val content: Half) {
 
     external fun compareTo(other: Half): Int
     external fun equals(other: Half): Boolean
-    external fun hashCode(): Int
+    override external fun hashCode(): Int
 
     external fun toByte(): Byte
     external fun toUByte(): UByte
@@ -334,6 +368,8 @@ external class Float(val content: Float) {
     external fun neg(): Float
     fun inc(): Float = this + 1f
     fun dec(): Float = this - 1f
+    fun unaryPlus() = this
+    fun unaryMinus() = 0f - this
 
     external fun plus(other: Float): Float
     external fun minus(other: Float): Float
@@ -343,7 +379,7 @@ external class Float(val content: Float) {
 
     external fun compareTo(other: Float): Int
     external fun equals(other: Float): Boolean
-    external fun hashCode(): Int
+    override external fun hashCode(): Int
 
     external fun toByte(): Byte
     external fun toUByte(): UByte
@@ -353,7 +389,7 @@ external class Float(val content: Float) {
     external fun toUInt(): UInt
     external fun toLong(): Long
     external fun toULong(): ULong
-    external fun toFloat(): Half
+    external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
 }
@@ -362,6 +398,8 @@ external class Double(val content: Double) {
     external fun neg(): Double
     fun inc(): Double = this + 1.0
     fun dec(): Double = this - 1.0
+    fun unaryPlus() = this
+    fun unaryMinus() = 0.0 - this
 
     external fun plus(other: Double): Double
     external fun minus(other: Double): Double
@@ -371,7 +409,7 @@ external class Double(val content: Double) {
 
     external fun compareTo(other: Double): Int
     external fun equals(other: Double): Boolean
-    external fun hashCode(): Int
+    override external fun hashCode(): Int
 
     external fun toByte(): Byte
     external fun toUByte(): UByte
@@ -381,7 +419,7 @@ external class Double(val content: Double) {
     external fun toUInt(): UInt
     external fun toLong(): Long
     external fun toULong(): ULong
-    external fun toFloat(): Half
+    external fun toHalf(): Half
     external fun toFloat(): Float
     external fun toDouble(): Double
 }

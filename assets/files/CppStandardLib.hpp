@@ -20,3 +20,5 @@ T* gcNew(Args&&... args)
     void* mem = calloc(1, sizeof(T));
     return new (mem) T(std::forward<Args>(args)...);
 }
+
+int32_t stdlibMain();

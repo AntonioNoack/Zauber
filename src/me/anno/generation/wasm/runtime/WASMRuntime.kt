@@ -91,7 +91,8 @@ class WASMRuntime(val binary: WASMBinary) {
 
     fun execute(call: WASMCall, instructions: List<WASMInstruction>): WASMInstruction? {
         for (i in instructions.indices) {
-            when (val instr = instructions[i]) {
+            val instr = instructions[i]
+            when (instr) {
 
                 is WASMInstruction.I32Const -> stack.add(instr.value)
                 is WASMInstruction.I64Const -> stack.add(instr.value)
@@ -264,7 +265,7 @@ class WASMRuntime(val binary: WASMBinary) {
 
                 else -> throw NotImplementedError("Implement $instr")
             }
-            check(stack.size >= call.stack0) { "Popped too many values" }
+            check(stack.size >= call.stack0) { "[$i] $instr popped too many values" }
         }
         return null
     }
