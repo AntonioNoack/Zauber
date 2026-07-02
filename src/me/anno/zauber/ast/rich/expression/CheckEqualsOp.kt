@@ -109,8 +109,8 @@ class CheckEqualsOp(
         }
         block2v.block.add(call)
         return flow0
-            .joinError(block1)
-            .joinError(block2)
+            .joinReturnAndThrown(block1)
+            .joinReturnAndThrown(block2)
             .withValue(dst, block2v.block)
     }
 }

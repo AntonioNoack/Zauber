@@ -68,7 +68,7 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
         val unit = unitInstance(graph, this)
         val insideFlow0 = flow0.withValue(unit, bodyBlock)
         val insideBlock1 = body.simplify(context, bodyBlock, insideFlow0, false)
-        var flow1 = insideFlow0.joinError(insideBlock1)
+        var flow1 = insideFlow0.joinReturnAndThrown(insideBlock1)
         if (insideBlock1.value != null ||
             afterBlock.inputBlocks.isNotEmpty() || // there is a @break
             conditionBlock.inputBlocks.isNotEmpty() // there is a @continue
@@ -85,7 +85,7 @@ class DoWhileLoop(val body: Expression, val condition: Expression, val label: St
                 decideBlock1.ifBranch = bodyBlock
                 decideBlock1.elseBranch = afterBlock
             }
-            flow1 = flow1.joinError(decideBlock1i)
+            flow1 = flow1.joinReturnAndThrown(decideBlock1i)
         }
 
         // Unit, because no return value is supported

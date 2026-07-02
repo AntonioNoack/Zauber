@@ -28,7 +28,6 @@ import me.anno.zauber.expansion.DefaultParameters
 import me.anno.zauber.expansion.EarlyTypeResolution
 import me.anno.zauber.expansion.MethodOverrides
 import me.anno.zauber.logging.LogManager
-import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.TypeResolution.langScope
 import me.anno.zauber.types.Import
 import me.anno.zauber.types.StandardTypes
@@ -605,8 +604,8 @@ class Scope(val name: String, val parent: Scope? = null) {
         throw NotImplementedError("isVisible? $ownScopeType > $parentScopeType")
     }
 
-    fun createImmutableField(initialValue: Expression): Field {
-        val name = generateName("tmpField")
+    fun createImmutableField(initialValue: Expression, prefix: String, origin: Long): Field {
+        val name = generateName(prefix, origin)
         return addField(
             null, false, isMutable = false, null,
             name, null, initialValue, Flags.NONE, initialValue.origin

@@ -384,7 +384,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+    override fun appendField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
         appendFieldFlags(classScope, field, allowFinal)
 
         var valueType = (field.valueType ?: Types.NullableAny)
@@ -560,7 +560,7 @@ open class JavaScriptSourceGenerator : JavaSourceGenerator() {
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
         val selfType = expr.thisInstance.type as ClassType
-        ensureImport(selfType.clazz)
+        ensureImport(selfType)
         // todo bug: why is this not being imported???
 
         builder.append("Object.assign(new ")

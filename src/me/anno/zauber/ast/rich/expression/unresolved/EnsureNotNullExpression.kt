@@ -19,9 +19,9 @@ import me.anno.zauber.typeresolution.ValueParameterImpl
 import me.anno.zauber.typeresolution.members.ConstructorResolver
 import me.anno.zauber.typeresolution.members.MatchScore
 import me.anno.zauber.typeresolution.members.ResolvedField
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.Types
-import me.anno.zauber.types.Specialization
 
 /**
  * left!!
@@ -60,7 +60,7 @@ class EnsureNotNullExpression(
     override fun resolveImpl(context: ResolutionContext): Expression {
         val base = value.resolve(context)
         val contextI = context.withSelfType(null).withTargetType(null)
-        val field = scope.createImmutableField(base)
+        val field = scope.createImmutableField(base, "notNull", origin)
         val ownerR = ThisExpression(field.ownerScope, scope, origin)
         val fieldR = ResolvedField(
             field, contextI.withSpec(Specialization(field.fieldScope, ParameterList.emptyParameterList())),

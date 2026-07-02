@@ -44,6 +44,8 @@ import org.objectweb.asm.Opcodes as AsmOpcodes
  *
  * For debugging, we also write a ".java" text file next to each ".class" containing Java-style
  * method headers, but bytecode-style instruction mnemonics in the body.
+ *
+ * todo respect hasReturn()
  */
 class JVMBytecodeGenerator : JavaSourceGenerator() {
 
@@ -579,6 +581,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
         // Unlike JavaSourceGenerator.prepareGraph(), we do NOT reconstruct to if/while nodes.
         // We also keep fields (no aggressive DCE) because stack optimization is out of scope for now.
         graph.giveLocalFieldsUniqueNames(JavaTokenizer.KEYWORDS)
+        graph.findBoxingAndUnboxing()
         graph.renumberFields()
     }
 

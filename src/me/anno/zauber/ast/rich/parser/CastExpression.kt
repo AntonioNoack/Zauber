@@ -28,16 +28,16 @@ fun createBranchExpression(
     ifFalseExpr: (Scope) -> Expression,
 ): Expression {
     // we need to store the variable in a temporary field
-    val tmpField = scope.createImmutableField(expr)
-    val ifTrueScope = scope.getOrPut(scope.generateName("ifTrue"), ScopeType.METHOD_BODY)
-    val ifFalseScope = scope.getOrPut(scope.generateName("ifFalse"), ScopeType.METHOD_BODY)
-    val fieldExpr = FieldExpression(tmpField, scope, origin)
-    val condition = condition(fieldExpr)
+    val tmpField = scope.createImmutableField(expr, "branch", origin)
+    val ifTrueScope = scope.generate("ifTrue", origin, ScopeType.METHOD_BODY)
+    val ifFalseScope = scope.generate("ifFalse", origin, ScopeType.METHOD_BODY)
+    val tmpFieldExpr = FieldExpression(tmpField, scope, origin)
+    val condition = condition(tmpFieldExpr)
     val ifTrueExpr = ifTrueExpr(FieldExpression(tmpField, ifTrueScope, origin), ifTrueScope)
     val ifFalseExpr = ifFalseExpr(ifFalseScope)
     return ExpressionList(
         scope, origin,
-        AssignmentExpression(fieldExpr, expr),
+        AssignmentExpression(tmpFieldExpr, expr),
         IfElseBranch(condition, ifTrueExpr, ifFalseExpr)
     )
 }

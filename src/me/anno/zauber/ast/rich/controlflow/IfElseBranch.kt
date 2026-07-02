@@ -149,7 +149,8 @@ class IfElseBranch(
             val ifValue = ifBranch.simplify(context, ifBlock, ifFlow, needsValue)
             ifValue.value?.block?.nextBranch = elseBlock
 
-            return elseFlow.joinError(ifValue)
+            return elseFlow
+                .joinReturnAndThrown(ifValue)
                 .withValue(unit, elseBlock)
         } else {
             val ifValue = ifBranch.simplify(context, ifBlock, ifFlow, needsValue)

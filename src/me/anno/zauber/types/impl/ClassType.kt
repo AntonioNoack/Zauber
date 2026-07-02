@@ -8,6 +8,7 @@ import me.anno.zauber.scope.ScopeType
 import me.anno.zauber.typeresolution.InsertMode
 import me.anno.zauber.typeresolution.ParameterList
 import me.anno.zauber.typeresolution.ParameterList.Companion.emptyParameterList
+import me.anno.zauber.types.Specialization
 import me.anno.zauber.types.Type
 import java.util.*
 
@@ -141,6 +142,10 @@ class ClassType(val clazz: Scope, typeParameters0: ParameterList?) : Type() {
         }
 
         return toStringImplForInnerClasses(depth)
+    }
+
+    override fun specialize(spec: Specialization): ClassType {
+        return ClassType(clazz, typeParameters!!.map { it.specialize(spec) })
     }
 
     private fun toStringImplForInnerClasses(depth: Int): String {

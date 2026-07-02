@@ -543,9 +543,9 @@ object ASTSimplifier {
                 method.getThrownType(method0.specialization)
             )
         } else {
-            var selfType = method.selfTypeI.specialize(method0.specialization) as ClassType
+            var selfType = method.selfTypeI.specialize(method0.specialization)
             if (selfType.typeParameters == null) {
-                selfType = selfType.clazz.typeWithArgs.specialize(method0.specialization) as ClassType
+                selfType = selfType.clazz.typeWithArgs2.specialize(method0.specialization)
             }
             // todo allocation could fail, too...
             block0.add(
@@ -580,10 +580,9 @@ object ASTSimplifier {
         val throwFlow = Flow(throwField, throwBlock)
         callable.onThrown = throwFlow
 
-        val flow2 = flow1.joinError(throwFlow)
+        return flow1
+            .joinReturnAndThrown(throwFlow)
             .withValue(result, block0)
-        // println("joining: $flow1 x $throwFlow = $flow2")
-        return flow2
     }
 
     fun reorderResolveParameters(

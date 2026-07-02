@@ -5,6 +5,7 @@ import me.anno.utils.StdlibLoader.loadLazyCode
 import me.anno.utils.StringStyles.ORANGE
 import me.anno.utils.StringStyles.YELLOW
 import me.anno.utils.StringStyles.style
+import me.anno.utils.assertEquals
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
@@ -235,6 +236,13 @@ class InheritanceTable(val data: DependencyData) {
 
     private val classes = ArrayList<Specialization>()
     val classIndices = HashMap<Specialization, Int>()
+
+    init {
+        // these are used by low-level implementations like C to create constant strings
+        assertEquals(0, getClassIndex(Types.Any))
+        assertEquals(1, getClassIndex(Types.String))
+        assertEquals(2, getClassIndex(Types.Array.withTypeParameter(Types.Byte)))
+    }
 
     fun getClassIndex(clazz: Specialization): Int {
         check(clazz.isClassLike())

@@ -57,7 +57,7 @@ fun ASTBuilderBase.createIteratorForLoop(
     val scope = iterable.scope
     val origin = iterable.origin
     val iterator = iterableToIterator(iterable)
-    val iteratorField = scope.createImmutableField(iterator)
+    val iteratorField = scope.createImmutableField(iterator, "iter", origin)
     val iteratorFieldExpr = FieldExpression(iteratorField, scope, origin)
     val getNextCall = iteratorToNext(iteratorFieldExpr, body.scope, body.origin)
     val outerAssignment = createDeclarationExpression(scope, iterator, iteratorField)

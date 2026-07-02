@@ -86,11 +86,12 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
         beforeBlock1v.block.ifBranch = bodyBlock
         beforeBlock1v.block.elseBranch = elseBlock ?: afterBlock
 
-        if (elseBlock != null) {
+        val elseBlock1 = if (elseBlock != null) {
             // todo test this
             val elseBlock1 = elseBranch!!.simplify(context, elseBlock, beforeBlock1, false)
             elseBlock1.value?.block?.nextBranch = afterBlock
-        }
+            elseBlock1
+        } else null
 
         // add body to insideBlock
         val insideFlow0 = beforeBlock1.withValue(unit, bodyBlock)
@@ -98,7 +99,10 @@ class WhileLoop(val condition: Expression, val body: Expression, val label: Stri
         // continue, if possible
         insideBlock1.value?.block?.nextBranch = conditionBlock
 
-        return beforeBlock1.withValue(unit, afterBlock)
+        return beforeBlock1
+            .joinReturnAndThrown(insideBlock1)
+            .joinReturnAndThrown(elseBlock1)
+            .withValue(unit, afterBlock)
     }
 
 }

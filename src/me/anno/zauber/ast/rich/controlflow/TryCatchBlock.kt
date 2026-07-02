@@ -219,8 +219,8 @@ class TryCatchBlock(
         } else null
 
         return value
-            .joinError(returned)
-            .joinError(thrown)
+            .joinReturnAndThrown(returned)
+            .joinReturnAndThrown(thrown)
     }
 
     private fun simplifyImpl(context: ResolutionContext, expr: Expression, flow0: FlowResult): FlowResult {

@@ -1,6 +1,5 @@
 package me.anno.zauber.ast.simple
 
-import me.anno.support.jvm.expression.JVMLocalField
 import me.anno.utils.StringStyles.bold
 import me.anno.utils.assertEquals
 import me.anno.zauber.ast.reverse.SimpleTailCall
@@ -73,16 +72,6 @@ class SimpleGraph(val method0: Specialization) {
         return localField
     }
 
-    fun getOrPutLocalField(field: JVMLocalField): LocalField {
-        var localField = localFields.firstOrNull { it.name == field.name }
-        if (localField == null) {
-            val type = field.type
-            localField = createLocalField(null, field.name, type, true)
-        }
-        // println("localField[$field] -> $localField")
-        return localField
-    }
-
     fun initializeSpecialFields(context: ResolutionContext) {
 
         check(localFields.isEmpty()) {
@@ -101,7 +90,7 @@ class SimpleGraph(val method0: Specialization) {
         parameterFields = method.valueParameters.map { parameter ->
             val type = parameter.type.specialize(context)
             val field = parameter.getOrCreateField(null, Flags.NONE)
-            createLocalField(field, parameter.name, type, false)
+            createLocalField(field, parameter.newName, type, false)
         }
     }
 
@@ -189,27 +178,32 @@ class SimpleGraph(val method0: Specialization) {
     }
 
     fun giveLocalFieldsUniqueNames(keywords: Collection<String>) {
-        val foundNames = HashMap<String, LocalField?>()
+        val foundNames = HashMap<String, Any>()
 
         // protect these special names:
-        foundNames["this"] = null
-        foundNames["nextBlockId"] = null // for tail calls
-        for (name in keywords) foundNames[name] = null
-
-        if (method.hasExplicitSelfType) foundNames["self"] = null
-        for (param in method.valueParameters) foundNames[param.name] = null
-
+        foundNames["nextBlockId"] = Unit // for tail calls
+        for (name in keywords) foundNames[name] = Unit
         for (field in localFields) {
+            // contains this, self and valueParams if needed
             foundNames.getOrPut(field.name) { field }
         }
 
         for (field in localFields) {
             val prevField = foundNames[field.name]
-            if (prevField != field) findNewName(foundNames, field)
+            if (prevField == field) continue
+
+            if (field.isInsideMethod) {
+                findNewName(foundNames, field)
+            } else if (field.field != null) {
+                field.newName = field.field.newName
+            } else {
+                // todo should be synchronized with parameters at all times
+                field.newName += "_"
+            }
         }
     }
 
-    private fun findNewName(allNames: HashMap<String, LocalField?>, field: LocalField) {
+    private fun findNewName(allNames: HashMap<String, Any>, field: LocalField) {
         val oldName = field.name
         var id = 0
         while (true) {

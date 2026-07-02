@@ -1,11 +1,9 @@
 package me.anno.zauber.ast.rich.expression
 
-import me.anno.zauber.ast.rich.parser.ASTBuilderBase
-import me.anno.zauber.ast.rich.TokenListIndex.resolveOrigin
 import me.anno.zauber.ast.rich.expression.unresolved.AssignmentExpression
 import me.anno.zauber.ast.rich.expression.unresolved.FieldExpression
-import me.anno.zauber.ast.rich.expression.unresolved.FieldResolvable
 import me.anno.zauber.ast.rich.expression.unresolved.NamedCallExpression
+import me.anno.zauber.ast.rich.parser.ASTBuilderBase
 
 enum class InplaceModifyType(val symbol: String, val methodName: String) {
     INCREMENT("++", "inc"),
@@ -28,10 +26,9 @@ private fun ASTBuilderBase.createPrePostfixExpression(
     val getterSetter = splitGetterSetter(base0)
     val instr = ArrayList<Expression>()
     if (returnBeforeChange) {
-        val tmpBefore = scope.createImmutableField(getterSetter.beforeChange)
+        val tmpBefore = scope.createImmutableField(getterSetter.beforeChange, "postfix1", origin)
         val tmpBeforeExpr = FieldExpression(tmpBefore, scope, origin)
         instr.add(AssignmentExpression(tmpBeforeExpr, getterSetter.beforeChange))
-
         val afterChange = NamedCallExpression(
             tmpBeforeExpr, type.methodName,
             nameAsImport(type.methodName), scope, origin
@@ -43,7 +40,7 @@ private fun ASTBuilderBase.createPrePostfixExpression(
             getterSetter.beforeChange, type.methodName,
             nameAsImport(type.methodName), scope, origin
         )
-        val tmpAfter = scope.createImmutableField(afterChange)
+        val tmpAfter = scope.createImmutableField(afterChange, "postfix2", origin)
         val tmpAfterExpr = FieldExpression(tmpAfter, scope, origin)
         instr.add(AssignmentExpression(tmpAfterExpr, afterChange))
         instr.add(getterSetter.createSetter(tmpAfterExpr))

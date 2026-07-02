@@ -185,7 +185,7 @@ open class JavaSourceGenerator : Generator() {
             }
         }
 
-        fun getCastTargetType(methodName: String): Type? {
+        fun getCastTargetType(methodName: String): ClassType? {
             return when (methodName) {
                 "toByte" -> Types.Byte
                 "toUByte" -> Types.UByte
@@ -233,6 +233,17 @@ open class JavaSourceGenerator : Generator() {
 
     fun ensureImport(scope: Scope) {
         imports.getOrPut(scope.pathStr) {
+            Import2(
+                if (scope.isPackage()) scope.path + getPackageName(scope)
+                else scope.path, scope
+            )
+        }
+    }
+
+    fun ensureImport(type: ClassType) {
+        val scope = type.clazz
+        val spec = Specialization(type)
+        imports.getOrPut(scope.pathStr + createSpecializationSuffix(spec)) {
             Import2(
                 if (scope.isPackage()) scope.path + getPackageName(scope)
                 else scope.path, scope
@@ -565,7 +576,7 @@ open class JavaSourceGenerator : Generator() {
             val field = fieldSpec.field
             if (isStoredField(field)) {
                 fieldSpec.use {
-                    appendBackingField(classScope, field, allowFinal, headerOnly)
+                    appendField(classScope, field, allowFinal, headerOnly)
                 }
             }
         }
@@ -589,7 +600,7 @@ open class JavaSourceGenerator : Generator() {
         if (!field.isMutable && allowFinal) builder.append("final ")
     }
 
-    open fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+    open fun appendField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
         appendFieldFlags(classScope, field, allowFinal)
 
         var valueType = (field.valueType ?: Types.NullableAny)
@@ -611,13 +622,17 @@ open class JavaSourceGenerator : Generator() {
         for (method0 in methods) {
             val method = method0.method
             if (method !is Method) continue
-            if (method.scope.parent != classScope) {
+            if (canSkipMethod(classScope, method)) {
                 // an inherited method -> skip, because it's already defined in the parent
                 continue
             }
 
             appendMethod(classScope, className, method0, headerOnly)
         }
+    }
+
+    open fun canSkipMethod(classScope: Scope, method: Method): Boolean {
+        return method.scope.parent != classScope
     }
 
     open fun appendConstructors(
@@ -1815,14 +1830,19 @@ open class JavaSourceGenerator : Generator() {
                 appendType(valueType, scope, needsBoxedType)
             }
             else -> {
-                builder.append("Object ")
-                comment {
-                    builder.append(type)
-                        .append(" (")
-                        .append(type.javaClass.simpleName)
-                        .append(')')
-                }
+                appendUnknownType(type, scope)
             }
+        }
+    }
+
+    open fun appendUnknownType(type: Type, scope: Scope) {
+        check(type != Types.NullableAny)
+        appendType(Types.NullableAny, scope, true)
+        comment {
+            builder.append(type)
+                .append(" (")
+                .append(type.javaClass.simpleName)
+                .append(')')
         }
     }
 
@@ -1870,20 +1890,26 @@ open class JavaSourceGenerator : Generator() {
     }
 
     fun ensureFieldName(field: Field) {
+        // todo avoid duplicates
         if (isProtectedFieldName(field.newName)) {
             field.newName += "_"
         }
     }
 
     fun ensureFieldName(field: LocalField) {
+        // todo avoid duplicates
         if (isProtectedFieldName(field.newName)) {
             field.newName += "_"
         }
     }
 
-    fun ensureFieldName(field: Parameter) {
-        if (isProtectedFieldName(field.newName)) {
-            field.newName += "_"
+    fun ensureFieldName(param: Parameter) {
+        // todo avoid duplicates
+        if (isProtectedFieldName(param.newName)) {
+            param.newName += "_"
+            val field = param.getOrCreateField(null, Flags.NONE)
+            field.newName = param.newName
+            // todo that must be synced to the LocalFields, too
         }
     }
 

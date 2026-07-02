@@ -351,7 +351,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
         }
     }
 
-    override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+    override fun appendField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
         appendFieldFlags(classScope, field, allowFinal)
 
         var valueType = (field.valueType ?: Types.NullableAny)
@@ -666,7 +666,7 @@ class PythonSourceGenerator : JavaSourceGenerator() {
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
         // ensure import
         val selfType = expr.thisInstance.type as ClassType
-        ensureImport(selfType.clazz)
+        ensureImport(selfType)
 
         builder.append(needsCastForFirstValue.boxed).append("(")
         appendFieldName(graph, expr.thisInstance)

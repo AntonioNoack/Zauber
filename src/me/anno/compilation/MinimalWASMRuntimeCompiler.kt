@@ -33,7 +33,7 @@ class MinimalWASMRuntimeCompiler : MinimalCompiler() {
         val printed = StringBuilder()
 
         langScope[ScopeInitType.AFTER_DISCOVERY]
-        for ((type, _) in nativeJavaNumbers) {
+        for (type in (nativeJavaNumbers.keys + Types.String)) {
 
             // register println
             val printScope = langScope.children.firstOrNull {

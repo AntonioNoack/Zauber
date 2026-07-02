@@ -515,7 +515,7 @@ abstract class ASTClassScanner(tokens: TokenList, language: Language) :
         if (delegateExpr != null) {
 
             val initial = delegateExpr
-            val delegateField = ownerScope.createImmutableField(initial)
+            val delegateField = ownerScope.createImmutableField(initial, "delegate", initial.origin)
             val backingFieldExpr = FieldExpression(delegateField, ownerScope, origin)
             ownerScope.getOrCreatePrimaryConstructorScope()
                 .code.add(AssignmentExpression(backingFieldExpr, initial))

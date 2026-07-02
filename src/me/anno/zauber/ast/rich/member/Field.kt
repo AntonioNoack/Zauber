@@ -203,10 +203,14 @@ class Field(
     override val memberScope: Scope get() = fieldScope
 
     private val fieldScopeImpl: Scope by lazy {
-        ownerScope.getOrPut(name, ScopeType.FIELD).apply {
-            check(selfAsField == null)
-            selfAsField = this@Field
+        val scope = ownerScope.getOrPut(name, ScopeType.FIELD)
+        check(scope.selfAsField == null || scope.selfAsField === this) {
+            LOGGER.warn("Field1: ${resolveOrigin(scope.selfAsField!!.origin)}")
+            LOGGER.warn("Field2: ${resolveOrigin(origin)}")
+            "selfAsField is defined twice?? ${scope.selfAsField} vs $this"
         }
+        scope.selfAsField = this
+        scope
     }
 
     val fieldScope: Scope

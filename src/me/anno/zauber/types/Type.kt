@@ -286,10 +286,9 @@ abstract class Type {
 
     fun specialize(context: ResolutionContext): Type = specialize(context.specialization)
 
-    fun specialize(spec: Specialization = specialization): Type {
+    open fun specialize(spec: Specialization = specialization): Type {
         if (isFullySpecialized()) return this
         return when (this) {
-            is ClassType -> ClassType(clazz, typeParameters!!.map { it.specialize(spec) })
             is UnionType -> unionTypes(types.map { it.specialize(spec) })
             is AndType -> andTypes(types.map { it.specialize(spec) })
             is GenericType -> spec[this] ?: this
@@ -303,7 +302,6 @@ abstract class Type {
             is UnresolvedClassType -> resolvedName.specialize(spec)
             // todo we need selfType to properly resolve them...
             is ThisType, is SelfType -> type.specialize(spec)
-            is NonObjectClassType -> NonObjectClassType(type.specialize(spec) as ClassType)
             is PointerType -> PointerType(type.specialize(spec))
             else -> error("Specialize ${javaClass.simpleName}")
         }

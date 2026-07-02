@@ -3,6 +3,7 @@ package me.anno.generation
 import me.anno.compilation.MinimalCppCompiler
 import me.anno.generation.cpp.CppSourceGenerator.Companion.nativeCppTypes
 import me.anno.generation.java.JavaSourceGenerator
+import me.anno.generation.java.JavaSourceGenerator.Companion.register
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.getNumBits
 import me.anno.zauber.ast.rich.expression.constants.NumberExpression.Companion.toUnsigned
 import me.anno.zauber.ast.simple.ASTSimplifier.nativeInts
@@ -19,33 +20,38 @@ class CppGenerationTests : CodeGenerationTests() {
 
     override fun registerLib() {
         for (type in listOf(Types.Byte, Types.Short, Types.Int)) {
-            JavaSourceGenerator.register(
+            register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
                         "printf(\"%d\\n\",arg0);"
             )
         }
         for (type in listOf(Types.UByte, Types.UShort, Types.UInt)) {
-            JavaSourceGenerator.register(
+            register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
                         "printf(\"%u\\n\",arg0);"
             )
         }
 
-        JavaSourceGenerator.register(
+        register(
             TypeResolution.langScope, "println", listOf(Types.Long),
             "#include <stdio.h>\n" +
                     "printf(\"%ld\\n\",arg0);"
         )
-        JavaSourceGenerator.register(
+        register(
             TypeResolution.langScope, "println", listOf(Types.ULong),
             "#include <stdio.h>\n" +
                     "printf(\"%lu\\n\",arg0);"
         )
+        register(
+            TypeResolution.langScope, "println", listOf(Types.String),
+            "#include <stdio.h>\n" +
+                    "printf(\"%s\\n\",arg0->content->content);"
+        )
 
         for (type in listOf(Types.Half, Types.Float, Types.Double)) {
-            JavaSourceGenerator.register(
+            register(
                 TypeResolution.langScope, "println", listOf(type),
                 "#include <stdio.h>\n" +
                         "#include <math.h>\n" +
@@ -55,19 +61,20 @@ class CppGenerationTests : CodeGenerationTests() {
             )
         }
 
+        // I don't think that this is necessary, we have defined it like that in our Zauber code.
         for (type in nativeInts) {
             val numBits = type.getNumBits()
             val unsignedType = type.toUnsigned()
             val unsigned = nativeCppTypes[unsignedType]!!.native
             // cast to unsigned is necessary to apply the correct shift
             // could be a static-cast, too
-            JavaSourceGenerator.register(
+            register(
                 type.clazz, "rotateLeft", listOf(Types.Int),
                 "" +
                         "shift = shift & ${numBits - 1};\n" +
                         "return (content << shift) | (($unsigned) content >> ($numBits - shift));\n"
             )
-            JavaSourceGenerator.register(
+            register(
                 type.clazz, "rotateRight", listOf(Types.Int),
                 "" +
                         "shift = shift & ${numBits - 1};\n" +

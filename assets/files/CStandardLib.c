@@ -9,16 +9,6 @@
 
 #include "CStandardFileIO.h"
 
-typedef struct {
-    uint32_t classIndex;
-} GCInstance;
-
-void* gcNew(size_t size, uint32_t classIndex) {
-    void* instance = calloc(1, size);
-    ((GCInstance*) instance)->classIndex = classIndex;
-    return instance;
-}
-
 u32_file classCallTable;
 u32_file interfaceCallTable;
 u32_file superClassTable;
@@ -78,4 +68,29 @@ int32_t stdlibMain() {
     }
 
     return 0;
+}
+
+#include "zauber/Any.h"
+
+void* __gcNew(size_t size, uint32_t classIndex) {
+    zauber_Any* instance = (zauber_Any*) calloc(1, size);
+    instance->__class = classIndex;
+    return instance;
+}
+
+#include "zauber/Array_zauberByte.h"
+#include "zauber/String.h"
+#include <string.h> // for strlen
+
+void* __createString(char* content, void* newStr0) {
+    zauber_String* newStr = newStr0;
+    if (!newStr->content) { // not yet initialized
+        newStr->__class = 1;
+        zauber_Array_zauberByte* newBuffer = __gcNew(sizeof(zauber_Array_zauberByte), 2);
+        newStr->content = newBuffer;
+        newBuffer->content = content;
+        newBuffer->size = strlen(content);
+        // todo we need to copy the data, or set a flag that we don't free it
+    }
+    return newStr;
 }

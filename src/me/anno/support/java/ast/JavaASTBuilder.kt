@@ -936,10 +936,15 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val base = IsInstanceOfExpr(expr, type, scope, origin)
         val value = if (tokens.equals(i, TokenType.NAME)) {
             // assign to temporary field to avoid double-invocation
-            val tmpField = currPackage.createImmutableField(base.value)
+            val tmpField = currPackage.createImmutableField(base.value, "instanceOf", origin)
             val tmpExpr = FieldExpression(tmpField, currPackage, origin)
             val baseWithTmp = base.withValue(tmpExpr)
-            NamedCastExpression(baseWithTmp, tokens.toString(i++))
+            val newName = tokens.toString(i++)
+            ExpressionList(
+                currPackage, origin,
+                AssignmentExpression(tmpExpr, base.value),
+                NamedCastExpression(baseWithTmp, newName)
+            )
         } else base
         return if (negated) value.not() else value
     }
@@ -1058,7 +1063,7 @@ open class JavaASTBuilder(tokens: TokenList, root: Scope, allowUnresolvedTypes: 
         val origin = origin(i - 1)
         val lock = pushCall { readExpression() }
         val scope = currPackage
-        val tmpField = scope.createImmutableField(lock)
+        val tmpField = scope.createImmutableField(lock, "synchronized", origin)
         val scopeName = scope.generateName("sync", origin)
         val body = pushBlock(ScopeType.METHOD_BODY, scopeName) {
             readMethodBody()

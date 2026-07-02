@@ -33,6 +33,7 @@ import me.anno.zauber.ast.simple.ASTSimplifier
 import me.anno.zauber.ast.simple.SimpleBlock
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.isValue
 import me.anno.zauber.ast.simple.SimpleGraph
+import me.anno.zauber.ast.simple.constants.SimpleString
 import me.anno.zauber.ast.simple.expression.SimpleAllocateInstance
 import me.anno.zauber.ast.simple.expression.SimpleBoxCast
 import me.anno.zauber.ast.simple.expression.SimpleInstanceOf
@@ -100,6 +101,10 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
     val cppFiles = HashSet<File>()
 
     val CIncludeType = Types.getType("CInclude")
+
+    val strBuilder = StringBuilder()
+    val strings = HashMap<String, String>()
+    var strIndex = 0
 
     fun isCIncludeMethod(method: MethodLike): Boolean {
         return method.memberScope[ScopeInitType.AFTER_RESOLVE_TYPES]
@@ -190,10 +195,13 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         headerOnly: Boolean
     ) {
         if (headerOnly) markClassAsPolymorphic(className)
+        val pos0 = builder.length
+
         super.appendMethods(classScope, className, methods, headerOnly)
+        appendStringDeclarations(pos0)
     }
 
-    fun markClassAsPolymorphic(className: String) {
+    open fun markClassAsPolymorphic(className: String) {
         // needed in C++ to be marked as polymorphic (for dynamic_cast to work)
         builder.append("virtual ~").append(className).append("() = default;")
         nextLine()
@@ -255,7 +263,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         nextLine()
     }
 
-    override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+    override fun appendField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
         appendFieldFlags(classScope, field, allowFinal)
 
         var valueType = (field.valueType ?: Types.NullableAny)
@@ -572,10 +580,12 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             builder.append("this->content[index] = value;")
             nextLine()
 
-            builder.append("return ")
-            appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
-            builder.append(';')
-            nextLine()
+            if (hasReturn(method0.method)) {
+                builder.append("return ")
+                appendGetObjectInstance(Types.Unit.clazz, method0.method.memberScope)
+                builder.append(';')
+                nextLine()
+            }
         }
     }
 
@@ -760,14 +770,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
             val field = field.dst
             when (val expr = field.constantRef) {
                 is NumberExpression -> appendNumber(field.type, expr)
-                is StringExpression -> {
-                    val l0 = builder.length
-                    appendType(Types.String, graph.method.scope, true)
-                    builder.setLength(l0)
-                    builder.append("__createString(")
-                    appendString(expr.value)
-                    builder.append(')')
-                }
+                is StringExpression -> appendStringImpl(expr.value, expr.scope)
                 is SpecialValueExpression -> {
                     when (expr.type) {
                         SpecialValue.TRUE -> builder.append("true")
@@ -811,6 +814,32 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         appendDefaultValue(type)
         builder.append(";")
         nextLine()
+    }
+
+    fun copyInto(dst: StringBuilder, writeImpl: () -> Unit) {
+        val l0 = builder.length
+        writeImpl()
+        val l1 = builder.length
+        dst.append(builder, l0, l1)
+        builder.setLength(l0)
+    }
+
+    fun appendStringImpl(value: String, scope: Scope) {
+        ensureImport(Types.String)
+
+        val tmp = strings.getOrPut(value) {
+            val tmp = "__str${strIndex++}"
+            strBuilder.append("static ") // means only accessible in this file
+            copyInto(strBuilder) {
+                appendType(Types.String, scope, true)
+            }
+            strBuilder.append(' ').append(tmp).append(";\n")
+            tmp
+        }
+
+        builder.append("__createString(")
+        appendString(value)
+        builder.append(", &").append(tmp).append(')')
     }
 
     override fun appendDefaultValue(valueType: Type) {
@@ -894,6 +923,17 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
         }
     }
 
+    fun appendStringDeclarations(pos0: Int) {
+        if (strBuilder.isEmpty()) return
+
+        val pos1 = builder.length
+        builder.append('\n').append(strBuilder)
+        swapSections(pos0, pos1)
+        strBuilder.clear()
+        strings.clear()
+        strIndex = 0
+    }
+
     override fun appendSimpleBlock(graph: SimpleGraph, block: SimpleBlock) {
         // mark block as jumpable
         if (block.inputBlocks.isNotEmpty()) {
@@ -929,7 +969,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                 // this allocation is a ClassType, so it cannot be null ever
                 if (!expr.allocatedType.isValue()) {
                     // call GC-aware alloc instead
-                    builder.append("gcNew<")
+                    builder.append("__gcNew<")
                     appendType(expr.allocatedType, expr.scope, true)
                     builder.append(">")
                     appendValueParams(graph, expr.paramsForLater)
@@ -938,6 +978,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     appendValueParams(graph, expr.paramsForLater)
                 }
             }
+            is SimpleString -> appendStringImpl(expr.base.value, expr.scope)
             is SimpleTailCall -> {
                 builder.append("goto b").append(expr.toBeCalled.id).append(';')
                 nextLine()
@@ -962,7 +1003,7 @@ open class CppSourceGenerator(val cppVersion: Int = 11) : JavaSourceGenerator() 
                     }
                     srcNum -> {
                         check(dstRef) { "Expected $expr with srcNum to have dstRef" }
-                        builder.append("gcNew<")
+                        builder.append("__gcNew<")
                         appendType(srcType, expr.scope, true)
                         builder.append(">(")
                         appendFieldName(graph, expr.src)

@@ -119,25 +119,15 @@ open class CSourceGenerator : CppSourceGenerator() {
         nextLine()
     }
 
-    override fun appendMethods(
-        classScope: Scope, className: String,
-        methods: Collection<Specialization>, headerOnly: Boolean
-    ) {
-        for (method0 in methods) {
-            val method = method0.method
-            if (method !is Method) continue
-            if (method.scope.parent != classScope || isCIncludeMethod(method)) {
-                // an inherited method -> skip, because it's already defined in the parent
-                continue
-            }
-
-            appendMethod(classScope, className, method0, headerOnly)
-        }
+    override fun canSkipMethod(classScope: Scope, method: Method): Boolean {
+        return super.canSkipMethod(classScope, method) || isCIncludeMethod(method)
     }
 
     override fun appendMethodFlags(classScope: Scope, method0: Specialization, headerOnly: Boolean) {
         // nothing yet
     }
+
+    override fun markClassAsPolymorphic(className: String) {}
 
     override fun needsEmptyConstructor(classScope: Scope, methods: Collection<Specialization>): Boolean {
         return false
@@ -260,8 +250,13 @@ open class CSourceGenerator : CppSourceGenerator() {
         classScope: Scope, className: String,
         constructor: Constructor, headerOnly: Boolean
     ) {
-        appendType(Types.Unit, classScope, false)
-        builder.append("* ").append(getMethodName(specialization))
+        if (hasReturn(constructor)) {
+            appendType(Types.Unit, classScope, false)
+            builder.append("* ")
+        } else {
+            builder.append("void ")
+        }
+        builder.append(getMethodName(specialization))
         appendValueParameterDeclaration(constructor, classScope)
     }
 
@@ -287,7 +282,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         builder.append(')')
     }
 
-    override fun appendBackingField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
+    override fun appendField(classScope: Scope, field: Field, allowFinal: Boolean, headerOnly: Boolean) {
         appendFieldFlags(classScope, field, allowFinal)
 
         var valueType = (field.valueType ?: Types.NullableAny)
@@ -295,6 +290,7 @@ open class CSourceGenerator : CppSourceGenerator() {
         valueType = resolveType(valueType)
 
         appendType(valueType, classScope, false)
+        appendOwnershipSuffix(valueType, false)
         builder.append(' ')
         appendFieldName(field)
         builder.append(";")
@@ -365,6 +361,11 @@ open class CSourceGenerator : CppSourceGenerator() {
         graph: SimpleGraph, method0: Specialization, expr: SimpleMethodCall,
         withCast: Boolean
     ) {
+
+        val ownerType = method0.method.ownerScope
+            .typeWithArgs2.specialize(method0)
+        ensureImport(ownerType)
+
         appendAssign(graph, expr)
         val methodName = getMethodName(method0)
         builder.append(methodName).append('(')
@@ -411,7 +412,7 @@ open class CSourceGenerator : CppSourceGenerator() {
     override fun appendNativeCall(needsCastForFirstValue: BoxedType, expr: SimpleMethodCall, graph: SimpleGraph) {
 
         val selfType = expr.thisInstance.type as ClassType
-        ensureImport(selfType.clazz)
+        ensureImport(selfType)
 
         if (expr.methodName == "hashCode" && selfType == Types.Int) {
             // optimization for Int.hashCode
@@ -520,7 +521,7 @@ open class CSourceGenerator : CppSourceGenerator() {
                     appendOwnershipSuffix(expr.allocatedType, true)
                     builder.append(") ")
 
-                    builder.append("gcNew(sizeof(")
+                    builder.append("__gcNew(sizeof(")
                     appendType(expr.allocatedType, expr.scope, true)
                     builder.append("), ")
                         .append(inheritanceTable.getClassIndex(expr.specialization))
@@ -563,7 +564,7 @@ open class CSourceGenerator : CppSourceGenerator() {
                         appendOwnershipSuffix(src.type, true)
                         builder.append(") ")
 
-                        builder.append("gcNew(sizeof(")
+                        builder.append("__gcNew(sizeof(")
                         appendType(src.type, expr.scope, true)
                         val spec = Specialization(src.type as ClassType)
                         builder.append("), ")

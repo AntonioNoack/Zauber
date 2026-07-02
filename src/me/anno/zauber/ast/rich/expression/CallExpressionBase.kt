@@ -159,7 +159,7 @@ abstract class CallExpressionBase(
                 val selfType = parameterType.selfType?.specialize(context)
                 var subContext = context
                 if (selfType != null) {
-                    val baseField = subscope.createImmutableField(self).apply {
+                    val baseField = subscope.createImmutableField(self, "lambdaBase", origin).apply {
                         valueType = selfType
                     }
                     val selfScope = typeToScope(selfType)

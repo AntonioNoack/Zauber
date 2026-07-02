@@ -27,6 +27,10 @@ class AndType(types: List<Type>) : CollectionType(types) {
             if (typeA == UnknownType) return typeB
             if (typeB == UnknownType) return typeA
 
+            // impossible
+            if (typeA is NotType && typeA.type == typeB) return Types.Nothing
+            if (typeB is NotType && typeB.type == typeA) return Types.Nothing
+
             if (typeA is UnionType && typeB is NotType &&
                 typeB.type in typeA.types
             ) {

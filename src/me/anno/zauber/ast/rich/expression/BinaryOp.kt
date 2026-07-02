@@ -101,13 +101,17 @@ fun ASTBuilderBase.binaryOp(
         "in", "!in" -> {
             // swap the order of the arguments without changing their calculation order:
             // save left as temporary, then put into right side
-            val leftTmp = currPackage.createImmutableField(left)
+            val leftTmp = currPackage.createImmutableField(left, "contains", origin)
             val methodName = lookupBinaryOp("in", origin)
-            val param = NamedParameter(FieldExpression(leftTmp, scope, origin))
-            val expr = NamedCallExpression(
-                right, methodName, nameAsImport(methodName),
-                emptyList(), listOf(param),
-                right.scope, right.origin
+            val leftTmpExpr = FieldExpression(leftTmp, scope, origin)
+            val expr = ExpressionList(
+                scope, origin,
+                AssignmentExpression(leftTmpExpr, left),
+                NamedCallExpression(
+                    right, methodName, nameAsImport(methodName),
+                    emptyList(), listOf(NamedParameter(leftTmpExpr)),
+                    right.scope, right.origin
+                )
             )
             if (symbol == "in") expr else expr.not()
         }

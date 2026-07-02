@@ -3,6 +3,7 @@ package me.anno.support.cpp.ast.rich
 import me.anno.zauber.types.Type
 import me.anno.zauber.types.impl.ModifierType
 
+@Deprecated("Replaced by ClassType(Types.Pointer, type)")
 class PointerType(type: Type) : ModifierType(type) {
 
     override fun toStringImpl(depth: Int): String =

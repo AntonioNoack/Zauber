@@ -1,11 +1,13 @@
 package me.anno.zauber.expansion
 
+import me.anno.generation.java.JavaSourceGenerator.Companion.getCastTargetType
 import me.anno.utils.ResetThreadLocal.Companion.threadLocal
 import me.anno.zauber.ast.rich.Flags
 import me.anno.zauber.ast.rich.Flags.hasAnyFlag
 import me.anno.zauber.ast.rich.Flags.hasFlag
 import me.anno.zauber.ast.rich.member.Constructor
 import me.anno.zauber.ast.simple.ASTSimplifier
+import me.anno.zauber.ast.simple.ASTSimplifier.nativeNumbers
 import me.anno.zauber.ast.simple.SimpleBlock.Companion.needsCopy
 import me.anno.zauber.ast.simple.constants.SimpleNumber
 import me.anno.zauber.ast.simple.constants.SimpleString
@@ -117,12 +119,23 @@ object Dependencies {
         //  and if so, we must add their overridden method to be reachable
     }
 
-    private fun markCalledMethodsReachable(method: Specialization) {
+    private fun markCalledMethodsReachable(method0: Specialization) {
         // ASTSimplify method, and collect all called methods
-        check(method.isMethodLike())
-        if (method.method.isExternal() || method.method.hasNoBody()) return
+        check(method0.isMethodLike())
+        val method = method0.method
+        if (method.isExternal() || method.hasNoBody()) {
+            val owner = method.ownerScope
+            val ownerType = owner.typeWithArgs2
+            if (method.name.startsWith("to") &&
+                ownerType in nativeNumbers
+            ) {
+                val targetType = getCastTargetType(method.name)
+                if (targetType != null) addClass(targetType, true)
+            }
+            return
+        }
 
-        val simplified = ASTSimplifier.simplify(method, readOnly = true)
+        val simplified = ASTSimplifier.simplify(method0, readOnly = true)
         for (node in simplified.blocks) {
             for (instr in node.instructions) {
 
