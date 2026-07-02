@@ -61,7 +61,7 @@ class SimpleField(
         get() {
             var dst = this
             while (true) {
-                dst = next
+                dst = dst.next
                     ?: return dst
             }
         }

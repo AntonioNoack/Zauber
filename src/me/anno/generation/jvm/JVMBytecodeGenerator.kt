@@ -734,6 +734,7 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                                 JVMValueType.DOUBLE -> code.dmul()
                                 JVMValueType.REFERENCE -> error("inline times on ref")
                             }
+                            // todo unsigned types need other implementations
                             "div" -> when (jvmType) {
                                 JVMValueType.INT -> code.idiv()
                                 JVMValueType.LONG -> code.ldiv()
