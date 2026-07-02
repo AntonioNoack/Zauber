@@ -20,6 +20,7 @@ class JVMCodeBuilder(
     private val out = ByteArrayOutputStream2()
     private val labels = HashMap<String, Int>() // label -> pc
     var blockLabels: Map<SimpleBlock, String> = emptyMap()
+    val pendingFrames = ArrayList<PendingFrame>()
 
     fun currentPc(): Int {
         return out.size

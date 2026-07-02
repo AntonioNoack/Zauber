@@ -12,7 +12,7 @@ import javax.tools.ToolProvider
 class MinimalJavaBuildCompiler : MinimalCompiler() {
 
     companion object {
-        val compiler by lazy {
+        val javaCompiler by lazy {
             ToolProvider.getSystemJavaCompiler()
                 ?: error("No Java compiler found. Run with JDK, not JRE.")
         }
@@ -50,7 +50,7 @@ class MinimalJavaBuildCompiler : MinimalCompiler() {
             "-d", classFolder.path
         ) + sourceFiles.map { it.path }
 
-        val result = compiler.run(null, null, null, *args.toTypedArray())
+        val result = javaCompiler.run(null, null, null, *args.toTypedArray())
         check(result == 0) {
             error("Compilation failed with exit code $result")
         }

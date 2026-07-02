@@ -19,12 +19,7 @@ import me.anno.zauber.ast.simple.constants.SimpleString
 import me.anno.zauber.ast.simple.controlflow.SimpleReturn
 import me.anno.zauber.ast.simple.controlflow.SimpleThrow
 import me.anno.zauber.ast.simple.expression.*
-import me.anno.zauber.ast.simple.fields.SimpleGetClassField
-import me.anno.zauber.ast.simple.fields.SimpleGetLocalField
-import me.anno.zauber.ast.simple.fields.SimpleGetObject
-import me.anno.zauber.ast.simple.fields.SimpleInstruction
-import me.anno.zauber.ast.simple.fields.SimpleSetClassField
-import me.anno.zauber.ast.simple.fields.SimpleSetLocalField
+import me.anno.zauber.ast.simple.fields.*
 import me.anno.zauber.expansion.DependencyData
 import me.anno.zauber.scope.Scope
 import me.anno.zauber.scope.ScopeInitType
@@ -782,6 +777,9 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 locals.loadField(instr.right)
                 val lTrue = code.newLabel("cmp_true")
                 val lEnd = code.newLabel("cmp_end")
+
+                addPendingFrames(locals, code, lTrue, lEnd)
+
                 when (vt) {
                     JVMValueType.INT -> {
                         val op = when (instr.type) {
@@ -838,6 +836,9 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 locals.loadField(instr.right)
                 val lTrue = code.newLabel("id_true")
                 val lEnd = code.newLabel("id_end")
+
+                addPendingFrames(locals, code, lTrue, lEnd)
+
                 val op = if (instr.negated) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ
                 code.jump(op, lTrue)
                 code.iconst(0)
@@ -855,6 +856,9 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                     locals.loadField(instr.right)
                     val lTrue = code.newLabel("eq_true")
                     val lEnd = code.newLabel("eq_end")
+
+                    addPendingFrames(locals, code, lTrue, lEnd)
+
                     when (vt) {
                         JVMValueType.INT -> {
                             val op = if (instr.negated) Opcodes.IF_ICMPNE else Opcodes.IF_ICMPEQ
@@ -919,6 +923,12 @@ class JVMBytecodeGenerator : JavaSourceGenerator() {
                 code.athrow()
             }
         }
+    }
+
+    private fun addPendingFrames(locals: JVMLocals, code: JVMCodeBuilder, lTrue: String, lEnd: String) {
+        val snapshot = locals.snapshotForFrame(code.cp)
+        code.pendingFrames.add(PendingFrame(lTrue, snapshot, emptyList()))
+        code.pendingFrames.add(PendingFrame(lEnd, snapshot, listOf(VerificationTypeInfo.IntegerVariable)))
     }
 
     private fun appendReturnIfMissing(code: JVMCodeBuilder, method: MethodLike, spec: Specialization) {

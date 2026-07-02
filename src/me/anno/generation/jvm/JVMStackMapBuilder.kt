@@ -18,35 +18,52 @@ class JVMStackMapBuilder(
 
     fun buildFrames(): List<StackMapFrame> {
 
-        val result = ArrayList<StackMapFrame>()
+        data class Pending(
+            val pc: Int,
+            val locals: List<VerificationTypeInfo>,
+            val stack: List<VerificationTypeInfo>
+        )
 
-        val blocks = graph.blocks
-        if (blocks.isEmpty()) return result
+        val pending = ArrayList<Pending>()
 
-        var previousPc = -1
-
-        for (i in 1 until blocks.size) {
-
-            val block = blocks[i]
-
+        // normal CFG block frames
+        for (i in 1 until graph.blocks.size) {
+            val block = graph.blocks[i]
             val label = code.blockLabels[block]!!
             val pc = code.labelPc(label)
+            pending.add(Pending(pc = pc, locals = buildLocals(), stack = emptyList()))
+        }
+
+        // synthetic branch labels
+        for (frame in code.pendingFrames) {
+            val pc = code.labelPc(frame.label)
+            pending.add(Pending(pc = pc, locals = frame.locals, stack = frame.stack))
+        }
+
+        val deduplicated = LinkedHashMap<Int, Pending>()
+        for (entry in pending) deduplicated[entry.pc] = entry
+        val sorted = deduplicated.values.sortedBy { it.pc }
+
+        // build final frames
+        val result = ArrayList<StackMapFrame>()
+        var previousPc = -1
+        for (entry in sorted) {
 
             val offsetDelta = if (previousPc < 0) {
-                pc
+                entry.pc
             } else {
-                pc - previousPc - 1
+                entry.pc - previousPc - 1
             }
 
-            previousPc = pc
+            previousPc = entry.pc
 
-            val frame = StackMapFrame(
-                offsetDelta = offsetDelta,
-                locals = buildLocals(),
-                stack = emptyList()
+            result.add(
+                StackMapFrame(
+                    offsetDelta = offsetDelta,
+                    locals = entry.locals,
+                    stack = entry.stack
+                )
             )
-
-            result.add(frame)
         }
 
         return result
@@ -55,22 +72,28 @@ class JVMStackMapBuilder(
     private fun buildLocals(): List<VerificationTypeInfo> {
         val ordered = locals.orderedLocals
         return ordered.map { local ->
-            typeOf(local.type)
+            typeOf(local.type, gen, cp)
         }
     }
 
-    private fun typeOf(type0: me.anno.zauber.types.Type): VerificationTypeInfo {
-        return when (JVMBytecodeGenerator.toJVMValueType(type0)) {
-            JVMValueType.INT -> IntegerVariable
-            JVMValueType.FLOAT -> FloatVariable
-            JVMValueType.LONG -> LongVariable
-            JVMValueType.DOUBLE -> DoubleVariable
-            JVMValueType.REFERENCE -> {
-                val internalName = when (val type = resolveType(type0)) {
-                    is ClassType -> gen.getJVMName(type)
-                    else -> "java/lang/Object"
+    companion object {
+
+        fun typeOf(
+            type0: me.anno.zauber.types.Type,
+            gen: JVMBytecodeGenerator, cp: ConstantPool
+        ): VerificationTypeInfo {
+            return when (JVMBytecodeGenerator.toJVMValueType(type0)) {
+                JVMValueType.INT -> IntegerVariable
+                JVMValueType.FLOAT -> FloatVariable
+                JVMValueType.LONG -> LongVariable
+                JVMValueType.DOUBLE -> DoubleVariable
+                JVMValueType.REFERENCE -> {
+                    val internalName = when (val type = resolveType(type0)) {
+                        is ClassType -> gen.getJVMName(type)
+                        else -> "java/lang/Object"
+                    }
+                    VerificationTypeInfo.ObjectVariable(cp.clazz(internalName))
                 }
-                VerificationTypeInfo.ObjectVariable(cp.clazz(internalName))
             }
         }
     }

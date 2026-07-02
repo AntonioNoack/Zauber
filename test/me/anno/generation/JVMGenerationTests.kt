@@ -17,7 +17,6 @@ class JVMGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testOperationOrder() {
-        LogManager.enable("ASTSimplifier")
         testOperationOrderImpl()
     }
 
@@ -48,6 +47,7 @@ class JVMGenerationTests : CodeGenerationTests() {
 
     @Test
     fun testSimpleBranch() {
+        LogManager.enable("ASTSimplifier")
         testSimpleBranchImpl()
     }
 

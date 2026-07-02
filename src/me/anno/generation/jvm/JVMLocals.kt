@@ -31,6 +31,45 @@ class JVMLocals(
 
     val maxLocals: Int = collectFields(graph)
 
+    fun snapshotForFrame(cp: ConstantPool): List<VerificationTypeInfo> {
+
+        if (maxLocals <= 0) return emptyList()
+
+        val localsBySlot = arrayOfNulls<VerificationTypeInfo>(maxLocals)
+
+        // Real JVM locals only.
+        // SSA temporaries in fieldSlots are NOT verifier locals.
+        for ((local, slot) in localSlots) {
+
+            val vt = JVMStackMapBuilder.typeOf(local.type, gen, cp)
+
+            localsBySlot[slot] = vt
+
+            // category-2 locals occupy two slots
+            when (vt) {
+                VerificationTypeInfo.LongVariable,
+                VerificationTypeInfo.DoubleVariable -> {
+                    if (slot + 1 < localsBySlot.size) {
+                        localsBySlot[slot + 1] = VerificationTypeInfo.TopVariable
+                    }
+                }
+                else -> {}
+            }
+        }
+
+        // trailing TOP entries must be removed
+        var end = localsBySlot.size
+        while (end > 0 && localsBySlot[end - 1] == null) {
+            end--
+        }
+
+        return buildList(end) {
+            for (i in 0 until end) {
+                add(localsBySlot[i] ?: VerificationTypeInfo.TopVariable)
+            }
+        }
+    }
+
     private fun collectFields(graph: SimpleGraph): Int {
         // Union-find across merge instructions: (dst, ifField, elseField) share one local.
         for (block in graph.blocks) {
@@ -61,6 +100,7 @@ class JVMLocals(
 
         for (p in graph.parameterFields) {
             localSlots[p] = slot
+            orderedLocals.add(p)
             slot += slotSize(p.type)
         }
 
@@ -100,7 +140,7 @@ class JVMLocals(
         if (ra != rb) parent[rb] = ra
     }
 
-    private fun rep(f: SimpleField): SimpleField = find(f)
+    private fun rep(f: SimpleField): SimpleField = find(f.dst)
 
     private fun slotSize(type0: Type): Int {
         return when (toJVMValueType(type0)) {

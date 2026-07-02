@@ -61,10 +61,13 @@ class SimpleField(
         get() {
             var dst = this
             while (true) {
-                dst = dst.mergeInfo?.dst
+                dst = next
                     ?: return dst
             }
         }
+
+    val next: SimpleField?
+        get() = mergeInfo?.dst
 
     override fun toString(): String {
         val idName = style("%$id", YELLOW)
